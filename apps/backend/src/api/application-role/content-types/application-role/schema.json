@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "idambox_application_roles",
+  "info": {
+    "singularName": "application-role",
+    "pluralName": "application-roles",
+    "displayName": "Application Role",
+    "description": "Role defined by a specific IdamBox application"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "application": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::application.application",
+      "inversedBy": "applicationRoles",
+      "required": true
+    },
+    "roles": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::role.role",
+      "mappedBy": "applicationRoles"
+    }
+  }
+}

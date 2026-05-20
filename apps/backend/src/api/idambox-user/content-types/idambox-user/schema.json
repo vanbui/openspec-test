@@ -1,0 +1,50 @@
+{
+  "kind": "collectionType",
+  "collectionName": "idambox_users",
+  "info": {
+    "singularName": "idambox-user",
+    "pluralName": "idambox-users",
+    "displayName": "IdamBox User",
+    "description": "Product user represented inside the IdamBox platform"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active",
+      "required": true
+    },
+    "externalSubject": {
+      "type": "string",
+      "unique": true
+    },
+    "roles": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::role.role",
+      "inversedBy": "idamboxUsers"
+    }
+  }
+}
