@@ -19,6 +19,7 @@ coverage/
 .tmp/
 .cache/
 .strapi/
+.strapi-updater.json
 public/uploads/*
 !public/uploads/.gitkeep
 
