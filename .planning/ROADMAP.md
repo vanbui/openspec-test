@@ -8,7 +8,7 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Strapi Backend Foundation | Create the IdamBox monorepo backend and core authorization data model. | MONO-01, MONO-02, MONO-03, BACK-01, BACK-02, BACK-03, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07 | 5 |
+| 1 | Strapi Backend Foundation | Complete 2026-05-20. Create the IdamBox monorepo backend and core authorization data model. | MONO-01, MONO-02, MONO-03, BACK-01, BACK-02, BACK-03, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07 | 5 |
 
 ## Phase Details
 

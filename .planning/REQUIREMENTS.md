@@ -9,25 +9,25 @@ Requirements for the initial backend foundation release. Each maps to roadmap ph
 
 ### Monorepo
 
-- [ ] **MONO-01**: Developer can work in a Turbo monorepo structured like the closest example, with applications under `apps/*` and shared packages under `packages/*`.
-- [ ] **MONO-02**: Developer can run the IdamBox Strapi backend from `apps/backend` through root workspace scripts.
-- [ ] **MONO-03**: Developer can add future Next.js application modules under `apps/*` without restructuring the repository.
+- [x] **MONO-01**: Developer can work in a Turbo monorepo structured like the closest example, with applications under `apps/*` and shared packages under `packages/*`.
+- [x] **MONO-02**: Developer can run the IdamBox Strapi backend from `apps/backend` through root workspace scripts.
+- [x] **MONO-03**: Developer can add future Next.js application modules under `apps/*` without restructuring the repository.
 
 ### Backend
 
-- [ ] **BACK-01**: Administrator can access the Strapi admin panel using native Strapi admin authentication.
-- [ ] **BACK-02**: Administrator can create and edit IdamBox platform records through Strapi content management.
-- [ ] **BACK-03**: Backend configuration supports local development without requiring a Phase 1 frontend application.
+- [x] **BACK-01**: Administrator can access the Strapi admin panel using native Strapi admin authentication.
+- [x] **BACK-02**: Administrator can create and edit IdamBox platform records through Strapi content management.
+- [x] **BACK-03**: Backend configuration supports local development without requiring a Phase 1 frontend application.
 
 ### Data Model
 
-- [ ] **DATA-01**: Administrator can manage IdamBox users in a custom IdamBox-specific user collection.
-- [ ] **DATA-02**: Administrator can manage applications representing IdamBox modules such as IAM, Compliance, Automation, Crypto Manager, LMS, and Cyber Risk Manager.
-- [ ] **DATA-03**: Administrator can manage application roles as records with `name` and `description`.
-- [ ] **DATA-04**: Administrator can associate each application role with its owning application.
-- [ ] **DATA-05**: Administrator can manage roles as reusable bundles of application roles.
-- [ ] **DATA-06**: Administrator can assign one or more roles to an IdamBox user.
-- [ ] **DATA-07**: Backend data relationships allow a user's effective application roles to be derived through user -> roles -> application roles -> application.
+- [x] **DATA-01**: Administrator can manage IdamBox users in a custom IdamBox-specific user collection.
+- [x] **DATA-02**: Administrator can manage applications representing IdamBox modules such as IAM, Compliance, Automation, Crypto Manager, LMS, and Cyber Risk Manager.
+- [x] **DATA-03**: Administrator can manage application roles as records with `name` and `description`.
+- [x] **DATA-04**: Administrator can associate each application role with its owning application.
+- [x] **DATA-05**: Administrator can manage roles as reusable bundles of application roles.
+- [x] **DATA-06**: Administrator can assign one or more roles to an IdamBox user.
+- [x] **DATA-07**: Backend data relationships allow a user's effective application roles to be derived through user -> roles -> application roles -> application.
 
 ## v2 Requirements
 
@@ -65,19 +65,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MONO-01 | Phase 1 | Pending |
-| MONO-02 | Phase 1 | Pending |
-| MONO-03 | Phase 1 | Pending |
-| BACK-01 | Phase 1 | Pending |
-| BACK-02 | Phase 1 | Pending |
-| BACK-03 | Phase 1 | Pending |
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
-| DATA-06 | Phase 1 | Pending |
-| DATA-07 | Phase 1 | Pending |
+| MONO-01 | Phase 1 | Complete |
+| MONO-02 | Phase 1 | Complete |
+| MONO-03 | Phase 1 | Complete |
+| BACK-01 | Phase 1 | Complete |
+| BACK-02 | Phase 1 | Complete |
+| BACK-03 | Phase 1 | Complete |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
+| DATA-05 | Phase 1 | Complete |
+| DATA-06 | Phase 1 | Complete |
+| DATA-07 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
@@ -86,4 +86,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-20 after roadmap creation*
+*Last updated: 2026-05-20 after Phase 1 completion*

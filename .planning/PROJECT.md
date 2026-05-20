@@ -14,18 +14,16 @@ IdamBox must provide a clean shared authorization model where each application c
 
 ### Validated
 
-(None yet - ship to validate)
+- ✓ Turbo monorepo with `apps/backend` as the Strapi application and room for future `apps/*` modules — Phase 1
+- ✓ IdamBox Strapi backend exists as the first application in the monorepo — Phase 1
+- ✓ Strapi native admin authentication remains the Phase 1 content administration path — Phase 1
+- ✓ Custom IdamBox user collection exists separately from Strapi admin users and future Auth0 users — Phase 1
+- ✓ Applications, application roles, roles, and user role assignments are modeled in Strapi — Phase 1
+- ✓ User access can be derived indirectly through assigned roles and those roles' application roles — Phase 1
 
 ### Active
 
-- [ ] Create a Turbo monorepo following the closest provided example, with `apps/backend` as the Strapi application and room for future `apps/*` Next.js modules.
-- [ ] Build the IdamBox Strapi backend as the first application in the monorepo.
-- [ ] Use Strapi native admin authentication for Phase 1 content administration.
-- [ ] Model IdamBox users as a custom IdamBox-specific collection, separate from Strapi admin users and future Auth0 app users.
-- [ ] Model applications as first-class records representing IdamBox modules.
-- [ ] Model application roles as records with `name` and `description`, scoped to an application.
-- [ ] Model roles as reusable collections of application roles.
-- [ ] Assign roles to IdamBox users so user access is derived indirectly from the role's application roles.
+(None currently - Phase 1 scope completed)
 
 ### Out of Scope
 
@@ -63,6 +61,7 @@ Strapi Phase 1 uses native Strapi admin authentication for administrators who en
 | Model application roles as separate records | Each IdamBox application needs its own role vocabulary, such as LMS `STUDENT` and `TUTOR`. | - Pending |
 | Assign application roles indirectly through roles | Roles act as reusable bundles of application roles assigned to users. | - Pending |
 | Follow the `edalas-dylan` monorepo pattern | It is the closest provided example for Strapi plus Next.js apps in a Turbo monorepo. | - Pending |
+| Add guarded core sample seeding | Local verification benefits from representative application and LMS role records, but production must not seed by default. | - Pending |
 
 ## Evolution
 
@@ -82,4 +81,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after initialization*
+*Last updated: 2026-05-20 after Phase 1 completion*
