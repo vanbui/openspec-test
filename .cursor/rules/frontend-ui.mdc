@@ -1,0 +1,44 @@
+---
+description: UI quality, Tailwind, component design, performance, and graceful errors.
+globs: "**/*.{tsx,css}"
+alwaysApply: false
+---
+
+# Frontend UI & Quality
+
+## Component design
+
+- Single responsibility; predictable props; minimal side effects.
+- Prefer small composable components over god components.
+- Extract reusable logic into hooks; keep UI components presentational.
+- Avoid deep prop drilling — compose or use context/hooks deliberately.
+
+## Tailwind
+
+- Consistent spacing and typography; semantic tokens via theme when configured.
+- Use `cn()` (clsx + tailwind-merge) for conditional classes.
+- Avoid unreadable utility chains; extract repeated patterns to components or `@apply` sparingly.
+
+## UX
+
+- Handle loading, empty, and error states for every async UI.
+- Responsive layouts; clear hierarchy; purposeful motion only.
+- Never expose raw API errors or stack traces to users.
+
+## Performance
+
+- Prefer RSC and code splitting; lazy-load heavy client bundles.
+- Memoize only when measured or clearly justified.
+- Watch bundle size, render frequency, and expensive computations.
+
+## API in the UI layer
+
+- No `fetch` in presentational components — use `services/` and `hooks/`.
+- Components consume hooks; hooks consume services.
+
+## Anti-patterns
+
+- Giant pages with all logic inline.
+- Duplicated fetch calls across siblings.
+- Global state for data that belongs on the server or in the URL.
+- Chaotic one-off styling without shared patterns.

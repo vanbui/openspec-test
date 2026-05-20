@@ -1,0 +1,36 @@
+---
+description: API client layer, environment variables, validation, and security boundaries.
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# API & Security
+
+## Service layer
+
+- All HTTP/API access in `services/` (or Route Handlers / Server Actions for Next.js-native paths).
+- Services return typed results; throw or return `Result` types — no business logic in route files beyond orchestration.
+- One shared client for auth headers, base URL, and error normalization when calling external APIs.
+
+## Environment variables
+
+- **Client-exposed:** `process.env.NEXT_PUBLIC_*` only for non-secret config.
+- **Server-only:** database URLs, API secrets, tokens — never import into Client Components.
+- Do not use Vite-style `import.meta.env.VITE_*` in Next.js projects.
+
+## Validation
+
+- Validate all external input (forms, actions, route handlers) with Zod.
+- Never trust client-side validation alone.
+
+## Security
+
+- No secrets in source control or client bundles.
+- Sanitize user-generated content when rendered as HTML.
+- Auth tokens: prefer HttpOnly cookies or secure patterns defined by the project; never log tokens.
+- Map API errors to safe user messages; log details server-side only.
+
+## Errors
+
+- Distinguish validation, business, and infrastructure failures.
+- Fail gracefully; avoid silent broken UI.

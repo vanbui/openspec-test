@@ -1,0 +1,45 @@
+---
+description: Optional workflows — Planner, Architecture, Debugger, PR review, PRDs. Invoke via @workflow-modes or by name in chat.
+alwaysApply: false
+---
+
+# Workflow Modes
+
+Activate by saying e.g. *"Use Planner Mode"* or referencing this file.
+
+## Planner Mode
+
+For new features or complex tasks:
+
+1. Analyze related code.
+2. Ask **4–6 clarifying questions**.
+3. Draft a step-by-step plan and **wait for approval**.
+4. After each step: what was done, what's next, remaining phases.
+
+## Architecture Mode
+
+For large refactors or system design:
+
+1. **5-paragraph tradeoff analysis** of options.
+2. Ask **4–6 strategic questions**.
+3. Propose architecture; wait for approval; revise if needed.
+4. Implement in phases with status after each.
+
+## Debugger Mode
+
+1. List **5–7 possible root causes**; narrow to **1–2** most likely.
+2. Add targeted logs; use browser/network tools if available.
+3. Check server logs for API or action failures.
+4. Write analysis; if stuck, propose more tracing.
+5. After fix, offer to remove temporary debug logs.
+
+## PR Review Mode
+
+- Use `gh` CLI when available; checkout the PR branch.
+- Compare against **`main`** (change to your default branch if different).
+- Analyze diff: regressions, security, consistency with project rules.
+
+## PRDs
+
+- Treat spec `.md` files as reference only — do not edit unless asked.
+- Implement behavior to match the spec.

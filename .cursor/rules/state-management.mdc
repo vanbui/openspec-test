@@ -1,0 +1,38 @@
+---
+description: Client and server state — Zustand, forms, URL state, React Query.
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# State Management
+
+## Global (Zustand)
+
+- Use for cross-component or persisted UI state only.
+- Location: `src/modules/{feature}/store/` or `src/core/store/`.
+- Typed stores; flat shape; use `set()` — never mutate directly.
+- Middleware (`persist`, `devtools`) only where needed per slice.
+- Do not store server-fetched entities in Zustand.
+
+## Forms (React Hook Form + Zod)
+
+- `useForm`, `useFormContext`, `useFieldArray` for inputs.
+- Schemas in `schemas/`; `zodResolver`; form logic in `hooks/`.
+- Prefer `control`, `watch`, `setValue` over ad-hoc local state.
+- Keep form state separate from Zustand and unrelated React state.
+
+## URL state (`nuqs`)
+
+- Use `useQueryState()` for filters, tabs, pagination synced to the URL.
+- Do not manually sync URL and local/global state.
+
+## Server state (TanStack Query)
+
+- All server data via React Query in custom `hooks/`.
+- Invalidate/refetch after Server Actions or Zustand-driven events.
+- Minimize client state; prefer RSC and server fetching where possible.
+
+## Defaults
+
+- Local state first; lift only when shared across routes or features.
+- Avoid deep nesting in stores; use semantic slices.

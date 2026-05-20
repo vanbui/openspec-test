@@ -32,3 +32,6 @@ yarn-error.log*
 # OS/editor
 .DS_Store
 Thumbs.db
+
+# Ingore the example-projects folder which we have the example grad and edalas-dylan projects for Codex to use as reference
+example-projects/

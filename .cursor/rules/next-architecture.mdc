@@ -1,0 +1,58 @@
+---
+description: Next.js App Router structure, RSC/client split, modules (MVVM), and Server Actions.
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Next.js Architecture
+
+## App Router (`app/`)
+
+- Colocate `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `template.tsx` per route segment.
+- Keep `app/` thin: routing, layouts, and composition — delegate feature UI to modules.
+- Import order: external → `core/` / shared → module-internal → types/constants.
+
+## Feature modules (`src/modules/{feature}/`)
+
+Each feature includes: `components/`, `hooks/`, `schemas/`, `services/`, `views/`, and optional `actions.ts`, `store/`.
+
+| Folder | Role |
+|--------|------|
+| `views/` | Page-level View (RSC or client) |
+| `hooks/` | ViewModel: state, React Query, Server Action calls |
+| `services/` | Typed API/DB access; no UI logic |
+| `schemas/` | Zod validation |
+| `components/` | Reusable, stateless UI |
+| `actions.ts` | Server Actions (`'use server'`) |
+
+- No cross-module imports; shared code lives in `src/core/` or `src/lib/`.
+- If the project has no `src/`, use the same module layout under `src/` or align `modules/` with the team convention.
+
+## React Server Components
+
+- Prefer RSC for non-interactive UI and data orchestration.
+- Add `'use client'` only when required (hooks, events, browser APIs).
+- Do not fetch in RSC directly — delegate to `hooks/` or `services/` (e.g. via `use()` where appropriate).
+- RSCs stay pure: no `useState`, `useEffect`, or browser-only APIs.
+- Avoid pulling client components into RSC files except as leaf children (hydration boundaries).
+
+## Client components
+
+- Small, focused; interactivity and hooks live in `hooks/` when non-trivial.
+- Prefer data from RSC parents over client-side fetching when possible.
+- Event handlers: `handle*` prefix; state names like `isOpen`, `hasError`.
+
+## Server Actions
+
+- Mutations and secure server logic in module `actions.ts` with `'use server'`.
+- Validate with Zod inside the action.
+- Prefer invoking from `hooks/` (ViewModel), not directly from presentational `components/`.
+- Throw on failure; toasts and cache updates on the client (e.g. React Query).
+- Do not call actions inside loops or inline conditionals — use event handlers.
+- Avoid `redirect()` from actions triggered by client UI; use `router.push()` on the client when needed.
+
+## React Query (in `hooks/`)
+
+- Wrap queries/mutations in custom hooks: `use{Entity}{Operation}`.
+- Do not call TanStack Query hooks directly in components.
+- Co-locate query keys and fetch logic in the hook; type `data`, `error`, and variables.

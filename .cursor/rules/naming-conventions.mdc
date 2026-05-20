@@ -1,0 +1,45 @@
+---
+description: File and folder naming conventions across the project.
+globs: **/*
+alwaysApply: true
+---
+
+# Naming Conventions
+
+## Folders
+
+- `kebab-case`, all lowercase.
+- Examples: `user-profile`, `auth`, `settings`
+
+## Hooks
+
+- `camelCase`, must start with `use`.
+- Examples: `useAuth.ts`, `useUserSettings.ts`
+
+## Components
+
+- `PascalCase`; filename matches exported component name.
+- Examples: `LoginForm.tsx`, `UserCard.tsx`
+
+## Schemas (Zod)
+
+- `camelCase`, suffix `Schema`.
+- Examples: `userSchema.ts`, `paymentMethodSchema.ts`
+
+## Services
+
+- `camelCase`; suffix `Service` or `Api`.
+- Examples: `authService.ts`, `userApi.ts`
+
+## Server actions
+
+- File: `actions.ts` per feature module (see `next-architecture.mdc`).
+
+## Tests
+
+- Same base name + `.test.tsx` or `.spec.ts`.
+- Examples: `LoginForm.test.tsx`, `authService.spec.ts`
+
+## Next.js App Router files
+
+- Use framework names as-is: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `route.ts`.

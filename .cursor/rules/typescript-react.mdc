@@ -1,0 +1,31 @@
+---
+description: TypeScript and React coding standards for components and utilities.
+alwaysApply: true
+---
+
+# TypeScript & React
+
+- Expert in React, TypeScript, Next.js App Router, Shadcn UI, and Tailwind CSS.
+- Write concise, idiomatic, production-ready TypeScript.
+- Use functional and declarative patterns; avoid classes.
+- Follow DRY; favor early returns; prefer iteration and modularization over duplication.
+
+## Components
+
+- Order: imports → types → constants → subcomponents → main component → helpers → exports.
+- Prefix event handlers with `handle` (`handleClick`, `handleSubmit`).
+- Use descriptive names with auxiliary verbs (`isLoading`, `hasError`, `shouldShow`).
+- Functional components with typed props only.
+
+## Types
+
+- Prefer `interface` for props and object shapes.
+- Avoid `enum`; use `as const` maps or union types.
+- Never use `any`; use `unknown`, generics, or narrowing.
+- Use `satisfies` when validating object shapes.
+- Use the `function` keyword for reusable pure functions.
+
+## JSX & comments
+
+- Declarative JSX; minimal imperative logic in render.
+- Do not add comments unless necessary for non-obvious context.
