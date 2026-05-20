@@ -13,16 +13,18 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 |-------|-------|
 | Phase | 1 |
 | Name | Strapi Backend Foundation |
-| Status | Pending planning |
+| Status | Ready to execute |
 | Started | Not started |
 | Completed | Not completed |
+| Plans | 3 |
 
 ## Workflow State
 
 - Project initialized: 2026-05-20
 - Requirements defined: 2026-05-20
 - Roadmap created: 2026-05-20
-- Next command: `$gsd-plan-phase 1`
+- Phase 1 planned: 2026-05-20
+- Next command: `$gsd-execute-phase 1`
 
 ## Memory
 

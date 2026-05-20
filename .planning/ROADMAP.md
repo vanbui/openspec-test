@@ -38,6 +38,24 @@
 4. Content types exist for IdamBox user, role, application, and application role with the agreed Phase 1 attributes.
 5. Relationships support deriving application access through `IdamBoxUser -> Role -> ApplicationRole -> Application`.
 
+**Plans:**
+
+**Wave 1**
+- `01-PLAN.md` - Monorepo And Strapi Backend Scaffold
+
+**Wave 2 *(blocked on Wave 1 completion)***
+- `02-PLAN.md` - Core IdamBox Data Model
+
+**Wave 3 *(blocked on Wave 2 completion)***
+- `03-PLAN.md` - Backend Verification, Seeds, And Documentation
+
+**Cross-cutting constraints:**
+- Phase 1 is backend-only; do not create a frontend app.
+- Strapi native admin authentication is the Phase 1 admin path.
+- Auth0 is deferred to later app phases.
+- Product users must use a custom IdamBox user collection, not Strapi admin users.
+- Effective access must follow `IdamBoxUser -> Role -> ApplicationRole -> Application`.
+
 **UI hint:** no
 
 ## Coverage Validation
