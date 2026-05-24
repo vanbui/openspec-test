@@ -40,6 +40,11 @@
       "type": "string",
       "unique": true
     },
+    "password": {
+      "type": "password",
+      "minLength": 6,
+      "private": true
+    },
     "roles": {
       "type": "relation",
       "relation": "manyToMany",

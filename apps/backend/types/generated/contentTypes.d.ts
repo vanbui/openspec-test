@@ -478,6 +478,11 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
       'api::idambox-user.idambox-user'
     > &
       Schema.Attribute.Private;
+    password: Schema.Attribute.Password &
+      Schema.Attribute.Private &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 6;
+      }>;
     publishedAt: Schema.Attribute.DateTime;
     roles: Schema.Attribute.Relation<'manyToMany', 'api::role.role'>;
     status: Schema.Attribute.Enumeration<['active', 'inactive']> &
