@@ -54,6 +54,18 @@ Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records a
 
 The seed is disabled by default and is intended for local verification only.
 
+Set `IDAMBOX_SEED_CSRM=true` before startup to seed the Cybersecurity Risk Manager (CSRM) application access baseline independently from `IDAMBOX_SEED_CORE`:
+
+- `Application`: IdamBox CSRM with slug `idambox-csrm`
+- `Application Role`: Security Analyst
+- `Application Role`: Security Analyst Agent
+- `Role`: Security Analyst, linked to the matching CSRM application role
+- `Role`: Security Analyst Agent, linked to the matching CSRM application role
+- `IdamBox User`: Jane Doe (`jane.doe@idambox.com`), active with no roles
+- `IdamBox User`: Bob Doe (`bob.doe@idambox.com`), active and assigned to `Security Analyst`
+
+Keycloak, CSRM assessment content types, and the CSRM Next.js application are later phases.
+
 ## Out Of Scope For Phase 1
 
 - Auth0 end-user authentication
