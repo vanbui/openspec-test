@@ -1,12 +1,16 @@
 import type { Core } from '@strapi/strapi';
 
-type ApplicationSeed = {
+type ApplicationRoleSeed = {
   name: string;
   description: string;
-  roles?: Array<{
-    name: string;
-    description: string;
-  }>;
+  createReusableRole?: boolean;
+};
+
+type ApplicationSeed = {
+  name: string;
+  slug?: string;
+  description: string;
+  applicationRoles?: ApplicationRoleSeed[];
 };
 
 const applications: ApplicationSeed[] = [
@@ -29,7 +33,7 @@ const applications: ApplicationSeed[] = [
   {
     name: 'IdamBox LMS',
     description: 'Learning management module.',
-    roles: [
+    applicationRoles: [
       {
         name: 'STUDENT',
         description: 'Learner role for IdamBox LMS.',
@@ -41,8 +45,21 @@ const applications: ApplicationSeed[] = [
     ],
   },
   {
-    name: 'IdamBox Cyber Risk Manager',
-    description: 'Cyber risk management module.',
+    name: 'IdamBox CSRM',
+    slug: 'idambox-csrm',
+    description: 'Cybersecurity Risk Manager application for assessment request workflows.',
+    applicationRoles: [
+      {
+        name: 'Security Analyst',
+        description: 'Security analyst role for reviewing and releasing CSRM assessments.',
+        createReusableRole: true,
+      },
+      {
+        name: 'Security Analyst Agent',
+        description: 'Agent role for automated CSRM security analysis workflows.',
+        createReusableRole: true,
+      },
+    ],
   },
 ];
 
@@ -57,12 +74,17 @@ export async function seedCoreData(strapi: Core.Strapi) {
     return;
   }
 
+  const applicationService = strapi.documents('api::application.application');
+  const applicationRoleService = strapi.documents('api::application-role.application-role');
+  const roleService = strapi.documents('api::role.role');
+
   for (const appSeed of applications) {
-    const applicationService = strapi.documents('api::application.application');
+    const slug = appSeed.slug ?? slugify(appSeed.name);
+
     const existingApplications = await applicationService.findMany({
       filters: {
         slug: {
-          $eq: slugify(appSeed.name),
+          $eq: slug,
         },
       },
       limit: 1,
@@ -73,15 +95,14 @@ export async function seedCoreData(strapi: Core.Strapi) {
       (await applicationService.create({
         data: {
           name: appSeed.name,
-          slug: slugify(appSeed.name),
+          slug,
           description: appSeed.description,
           status: 'active',
         },
       }));
 
-    for (const roleSeed of appSeed.roles ?? []) {
-      const applicationRoleService = strapi.documents('api::application-role.application-role');
-      const existingRoles = await applicationRoleService.findMany({
+    for (const roleSeed of appSeed.applicationRoles ?? []) {
+      const existingApplicationRoles = await applicationRoleService.findMany({
         filters: {
           name: {
             $eq: roleSeed.name,
@@ -95,12 +116,44 @@ export async function seedCoreData(strapi: Core.Strapi) {
         limit: 1,
       });
 
-      if (existingRoles.length === 0) {
-        await applicationRoleService.create({
+      const applicationRole =
+        existingApplicationRoles[0] ??
+        (await applicationRoleService.create({
           data: {
             name: roleSeed.name,
             description: roleSeed.description,
             application: application.documentId,
+          },
+        }));
+
+      if (!roleSeed.createReusableRole) {
+        continue;
+      }
+
+      const existingReusableRoles = await roleService.findMany({
+        filters: {
+          name: {
+            $eq: roleSeed.name,
+          },
+        },
+        limit: 1,
+      });
+
+      const reusableRole =
+        existingReusableRoles[0] ??
+        (await roleService.create({
+          data: {
+            name: roleSeed.name,
+            description: roleSeed.description,
+            applicationRoles: [applicationRole.documentId],
+          },
+        }));
+
+      if (existingReusableRoles.length > 0) {
+        await roleService.update({
+          documentId: reusableRole.documentId,
+          data: {
+            applicationRoles: [applicationRole.documentId],
           },
         });
       }
