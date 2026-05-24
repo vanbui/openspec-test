@@ -9,7 +9,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 1 | Strapi Backend Foundation | Complete 2026-05-20. Create the IdamBox monorepo backend and core authorization data model. | MONO-01, MONO-02, MONO-03, BACK-01, BACK-02, BACK-03, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07 | 5 |
-| 2 | CSRM Bootstrap Data | Seed the Strapi backend with CSRM application access data and sample IdamBox users on boot. | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | 5 |
+| 2 | CSRM Bootstrap Data | Complete 2026-05-24. Seed the Strapi backend with CSRM application access data and sample IdamBox users on boot. | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | 5 |
 | 3 | Keycloak Identity Provider Setup | Add a top-level Keycloak Docker setup for IdamBox with CSRM users and an OIDC client. | IDP-01, IDP-02, IDP-03, IDP-04 | 5 |
 | 4 | Strapi To Keycloak User Provisioning | Provision Strapi IdamBox user records into Keycloak through backend lifecycle hooks. | IDP-05, IDP-06 | 4 |
 | 5 | CSRM Backend Content Model | Add feature-flagged Strapi collections for CSRM assessment workflows. | CSRM-01, CSRM-02, CSRM-03, CSRM-04 | 5 |
@@ -82,10 +82,10 @@
 4. Strapi bootstraps IdamBox users `Jane Doe <jane.doe@idambox.com>` and `Bob Doe <bob.doe@idambox.com>`.
 5. Bob Doe is assigned to the `Security Analyst` role, while Jane Doe remains an end-user/requestor account for later CSRM assessment requests.
 
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run `$gsd-plan-phase 2` to break down)
+- [x] `02-01-PLAN.md` - CSRM Seed Data, Documentation, And Verification
 
 **Cross-cutting constraints:**
 - Preserve the authorization path: `IdamBoxUser -> Role -> ApplicationRole -> Application`.

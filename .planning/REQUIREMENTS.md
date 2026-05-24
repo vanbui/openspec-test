@@ -49,10 +49,10 @@ Identity provider, CSRM bootstrap, and first application-module requirements add
 
 ### Bootstrap Data
 
-- **BOOT-01**: Strapi can seed a CSRM application record at backend boot.
-- **BOOT-02**: Strapi can seed CSRM application roles for Security Analyst and Security Analyst Agent.
-- **BOOT-03**: Strapi can seed reusable roles matching the CSRM application roles.
-- **BOOT-04**: Strapi can seed Jane Doe and Bob Doe as custom IdamBox users, assigning Bob Doe to the Security Analyst role.
+- [x] **BOOT-01**: Strapi can seed a CSRM application record at backend boot.
+- [x] **BOOT-02**: Strapi can seed CSRM application roles for Security Analyst and Security Analyst Agent.
+- [x] **BOOT-03**: Strapi can seed reusable roles matching the CSRM application roles.
+- [x] **BOOT-04**: Strapi can seed Jane Doe and Bob Doe as custom IdamBox users, assigning Bob Doe to the Security Analyst role.
 
 ### CSRM
 
@@ -109,10 +109,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 1 | Complete |
 | DATA-07 | Phase 1 | Complete |
-| BOOT-01 | Phase 2 | Planned |
-| BOOT-02 | Phase 2 | Planned |
-| BOOT-03 | Phase 2 | Planned |
-| BOOT-04 | Phase 2 | Planned |
+| BOOT-01 | Phase 2 | Complete |
+| BOOT-02 | Phase 2 | Complete |
+| BOOT-03 | Phase 2 | Complete |
+| BOOT-04 | Phase 2 | Complete |
 | IDP-01 | Phase 3 | Planned |
 | IDP-02 | Phase 3 | Planned |
 | IDP-03 | Phase 3 | Planned |
