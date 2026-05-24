@@ -31,21 +31,52 @@ Requirements for the initial backend foundation release. Each maps to roadmap ph
 
 ## v2 Requirements
 
-Deferred to future release. Tracked but not in current roadmap.
+Identity provider, CSRM bootstrap, and first application-module requirements added after Phase 1 completion.
 
 ### Authentication
 
-- **AUTH-01**: User can authenticate into a Next.js IdamBox application using Auth0.
-- **AUTH-02**: Auth0 identities can be mapped to IdamBox user records.
+- **IDP-01**: Developer can run a top-level Keycloak Docker Compose setup for IdamBox from an `idp` directory.
+- **IDP-02**: Keycloak bootstraps IdamBox test users matching the Strapi sample users.
+- **IDP-03**: Keycloak bootstraps an OIDC client for the CSRM Next.js application.
+- **IDP-04**: Documentation explains launching Keycloak and its future role as a broker to customer IdPs such as Auth0, Ping Access Management, Okta, and Entra ID.
+- **IDP-05**: Strapi can provision custom IdamBox user records into Keycloak through the Keycloak API.
+- **IDP-06**: Keycloak provisioning is idempotent and configured through environment values rather than hard-coded secrets.
+- **AUTH-01**: User can authenticate into a Next.js IdamBox application using Keycloak/OIDC.
+
+### Future Identity Broker
+
+- **AUTH-02**: Customer IdP identities, including Auth0 identities, can be brokered through Keycloak and mapped to IdamBox user records.
+
+### Bootstrap Data
+
+- **BOOT-01**: Strapi can seed a CSRM application record at backend boot.
+- **BOOT-02**: Strapi can seed CSRM application roles for Security Analyst and Security Analyst Agent.
+- **BOOT-03**: Strapi can seed reusable roles matching the CSRM application roles.
+- **BOOT-04**: Strapi can seed Jane Doe and Bob Doe as custom IdamBox users, assigning Bob Doe to the Security Analyst role.
+
+### CSRM
+
+- **CSRM-01**: Administrator can enable CSRM backend collections through the `csrmAppIsEnabled` environment flag.
+- **CSRM-02**: Backend can manage CSRM Assessment Request records.
+- **CSRM-03**: Backend can manage CSRM Assessment Questionnaire records associated with assessment requests.
+- **CSRM-04**: Backend can manage CSRM Assessment records associated with assessment requests and release state.
+- **CSRM-05**: Requestor can create, view, and edit their own CSRM assessment requests in a Next.js application.
+- **CSRM-06**: Requestor can view and fill out assessment questionnaires for their own assessment requests.
+- **CSRM-07**: Requestor can view released assessments for their own assessment requests.
+- **CSRM-08**: Security Analyst can view and edit all CSRM assessment requests, questionnaires, and assessments.
+- **CSRM-09**: Security Analyst can release assessments for requestor viewing.
 
 ### Applications
+
+- **APP-06**: IdamBox Cyber Risk Manager can be added as a Next.js application module.
+
+### Deferred Application Modules
 
 - **APP-01**: IdamBox IAM can be added as a Next.js application module.
 - **APP-02**: IdamBox Compliance can be added as a Next.js application module.
 - **APP-03**: IdamBox Automation can be added as a Next.js application module.
 - **APP-04**: IdamBox Crypto Manager can be added as a Next.js application module.
 - **APP-05**: IdamBox LMS can be added as a Next.js application module.
-- **APP-06**: IdamBox Cyber Risk Manager can be added as a Next.js application module.
 
 ## Out of Scope
 
@@ -78,12 +109,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 1 | Complete |
 | DATA-07 | Phase 1 | Complete |
+| BOOT-01 | Phase 2 | Planned |
+| BOOT-02 | Phase 2 | Planned |
+| BOOT-03 | Phase 2 | Planned |
+| BOOT-04 | Phase 2 | Planned |
+| IDP-01 | Phase 3 | Planned |
+| IDP-02 | Phase 3 | Planned |
+| IDP-03 | Phase 3 | Planned |
+| IDP-04 | Phase 3 | Planned |
+| IDP-05 | Phase 4 | Planned |
+| IDP-06 | Phase 4 | Planned |
+| AUTH-01 | Phase 6 | Planned |
+| CSRM-01 | Phase 5 | Planned |
+| CSRM-02 | Phase 5 | Planned |
+| CSRM-03 | Phase 5 | Planned |
+| CSRM-04 | Phase 5 | Planned |
+| CSRM-05 | Phase 6 | Planned |
+| CSRM-06 | Phase 6 | Planned |
+| CSRM-07 | Phase 6 | Planned |
+| CSRM-08 | Phase 6 | Planned |
+| CSRM-09 | Phase 6 | Planned |
+| APP-06 | Phase 6 | Planned |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 13
+- v2 active roadmap requirements: 21 total
+- Mapped to phases: 34
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-20 after Phase 1 completion*
+*Last updated: 2026-05-24 after adding Phases 2-6*
