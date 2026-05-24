@@ -11,7 +11,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "check-types": "turbo run check-types",
-    "verify:schema": "node scripts/verify-core-model.mjs"
+    "verify:schema": "node scripts/verify-core-model.mjs",
+    "verify:csrm-seed": "node scripts/verify-csrm-seed.mjs"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
