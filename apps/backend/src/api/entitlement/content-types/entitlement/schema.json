@@ -1,11 +1,11 @@
 {
   "kind": "collectionType",
-  "collectionName": "idambox_application_roles",
+  "collectionName": "idambox_entitlements",
   "info": {
-    "singularName": "application-role",
-    "pluralName": "application-roles",
-    "displayName": "Application Role",
-    "description": "Role defined by a specific IdamBox application"
+    "singularName": "entitlement",
+    "pluralName": "entitlements",
+    "displayName": "Entitlement",
+    "description": "Entitlement defined by a specific IdamBox application"
   },
   "options": {
     "draftAndPublish": false
@@ -23,14 +23,14 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::application.application",
-      "inversedBy": "applicationRoles",
+      "inversedBy": "entitlements",
       "required": true
     },
     "roles": {
       "type": "relation",
       "relation": "manyToMany",
       "target": "api::role.role",
-      "mappedBy": "applicationRoles"
+      "mappedBy": "entitlements"
     }
   }
 }

@@ -43,12 +43,12 @@ Strapi runs on `http://localhost:1337` by default. The admin panel is available 
 Phase 1 implements this access model:
 
 ```text
-IdamBoxUser -> Role -> ApplicationRole -> Application
+IdamBoxUser -> Role -> Entitlement -> Application
 ```
 
 - `IdamBoxUser` is a custom product user collection, separate from Strapi admin users.
 - `Role` is a reusable bundle assigned to one or more IdamBox users.
-- `ApplicationRole` is a role defined by one application, such as LMS `STUDENT` or `TUTOR`.
+- `Entitlement` is a permission defined by one application, such as LMS `STUDENT` or `TUTOR`.
 - `Application` represents an IdamBox module such as IAM, LMS, or Cyber Risk Manager.
 
 ## Authentication Boundary

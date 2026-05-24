@@ -34,10 +34,10 @@
       "default": "active",
       "required": true
     },
-    "applicationRoles": {
+    "entitlements": {
       "type": "relation",
       "relation": "oneToMany",
-      "target": "api::application-role.application-role",
+      "target": "api::entitlement.entitlement",
       "mappedBy": "application"
     }
   }

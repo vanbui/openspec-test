@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/strapi';
 
-type ApplicationRoleSeed = {
+type EntitlementSeed = {
   name: string;
   description: string;
   createReusableRole?: boolean;
@@ -10,7 +10,7 @@ type ApplicationSeed = {
   name: string;
   slug?: string;
   description: string;
-  applicationRoles?: ApplicationRoleSeed[];
+  entitlements?: EntitlementSeed[];
 };
 
 const applications: ApplicationSeed[] = [
@@ -33,30 +33,30 @@ const applications: ApplicationSeed[] = [
   {
     name: 'IdamBox LMS',
     description: 'Learning management module.',
-    applicationRoles: [
+    entitlements: [
       {
         name: 'STUDENT',
-        description: 'Learner role for IdamBox LMS.',
+        description: 'Learner entitlement for IdamBox LMS.',
       },
       {
         name: 'TUTOR',
-        description: 'Tutor role for IdamBox LMS.',
+        description: 'Tutor entitlement for IdamBox LMS.',
       },
     ],
   },
   {
     name: 'IdamBox CSRM',
     slug: 'idambox-csrm',
-    description: 'Cybersecurity Risk Manager application for assessment request workflows.',
-    applicationRoles: [
+    description: 'Cybersecurity Risk Manager module for automating cybersecurity risk management processes.',
+    entitlements: [
       {
         name: 'Security Analyst',
-        description: 'Security analyst role for reviewing and releasing CSRM assessments.',
+        description: 'Security Analyst entitlement IdamBox CSRM.',
         createReusableRole: true,
       },
       {
         name: 'Security Analyst Agent',
-        description: 'Agent role for automated CSRM security analysis workflows.',
+        description: 'Security Analyst Agentic entitlement for automated CSRM security analysis workflows.',
         createReusableRole: true,
       },
     ],
@@ -75,7 +75,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
   }
 
   const applicationService = strapi.documents('api::application.application');
-  const applicationRoleService = strapi.documents('api::application-role.application-role');
+  const entitlementService = strapi.documents('api::entitlement.entitlement');
   const roleService = strapi.documents('api::role.role');
 
   for (const appSeed of applications) {
@@ -101,11 +101,11 @@ export async function seedCoreData(strapi: Core.Strapi) {
         },
       }));
 
-    for (const roleSeed of appSeed.applicationRoles ?? []) {
-      const existingApplicationRoles = await applicationRoleService.findMany({
+    for (const entitlementSeed of appSeed.entitlements ?? []) {
+      const existingEntitlements = await entitlementService.findMany({
         filters: {
           name: {
-            $eq: roleSeed.name,
+            $eq: entitlementSeed.name,
           },
           application: {
             documentId: {
@@ -116,24 +116,24 @@ export async function seedCoreData(strapi: Core.Strapi) {
         limit: 1,
       });
 
-      const applicationRole =
-        existingApplicationRoles[0] ??
-        (await applicationRoleService.create({
+      const entitlement =
+        existingEntitlements[0] ??
+        (await entitlementService.create({
           data: {
-            name: roleSeed.name,
-            description: roleSeed.description,
+            name: entitlementSeed.name,
+            description: entitlementSeed.description,
             application: application.documentId,
           },
         }));
 
-      if (!roleSeed.createReusableRole) {
+      if (!entitlementSeed.createReusableRole) {
         continue;
       }
 
       const existingReusableRoles = await roleService.findMany({
         filters: {
           name: {
-            $eq: roleSeed.name,
+            $eq: entitlementSeed.name,
           },
         },
         limit: 1,
@@ -143,9 +143,9 @@ export async function seedCoreData(strapi: Core.Strapi) {
         existingReusableRoles[0] ??
         (await roleService.create({
           data: {
-            name: roleSeed.name,
-            description: roleSeed.description,
-            applicationRoles: [applicationRole.documentId],
+            name: entitlementSeed.name,
+            description: entitlementSeed.description,
+            entitlements: [entitlement.documentId],
           },
         }));
 
@@ -153,7 +153,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
         await roleService.update({
           documentId: reusableRole.documentId,
           data: {
-            applicationRoles: [applicationRole.documentId],
+            entitlements: [entitlement.documentId],
           },
         });
       }

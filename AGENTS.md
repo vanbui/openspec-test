@@ -21,7 +21,7 @@ Phase 1: Strapi Backend Foundation
 - Do not use Strapi admin users as IdamBox product users.
 - Do not implement Auth0 until a future app phase.
 - Do not add fine-grained permission strings before a module requires them.
-- Preserve the authorization path: `IdamBoxUser -> Role -> ApplicationRole -> Application`.
+- Preserve the authorization path: `IdamBoxUser -> Role -> Entitlement -> Application`.
 
 ## GSD Workflow
 

@@ -2,7 +2,7 @@
  * IdamBox IAM Data Model in JHipster Domain Language (JDL)
  *
  * Authorization path:
- *   IdamBoxUser -> Role -> ApplicationRole -> Application
+ *   IdamBoxUser -> Role -> Entitlement -> Application
  *
  * Product users are represented by IdamBoxUser, separate from Strapi admin users.
  */
@@ -39,7 +39,7 @@ enum ApplicationStatus {
   INACTIVE
 }
 
-entity ApplicationRole {
+entity Entitlement {
   name String required,
   description TextBlob
 }
@@ -49,11 +49,11 @@ entity ApplicationRole {
  */
 relationship ManyToMany {
   IdamBoxUser{roles} to Role{idamboxUsers},
-  Role{applicationRoles} to ApplicationRole{roles}
+  Role{entitlements} to Entitlement{roles}
 }
 
 relationship OneToMany {
-  Application{applicationRoles} to ApplicationRole{application}
+  Application{entitlements} to Entitlement{application}
 }
 
-paginate IdamBoxUser, Role, Application, ApplicationRole with pagination
+paginate IdamBoxUser, Role, Application, Entitlement with pagination

@@ -373,14 +373,53 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiApplicationRoleApplicationRole
-  extends Struct.CollectionTypeSchema {
-  collectionName: 'idambox_application_roles';
+export interface ApiApplicationApplication extends Struct.CollectionTypeSchema {
+  collectionName: 'idambox_applications';
   info: {
-    description: 'Role defined by a specific IdamBox application';
-    displayName: 'Application Role';
-    pluralName: 'application-roles';
-    singularName: 'application-role';
+    description: 'IdamBox platform application module';
+    displayName: 'Application';
+    pluralName: 'applications';
+    singularName: 'application';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    entitlements: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::entitlement.entitlement'
+    >;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::application.application'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.UID<'name'> & Schema.Attribute.Required;
+    status: Schema.Attribute.Enumeration<['active', 'inactive']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiEntitlementEntitlement extends Struct.CollectionTypeSchema {
+  collectionName: 'idambox_entitlements';
+  info: {
+    description: 'Entitlement defined by a specific IdamBox application';
+    displayName: 'Entitlement';
+    pluralName: 'entitlements';
+    singularName: 'entitlement';
   };
   options: {
     draftAndPublish: false;
@@ -398,52 +437,12 @@ export interface ApiApplicationRoleApplicationRole
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
-      'api::application-role.application-role'
+      'api::entitlement.entitlement'
     > &
       Schema.Attribute.Private;
     name: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     roles: Schema.Attribute.Relation<'manyToMany', 'api::role.role'>;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-  };
-}
-
-export interface ApiApplicationApplication extends Struct.CollectionTypeSchema {
-  collectionName: 'idambox_applications';
-  info: {
-    description: 'IdamBox platform application module';
-    displayName: 'Application';
-    pluralName: 'applications';
-    singularName: 'application';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    applicationRoles: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::application-role.application-role'
-    >;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    description: Schema.Attribute.Text;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::application.application'
-    > &
-      Schema.Attribute.Private;
-    name: Schema.Attribute.String &
-      Schema.Attribute.Required &
-      Schema.Attribute.Unique;
-    publishedAt: Schema.Attribute.DateTime;
-    slug: Schema.Attribute.UID<'name'> & Schema.Attribute.Required;
-    status: Schema.Attribute.Enumeration<['active', 'inactive']> &
-      Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<'active'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -497,7 +496,7 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
 export interface ApiRoleRole extends Struct.CollectionTypeSchema {
   collectionName: 'idambox_roles';
   info: {
-    description: 'Reusable bundle of IdamBox application roles';
+    description: 'Reusable bundle of IdamBox entitlements';
     displayName: 'Role';
     pluralName: 'roles';
     singularName: 'role';
@@ -506,14 +505,14 @@ export interface ApiRoleRole extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
-    applicationRoles: Schema.Attribute.Relation<
-      'manyToMany',
-      'api::application-role.application-role'
-    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
+    entitlements: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::entitlement.entitlement'
+    >;
     idamboxUsers: Schema.Attribute.Relation<
       'manyToMany',
       'api::idambox-user.idambox-user'
@@ -1040,8 +1039,8 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
-      'api::application-role.application-role': ApiApplicationRoleApplicationRole;
       'api::application.application': ApiApplicationApplication;
+      'api::entitlement.entitlement': ApiEntitlementEntitlement;
       'api::idambox-user.idambox-user': ApiIdamboxUserIdamboxUser;
       'api::role.role': ApiRoleRole;
       'plugin::content-releases.release': PluginContentReleasesRelease;

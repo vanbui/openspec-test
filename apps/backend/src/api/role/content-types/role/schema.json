@@ -5,7 +5,7 @@
     "singularName": "role",
     "pluralName": "roles",
     "displayName": "Role",
-    "description": "Reusable bundle of IdamBox application roles"
+    "description": "Reusable bundle of IdamBox entitlements"
   },
   "options": {
     "draftAndPublish": false
@@ -20,10 +20,10 @@
     "description": {
       "type": "text"
     },
-    "applicationRoles": {
+    "entitlements": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::application-role.application-role",
+      "target": "api::entitlement.entitlement",
       "inversedBy": "roles"
     },
     "idamboxUsers": {
