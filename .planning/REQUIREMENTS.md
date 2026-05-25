@@ -35,10 +35,10 @@ Identity provider, CSRM bootstrap, and first application-module requirements add
 
 ### Authentication
 
-- **IDP-01**: Developer can run a top-level Keycloak Docker Compose setup for IdamBox from an `idp` directory.
-- **IDP-02**: Keycloak bootstraps IdamBox test users matching the Strapi sample users.
-- **IDP-03**: Keycloak bootstraps an OIDC client for the CSRM Next.js application.
-- **IDP-04**: Documentation explains launching Keycloak and its future role as a broker to customer IdPs such as Auth0, Ping Access Management, Okta, and Entra ID.
+- [x] **IDP-01**: Developer can run a top-level Keycloak Docker Compose setup for IdamBox from an `idp` directory.
+- [x] **IDP-02**: Keycloak bootstraps IdamBox test users matching the Strapi sample users.
+- [x] **IDP-03**: Keycloak bootstraps an OIDC client for the CSRM Next.js application.
+- [x] **IDP-04**: Documentation explains launching Keycloak and its future role as a broker to customer IdPs such as Auth0, Ping Access Management, Okta, and Entra ID.
 - **IDP-05**: Strapi can provision custom IdamBox user records into Keycloak through the Keycloak API.
 - **IDP-06**: Keycloak provisioning is idempotent and configured through environment values rather than hard-coded secrets.
 - **AUTH-01**: User can authenticate into a Next.js IdamBox application using Keycloak/OIDC.
@@ -113,10 +113,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BOOT-02 | Phase 2 | Complete |
 | BOOT-03 | Phase 2 | Complete |
 | BOOT-04 | Phase 2 | Complete |
-| IDP-01 | Phase 3 | Planned |
-| IDP-02 | Phase 3 | Planned |
-| IDP-03 | Phase 3 | Planned |
-| IDP-04 | Phase 3 | Planned |
+| IDP-01 | Phase 3 | Complete |
+| IDP-02 | Phase 3 | Complete |
+| IDP-03 | Phase 3 | Complete |
+| IDP-04 | Phase 3 | Complete |
 | IDP-05 | Phase 4 | Planned |
 | IDP-06 | Phase 4 | Planned |
 | AUTH-01 | Phase 6 | Planned |
@@ -139,4 +139,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-24 after adding Phases 2-6*
+*Last updated: 2026-05-25 after completing Phase 3*

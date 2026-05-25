@@ -10,7 +10,7 @@
 |---|-------|------|--------------|------------------|
 | 1 | Strapi Backend Foundation | Complete 2026-05-20. Create the IdamBox monorepo backend and core authorization data model. | MONO-01, MONO-02, MONO-03, BACK-01, BACK-02, BACK-03, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07 | 5 |
 | 2 | CSRM Bootstrap Data | Complete 2026-05-24. Seed the Strapi backend with CSRM application access data and sample IdamBox users on boot. | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | 5 |
-| 3 | Keycloak Identity Provider Setup | Add a top-level Keycloak Docker setup for IdamBox with CSRM users and an OIDC client. | IDP-01, IDP-02, IDP-03, IDP-04 | 5 |
+| 3 | Keycloak Identity Provider Setup | Complete 2026-05-25. Added a top-level Keycloak Docker setup for IdamBox with CSRM users and an OIDC client. | IDP-01, IDP-02, IDP-03, IDP-04 | 5 |
 | 4 | Strapi To Keycloak User Provisioning | Provision Strapi IdamBox user records into Keycloak through backend lifecycle hooks. | IDP-05, IDP-06 | 4 |
 | 5 | CSRM Backend Content Model | Add feature-flagged Strapi collections for CSRM assessment workflows. | CSRM-01, CSRM-02, CSRM-03, CSRM-04 | 5 |
 | 6 | IdamBox CSRM Next.js Application | Create the first IdamBox application module for CSRM requestors and security analysts. | AUTH-01, APP-06, CSRM-05, CSRM-06, CSRM-07, CSRM-08, CSRM-09 | 6 |
@@ -113,10 +113,10 @@ Plans:
 4. The top-level `README.md` includes setup instructions for launching the Keycloak container.
 5. Documentation states that Keycloak is the IdamBox OIDC Identity Provider and may later broker authentication to customer IdPs such as Auth0, Ping Access Management, Okta, and Entra ID.
 
-**Plans:** 0/1 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] `03-01-PLAN.md` - Local Keycloak IDP Setup, Realm Import, Documentation, And Verification
+- [x] `03-01-PLAN.md` - Local Keycloak IDP Setup, Realm Import, Documentation, And Verification
 
 **Cross-cutting constraints:**
 - Do not wire application login into a Next.js app in this phase.
