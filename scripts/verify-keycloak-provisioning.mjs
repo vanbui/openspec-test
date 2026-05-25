@@ -215,6 +215,11 @@ assertIncludes(
 );
 assertIncludes(
   provisionSource,
+  "strapi.db.query(IDAMBOX_USER_UID).update",
+  "Keycloak provisioning source",
+);
+assertIncludes(
+  provisionSource,
   "findUserByEmail",
   "Keycloak provisioning source",
 );

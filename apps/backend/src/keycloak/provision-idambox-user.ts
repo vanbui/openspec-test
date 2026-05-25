@@ -93,11 +93,13 @@ async function clearProvisioningSecrets(
   documentId: string,
   externalSubject: string,
 ) {
-  await strapi.documents(IDAMBOX_USER_UID).update({
-    documentId,
+  await strapi.db.query(IDAMBOX_USER_UID).update({
+    where: {
+      documentId,
+    },
     data: {
       externalSubject,
       password: null,
     },
-  } as never);
+  });
 }
