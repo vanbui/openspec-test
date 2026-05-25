@@ -105,10 +105,12 @@ Auth0 authentication for end users is intentionally deferred until Next.js appli
 
 ## Verification
 
-Run the static schema verification:
+Run the static project verifiers:
 
 ```powershell
+yarn verify:keycloak-idp
 yarn verify:schema
+yarn verify:csrm-seed
 ```
 
 After dependencies are installed, also run:
