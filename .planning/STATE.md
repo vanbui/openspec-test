@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-05-25T10:18:24.510Z"
+status: planned
+last_updated: "2026-05-25T10:25:20.267Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
+  total_plans: 5
   completed_plans: 4
   percent: 33
 ---
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 | Field | Value |
 |-------|-------|
-| Phase | 2 |
-| Name | CSRM Bootstrap Data |
-| Status | Complete |
-| Started | - |
-| Completed | 2026-05-24 |
+| Phase | 3 |
+| Name | Keycloak Identity Provider Setup |
+| Status | Planned |
+| Started | 2026-05-25 |
+| Completed | - |
 | Plans | 1 |
 
 ## Workflow State
@@ -43,7 +43,9 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 - Phase 2 context gathered: 2026-05-24
 - Phase 2 planned: 2026-05-24
 - Phase 2 executed: 2026-05-24
-- Next command: `$gsd-discuss-phase 3`
+- Phase 3 context gathered: 2026-05-25
+- Phase 3 planned: 2026-05-25
+- Next command: `$gsd-execute-phase 3`
 
 ## Memory
 
@@ -55,5 +57,5 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 - Roles bundle application roles and are assigned to users.
 - Follow the `example-projects/edalas-dylan` monorepo shape.
 - Phase 2 added idempotent Strapi bootstrap data for the CSRM application, CSRM roles, and Jane/Bob sample users behind `IDAMBOX_SEED_CSRM`.
-- Phase 3 will add a top-level Keycloak `idp` setup based on `example-projects/idambox_old/keycloak`.
+- Phase 3 will add a top-level Keycloak `idp` setup based on `example-projects/idambox_old/keycloak`, with a local `idambox` realm, Jane/Bob Keycloak users, an `idambox-csrm` OIDC client, and static verification.
 - Phase 6 will add the IdamBox CSRM Next.js application using Keycloak/OIDC.

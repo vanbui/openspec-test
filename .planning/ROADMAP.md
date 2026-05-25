@@ -113,10 +113,10 @@ Plans:
 4. The top-level `README.md` includes setup instructions for launching the Keycloak container.
 5. Documentation states that Keycloak is the IdamBox OIDC Identity Provider and may later broker authentication to customer IdPs such as Auth0, Ping Access Management, Okta, and Entra ID.
 
-**Plans:** 0 plans
+**Plans:** 0/1 plans complete
 
 Plans:
-- [ ] TBD (run `$gsd-plan-phase 3` to break down)
+- [ ] `03-01-PLAN.md` - Local Keycloak IDP Setup, Realm Import, Documentation, And Verification
 
 **Cross-cutting constraints:**
 - Do not wire application login into a Next.js app in this phase.
