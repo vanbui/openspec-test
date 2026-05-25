@@ -1,10 +1,10 @@
-import type { Core } from '@strapi/strapi';
+import type { Core } from "@strapi/strapi";
 
-import { KeycloakAdminClient, type KeycloakUserPayload } from './admin-client';
-import { getKeycloakProvisioningConfig } from './config';
+import { KeycloakAdminClient, type KeycloakUserPayload } from "./admin-client";
+import { getKeycloakProvisioningConfig } from "./config";
 
-export const IDAMBOX_USER_UID = 'api::idambox-user.idambox-user';
-export const UPDATE_PASSWORD_REQUIRED_ACTION = 'UPDATE_PASSWORD';
+export const IDAMBOX_USER_UID = "api::idambox-user.idambox-user";
+export const UPDATE_PASSWORD_REQUIRED_ACTION = "UPDATE_PASSWORD";
 
 export type IdamBoxUserDocument = {
   documentId: string;
@@ -12,7 +12,7 @@ export type IdamBoxUserDocument = {
   firstName?: string | null;
   lastName?: string | null;
   displayName: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   externalSubject?: string | null;
 };
 
@@ -28,12 +28,13 @@ export async function provisionIdamboxUserToKeycloak(
   }
 
   const client = new KeycloakAdminClient(config);
-  const passwordValue = password?.trim();
+  const passwordValue = getNonEmptyPassword(password);
   const existingUser = user.externalSubject
     ? await client.findUserById(user.externalSubject)
     : await client.findUserByEmail(user.email);
-  const keycloakUser = existingUser ?? await client.findUserByEmail(user.email);
-  const payload = toKeycloakUserPayload(user, !keycloakUser && !passwordValue);
+  const keycloakUser =
+    existingUser ?? (await client.findUserByEmail(user.email));
+  const payload = toKeycloakUserPayload(user);
   let keycloakUserId = keycloakUser?.id;
 
   if (keycloakUserId) {
@@ -41,10 +42,13 @@ export async function provisionIdamboxUserToKeycloak(
   } else {
     keycloakUserId = await client.createUser({
       ...payload,
+      requiredActions: passwordValue
+        ? undefined
+        : [UPDATE_PASSWORD_REQUIRED_ACTION],
       credentials: passwordValue
         ? [
             {
-              type: 'password',
+              type: "password",
               value: passwordValue,
               temporary: false,
             },
@@ -62,22 +66,33 @@ export async function provisionIdamboxUserToKeycloak(
   return keycloakUserId;
 }
 
-function toKeycloakUserPayload(user: IdamBoxUserDocument, requirePasswordUpdate: boolean): KeycloakUserPayload {
+function toKeycloakUserPayload(user: IdamBoxUserDocument): KeycloakUserPayload {
   return {
     username: user.email,
     email: user.email,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
-    enabled: user.status === 'active',
+    enabled: user.status === "active",
     emailVerified: true,
     attributes: {
       displayName: [user.displayName],
     },
-    requiredActions: requirePasswordUpdate ? [UPDATE_PASSWORD_REQUIRED_ACTION] : [],
   };
 }
 
-async function clearProvisioningSecrets(strapi: Core.Strapi, documentId: string, externalSubject: string) {
+function getNonEmptyPassword(password?: string | null) {
+  if (typeof password !== "string" || password.trim().length === 0) {
+    return null;
+  }
+
+  return password;
+}
+
+async function clearProvisioningSecrets(
+  strapi: Core.Strapi,
+  documentId: string,
+  externalSubject: string,
+) {
   await strapi.documents(IDAMBOX_USER_UID).update({
     documentId,
     data: {
@@ -86,4 +101,3 @@ async function clearProvisioningSecrets(strapi: Core.Strapi, documentId: string,
     },
   } as never);
 }
-
