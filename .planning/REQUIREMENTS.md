@@ -82,61 +82,63 @@ Identity provider, CSRM bootstrap, and first application-module requirements add
 
 Explicitly excluded. Documented to prevent scope creep.
 
-| Feature | Reason |
-|---------|--------|
-| Auth0 login in Phase 1 | App authentication starts when Next.js modules are added. |
-| Next.js frontend shell in Phase 1 | Current scope is the Strapi backend and core model only. |
-| Fine-grained permissions | Application roles start as simple named roles with descriptions. |
-| Custom Strapi admin UI | Native Strapi admin is sufficient for Phase 1. |
-| Production deployment | First milestone is backend/data-model foundation. |
+| Feature                           | Reason                                                           |
+| --------------------------------- | ---------------------------------------------------------------- |
+| Auth0 login in Phase 1            | App authentication starts when Next.js modules are added.        |
+| Next.js frontend shell in Phase 1 | Current scope is the Strapi backend and core model only.         |
+| Fine-grained permissions          | Application roles start as simple named roles with descriptions. |
+| Custom Strapi admin UI            | Native Strapi admin is sufficient for Phase 1.                   |
+| Production deployment             | First milestone is backend/data-model foundation.                |
 
 ## Traceability
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| MONO-01 | Phase 1 | Complete |
-| MONO-02 | Phase 1 | Complete |
-| MONO-03 | Phase 1 | Complete |
-| BACK-01 | Phase 1 | Complete |
-| BACK-02 | Phase 1 | Complete |
-| BACK-03 | Phase 1 | Complete |
-| DATA-01 | Phase 1 | Complete |
-| DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Complete |
-| DATA-04 | Phase 1 | Complete |
-| DATA-05 | Phase 1 | Complete |
-| DATA-06 | Phase 1 | Complete |
-| DATA-07 | Phase 1 | Complete |
-| BOOT-01 | Phase 2 | Complete |
-| BOOT-02 | Phase 2 | Complete |
-| BOOT-03 | Phase 2 | Complete |
-| BOOT-04 | Phase 2 | Complete |
-| IDP-01 | Phase 3 | Complete |
-| IDP-02 | Phase 3 | Complete |
-| IDP-03 | Phase 3 | Complete |
-| IDP-04 | Phase 3 | Complete |
-| IDP-05 | Phase 4 | Planned |
-| IDP-06 | Phase 4 | Planned |
-| AUTH-01 | Phase 6 | Planned |
-| CSRM-01 | Phase 5 | Planned |
-| CSRM-02 | Phase 5 | Planned |
-| CSRM-03 | Phase 5 | Planned |
-| CSRM-04 | Phase 5 | Planned |
-| CSRM-05 | Phase 6 | Planned |
-| CSRM-06 | Phase 6 | Planned |
-| CSRM-07 | Phase 6 | Planned |
-| CSRM-08 | Phase 6 | Planned |
-| CSRM-09 | Phase 6 | Planned |
-| APP-06 | Phase 6 | Planned |
+| Requirement | Phase   | Status   |
+| ----------- | ------- | -------- |
+| MONO-01     | Phase 1 | Complete |
+| MONO-02     | Phase 1 | Complete |
+| MONO-03     | Phase 1 | Complete |
+| BACK-01     | Phase 1 | Complete |
+| BACK-02     | Phase 1 | Complete |
+| BACK-03     | Phase 1 | Complete |
+| DATA-01     | Phase 1 | Complete |
+| DATA-02     | Phase 1 | Complete |
+| DATA-03     | Phase 1 | Complete |
+| DATA-04     | Phase 1 | Complete |
+| DATA-05     | Phase 1 | Complete |
+| DATA-06     | Phase 1 | Complete |
+| DATA-07     | Phase 1 | Complete |
+| BOOT-01     | Phase 2 | Complete |
+| BOOT-02     | Phase 2 | Complete |
+| BOOT-03     | Phase 2 | Complete |
+| BOOT-04     | Phase 2 | Complete |
+| IDP-01      | Phase 3 | Complete |
+| IDP-02      | Phase 3 | Complete |
+| IDP-03      | Phase 3 | Complete |
+| IDP-04      | Phase 3 | Complete |
+| IDP-05      | Phase 4 | Complete |
+| IDP-06      | Phase 4 | Complete |
+| AUTH-01     | Phase 6 | Planned  |
+| CSRM-01     | Phase 5 | Planned  |
+| CSRM-02     | Phase 5 | Planned  |
+| CSRM-03     | Phase 5 | Planned  |
+| CSRM-04     | Phase 5 | Planned  |
+| CSRM-05     | Phase 6 | Planned  |
+| CSRM-06     | Phase 6 | Planned  |
+| CSRM-07     | Phase 6 | Planned  |
+| CSRM-08     | Phase 6 | Planned  |
+| CSRM-09     | Phase 6 | Planned  |
+| APP-06      | Phase 6 | Planned  |
 
 **Coverage:**
+
 - v1 requirements: 13 total
 - v2 active roadmap requirements: 21 total
 - Mapped to phases: 34
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-05-20*
-*Last updated: 2026-05-25 after completing Phase 3*
+
+_Requirements defined: 2026-05-20_
+_Last updated: 2026-05-25 after completing Phase 3_
