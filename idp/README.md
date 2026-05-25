@@ -43,6 +43,8 @@ docker compose down -v
 | Bob Doe password | `bob` |
 | CSRM OIDC client ID | `idambox-csrm` |
 | CSRM OIDC client secret | `idambox-csrm-local-secret` |
+| Strapi admin API client ID | `idambox-strapi-admin` |
+| Strapi admin API client secret | `idambox-strapi-admin-local-secret` |
 
 ## Realm Import
 
@@ -58,8 +60,22 @@ The import file is `keycloak/import/idambox-realm.json`. Docker Compose mounts i
 | Callback URL | `http://localhost:3000/api/auth/callback/keycloak` |
 | Post-logout/home URL | `http://localhost:3000` |
 | Web origin | `http://localhost:3000` |
+| Strapi admin API client | `idambox-strapi-admin` |
 
 Keycloak startup import skips a realm that already exists in the persisted `keycloak_data` Docker volume. Normal restarts keep admin changes. To apply changes from `keycloak/import/idambox-realm.json` as a clean import, run `docker compose down -v` from this directory before starting again.
+
+## Strapi Provisioning Client
+
+The realm import includes a local-only service-account client for Strapi user provisioning:
+
+```env
+KEYCLOAK_BASE_URL=http://localhost:8080
+KEYCLOAK_REALM=idambox
+KEYCLOAK_ADMIN_CLIENT_ID=idambox-strapi-admin
+KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
+```
+
+Strapi uses this dedicated client for Keycloak Admin API calls. Do not use the bootstrap `admin` / `admin` account for application provisioning. The client manages users in the existing `idambox` realm and does not add CSRM authorization roles or groups.
 
 ## OIDC Values
 

@@ -40,6 +40,18 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "service-account-idambox-strapi-admin",
+      "enabled": true,
+      "serviceAccountClientId": "idambox-strapi-admin",
+      "clientRoles": {
+        "realm-management": [
+          "view-users",
+          "query-users",
+          "manage-users"
+        ]
+      }
     }
   ],
   "clients": [
@@ -80,6 +92,29 @@
         "offline_access",
         "microprofile-jwt"
       ]
+    },
+    {
+      "clientId": "idambox-strapi-admin",
+      "name": "IdamBox Strapi Admin API",
+      "description": "Local-only service account client for Strapi Keycloak Admin API provisioning.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "idambox-strapi-admin-local-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "defaultClientScopes": [
+        "roles",
+        "email",
+        "profile"
+      ],
+      "optionalClientScopes": []
     }
   ]
 }

@@ -62,6 +62,8 @@ Local-only credentials and secrets:
 | Bob Doe login | `bob.doe@idambox.com` / `bob` |
 | CSRM client ID | `idambox-csrm` |
 | CSRM client secret | `idambox-csrm-local-secret` |
+| Strapi admin API client ID | `idambox-strapi-admin` |
+| Strapi admin API client secret | `idambox-strapi-admin-local-secret` |
 
 OIDC values for local CSRM development:
 
@@ -83,6 +85,19 @@ docker compose up -d
 ```
 
 Keycloak is the IdamBox OIDC provider. A future phase may configure it to broker Auth0, Ping Access Management, Okta, or Entra ID while keeping the application-facing issuer and client contract stable.
+
+## Strapi To Keycloak Provisioning
+
+Set `IDAMBOX_KEYCLOAK_PROVISIONING=true` in `apps/backend/.env` to provision custom Strapi `IdamBox User` records into the Keycloak `idambox` realm. Provisioning is disabled by default and requires the dedicated local service-account client:
+
+```env
+KEYCLOAK_BASE_URL=http://localhost:8080
+KEYCLOAK_REALM=idambox
+KEYCLOAK_ADMIN_CLIENT_ID=idambox-strapi-admin
+KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
+```
+
+The `idambox-strapi-admin-local-secret` value is local-only and must not be reused outside local development. Strapi uses this dedicated client for Keycloak Admin API calls, not the bootstrap `admin` / `admin` account.
 
 ## Core Data Model
 

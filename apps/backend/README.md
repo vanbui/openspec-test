@@ -61,6 +61,22 @@ Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires 
 
 Keycloak, CSRM assessment content types, and the CSRM Next.js application are later phases.
 
+## Optional Keycloak Provisioning
+
+Set `IDAMBOX_KEYCLOAK_PROVISIONING=true` to provision custom `IdamBox User` records into Keycloak when users are created or updated in Strapi. Provisioning is disabled by default.
+
+Local development values:
+
+```env
+IDAMBOX_KEYCLOAK_PROVISIONING=true
+KEYCLOAK_BASE_URL=http://localhost:8080
+KEYCLOAK_REALM=idambox
+KEYCLOAK_ADMIN_CLIENT_ID=idambox-strapi-admin
+KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
+```
+
+The `idambox-strapi-admin-local-secret` value is local-only and must not be reused outside local development. Strapi uses the dedicated `idambox-strapi-admin` service-account client for Keycloak Admin API calls, not the bootstrap `admin` / `admin` account. Strapi-created users are created in the existing `idambox` realm.
+
 ## Out Of Scope For Phase 1
 
 - Auth0 end-user authentication
