@@ -12,7 +12,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "check-types": "turbo run check-types",
     "verify:schema": "node scripts/verify-core-model.mjs",
-    "verify:csrm-seed": "node scripts/verify-csrm-seed.mjs"
+    "verify:csrm-seed": "node scripts/verify-csrm-seed.mjs",
+    "verify:keycloak-idp": "node scripts/verify-keycloak-idp.mjs"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
