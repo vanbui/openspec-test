@@ -77,6 +77,8 @@ KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
 
 The `idambox-strapi-admin-local-secret` value is local-only and must not be reused outside local development. Strapi uses the dedicated `idambox-strapi-admin` service-account client for Keycloak Admin API calls, not the bootstrap `admin` / `admin` account. Strapi-created users are created in the existing `idambox` realm.
 
+When provisioning is enabled, a Keycloak API failure blocks the Strapi user save so Strapi and Keycloak do not silently drift. To verify the local runtime path, start Keycloak from `idp/` with `docker compose up -d`, run Strapi with the environment values above, create or update an `IdamBox User`, and inspect the matching user in the Keycloak `idambox` realm. If the realm import needs to be reset after changing `idp/keycloak/import/idambox-realm.json`, run `docker compose down -v` from `idp/`.
+
 ## Out Of Scope For Phase 1
 
 - Auth0 end-user authentication

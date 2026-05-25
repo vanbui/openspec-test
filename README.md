@@ -54,26 +54,26 @@ The admin console runs at `http://localhost:8080/admin`.
 
 Local-only credentials and secrets:
 
-| Purpose | Value |
-| --- | --- |
-| Keycloak admin username | `admin` |
-| Keycloak admin password | `admin` |
-| Jane Doe login | `jane.doe@idambox.com` / `jane` |
-| Bob Doe login | `bob.doe@idambox.com` / `bob` |
-| CSRM client ID | `idambox-csrm` |
-| CSRM client secret | `idambox-csrm-local-secret` |
-| Strapi admin API client ID | `idambox-strapi-admin` |
+| Purpose                        | Value                               |
+| ------------------------------ | ----------------------------------- |
+| Keycloak admin username        | `admin`                             |
+| Keycloak admin password        | `admin`                             |
+| Jane Doe login                 | `jane.doe@idambox.com` / `jane`     |
+| Bob Doe login                  | `bob.doe@idambox.com` / `bob`       |
+| CSRM client ID                 | `idambox-csrm`                      |
+| CSRM client secret             | `idambox-csrm-local-secret`         |
+| Strapi admin API client ID     | `idambox-strapi-admin`              |
 | Strapi admin API client secret | `idambox-strapi-admin-local-secret` |
 
 OIDC values for local CSRM development:
 
-| Setting | Value |
-| --- | --- |
-| Issuer | `http://localhost:8080/realms/idambox` |
-| Discovery URL | `http://localhost:8080/realms/idambox/.well-known/openid-configuration` |
-| Callback URL | `http://localhost:3000/api/auth/callback/keycloak` |
-| Post-logout/home URL | `http://localhost:3000` |
-| Web origin | `http://localhost:3000` |
+| Setting              | Value                                                                   |
+| -------------------- | ----------------------------------------------------------------------- |
+| Issuer               | `http://localhost:8080/realms/idambox`                                  |
+| Discovery URL        | `http://localhost:8080/realms/idambox/.well-known/openid-configuration` |
+| Callback URL         | `http://localhost:3000/api/auth/callback/keycloak`                      |
+| Post-logout/home URL | `http://localhost:3000`                                                 |
+| Web origin           | `http://localhost:3000`                                                 |
 
 These committed credentials are local-only development values and must not be reused outside local development.
 
@@ -98,6 +98,8 @@ KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
 ```
 
 The `idambox-strapi-admin-local-secret` value is local-only and must not be reused outside local development. Strapi uses this dedicated client for Keycloak Admin API calls, not the bootstrap `admin` / `admin` account.
+
+When provisioning is enabled, a Keycloak API failure blocks the Strapi user save so Strapi and Keycloak do not silently drift. For local runtime verification, start Keycloak from `idp/`, run the backend with the provisioning env vars above, create or update an `IdamBox User`, and inspect the matching user in the Keycloak `idambox` realm. Use `docker compose down -v` from `idp/` to force a clean realm re-import after changing the checked-in realm JSON.
 
 ## Core Data Model
 
@@ -124,6 +126,7 @@ Run the static project verifiers:
 
 ```powershell
 yarn verify:keycloak-idp
+yarn verify:keycloak-provisioning
 yarn verify:schema
 yarn verify:csrm-seed
 ```

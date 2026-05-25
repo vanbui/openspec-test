@@ -1,10 +1,10 @@
-import type { Core } from '@strapi/strapi';
+import type { Core } from "@strapi/strapi";
 
 import {
   IDAMBOX_USER_UID,
   type IdamBoxUserDocument,
   provisionIdamboxUserToKeycloak,
-} from './provision-idambox-user';
+} from "./provision-idambox-user";
 
 const cleanupUpdates = new Set<string>();
 
@@ -31,7 +31,9 @@ export function registerIdamboxUserProvisioning(strapi: Core.Strapi) {
       return result;
     }
 
-    const password = (context as IdamBoxUserDocumentMiddlewareContext).params?.data?.password ?? null;
+    const password =
+      (context as IdamBoxUserDocumentMiddlewareContext).params?.data
+        ?.password ?? null;
 
     try {
       cleanupUpdates.add(user.documentId);
@@ -45,5 +47,9 @@ export function registerIdamboxUserProvisioning(strapi: Core.Strapi) {
 }
 
 function isIdamboxUserWrite(context: { uid: string; action: string }) {
-  return context.uid === IDAMBOX_USER_UID && (context.action === 'create' || context.action === 'update');
+  return (
+    context.uid === "api::idambox-user.idambox-user" &&
+    context.uid === IDAMBOX_USER_UID &&
+    (context.action === "create" || context.action === "update")
+  );
 }
