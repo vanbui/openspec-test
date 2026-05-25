@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-last_updated: "2026-05-25T20:14:29.272Z"
+last_updated: "2026-05-25T20:25:03.889Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 5
+  total_plans: 8
   completed_plans: 5
   percent: 50
 ---
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 |-------|-------|
 | Phase | 4 |
 | Name | Strapi To Keycloak User Provisioning |
-| Status | Planned |
+| Status | Ready to execute |
 | Started | - |
 | Completed | - |
-| Plans | 0 |
+| Plans | 3 |
 
 ## Workflow State
 
@@ -46,7 +46,9 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 - Phase 3 context gathered: 2026-05-25
 - Phase 3 planned: 2026-05-25
 - Phase 3 executed: 2026-05-25
-- Next command: `$gsd-plan-phase 4`
+- Phase 4 context gathered: 2026-05-25
+- Phase 4 planned: 2026-05-25
+- Next command: `$gsd-execute-phase 4`
 
 ## Memory
 
@@ -60,4 +62,6 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 - Phase 2 added idempotent Strapi bootstrap data for the CSRM application, CSRM roles, and Jane/Bob sample users behind `IDAMBOX_SEED_CSRM`.
 - Phase 3 added a top-level Keycloak `idp` setup based on `example-projects/idambox_old/keycloak`, with a local `idambox` realm, Jane/Bob Keycloak users, an `idambox-csrm` OIDC client, and static verification.
 - Keycloak committed credentials and `idambox-csrm-local-secret` are local-only values and must not be reused outside local development.
+- Phase 4 is planned as three waves: Keycloak admin client/configuration, backend provisioning integration, and verification/documentation closeout.
+- Phase 4 provisioning is gated by `IDAMBOX_KEYCLOAK_PROVISIONING=true`, uses the dedicated local admin client `idambox-strapi-admin`, stores Keycloak user IDs in `externalSubject`, and clears transient IdamBox user passwords after successful provisioning.
 - Phase 6 will add the IdamBox CSRM Next.js application using Keycloak/OIDC.

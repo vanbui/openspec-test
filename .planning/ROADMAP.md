@@ -141,10 +141,17 @@ Plans:
 3. Provisioning is idempotent and does not create duplicate Keycloak users for the same email address.
 4. Keycloak connection settings and credentials are driven by environment configuration and are not hard-coded.
 
-**Plans:** 0 plans
+**Plans:** 0/3 plans executed
 
 Plans:
-- [ ] TBD (run `$gsd-plan-phase 4` to break down)
+**Wave 1**
+- [ ] `04-01-PLAN.md` - Keycloak Admin Client Seed And Provisioning Configuration
+
+**Wave 2 *(blocked on Wave 1 completion)***
+- [ ] `04-02-PLAN.md` - Backend Keycloak Provisioning Integration
+
+**Wave 3 *(blocked on Wave 2 completion)***
+- [ ] `04-03-PLAN.md` - Provisioning Verification And Documentation Closeout
 
 **Cross-cutting constraints:**
 - Strapi remains the source of product user/profile records.
