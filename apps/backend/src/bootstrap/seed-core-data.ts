@@ -57,10 +57,12 @@ const applications: ApplicationSeed[] = [
       {
         name: 'STUDENT',
         description: 'Learner entitlement for IdamBox LMS.',
+        createReusableRole: true,
       },
       {
         name: 'TUTOR',
         description: 'Tutor entitlement for IdamBox LMS.',
+        createReusableRole: true,
       },
     ],
   },
