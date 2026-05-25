@@ -1,0 +1,110 @@
+# IdamBox Keycloak Identity Provider
+
+This directory contains the local-only Keycloak identity provider for IdamBox development. The committed admin password, user passwords, and OIDC client secret are intentionally easy local development values and must not be reused outside local development.
+
+Phase 3 only provides the identity provider. It does not wire Next.js login, Strapi provisioning, or CSRM runtime authentication. Product authorization remains in Strapi through `IdamBoxUser -> Role -> Entitlement -> Application`; do not add CSRM authorization roles or groups in Keycloak for this phase.
+
+## Quickstart
+
+Run Keycloak from this directory:
+
+```powershell
+docker compose up -d
+docker compose logs -f keycloak
+```
+
+Open the admin console:
+
+```text
+http://localhost:8080/admin
+```
+
+Stop the container and keep the imported realm data:
+
+```powershell
+docker compose down
+```
+
+Stop the container and remove the named volume so the checked-in realm JSON imports again on the next startup:
+
+```powershell
+docker compose down -v
+```
+
+## Local-Only Credentials
+
+| Purpose | Value |
+| --- | --- |
+| Keycloak admin username | `admin` |
+| Keycloak admin password | `admin` |
+| Jane Doe username/email | `jane.doe@idambox.com` |
+| Jane Doe password | `jane` |
+| Bob Doe username/email | `bob.doe@idambox.com` |
+| Bob Doe password | `bob` |
+| CSRM OIDC client ID | `idambox-csrm` |
+| CSRM OIDC client secret | `idambox-csrm-local-secret` |
+
+## Realm Import
+
+The import file is `keycloak/import/idambox-realm.json`. Docker Compose mounts it into `/opt/keycloak/data/import` and starts Keycloak with `start-dev --import-realm`.
+
+| Setting | Value |
+| --- | --- |
+| Realm | `idambox` |
+| Users | `jane.doe@idambox.com`, `bob.doe@idambox.com` |
+| Required user actions | None |
+| Client | `idambox-csrm` |
+| Client type | Confidential OpenID Connect client |
+| Callback URL | `http://localhost:3000/api/auth/callback/keycloak` |
+| Post-logout/home URL | `http://localhost:3000` |
+| Web origin | `http://localhost:3000` |
+
+Keycloak startup import skips a realm that already exists in the persisted `keycloak_data` Docker volume. Normal restarts keep admin changes. To apply changes from `keycloak/import/idambox-realm.json` as a clean import, run `docker compose down -v` from this directory before starting again.
+
+## OIDC Values
+
+| Setting | Value |
+| --- | --- |
+| Admin console | `http://localhost:8080/admin` |
+| Issuer | `http://localhost:8080/realms/idambox` |
+| Discovery URL | `http://localhost:8080/realms/idambox/.well-known/openid-configuration` |
+| Client ID | `idambox-csrm` |
+| Client secret | `idambox-csrm-local-secret` |
+| Callback URL | `http://localhost:3000/api/auth/callback/keycloak` |
+| Post-logout/home URL | `http://localhost:3000` |
+| Web origin | `http://localhost:3000` |
+
+Example local environment values for a future app integration:
+
+```env
+KEYCLOAK_ISSUER=http://localhost:8080/realms/idambox
+KEYCLOAK_CLIENT_ID=idambox-csrm
+KEYCLOAK_CLIENT_SECRET=idambox-csrm-local-secret
+AUTH_URL=http://localhost:3000
+AUTH_KEYCLOAK_ID=idambox-csrm
+AUTH_KEYCLOAK_SECRET=idambox-csrm-local-secret
+AUTH_KEYCLOAK_ISSUER=http://localhost:8080/realms/idambox
+```
+
+## Broker Boundary
+
+Keycloak is the IdamBox OIDC provider. A later phase may configure it to broker authentication to customer identity providers such as Auth0, Ping Access Management, Okta, or Entra ID. The future CSRM app should continue to talk to the IdamBox Keycloak issuer and `idambox-csrm` client instead of binding directly to customer IdPs.
+
+## Verification
+
+Run the static project verifier from the repository root:
+
+```powershell
+yarn verify:keycloak-idp
+```
+
+When Docker is available, runtime verification is:
+
+```powershell
+docker compose up -d
+docker compose logs keycloak
+curl -f http://localhost:8080/realms/idambox/.well-known/openid-configuration
+docker compose down
+```
+
+If port `8080` is already in use, stop the conflicting local service or change the host port mapping in `docker-compose.yml` for your local machine.

@@ -38,6 +38,52 @@ yarn develop:cms
 
 Strapi runs on `http://localhost:1337` by default. The admin panel is available at `http://localhost:1337/admin`.
 
+## Keycloak Identity Provider
+
+Phase 3 adds a local-only Keycloak identity provider under `idp/` for the future CSRM Next.js app. It does not wire Next.js login yet, and product authorization remains in Strapi through `IdamBoxUser -> Role -> Entitlement -> Application`.
+
+Start Keycloak from the `idp/` directory:
+
+```powershell
+cd idp
+docker compose up -d
+docker compose logs -f keycloak
+```
+
+The admin console runs at `http://localhost:8080/admin`.
+
+Local-only credentials and secrets:
+
+| Purpose | Value |
+| --- | --- |
+| Keycloak admin username | `admin` |
+| Keycloak admin password | `admin` |
+| Jane Doe login | `jane.doe@idambox.com` / `jane` |
+| Bob Doe login | `bob.doe@idambox.com` / `bob` |
+| CSRM client ID | `idambox-csrm` |
+| CSRM client secret | `idambox-csrm-local-secret` |
+
+OIDC values for local CSRM development:
+
+| Setting | Value |
+| --- | --- |
+| Issuer | `http://localhost:8080/realms/idambox` |
+| Discovery URL | `http://localhost:8080/realms/idambox/.well-known/openid-configuration` |
+| Callback URL | `http://localhost:3000/api/auth/callback/keycloak` |
+| Post-logout/home URL | `http://localhost:3000` |
+| Web origin | `http://localhost:3000` |
+
+These committed credentials are local-only development values and must not be reused outside local development.
+
+Keycloak imports `idp/keycloak/import/idambox-realm.json` on first startup. If the `idambox` realm already exists in the `keycloak_data` Docker volume, startup import skips it. To force a clean re-import after changing the realm JSON, run this from `idp/`:
+
+```powershell
+docker compose down -v
+docker compose up -d
+```
+
+Keycloak is the IdamBox OIDC provider. A future phase may configure it to broker Auth0, Ping Access Management, Okta, or Entra ID while keeping the application-facing issuer and client contract stable.
+
 ## Core Data Model
 
 Phase 1 implements this access model:
