@@ -29,6 +29,7 @@ Implemented backend Keycloak provisioning for custom Strapi `IdamBox User` creat
 | Task                             | Commit    | Result                                                                                                                                                                        |
 | -------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Backend provisioning integration | `93f2959` | Added the environment config reader, fetch-based Keycloak Admin API client, IdamBox user provisioning service, document middleware registration, and Strapi bootstrap wiring. |
+| Review fix                       | `2156c13` | Preserved existing Keycloak password setup actions on profile updates and stopped trimming non-empty password values before sending them to Keycloak.                         |
 
 ## Files Created Or Modified
 
@@ -55,6 +56,7 @@ yarn verify:schema
 ## Deviations
 
 - The existing `IdamBox User.password` schema already had the required private transient password behavior, so no schema or generated type changes were needed.
+- During the code review gate, the update payload was narrowed so ordinary profile updates do not clear a Keycloak `UPDATE_PASSWORD` required action set during passwordless account creation.
 
 ## Self-Check
 
