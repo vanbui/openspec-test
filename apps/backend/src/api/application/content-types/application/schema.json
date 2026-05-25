@@ -25,12 +25,9 @@
     "description": {
       "type": "text"
     },
-    "status": {
+    "applicationStatus": {
       "type": "enumeration",
-      "enum": [
-        "active",
-        "inactive"
-      ],
+      "enum": ["active", "inactive"],
       "default": "active",
       "required": true
     },

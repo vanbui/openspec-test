@@ -35,6 +35,8 @@ The backend defines four core collection types:
 - `Role`
 - `IdamBox User`
 
+Strapi Content Manager reserves the request field `status` for document publication state. Use `accountStatus` for `IdamBox User` records and `applicationStatus` for `Application` records.
+
 Effective access is derived through:
 
 ```text

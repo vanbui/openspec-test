@@ -114,6 +114,8 @@ IdamBoxUser -> Role -> Entitlement -> Application
 - `Entitlement` is a permission defined by one application, such as `LMS STUDENT` or `LMS TUTOR`.
 - `Application` represents an IdamBox module such as IAM, LMS, or Cyber Risk Manager.
 
+Strapi Content Manager reserves the request field `status` for document publication state. IdamBox domain state uses `accountStatus` on `IdamBoxUser` and `applicationStatus` on `Application`.
+
 ## Authentication Boundary
 
 Phase 1 uses native Strapi admin authentication only, so administrators can create and edit records in Strapi.

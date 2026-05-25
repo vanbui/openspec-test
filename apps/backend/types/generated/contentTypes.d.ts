@@ -385,6 +385,9 @@ export interface ApiApplicationApplication extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    applicationStatus: Schema.Attribute.Enumeration<['active', 'inactive']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -404,9 +407,6 @@ export interface ApiApplicationApplication extends Struct.CollectionTypeSchema {
       Schema.Attribute.Unique;
     publishedAt: Schema.Attribute.DateTime;
     slug: Schema.Attribute.UID<'name'> & Schema.Attribute.Required;
-    status: Schema.Attribute.Enumeration<['active', 'inactive']> &
-      Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<'active'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -461,6 +461,9 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    accountStatus: Schema.Attribute.Enumeration<['active', 'inactive']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -484,9 +487,6 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
       }>;
     publishedAt: Schema.Attribute.DateTime;
     roles: Schema.Attribute.Relation<'manyToMany', 'api::role.role'>;
-    status: Schema.Attribute.Enumeration<['active', 'inactive']> &
-      Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<'active'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;

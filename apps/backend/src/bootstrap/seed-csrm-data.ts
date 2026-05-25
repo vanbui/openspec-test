@@ -1,31 +1,31 @@
-import type { Core } from '@strapi/strapi';
+import type { Core } from "@strapi/strapi";
 
-import { CSRM_SECURITY_ANALYST_ROLE_NAME } from './seed-core-data';
+import { CSRM_SECURITY_ANALYST_ROLE_NAME } from "./seed-core-data";
 
 const CSRM_USERS = {
   jane: {
-    email: 'jane.doe@idambox.com',
-    firstName: 'Jane',
-    lastName: 'Doe',
-    displayName: 'Jane Doe',
-    status: 'active',
+    email: "jane.doe@idambox.com",
+    firstName: "Jane",
+    lastName: "Doe",
+    displayName: "Jane Doe",
+    accountStatus: "active",
   },
   bob: {
-    email: 'bob.doe@idambox.com',
-    firstName: 'Bob',
-    lastName: 'Doe',
-    displayName: 'Bob Doe',
-    status: 'active',
+    email: "bob.doe@idambox.com",
+    firstName: "Bob",
+    lastName: "Doe",
+    displayName: "Bob Doe",
+    accountStatus: "active",
   },
 } as const;
 
 export async function seedCsrmData(strapi: Core.Strapi) {
-  if (process.env.IDAMBOX_SEED_CSRM !== 'true') {
+  if (process.env.IDAMBOX_SEED_CSRM !== "true") {
     return;
   }
 
-  const roleService = strapi.documents('api::role.role');
-  const userService = strapi.documents('api::idambox-user.idambox-user');
+  const roleService = strapi.documents("api::role.role");
+  const userService = strapi.documents("api::idambox-user.idambox-user");
 
   const existingSecurityAnalystRoles = await roleService.findMany({
     filters: {
@@ -84,5 +84,5 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     });
   }
 
-  strapi.log.info('IdamBox CSRM sample data seed complete');
+  strapi.log.info("IdamBox CSRM sample data seed complete");
 }

@@ -1,6 +1,6 @@
-import type { Core } from '@strapi/strapi';
+import type { Core } from "@strapi/strapi";
 
-const IDAMBOX_NAME_PREFIX = 'IdamBox ';
+const IDAMBOX_NAME_PREFIX = "IdamBox ";
 
 export function getApplicationNamePrefix(applicationName: string): string {
   return applicationName.startsWith(IDAMBOX_NAME_PREFIX)
@@ -16,8 +16,8 @@ export function buildPrefixedEntitlementName(
 }
 
 export const CSRM_SECURITY_ANALYST_ROLE_NAME = buildPrefixedEntitlementName(
-  'IdamBox CSRM',
-  'Security Analyst',
+  "IdamBox CSRM",
+  "Security Analyst",
 );
 
 type EntitlementSeed = {
@@ -35,50 +35,52 @@ type ApplicationSeed = {
 
 const applications: ApplicationSeed[] = [
   {
-    name: 'IdamBox IAM',
-    description: 'Identity and access management module.',
+    name: "IdamBox IAM",
+    description: "Identity and access management module.",
   },
   {
-    name: 'IdamBox Compliance',
-    description: 'Compliance management module.',
+    name: "IdamBox Compliance",
+    description: "Compliance management module.",
   },
   {
-    name: 'IdamBox Automation',
-    description: 'Automation workflow module.',
+    name: "IdamBox Automation",
+    description: "Automation workflow module.",
   },
   {
-    name: 'IdamBox Crypto Manager',
-    description: 'Cryptographic asset management module.',
+    name: "IdamBox Crypto Manager",
+    description: "Cryptographic asset management module.",
   },
   {
-    name: 'IdamBox LMS',
-    description: 'Learning management module.',
+    name: "IdamBox LMS",
+    description: "Learning management module.",
     entitlements: [
       {
-        name: 'STUDENT',
-        description: 'Learner entitlement for IdamBox LMS.',
+        name: "STUDENT",
+        description: "Learner entitlement for IdamBox LMS.",
         createReusableRole: true,
       },
       {
-        name: 'TUTOR',
-        description: 'Tutor entitlement for IdamBox LMS.',
+        name: "TUTOR",
+        description: "Tutor entitlement for IdamBox LMS.",
         createReusableRole: true,
       },
     ],
   },
   {
-    name: 'IdamBox CSRM',
-    slug: 'idambox-csrm',
-    description: 'Cybersecurity Risk Manager module for automating cybersecurity risk management processes.',
+    name: "IdamBox CSRM",
+    slug: "idambox-csrm",
+    description:
+      "Cybersecurity Risk Manager module for automating cybersecurity risk management processes.",
     entitlements: [
       {
-        name: 'Security Analyst',
-        description: 'Security Analyst entitlement IdamBox CSRM.',
+        name: "Security Analyst",
+        description: "Security Analyst entitlement IdamBox CSRM.",
         createReusableRole: true,
       },
       {
-        name: 'Security Analyst Agent',
-        description: 'Security Analyst Agentic entitlement for automated CSRM security analysis workflows.',
+        name: "Security Analyst Agent",
+        description:
+          "Security Analyst Agentic entitlement for automated CSRM security analysis workflows.",
         createReusableRole: true,
       },
     ],
@@ -88,17 +90,17 @@ const applications: ApplicationSeed[] = [
 const slugify = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 export async function seedCoreData(strapi: Core.Strapi) {
-  if (process.env.IDAMBOX_SEED_CORE !== 'true') {
+  if (process.env.IDAMBOX_SEED_CORE !== "true") {
     return;
   }
 
-  const applicationService = strapi.documents('api::application.application');
-  const entitlementService = strapi.documents('api::entitlement.entitlement');
-  const roleService = strapi.documents('api::role.role');
+  const applicationService = strapi.documents("api::application.application");
+  const entitlementService = strapi.documents("api::entitlement.entitlement");
+  const roleService = strapi.documents("api::role.role");
 
   for (const appSeed of applications) {
     const slug = appSeed.slug ?? slugify(appSeed.name);
@@ -119,12 +121,15 @@ export async function seedCoreData(strapi: Core.Strapi) {
           name: appSeed.name,
           slug,
           description: appSeed.description,
-          status: 'active',
+          applicationStatus: "active",
         },
       }));
 
     for (const entitlementSeed of appSeed.entitlements ?? []) {
-      const entitlementName = buildPrefixedEntitlementName(appSeed.name, entitlementSeed.name);
+      const entitlementName = buildPrefixedEntitlementName(
+        appSeed.name,
+        entitlementSeed.name,
+      );
 
       const existingEntitlements = await entitlementService.findMany({
         filters: {
@@ -184,5 +189,5 @@ export async function seedCoreData(strapi: Core.Strapi) {
     }
   }
 
-  strapi.log.info('IdamBox core sample data seed complete');
+  strapi.log.info("IdamBox core sample data seed complete");
 }

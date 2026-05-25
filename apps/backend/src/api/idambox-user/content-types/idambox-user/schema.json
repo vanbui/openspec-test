@@ -27,12 +27,9 @@
       "type": "string",
       "required": true
     },
-    "status": {
+    "accountStatus": {
       "type": "enumeration",
-      "enum": [
-        "active",
-        "inactive"
-      ],
+      "enum": ["active", "inactive"],
       "default": "active",
       "required": true
     },

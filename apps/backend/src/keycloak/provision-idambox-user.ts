@@ -12,7 +12,7 @@ export type IdamBoxUserDocument = {
   firstName?: string | null;
   lastName?: string | null;
   displayName: string;
-  status: "active" | "inactive";
+  accountStatus?: "active" | "inactive" | null;
   externalSubject?: string | null;
 };
 
@@ -72,7 +72,7 @@ function toKeycloakUserPayload(user: IdamBoxUserDocument): KeycloakUserPayload {
     email: user.email,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
-    enabled: user.status === "active",
+    enabled: user.accountStatus !== "inactive",
     emailVerified: true,
     attributes: {
       displayName: [user.displayName],
