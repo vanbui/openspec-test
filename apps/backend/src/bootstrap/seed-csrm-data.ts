@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/strapi';
 
-const SECURITY_ANALYST_ROLE_NAME = 'Security Analyst';
+import { CSRM_SECURITY_ANALYST_ROLE_NAME } from './seed-core-data';
 
 const CSRM_USERS = {
   jane: {
@@ -30,7 +30,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
   const existingSecurityAnalystRoles = await roleService.findMany({
     filters: {
       name: {
-        $eq: SECURITY_ANALYST_ROLE_NAME,
+        $eq: CSRM_SECURITY_ANALYST_ROLE_NAME,
       },
     },
     limit: 1,
@@ -40,7 +40,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
 
   if (!securityAnalystRole) {
     throw new Error(
-      `Security Analyst role was not found. Enable IDAMBOX_SEED_CORE=true to seed core data before CSRM users.`,
+      `${CSRM_SECURITY_ANALYST_ROLE_NAME} role was not found. Enable IDAMBOX_SEED_CORE=true to seed core data before CSRM users.`,
     );
   }
 

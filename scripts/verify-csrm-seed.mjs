@@ -31,16 +31,17 @@ const envExample = read('apps', 'backend', '.env.example');
 const backendReadme = read('apps', 'backend', 'README.md');
 const packageJson = JSON.parse(read('package.json'));
 
-const requiredValues = [
-  'IDAMBOX_SEED_CSRM',
-  'Security Analyst',
-  'jane.doe@idambox.com',
-  'bob.doe@idambox.com',
-];
+const requiredCsrmSeedValues = ['IDAMBOX_SEED_CSRM', 'jane.doe@idambox.com', 'bob.doe@idambox.com'];
 
-for (const value of requiredValues) {
+for (const value of requiredCsrmSeedValues) {
   assertIncludes(seedSource, value, 'CSRM seed source');
 }
+
+assertIncludes(seedSource, 'CSRM_SECURITY_ANALYST_ROLE_NAME', 'CSRM seed role lookup');
+assertIncludes(coreSeedSource, 'CSRM_SECURITY_ANALYST_ROLE_NAME', 'Core seed CSRM role constant');
+assertIncludes(coreSeedSource, 'buildPrefixedEntitlementName', 'Core seed name prefix helper');
+assertIncludes(coreSeedSource, "'IdamBox CSRM'", 'Core seed CSRM application name');
+assertIncludes(coreSeedSource, "'Security Analyst'", 'Core seed CSRM entitlement short name');
 
 assertIncludes(seedSource, "process.env.IDAMBOX_SEED_CSRM !== 'true'", 'CSRM seed guard');
 assertIncludes(seedSource, "strapi.documents('api::role.role')", 'Role document service');

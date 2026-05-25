@@ -1,5 +1,25 @@
 import type { Core } from '@strapi/strapi';
 
+const IDAMBOX_NAME_PREFIX = 'IdamBox ';
+
+export function getApplicationNamePrefix(applicationName: string): string {
+  return applicationName.startsWith(IDAMBOX_NAME_PREFIX)
+    ? applicationName.slice(IDAMBOX_NAME_PREFIX.length)
+    : applicationName;
+}
+
+export function buildPrefixedEntitlementName(
+  applicationName: string,
+  entitlementName: string,
+): string {
+  return `${getApplicationNamePrefix(applicationName)} ${entitlementName}`;
+}
+
+export const CSRM_SECURITY_ANALYST_ROLE_NAME = buildPrefixedEntitlementName(
+  'IdamBox CSRM',
+  'Security Analyst',
+);
+
 type EntitlementSeed = {
   name: string;
   description: string;
@@ -102,10 +122,12 @@ export async function seedCoreData(strapi: Core.Strapi) {
       }));
 
     for (const entitlementSeed of appSeed.entitlements ?? []) {
+      const entitlementName = buildPrefixedEntitlementName(appSeed.name, entitlementSeed.name);
+
       const existingEntitlements = await entitlementService.findMany({
         filters: {
           name: {
-            $eq: entitlementSeed.name,
+            $eq: entitlementName,
           },
           application: {
             documentId: {
@@ -120,7 +142,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
         existingEntitlements[0] ??
         (await entitlementService.create({
           data: {
-            name: entitlementSeed.name,
+            name: entitlementName,
             description: entitlementSeed.description,
             application: application.documentId,
           },
@@ -133,7 +155,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
       const existingReusableRoles = await roleService.findMany({
         filters: {
           name: {
-            $eq: entitlementSeed.name,
+            $eq: entitlementName,
           },
         },
         limit: 1,
@@ -143,7 +165,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
         existingReusableRoles[0] ??
         (await roleService.create({
           data: {
-            name: entitlementSeed.name,
+            name: entitlementName,
             description: entitlementSeed.description,
             entitlements: [entitlement.documentId],
           },

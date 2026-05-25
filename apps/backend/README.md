@@ -49,7 +49,7 @@ Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records a
 - IdamBox Compliance
 - IdamBox Automation
 - IdamBox Crypto Manager
-- IdamBox LMS with `STUDENT` and `TUTOR`
+- IdamBox LMS with `LMS STUDENT` and `LMS TUTOR`
 - IdamBox Cyber Risk Manager
 
 The seed is disabled by default and is intended for local verification only.
@@ -57,7 +57,7 @@ The seed is disabled by default and is intended for local verification only.
 Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires `IDAMBOX_SEED_CORE=true` first so CSRM entitlements and roles exist:
 
 - `IdamBox User`: Jane Doe (`jane.doe@idambox.com`), active with no roles
-- `IdamBox User`: Bob Doe (`bob.doe@idambox.com`), active and assigned to `Security Analyst`
+- `IdamBox User`: Bob Doe (`bob.doe@idambox.com`), active and assigned to `CSRM Security Analyst`
 
 Keycloak, CSRM assessment content types, and the CSRM Next.js application are later phases.
 

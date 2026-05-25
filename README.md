@@ -48,7 +48,7 @@ IdamBoxUser -> Role -> Entitlement -> Application
 
 - `IdamBoxUser` is a custom product user collection, separate from Strapi admin users.
 - `Role` is a reusable bundle assigned to one or more IdamBox users.
-- `Entitlement` is a permission defined by one application, such as LMS `STUDENT` or `TUTOR`.
+- `Entitlement` is a permission defined by one application, such as `LMS STUDENT` or `LMS TUTOR`.
 - `Application` represents an IdamBox module such as IAM, LMS, or Cyber Risk Manager.
 
 ## Authentication Boundary
