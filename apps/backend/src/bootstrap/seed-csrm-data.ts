@@ -5,6 +5,7 @@ import { CSRM_SECURITY_ANALYST_ROLE_NAME } from "./seed-core-data";
 const CSRM_USERS = {
   jane: {
     email: "jane.doe@idambox.com",
+    username: "jane.doe",
     firstName: "Jane",
     lastName: "Doe",
     displayName: "Jane Doe",
@@ -12,6 +13,7 @@ const CSRM_USERS = {
   },
   bob: {
     email: "bob.doe@idambox.com",
+    username: "bob.doe",
     firstName: "Bob",
     lastName: "Doe",
     displayName: "Bob Doe",
@@ -57,6 +59,11 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     await userService.create({
       data: CSRM_USERS.jane,
     });
+  } else {
+    await userService.update({
+      documentId: existingJaneUsers[0].documentId,
+      data: CSRM_USERS.jane,
+    });
   }
 
   const existingBobUsers = await userService.findMany({
@@ -80,6 +87,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
       documentId: existingBobUsers[0].documentId,
       data: {
         roles: [securityAnalystRole.documentId],
+        ...CSRM_USERS.bob,
       },
     });
   }

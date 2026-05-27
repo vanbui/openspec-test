@@ -9,6 +9,7 @@ export const UPDATE_PASSWORD_REQUIRED_ACTION = "UPDATE_PASSWORD";
 export type IdamBoxUserDocument = {
   documentId: string;
   email: string;
+  username: string;
   firstName?: string | null;
   lastName?: string | null;
   displayName: string;
@@ -68,7 +69,7 @@ export async function provisionIdamboxUserToKeycloak(
 
 function toKeycloakUserPayload(user: IdamBoxUserDocument): KeycloakUserPayload {
   return {
-    username: user.email,
+    username: user.username,
     email: user.email,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,

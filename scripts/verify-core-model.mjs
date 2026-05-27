@@ -90,6 +90,18 @@ assert(
   "IdamBox User must use accountStatus enum",
 );
 assert(
+  idamboxUser.attributes.username?.type === "string",
+  "IdamBox User username must be a string",
+);
+assert(
+  idamboxUser.attributes.username?.required === true,
+  "IdamBox User username must be required",
+);
+assert(
+  idamboxUser.attributes.username?.unique === true,
+  "IdamBox User username must be unique",
+);
+assert(
   !idamboxUser.attributes.status,
   "IdamBox User must not use reserved Strapi status attribute",
 );

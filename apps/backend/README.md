@@ -58,8 +58,8 @@ The seed is disabled by default and is intended for local verification only.
 
 Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires `IDAMBOX_SEED_CORE=true` first so CSRM entitlements and roles exist:
 
-- `IdamBox User`: Jane Doe (`jane.doe@idambox.com`), active with no roles
-- `IdamBox User`: Bob Doe (`bob.doe@idambox.com`), active and assigned to `CSRM Security Analyst`
+- `IdamBox User`: Jane Doe (`jane.doe`, `jane.doe@idambox.com`), active with no roles
+- `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned to `CSRM Security Analyst`
 
 Keycloak, CSRM assessment content types, and the CSRM Next.js application are later phases.
 

@@ -65,14 +65,14 @@ assert(realm.duplicateEmailsAllowed === false, 'Realm duplicate emails must be d
 assert(realm.verifyEmail === false, 'Realm email verification must be disabled for local users');
 
 const jane = findBy(realm.users, 'email', 'jane.doe@idambox.com', 'Realm users');
-assert(jane.username === 'jane.doe@idambox.com', 'Jane username must match email');
+assert(jane.username === 'jane.doe', 'Jane username must be email local part');
 assert(jane.emailVerified === true, 'Jane email must be verified');
 assert(jane.enabled === true, 'Jane user must be enabled');
 assert(Array.isArray(jane.requiredActions) && jane.requiredActions.length === 0, 'Jane must have no required actions');
 assertCredential(jane, 'jane', 'Jane');
 
 const bob = findBy(realm.users, 'email', 'bob.doe@idambox.com', 'Realm users');
-assert(bob.username === 'bob.doe@idambox.com', 'Bob username must match email');
+assert(bob.username === 'bob.doe', 'Bob username must be email local part');
 assert(bob.emailVerified === true, 'Bob email must be verified');
 assert(bob.enabled === true, 'Bob user must be enabled');
 assert(Array.isArray(bob.requiredActions) && bob.requiredActions.length === 0, 'Bob must have no required actions');
@@ -121,7 +121,9 @@ for (const source of [rootReadme, idpReadme]) {
   assertIncludes(source, 'idambox-csrm', 'Keycloak docs');
   assertIncludes(source, 'idambox-csrm-local-secret', 'Keycloak docs');
   assertIncludes(source, 'jane.doe@idambox.com', 'Keycloak docs');
+  assertIncludes(source, 'jane.doe', 'Keycloak docs');
   assertIncludes(source, 'bob.doe@idambox.com', 'Keycloak docs');
+  assertIncludes(source, 'bob.doe', 'Keycloak docs');
   assertIncludes(source, 'docker compose down -v', 'Keycloak docs');
   assertIncludes(source, 'Auth0', 'Keycloak docs');
   assertIncludes(source, 'Ping Access Management', 'Keycloak docs');

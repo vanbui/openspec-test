@@ -37,9 +37,11 @@ docker compose down -v
 | ------------------------------ | ----------------------------------- |
 | Keycloak admin username        | `admin`                             |
 | Keycloak admin password        | `admin`                             |
-| Jane Doe username/email        | `jane.doe@idambox.com`              |
+| Jane Doe username              | `jane.doe`                          |
+| Jane Doe email                 | `jane.doe@idambox.com`              |
 | Jane Doe password              | `jane`                              |
-| Bob Doe username/email         | `bob.doe@idambox.com`               |
+| Bob Doe username               | `bob.doe`                           |
+| Bob Doe email                  | `bob.doe@idambox.com`               |
 | Bob Doe password               | `bob`                               |
 | CSRM OIDC client ID            | `idambox-csrm`                      |
 | CSRM OIDC client secret        | `idambox-csrm-local-secret`         |
@@ -53,7 +55,8 @@ The import file is `keycloak/import/idambox-realm.json`. Docker Compose mounts i
 | Setting                 | Value                                              |
 | ----------------------- | -------------------------------------------------- |
 | Realm                   | `idambox`                                          |
-| Users                   | `jane.doe@idambox.com`, `bob.doe@idambox.com`      |
+| Users                   | `jane.doe`, `bob.doe`                              |
+| Emails                  | `jane.doe@idambox.com`, `bob.doe@idambox.com`      |
 | Required user actions   | None                                               |
 | Client                  | `idambox-csrm`                                     |
 | Client type             | Confidential OpenID Connect client                 |

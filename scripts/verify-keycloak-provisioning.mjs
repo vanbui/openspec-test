@@ -220,6 +220,11 @@ assertIncludes(
 );
 assertIncludes(
   provisionSource,
+  "username: user.username",
+  "Keycloak provisioning source",
+);
+assertIncludes(
+  provisionSource,
   "findUserByEmail",
   "Keycloak provisioning source",
 );

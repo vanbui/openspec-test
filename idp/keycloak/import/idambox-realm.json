@@ -10,7 +10,7 @@
   "verifyEmail": false,
   "users": [
     {
-      "username": "jane.doe@idambox.com",
+      "username": "jane.doe",
       "email": "jane.doe@idambox.com",
       "emailVerified": true,
       "enabled": true,
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "username": "bob.doe@idambox.com",
+      "username": "bob.doe",
       "email": "bob.doe@idambox.com",
       "emailVerified": true,
       "enabled": true,

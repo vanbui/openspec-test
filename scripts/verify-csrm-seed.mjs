@@ -49,7 +49,9 @@ const packageJson = JSON.parse(read("package.json"));
 const requiredCsrmSeedValues = [
   "IDAMBOX_SEED_CSRM",
   "jane.doe@idambox.com",
+  'username: "jane.doe"',
   "bob.doe@idambox.com",
+  'username: "bob.doe"',
 ];
 
 for (const value of requiredCsrmSeedValues) {
@@ -116,6 +118,8 @@ assertBefore(
 
 assertIncludes(seedSource, "$eq: CSRM_USERS.jane.email", "Jane lookup");
 assertIncludes(seedSource, "$eq: CSRM_USERS.bob.email", "Bob lookup");
+assertIncludes(seedSource, "data: CSRM_USERS.jane", "Jane update data");
+assertIncludes(seedSource, "...CSRM_USERS.bob", "Bob update data");
 assertIncludes(
   seedSource,
   "roles: [securityAnalystRole.documentId]",

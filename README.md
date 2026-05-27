@@ -58,8 +58,10 @@ Local-only credentials and secrets:
 | ------------------------------ | ----------------------------------- |
 | Keycloak admin username        | `admin`                             |
 | Keycloak admin password        | `admin`                             |
-| Jane Doe login                 | `jane.doe@idambox.com` / `jane`     |
-| Bob Doe login                  | `bob.doe@idambox.com` / `bob`       |
+| Jane Doe login                 | `jane.doe` / `jane`                 |
+| Jane Doe email                 | `jane.doe@idambox.com`              |
+| Bob Doe login                  | `bob.doe` / `bob`                   |
+| Bob Doe email                  | `bob.doe@idambox.com`               |
 | CSRM client ID                 | `idambox-csrm`                      |
 | CSRM client secret             | `idambox-csrm-local-secret`         |
 | Strapi admin API client ID     | `idambox-strapi-admin`              |
