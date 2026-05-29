@@ -118,6 +118,12 @@ IdamBoxUser -> Role -> Entitlement -> Application
 
 Strapi Content Manager reserves the request field `status` for document publication state. IdamBox domain state uses `accountStatus` on `IdamBoxUser` and `applicationStatus` on `Application`.
 
+## CSRM Backend Model
+
+Phase 5 adds the backend-only CSRM content model in Strapi: `csrm-assessment-request`, `csrm-information-asset`, `csrm-information-system`, `csrm-questionnaire`, `csrm-question`, `csrm-assessment`, and `csrm-risk`.
+
+Set `csrmAppIsEnabled=true` to enable application-facing CSRM routes. When the flag is false, CSRM schemas may still be registered in Strapi, but CSRM API behavior is guarded. CSRM Next.js workflows, request transitions, and Keycloak/OIDC login screens belong to Phase 6 or later.
+
 ## Authentication Boundary
 
 Phase 1 uses native Strapi admin authentication only, so administrators can create and edit records in Strapi.
@@ -132,6 +138,7 @@ Run the static project verifiers:
 yarn verify:keycloak-idp
 yarn verify:keycloak-provisioning
 yarn verify:schema
+yarn verify:csrm-model
 yarn verify:csrm-seed
 ```
 

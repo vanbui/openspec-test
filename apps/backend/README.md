@@ -28,7 +28,7 @@ SQLite is the default local database. PostgreSQL settings are included as commen
 
 ## Collections
 
-The backend defines four core collection types:
+The backend defines four core platform collection types:
 
 - `Application`
 - `Entitlement`
@@ -42,6 +42,18 @@ Effective access is derived through:
 ```text
 IdamBoxUser -> Role -> Entitlement -> Application
 ```
+
+The Phase 5 CSRM backend model adds seven CSRM collection types:
+
+- `csrm-assessment-request`
+- `csrm-information-asset`
+- `csrm-information-system`
+- `csrm-questionnaire`
+- `csrm-question`
+- `csrm-assessment`
+- `csrm-risk`
+
+Set `csrmAppIsEnabled=true` to enable application-facing CSRM route behavior. When `csrmAppIsEnabled=false`, CSRM schema files may still exist in Strapi and Content Manager, but active CSRM API behavior is guarded by the shared route policy. Phase 5 stores the backend content model and lifecycle fields only; CSRM screen flows, OIDC login, request transitions, and requestor/security analyst UI behavior belong to Phase 6 or later.
 
 ## Optional Sample Data
 
@@ -61,7 +73,7 @@ Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires 
 - `IdamBox User`: Jane Doe (`jane.doe`, `jane.doe@idambox.com`), active with no roles
 - `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned to `CSRM Security Analyst`
 
-Keycloak, CSRM assessment content types, and the CSRM Next.js application are later phases.
+Keycloak is available for local identity-provider verification. The CSRM Next.js application is a later phase.
 
 ## Optional Keycloak Provisioning
 
