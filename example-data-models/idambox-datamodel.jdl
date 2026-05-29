@@ -1,0 +1,239 @@
+/**
+ * IdamBox Backend Data Model in JHipster Domain Language (JDL)
+ *
+ * Generated from the Strapi backend schemas under apps/backend/src/api.
+ *
+ * Authorization path:
+ *   IdamBoxUser -> Role -> Entitlement -> Application
+ *
+ * Product users are represented by IdamBoxUser, separate from Strapi admin users.
+ * CSRM records are application-specific backend collections guarded by the
+ * csrmAppIsEnabled route policy in Strapi.
+ */
+
+/**
+ * Core platform model
+ */
+entity IdamBoxUser {
+  email String required unique,
+  username String required unique,
+  firstName String,
+  lastName String,
+  displayName String required,
+  accountStatus IdamBoxUserStatus required,
+  externalSubject String unique,
+  password String // Strapi password, private, minLength 6
+}
+
+enum IdamBoxUserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+entity Role {
+  name String required unique,
+  description TextBlob
+}
+
+entity Application {
+  name String required unique,
+  slug String required unique,
+  description TextBlob,
+  applicationStatus ApplicationStatus required
+}
+
+enum ApplicationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+entity Entitlement {
+  name String required,
+  description TextBlob
+}
+
+/**
+ * CSRM backend model
+ */
+entity CsrmAssessmentRequest {
+  requestNumber String required unique,
+  title String required,
+  description TextBlob,
+  submittedDate Instant,
+  dueDate LocalDate,
+  requestStatus CsrmRequestStatus required
+}
+
+enum CsrmRequestStatus {
+  DRAFT
+  SUBMITTED
+  QUESTIONNAIRE_IN_PROGRESS
+  RISK_ASSESSMENT_DRAFTED
+  UNDER_REVIEW
+  APPROVED
+  CLOSED
+}
+
+entity CsrmInformationAsset {
+  name String required,
+  description TextBlob,
+  location String,
+  type String,
+  dataClassification CsrmDataClassification,
+  confidentialityRating String,
+  integrityRating String,
+  availabilityRating String,
+  containsPersonalData Boolean,
+  containsLegalData Boolean,
+  comments TextBlob
+}
+
+enum CsrmDataClassification {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  CRITICAL_INFRASTRUCTURE_SENSITIVE
+}
+
+entity CsrmInformationSystem {
+  name String required,
+  description TextBlob,
+  systemType String,
+  environment CsrmSystemEnvironment,
+  businessCriticality String,
+  internetFacing Boolean,
+  externalAccessRequired Boolean,
+  hostingLocation String,
+  lifecycleState CsrmSystemLifecycleState
+}
+
+enum CsrmSystemEnvironment {
+  PRODUCTION
+  NON_PRODUCTION
+  CLOUD
+  SAAS
+  ON_PREM
+}
+
+enum CsrmSystemLifecycleState {
+  NEW
+  CHANGED
+  EXISTING
+  DECOMMISSIONING
+}
+
+entity CsrmQuestionnaire {
+  questionnaireNumber String unique,
+  title String required,
+  description TextBlob
+}
+
+entity CsrmQuestion {
+  questionText TextBlob required,
+  helpText TextBlob,
+  answerType CsrmAnswerType required,
+  options TextBlob, // Strapi json
+  order Integer,
+  answer TextBlob, // Strapi json
+  reviewComment TextBlob
+}
+
+enum CsrmAnswerType {
+  TEXT
+  LONG_TEXT
+  BOOLEAN
+  SINGLE_SELECT
+  MULTI_SELECT
+  DATE
+  FILE_UPLOAD
+}
+
+entity CsrmAssessment {
+  assessmentNumber String required unique,
+  assessmentStatus CsrmAssessmentStatus required,
+  generatedDate Instant,
+  approvalDate Instant,
+  summary TextBlob,
+  overallRating String
+}
+
+enum CsrmAssessmentStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  CLOSED
+}
+
+entity CsrmRisk {
+  riskNumber String required unique,
+  issueStatement TextBlob,
+  riskStatement TextBlob required,
+  dataClassification CsrmDataClassification,
+  inherentLikelihood String,
+  highestInherentConsequence String,
+  inherentRating String,
+  inherentRatingRationale TextBlob,
+  residualLikelihood String,
+  highestResidualConsequence String,
+  residualRating String,
+  residualRatingRationale TextBlob,
+  riskCommunicationDate LocalDate,
+  treatmentAction CsrmTreatmentAction,
+  treatmentPlan TextBlob,
+  treatmentResolveDate LocalDate,
+  treatmentStatus CsrmTreatmentStatus
+}
+
+enum CsrmTreatmentAction {
+  ACCEPT
+  TREAT
+}
+
+enum CsrmTreatmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  OVERDUE
+  COMPLETE
+}
+
+/**
+ * Relationships
+ */
+relationship ManyToMany {
+  IdamBoxUser{roles} to Role{idamboxUsers}
+  Role{entitlements} to Entitlement{roles}
+
+  CsrmAssessmentRequest{informationAssets} to CsrmInformationAsset{assessmentRequests}
+  CsrmAssessmentRequest{informationSystems} to CsrmInformationSystem{assessmentRequests}
+}
+
+relationship OneToMany {
+  Application{entitlements} to Entitlement{application required}
+
+  CsrmQuestionnaire{questions} to CsrmQuestion{questionnaire}
+  CsrmAssessment{risks} to CsrmRisk{assessment}
+}
+
+relationship OneToOne {
+  CsrmAssessmentRequest{questionnaire} to CsrmQuestionnaire{assessmentRequest}
+  CsrmAssessmentRequest{assessment} to CsrmAssessment{assessmentRequest}
+}
+
+relationship ManyToOne {
+  CsrmAssessmentRequest{requestor} to IdamBoxUser
+  CsrmAssessmentRequest{sponsor} to IdamBoxUser
+
+  CsrmInformationSystem{owner} to IdamBoxUser
+
+  CsrmAssessment{generatedBy} to IdamBoxUser
+  CsrmAssessment{reviewedBy} to IdamBoxUser
+  CsrmAssessment{approvedBy} to IdamBoxUser
+
+  CsrmRisk{riskOwner} to IdamBoxUser
+  CsrmRisk{treatmentOwner} to IdamBoxUser
+  CsrmRisk{informationSystemImpacted} to CsrmInformationSystem
+  CsrmRisk{informationAssetImpacted} to CsrmInformationAsset
+}
+
+paginate IdamBoxUser, Role, Application, Entitlement with pagination
+paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRisk with pagination
