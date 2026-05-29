@@ -100,6 +100,7 @@ entity CsrmInformationSystem {
   description TextBlob,
   systemType String,
   environment CsrmSystemEnvironment,
+  deploymentModel CsrmDeploymentModel,
   businessCriticality String,
   internetFacing Boolean,
   externalAccessRequired Boolean,
@@ -110,9 +111,12 @@ entity CsrmInformationSystem {
 enum CsrmSystemEnvironment {
   PRODUCTION
   NON_PRODUCTION
+}
+
+enum CsrmDeploymentModel {
+  ON_PREM
   CLOUD
   SAAS
-  ON_PREM
 }
 
 enum CsrmSystemLifecycleState {

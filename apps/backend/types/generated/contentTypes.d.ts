@@ -613,10 +613,9 @@ export interface ApiCsrmInformationSystemCsrmInformationSystem
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    deploymentModel: Schema.Attribute.Enumeration<['On-prem', 'Cloud', 'SaaS']>;
     description: Schema.Attribute.Text;
-    environment: Schema.Attribute.Enumeration<
-      ['Production', 'Non-production', 'Cloud', 'SaaS', 'On-prem']
-    >;
+    environment: Schema.Attribute.Enumeration<['Production', 'Non-production']>;
     externalAccessRequired: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;
     hostingLocation: Schema.Attribute.String;

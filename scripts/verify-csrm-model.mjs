@@ -171,8 +171,14 @@ assertRelationTarget(
 assertEnum(
   system,
   "environment",
-  ["Production", "Non-production", "Cloud", "SaaS", "On-prem"],
+  ["Production", "Non-production"],
   "System environment",
+);
+assertEnum(
+  system,
+  "deploymentModel",
+  ["On-prem", "Cloud", "SaaS"],
+  "System deployment model",
 );
 assertEnum(
   system,

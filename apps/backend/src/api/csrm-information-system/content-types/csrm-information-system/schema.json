@@ -31,10 +31,15 @@
       "type": "enumeration",
       "enum": [
         "Production",
-        "Non-production",
+        "Non-production"
+      ]
+    },
+    "deploymentModel": {
+      "type": "enumeration",
+      "enum": [
+        "On-prem",
         "Cloud",
-        "SaaS",
-        "On-prem"
+        "SaaS"
       ]
     },
     "businessCriticality": {
