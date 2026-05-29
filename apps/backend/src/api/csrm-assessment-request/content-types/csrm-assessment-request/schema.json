@@ -1,0 +1,82 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_assessment_requests",
+  "info": {
+    "singularName": "csrm-assessment-request",
+    "pluralName": "csrm-assessment-requests",
+    "displayName": "CSRM Assessment Request",
+    "description": "Cyber security risk management assessment request"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "requestNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "requestor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "sponsor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "submittedDate": {
+      "type": "datetime"
+    },
+    "dueDate": {
+      "type": "date"
+    },
+    "requestStatus": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "submitted",
+        "questionnaire-in-progress",
+        "risk-assessment-drafted",
+        "under-review",
+        "approved",
+        "closed"
+      ],
+      "default": "draft",
+      "required": true
+    },
+    "informationAssets": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-information-asset.csrm-information-asset",
+      "inversedBy": "assessmentRequests"
+    },
+    "informationSystems": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-information-system.csrm-information-system",
+      "inversedBy": "assessmentRequests"
+    },
+    "questionnaire": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::csrm-questionnaire.csrm-questionnaire",
+      "mappedBy": "assessmentRequest"
+    },
+    "assessment": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::csrm-assessment.csrm-assessment",
+      "mappedBy": "assessmentRequest"
+    }
+  }
+}

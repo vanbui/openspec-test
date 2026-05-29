@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_questions",
+  "info": {
+    "singularName": "csrm-question",
+    "pluralName": "csrm-questions",
+    "displayName": "CSRM Question",
+    "description": "Question and answer within a CSRM questionnaire"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "questionText": {
+      "type": "text",
+      "required": true
+    },
+    "helpText": {
+      "type": "text"
+    },
+    "answerType": {
+      "type": "enumeration",
+      "enum": [
+        "Text",
+        "Long text",
+        "Boolean",
+        "Single select",
+        "Multi select",
+        "Date",
+        "File upload"
+      ],
+      "required": true
+    },
+    "options": {
+      "type": "json"
+    },
+    "order": {
+      "type": "integer"
+    },
+    "answer": {
+      "type": "json"
+    },
+    "reviewComment": {
+      "type": "text"
+    },
+    "questionnaire": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-questionnaire.csrm-questionnaire",
+      "inversedBy": "questions"
+    }
+  }
+}

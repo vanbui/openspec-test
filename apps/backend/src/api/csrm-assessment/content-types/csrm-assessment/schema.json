@@ -1,0 +1,71 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_assessments",
+  "info": {
+    "singularName": "csrm-assessment",
+    "pluralName": "csrm-assessments",
+    "displayName": "CSRM Assessment",
+    "description": "Risk assessment generated from a CSRM assessment request"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "assessmentNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "assessmentStatus": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "in-review",
+        "approved",
+        "closed"
+      ],
+      "default": "draft",
+      "required": true
+    },
+    "generatedDate": {
+      "type": "datetime"
+    },
+    "generatedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "reviewedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "approvedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "approvalDate": {
+      "type": "datetime"
+    },
+    "summary": {
+      "type": "text"
+    },
+    "overallRating": {
+      "type": "string"
+    },
+    "assessmentRequest": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::csrm-assessment-request.csrm-assessment-request",
+      "inversedBy": "assessment"
+    },
+    "risks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::csrm-risk.csrm-risk",
+      "mappedBy": "assessment"
+    }
+  }
+}

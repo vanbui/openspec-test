@@ -1,0 +1,112 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_risks",
+  "info": {
+    "singularName": "csrm-risk",
+    "pluralName": "csrm-risks",
+    "displayName": "CSRM Risk",
+    "description": "Risk identified during a CSRM assessment"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "riskNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "issueStatement": {
+      "type": "text"
+    },
+    "riskStatement": {
+      "type": "text",
+      "required": true
+    },
+    "riskOwner": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "informationSystemImpacted": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-information-system.csrm-information-system"
+    },
+    "informationAssetImpacted": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-information-asset.csrm-information-asset"
+    },
+    "dataClassification": {
+      "type": "enumeration",
+      "enum": [
+        "Public",
+        "Internal",
+        "Restricted",
+        "Critical Infrastructure Sensitive"
+      ]
+    },
+    "inherentLikelihood": {
+      "type": "string"
+    },
+    "highestInherentConsequence": {
+      "type": "string"
+    },
+    "inherentRating": {
+      "type": "string"
+    },
+    "inherentRatingRationale": {
+      "type": "text"
+    },
+    "residualLikelihood": {
+      "type": "string"
+    },
+    "highestResidualConsequence": {
+      "type": "string"
+    },
+    "residualRating": {
+      "type": "string"
+    },
+    "residualRatingRationale": {
+      "type": "text"
+    },
+    "riskCommunicationDate": {
+      "type": "date"
+    },
+    "treatmentAction": {
+      "type": "enumeration",
+      "enum": [
+        "Accept",
+        "Treat"
+      ]
+    },
+    "treatmentPlan": {
+      "type": "text"
+    },
+    "treatmentOwner": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "treatmentResolveDate": {
+      "type": "date"
+    },
+    "treatmentStatus": {
+      "type": "enumeration",
+      "enum": [
+        "Not Started",
+        "In Progress",
+        "Overdue",
+        "Complete"
+      ]
+    },
+    "assessment": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-assessment.csrm-assessment",
+      "inversedBy": "risks"
+    }
+  }
+}

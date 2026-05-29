@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_questionnaires",
+  "info": {
+    "singularName": "csrm-questionnaire",
+    "pluralName": "csrm-questionnaires",
+    "displayName": "CSRM Questionnaire",
+    "description": "Questionnaire attached to a CSRM assessment request"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "questionnaireNumber": {
+      "type": "string",
+      "unique": true
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "assessmentRequest": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::csrm-assessment-request.csrm-assessment-request",
+      "inversedBy": "questionnaire"
+    },
+    "questions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::csrm-question.csrm-question",
+      "mappedBy": "questionnaire"
+    }
+  }
+}

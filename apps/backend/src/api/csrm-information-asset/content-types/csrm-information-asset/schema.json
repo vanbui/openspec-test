@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_information_assets",
+  "info": {
+    "singularName": "csrm-information-asset",
+    "pluralName": "csrm-information-assets",
+    "displayName": "CSRM Information Asset",
+    "description": "Information asset included in a CSRM assessment request"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "location": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "dataClassification": {
+      "type": "enumeration",
+      "enum": [
+        "Public",
+        "Internal",
+        "Restricted",
+        "Critical Infrastructure Sensitive"
+      ]
+    },
+    "confidentialityRating": {
+      "type": "string"
+    },
+    "integrityRating": {
+      "type": "string"
+    },
+    "availabilityRating": {
+      "type": "string"
+    },
+    "containsPersonalData": {
+      "type": "boolean",
+      "default": false
+    },
+    "containsLegalData": {
+      "type": "boolean",
+      "default": false
+    },
+    "comments": {
+      "type": "text"
+    },
+    "assessmentRequests": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-assessment-request.csrm-assessment-request",
+      "mappedBy": "informationAssets"
+    }
+  }
+}

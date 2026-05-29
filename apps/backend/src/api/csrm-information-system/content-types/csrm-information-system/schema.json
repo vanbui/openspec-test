@@ -1,0 +1,70 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_information_systems",
+  "info": {
+    "singularName": "csrm-information-system",
+    "pluralName": "csrm-information-systems",
+    "displayName": "CSRM Information System",
+    "description": "Information system included in a CSRM assessment request"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "systemType": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "environment": {
+      "type": "enumeration",
+      "enum": [
+        "Production",
+        "Non-production",
+        "Cloud",
+        "SaaS",
+        "On-prem"
+      ]
+    },
+    "businessCriticality": {
+      "type": "string"
+    },
+    "internetFacing": {
+      "type": "boolean",
+      "default": false
+    },
+    "externalAccessRequired": {
+      "type": "boolean",
+      "default": false
+    },
+    "hostingLocation": {
+      "type": "string"
+    },
+    "lifecycleState": {
+      "type": "enumeration",
+      "enum": [
+        "New",
+        "Changed",
+        "Existing",
+        "Decommissioning"
+      ]
+    },
+    "assessmentRequests": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-assessment-request.csrm-assessment-request",
+      "mappedBy": "informationSystems"
+    }
+  }
+}
