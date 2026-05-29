@@ -4,7 +4,7 @@
 
 IdamBox is a rebuilt platform foundation for BProton application modules such as IdamBox IAM, IdamBox Compliance, IdamBox Automation, IdamBox Crypto Manager, IdamBox LMS, and IdamBox Cyber Risk Manager. The platform starts with one shared Strapi backend that owns the core identity and authorization data model, while application-specific Next.js modules are added to the monorepo over time.
 
-Phase 1 is intentionally backend-only: create the Strapi backend and the core collections needed to model users, applications, roles, and application roles.
+The current platform foundation includes the Strapi backend, core authorization collections, local Keycloak identity-provider setup, Strapi-to-Keycloak user provisioning, and the backend-only CSRM assessment content model. The CSRM Next.js application remains a future phase.
 
 ## Core Value
 
@@ -20,10 +20,14 @@ IdamBox must provide a clean shared authorization model where each application c
 - ✓ Custom IdamBox user collection exists separately from Strapi admin users and future Auth0 users — Phase 1
 - ✓ Applications, application roles, roles, and user role assignments are modeled in Strapi — Phase 1
 - ✓ User access can be derived indirectly through assigned roles and those roles' application roles — Phase 1
+- ✓ CSRM bootstrap application access data and sample users exist behind local seed flags — Phase 2
+- ✓ Local Keycloak identity-provider setup exists for future application login — Phase 3
+- ✓ Strapi IdamBox users can be provisioned into Keycloak when provisioning is enabled — Phase 4
+- ✓ Backend-only CSRM assessment content model exists behind `csrmAppIsEnabled` route guarding — Phase 5
 
 ### Active
 
-(None currently - Phase 1 scope completed)
+- Build the IdamBox CSRM Next.js application using Keycloak/OIDC and the Phase 5 CSRM backend model — Phase 6
 
 ### Out of Scope
 
@@ -81,4 +85,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after Phase 1 completion*
+*Last updated: 2026-05-29 after Phase 5 completion*

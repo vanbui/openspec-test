@@ -12,7 +12,7 @@
 | 2   | CSRM Bootstrap Data                  | Complete 2026-05-24. Seed the Strapi backend with CSRM application access data and sample IdamBox users on boot.                                                   | BOOT-01, BOOT-02, BOOT-03, BOOT-04                                                                                  | 5                |
 | 3   | Keycloak Identity Provider Setup     | Complete 2026-05-25. Added a top-level Keycloak Docker setup for IdamBox with CSRM users and an OIDC client.                                                       | IDP-01, IDP-02, IDP-03, IDP-04                                                                                      | 5                |
 | 4   | Strapi To Keycloak User Provisioning | Complete 2026-05-26. Added Strapi-to-Keycloak provisioning with a dedicated admin client, idempotent lookup, transient password handling, and static verification. | IDP-05, IDP-06                                                                                                      | 4                |
-| 5   | CSRM Backend Content Model           | Add feature-flagged Strapi collections for CSRM assessment workflows.                                                                                              | CSRM-01, CSRM-02, CSRM-03, CSRM-04                                                                                  | 5                |
+| 5   | CSRM Backend Content Model           | Complete 2026-05-29. Added guarded CSRM assessment request, asset, system, questionnaire, question, assessment, and risk collections.                    | CSRM-01, CSRM-02, CSRM-03, CSRM-04                                                                                 | 5                |
 | 6   | IdamBox CSRM Next.js Application     | Create the first IdamBox application module for CSRM requestors and security analysts.                                                                             | AUTH-01, APP-06, CSRM-05, CSRM-06, CSRM-07, CSRM-08, CSRM-09                                                        | 6                |
 
 ## Phase Details
@@ -201,11 +201,13 @@ Plans:
 4. The CSRM collections are gated by the Strapi environment flag `csrmAppIsEnabled`.
 5. When the flag is disabled, the backend does not expose active CSRM collection behavior to application consumers.
 
-**Plans:** 0 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 
-- [ ] TBD (run `$gsd-plan-phase 5` to break down)
+- [x] `05-01-PLAN.md` - CSRM Content-Type Schemas
+- [x] `05-02-PLAN.md` - CSRM Feature Flag Guarding
+- [x] `05-03-PLAN.md` - CSRM Verification Documentation And Types
 
 **Cross-cutting constraints:**
 

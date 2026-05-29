@@ -2,36 +2,36 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_execute
-last_updated: "2026-05-29T09:20:21.371Z"
+status: ready_to_plan
+last_updated: 2026-05-29T09:33:11.921Z
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 8
-  percent: 67
-stopped_at: Phase 5 planned (3 plans) - ready to execute
+  completed_plans: 11
+  percent: 83
+stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 06
 ---
 
 # State: IdamBox Platform
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-20)
+See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** IdamBox must provide a clean shared authorization model where each application can define roles and users receive access indirectly through assigned role bundles.
-**Current focus:** Phase 05 — CSRM Backend Content Model
+**Current focus:** Phase 06 — create the idambox csrm next js application
 
 ## Current Phase
 
 | Field     | Value                      |
 | --------- | -------------------------- |
-| Phase     | 5                          |
-| Name      | CSRM Backend Content Model |
-| Status    | Ready to execute           |
+| Phase     | 6                          |
+| Name      | IdamBox CSRM Next.js Application |
+| Status    | Ready to discuss           |
 | Started   | -                          |
 | Completed | -                          |
-| Plans     | 3                          |
+| Plans     | 0                          |
 
 ## Workflow State
 
@@ -52,7 +52,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 - Phase 4 executed: 2026-05-26
 - Phase 5 context gathered: 2026-05-29
 - Phase 5 planned: 2026-05-29
-- Next command: `$gsd-execute-phase 5`
+- Phase 5 executed: 2026-05-29
+- Next command: `$gsd-discuss-phase 6`
 
 ## Memory
 
@@ -68,4 +69,5 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 - Keycloak committed credentials and `idambox-csrm-local-secret` are local-only values and must not be reused outside local development.
 - Phase 4 executed as three waves: Keycloak admin client/configuration, backend provisioning integration, and verification/documentation closeout.
 - Phase 4 added Strapi-to-Keycloak provisioning gated by `IDAMBOX_KEYCLOAK_PROVISIONING=true`, using the dedicated local admin client `idambox-strapi-admin`, storing Keycloak user IDs in `externalSubject`, and clearing transient IdamBox user passwords after successful provisioning.
+- Phase 5 added the backend-only CSRM content model with seven Strapi collections, generated API files, `csrmAppIsEnabled` route policy guarding, `verify:csrm-model`, docs, and regenerated content type declarations.
 - Phase 6 will add the IdamBox CSRM Next.js application using Keycloak/OIDC.
