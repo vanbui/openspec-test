@@ -221,7 +221,27 @@ assertIncludes(
 assertIncludes(
   provisionSource,
   "username: user.username",
-  "Keycloak provisioning source",
+  "Keycloak provisioning create payload",
+);
+assertIncludes(
+  provisionSource,
+  "toKeycloakUserUpdatePayload",
+  "Keycloak provisioning update payload",
+);
+assertIncludes(
+  provisionSource,
+  "const { username: _username, ...updatePayload } = payload;",
+  "Keycloak provisioning update payload",
+);
+assertIncludes(
+  provisionSource,
+  "await client.updateUser(keycloakUserId, toKeycloakUserUpdatePayload(payload));",
+  "Keycloak provisioning update payload",
+);
+assertIncludes(
+  adminClientSource,
+  "KeycloakUserUpdatePayload = Omit<KeycloakUserPayload, 'username'>",
+  "Keycloak admin client update payload",
 );
 assertIncludes(
   provisionSource,

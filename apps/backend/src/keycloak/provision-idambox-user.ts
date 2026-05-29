@@ -1,6 +1,10 @@
 import type { Core } from "@strapi/strapi";
 
-import { KeycloakAdminClient, type KeycloakUserPayload } from "./admin-client";
+import {
+  KeycloakAdminClient,
+  type KeycloakUserPayload,
+  type KeycloakUserUpdatePayload,
+} from "./admin-client";
 import { getKeycloakProvisioningConfig } from "./config";
 
 export const IDAMBOX_USER_UID = "api::idambox-user.idambox-user";
@@ -39,7 +43,7 @@ export async function provisionIdamboxUserToKeycloak(
   let keycloakUserId = keycloakUser?.id;
 
   if (keycloakUserId) {
-    await client.updateUser(keycloakUserId, payload);
+    await client.updateUser(keycloakUserId, toKeycloakUserUpdatePayload(payload));
   } else {
     keycloakUserId = await client.createUser({
       ...payload,
@@ -65,6 +69,14 @@ export async function provisionIdamboxUserToKeycloak(
   await clearProvisioningSecrets(strapi, user.documentId, keycloakUserId);
 
   return keycloakUserId;
+}
+
+function toKeycloakUserUpdatePayload(
+  payload: KeycloakUserPayload,
+): KeycloakUserUpdatePayload {
+  const { username: _username, ...updatePayload } = payload;
+
+  return updatePayload;
 }
 
 function toKeycloakUserPayload(user: IdamBoxUserDocument): KeycloakUserPayload {

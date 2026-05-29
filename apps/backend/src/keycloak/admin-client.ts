@@ -22,6 +22,8 @@ export type KeycloakUserPayload = {
   }>;
 };
 
+export type KeycloakUserUpdatePayload = Omit<KeycloakUserPayload, 'username'>;
+
 export class KeycloakAdminClient {
   private accessToken?: string;
 
@@ -63,7 +65,7 @@ export class KeycloakAdminClient {
     return id;
   }
 
-  async updateUser(id: string, payload: KeycloakUserPayload) {
+  async updateUser(id: string, payload: KeycloakUserUpdatePayload) {
     await this.requestResponse(`/admin/realms/${this.config.realm}/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -148,4 +150,3 @@ export class KeycloakAdminClient {
     return response;
   }
 }
-
