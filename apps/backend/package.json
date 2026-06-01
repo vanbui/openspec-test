@@ -12,7 +12,8 @@
     "start": "strapi start",
     "strapi": "strapi",
     "lint": "tsc --noEmit",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "openapi": "strapi openapi generate"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.23.6",
