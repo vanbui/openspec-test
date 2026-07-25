@@ -30,7 +30,14 @@ Before running Strapi, replace the placeholder secrets in `apps/backend/.env`.
 
 ## Development
 
-Run the Strapi backend:
+Strapi backend is now dependent on Keycloak, so before launching the Strapi backend, please follow the instructions in the idp/README.md file to start up Keycloak. Basically run:
+
+```
+cd idp
+docker compose up -d
+```
+
+Wait 1 minute for Keycloak to be ready then start the Strapi backend:
 
 ```powershell
 yarn develop:cms

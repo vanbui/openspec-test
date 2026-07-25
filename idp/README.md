@@ -13,7 +13,7 @@ docker compose up -d
 docker compose logs -f keycloak
 ```
 
-Open the admin console:
+Open the admin console and login as admin/admin:
 
 ```text
 http://localhost:8080/admin

@@ -318,7 +318,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.407Z",
+                            "default": "2026-07-25T06:35:30.321Z",
                             "type": "string"
                           },
                           "entitlements": {
@@ -484,7 +484,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.427Z",
+                          "default": "2026-07-25T06:35:30.353Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -566,7 +566,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.426Z",
+                        "default": "2026-07-25T06:35:30.352Z",
                         "type": "string"
                       },
                       "entitlements": {
@@ -836,7 +836,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.422Z",
+                          "default": "2026-07-25T06:35:30.347Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -1013,7 +1013,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.431Z",
+                          "default": "2026-07-25T06:35:30.364Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -1095,7 +1095,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.430Z",
+                        "default": "2026-07-25T06:35:30.361Z",
                         "type": "string"
                       },
                       "entitlements": {
@@ -1271,7 +1271,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.434Z",
+                          "default": "2026-07-25T06:35:30.370Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -1662,7 +1662,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.443Z",
+                            "default": "2026-07-25T06:35:30.379Z",
                             "type": "string"
                           },
                           "generatedBy": {
@@ -1863,7 +1863,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.471Z",
+                          "default": "2026-07-25T06:35:30.423Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -1970,7 +1970,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.469Z",
+                        "default": "2026-07-25T06:35:30.420Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -2293,7 +2293,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.463Z",
+                          "default": "2026-07-25T06:35:30.416Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2505,7 +2505,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.477Z",
+                          "default": "2026-07-25T06:35:30.433Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2612,7 +2612,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.475Z",
+                        "default": "2026-07-25T06:35:30.430Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -2834,7 +2834,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.480Z",
+                          "default": "2026-07-25T06:35:30.438Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -3245,7 +3245,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.486Z",
+                            "default": "2026-07-25T06:35:30.450Z",
                             "type": "string"
                           },
                           "requestor": {
@@ -3459,7 +3459,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.500Z",
+                          "default": "2026-07-25T06:35:30.466Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -3577,7 +3577,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.498Z",
+                        "default": "2026-07-25T06:35:30.462Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -3915,7 +3915,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.494Z",
+                          "default": "2026-07-25T06:35:30.457Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4140,7 +4140,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.506Z",
+                          "default": "2026-07-25T06:35:30.477Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4258,7 +4258,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.504Z",
+                        "default": "2026-07-25T06:35:30.474Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -4494,7 +4494,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.510Z",
+                          "default": "2026-07-25T06:35:30.485Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4594,6 +4594,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -4624,6 +4625,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -4737,6 +4739,7 @@
                     "availabilityRating",
                     "containsPersonalData",
                     "containsLegalData",
+                    "containsCreditCardData",
                     "comments",
                     "createdAt",
                     "updatedAt",
@@ -4758,6 +4761,7 @@
                       "availabilityRating",
                       "containsPersonalData",
                       "containsLegalData",
+                      "containsCreditCardData",
                       "comments",
                       "createdAt",
                       "updatedAt",
@@ -4780,6 +4784,7 @@
                       "availabilityRating",
                       "containsPersonalData",
                       "containsLegalData",
+                      "containsCreditCardData",
                       "comments",
                       "createdAt",
                       "updatedAt",
@@ -4811,6 +4816,7 @@
                         "availabilityRating",
                         "containsPersonalData",
                         "containsLegalData",
+                        "containsCreditCardData",
                         "comments",
                         "createdAt",
                         "updatedAt",
@@ -4937,6 +4943,11 @@
                             "default": false,
                             "type": "boolean"
                           },
+                          "containsCreditCardData": {
+                            "description": "A boolean field",
+                            "default": false,
+                            "type": "boolean"
+                          },
                           "comments": {
                             "description": "A text field",
                             "type": "string"
@@ -4951,7 +4962,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.517Z",
+                            "default": "2026-07-25T06:35:30.499Z",
                             "type": "string"
                           },
                           "assessmentRequests": {
@@ -4968,6 +4979,7 @@
                           "name",
                           "containsPersonalData",
                           "containsLegalData",
+                          "containsCreditCardData",
                           "publishedAt"
                         ],
                         "additionalProperties": false
@@ -5027,6 +5039,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -5141,6 +5154,11 @@
                           "default": false,
                           "type": "boolean"
                         },
+                        "containsCreditCardData": {
+                          "description": "A boolean field",
+                          "default": false,
+                          "type": "boolean"
+                        },
                         "comments": {
                           "description": "A text field",
                           "type": "string"
@@ -5155,7 +5173,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.532Z",
+                          "default": "2026-07-25T06:35:30.521Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -5172,6 +5190,7 @@
                         "name",
                         "containsPersonalData",
                         "containsLegalData",
+                        "containsCreditCardData",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -5278,13 +5297,26 @@
                           "false"
                         ]
                       },
+                      "containsCreditCardData": {
+                        "description": "A boolean field",
+                        "default": false,
+                        "type": "string",
+                        "enum": [
+                          "0",
+                          "1",
+                          "t",
+                          "true",
+                          "f",
+                          "false"
+                        ]
+                      },
                       "comments": {
                         "description": "A text field",
                         "type": "string"
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.531Z",
+                        "default": "2026-07-25T06:35:30.519Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -5301,6 +5333,7 @@
                       "name",
                       "containsPersonalData",
                       "containsLegalData",
+                      "containsCreditCardData",
                       "publishedAt"
                     ],
                     "additionalProperties": false
@@ -5354,6 +5387,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -5419,6 +5453,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -5450,6 +5485,7 @@
                     "availabilityRating",
                     "containsPersonalData",
                     "containsLegalData",
+                    "containsCreditCardData",
                     "comments",
                     "createdAt",
                     "updatedAt",
@@ -5471,6 +5507,7 @@
                       "availabilityRating",
                       "containsPersonalData",
                       "containsLegalData",
+                      "containsCreditCardData",
                       "comments",
                       "createdAt",
                       "updatedAt",
@@ -5493,6 +5530,7 @@
                       "availabilityRating",
                       "containsPersonalData",
                       "containsLegalData",
+                      "containsCreditCardData",
                       "comments",
                       "createdAt",
                       "updatedAt",
@@ -5524,6 +5562,7 @@
                         "availabilityRating",
                         "containsPersonalData",
                         "containsLegalData",
+                        "containsCreditCardData",
                         "comments",
                         "createdAt",
                         "updatedAt",
@@ -5613,6 +5652,11 @@
                           "default": false,
                           "type": "boolean"
                         },
+                        "containsCreditCardData": {
+                          "description": "A boolean field",
+                          "default": false,
+                          "type": "boolean"
+                        },
                         "comments": {
                           "description": "A text field",
                           "type": "string"
@@ -5627,7 +5671,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.527Z",
+                          "default": "2026-07-25T06:35:30.514Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -5644,6 +5688,7 @@
                         "name",
                         "containsPersonalData",
                         "containsLegalData",
+                        "containsCreditCardData",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -5714,6 +5759,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -5828,6 +5874,11 @@
                           "default": false,
                           "type": "boolean"
                         },
+                        "containsCreditCardData": {
+                          "description": "A boolean field",
+                          "default": false,
+                          "type": "boolean"
+                        },
                         "comments": {
                           "description": "A text field",
                           "type": "string"
@@ -5842,7 +5893,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.538Z",
+                          "default": "2026-07-25T06:35:30.536Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -5859,6 +5910,7 @@
                         "name",
                         "containsPersonalData",
                         "containsLegalData",
+                        "containsCreditCardData",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -5965,13 +6017,26 @@
                           "false"
                         ]
                       },
+                      "containsCreditCardData": {
+                        "description": "A boolean field",
+                        "default": false,
+                        "type": "string",
+                        "enum": [
+                          "0",
+                          "1",
+                          "t",
+                          "true",
+                          "f",
+                          "false"
+                        ]
+                      },
                       "comments": {
                         "description": "A text field",
                         "type": "string"
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.536Z",
+                        "default": "2026-07-25T06:35:30.533Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -6033,6 +6098,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -6098,6 +6164,7 @@
                   "availabilityRating",
                   "containsPersonalData",
                   "containsLegalData",
+                  "containsCreditCardData",
                   "comments",
                   "createdAt",
                   "updatedAt",
@@ -6178,6 +6245,11 @@
                           "default": false,
                           "type": "boolean"
                         },
+                        "containsCreditCardData": {
+                          "description": "A boolean field",
+                          "default": false,
+                          "type": "boolean"
+                        },
                         "comments": {
                           "description": "A text field",
                           "type": "string"
@@ -6192,7 +6264,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.541Z",
+                          "default": "2026-07-25T06:35:30.542Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -6209,6 +6281,7 @@
                         "name",
                         "containsPersonalData",
                         "containsLegalData",
+                        "containsCreditCardData",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -6627,7 +6700,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.551Z",
+                            "default": "2026-07-25T06:35:30.549Z",
                             "type": "string"
                           },
                           "owner": {
@@ -6841,7 +6914,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.560Z",
+                          "default": "2026-07-25T06:35:30.567Z",
                           "type": "string"
                         },
                         "owner": {
@@ -6979,7 +7052,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.558Z",
+                        "default": "2026-07-25T06:35:30.565Z",
                         "type": "string"
                       },
                       "owner": {
@@ -7329,7 +7402,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.555Z",
+                          "default": "2026-07-25T06:35:30.555Z",
                           "type": "string"
                         },
                         "owner": {
@@ -7554,7 +7627,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.564Z",
+                          "default": "2026-07-25T06:35:30.577Z",
                           "type": "string"
                         },
                         "owner": {
@@ -7692,7 +7765,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.562Z",
+                        "default": "2026-07-25T06:35:30.573Z",
                         "type": "string"
                       },
                       "owner": {
@@ -7924,7 +7997,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.569Z",
+                          "default": "2026-07-25T06:35:30.581Z",
                           "type": "string"
                         },
                         "owner": {
@@ -8323,7 +8396,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.574Z",
+                            "default": "2026-07-25T06:35:30.588Z",
                             "type": "string"
                           },
                           "questionnaire": {
@@ -8504,7 +8577,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.581Z",
+                          "default": "2026-07-25T06:35:30.611Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -8598,7 +8671,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.580Z",
+                        "default": "2026-07-25T06:35:30.610Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -8898,7 +8971,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.578Z",
+                          "default": "2026-07-25T06:35:30.594Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -9090,7 +9163,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.585Z",
+                          "default": "2026-07-25T06:35:30.616Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -9184,7 +9257,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.583Z",
+                        "default": "2026-07-25T06:35:30.615Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -9379,7 +9452,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.591Z",
+                          "default": "2026-07-25T06:35:30.620Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -9723,7 +9796,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.595Z",
+                            "default": "2026-07-25T06:35:30.626Z",
                             "type": "string"
                           },
                           "assessmentRequest": {
@@ -9883,7 +9956,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.600Z",
+                          "default": "2026-07-25T06:35:30.645Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -9958,7 +10031,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.599Z",
+                        "default": "2026-07-25T06:35:30.643Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -10219,7 +10292,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.597Z",
+                          "default": "2026-07-25T06:35:30.632Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -10390,7 +10463,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.602Z",
+                          "default": "2026-07-25T06:35:30.649Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -10465,7 +10538,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.601Z",
+                        "default": "2026-07-25T06:35:30.647Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -10638,7 +10711,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.604Z",
+                          "default": "2026-07-25T06:35:30.651Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -11150,7 +11223,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.615Z",
+                            "default": "2026-07-25T06:35:30.662Z",
                             "type": "string"
                           },
                           "riskOwner": {
@@ -11412,7 +11485,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.630Z",
+                          "default": "2026-07-25T06:35:30.683Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -11569,7 +11642,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.625Z",
+                        "default": "2026-07-25T06:35:30.681Z",
                         "type": "string"
                       },
                       "riskOwner": {
@@ -12008,7 +12081,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.621Z",
+                          "default": "2026-07-25T06:35:30.676Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -12281,7 +12354,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.636Z",
+                          "default": "2026-07-25T06:35:30.691Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -12438,7 +12511,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.634Z",
+                        "default": "2026-07-25T06:35:30.688Z",
                         "type": "string"
                       },
                       "riskOwner": {
@@ -12732,7 +12805,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.640Z",
+                          "default": "2026-07-25T06:35:30.709Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -13082,7 +13155,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.644Z",
+                            "default": "2026-07-25T06:35:30.714Z",
                             "type": "string"
                           },
                           "application": {
@@ -13238,7 +13311,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.652Z",
+                          "default": "2026-07-25T06:35:30.723Z",
                           "type": "string"
                         },
                         "application": {
@@ -13310,7 +13383,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.651Z",
+                        "default": "2026-07-25T06:35:30.722Z",
                         "type": "string"
                       },
                       "application": {
@@ -13562,7 +13635,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.649Z",
+                          "default": "2026-07-25T06:35:30.719Z",
                           "type": "string"
                         },
                         "application": {
@@ -13729,7 +13802,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.654Z",
+                          "default": "2026-07-25T06:35:30.726Z",
                           "type": "string"
                         },
                         "application": {
@@ -13801,7 +13874,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.653Z",
+                        "default": "2026-07-25T06:35:30.725Z",
                         "type": "string"
                       },
                       "application": {
@@ -13968,7 +14041,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.656Z",
+                          "default": "2026-07-25T06:35:30.730Z",
                           "type": "string"
                         },
                         "application": {
@@ -14364,7 +14437,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-06-01T05:05:00.661Z",
+                            "default": "2026-07-25T06:35:30.744Z",
                             "type": "string"
                           },
                           "roles": {
@@ -14548,7 +14621,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.671Z",
+                          "default": "2026-07-25T06:35:30.752Z",
                           "type": "string"
                         },
                         "roles": {
@@ -14645,7 +14718,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.670Z",
+                        "default": "2026-07-25T06:35:30.751Z",
                         "type": "string"
                       },
                       "roles": {
@@ -14948,7 +15021,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.664Z",
+                          "default": "2026-07-25T06:35:30.748Z",
                           "type": "string"
                         },
                         "roles": {
@@ -15143,7 +15216,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.674Z",
+                          "default": "2026-07-25T06:35:30.757Z",
                           "type": "string"
                         },
                         "roles": {
@@ -15240,7 +15313,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.673Z",
+                        "default": "2026-07-25T06:35:30.755Z",
                         "type": "string"
                       },
                       "roles": {
@@ -15436,7 +15509,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.677Z",
+                          "default": "2026-07-25T06:35:30.761Z",
                           "type": "string"
                         },
                         "roles": {
@@ -15971,7 +16044,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.691Z",
+                          "default": "2026-07-25T06:35:30.785Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -16045,7 +16118,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-06-01T05:05:00.690Z",
+                        "default": "2026-07-25T06:35:30.784Z",
                         "type": "string"
                       },
                       "entitlements": {
@@ -16215,7 +16288,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-06-01T05:05:00.693Z",
+                          "default": "2026-07-25T06:35:30.787Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -21725,7 +21798,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.413Z",
+            "default": "2026-07-25T06:35:30.330Z",
             "type": "string"
           },
           "entitlements": {
@@ -21805,7 +21878,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.417Z",
+            "default": "2026-07-25T06:35:30.340Z",
             "type": "string"
           },
           "roles": {
@@ -21859,7 +21932,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.415Z",
+            "default": "2026-07-25T06:35:30.336Z",
             "type": "string"
           },
           "entitlements": {
@@ -21917,7 +21990,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.411Z",
+            "default": "2026-07-25T06:35:30.326Z",
             "type": "string"
           },
           "application": {
@@ -22003,6 +22076,11 @@
             "default": false,
             "type": "boolean"
           },
+          "containsCreditCardData": {
+            "description": "A boolean field",
+            "default": false,
+            "type": "boolean"
+          },
           "comments": {
             "description": "A text field",
             "type": "string"
@@ -22017,7 +22095,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.447Z",
+            "default": "2026-07-25T06:35:30.384Z",
             "type": "string"
           },
           "assessmentRequests": {
@@ -22034,6 +22112,7 @@
           "name",
           "containsPersonalData",
           "containsLegalData",
+          "containsCreditCardData",
           "publishedAt"
         ],
         "additionalProperties": false,
@@ -22119,7 +22198,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.449Z",
+            "default": "2026-07-25T06:35:30.386Z",
             "type": "string"
           },
           "owner": {
@@ -22205,7 +22284,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.453Z",
+            "default": "2026-07-25T06:35:30.391Z",
             "type": "string"
           },
           "questionnaire": {
@@ -22258,7 +22337,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.451Z",
+            "default": "2026-07-25T06:35:30.388Z",
             "type": "string"
           },
           "assessmentRequest": {
@@ -22389,7 +22468,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.458Z",
+            "default": "2026-07-25T06:35:30.408Z",
             "type": "string"
           },
           "riskOwner": {
@@ -22477,7 +22556,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.455Z",
+            "default": "2026-07-25T06:35:30.397Z",
             "type": "string"
           },
           "generatedBy": {
@@ -22571,7 +22650,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-06-01T05:05:00.445Z",
+            "default": "2026-07-25T06:35:30.381Z",
             "type": "string"
           },
           "requestor": {

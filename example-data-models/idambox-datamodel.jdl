@@ -85,6 +85,7 @@ entity CsrmInformationAsset {
   availabilityRating String,
   containsPersonalData Boolean,
   containsLegalData Boolean,
+  containsCreditCardData Boolean,
   comments TextBlob
 }
 

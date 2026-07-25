@@ -564,6 +564,8 @@ export interface ApiCsrmInformationAssetCsrmInformationAsset
     availabilityRating: Schema.Attribute.String;
     comments: Schema.Attribute.Text;
     confidentialityRating: Schema.Attribute.String;
+    containsCreditCardData: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
     containsLegalData: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;
     containsPersonalData: Schema.Attribute.Boolean &

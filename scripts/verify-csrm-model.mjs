@@ -138,12 +138,14 @@ for (const field of [
   "availabilityRating",
   "containsPersonalData",
   "containsLegalData",
+  "containsCreditCardData",
   "comments",
 ]) {
   assert(asset.attributes[field], `Information asset must define ${field}`);
 }
 assert(asset.attributes.containsPersonalData.default === false, "Asset personal data flag must default false");
 assert(asset.attributes.containsLegalData.default === false, "Asset legal data flag must default false");
+assert(asset.attributes.containsCreditCardData.default === false, "Asset credit card data flag must default false");
 assertEnum(
   asset,
   "dataClassification",

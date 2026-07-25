@@ -51,6 +51,10 @@
       "type": "boolean",
       "default": false
     },
+    "containsCreditCardData": {
+      "type": "boolean",
+      "default": false
+    },
     "comments": {
       "type": "text"
     },
