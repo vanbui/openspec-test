@@ -59,9 +59,30 @@ entity CsrmAssessmentRequest {
   requestNumber String required unique,
   title String required,
   description TextBlob,
+  assessmentType CsrmAssessmentType,
+  division String,
+  businessUnit String,
+  businessPurpose TextBlob,
+  businessCriticality CsrmBusinessCriticality,
+  thirdPartyInvolvement Boolean,
+  thirdPartyDetails TextBlob,
+  regulatoryRequirements TextBlob,
   submittedDate Instant,
   dueDate LocalDate,
   requestStatus CsrmRequestStatus required
+}
+
+enum CsrmAssessmentType {
+  BAU
+  PROJECT
+  OTHER
+}
+
+enum CsrmBusinessCriticality {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
 }
 
 enum CsrmRequestStatus {
@@ -156,10 +177,15 @@ enum CsrmAnswerType {
 entity CsrmAssessment {
   assessmentNumber String required unique,
   assessmentStatus CsrmAssessmentStatus required,
+  assessmentDate Instant,
   generatedDate Instant,
+  nextReviewDate LocalDate,
   approvalDate Instant,
   summary TextBlob,
-  overallRating String
+  overallRating String,
+  overallControlEffectiveness CsrmControlEffectiveness,
+  recommendationsSummary TextBlob,
+  overallRiskRationale TextBlob
 }
 
 enum CsrmAssessmentStatus {
@@ -173,6 +199,10 @@ entity CsrmRisk {
   riskNumber String required unique,
   issueStatement TextBlob,
   riskStatement TextBlob required,
+  riskCategory String,
+  riskSubCategory String,
+  riskCause TextBlob,
+  potentialImpact TextBlob,
   dataClassification CsrmDataClassification,
   inherentLikelihood String,
   highestInherentConsequence String,
@@ -182,11 +212,60 @@ entity CsrmRisk {
   highestResidualConsequence String,
   residualRating String,
   residualRatingRationale TextBlob,
+  controlEffectiveness CsrmControlEffectiveness,
+  riskVelocity CsrmRiskVelocity,
+  identifiedDate LocalDate,
+  targetDate LocalDate,
+  closureDate LocalDate,
+  escalationDetails TextBlob,
+  comments TextBlob,
   riskCommunicationDate LocalDate,
   treatmentAction CsrmTreatmentAction,
   treatmentPlan TextBlob,
   treatmentResolveDate LocalDate,
   treatmentStatus CsrmTreatmentStatus
+}
+
+entity CsrmControl {
+  controlNumber String required unique,
+  name String required,
+  description TextBlob,
+  controlType CsrmControlType,
+  controlStatus CsrmControlStatus,
+  effectivenessRating CsrmControlEffectiveness,
+  controlReference String,
+  evidence TextBlob,
+  implementationDueDate LocalDate,
+  implementedDate LocalDate,
+  reviewDate LocalDate
+}
+
+enum CsrmControlType {
+  PREVENTIVE
+  DETECTIVE
+  CORRECTIVE
+  COMPENSATING
+}
+
+enum CsrmControlStatus {
+  EXISTING
+  PLANNED
+  IMPLEMENTED
+  RETIRED
+}
+
+enum CsrmControlEffectiveness {
+  EFFECTIVE
+  PARTIALLY_EFFECTIVE
+  INEFFECTIVE
+  NOT_ASSESSED
+}
+
+enum CsrmRiskVelocity {
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
 }
 
 enum CsrmTreatmentAction {
@@ -210,6 +289,8 @@ relationship ManyToMany {
 
   CsrmAssessmentRequest{informationAssets} to CsrmInformationAsset{assessmentRequests}
   CsrmAssessmentRequest{informationSystems} to CsrmInformationSystem{assessmentRequests}
+  CsrmRisk{currentControls} to CsrmControl{currentRisks}
+  CsrmRisk{recommendedControls} to CsrmControl{recommendedRisks}
 }
 
 relationship OneToMany {
@@ -236,9 +317,10 @@ relationship ManyToOne {
 
   CsrmRisk{riskOwner} to IdamBoxUser
   CsrmRisk{treatmentOwner} to IdamBoxUser
+  CsrmControl{controlOwner} to IdamBoxUser
   CsrmRisk{informationSystemImpacted} to CsrmInformationSystem
   CsrmRisk{informationAssetImpacted} to CsrmInformationAsset
 }
 
 paginate IdamBoxUser, Role, Application, Entitlement with pagination
-paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRisk with pagination
+paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRisk, CsrmControl with pagination

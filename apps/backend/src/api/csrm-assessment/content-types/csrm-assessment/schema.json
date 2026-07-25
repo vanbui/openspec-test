@@ -31,6 +31,9 @@
     "generatedDate": {
       "type": "datetime"
     },
+    "assessmentDate": {
+      "type": "datetime"
+    },
     "generatedBy": {
       "type": "relation",
       "relation": "manyToOne",
@@ -49,11 +52,29 @@
     "approvalDate": {
       "type": "datetime"
     },
+    "nextReviewDate": {
+      "type": "date"
+    },
     "summary": {
       "type": "text"
     },
     "overallRating": {
       "type": "string"
+    },
+    "overallControlEffectiveness": {
+      "type": "enumeration",
+      "enum": [
+        "Effective",
+        "Partially Effective",
+        "Ineffective",
+        "Not Assessed"
+      ]
+    },
+    "recommendationsSummary": {
+      "type": "text"
+    },
+    "overallRiskRationale": {
+      "type": "text"
     },
     "assessmentRequest": {
       "type": "relation",

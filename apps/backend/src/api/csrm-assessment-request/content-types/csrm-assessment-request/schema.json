@@ -24,6 +24,41 @@
     "description": {
       "type": "text"
     },
+    "assessmentType": {
+      "type": "enumeration",
+      "enum": [
+        "BAU",
+        "Project",
+        "Other"
+      ]
+    },
+    "division": {
+      "type": "string"
+    },
+    "businessUnit": {
+      "type": "string"
+    },
+    "businessPurpose": {
+      "type": "text"
+    },
+    "businessCriticality": {
+      "type": "enumeration",
+      "enum": [
+        "Low",
+        "Moderate",
+        "High",
+        "Critical"
+      ]
+    },
+    "thirdPartyInvolvement": {
+      "type": "boolean"
+    },
+    "thirdPartyDetails": {
+      "type": "text"
+    },
+    "regulatoryRequirements": {
+      "type": "text"
+    },
     "requestor": {
       "type": "relation",
       "relation": "manyToOne",

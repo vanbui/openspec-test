@@ -57,6 +57,7 @@ const csrmSchemas = {
   "csrm-question": readSchema("csrm-question"),
   "csrm-assessment": readSchema("csrm-assessment"),
   "csrm-risk": readSchema("csrm-risk"),
+  "csrm-control": readSchema("csrm-control"),
 };
 
 const expectedCollectionNames = {
@@ -67,6 +68,7 @@ const expectedCollectionNames = {
   "csrm-question": "csrm_questions",
   "csrm-assessment": "csrm_assessments",
   "csrm-risk": "csrm_risks",
+  "csrm-control": "csrm_controls",
 };
 
 for (const [name, schema] of Object.entries(csrmSchemas)) {
@@ -88,11 +90,18 @@ const questionnaire = csrmSchemas["csrm-questionnaire"];
 const question = csrmSchemas["csrm-question"];
 const assessment = csrmSchemas["csrm-assessment"];
 const risk = csrmSchemas["csrm-risk"];
+const control = csrmSchemas["csrm-control"];
 
 for (const field of [
   "requestNumber",
   "title",
   "description",
+  "division",
+  "businessUnit",
+  "businessPurpose",
+  "thirdPartyInvolvement",
+  "thirdPartyDetails",
+  "regulatoryRequirements",
   "submittedDate",
   "dueDate",
 ]) {
@@ -100,6 +109,13 @@ for (const field of [
 }
 assert(request.attributes.requestNumber.required === true, "Request number must be required");
 assert(request.attributes.requestNumber.unique === true, "Request number must be unique");
+assertEnum(request, "assessmentType", ["BAU", "Project", "Other"], "Assessment type");
+assertEnum(
+  request,
+  "businessCriticality",
+  ["Low", "Moderate", "High", "Critical"],
+  "Business criticality",
+);
 assertRelationTarget(
   request,
   "requestor",
@@ -253,10 +269,15 @@ assertEnum(
 
 for (const field of [
   "assessmentNumber",
+  "assessmentDate",
   "generatedDate",
+  "nextReviewDate",
   "approvalDate",
   "summary",
   "overallRating",
+  "overallControlEffectiveness",
+  "recommendationsSummary",
+  "overallRiskRationale",
 ]) {
   assert(assessment.attributes[field], `Assessment must define ${field}`);
 }
@@ -267,6 +288,12 @@ assertEnum(
   "assessmentStatus",
   ["draft", "in-review", "approved", "closed"],
   "Assessment status",
+);
+assertEnum(
+  assessment,
+  "overallControlEffectiveness",
+  ["Effective", "Partially Effective", "Ineffective", "Not Assessed"],
+  "Overall control effectiveness",
 );
 for (const field of ["generatedBy", "reviewedBy", "approvedBy"]) {
   assertRelationTarget(
@@ -305,6 +332,10 @@ for (const field of [
   "riskNumber",
   "issueStatement",
   "riskStatement",
+  "riskCategory",
+  "riskSubCategory",
+  "riskCause",
+  "potentialImpact",
   "inherentLikelihood",
   "highestInherentConsequence",
   "inherentRating",
@@ -313,6 +344,13 @@ for (const field of [
   "highestResidualConsequence",
   "residualRating",
   "residualRatingRationale",
+  "controlEffectiveness",
+  "riskVelocity",
+  "identifiedDate",
+  "targetDate",
+  "closureDate",
+  "escalationDetails",
+  "comments",
   "riskCommunicationDate",
   "treatmentPlan",
   "treatmentResolveDate",
@@ -358,6 +396,72 @@ assertEnum(
   "treatmentStatus",
   ["Not Started", "In Progress", "Overdue", "Complete"],
   "Risk treatment status",
+);
+assertEnum(
+  risk,
+  "controlEffectiveness",
+  ["Effective", "Partially Effective", "Ineffective", "Not Assessed"],
+  "Risk control effectiveness",
+);
+assertEnum(
+  risk,
+  "riskVelocity",
+  ["Low", "Moderate", "High", "Very High"],
+  "Risk velocity",
+);
+assertRelationTarget(
+  risk,
+  "currentControls",
+  "api::csrm-control.csrm-control",
+  "Risk current controls",
+);
+assertRelationTarget(
+  risk,
+  "recommendedControls",
+  "api::csrm-control.csrm-control",
+  "Risk recommended controls",
+);
+
+for (const field of [
+  "controlNumber",
+  "name",
+  "description",
+  "controlStatus",
+  "controlOwner",
+  "effectivenessRating",
+  "controlReference",
+  "evidence",
+  "implementationDueDate",
+  "implementedDate",
+  "reviewDate",
+]) {
+  assert(control.attributes[field], `Control must define ${field}`);
+}
+assert(control.attributes.controlNumber.required === true, "Control number must be required");
+assert(control.attributes.controlNumber.unique === true, "Control number must be unique");
+assertEnum(
+  control,
+  "controlType",
+  ["Preventive", "Detective", "Corrective", "Compensating"],
+  "Control type",
+);
+assertEnum(
+  control,
+  "controlStatus",
+  ["Existing", "Planned", "Implemented", "Retired"],
+  "Control status",
+);
+assertEnum(
+  control,
+  "effectivenessRating",
+  ["Effective", "Partially Effective", "Ineffective", "Not Assessed"],
+  "Control effectiveness",
+);
+assertRelationTarget(
+  control,
+  "controlOwner",
+  "api::idambox-user.idambox-user",
+  "Control owner",
 );
 
 const routeNames = Object.keys(csrmSchemas);

@@ -430,10 +430,17 @@ export interface ApiCsrmAssessmentRequestCsrmAssessmentRequest
       'oneToOne',
       'api::csrm-assessment.csrm-assessment'
     >;
+    assessmentType: Schema.Attribute.Enumeration<['BAU', 'Project', 'Other']>;
+    businessCriticality: Schema.Attribute.Enumeration<
+      ['Low', 'Moderate', 'High', 'Critical']
+    >;
+    businessPurpose: Schema.Attribute.Text;
+    businessUnit: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
+    division: Schema.Attribute.String;
     dueDate: Schema.Attribute.Date;
     informationAssets: Schema.Attribute.Relation<
       'manyToMany',
@@ -454,6 +461,7 @@ export interface ApiCsrmAssessmentRequestCsrmAssessmentRequest
       'oneToOne',
       'api::csrm-questionnaire.csrm-questionnaire'
     >;
+    regulatoryRequirements: Schema.Attribute.Text;
     requestNumber: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
@@ -479,6 +487,8 @@ export interface ApiCsrmAssessmentRequestCsrmAssessmentRequest
       'api::idambox-user.idambox-user'
     >;
     submittedDate: Schema.Attribute.DateTime;
+    thirdPartyDetails: Schema.Attribute.Text;
+    thirdPartyInvolvement: Schema.Attribute.Boolean;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -504,6 +514,7 @@ export interface ApiCsrmAssessmentCsrmAssessment
       'manyToOne',
       'api::idambox-user.idambox-user'
     >;
+    assessmentDate: Schema.Attribute.DateTime;
     assessmentNumber: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
@@ -530,14 +541,71 @@ export interface ApiCsrmAssessmentCsrmAssessment
       'api::csrm-assessment.csrm-assessment'
     > &
       Schema.Attribute.Private;
+    nextReviewDate: Schema.Attribute.Date;
+    overallControlEffectiveness: Schema.Attribute.Enumeration<
+      ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']
+    >;
     overallRating: Schema.Attribute.String;
+    overallRiskRationale: Schema.Attribute.Text;
     publishedAt: Schema.Attribute.DateTime;
+    recommendationsSummary: Schema.Attribute.Text;
     reviewedBy: Schema.Attribute.Relation<
       'manyToOne',
       'api::idambox-user.idambox-user'
     >;
     risks: Schema.Attribute.Relation<'oneToMany', 'api::csrm-risk.csrm-risk'>;
     summary: Schema.Attribute.Text;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_controls';
+  info: {
+    description: 'Current or recommended control associated with a CSRM risk';
+    displayName: 'CSRM Control';
+    pluralName: 'csrm-controls';
+    singularName: 'csrm-control';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    controlNumber: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    controlOwner: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    controlReference: Schema.Attribute.String;
+    controlStatus: Schema.Attribute.Enumeration<
+      ['Existing', 'Planned', 'Implemented', 'Retired']
+    >;
+    controlType: Schema.Attribute.Enumeration<
+      ['Preventive', 'Detective', 'Corrective', 'Compensating']
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    effectivenessRating: Schema.Attribute.Enumeration<
+      ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']
+    >;
+    evidence: Schema.Attribute.Text;
+    implementationDueDate: Schema.Attribute.Date;
+    implementedDate: Schema.Attribute.Date;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-control.csrm-control'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    reviewDate: Schema.Attribute.Date;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -752,14 +820,25 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
       'manyToOne',
       'api::csrm-assessment.csrm-assessment'
     >;
+    closureDate: Schema.Attribute.Date;
+    comments: Schema.Attribute.Text;
+    controlEffectiveness: Schema.Attribute.Enumeration<
+      ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']
+    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    currentControls: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::csrm-control.csrm-control'
+    >;
     dataClassification: Schema.Attribute.Enumeration<
       ['Public', 'Internal', 'Restricted', 'Critical Infrastructure Sensitive']
     >;
+    escalationDetails: Schema.Attribute.Text;
     highestInherentConsequence: Schema.Attribute.String;
     highestResidualConsequence: Schema.Attribute.String;
+    identifiedDate: Schema.Attribute.Date;
     informationAssetImpacted: Schema.Attribute.Relation<
       'manyToOne',
       'api::csrm-information-asset.csrm-information-asset'
@@ -778,10 +857,17 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
       'api::csrm-risk.csrm-risk'
     > &
       Schema.Attribute.Private;
+    potentialImpact: Schema.Attribute.Text;
     publishedAt: Schema.Attribute.DateTime;
+    recommendedControls: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::csrm-control.csrm-control'
+    >;
     residualLikelihood: Schema.Attribute.String;
     residualRating: Schema.Attribute.String;
     residualRatingRationale: Schema.Attribute.Text;
+    riskCategory: Schema.Attribute.String;
+    riskCause: Schema.Attribute.Text;
     riskCommunicationDate: Schema.Attribute.Date;
     riskNumber: Schema.Attribute.String &
       Schema.Attribute.Required &
@@ -791,6 +877,11 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
       'api::idambox-user.idambox-user'
     >;
     riskStatement: Schema.Attribute.Text & Schema.Attribute.Required;
+    riskSubCategory: Schema.Attribute.String;
+    riskVelocity: Schema.Attribute.Enumeration<
+      ['Low', 'Moderate', 'High', 'Very High']
+    >;
+    targetDate: Schema.Attribute.Date;
     treatmentAction: Schema.Attribute.Enumeration<['Accept', 'Treat']>;
     treatmentOwner: Schema.Attribute.Relation<
       'manyToOne',
@@ -1439,6 +1530,7 @@ declare module '@strapi/strapi' {
       'api::application.application': ApiApplicationApplication;
       'api::csrm-assessment-request.csrm-assessment-request': ApiCsrmAssessmentRequestCsrmAssessmentRequest;
       'api::csrm-assessment.csrm-assessment': ApiCsrmAssessmentCsrmAssessment;
+      'api::csrm-control.csrm-control': ApiCsrmControlCsrmControl;
       'api::csrm-information-asset.csrm-information-asset': ApiCsrmInformationAssetCsrmInformationAsset;
       'api::csrm-information-system.csrm-information-system': ApiCsrmInformationSystemCsrmInformationSystem;
       'api::csrm-question.csrm-question': ApiCsrmQuestionCsrmQuestion;

@@ -24,6 +24,18 @@
       "type": "text",
       "required": true
     },
+    "riskCategory": {
+      "type": "string"
+    },
+    "riskSubCategory": {
+      "type": "string"
+    },
+    "riskCause": {
+      "type": "text"
+    },
+    "potentialImpact": {
+      "type": "text"
+    },
     "riskOwner": {
       "type": "relation",
       "relation": "manyToOne",
@@ -72,6 +84,39 @@
     "residualRatingRationale": {
       "type": "text"
     },
+    "controlEffectiveness": {
+      "type": "enumeration",
+      "enum": [
+        "Effective",
+        "Partially Effective",
+        "Ineffective",
+        "Not Assessed"
+      ]
+    },
+    "riskVelocity": {
+      "type": "enumeration",
+      "enum": [
+        "Low",
+        "Moderate",
+        "High",
+        "Very High"
+      ]
+    },
+    "identifiedDate": {
+      "type": "date"
+    },
+    "targetDate": {
+      "type": "date"
+    },
+    "closureDate": {
+      "type": "date"
+    },
+    "escalationDetails": {
+      "type": "text"
+    },
+    "comments": {
+      "type": "text"
+    },
     "riskCommunicationDate": {
       "type": "date"
     },
@@ -101,6 +146,16 @@
         "Overdue",
         "Complete"
       ]
+    },
+    "currentControls": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-control.csrm-control"
+    },
+    "recommendedControls": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-control.csrm-control"
     },
     "assessment": {
       "type": "relation",

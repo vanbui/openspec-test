@@ -1,0 +1,75 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_controls",
+  "info": {
+    "singularName": "csrm-control",
+    "pluralName": "csrm-controls",
+    "displayName": "CSRM Control",
+    "description": "Current or recommended control associated with a CSRM risk"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "controlNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "controlType": {
+      "type": "enumeration",
+      "enum": [
+        "Preventive",
+        "Detective",
+        "Corrective",
+        "Compensating"
+      ]
+    },
+    "controlStatus": {
+      "type": "enumeration",
+      "enum": [
+        "Existing",
+        "Planned",
+        "Implemented",
+        "Retired"
+      ]
+    },
+    "controlOwner": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "effectivenessRating": {
+      "type": "enumeration",
+      "enum": [
+        "Effective",
+        "Partially Effective",
+        "Ineffective",
+        "Not Assessed"
+      ]
+    },
+    "controlReference": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "text"
+    },
+    "implementationDueDate": {
+      "type": "date"
+    },
+    "implementedDate": {
+      "type": "date"
+    },
+    "reviewDate": {
+      "type": "date"
+    }
+  }
+}
