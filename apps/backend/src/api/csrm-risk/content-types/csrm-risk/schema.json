@@ -147,15 +147,11 @@
         "Complete"
       ]
     },
-    "currentControls": {
+    "controlImplementations": {
       "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::csrm-control.csrm-control"
-    },
-    "recommendedControls": {
-      "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::csrm-control.csrm-control"
+      "relation": "oneToMany",
+      "target": "api::csrm-control-implementation.csrm-control-implementation",
+      "mappedBy": "risk"
     },
     "assessment": {
       "type": "relation",

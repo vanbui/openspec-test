@@ -5,7 +5,7 @@
     "singularName": "csrm-control",
     "pluralName": "csrm-controls",
     "displayName": "CSRM Control",
-    "description": "Current or recommended control associated with a CSRM risk"
+    "description": "Reusable CSRM control definition"
   },
   "options": {
     "draftAndPublish": false
@@ -33,43 +33,14 @@
         "Compensating"
       ]
     },
-    "controlStatus": {
-      "type": "enumeration",
-      "enum": [
-        "Existing",
-        "Planned",
-        "Implemented",
-        "Retired"
-      ]
-    },
-    "controlOwner": {
-      "type": "relation",
-      "relation": "manyToOne",
-      "target": "api::idambox-user.idambox-user"
-    },
-    "effectivenessRating": {
-      "type": "enumeration",
-      "enum": [
-        "Effective",
-        "Partially Effective",
-        "Ineffective",
-        "Not Assessed"
-      ]
-    },
     "controlReference": {
       "type": "string"
     },
-    "evidence": {
-      "type": "text"
-    },
-    "implementationDueDate": {
-      "type": "date"
-    },
-    "implementedDate": {
-      "type": "date"
-    },
-    "reviewDate": {
-      "type": "date"
+    "implementations": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::csrm-control-implementation.csrm-control-implementation",
+      "mappedBy": "control"
     }
   }
 }

@@ -231,9 +231,12 @@ entity CsrmControl {
   name String required,
   description TextBlob,
   controlType CsrmControlType,
+  controlReference String
+}
+
+entity CsrmControlImplementation {
   controlStatus CsrmControlStatus,
   effectivenessRating CsrmControlEffectiveness,
-  controlReference String,
   evidence TextBlob,
   implementationDueDate LocalDate,
   implementedDate LocalDate,
@@ -289,8 +292,6 @@ relationship ManyToMany {
 
   CsrmAssessmentRequest{informationAssets} to CsrmInformationAsset{assessmentRequests}
   CsrmAssessmentRequest{informationSystems} to CsrmInformationSystem{assessmentRequests}
-  CsrmRisk{currentControls} to CsrmControl{currentRisks}
-  CsrmRisk{recommendedControls} to CsrmControl{recommendedRisks}
 }
 
 relationship OneToMany {
@@ -298,6 +299,8 @@ relationship OneToMany {
 
   CsrmQuestionnaire{questions} to CsrmQuestion{questionnaire}
   CsrmAssessment{risks} to CsrmRisk{assessment}
+  CsrmControl{implementations} to CsrmControlImplementation{control required}
+  CsrmRisk{controlImplementations} to CsrmControlImplementation{risk required}
 }
 
 relationship OneToOne {
@@ -317,10 +320,10 @@ relationship ManyToOne {
 
   CsrmRisk{riskOwner} to IdamBoxUser
   CsrmRisk{treatmentOwner} to IdamBoxUser
-  CsrmControl{controlOwner} to IdamBoxUser
+  CsrmControlImplementation{controlOwner} to IdamBoxUser
   CsrmRisk{informationSystemImpacted} to CsrmInformationSystem
   CsrmRisk{informationAssetImpacted} to CsrmInformationAsset
 }
 
 paginate IdamBoxUser, Role, Application, Entitlement with pagination
-paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRisk, CsrmControl with pagination
+paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRisk, CsrmControl, CsrmControlImplementation with pagination
