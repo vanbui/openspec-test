@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 ## Workflow State
 
-Last activity: 2026-08-02 - Completed quick task 260802-onb: review the changes and make any necessary adjustments
+Last activity: 2026-08-05 - Completed quick task 260805-sct: update the Strapi backend data schema to rename Entitlement object to Function and add menuPath
 
 - Project initialized: 2026-05-20
 - Requirements defined: 2026-05-20
@@ -62,6 +62,7 @@ Last activity: 2026-08-02 - Completed quick task 260802-onb: review the changes 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260802-onb | review the changes and make any necessary adjustments | 2026-08-02 | 13cbce5 | [260802-onb-review-the-changes-and-make-any-necessar](./quick/260802-onb-review-the-changes-and-make-any-necessar/) |
+| 260805-sct | update the Strapi backend data schema to rename Entitlement object to Function and add menuPath | 2026-08-05 | 270204a | [260805-sct-update-the-strapi-backend-data-schema-to](./quick/260805-sct-update-the-strapi-backend-data-schema-to/) |
 
 ## Memory
 

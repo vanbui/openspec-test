@@ -31,7 +31,7 @@ SQLite is the default local database. PostgreSQL settings are included as commen
 The backend defines four core platform collection types:
 
 - `Application`
-- `Entitlement`
+- `Function`
 - `Role`
 - `IdamBox User`
 
@@ -40,7 +40,7 @@ Strapi Content Manager reserves the request field `status` for document publicat
 Effective access is derived through:
 
 ```text
-IdamBoxUser -> Role -> Entitlement -> Application
+IdamBoxUser -> Role -> Function -> Application
 ```
 
 The Phase 5 CSRM backend model adds ten CSRM collection types:
@@ -60,7 +60,7 @@ Set `csrmAppIsEnabled=true` to enable application-facing CSRM route behavior. Wh
 
 ## Optional Sample Data
 
-Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records and entitlements:
+Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records and functions:
 
 - IdamBox IAM
 - IdamBox Compliance
@@ -71,7 +71,7 @@ Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records a
 
 The seed is disabled by default and is intended for local verification only.
 
-Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires `IDAMBOX_SEED_CORE=true` first so CSRM entitlements and roles exist:
+Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires `IDAMBOX_SEED_CORE=true` first so CSRM functions and roles exist:
 
 - `IdamBox User`: Jane Doe (`jane.doe`, `jane.doe@idambox.com`), active with no roles
 - `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned to `CSRM Security Analyst`

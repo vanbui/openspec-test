@@ -2,10 +2,10 @@
   "kind": "collectionType",
   "collectionName": "idambox_entitlements",
   "info": {
-    "singularName": "entitlement",
-    "pluralName": "entitlements",
-    "displayName": "Entitlement",
-    "description": "Entitlement defined by a specific IdamBox application"
+    "singularName": "function",
+    "pluralName": "functions",
+    "displayName": "Function",
+    "description": "Function defined by a specific IdamBox application"
   },
   "options": {
     "draftAndPublish": false
@@ -19,18 +19,21 @@
     "description": {
       "type": "text"
     },
+    "menuPath": {
+      "type": "text"
+    },
     "application": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::application.application",
-      "inversedBy": "entitlements",
+      "inversedBy": "functions",
       "required": true
     },
     "roles": {
       "type": "relation",
       "relation": "manyToMany",
       "target": "api::role.role",
-      "mappedBy": "entitlements"
+      "mappedBy": "functions"
     }
   }
 }

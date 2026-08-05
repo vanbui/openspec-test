@@ -392,10 +392,7 @@ export interface ApiApplicationApplication extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
-    entitlements: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::entitlement.entitlement'
-    >;
+    functions: Schema.Attribute.Relation<'oneToMany', 'api::function.function'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -978,13 +975,13 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiEntitlementEntitlement extends Struct.CollectionTypeSchema {
+export interface ApiFunctionFunction extends Struct.CollectionTypeSchema {
   collectionName: 'idambox_entitlements';
   info: {
-    description: 'Entitlement defined by a specific IdamBox application';
-    displayName: 'Entitlement';
-    pluralName: 'entitlements';
-    singularName: 'entitlement';
+    description: 'Function defined by a specific IdamBox application';
+    displayName: 'Function';
+    pluralName: 'functions';
+    singularName: 'function';
   };
   options: {
     draftAndPublish: false;
@@ -1002,9 +999,10 @@ export interface ApiEntitlementEntitlement extends Struct.CollectionTypeSchema {
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
-      'api::entitlement.entitlement'
+      'api::function.function'
     > &
       Schema.Attribute.Private;
+    menuPath: Schema.Attribute.Text;
     name: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     roles: Schema.Attribute.Relation<'manyToMany', 'api::role.role'>;
@@ -1064,7 +1062,7 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
 export interface ApiRoleRole extends Struct.CollectionTypeSchema {
   collectionName: 'idambox_roles';
   info: {
-    description: 'Reusable bundle of IdamBox entitlements';
+    description: 'Reusable bundle of IdamBox functions';
     displayName: 'Role';
     pluralName: 'roles';
     singularName: 'role';
@@ -1077,9 +1075,9 @@ export interface ApiRoleRole extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
-    entitlements: Schema.Attribute.Relation<
+    functions: Schema.Attribute.Relation<
       'manyToMany',
-      'api::entitlement.entitlement'
+      'api::function.function'
     >;
     idamboxUsers: Schema.Attribute.Relation<
       'manyToMany',
@@ -1618,7 +1616,7 @@ declare module '@strapi/strapi' {
       'api::csrm-questionnaire.csrm-questionnaire': ApiCsrmQuestionnaireCsrmQuestionnaire;
       'api::csrm-risk-type.csrm-risk-type': ApiCsrmRiskTypeCsrmRiskType;
       'api::csrm-risk.csrm-risk': ApiCsrmRiskCsrmRisk;
-      'api::entitlement.entitlement': ApiEntitlementEntitlement;
+      'api::function.function': ApiFunctionFunction;
       'api::idambox-user.idambox-user': ApiIdamboxUserIdamboxUser;
       'api::role.role': ApiRoleRole;
       'plugin::content-releases.release': PluginContentReleasesRelease;

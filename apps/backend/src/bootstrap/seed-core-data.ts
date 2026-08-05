@@ -8,19 +8,19 @@ export function getApplicationNamePrefix(applicationName: string): string {
     : applicationName;
 }
 
-export function buildPrefixedEntitlementName(
+export function buildPrefixedFunctionName(
   applicationName: string,
-  entitlementName: string,
+  functionName: string,
 ): string {
-  return `${getApplicationNamePrefix(applicationName)} ${entitlementName}`;
+  return `${getApplicationNamePrefix(applicationName)} ${functionName}`;
 }
 
-export const CSRM_SECURITY_ANALYST_ROLE_NAME = buildPrefixedEntitlementName(
+export const CSRM_SECURITY_ANALYST_ROLE_NAME = buildPrefixedFunctionName(
   "IdamBox CSRM",
   "Security Analyst",
 );
 
-type EntitlementSeed = {
+type FunctionSeed = {
   name: string;
   description: string;
   createReusableRole?: boolean;
@@ -30,7 +30,7 @@ type ApplicationSeed = {
   name: string;
   slug?: string;
   description: string;
-  entitlements?: EntitlementSeed[];
+  functions?: FunctionSeed[];
 };
 
 const applications: ApplicationSeed[] = [
@@ -53,15 +53,15 @@ const applications: ApplicationSeed[] = [
   {
     name: "IdamBox LMS",
     description: "Learning management module.",
-    entitlements: [
+    functions: [
       {
         name: "STUDENT",
-        description: "Learner entitlement for IdamBox LMS.",
+        description: "Learner function for IdamBox LMS.",
         createReusableRole: true,
       },
       {
         name: "TUTOR",
-        description: "Tutor entitlement for IdamBox LMS.",
+        description: "Tutor function for IdamBox LMS.",
         createReusableRole: true,
       },
     ],
@@ -71,16 +71,16 @@ const applications: ApplicationSeed[] = [
     slug: "idambox-csrm",
     description:
       "Cybersecurity Risk Manager module for automating cybersecurity risk management processes.",
-    entitlements: [
+    functions: [
       {
         name: "Security Analyst",
-        description: "Security Analyst entitlement IdamBox CSRM.",
+        description: "Security Analyst function for IdamBox CSRM.",
         createReusableRole: true,
       },
       {
         name: "Security Analyst Agent",
         description:
-          "Security Analyst Agentic entitlement for automated CSRM security analysis workflows.",
+          "Security Analyst Agent function for automated CSRM security analysis workflows.",
         createReusableRole: true,
       },
     ],
@@ -99,7 +99,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
   }
 
   const applicationService = strapi.documents("api::application.application");
-  const entitlementService = strapi.documents("api::entitlement.entitlement");
+  const functionService = strapi.documents("api::function.function");
   const roleService = strapi.documents("api::role.role");
 
   for (const appSeed of applications) {
@@ -125,16 +125,16 @@ export async function seedCoreData(strapi: Core.Strapi) {
         },
       }));
 
-    for (const entitlementSeed of appSeed.entitlements ?? []) {
-      const entitlementName = buildPrefixedEntitlementName(
+    for (const functionSeed of appSeed.functions ?? []) {
+      const functionName = buildPrefixedFunctionName(
         appSeed.name,
-        entitlementSeed.name,
+        functionSeed.name,
       );
 
-      const existingEntitlements = await entitlementService.findMany({
+      const existingFunctions = await functionService.findMany({
         filters: {
           name: {
-            $eq: entitlementName,
+            $eq: functionName,
           },
           application: {
             documentId: {
@@ -145,24 +145,24 @@ export async function seedCoreData(strapi: Core.Strapi) {
         limit: 1,
       });
 
-      const entitlement =
-        existingEntitlements[0] ??
-        (await entitlementService.create({
+      const platformFunction =
+        existingFunctions[0] ??
+        (await functionService.create({
           data: {
-            name: entitlementName,
-            description: entitlementSeed.description,
+            name: functionName,
+            description: functionSeed.description,
             application: application.documentId,
           },
         }));
 
-      if (!entitlementSeed.createReusableRole) {
+      if (!functionSeed.createReusableRole) {
         continue;
       }
 
       const existingReusableRoles = await roleService.findMany({
         filters: {
           name: {
-            $eq: entitlementName,
+            $eq: functionName,
           },
         },
         limit: 1,
@@ -172,9 +172,9 @@ export async function seedCoreData(strapi: Core.Strapi) {
         existingReusableRoles[0] ??
         (await roleService.create({
           data: {
-            name: entitlementName,
-            description: entitlementSeed.description,
-            entitlements: [entitlement.documentId],
+            name: functionName,
+            description: functionSeed.description,
+            functions: [platformFunction.documentId],
           },
         }));
 
@@ -182,7 +182,7 @@ export async function seedCoreData(strapi: Core.Strapi) {
         await roleService.update({
           documentId: reusableRole.documentId,
           data: {
-            entitlements: [entitlement.documentId],
+            functions: [platformFunction.documentId],
           },
         });
       }

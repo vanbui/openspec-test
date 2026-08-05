@@ -31,10 +31,10 @@
       "default": "active",
       "required": true
     },
-    "entitlements": {
+    "functions": {
       "type": "relation",
       "relation": "oneToMany",
-      "target": "api::entitlement.entitlement",
+      "target": "api::function.function",
       "mappedBy": "application"
     }
   }
