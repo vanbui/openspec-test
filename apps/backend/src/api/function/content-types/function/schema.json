@@ -22,6 +22,11 @@
     "menuPath": {
       "type": "text"
     },
+    "functionApis": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::function-api.function-api"
+    },
     "application": {
       "type": "relation",
       "relation": "manyToOne",

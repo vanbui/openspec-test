@@ -975,6 +975,37 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiFunctionApiFunctionApi extends Struct.CollectionTypeSchema {
+  collectionName: 'idambox_function_apis';
+  info: {
+    description: 'API endpoint associated with an IdamBox function';
+    displayName: 'FunctionApi';
+    pluralName: 'function-apis';
+    singularName: 'function-api';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::function-api.function-api'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    url: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
 export interface ApiFunctionFunction extends Struct.CollectionTypeSchema {
   collectionName: 'idambox_entitlements';
   info: {
@@ -996,6 +1027,10 @@ export interface ApiFunctionFunction extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
+    functionApis: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::function-api.function-api'
+    >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1616,6 +1651,7 @@ declare module '@strapi/strapi' {
       'api::csrm-questionnaire.csrm-questionnaire': ApiCsrmQuestionnaireCsrmQuestionnaire;
       'api::csrm-risk-type.csrm-risk-type': ApiCsrmRiskTypeCsrmRiskType;
       'api::csrm-risk.csrm-risk': ApiCsrmRiskCsrmRisk;
+      'api::function-api.function-api': ApiFunctionApiFunctionApi;
       'api::function.function': ApiFunctionFunction;
       'api::idambox-user.idambox-user': ApiIdamboxUserIdamboxUser;
       'api::role.role': ApiRoleRole;

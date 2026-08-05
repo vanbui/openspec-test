@@ -32,6 +32,7 @@ The backend defines four core platform collection types:
 
 - `Application`
 - `Function`
+- `FunctionApi`
 - `Role`
 - `IdamBox User`
 
@@ -42,6 +43,8 @@ Effective access is derived through:
 ```text
 IdamBoxUser -> Role -> Function -> Application
 ```
+
+Each `Function` can expose multiple `FunctionApi` records through a one-way relationship.
 
 The Phase 5 CSRM backend model adds ten CSRM collection types:
 

@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "idambox_function_apis",
+  "info": {
+    "singularName": "function-api",
+    "pluralName": "function-apis",
+    "displayName": "FunctionApi",
+    "description": "API endpoint associated with an IdamBox function"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "url": {
+      "type": "string",
+      "required": true
+    }
+  }
+}
