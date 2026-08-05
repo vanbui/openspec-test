@@ -111,6 +111,12 @@
     "closureDate": {
       "type": "date"
     },
+    "isExempted": {
+      "type": "boolean"
+    },
+    "exemptionReviewDate": {
+      "type": "datetime"
+    },
     "escalationDetails": {
       "type": "text"
     },

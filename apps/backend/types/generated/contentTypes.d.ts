@@ -836,6 +836,7 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
       ['Public', 'Internal', 'Restricted', 'Critical Infrastructure Sensitive']
     >;
     escalationDetails: Schema.Attribute.Text;
+    exemptionReviewDate: Schema.Attribute.DateTime;
     highestInherentConsequence: Schema.Attribute.String;
     highestResidualConsequence: Schema.Attribute.String;
     identifiedDate: Schema.Attribute.Date;
@@ -850,6 +851,7 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
     inherentLikelihood: Schema.Attribute.String;
     inherentRating: Schema.Attribute.String;
     inherentRatingRationale: Schema.Attribute.Text;
+    isExempted: Schema.Attribute.Boolean;
     issueStatement: Schema.Attribute.Text;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
