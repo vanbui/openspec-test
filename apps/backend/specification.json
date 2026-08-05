@@ -318,7 +318,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.486Z",
+                            "default": "2026-08-02T07:47:56.013Z",
                             "type": "string"
                           },
                           "entitlements": {
@@ -484,7 +484,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.519Z",
+                          "default": "2026-08-02T07:47:56.045Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -566,7 +566,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.517Z",
+                        "default": "2026-08-02T07:47:56.043Z",
                         "type": "string"
                       },
                       "entitlements": {
@@ -836,7 +836,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.511Z",
+                          "default": "2026-08-02T07:47:56.038Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -1013,7 +1013,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.527Z",
+                          "default": "2026-08-02T07:47:56.052Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -1095,7 +1095,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.524Z",
+                        "default": "2026-08-02T07:47:56.050Z",
                         "type": "string"
                       },
                       "entitlements": {
@@ -1271,7 +1271,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.530Z",
+                          "default": "2026-08-02T07:47:56.057Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -1718,7 +1718,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.552Z",
+                            "default": "2026-08-02T07:47:56.076Z",
                             "type": "string"
                           },
                           "generatedBy": {
@@ -1950,7 +1950,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.629Z",
+                          "default": "2026-08-02T07:47:56.136Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2083,7 +2083,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.626Z",
+                        "default": "2026-08-02T07:47:56.132Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -2462,7 +2462,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.619Z",
+                          "default": "2026-08-02T07:47:56.124Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2705,7 +2705,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.641Z",
+                          "default": "2026-08-02T07:47:56.148Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2838,7 +2838,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.636Z",
+                        "default": "2026-08-02T07:47:56.142Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -3096,7 +3096,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.648Z",
+                          "default": "2026-08-02T07:47:56.163Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -3598,7 +3598,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.670Z",
+                            "default": "2026-08-02T07:47:56.180Z",
                             "type": "string"
                           },
                           "requestor": {
@@ -3863,7 +3863,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.700Z",
+                          "default": "2026-08-02T07:47:56.212Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4032,7 +4032,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.694Z",
+                        "default": "2026-08-02T07:47:56.208Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -4461,7 +4461,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.684Z",
+                          "default": "2026-08-02T07:47:56.190Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4737,7 +4737,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.720Z",
+                          "default": "2026-08-02T07:47:56.229Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4906,7 +4906,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.715Z",
+                        "default": "2026-08-02T07:47:56.219Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -5201,7 +5201,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.728Z",
+                          "default": "2026-08-02T07:47:56.236Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -5295,13 +5295,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5325,13 +5319,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5438,13 +5426,7 @@
                     "name",
                     "description",
                     "controlType",
-                    "controlStatus",
-                    "effectivenessRating",
                     "controlReference",
-                    "evidence",
-                    "implementationDueDate",
-                    "implementedDate",
-                    "reviewDate",
                     "createdAt",
                     "updatedAt",
                     "publishedAt"
@@ -5459,13 +5441,7 @@
                       "name",
                       "description",
                       "controlType",
-                      "controlStatus",
-                      "effectivenessRating",
                       "controlReference",
-                      "evidence",
-                      "implementationDueDate",
-                      "implementedDate",
-                      "reviewDate",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -5481,13 +5457,7 @@
                       "name",
                       "description",
                       "controlType",
-                      "controlStatus",
-                      "effectivenessRating",
                       "controlReference",
-                      "evidence",
-                      "implementationDueDate",
-                      "implementedDate",
-                      "reviewDate",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -5512,13 +5482,7 @@
                         "name",
                         "description",
                         "controlType",
-                        "controlStatus",
-                        "effectivenessRating",
                         "controlReference",
-                        "evidence",
-                        "implementationDueDate",
-                        "implementedDate",
-                        "reviewDate",
                         "createdAt",
                         "updatedAt",
                         "publishedAt"
@@ -5555,7 +5519,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "controlOwner"
+                    "implementations"
                   ]
                 },
                 {
@@ -5564,7 +5528,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "controlOwner"
+                      "implementations"
                     ]
                   }
                 }
@@ -5618,44 +5582,8 @@
                               "Compensating"
                             ]
                           },
-                          "controlStatus": {
-                            "description": "An enum field",
-                            "type": "string",
-                            "enum": [
-                              "Existing",
-                              "Planned",
-                              "Implemented",
-                              "Retired"
-                            ]
-                          },
-                          "effectivenessRating": {
-                            "description": "An enum field",
-                            "type": "string",
-                            "enum": [
-                              "Effective",
-                              "Partially Effective",
-                              "Ineffective",
-                              "Not Assessed"
-                            ]
-                          },
                           "controlReference": {
                             "description": "A string field",
-                            "type": "string"
-                          },
-                          "evidence": {
-                            "description": "A text field",
-                            "type": "string"
-                          },
-                          "implementationDueDate": {
-                            "description": "A date field",
-                            "type": "string"
-                          },
-                          "implementedDate": {
-                            "description": "A date field",
-                            "type": "string"
-                          },
-                          "reviewDate": {
-                            "description": "A date field",
                             "type": "string"
                           },
                           "createdAt": {
@@ -5668,12 +5596,15 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.738Z",
+                            "default": "2026-08-02T07:47:56.245Z",
                             "type": "string"
                           },
-                          "controlOwner": {
+                          "implementations": {
                             "description": "A relational field",
-                            "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+                            }
                           }
                         },
                         "required": [
@@ -5734,13 +5665,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5767,7 +5692,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "controlOwner"
+                    "implementations"
                   ]
                 },
                 {
@@ -5776,7 +5701,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "controlOwner"
+                      "implementations"
                     ]
                   }
                 }
@@ -5828,44 +5753,8 @@
                             "Compensating"
                           ]
                         },
-                        "controlStatus": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Existing",
-                            "Planned",
-                            "Implemented",
-                            "Retired"
-                          ]
-                        },
-                        "effectivenessRating": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Effective",
-                            "Partially Effective",
-                            "Ineffective",
-                            "Not Assessed"
-                          ]
-                        },
                         "controlReference": {
                           "description": "A string field",
-                          "type": "string"
-                        },
-                        "evidence": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "implementationDueDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "implementedDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "reviewDate": {
-                          "description": "A date field",
                           "type": "string"
                         },
                         "createdAt": {
@@ -5878,12 +5767,15 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.762Z",
+                          "default": "2026-08-02T07:47:56.262Z",
                           "type": "string"
                         },
-                        "controlOwner": {
+                        "implementations": {
                           "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+                          }
                         }
                       },
                       "required": [
@@ -5955,56 +5847,23 @@
                           "Compensating"
                         ]
                       },
-                      "controlStatus": {
-                        "description": "An enum field",
-                        "type": "string",
-                        "enum": [
-                          "Existing",
-                          "Planned",
-                          "Implemented",
-                          "Retired"
-                        ]
-                      },
-                      "effectivenessRating": {
-                        "description": "An enum field",
-                        "type": "string",
-                        "enum": [
-                          "Effective",
-                          "Partially Effective",
-                          "Ineffective",
-                          "Not Assessed"
-                        ]
-                      },
                       "controlReference": {
                         "description": "A string field",
                         "type": "string"
                       },
-                      "evidence": {
-                        "description": "A text field",
-                        "type": "string"
-                      },
-                      "implementationDueDate": {
-                        "description": "A date field",
-                        "type": "string"
-                      },
-                      "implementedDate": {
-                        "description": "A date field",
-                        "type": "string"
-                      },
-                      "reviewDate": {
-                        "description": "A date field",
-                        "type": "string"
-                      },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.760Z",
+                        "default": "2026-08-02T07:47:56.261Z",
                         "type": "string"
                       },
-                      "controlOwner": {
+                      "implementations": {
                         "description": "A relational field",
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
                       }
                     },
                     "required": [
@@ -6057,13 +5916,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6090,7 +5943,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "controlOwner"
+                    "implementations"
                   ]
                 },
                 {
@@ -6099,7 +5952,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "controlOwner"
+                      "implementations"
                     ]
                   }
                 }
@@ -6122,13 +5975,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6153,13 +6000,7 @@
                     "name",
                     "description",
                     "controlType",
-                    "controlStatus",
-                    "effectivenessRating",
                     "controlReference",
-                    "evidence",
-                    "implementationDueDate",
-                    "implementedDate",
-                    "reviewDate",
                     "createdAt",
                     "updatedAt",
                     "publishedAt"
@@ -6174,13 +6015,7 @@
                       "name",
                       "description",
                       "controlType",
-                      "controlStatus",
-                      "effectivenessRating",
                       "controlReference",
-                      "evidence",
-                      "implementationDueDate",
-                      "implementedDate",
-                      "reviewDate",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -6196,13 +6031,7 @@
                       "name",
                       "description",
                       "controlType",
-                      "controlStatus",
-                      "effectivenessRating",
                       "controlReference",
-                      "evidence",
-                      "implementationDueDate",
-                      "implementedDate",
-                      "reviewDate",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -6227,13 +6056,7 @@
                         "name",
                         "description",
                         "controlType",
-                        "controlStatus",
-                        "effectivenessRating",
                         "controlReference",
-                        "evidence",
-                        "implementationDueDate",
-                        "implementedDate",
-                        "reviewDate",
                         "createdAt",
                         "updatedAt",
                         "publishedAt"
@@ -6296,44 +6119,8 @@
                             "Compensating"
                           ]
                         },
-                        "controlStatus": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Existing",
-                            "Planned",
-                            "Implemented",
-                            "Retired"
-                          ]
-                        },
-                        "effectivenessRating": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Effective",
-                            "Partially Effective",
-                            "Ineffective",
-                            "Not Assessed"
-                          ]
-                        },
                         "controlReference": {
                           "description": "A string field",
-                          "type": "string"
-                        },
-                        "evidence": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "implementationDueDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "implementedDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "reviewDate": {
-                          "description": "A date field",
                           "type": "string"
                         },
                         "createdAt": {
@@ -6346,12 +6133,15 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.755Z",
+                          "default": "2026-08-02T07:47:56.257Z",
                           "type": "string"
                         },
-                        "controlOwner": {
+                        "implementations": {
                           "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+                          }
                         }
                       },
                       "required": [
@@ -6423,13 +6213,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6456,7 +6240,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "controlOwner"
+                    "implementations"
                   ]
                 },
                 {
@@ -6465,7 +6249,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "controlOwner"
+                      "implementations"
                     ]
                   }
                 }
@@ -6517,44 +6301,8 @@
                             "Compensating"
                           ]
                         },
-                        "controlStatus": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Existing",
-                            "Planned",
-                            "Implemented",
-                            "Retired"
-                          ]
-                        },
-                        "effectivenessRating": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Effective",
-                            "Partially Effective",
-                            "Ineffective",
-                            "Not Assessed"
-                          ]
-                        },
                         "controlReference": {
                           "description": "A string field",
-                          "type": "string"
-                        },
-                        "evidence": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "implementationDueDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "implementedDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "reviewDate": {
-                          "description": "A date field",
                           "type": "string"
                         },
                         "createdAt": {
@@ -6567,12 +6315,15 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.768Z",
+                          "default": "2026-08-02T07:47:56.266Z",
                           "type": "string"
                         },
-                        "controlOwner": {
+                        "implementations": {
                           "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+                          }
                         }
                       },
                       "required": [
@@ -6644,56 +6395,23 @@
                           "Compensating"
                         ]
                       },
-                      "controlStatus": {
-                        "description": "An enum field",
-                        "type": "string",
-                        "enum": [
-                          "Existing",
-                          "Planned",
-                          "Implemented",
-                          "Retired"
-                        ]
-                      },
-                      "effectivenessRating": {
-                        "description": "An enum field",
-                        "type": "string",
-                        "enum": [
-                          "Effective",
-                          "Partially Effective",
-                          "Ineffective",
-                          "Not Assessed"
-                        ]
-                      },
                       "controlReference": {
                         "description": "A string field",
                         "type": "string"
                       },
-                      "evidence": {
-                        "description": "A text field",
-                        "type": "string"
-                      },
-                      "implementationDueDate": {
-                        "description": "A date field",
-                        "type": "string"
-                      },
-                      "implementedDate": {
-                        "description": "A date field",
-                        "type": "string"
-                      },
-                      "reviewDate": {
-                        "description": "A date field",
-                        "type": "string"
-                      },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.766Z",
+                        "default": "2026-08-02T07:47:56.264Z",
                         "type": "string"
                       },
-                      "controlOwner": {
+                      "implementations": {
                         "description": "A relational field",
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
                       }
                     },
                     "additionalProperties": false
@@ -6739,13 +6457,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6772,7 +6484,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "controlOwner"
+                    "implementations"
                   ]
                 },
                 {
@@ -6781,7 +6493,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "controlOwner"
+                      "implementations"
                     ]
                   }
                 }
@@ -6804,13 +6516,7 @@
                   "name",
                   "description",
                   "controlType",
-                  "controlStatus",
-                  "effectivenessRating",
                   "controlReference",
-                  "evidence",
-                  "implementationDueDate",
-                  "implementedDate",
-                  "reviewDate",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6864,44 +6570,8 @@
                             "Compensating"
                           ]
                         },
-                        "controlStatus": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Existing",
-                            "Planned",
-                            "Implemented",
-                            "Retired"
-                          ]
-                        },
-                        "effectivenessRating": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Effective",
-                            "Partially Effective",
-                            "Ineffective",
-                            "Not Assessed"
-                          ]
-                        },
                         "controlReference": {
                           "description": "A string field",
-                          "type": "string"
-                        },
-                        "evidence": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "implementationDueDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "implementedDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "reviewDate": {
-                          "description": "A date field",
                           "type": "string"
                         },
                         "createdAt": {
@@ -6914,12 +6584,15 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.775Z",
+                          "default": "2026-08-02T07:47:56.270Z",
                           "type": "string"
                         },
-                        "controlOwner": {
+                        "implementations": {
                           "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+                          }
                         }
                       },
                       "required": [
@@ -6958,6 +6631,1514 @@
         },
         "tags": [
           "csrm-control"
+        ]
+      }
+    },
+    "/csrm-control-implementations": {
+      "get": {
+        "operationId": "csrm-control-implementation/get/csrm_control_implementations",
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "_q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string"
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "pagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Pagination parameters",
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "withCount": {
+                      "description": "Include total count in response",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "anyOf": [
+                    {
+                      "description": "Page-based pagination",
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "description": "Page number (1-based)",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "pageSize": {
+                          "description": "Number of entries per page",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "pageSize"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "description": "Offset-based pagination",
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "description": "Number of entries to skip",
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "limit": {
+                          "description": "Maximum number of entries to return",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "limit"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Sort the result",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "controlStatus",
+                    "effectivenessRating",
+                    "evidence",
+                    "implementationDueDate",
+                    "implementedDate",
+                    "reviewDate",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "controlStatus",
+                      "effectivenessRating",
+                      "evidence",
+                      "implementationDueDate",
+                      "implementedDate",
+                      "reviewDate",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "controlStatus",
+                      "effectivenessRating",
+                      "evidence",
+                      "implementationDueDate",
+                      "implementedDate",
+                      "reviewDate",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "controlStatus",
+                        "effectivenessRating",
+                        "evidence",
+                        "implementationDueDate",
+                        "implementedDate",
+                        "reviewDate",
+                        "createdAt",
+                        "updatedAt",
+                        "publishedAt"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "control",
+                    "risk",
+                    "controlOwner"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "control",
+                      "risk",
+                      "controlOwner"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {
+                            "description": "The document ID, represented by a UUID",
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                          },
+                          "id": {
+                            "type": "number"
+                          },
+                          "controlStatus": {
+                            "description": "An enum field",
+                            "type": "string",
+                            "enum": [
+                              "Existing",
+                              "Planned",
+                              "Implemented",
+                              "Retired"
+                            ]
+                          },
+                          "effectivenessRating": {
+                            "description": "An enum field",
+                            "type": "string",
+                            "enum": [
+                              "Effective",
+                              "Partially Effective",
+                              "Ineffective",
+                              "Not Assessed"
+                            ]
+                          },
+                          "evidence": {
+                            "description": "A text field",
+                            "type": "string"
+                          },
+                          "implementationDueDate": {
+                            "description": "A date field",
+                            "type": "string"
+                          },
+                          "implementedDate": {
+                            "description": "A date field",
+                            "type": "string"
+                          },
+                          "reviewDate": {
+                            "description": "A date field",
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
+                          "publishedAt": {
+                            "description": "A datetime field",
+                            "default": "2026-08-02T07:47:56.278Z",
+                            "type": "string"
+                          },
+                          "control": {
+                            "description": "A relational field",
+                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                          },
+                          "risk": {
+                            "description": "A relational field",
+                            "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+                          },
+                          "controlOwner": {
+                            "description": "A relational field",
+                            "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                          }
+                        },
+                        "required": [
+                          "documentId",
+                          "id",
+                          "publishedAt",
+                          "control",
+                          "risk"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-control-implementation"
+        ]
+      },
+      "post": {
+        "operationId": "csrm-control-implementation/post/csrm_control_implementations",
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "control",
+                    "risk",
+                    "controlOwner"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "control",
+                      "risk",
+                      "controlOwner"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "controlStatus": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Existing",
+                            "Planned",
+                            "Implemented",
+                            "Retired"
+                          ]
+                        },
+                        "effectivenessRating": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Effective",
+                            "Partially Effective",
+                            "Ineffective",
+                            "Not Assessed"
+                          ]
+                        },
+                        "evidence": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "implementationDueDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "implementedDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "reviewDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-02T07:47:56.295Z",
+                          "type": "string"
+                        },
+                        "control": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                        },
+                        "risk": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+                        },
+                        "controlOwner": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "publishedAt",
+                        "control",
+                        "risk"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-control-implementation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "controlStatus": {
+                        "description": "An enum field",
+                        "type": "string",
+                        "enum": [
+                          "Existing",
+                          "Planned",
+                          "Implemented",
+                          "Retired"
+                        ]
+                      },
+                      "effectivenessRating": {
+                        "description": "An enum field",
+                        "type": "string",
+                        "enum": [
+                          "Effective",
+                          "Partially Effective",
+                          "Ineffective",
+                          "Not Assessed"
+                        ]
+                      },
+                      "evidence": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "implementationDueDate": {
+                        "description": "A date field",
+                        "type": "string"
+                      },
+                      "implementedDate": {
+                        "description": "A date field",
+                        "type": "string"
+                      },
+                      "reviewDate": {
+                        "description": "A date field",
+                        "type": "string"
+                      },
+                      "publishedAt": {
+                        "description": "A datetime field",
+                        "default": "2026-08-02T07:47:56.293Z",
+                        "type": "string"
+                      },
+                      "control": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      },
+                      "risk": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      },
+                      "controlOwner": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      }
+                    },
+                    "required": [
+                      "publishedAt",
+                      "control",
+                      "risk"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/csrm-control-implementations/{id}": {
+      "get": {
+        "operationId": "csrm-control-implementation/get/csrm_control_implementations_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "control",
+                    "risk",
+                    "controlOwner"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "control",
+                      "risk",
+                      "controlOwner"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Sort the result",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "controlStatus",
+                    "effectivenessRating",
+                    "evidence",
+                    "implementationDueDate",
+                    "implementedDate",
+                    "reviewDate",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "controlStatus",
+                      "effectivenessRating",
+                      "evidence",
+                      "implementationDueDate",
+                      "implementedDate",
+                      "reviewDate",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "controlStatus",
+                      "effectivenessRating",
+                      "evidence",
+                      "implementationDueDate",
+                      "implementedDate",
+                      "reviewDate",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "controlStatus",
+                        "effectivenessRating",
+                        "evidence",
+                        "implementationDueDate",
+                        "implementedDate",
+                        "reviewDate",
+                        "createdAt",
+                        "updatedAt",
+                        "publishedAt"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "controlStatus": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Existing",
+                            "Planned",
+                            "Implemented",
+                            "Retired"
+                          ]
+                        },
+                        "effectivenessRating": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Effective",
+                            "Partially Effective",
+                            "Ineffective",
+                            "Not Assessed"
+                          ]
+                        },
+                        "evidence": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "implementationDueDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "implementedDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "reviewDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-02T07:47:56.283Z",
+                          "type": "string"
+                        },
+                        "control": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                        },
+                        "risk": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+                        },
+                        "controlOwner": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "publishedAt",
+                        "control",
+                        "risk"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-control-implementation"
+        ]
+      },
+      "put": {
+        "operationId": "csrm-control-implementation/put/csrm_control_implementations_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "control",
+                    "risk",
+                    "controlOwner"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "control",
+                      "risk",
+                      "controlOwner"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "controlStatus": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Existing",
+                            "Planned",
+                            "Implemented",
+                            "Retired"
+                          ]
+                        },
+                        "effectivenessRating": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Effective",
+                            "Partially Effective",
+                            "Ineffective",
+                            "Not Assessed"
+                          ]
+                        },
+                        "evidence": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "implementationDueDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "implementedDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "reviewDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-02T07:47:56.301Z",
+                          "type": "string"
+                        },
+                        "control": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                        },
+                        "risk": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+                        },
+                        "controlOwner": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "publishedAt",
+                        "control",
+                        "risk"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-control-implementation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "controlStatus": {
+                        "description": "An enum field",
+                        "type": "string",
+                        "enum": [
+                          "Existing",
+                          "Planned",
+                          "Implemented",
+                          "Retired"
+                        ]
+                      },
+                      "effectivenessRating": {
+                        "description": "An enum field",
+                        "type": "string",
+                        "enum": [
+                          "Effective",
+                          "Partially Effective",
+                          "Ineffective",
+                          "Not Assessed"
+                        ]
+                      },
+                      "evidence": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "implementationDueDate": {
+                        "description": "A date field",
+                        "type": "string"
+                      },
+                      "implementedDate": {
+                        "description": "A date field",
+                        "type": "string"
+                      },
+                      "reviewDate": {
+                        "description": "A date field",
+                        "type": "string"
+                      },
+                      "publishedAt": {
+                        "description": "A datetime field",
+                        "default": "2026-08-02T07:47:56.299Z",
+                        "type": "string"
+                      },
+                      "control": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      },
+                      "risk": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      },
+                      "controlOwner": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "csrm-control-implementation/delete/csrm_control_implementations_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "control",
+                    "risk",
+                    "controlOwner"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "control",
+                      "risk",
+                      "controlOwner"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "controlStatus",
+                  "effectivenessRating",
+                  "evidence",
+                  "implementationDueDate",
+                  "implementedDate",
+                  "reviewDate",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "controlStatus": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Existing",
+                            "Planned",
+                            "Implemented",
+                            "Retired"
+                          ]
+                        },
+                        "effectivenessRating": {
+                          "description": "An enum field",
+                          "type": "string",
+                          "enum": [
+                            "Effective",
+                            "Partially Effective",
+                            "Ineffective",
+                            "Not Assessed"
+                          ]
+                        },
+                        "evidence": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "implementationDueDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "implementedDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "reviewDate": {
+                          "description": "A date field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-02T07:47:56.304Z",
+                          "type": "string"
+                        },
+                        "control": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                        },
+                        "risk": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+                        },
+                        "controlOwner": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "publishedAt",
+                        "control",
+                        "risk"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-control-implementation"
         ]
       }
     },
@@ -7355,7 +8536,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.792Z",
+                            "default": "2026-08-02T07:47:56.314Z",
                             "type": "string"
                           },
                           "assessmentRequests": {
@@ -7566,7 +8747,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.809Z",
+                          "default": "2026-08-02T07:47:56.335Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -7709,7 +8890,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.803Z",
+                        "default": "2026-08-02T07:47:56.333Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -8064,7 +9245,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.798Z",
+                          "default": "2026-08-02T07:47:56.328Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -8286,7 +9467,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.819Z",
+                          "default": "2026-08-02T07:47:56.342Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -8429,7 +9610,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.816Z",
+                        "default": "2026-08-02T07:47:56.339Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -8657,7 +9838,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.828Z",
+                          "default": "2026-08-02T07:47:56.346Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -9093,7 +10274,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.838Z",
+                            "default": "2026-08-02T07:47:56.362Z",
                             "type": "string"
                           },
                           "owner": {
@@ -9307,7 +10488,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.852Z",
+                          "default": "2026-08-02T07:47:56.375Z",
                           "type": "string"
                         },
                         "owner": {
@@ -9445,7 +10626,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.849Z",
+                        "default": "2026-08-02T07:47:56.373Z",
                         "type": "string"
                       },
                       "owner": {
@@ -9795,7 +10976,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.845Z",
+                          "default": "2026-08-02T07:47:56.369Z",
                           "type": "string"
                         },
                         "owner": {
@@ -10020,7 +11201,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.865Z",
+                          "default": "2026-08-02T07:47:56.387Z",
                           "type": "string"
                         },
                         "owner": {
@@ -10158,7 +11339,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.861Z",
+                        "default": "2026-08-02T07:47:56.379Z",
                         "type": "string"
                       },
                       "owner": {
@@ -10390,7 +11571,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.875Z",
+                          "default": "2026-08-02T07:47:56.394Z",
                           "type": "string"
                         },
                         "owner": {
@@ -10789,7 +11970,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.891Z",
+                            "default": "2026-08-02T07:47:56.403Z",
                             "type": "string"
                           },
                           "questionnaire": {
@@ -10970,7 +12151,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.901Z",
+                          "default": "2026-08-02T07:47:56.414Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -11064,7 +12245,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.899Z",
+                        "default": "2026-08-02T07:47:56.413Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -11364,7 +12545,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.896Z",
+                          "default": "2026-08-02T07:47:56.409Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -11556,7 +12737,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.914Z",
+                          "default": "2026-08-02T07:47:56.426Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -11650,7 +12831,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.912Z",
+                        "default": "2026-08-02T07:47:56.418Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -11845,7 +13026,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.918Z",
+                          "default": "2026-08-02T07:47:56.430Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -12189,7 +13370,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:02.931Z",
+                            "default": "2026-08-02T07:47:56.436Z",
                             "type": "string"
                           },
                           "assessmentRequest": {
@@ -12349,7 +13530,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.957Z",
+                          "default": "2026-08-02T07:47:56.443Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -12424,7 +13605,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.950Z",
+                        "default": "2026-08-02T07:47:56.442Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -12685,7 +13866,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.939Z",
+                          "default": "2026-08-02T07:47:56.440Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -12856,7 +14037,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.978Z",
+                          "default": "2026-08-02T07:47:56.447Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -12931,7 +14112,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:02.964Z",
+                        "default": "2026-08-02T07:47:56.446Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -13104,7 +14285,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:02.984Z",
+                          "default": "2026-08-02T07:47:56.456Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -13543,8 +14724,7 @@
                     "informationSystemImpacted",
                     "informationAssetImpacted",
                     "treatmentOwner",
-                    "currentControls",
-                    "recommendedControls",
+                    "controlImplementations",
                     "assessment"
                   ]
                 },
@@ -13558,8 +14738,7 @@
                       "informationSystemImpacted",
                       "informationAssetImpacted",
                       "treatmentOwner",
-                      "currentControls",
-                      "recommendedControls",
+                      "controlImplementations",
                       "assessment"
                     ]
                   }
@@ -13742,7 +14921,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:03.010Z",
+                            "default": "2026-08-02T07:47:56.472Z",
                             "type": "string"
                           },
                           "riskOwner": {
@@ -13761,18 +14940,11 @@
                             "description": "A relational field",
                             "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
                           },
-                          "currentControls": {
+                          "controlImplementations": {
                             "description": "A relational field",
                             "type": "array",
                             "items": {
-                              "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
-                            }
-                          },
-                          "recommendedControls": {
-                            "description": "A relational field",
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                              "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
                             }
                           },
                           "assessment": {
@@ -13892,8 +15064,7 @@
                     "informationSystemImpacted",
                     "informationAssetImpacted",
                     "treatmentOwner",
-                    "currentControls",
-                    "recommendedControls",
+                    "controlImplementations",
                     "assessment"
                   ]
                 },
@@ -13907,8 +15078,7 @@
                       "informationSystemImpacted",
                       "informationAssetImpacted",
                       "treatmentOwner",
-                      "currentControls",
-                      "recommendedControls",
+                      "controlImplementations",
                       "assessment"
                     ]
                   }
@@ -14089,7 +15259,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.046Z",
+                          "default": "2026-08-02T07:47:56.503Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -14108,18 +15278,11 @@
                           "description": "A relational field",
                           "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
                         },
-                        "currentControls": {
+                        "controlImplementations": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
-                          }
-                        },
-                        "recommendedControls": {
-                          "description": "A relational field",
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
                           }
                         },
                         "assessment": {
@@ -14316,7 +15479,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.041Z",
+                        "default": "2026-08-02T07:47:56.498Z",
                         "type": "string"
                       },
                       "riskOwner": {
@@ -14343,16 +15506,7 @@
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
                       },
-                      "currentControls": {
-                        "description": "A relational field",
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
-                        }
-                      },
-                      "recommendedControls": {
+                      "controlImplementations": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -14472,8 +15626,7 @@
                     "informationSystemImpacted",
                     "informationAssetImpacted",
                     "treatmentOwner",
-                    "currentControls",
-                    "recommendedControls",
+                    "controlImplementations",
                     "assessment"
                   ]
                 },
@@ -14487,8 +15640,7 @@
                       "informationSystemImpacted",
                       "informationAssetImpacted",
                       "treatmentOwner",
-                      "currentControls",
-                      "recommendedControls",
+                      "controlImplementations",
                       "assessment"
                     ]
                   }
@@ -14899,7 +16051,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.030Z",
+                          "default": "2026-08-02T07:47:56.489Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -14918,18 +16070,11 @@
                           "description": "A relational field",
                           "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
                         },
-                        "currentControls": {
+                        "controlImplementations": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
-                          }
-                        },
-                        "recommendedControls": {
-                          "description": "A relational field",
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
                           }
                         },
                         "assessment": {
@@ -15060,8 +16205,7 @@
                     "informationSystemImpacted",
                     "informationAssetImpacted",
                     "treatmentOwner",
-                    "currentControls",
-                    "recommendedControls",
+                    "controlImplementations",
                     "assessment"
                   ]
                 },
@@ -15075,8 +16219,7 @@
                       "informationSystemImpacted",
                       "informationAssetImpacted",
                       "treatmentOwner",
-                      "currentControls",
-                      "recommendedControls",
+                      "controlImplementations",
                       "assessment"
                     ]
                   }
@@ -15257,7 +16400,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.074Z",
+                          "default": "2026-08-02T07:47:56.523Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -15276,18 +16419,11 @@
                           "description": "A relational field",
                           "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
                         },
-                        "currentControls": {
+                        "controlImplementations": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
-                          }
-                        },
-                        "recommendedControls": {
-                          "description": "A relational field",
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
                           }
                         },
                         "assessment": {
@@ -15484,7 +16620,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.066Z",
+                        "default": "2026-08-02T07:47:56.512Z",
                         "type": "string"
                       },
                       "riskOwner": {
@@ -15511,16 +16647,7 @@
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
                       },
-                      "currentControls": {
-                        "description": "A relational field",
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
-                        }
-                      },
-                      "recommendedControls": {
+                      "controlImplementations": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -15633,8 +16760,7 @@
                     "informationSystemImpacted",
                     "informationAssetImpacted",
                     "treatmentOwner",
-                    "currentControls",
-                    "recommendedControls",
+                    "controlImplementations",
                     "assessment"
                   ]
                 },
@@ -15648,8 +16774,7 @@
                       "informationSystemImpacted",
                       "informationAssetImpacted",
                       "treatmentOwner",
-                      "currentControls",
-                      "recommendedControls",
+                      "controlImplementations",
                       "assessment"
                     ]
                   }
@@ -15878,7 +17003,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.084Z",
+                          "default": "2026-08-02T07:47:56.531Z",
                           "type": "string"
                         },
                         "riskOwner": {
@@ -15897,18 +17022,11 @@
                           "description": "A relational field",
                           "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
                         },
-                        "currentControls": {
+                        "controlImplementations": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
-                          }
-                        },
-                        "recommendedControls": {
-                          "description": "A relational field",
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
                           }
                         },
                         "assessment": {
@@ -16242,7 +17360,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:03.090Z",
+                            "default": "2026-08-02T07:47:56.537Z",
                             "type": "string"
                           },
                           "application": {
@@ -16398,7 +17516,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.108Z",
+                          "default": "2026-08-02T07:47:56.551Z",
                           "type": "string"
                         },
                         "application": {
@@ -16470,7 +17588,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.104Z",
+                        "default": "2026-08-02T07:47:56.550Z",
                         "type": "string"
                       },
                       "application": {
@@ -16722,7 +17840,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.101Z",
+                          "default": "2026-08-02T07:47:56.540Z",
                           "type": "string"
                         },
                         "application": {
@@ -16889,7 +18007,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.112Z",
+                          "default": "2026-08-02T07:47:56.555Z",
                           "type": "string"
                         },
                         "application": {
@@ -16961,7 +18079,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.110Z",
+                        "default": "2026-08-02T07:47:56.554Z",
                         "type": "string"
                       },
                       "application": {
@@ -17128,7 +18246,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.114Z",
+                          "default": "2026-08-02T07:47:56.557Z",
                           "type": "string"
                         },
                         "application": {
@@ -17524,7 +18642,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-07-25T07:19:03.120Z",
+                            "default": "2026-08-02T07:47:56.564Z",
                             "type": "string"
                           },
                           "roles": {
@@ -17708,7 +18826,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.135Z",
+                          "default": "2026-08-02T07:47:56.579Z",
                           "type": "string"
                         },
                         "roles": {
@@ -17805,7 +18923,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.133Z",
+                        "default": "2026-08-02T07:47:56.572Z",
                         "type": "string"
                       },
                       "roles": {
@@ -18108,7 +19226,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.130Z",
+                          "default": "2026-08-02T07:47:56.569Z",
                           "type": "string"
                         },
                         "roles": {
@@ -18303,7 +19421,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.141Z",
+                          "default": "2026-08-02T07:47:56.586Z",
                           "type": "string"
                         },
                         "roles": {
@@ -18400,7 +19518,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.139Z",
+                        "default": "2026-08-02T07:47:56.585Z",
                         "type": "string"
                       },
                       "roles": {
@@ -18596,7 +19714,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.145Z",
+                          "default": "2026-08-02T07:47:56.590Z",
                           "type": "string"
                         },
                         "roles": {
@@ -19131,7 +20249,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.169Z",
+                          "default": "2026-08-02T07:47:56.615Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -19205,7 +20323,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-07-25T07:19:03.167Z",
+                        "default": "2026-08-02T07:47:56.607Z",
                         "type": "string"
                       },
                       "entitlements": {
@@ -19375,7 +20493,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-07-25T07:19:03.172Z",
+                          "default": "2026-08-02T07:47:56.618Z",
                           "type": "string"
                         },
                         "entitlements": {
@@ -24885,7 +26003,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.496Z",
+            "default": "2026-08-02T07:47:56.023Z",
             "type": "string"
           },
           "entitlements": {
@@ -24965,7 +26083,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.503Z",
+            "default": "2026-08-02T07:47:56.031Z",
             "type": "string"
           },
           "roles": {
@@ -25019,7 +26137,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.499Z",
+            "default": "2026-08-02T07:47:56.027Z",
             "type": "string"
           },
           "entitlements": {
@@ -25077,7 +26195,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.490Z",
+            "default": "2026-08-02T07:47:56.019Z",
             "type": "string"
           },
           "application": {
@@ -25182,7 +26300,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.566Z",
+            "default": "2026-08-02T07:47:56.084Z",
             "type": "string"
           },
           "assessmentRequests": {
@@ -25285,7 +26403,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.570Z",
+            "default": "2026-08-02T07:47:56.088Z",
             "type": "string"
           },
           "owner": {
@@ -25371,7 +26489,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.577Z",
+            "default": "2026-08-02T07:47:56.093Z",
             "type": "string"
           },
           "questionnaire": {
@@ -25424,7 +26542,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.574Z",
+            "default": "2026-08-02T07:47:56.090Z",
             "type": "string"
           },
           "assessmentRequest": {
@@ -25483,6 +26601,54 @@
               "Compensating"
             ]
           },
+          "controlReference": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "publishedAt": {
+            "description": "A datetime field",
+            "default": "2026-08-02T07:47:56.109Z",
+            "type": "string"
+          },
+          "implementations": {
+            "description": "A relational field",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+            }
+          }
+        },
+        "required": [
+          "documentId",
+          "id",
+          "controlNumber",
+          "name",
+          "publishedAt"
+        ],
+        "additionalProperties": false,
+        "id": "ApiCsrmControlCsrmControlDocument"
+      },
+      "ApiCsrmControlImplementationCsrmControlImplementationDocument": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "description": "The document ID, represented by a UUID",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+          },
+          "id": {
+            "type": "number"
+          },
           "controlStatus": {
             "description": "An enum field",
             "type": "string",
@@ -25502,10 +26668,6 @@
               "Ineffective",
               "Not Assessed"
             ]
-          },
-          "controlReference": {
-            "description": "A string field",
-            "type": "string"
           },
           "evidence": {
             "description": "A text field",
@@ -25533,8 +26695,16 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.596Z",
+            "default": "2026-08-02T07:47:56.107Z",
             "type": "string"
+          },
+          "control": {
+            "description": "A relational field",
+            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+          },
+          "risk": {
+            "description": "A relational field",
+            "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
           },
           "controlOwner": {
             "description": "A relational field",
@@ -25544,12 +26714,12 @@
         "required": [
           "documentId",
           "id",
-          "controlNumber",
-          "name",
-          "publishedAt"
+          "publishedAt",
+          "control",
+          "risk"
         ],
         "additionalProperties": false,
-        "id": "ApiCsrmControlCsrmControlDocument"
+        "id": "ApiCsrmControlImplementationCsrmControlImplementationDocument"
       },
       "ApiCsrmRiskCsrmRiskDocument": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -25714,7 +26884,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.592Z",
+            "default": "2026-08-02T07:47:56.104Z",
             "type": "string"
           },
           "riskOwner": {
@@ -25733,18 +26903,11 @@
             "description": "A relational field",
             "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
           },
-          "currentControls": {
+          "controlImplementations": {
             "description": "A relational field",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
-            }
-          },
-          "recommendedControls": {
-            "description": "A relational field",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+              "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
             }
           },
           "assessment": {
@@ -25842,7 +27005,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.581Z",
+            "default": "2026-08-02T07:47:56.098Z",
             "type": "string"
           },
           "generatedBy": {
@@ -25979,7 +27142,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-07-25T07:19:02.562Z",
+            "default": "2026-08-02T07:47:56.080Z",
             "type": "string"
           },
           "requestor": {

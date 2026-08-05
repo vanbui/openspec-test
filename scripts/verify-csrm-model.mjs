@@ -59,6 +59,7 @@ const csrmSchemas = {
   "csrm-risk": readSchema("csrm-risk"),
   "csrm-control": readSchema("csrm-control"),
   "csrm-risk-type": readSchema("csrm-risk-type"),
+  "csrm-control-implementation": readSchema("csrm-control-implementation"),
 };
 
 const expectedCollectionNames = {
@@ -71,6 +72,7 @@ const expectedCollectionNames = {
   "csrm-risk": "csrm_risks",
   "csrm-control": "csrm_controls",
   "csrm-risk-type": "csrm_risk_types",
+  "csrm-control-implementation": "csrm_control_implementations",
 };
 
 for (const [name, schema] of Object.entries(csrmSchemas)) {
@@ -94,6 +96,7 @@ const assessment = csrmSchemas["csrm-assessment"];
 const risk = csrmSchemas["csrm-risk"];
 const control = csrmSchemas["csrm-control"];
 const riskType = csrmSchemas["csrm-risk-type"];
+const controlImplementation = csrmSchemas["csrm-control-implementation"];
 
 for (const field of [
   "requestNumber",
@@ -420,15 +423,9 @@ assertEnum(
 );
 assertRelationTarget(
   risk,
-  "currentControls",
-  "api::csrm-control.csrm-control",
-  "Risk current controls",
-);
-assertRelationTarget(
-  risk,
-  "recommendedControls",
-  "api::csrm-control.csrm-control",
-  "Risk recommended controls",
+  "controlImplementations",
+  "api::csrm-control-implementation.csrm-control-implementation",
+  "Risk control implementations",
 );
 
 for (const field of ["name", "description", "applicableControls", "risks"]) {
@@ -453,16 +450,27 @@ for (const field of [
   "controlNumber",
   "name",
   "description",
+  "controlReference",
+]) {
+  assert(control.attributes[field], `Control must define ${field}`);
+}
+for (const field of [
   "controlStatus",
   "controlOwner",
   "effectivenessRating",
-  "controlReference",
   "evidence",
   "implementationDueDate",
   "implementedDate",
   "reviewDate",
 ]) {
-  assert(control.attributes[field], `Control must define ${field}`);
+  assert(
+    !Object.hasOwn(control.attributes, field),
+    `Control must not define implementation field ${field}`,
+  );
+  assert(
+    controlImplementation.attributes[field],
+    `Control implementation must define ${field}`,
+  );
 }
 assert(control.attributes.controlNumber.required === true, "Control number must be required");
 assert(control.attributes.controlNumber.unique === true, "Control number must be unique");
@@ -472,23 +480,49 @@ assertEnum(
   ["Preventive", "Detective", "Corrective", "Compensating"],
   "Control type",
 );
-assertEnum(
-  control,
-  "controlStatus",
-  ["Existing", "Planned", "Implemented", "Retired"],
-  "Control status",
-);
-assertEnum(
-  control,
-  "effectivenessRating",
-  ["Effective", "Partially Effective", "Ineffective", "Not Assessed"],
-  "Control effectiveness",
-);
 assertRelationTarget(
   control,
+  "implementations",
+  "api::csrm-control-implementation.csrm-control-implementation",
+  "Control implementations",
+);
+assertRelationTarget(
+  controlImplementation,
+  "control",
+  "api::csrm-control.csrm-control",
+  "Control implementation control",
+);
+assert(
+  controlImplementation.attributes.control.required === true,
+  "Control implementation control must be required",
+);
+assertRelationTarget(
+  controlImplementation,
+  "risk",
+  "api::csrm-risk.csrm-risk",
+  "Control implementation risk",
+);
+assert(
+  controlImplementation.attributes.risk.required === true,
+  "Control implementation risk must be required",
+);
+assertEnum(
+  controlImplementation,
+  "controlStatus",
+  ["Existing", "Planned", "Implemented", "Retired"],
+  "Control implementation status",
+);
+assertEnum(
+  controlImplementation,
+  "effectivenessRating",
+  ["Effective", "Partially Effective", "Ineffective", "Not Assessed"],
+  "Control implementation effectiveness",
+);
+assertRelationTarget(
+  controlImplementation,
   "controlOwner",
   "api::idambox-user.idambox-user",
-  "Control owner",
+  "Control implementation owner",
 );
 
 const routeNames = Object.keys(csrmSchemas);

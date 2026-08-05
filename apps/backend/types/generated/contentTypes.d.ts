@@ -561,10 +561,60 @@ export interface ApiCsrmAssessmentCsrmAssessment
   };
 }
 
+export interface ApiCsrmControlImplementationCsrmControlImplementation
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_control_implementations';
+  info: {
+    description: 'Implementation of a CSRM control for a particular risk';
+    displayName: 'CSRM Control Implementation';
+    pluralName: 'csrm-control-implementations';
+    singularName: 'csrm-control-implementation';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    control: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-control.csrm-control'
+    > &
+      Schema.Attribute.Required;
+    controlOwner: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    controlStatus: Schema.Attribute.Enumeration<
+      ['Existing', 'Planned', 'Implemented', 'Retired']
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    effectivenessRating: Schema.Attribute.Enumeration<
+      ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']
+    >;
+    evidence: Schema.Attribute.Text;
+    implementationDueDate: Schema.Attribute.Date;
+    implementedDate: Schema.Attribute.Date;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-control-implementation.csrm-control-implementation'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    reviewDate: Schema.Attribute.Date;
+    risk: Schema.Attribute.Relation<'manyToOne', 'api::csrm-risk.csrm-risk'> &
+      Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
   collectionName: 'csrm_controls';
   info: {
-    description: 'Current or recommended control associated with a CSRM risk';
+    description: 'Reusable CSRM control definition';
     displayName: 'CSRM Control';
     pluralName: 'csrm-controls';
     singularName: 'csrm-control';
@@ -576,14 +626,7 @@ export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
     controlNumber: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
-    controlOwner: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::idambox-user.idambox-user'
-    >;
     controlReference: Schema.Attribute.String;
-    controlStatus: Schema.Attribute.Enumeration<
-      ['Existing', 'Planned', 'Implemented', 'Retired']
-    >;
     controlType: Schema.Attribute.Enumeration<
       ['Preventive', 'Detective', 'Corrective', 'Compensating']
     >;
@@ -591,12 +634,10 @@ export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
-    effectivenessRating: Schema.Attribute.Enumeration<
-      ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']
+    implementations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-control-implementation.csrm-control-implementation'
     >;
-    evidence: Schema.Attribute.Text;
-    implementationDueDate: Schema.Attribute.Date;
-    implementedDate: Schema.Attribute.Date;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -605,7 +646,6 @@ export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     name: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
-    reviewDate: Schema.Attribute.Date;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -863,13 +903,13 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
     controlEffectiveness: Schema.Attribute.Enumeration<
       ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']
     >;
+    controlImplementations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-control-implementation.csrm-control-implementation'
+    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    currentControls: Schema.Attribute.Relation<
-      'manyToMany',
-      'api::csrm-control.csrm-control'
-    >;
     dataClassification: Schema.Attribute.Enumeration<
       ['Public', 'Internal', 'Restricted', 'Critical Infrastructure Sensitive']
     >;
@@ -899,10 +939,6 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     potentialImpact: Schema.Attribute.Text;
     publishedAt: Schema.Attribute.DateTime;
-    recommendedControls: Schema.Attribute.Relation<
-      'manyToMany',
-      'api::csrm-control.csrm-control'
-    >;
     residualLikelihood: Schema.Attribute.String;
     residualRating: Schema.Attribute.String;
     residualRatingRationale: Schema.Attribute.Text;
@@ -1574,6 +1610,7 @@ declare module '@strapi/strapi' {
       'api::application.application': ApiApplicationApplication;
       'api::csrm-assessment-request.csrm-assessment-request': ApiCsrmAssessmentRequestCsrmAssessmentRequest;
       'api::csrm-assessment.csrm-assessment': ApiCsrmAssessmentCsrmAssessment;
+      'api::csrm-control-implementation.csrm-control-implementation': ApiCsrmControlImplementationCsrmControlImplementation;
       'api::csrm-control.csrm-control': ApiCsrmControlCsrmControl;
       'api::csrm-information-asset.csrm-information-asset': ApiCsrmInformationAssetCsrmInformationAsset;
       'api::csrm-information-system.csrm-information-system': ApiCsrmInformationSystemCsrmInformationSystem;

@@ -43,7 +43,7 @@ Effective access is derived through:
 IdamBoxUser -> Role -> Entitlement -> Application
 ```
 
-The Phase 5 CSRM backend model adds nine CSRM collection types:
+The Phase 5 CSRM backend model adds ten CSRM collection types:
 
 - `csrm-assessment-request`
 - `csrm-information-asset`
@@ -54,6 +54,7 @@ The Phase 5 CSRM backend model adds nine CSRM collection types:
 - `csrm-risk`
 - `csrm-control`
 - `csrm-risk-type`
+- `csrm-control-implementation`
 
 Set `csrmAppIsEnabled=true` to enable application-facing CSRM route behavior. When `csrmAppIsEnabled=false`, CSRM schema files may still exist in Strapi and Content Manager, but active CSRM API behavior is guarded by the shared route policy. Phase 5 stores the backend content model and lifecycle fields only; CSRM screen flows, OIDC login, request transitions, and requestor/security analyst UI behavior belong to Phase 6 or later.
 

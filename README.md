@@ -127,7 +127,7 @@ Strapi Content Manager reserves the request field `status` for document publicat
 
 ## CSRM Backend Model
 
-Phase 5 adds the backend-only CSRM content model in Strapi: `csrm-assessment-request`, `csrm-information-asset`, `csrm-information-system`, `csrm-questionnaire`, `csrm-question`, `csrm-assessment`, `csrm-risk`, `csrm-control`, and reusable `csrm-risk-type` definitions.
+Phase 5 adds the backend-only CSRM content model in Strapi: `csrm-assessment-request`, `csrm-information-asset`, `csrm-information-system`, `csrm-questionnaire`, `csrm-question`, `csrm-assessment`, `csrm-risk`, `csrm-control`, reusable `csrm-risk-type` definitions, and `csrm-control-implementation` records.
 
 Set `csrmAppIsEnabled=true` to enable application-facing CSRM routes. When the flag is false, CSRM schemas may still be registered in Strapi, but CSRM API behavior is guarded. CSRM Next.js workflows, request transitions, and Keycloak/OIDC login screens belong to Phase 6 or later.
 
