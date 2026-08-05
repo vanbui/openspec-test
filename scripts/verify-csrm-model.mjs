@@ -58,6 +58,7 @@ const csrmSchemas = {
   "csrm-assessment": readSchema("csrm-assessment"),
   "csrm-risk": readSchema("csrm-risk"),
   "csrm-control": readSchema("csrm-control"),
+  "csrm-risk-type": readSchema("csrm-risk-type"),
 };
 
 const expectedCollectionNames = {
@@ -69,6 +70,7 @@ const expectedCollectionNames = {
   "csrm-assessment": "csrm_assessments",
   "csrm-risk": "csrm_risks",
   "csrm-control": "csrm_controls",
+  "csrm-risk-type": "csrm_risk_types",
 };
 
 for (const [name, schema] of Object.entries(csrmSchemas)) {
@@ -91,6 +93,7 @@ const question = csrmSchemas["csrm-question"];
 const assessment = csrmSchemas["csrm-assessment"];
 const risk = csrmSchemas["csrm-risk"];
 const control = csrmSchemas["csrm-control"];
+const riskType = csrmSchemas["csrm-risk-type"];
 
 for (const field of [
   "requestNumber",
@@ -327,6 +330,12 @@ assertRelationTarget(
   "api::csrm-assessment.csrm-assessment",
   "Risk assessment",
 );
+assertRelationTarget(
+  risk,
+  "riskType",
+  "api::csrm-risk-type.csrm-risk-type",
+  "Risk type",
+);
 
 for (const field of [
   "riskNumber",
@@ -420,6 +429,24 @@ assertRelationTarget(
   "recommendedControls",
   "api::csrm-control.csrm-control",
   "Risk recommended controls",
+);
+
+for (const field of ["name", "description", "applicableControls", "risks"]) {
+  assert(riskType.attributes[field], `Risk type must define ${field}`);
+}
+assert(riskType.attributes.name.required === true, "Risk type name must be required");
+assert(riskType.attributes.name.unique === true, "Risk type name must be unique");
+assertRelationTarget(
+  riskType,
+  "applicableControls",
+  "api::csrm-control.csrm-control",
+  "Risk type applicable controls",
+);
+assertRelationTarget(
+  riskType,
+  "risks",
+  "api::csrm-risk.csrm-risk",
+  "Risk type risks",
 );
 
 for (const field of [

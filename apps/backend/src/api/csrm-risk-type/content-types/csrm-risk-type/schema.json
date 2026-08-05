@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_risk_types",
+  "info": {
+    "singularName": "csrm-risk-type",
+    "pluralName": "csrm-risk-types",
+    "displayName": "CSRM Risk Type",
+    "description": "Reusable generic risk definition for CSRM assessments"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "applicableControls": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::csrm-control.csrm-control"
+    },
+    "risks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::csrm-risk.csrm-risk",
+      "mappedBy": "riskType"
+    }
+  }
+}

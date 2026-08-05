@@ -36,6 +36,12 @@
     "potentialImpact": {
       "type": "text"
     },
+    "riskType": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-risk-type.csrm-risk-type",
+      "inversedBy": "risks"
+    },
     "riskOwner": {
       "type": "relation",
       "relation": "manyToOne",

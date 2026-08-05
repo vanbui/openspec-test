@@ -804,6 +804,44 @@ export interface ApiCsrmQuestionnaireCsrmQuestionnaire
   };
 }
 
+export interface ApiCsrmRiskTypeCsrmRiskType
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_risk_types';
+  info: {
+    description: 'Reusable generic risk definition for CSRM assessments';
+    displayName: 'CSRM Risk Type';
+    pluralName: 'csrm-risk-types';
+    singularName: 'csrm-risk-type';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    applicableControls: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::csrm-control.csrm-control'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-risk-type.csrm-risk-type'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    publishedAt: Schema.Attribute.DateTime;
+    risks: Schema.Attribute.Relation<'oneToMany', 'api::csrm-risk.csrm-risk'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
   collectionName: 'csrm_risks';
   info: {
@@ -880,6 +918,10 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
     >;
     riskStatement: Schema.Attribute.Text & Schema.Attribute.Required;
     riskSubCategory: Schema.Attribute.String;
+    riskType: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-risk-type.csrm-risk-type'
+    >;
     riskVelocity: Schema.Attribute.Enumeration<
       ['Low', 'Moderate', 'High', 'Very High']
     >;
@@ -1537,6 +1579,7 @@ declare module '@strapi/strapi' {
       'api::csrm-information-system.csrm-information-system': ApiCsrmInformationSystemCsrmInformationSystem;
       'api::csrm-question.csrm-question': ApiCsrmQuestionCsrmQuestion;
       'api::csrm-questionnaire.csrm-questionnaire': ApiCsrmQuestionnaireCsrmQuestionnaire;
+      'api::csrm-risk-type.csrm-risk-type': ApiCsrmRiskTypeCsrmRiskType;
       'api::csrm-risk.csrm-risk': ApiCsrmRiskCsrmRisk;
       'api::entitlement.entitlement': ApiEntitlementEntitlement;
       'api::idambox-user.idambox-user': ApiIdamboxUserIdamboxUser;
