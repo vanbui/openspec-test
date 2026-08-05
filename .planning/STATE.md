@@ -71,3 +71,11 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 - Phase 4 added Strapi-to-Keycloak provisioning gated by `IDAMBOX_KEYCLOAK_PROVISIONING=true`, using the dedicated local admin client `idambox-strapi-admin`, storing Keycloak user IDs in `externalSubject`, and clearing transient IdamBox user passwords after successful provisioning.
 - Phase 5 added the backend-only CSRM content model with seven Strapi collections, generated API files, `csrmAppIsEnabled` route policy guarding, `verify:csrm-model`, docs, and regenerated content type declarations.
 - Phase 6 will add the IdamBox CSRM Next.js application using Keycloak/OIDC.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260805-qzp | extend the CSRMRisk object with two more attributes: isExempted:Boolean and exemptionReviewDate:dateTime | 2026-08-05 | 867b9f0 | [260805-qzp-extend-the-csrmrisk-object-with-two-more](./quick/260805-qzp-extend-the-csrmrisk-object-with-two-more/) |
+
+Last activity: 2026-08-05 - Completed quick task 260805-qzp: extend the CSRMRisk object with two more attributes: isExempted:Boolean and exemptionReviewDate:dateTime
