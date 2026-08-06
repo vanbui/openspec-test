@@ -63,21 +63,21 @@ Set `csrmAppIsEnabled=true` to enable application-facing CSRM route behavior. Wh
 
 ## Optional Sample Data
 
-Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records and functions:
+Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records:
 
 - IdamBox IAM
 - IdamBox Compliance
 - IdamBox Automation
 - IdamBox Crypto Manager
-- IdamBox LMS with `LMS STUDENT` and `LMS TUTOR`
+- IdamBox LMS
 - IdamBox Cyber Risk Manager
 
 The seed is disabled by default and is intended for local verification only.
 
-Set `IDAMBOX_SEED_CSRM=true` before startup to seed CSRM sample users. Requires `IDAMBOX_SEED_CORE=true` first so CSRM functions and roles exist:
+Set `IDAMBOX_SEED_CSRM=true` before startup to seed the CSRM catalogue of functions, FunctionApi records, roles, and sample users. Requires `IDAMBOX_SEED_CORE=true` first so the CSRM application exists:
 
 - `IdamBox User`: Jane Doe (`jane.doe`, `jane.doe@idambox.com`), active with no roles
-- `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned to `CSRM Security Analyst`
+- `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned to `Security Analyst`
 
 Keycloak is available for local identity-provider verification. The CSRM Next.js application is a later phase.
 

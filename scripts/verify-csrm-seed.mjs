@@ -60,34 +60,31 @@ for (const value of requiredCsrmSeedValues) {
 
 assertIncludes(
   seedSource,
-  "CSRM_SECURITY_ANALYST_ROLE_NAME",
-  "CSRM seed role lookup",
-);
-assertIncludes(
-  coreSeedSource,
-  "CSRM_SECURITY_ANALYST_ROLE_NAME",
-  "Core seed CSRM role constant",
-);
-assertIncludes(
-  coreSeedSource,
-  "buildPrefixedEntitlementName",
-  "Core seed name prefix helper",
+  'const CSRM_SECURITY_ANALYST_ROLE_NAME = "Security Analyst"',
+  "CSRM security analyst role name",
 );
 assertIncludes(
   coreSeedSource,
   "IdamBox CSRM",
   "Core seed CSRM application name",
 );
-assertIncludes(
-  coreSeedSource,
-  "Security Analyst",
-  "Core seed CSRM entitlement short name",
-);
 
 assertIncludes(
   seedSource,
   "process.env.IDAMBOX_SEED_CSRM !==",
   "CSRM seed guard",
+);
+assertIncludes(
+  seedSource,
+  "idambox-csrm-role-function-api-catalogue.json",
+  "CSRM catalogue import",
+);
+assertIncludes(seedSource, "api::application.application", "Application document service");
+assertIncludes(seedSource, "api::function.function", "Function document service");
+assertIncludes(
+  seedSource,
+  "api::function-api.function-api",
+  "FunctionApi document service",
 );
 assertIncludes(seedSource, "api::role.role", "Role document service");
 assertIncludes(
@@ -137,15 +134,10 @@ assert(
 
 assertIncludes(coreSeedSource, "IdamBox CSRM", "Core seed CSRM application");
 assertIncludes(coreSeedSource, "idambox-csrm", "Core seed CSRM slug");
-assertIncludes(
-  coreSeedSource,
-  "api::entitlement.entitlement",
-  "Entitlement document service",
-);
-assertIncludes(
-  coreSeedSource,
-  "entitlements: [entitlement.documentId]",
-  "Reusable Role relation",
+assert(
+  !coreSeedSource.includes("api::function.function") &&
+    !coreSeedSource.includes("api::role.role"),
+  "Core seed must not create functions or roles",
 );
 
 assertIncludes(bootstrapSource, "seed-csrm-data", "Bootstrap import");
@@ -165,7 +157,7 @@ assertIncludes(envExample, "IDAMBOX_SEED_CSRM=", "Environment example");
 
 assertIncludes(backendReadme, "IDAMBOX_SEED_CSRM=true", "Backend README");
 assertIncludes(backendReadme, "IDAMBOX_SEED_CORE", "Backend README");
-assertIncludes(backendReadme, "Entitlement", "Backend README");
+assertIncludes(backendReadme, "FunctionApi", "Backend README");
 
 assert(
   packageJson.scripts?.["verify:csrm-seed"] ===
