@@ -4,7 +4,7 @@
  * Generated from the Strapi backend schemas under apps/backend/src/api.
  *
  * Authorization path:
- *   IdamBoxUser -> Role -> Entitlement -> Application
+ *   IdamBoxUser -> Role -> Function -> Application
  *
  * Product users are represented by IdamBoxUser, separate from Strapi admin users.
  * CSRM records are application-specific backend collections guarded by the
@@ -47,9 +47,16 @@ enum ApplicationStatus {
   INACTIVE
 }
 
-entity Entitlement {
+entity Function {
   name String required,
-  description TextBlob
+  description TextBlob,
+  menuPath TextBlob
+}
+
+entity FunctionApi {
+  name String required,
+  description TextBlob,
+  url String required
 }
 
 /**
@@ -158,9 +165,9 @@ entity CsrmQuestion {
   questionText TextBlob required,
   helpText TextBlob,
   answerType CsrmAnswerType required,
-  options TextBlob, // Strapi json
+  options AnyBlob, // Strapi json
   order Integer,
-  answer TextBlob, // Strapi json
+  answer AnyBlob, // Strapi json
   reviewComment TextBlob
 }
 
@@ -217,6 +224,8 @@ entity CsrmRisk {
   identifiedDate LocalDate,
   targetDate LocalDate,
   closureDate LocalDate,
+  isExempted Boolean,
+  exemptionReviewDate Instant,
   escalationDetails TextBlob,
   comments TextBlob,
   riskCommunicationDate LocalDate,
@@ -224,6 +233,11 @@ entity CsrmRisk {
   treatmentPlan TextBlob,
   treatmentResolveDate LocalDate,
   treatmentStatus CsrmTreatmentStatus
+}
+
+entity CsrmRiskType {
+  name String required unique,
+  description TextBlob
 }
 
 entity CsrmControl {
@@ -288,14 +302,17 @@ enum CsrmTreatmentStatus {
  */
 relationship ManyToMany {
   IdamBoxUser{roles} to Role{idamboxUsers}
-  Role{entitlements} to Entitlement{roles}
+  Role{functions} to Function{roles}
 
   CsrmAssessmentRequest{informationAssets} to CsrmInformationAsset{assessmentRequests}
   CsrmAssessmentRequest{informationSystems} to CsrmInformationSystem{assessmentRequests}
+  CsrmRiskType{applicableControls} to CsrmControl
 }
 
 relationship OneToMany {
-  Application{entitlements} to Entitlement{application required}
+  Application{functions} to Function{application required}
+  Function{functionApis} to FunctionApi
+  CsrmRiskType{risks} to CsrmRisk{riskType}
 
   CsrmQuestionnaire{questions} to CsrmQuestion{questionnaire}
   CsrmAssessment{risks} to CsrmRisk{assessment}
@@ -325,5 +342,5 @@ relationship ManyToOne {
   CsrmRisk{informationAssetImpacted} to CsrmInformationAsset
 }
 
-paginate IdamBoxUser, Role, Application, Entitlement with pagination
-paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRisk, CsrmControl, CsrmControlImplementation with pagination
+paginate IdamBoxUser, Role, Application, Function, FunctionApi with pagination
+paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRiskType, CsrmRisk, CsrmControl, CsrmControlImplementation with pagination
