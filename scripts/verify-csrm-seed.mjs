@@ -2,31 +2,26 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
-
 const assert = (condition, message) => {
   if (!condition) {
     throw new Error(message);
   }
 };
-
-const assertIncludes = (source, value, label) => {
-  assert(source.includes(value), `${label} must include ${value}`);
+const assertUniqueIds = (items, label) => {
+  const ids = items.map((item) => item.id);
+  assert(new Set(ids).size === ids.length, `${label} IDs must be unique`);
 };
 
-const assertBefore = (source, first, second, label) => {
-  const firstIndex = source.indexOf(first);
-  const secondIndex = source.indexOf(second);
-
-  assert(firstIndex >= 0, `${label} missing ${first}`);
-  assert(secondIndex >= 0, `${label} missing ${second}`);
-  assert(
-    firstIndex < secondIndex,
-    `${label} must use ${first} before ${second}`,
-  );
-};
-
+const catalogue = JSON.parse(
+  read(
+    "apps",
+    "backend",
+    "src",
+    "bootstrap",
+    "idambox-csrm-role-function-api-catalogue.json",
+  ),
+);
 const seedSource = read(
   "apps",
   "backend",
@@ -34,135 +29,93 @@ const seedSource = read(
   "bootstrap",
   "seed-csrm-data.ts",
 );
-const coreSeedSource = read(
-  "apps",
-  "backend",
-  "src",
-  "bootstrap",
-  "seed-core-data.ts",
-);
-const bootstrapSource = read("apps", "backend", "src", "index.ts");
-const envExample = read("apps", "backend", ".env.example");
-const backendReadme = read("apps", "backend", "README.md");
 const packageJson = JSON.parse(read("package.json"));
 
-const requiredCsrmSeedValues = [
-  "IDAMBOX_SEED_CSRM",
-  "jane.doe@idambox.com",
-  'username: "jane.doe"',
-  "bob.doe@idambox.com",
-  'username: "bob.doe"',
-];
+assertUniqueIds(catalogue.roles, "Role");
+assertUniqueIds(catalogue.functions, "Function");
+assertUniqueIds(catalogue.functionApis, "FunctionApi");
 
-for (const value of requiredCsrmSeedValues) {
-  assertIncludes(seedSource, value, "CSRM seed source");
+const functionIds = new Set(catalogue.functions.map((item) => item.id));
+const functionApiIds = new Set(catalogue.functionApis.map((item) => item.id));
+for (const role of catalogue.roles) {
+  for (const functionId of role.functionIds) {
+    assert(
+      functionIds.has(functionId),
+      `Role ${role.id} references missing Function ${functionId}`,
+    );
+  }
+}
+for (const platformFunction of catalogue.functions) {
+  for (const functionApiId of platformFunction.functionApiIds ?? []) {
+    assert(
+      functionApiIds.has(functionApiId),
+      `Function ${platformFunction.id} references missing FunctionApi ${functionApiId}`,
+    );
+  }
+}
+for (const functionApi of catalogue.functionApis) {
+  assert(
+    functionIds.has(functionApi.functionId),
+    `FunctionApi ${functionApi.id} references missing Function ${functionApi.functionId}`,
+  );
 }
 
-assertIncludes(
-  seedSource,
-  'const CSRM_SECURITY_ANALYST_ROLE_NAME = "Security Analyst"',
-  "CSRM security analyst role name",
+const roleByName = new Map(catalogue.roles.map((role) => [role.name, role]));
+const securityAnalyst = roleByName.get("Security Analyst");
+const securityAnalystAgent = roleByName.get("Security Analyst Agent");
+const requestor = roleByName.get("Requestor");
+assert(securityAnalyst, "Security Analyst must be present in the catalogue");
+assert(
+  securityAnalystAgent,
+  "Security Analyst Agent must be present in the catalogue",
 );
-assertIncludes(
-  coreSeedSource,
-  "IdamBox CSRM",
-  "Core seed CSRM application name",
-);
-
-assertIncludes(
-  seedSource,
-  "process.env.IDAMBOX_SEED_CSRM !==",
-  "CSRM seed guard",
-);
-assertIncludes(
-  seedSource,
-  "idambox-csrm-role-function-api-catalogue.json",
-  "CSRM catalogue import",
-);
-assertIncludes(seedSource, "api::application.application", "Application document service");
-assertIncludes(seedSource, "api::function.function", "Function document service");
-assertIncludes(
-  seedSource,
-  "api::function-api.function-api",
-  "FunctionApi document service",
-);
-assertIncludes(seedSource, "api::role.role", "Role document service");
-assertIncludes(
-  seedSource,
-  "api::idambox-user.idambox-user",
-  "IdamBox User document service",
-);
-assertIncludes(
-  seedSource,
-  "IDAMBOX_SEED_CORE=true",
-  "Core seed prerequisite message",
-);
-
-assertBefore(
-  seedSource,
-  "existingJaneUsers",
-  "userService.create",
-  "Jane idempotency",
-);
-
-const bobUserBlock = seedSource.slice(seedSource.indexOf("existingBobUsers"));
-assertBefore(
-  bobUserBlock,
-  "existingBobUsers",
-  "userService.create",
-  "Bob idempotency",
-);
-
-assertIncludes(seedSource, "$eq: CSRM_USERS.jane.email", "Jane lookup");
-assertIncludes(seedSource, "$eq: CSRM_USERS.bob.email", "Bob lookup");
-assertIncludes(seedSource, "data: CSRM_USERS.jane", "Jane update data");
-assertIncludes(seedSource, "...CSRM_USERS.bob", "Bob update data");
-assertIncludes(
-  seedSource,
-  "roles: [securityAnalystRole.documentId]",
-  "Bob Role relation",
-);
-
-const janeSeedDataBlock = seedSource.slice(
-  seedSource.indexOf("jane:"),
-  seedSource.indexOf("bob:"),
+assert(requestor, "Requestor must remain present in the catalogue");
+assert(
+  securityAnalyst.functionIds.length > 0,
+  "Security Analyst must have at least one Function grant",
 );
 assert(
-  !janeSeedDataBlock.includes("roles"),
-  "Jane seed data must not include roles",
+  JSON.stringify([...securityAnalyst.functionIds].sort()) ===
+    JSON.stringify([...securityAnalystAgent.functionIds].sort()),
+  "Security Analyst Agent Function grants must exactly match Security Analyst",
 );
 
-assertIncludes(coreSeedSource, "IdamBox CSRM", "Core seed CSRM application");
-assertIncludes(coreSeedSource, "idambox-csrm", "Core seed CSRM slug");
 assert(
-  !coreSeedSource.includes("api::function.function") &&
-    !coreSeedSource.includes("api::role.role"),
-  "Core seed must not create functions or roles",
+  seedSource.includes('process.env.IDAMBOX_SEED_CSRM !== "true"'),
+  "CSRM seed must retain the independent IDAMBOX_SEED_CSRM guard",
 );
-
-assertIncludes(bootstrapSource, "seed-csrm-data", "Bootstrap import");
-assertIncludes(
-  bootstrapSource,
-  "await seedCoreData(strapi);",
-  "Core seed call",
+assert(
+  seedSource.includes('const CSRM_APPLICATION_SLUG = "idambox-csrm"'),
+  "CSRM seed must use the canonical application slug",
 );
-assertIncludes(
-  bootstrapSource,
-  "await seedCsrmData(strapi);",
-  "CSRM seed call",
+assert(
+  seedSource.includes("applicationService.create"),
+  "CSRM seed must create its canonical Application when absent",
 );
-
-assertIncludes(envExample, "IDAMBOX_SEED_CORE=", "Environment example");
-assertIncludes(envExample, "IDAMBOX_SEED_CSRM=", "Environment example");
-
-assertIncludes(backendReadme, "IDAMBOX_SEED_CSRM=true", "Backend README");
-assertIncludes(backendReadme, "IDAMBOX_SEED_CORE", "Backend README");
-assertIncludes(backendReadme, "FunctionApi", "Backend README");
-
+assert(
+  seedSource.includes("applicationService.findMany"),
+  "CSRM seed must look up the canonical Application before creating it",
+);
+assert(
+  !seedSource.includes("IDAMBOX_SEED_CORE=true"),
+  "CSRM seed must not require the core seed flag",
+);
+assert(
+  !seedSource.includes("api::application-role"),
+  "CSRM seed must retain the accepted Function-based authorization model",
+);
+assert(
+  seedSource.includes("roles: []"),
+  "CSRM seed must keep Jane role-free on creation and update",
+);
+assert(
+  seedSource.includes("roles: [securityAnalystRole.documentId]"),
+  "CSRM seed must assign Bob only to Security Analyst",
+);
 assert(
   packageJson.scripts?.["verify:csrm-seed"] ===
-    "node scripts/verify-csrm-seed.mjs",
-  "package.json must define verify:csrm-seed",
+    "node scripts/verify-csrm-seed.mjs && node scripts/verify-csrm-seed-runtime.mjs",
+  "verify:csrm-seed must run static verification before the runtime verifier",
 );
 
-console.log("IdamBox CSRM seed verification passed");
+console.log("IdamBox CSRM seed catalogue verification passed");
