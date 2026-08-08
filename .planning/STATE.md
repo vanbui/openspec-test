@@ -64,6 +64,7 @@ Last activity: 2026-08-05 - Completed quick task 260805-sm8: add FunctionApi to 
 | 260802-onb | review the changes and make any necessary adjustments | 2026-08-02 | 13cbce5 | [260802-onb-review-the-changes-and-make-any-necessar](./quick/260802-onb-review-the-changes-and-make-any-necessar/) |
 | 260805-sct | update the Strapi backend data schema to rename Entitlement object to Function and add menuPath | 2026-08-05 | b4f113e | [260805-sct-update-the-strapi-backend-data-schema-to](./quick/260805-sct-update-the-strapi-backend-data-schema-to/) |
 | 260805-sm8 | add FunctionApi to the Strapi backend data model with a one-way Function relation | 2026-08-05 | d15a950 | [260805-sm8-extend-the-strapi-backend-data-model-to-](./quick/260805-sm8-extend-the-strapi-backend-data-model-to-/) |
+| 4 | update the CSRM project brief to reference the Strapi OpenAPI specification and use the Strapi backend API | 2026-08-08 | 0ed1b67 | — |
 
 ## Memory
 
