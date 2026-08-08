@@ -245,38 +245,42 @@ Plans:
 4. A typed service abstraction targets the Strapi OpenAPI contract and supports production Strapi calls plus fixtures or an HTTP-level test double without introducing a competing mock-only contract.
 5. Unit, component, integration, and Playwright foundations cover core layout, capability, validation, and responsive behavior.
 
-**Plans:** 8 plans
+**Plans:** 9 plans
 
 Plans:
 
 **Wave 1**
 
-- [ ] `06-01-PLAN.md` — Audited workspace bootstrap and runnable CSRM foundation tracer
+- [ ] `06-01-PLAN.md` — Audited dependency gate and strict CSRM workspace configuration
 
 **Wave 2**
 
-- [ ] `06-02-PLAN.md` — Generated Strapi transport boundary and fail-closed MSW integration
-- [ ] `06-03-PLAN.md` — Function-ID capabilities, routes, development identities, and access preflight
+- [ ] `06-02-PLAN.md` — Runnable port-3001 foundation tracer, bounded runtime probe, and Turbo wiring
 
 **Wave 3**
 
-- [ ] `06-04-PLAN.md` — Semantic design tokens and reviewed local UI primitives
+- [ ] `06-03-PLAN.md` — Generated Strapi transport boundary and fail-closed MSW integration
+- [ ] `06-04-PLAN.md` — Function-ID capabilities, routes, development identities, and access preflight
 
 **Wave 4**
 
-- [ ] `06-05-PLAN.md` — Complete reusable loading, error, access, partial, overflow, and cardinality states
+- [ ] `06-05-PLAN.md` — Semantic design tokens and reviewed local UI primitives
 
 **Wave 5**
 
-- [ ] `06-06-PLAN.md` — Server-rendered capability shell and safe direct-route states
+- [ ] `06-06-PLAN.md` — Complete reusable loading, error, access, partial, overflow, and cardinality states
 
 **Wave 6**
 
-- [ ] `06-07-PLAN.md` — Responsive navigation, account, focus, and development-identity client islands
+- [ ] `06-07-PLAN.md` — Server-rendered capability shell and safe direct-route states
 
 **Wave 7**
 
-- [ ] `06-08-PLAN.md` — Browser viewport, access, production-boundary, and visual approval evidence
+- [ ] `06-08-PLAN.md` — Responsive navigation, account, focus, and development-identity client islands
+
+**Wave 8**
+
+- [ ] `06-09-PLAN.md` — Browser viewport, access, production-boundary, and visual approval evidence
 
 **Cross-cutting constraints:**
 
