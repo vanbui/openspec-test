@@ -77,10 +77,10 @@ Last activity: 2026-08-05 - Completed quick task 260805-sm8: add FunctionApi to 
 - Use Strapi native admin authentication for content administration.
 - Auth0 is deferred until Next.js app modules are added.
 - Use a custom IdamBox user collection rather than Strapi admin users for product users.
-- Application roles start with `name` and `description`, scoped to applications.
-- Roles bundle application roles and are assigned to users.
+- Applications own Functions; Functions may expose FunctionApi operation grants rather than free-floating permission strings.
+- Roles bundle application-owned Functions and are assigned to users through `IdamBoxUser -> Role -> Function -> Application`.
 - Follow the `example-projects/edalas-dylan` monorepo shape.
-- Phase 2 added idempotent Strapi bootstrap data for the CSRM application, CSRM roles, and Jane/Bob sample users behind `IDAMBOX_SEED_CSRM`.
+- Phase 2 added idempotent Strapi bootstrap data for the CSRM Application, Function/FunctionApi catalogue, Security Analyst, Security Analyst Agent, and Requestor Roles, plus Jane/Bob sample users behind `IDAMBOX_SEED_CSRM`; Jane has no Roles and Bob has only Security Analyst.
 - Phase 3 added a top-level Keycloak `idp` setup based on `example-projects/idambox_old/keycloak`, with a local `idambox` realm, Jane/Bob Keycloak users, an `idambox-csrm` OIDC client, and static verification.
 - Keycloak committed credentials and `idambox-csrm-local-secret` are local-only values and must not be reused outside local development.
 - Phase 4 executed as three waves: Keycloak admin client/configuration, backend provisioning integration, and verification/documentation closeout.
