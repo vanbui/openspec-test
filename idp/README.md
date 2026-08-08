@@ -2,7 +2,7 @@
 
 This directory contains the local-only Keycloak identity provider for IdamBox development. The committed admin password, user passwords, and OIDC client secret are intentionally easy local development values and must not be reused outside local development.
 
-Phase 3 only provides the identity provider. It does not wire Next.js login, Strapi provisioning, or CSRM runtime authentication. Product authorization remains in Strapi through `IdamBoxUser -> Role -> Entitlement -> Application`; do not add CSRM authorization roles or groups in Keycloak for this phase.
+Phase 3 only provides the identity provider. It does not wire Next.js login, Strapi provisioning, or CSRM runtime authentication. Product authorization remains in Strapi through `IdamBoxUser -> Role -> Function -> Application`, with FunctionApi records supplying operation-level grants; do not add CSRM authorization Roles, Functions, FunctionApi grants, or groups in Keycloak for this phase.
 
 ## Quickstart
 

@@ -28,7 +28,7 @@ SQLite is the default local database. PostgreSQL settings are included as commen
 
 ## Collections
 
-The backend defines four core platform collection types:
+The backend defines five core platform collection types:
 
 - `Application`
 - `Function`
@@ -74,10 +74,20 @@ Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records:
 
 The seed is disabled by default and is intended for local verification only.
 
-Set `IDAMBOX_SEED_CSRM=true` before startup to seed the CSRM catalogue of functions, FunctionApi records, roles, and sample users. Requires `IDAMBOX_SEED_CORE=true` first so the CSRM application exists:
+Set `IDAMBOX_SEED_CSRM=true` before startup to seed the CSRM catalogue independently. It lookup-or-creates the canonical `IdamBox CSRM` Application, so it does not require `IDAMBOX_SEED_CORE=true`. The seed is disabled by default and is intended for local verification only.
+
+CSRM authorization remains application-owned: each `Function` belongs to the CSRM `Application`, while each `FunctionApi` is an operation-level grant below its Function. Roles bundle Functions, so effective access follows `IdamBoxUser -> Role -> Function -> Application`.
+
+The current Function-backed Role catalogue includes:
+
+- `Security Analyst`
+- `Security Analyst Agent` — mirrors the Security Analyst Function grants and is assigned to neither sample user
+- `Requestor`
+
+The sample users preserve the Phase 2 assignments:
 
 - `IdamBox User`: Jane Doe (`jane.doe`, `jane.doe@idambox.com`), active with no roles
-- `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned to `Security Analyst`
+- `IdamBox User`: Bob Doe (`bob.doe`, `bob.doe@idambox.com`), active and assigned only to `Security Analyst`
 
 Keycloak is available for local identity-provider verification. The CSRM Next.js application is a later phase.
 

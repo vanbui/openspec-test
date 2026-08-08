@@ -17,20 +17,20 @@ created: 2026-05-24
 
 | Property | Value |
 |----------|-------|
-| **Framework** | Node.js static verification scripts plus TypeScript compiler |
+| **Framework** | Node.js static verification scripts, a real Strapi two-boot disposable SQLite verifier, plus TypeScript compiler |
 | **Config file** | `package.json`, `apps/backend/package.json`, `tsconfig.json` |
 | **Quick run command** | `yarn verify:csrm-seed` |
-| **Full suite command** | `yarn verify:schema && yarn verify:csrm-seed && yarn check-types` |
-| **Estimated runtime** | ~30 seconds, excluding dependency install/build variance |
+| **Full suite command** | `yarn verify:csrm-seed && yarn verify:schema && yarn check-types` |
+| **Estimated runtime** | ~15 seconds for `yarn verify:csrm-seed` in a warm workspace; allow ~30 seconds for the full suite. This is not a static-only 60-second check. |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `yarn verify:csrm-seed` once the script exists.
-- **After every plan wave:** Run `yarn verify:schema && yarn verify:csrm-seed && yarn check-types`.
+- **After every task commit:** Run `yarn verify:csrm-seed`; it runs static checks and then boots the same disposable SQLite database twice.
+- **After every plan wave:** Run `yarn verify:csrm-seed && yarn verify:schema && yarn check-types`.
 - **Before `$gsd-verify-work`:** Full suite must be green, with any sandbox-only build limitation documented.
-- **Max feedback latency:** 60 seconds for static verification and type checking in a warm workspace.
+- **Max feedback latency:** Target <30 seconds for the complete warm-workspace suite (the measured two-boot seed command is ~15 seconds); do not treat the former static-only 60-second assumption as the runtime contract.
 
 ---
 
@@ -41,6 +41,10 @@ created: 2026-05-24
 | 02-01-01 | 01 | 1 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-01 / T-02-02 | Seed is opt-in and duplicate-safe | static + type | `yarn verify:csrm-seed && yarn check-types` | ✅ | ⬜ pending |
 | 02-01-02 | 01 | 1 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-01 | Documentation exposes opt-in flag only | static | `yarn verify:csrm-seed` | ✅ | ⬜ pending |
 | 02-01-03 | 01 | 1 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-02 | Relationships preserve role path | static + schema | `yarn verify:schema && yarn verify:csrm-seed` | ✅ | ⬜ pending |
+| 02-02-01 | 02 | 2 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-01 / T-02-03 / T-02-04 | Independent CSRM seed persists the exact Function-based graph and remains idempotent across two real boots | live integration | `yarn verify:csrm-seed` | ✅ | ✅ green |
+| 02-02-02 | 02 | 2 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-01 / T-02-02 | Static catalogue and all five live authorization schemas reject dangling or obsolete model wiring | static + schema | `yarn verify:csrm-seed && yarn verify:schema && yarn check-types` | ✅ | ✅ green |
+| 02-03-01 | 03 | 3 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-06 / T-02-10 | Current requirements and roadmap retain BOOT traceability while accepting the Function migration without changing historical evidence | documentation traceability | `node -e "const fs=require('node:fs');const q=fs.readFileSync('.planning/REQUIREMENTS.md','utf8');const r=fs.readFileSync('.planning/ROADMAP.md','utf8');for(const id of ['BOOT-01','BOOT-02','BOOT-03','BOOT-04'])if(!q.includes(id)||!r.includes(id))throw Error(id)"` | ✅ | ✅ green |
+| 02-03-02 | 03 | 3 | BOOT-01, BOOT-02, BOOT-03, BOOT-04 | T-02-07 / T-02-08 / T-02-09 | Docs default both seed flags to opt-in, preserve exact Jane/Bob and agent-Role guidance, and keep Keycloak separate from Strapi authorization | documentation + live integration | `yarn verify:csrm-seed && yarn verify:schema && yarn check-types` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -58,9 +62,7 @@ Existing infrastructure covers all phase requirements:
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Optional live Strapi boot with `IDAMBOX_SEED_CSRM=true` | BOOT-01 to BOOT-04 | Live Strapi boot may be sandbox-sensitive because Phase 1 build needed escalation | If local environment permits, copy `.env.example`, set `IDAMBOX_SEED_CSRM=true`, run `yarn develop:cms`, and inspect the Strapi admin content manager for the seeded records and Bob's role assignment. |
+No Phase 2 seed behavior remains manual-only. `yarn verify:csrm-seed` is the authoritative acceptance check: it creates a verifier-owned disposable SQLite database, boots the real Strapi backend twice against that same database, and verifies persistence, relations, and idempotency. Optional Strapi admin inspection is supplementary only and is not an acceptance gate.
 
 ---
 
@@ -70,7 +72,7 @@ Existing infrastructure covers all phase requirements:
 - [x] Sampling continuity: no 3 consecutive tasks without automated verify.
 - [x] Wave 0 covers all missing references.
 - [x] No watch-mode flags.
-- [x] Feedback latency target < 60s for static checks.
+- [x] Feedback latency accounts for the live two-boot verifier rather than a static-only threshold.
 - [x] `nyquist_compliant: true` set in frontmatter.
 
 **Approval:** pending
