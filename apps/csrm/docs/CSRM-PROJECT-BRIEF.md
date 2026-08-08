@@ -114,11 +114,10 @@ A Security Analyst can:
 - manage the Risk Register
 - manage Risk Types
 - manage the reusable Control library
-- manage the generic Risk library
 - manage Information Systems
 - manage Information Assets
-- import Controls, generic Risks, Information Systems and Information Assets
-  from CSV files through the frontend
+- import Controls, Risk Types, Information Systems and Information Assets from
+  CSV files through the frontend
 - view dashboards, reports and alerts
 
 Security Analyst capabilities are broader than Requestor capabilities.
@@ -171,8 +170,8 @@ Authorization must be enforced server-side as well as in the UI.
 - Mitigation Control Details
 
 ### Administration
-- Risk Library
-- Risk Details
+- Risk Types
+- Risk Type Details
 - Control Library
 - Control Details
 - Information Systems
@@ -180,9 +179,9 @@ Authorization must be enforced server-side as well as in the UI.
 - Information Assets
 - Information Asset Details
 
-The Control Library, Risk Library, Information Systems and Information Assets
+The Risk Types, Control Library, Information Systems and Information Assets
 list screens must each provide a Security Analyst action for importing records
-from a CSV file.
+from a CSV file through the frontend.
 
 ### Reports
 - Reports
@@ -395,23 +394,21 @@ Follow the actual JDL terminology where names differ.
 
 ## Security Analyst Library and Inventory Management
 
-Security Analysts must have dedicated functions/screens to manage:
+Security Analysts must have dedicated list and create/view/edit screens for:
 
+- Risk Types
 - the reusable Control library
-- the generic Risk library
 - Information Systems
 - Information Assets
 
-Each object type needs a list screen and a detail/create/edit experience. List
-screens should support the common administration patterns defined elsewhere in
-this brief, including search, filtering, sorting and pagination where the data
-volume warrants them.
+These screens should use the common administration patterns defined elsewhere
+in this brief, including search, filtering, sorting and pagination where the
+data volume warrants them.
 
-The generic Risk library contains reusable risk definitions used as inputs to
-assessments. It is distinct from contextual Risk records created for a specific
-assessment and shown in the Risk Register. Use the existing reusable risk
-definition entity from the data model (currently `CsrmRiskType`) rather than
-introducing a competing domain entity solely for the frontend label.
+Risk Types are reusable/canonical risk definitions or categories. They are
+distinct from contextual Risk records created for a specific assessment and
+shown in the Risk Register. Use the existing `CsrmRiskType` data-model entity;
+do not introduce a competing domain entity solely for the frontend.
 
 For each of the four object types, the frontend must support CSV import. The
 import experience should:
@@ -712,6 +709,7 @@ src/
     assessments/
     risks/
     controls/
+    risk-types/
     information-systems/
     information-assets/
     imports/
@@ -767,8 +765,8 @@ Examples include domain resources such as:
 /api/v1/information-assets
 
 The typed service layer must also expose CSV import operations for Controls,
-generic Risks, Information Systems and Information Assets. Final endpoint
-shapes must follow the supplied API catalogue or be documented as an explicit
+Risk Types, Information Systems and Information Assets. Final endpoint shapes
+must follow the supplied API catalogue or be documented as an explicit
 catalogue extension.
 
 Do not treat these examples as permission to ignore the supplied API catalogue.
@@ -1196,15 +1194,15 @@ Phase 5 — Risk Register
 - Mitigation Control Details
 
 Phase 6 — Administration
-- generic Risk Library
-- generic Risk Details
+- Risk Types
+- Risk Type Details
 - Control Library
 - Control Details
 - Information Systems
 - Information System Details
 - Information Assets
 - Information Asset Details
-- CSV import for Controls, generic Risks, Information Systems and Information
+- CSV import for Controls, Risk Types, Information Systems and Information
   Assets
 
 Phase 7 — Dashboard / Reporting
