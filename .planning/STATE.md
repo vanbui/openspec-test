@@ -101,3 +101,9 @@ Last activity: 2026-08-05 - Completed quick task 260805-qzp: extend the CSRMRisk
 ### Roadmap Evolution
 
 - Phase 6 edited: replaced original Phase 6 with CSRM project brief stages across Phases 6-13
+
+## Performance Metrics
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 02-create-strapi-backend-bootstrap-data-for-the-csrm-applicatio P02 | 18 min | 2 tasks | 6 files |

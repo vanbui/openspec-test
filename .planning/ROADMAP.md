@@ -97,12 +97,12 @@
 4. Strapi bootstraps IdamBox users `Jane Doe <jane.doe@idambox.com>` and `Bob Doe <bob.doe@idambox.com>`.
 5. Bob Doe is assigned to the `Security Analyst` role, while Jane Doe remains an end-user/requestor account for later CSRM assessment requests.
 
-**Plans:** 1/3 plans complete
+**Plans:** 2/3 plans complete
 
 Plans:
 
 - [x] `02-01-PLAN.md` - CSRM Seed Data, Documentation, And Verification
-- [ ] `02-02-PLAN.md` - Function-Based CSRM Seed Runtime And Verification Gap Closure
+- [x] `02-02-PLAN.md` - Function-Based CSRM Seed Runtime And Verification Gap Closure
 - [ ] `02-03-PLAN.md` - Authorization Contract Documentation And Traceability Gap Closure
 
 **Cross-cutting constraints:**
