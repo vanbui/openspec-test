@@ -115,6 +115,28 @@ const loadAndAssert = async (strapi, expectedCounts) => {
     `Expected ${catalogue.functionApis.length} FunctionApis, found ${functionApis.length}`,
   );
 
+  const functionByMenuPath = new Map(
+    functions.map((platformFunction) => [platformFunction.menuPath, platformFunction]),
+  );
+  for (const functionSeed of catalogue.functions) {
+    const seededFunction = functionByMenuPath.get(functionSeed.menuPath);
+    assert(
+      seededFunction?.name === functionSeed.name,
+      `Function ${functionSeed.id} must be persisted with its canonical name and menu path`,
+    );
+    const expectedFunctionApis = catalogue.functionApis
+      .filter((functionApi) => functionApi.functionId === functionSeed.id)
+      .map((functionApi) => `${functionApi.name}\u0000${functionApi.url}`)
+      .sort();
+    const actualFunctionApis = seededFunction.functionApis
+      .map((functionApi) => `${functionApi.name}\u0000${functionApi.url}`)
+      .sort();
+    assert(
+      JSON.stringify(actualFunctionApis) === JSON.stringify(expectedFunctionApis),
+      `Function ${functionSeed.id} must retain its exact FunctionApi grants`,
+    );
+  }
+
   const expectedRoleNames = catalogue.roles.map((role) => role.name).sort();
   const seededRoles = roles.filter((role) => expectedRoleNames.includes(role.name));
   assert(
@@ -122,6 +144,25 @@ const loadAndAssert = async (strapi, expectedCounts) => {
     "Every catalogue Role must be persisted exactly once",
   );
   const roleByName = new Map(seededRoles.map((role) => [role.name, role]));
+  for (const roleSeed of catalogue.roles) {
+    const seededRole = roleByName.get(roleSeed.name);
+    const expectedFunctionDocumentIds = roleSeed.functionIds
+      .map((functionId) => {
+        const functionSeed = catalogue.functions.find(
+          (item) => item.id === functionId,
+        );
+        return functionByMenuPath.get(functionSeed.menuPath)?.documentId;
+      })
+      .sort();
+    const actualFunctionDocumentIds = seededRole.functions
+      .map((item) => item.documentId)
+      .sort();
+    assert(
+      JSON.stringify(actualFunctionDocumentIds) ===
+        JSON.stringify(expectedFunctionDocumentIds),
+      `Role ${roleSeed.id} must retain its exact Function document-ID set`,
+    );
+  }
   const analyst = roleByName.get("Security Analyst");
   const agent = roleByName.get("Security Analyst Agent");
   assert(analyst, "Security Analyst Role must exist");
