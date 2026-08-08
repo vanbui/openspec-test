@@ -50,11 +50,16 @@ Treat these repository files as important project references:
    - Use this as a starting API/UI capability catalogue.
    - API implementation may evolve but maintain traceability to Functions.
 
-4. docs/reference/ux/*
+4. docs/references/specification.json
+   - Defines the OpenAPI 3.1 contract generated from the Strapi backend.
+   - Treat its paths, operations, parameters and schemas as the source of truth
+     for communication between the CSRM application and the backend.
+
+5. docs/reference/ux/*
    - Reference screenshots showing useful enterprise UX patterns.
    - They are inspiration, not designs to copy literally.
 
-5. https://www.bproton.com
+6. https://www.bproton.com
    - Visual brand reference for BProton.
    - CSRM should look like a BProton/IdamBox product rather than Saviynt.
    - Reuse BProton brand language, visual character, typography,
@@ -63,10 +68,11 @@ Treat these repository files as important project references:
 When requirements conflict, use this precedence:
 
 1. Explicit CSRM requirements in this project brief
-2. CSRM data model
-3. CSRM Functions / API catalogue
-4. BProton branding
-5. UX reference screenshots
+2. Strapi OpenAPI specification for backend API contracts
+3. CSRM data model
+4. CSRM Functions / API catalogue
+5. BProton branding
+6. UX reference screenshots
 
 Raise conflicts rather than silently choosing a materially different domain
 model.
@@ -742,34 +748,25 @@ The frontend must not scatter raw fetch calls throughout page components.
 
 Create a typed API/service layer.
 
-Use the FunctionApi catalogue as the initial contract.
+The service layer must call the Strapi backend API directly. Use
+`docs/references/specification.json` as the authoritative contract for its
+paths, HTTP methods, parameters, request bodies and response schemas. Generate
+or derive TypeScript client types from that specification where practical so
+contract drift is detected during development.
 
-API conventions should generally use:
-
-/api/v1/...
-
-Examples include domain resources such as:
-
-/api/v1/requests
-/api/v1/requests/{id}
-/api/v1/questionnaires
-/api/v1/questionnaires/{id}
-/api/v1/risk-assessments
-/api/v1/risk-assessments/{id}
-/api/v1/risks
-/api/v1/risks/{id}
-/api/v1/mitigation-controls
-/api/v1/risk-types
-/api/v1/controls
-/api/v1/information-systems
-/api/v1/information-assets
+Use the FunctionApi catalogue to map application capabilities to the relevant
+Strapi operations, but do not treat it as a replacement transport contract.
+Do not introduce a separate `/api/v1` facade or a mock-only API contract unless
+an explicit architecture decision adds one later.
 
 The typed service layer must also expose CSV import operations for Controls,
 Risk Types, Information Systems and Information Assets. Final endpoint shapes
-must follow the supplied API catalogue or be documented as an explicit
-catalogue extension.
+must be added to the Strapi backend OpenAPI specification and reflected in the
+FunctionApi catalogue.
 
-Do not treat these examples as permission to ignore the supplied API catalogue.
+When a required operation is absent from the OpenAPI specification, treat it as
+a backend API gap to implement and document rather than substituting a frontend
+mock endpoint.
 
 Create:
 
@@ -781,11 +778,9 @@ Create:
 
 Keep domain types separate from transport/API types where beneficial.
 
-For initial frontend development, a mock API implementation may be used behind
-the same service interfaces.
-
-It must be possible to switch from mock data to real APIs without rewriting
-screen components.
+Frontend development and automated tests may use fixtures or an HTTP-level
+Strapi test double, but the production service implementation and its contract
+must always target the Strapi backend API.
 
 ---
 
