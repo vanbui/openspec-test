@@ -1,0 +1,1444 @@
+{
+  "framework": {
+    "name": "Essential Eight Maturity Model",
+    "publisher": "Australian Signals Directorate / Australian Cyber Security Centre",
+    "version": "November 2023",
+    "releaseDate": "2023-11",
+    "source": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/essential-eight/essential-eight-maturity-model",
+    "retrieved": "2026-08-08",
+    "catalogueType": "maturity-model requirements",
+    "sourceArtifact": {
+      "fileName": "essential-eight-2023-11.pdf",
+      "sha256": "d9655b8dcd63a72145d803163995a6795f0abdd36a1c98e1ad6621348ce6b918"
+    },
+    "notes": [
+      "Requirements are de-duplicated within each mitigation strategy; maturityLevels records every appendix in which the requirement appears."
+    ]
+  },
+  "controlCount": 160,
+  "controls": [
+    {
+      "strategy": "Patch applications",
+      "statement": "An automated method of asset discovery is used at least fortnightly to support the detection of assets for subsequent vulnerability scanning activities.",
+      "maturityLevels": [
+        1,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-001"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "A vulnerability scanner with an up-to-date vulnerability database is used for vulnerability scanning activities.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-002"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "A vulnerability scanner is used at least daily to identify missing patches or updates for vulnerabilities in online services.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-003"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "A vulnerability scanner is used at least weekly to identify missing patches or updates for vulnerabilities in office productivity suites, web browsers and their extensions, email clients, PDF software, and security products.",
+      "maturityLevels": [
+        1,
+        2
+      ],
+      "id": "E8-PATCH_APPLICATIONS-004"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in online services are applied within 48 hours of release when vulnerabilities are assessed as critical by vendors or when working exploits exist.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-005"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in online services are applied within two weeks of release when vulnerabilities are assessed as non -critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        1,
+        2
+      ],
+      "id": "E8-PATCH_APPLICATIONS-006"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in office productivity suites, web browsers and their extensions, email clients, PDF software, and security products are applied within two weeks of release.",
+      "maturityLevels": [
+        1,
+        2
+      ],
+      "id": "E8-PATCH_APPLICATIONS-007"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Online services that are no longer supported by vendors are removed.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-008"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Office productivity suites, web browsers and their extensions, email clients, PDF software, Adobe Flash Player, and security products that are no longer supported by vendors are removed.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-009"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "An automated method of asset discovery is used at least fortnightly to supp ort the detection of assets for subsequent vulnerability scanning activities.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-PATCH_APPLICATIONS-010"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "A vulnerability scanner is used at least fortnightly to identify missing patches or updates for vulnerabilities in applications other than office productivity suites, web browsers and their extensions, email clients, PDF software, and security products.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-011"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in applications other than office productivity suites, web browsers and their extensions, email clients, PDF software, and security products are applied within one month of release.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-PATCH_APPLICATIONS-012"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "A vulnerability scanner is used at least weekly to identify missing patches or updates fo r vulnerabilities in office productivity suites, web browsers and their extensions, email clients, PDF software, and security products.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-013"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in online services are applied within two weeks of release when vulnerabilities are assessed as non-critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-014"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in office productivity suites, web browsers and their extensions, email clients, PDF software, and security products are applied within 48 hours of release when vulnerabilities are assessed as critical by vendors or when working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-015"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in office productivity suites, web browsers and their extensions, email clients, PDF software, and security products are applied within two weeks of release when vulnerabilities are assessed as non-critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-016"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in applications o ther than office productivity suites, web browsers and their extensions, email clients, PDF software, and security products are applied within one month of release.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-017"
+    },
+    {
+      "strategy": "Patch applications",
+      "statement": "Applications other than office productivity suites, web browsers and their extensions , email clients, PDF software, Adobe Flash Player, and security products that are no longer supported by vendors are removed.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_APPLICATIONS-018"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "An automated method of asset discovery is used at least fortnightly to support the detection of assets for subsequent vulnerability scanning activities.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-001"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "A vulnerability scanner with an up-to-date vulnerability database is used for vulnerability scanning activities.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-002"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "A vulnerability scanner is used at least daily to identify missing patches or updates for vulnerabilities in operating systems of internet-facing servers and internet-facing network devices.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-003"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "A vulnerability scanner is used at least fortnightly to identify missing patches or updates for vulnerabilities in operating systems of workstations, non-internet-facing servers and non-internet-facing network devices.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-004"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in operating systems of internet-facing servers and internet-facing network devices are applied within 48 hours of release when vulnerabilities are assessed as critical by vendors or when working exploits exist.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-005"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in operating systems of internet-facing servers and internet-facing network devices are applied within two weeks of release when vulnerabilities are assessed as non-critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-006"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in operating systems of workstations, non-internet-facing servers and non-internet-facing network devices are applied within one month of release.",
+      "maturityLevels": [
+        1
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-007"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Operating systems that are no longer supported by vendors are replaced.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-008"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in operating systems o f workstations, non-internet-facing servers and non-internet-facing network devices are applied within one month of release.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-009"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "A vulnerability scanner is used at least fortnightly to identify missing patches or updates for vulnerabilities in drivers.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-010"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "A vulnerability scanner is used at least fortnightly to identify missing patches or updates for vulnerabilities in firmware.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-011"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in operating systems of workstations, non-internet-facing servers and non-internet-facing network devices are applied within 48 hours of release when vulnerabilities are assessed as critical by vendors or when working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-012"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in operating systems of workstations, non-internet-facing servers and non-internet-facing network devices are applied within one month of release when vulnerabilities are assessed as non -critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-013"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in drivers are applied within 48 hours of release when vulnerabilities are assessed as critical by vendors or when working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-014"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in drivers are applied within one month of release when vulnerabilities are assessed as non-critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-015"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in firmware are applied within 48 hours of release when vulnerabilities are assessed as critical by vendors or when working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-016"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "Patches, updates or other vendor mitigations for vulnerabilities in firmware are applied within one month of release when vulnerabilities are assessed as non -critical by vendors and no working exploits exist.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-017"
+    },
+    {
+      "strategy": "Patch operating systems",
+      "statement": "The latest release, or the previous release, of operating systems are used.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-PATCH_OPERATING_SYSTEMS-018"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate users to their organisation’s online services that process, store or communicate their organisation’s sensitive data .",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-001"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate users to third-party online services that process, store or communicate their organisation’s sensitive data.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-002"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication (where available) is used to authenticate users to third -party online services that process, store or communicate their organisation’s non -sensitive data.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-003"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate users to their organisation’s online customer services that process, store or communicate their organisation’s sensitive customer data.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-004"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate users to third-party online customer services that process, store or communicate their organisation’s sensitive customer data.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-005"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate customers to online customer services that process, store or communicate sensitive customer data.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-006"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication uses either: something users have and something users know, or something users have that is unlocked by something users know or are.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-007"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate privileged users of systems.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-008"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate unprivileged users of systems.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-009"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication used for authenticating users of online services is phishing-resistant.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-010"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication used for authenticating customers of online customer service s provides a phishing-resistant option.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-011"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication used for authenticating users of systems is phishing -resistant.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-012"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Successful and unsuccessful multi-factor authentication events are centrally logged.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-013"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Event logs are protected from unauthorised modification and deletion.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-014"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Event logs from internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-015"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Cyber security events are analysed in a timely manner to identify cyber security incidents.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-016"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Cyber security incidents are reported to the Chief Information Security Officer, or one of their delegates, as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-017"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Cyber security incidents are reported to ASD as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-018"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Following the identification of a cyber security incident, the cyber security incident response plan is enacted.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-019"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication is used to authenticate users of data repositories.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-020"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication used for authenticating customers of online customer services is phishing-resistant.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-021"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Multi-factor authentication used for authenticating users of data repositories is ph ishing-resistant.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-022"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Event logs from non-internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-023"
+    },
+    {
+      "strategy": "Multi-factor authentication",
+      "statement": "Event logs from workstations are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-MULTI_FACTOR_AUTHENTICATION-024"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Requests for privileged access to systems, applications and data repositories are validated when first requested.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-001"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged users are assigned a dedicated privileged user account to be used solely for duties requiring privileged access.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-002"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged user accounts (excluding those explicitly authorised to access online services) are prevented from accessing the internet, email and web services.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-003"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged user accounts explicitly authorised to access online services are strictly limited to only what is required for users and services to undertake their duties.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-004"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged users use separate privileged and unprivileged operating environments.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-005"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Unprivileged user accounts cannot logon to privileged operating environments.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-006"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged user accounts (excluding local administrator accounts) cannot logon to unprivileged operating environments.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-007"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged access to systems, applications and data repositories is disabled after 12 months unless revalidated.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-008"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged access to systems and applications is disabled after 45 days of inactivity.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-009"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged operating environments are not virtualised within unprivileged operating environments.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-010"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Administrative activities are conducted through jump servers.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-011"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Credentials for break glass accounts, local administrator accounts and service accounts are long, unique, unpredictable and managed.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-012"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged access events are centrally logged.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-013"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged user account and security group management events are centrally logged.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-014"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Event logs are protected from unauthorised modification and deletion.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-015"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Event logs from internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-016"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Cyber security events are analysed in a timely manner to identify cyber security incidents.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-017"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Cyber security incidents are reported to the Chief Information Security Officer, or one of their delegates, as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-018"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Cyber security incidents are reported to ASD as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-019"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Following the identification of a cyber security incident, the cyber security incident response plan is enacted.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-020"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Privileged access to systems, applications and data repositories is limited to only w hat is required for users and services to undertake their duties.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-021"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Secure Admin Workstations are used in the performance of administrative activities.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-022"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Just-in-time administration is used for administering systems and applications.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-023"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Memory integrity functionality is enabled.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-024"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Local Security Authority protection functionality is enabled.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-025"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Credential Guard functionality is enabled.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-026"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Remote Credential Guard functionality is enabled.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-027"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Event logs from non-internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-028"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Event logs from workstations are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-029"
+    },
+    {
+      "strategy": "Restrict administrative privileges",
+      "statement": "Cyber security incidents are reported to the Chief Information Security Officer, or on e of their delegates, as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_ADMINISTRATIVE_PRIVILEGES-030"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control is implemented on workstations.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-001"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control is applied to user profiles and temporary folders used by operating systems, web browsers and email clients.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-002"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control restricts the execution of executables, software libraries, scripts, installers, compiled HTML, HTML applications and control panel applets to an organisation-approved set.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-003"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control is implemented on internet-facing servers.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-004"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control is applied to all locations other than user profiles and temporary folders used by operating systems, web browsers and email clients.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-005"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Microsoft’s recommended application blocklist is implemented.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-006"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control rulesets are validated on an annual or more frequent basis.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-007"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Allowed and blocked application control events are centrally logged.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-008"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Event logs are protected from unauthorised modification and deletion.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-009"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Event logs from internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-010"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Cyber security events are analysed in a timely manner to identify cyber security incidents.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-011"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Cyber security incidents are reported to the Chief Information Security Officer, or one of their delegates, as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-012"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Cyber security incidents are reported to ASD as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-013"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Following the identification of a cyber security incident, the cyber security incident response plan is enacted.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-014"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control is implemented on non-internet-facing servers.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-015"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Application control restricts the execution of drivers to an organisation-approved set.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-016"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Microsoft’s vulnerable driver blocklist is implemented.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-017"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Event logs from non-internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-018"
+    },
+    {
+      "strategy": "Application control",
+      "statement": "Event logs from workstations are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-APPLICATION_CONTROL-019"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macros are disabled for users that do not have a demonstrated business requirement.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-001"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macros in files originating from the internet are blocked.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-002"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macro antivirus scanning is enabled.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-003"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macro security settings cannot be changed by users.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-004"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macros are blocked from making Win32 API calls.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-005"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Only Microsoft Office macros running from within a sandboxed environment, a Trusted Location or that are digitally signed by a trusted publisher are allowed to execute.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-006"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macros are checked to ensure they are free of malicious code before being digitally signed or placed within Trusted Locations.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-007"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Only privileged users responsible for checking that Microsoft Office macros are free of malicious code can write to and modify content within Trusted Locations.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-008"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macros digitally signed by an untrusted publisher cannot be enabled via the Message Bar or Backstage View.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-009"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office macros digitally signed by signatures other than V3 signatures cannot be enabled via the Message Bar or Backstage View.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-010"
+    },
+    {
+      "strategy": "Restrict Microsoft Office macros",
+      "statement": "Microsoft Office’s list of trusted publishers is validated on an annual or more frequent basis.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-RESTRICT_MICROSOFT_OFFICE_MACROS-011"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Internet Explorer 11 is disabled or removed.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-001"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Web browsers do not process Java from the internet.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-002"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Web browsers do not process web advertisements from the internet.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-003"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Web browser security settings cannot be changed by users.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-004"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Web browsers are hardened using ASD and vendor hardening guidance, with the most restrictive guidance taking precedence when conflicts occur.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-005"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Microsoft Office is blocked from creating child processes.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-006"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Microsoft Office is blocked from creating executable content.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-007"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Microsoft Office is blocked from injecting code into other processes.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-008"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Microsoft Office is configured to prevent activation of Object Linking and Emb edding packages.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-009"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Office productivity suites are hardened using ASD and vendor hardening guidance, with the most restrictive guidance taking precedence when conflicts occur.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-010"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Office productivity suite security settings cannot be changed by users.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-011"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "PDF software is blocked from creating child processes.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-012"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "PDF software is hardened using ASD and vendor hardening guidance, with the most restrictive guidance taking precedence when conflicts occur.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-013"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "PDF software security settings cannot be changed by users.",
+      "maturityLevels": [
+        2
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-014"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "PowerShell module logging, script block logging and transcription events are centrally logged.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-015"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Command line process creation events are centrally logged.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-016"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Event logs are protected from unauthorised modification and deletion.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-017"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Event logs from internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-018"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Cyber security events are analysed in a timely manner to identify cyber security incidents.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-019"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Cyber security incidents are reported to the Chief Information Security Officer, or one of their delegates, as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-020"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Cyber security incidents are reported to ASD as soon as possible after they occur or are discovered.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-021"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Following the identification of a cyber security incident, the cyber security incident response plan is enacted.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-022"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Microsoft Office is configured to prevent activation of Object Linking and Embedding packages.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-023"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "PDF software security settings cannot be changed by users. .NET Framework 3.5 (includes .NET 2.0 and 3.0) is disabled or removed.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-024"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Windows PowerShell 2.0 is disabled or removed.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-025"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "PowerShell is configured to use Constrained Language Mode.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-026"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Event logs from non-internet-facing servers are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-027"
+    },
+    {
+      "strategy": "User application hardening",
+      "statement": "Event logs from workstations are analysed in a timely manner to detect cyber security events.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-USER_APPLICATION_HARDENING-028"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Backups of data, applications and settings are performed and retained in accordance with business criticality and business continuity requirements.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-001"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Backups of data, applications and settings are synchronised to enable restoration to a common point in time.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-002"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Backups of data, applications and settings are retained in a secure and resilient manner.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-003"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Restoration of data, applications and settings from backups to a common point in time is tested as part of disaster recovery exercises.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-004"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Unprivileged user accounts cannot access backups belonging to other user accounts.",
+      "maturityLevels": [
+        1,
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-005"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Unprivileged user accounts are prevented from modifying and deleting backups.",
+      "maturityLevels": [
+        1,
+        2
+      ],
+      "id": "E8-REGULAR_BACKUPS-006"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Privileged user accounts (excluding backup administrator accounts) cannot access backups belonging to other user accounts.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-007"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Privileged user accounts (excluding backup administrator accounts) are prevented from modifying and deleting backups.",
+      "maturityLevels": [
+        2,
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-008"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Unprivileged user accounts cannot access their own backups.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-009"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Privileged user accounts (excluding backup administrator accounts) cannot access their own backups.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-010"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Unprivileged accounts are prevented from modifying and deleting backups.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-011"
+    },
+    {
+      "strategy": "Regular backups",
+      "statement": "Backup administrator accounts are prevented from modifying and deleting backups during their retention period.",
+      "maturityLevels": [
+        3
+      ],
+      "id": "E8-REGULAR_BACKUPS-012"
+    }
+  ]
+}

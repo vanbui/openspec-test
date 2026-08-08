@@ -1,0 +1,141 @@
+{
+  "framework": {
+    "name": "Prudential Standard CPS-234",
+    "publisher": "Australian Prudential Regulation Authority",
+    "version": "CPS-234",
+    "releaseDate": "2019-07-01",
+    "source": "https://www.apra.gov.au/information-security-cps-234",
+    "retrieved": "2026-08-08",
+    "catalogueType": "numbered prudential requirements",
+    "sourceArtifact": {
+      "fileName": "cps-234-2019.pdf",
+      "sha256": "ddcef7b1f5780c26a7e79ecfb35ce41bee8b65f78a8cdb605c7508c2f604bee5"
+    },
+    "notes": [
+      "Numbered operative clauses are represented as individual controls; definitions and introductory authority clauses are excluded."
+    ]
+  },
+  "controlCount": 24,
+  "controls": [
+    {
+      "id": "CPS-234-13",
+      "clause": 13,
+      "statement": "The Board4 of an APRA-regulated entity (Board) is ultimately responsible for the information security of the entity. The Board must ensure that the entity maintains information security in a manner commensurate with the size and extent of threats to its information assets, and which enables the continued sound operation of the entity.5"
+    },
+    {
+      "id": "CPS-234-14",
+      "clause": 14,
+      "statement": "An APRA-regulated entity must clearly define t he information security-related roles and responsibilities of the Board, senior management, governing bodies and individuals with responsibilit y for decision-making, approval, oversight, operations and other information security functions.6 Information security capability"
+    },
+    {
+      "id": "CPS-234-15",
+      "clause": 15,
+      "statement": "An APRA -regulated entity must maintain an information security capability commensurate with the size and extent of threats to its information assets, and which enables the continued sound operation of the entity."
+    },
+    {
+      "id": "CPS-234-16",
+      "clause": 16,
+      "statement": "Where information asset s are managed by a related party or third party, the APRA-regulated entity must assess the information security capability of that party, commensurate with the potential consequences of an information security incident affecting those assets.7"
+    },
+    {
+      "id": "CPS-234-17",
+      "clause": 17,
+      "statement": "An APRA -regulated entity must actively maintain its information security capability with respect to changes in vulnerabilities and threats, including those resulting from changes to information assets or its business environment. Policy framework"
+    },
+    {
+      "id": "CPS-234-18",
+      "clause": 18,
+      "statement": "An APRA -regulated entity must maintain an information security policy framework commensurate with its exposures to vulnerabilities and threats."
+    },
+    {
+      "id": "CPS-234-19",
+      "clause": 19,
+      "statement": "An APRA-regulated entity’s information security policy framework must provide direction on the responsibilities of all parties who have an obligation to maintain information security.8 4 For an RSE licensee, a reference to the Board is to be read as a reference to the Board of directors or group of individual trustees of an RSE licensee , as applicable. ‘Group of individual trustees’ has the meaning given in subsection 10(1) of the SIS Act. 5 A reference to the Board in the case of a foreign ADI, is a reference to the senior officer outside Australia. 6 For the purposes of this Prudential Standard, governing bodies and individuals incl udes committees, working groups and forums. 7 For the avoidance of doubt, paragraph 16 of this Prudential Standard applies to all information assets managed by related parties and third parties, not only those captured under agreements with service providers of outsourced material business activities under Prudential Standard CPS 231 Outsourcing or Prudential Standard SPS 231 Outsourcing. 8 For the purpose of paragraph 19 of this Prudential Standard, parties includes governing bodies and individuals with responsibilities referred to in paragraph 14, as well as all other staff, contractors, consultants, related parties, third parties and customers. July 2019 Information asset identification and classification"
+    },
+    {
+      "id": "CPS-234-20",
+      "clause": 20,
+      "statement": "An APRA-regulated entity must classify its information assets, including those managed by related parties and third parties, by criticality and sensitivity . This classification must reflect the degree to which an information security incident affecting an information asset has the potential to affect, financially or non-financially, the entity or the interests of depositors, policyholders , beneficiaries or other customers. Implementation of controls"
+    },
+    {
+      "id": "CPS-234-21",
+      "clause": 21,
+      "statement": "An APRA-regulated entity must have information security controls to protect its information assets, including those managed by related parties and third parties, that are implemented in a timely manner and that are commensurate with: (a) vulnerabilities and threats to the information assets; (b) the criticality and sensitivity of the information assets; (c) the stage at which the information assets are within their life-cycle;9 and (d) the potential consequences of an information security incident."
+    },
+    {
+      "id": "CPS-234-22",
+      "clause": 22,
+      "statement": "Where an APRA-regulated entity’s information assets are managed by a related party or third party, the APRA-regulated entity must evaluate the design of that party’s information security controls that protects the information assets of the APRA-regulated entity.10 Incident management"
+    },
+    {
+      "id": "CPS-234-23",
+      "clause": 23,
+      "statement": "An APRA-regulated entity must have robust mechanisms in place to detect and respond to information security incidents in a timely manner."
+    },
+    {
+      "id": "CPS-234-24",
+      "clause": 24,
+      "statement": "An APRA-regulated entity must maintain plans to respond to information security incidents that the entity considers could plausibly occur (information security response plans)."
+    },
+    {
+      "id": "CPS-234-25",
+      "clause": 25,
+      "statement": "An APRA-regulated entity’s information security response plans must include the mechanisms in place for: (a) managing all relevant stages of an incident, from detection to post-incident review; and 9 The use of the term ‘life -cycle’ in this context r efers to the process from planning and design through to decommissioning and disposal of an information asset. 10 For the avoidance of doubt, paragraph 22 of this Prudential Standard applies to all information assets managed by related parties and third parties, not only those captured under agreements with service providers of outsourced material business activities under Prudential Standard CPS 231 Outsourcing or Prudential Standard SPS 231 Outsourcing. July 2019 (b) escalation and reporting of information security incidents to the Board, other governing bodies and individuals responsible for information security incident management and oversight, as appropriate."
+    },
+    {
+      "id": "CPS-234-26",
+      "clause": 26,
+      "statement": "An APRA-regulated entity must annually review and test its information security response plans to ensure they remain effective and fit-for-purpose. Testing control effectiveness"
+    },
+    {
+      "id": "CPS-234-27",
+      "clause": 27,
+      "statement": "An APRA-regulated entity must test the effectiveness of its information security controls through a systematic testing program. The nature and frequency of the systematic testing must be commensurate with: (a) the rate at which the vulnerabilities and threats change; (b) the criticality and sensitivity of the information asset; (c) the consequences of an information security incident; (d) the risks associated with exposure to environments where the APRA-regulated entity is unable to enforce its information security policies;11 and (e) the materiality and frequency of change to information assets."
+    },
+    {
+      "id": "CPS-234-28",
+      "clause": 28,
+      "statement": "Where an APRA-regulated entity’s information assets are managed by a related party or a third party, and the APRA-regulated entity is reliant on that party’s information security control testin g, the APRA-regulated entity must assess whether the nature and frequency of testing of controls in respect of those information assets is commensurate with paragraphs 27(a) to 27(e) of this Prudential Standard.12"
+    },
+    {
+      "id": "CPS-234-29",
+      "clause": 29,
+      "statement": "An APRA -regulated entity must escalate and report to the Board or senior management any testing results that identify information security control deficiencies that cannot be remediated in a timely manner."
+    },
+    {
+      "id": "CPS-234-30",
+      "clause": 30,
+      "statement": "An APRA-regulated entity must ensure that testing is conducted by appropriately skilled and functionally independent specialists."
+    },
+    {
+      "id": "CPS-234-31",
+      "clause": 31,
+      "statement": "An APRA-regulated entity must review the sufficiency of the testing program at least annually or when there is a material change to information assets or the business environment. Internal audit"
+    },
+    {
+      "id": "CPS-234-32",
+      "clause": 32,
+      "statement": "An APRA-regulated entity’s internal audit activities must include a review of the design and operating effectiveness of information security controls , including 11 Also referred to as an ‘untrusted’ environment. 12 For the avoidance of doubt, paragraph 28 of this Prudential Stan dard applies to all information assets managed by related parties and third parties, not only those captured under agreements with service providers of outsourced material business activities under Prudential Standard CPS 231 Outsourcing or Prudential Standard SPS 231 Outsourcing. July 2019 those maintained by related parties and third parties (information security control assurance)."
+    },
+    {
+      "id": "CPS-234-33",
+      "clause": 33,
+      "statement": "An APRA -regulated entity must ensure that the information security control assurance is provided by personnel appropriately skilled in providing such assurance."
+    },
+    {
+      "id": "CPS-234-34",
+      "clause": 34,
+      "statement": "An APRA-regulated entity’s internal audit function must assess the information security control assurance provided by a related party or third party where: (a) an information security incident affecting the information assets has the potential to materially affect, financially or non-financially, the entity or the interests of depositors, policyholders, beneficiaries or other customers; and (b) internal audit intends to rely on the information security control assurance provided by the related party or third party.13 APRA notification"
+    },
+    {
+      "id": "CPS-234-35",
+      "clause": 35,
+      "statement": "An APRA-regulated entity must notify APRA as soon as possible and , in any case, no later than 72 hours, after becoming aware of an information security incident that: (a) materially affected, or had the potential to materially affect, financially or non-financially, the entity or the interests of depositors, policyholders , beneficiaries or other customers; or (b) has been notified to other regulators, either in Australia or other jurisdictions.14"
+    },
+    {
+      "id": "CPS-234-36",
+      "clause": 36,
+      "statement": "An APRA-regulated entity must notify APRA as soon as possible and , in any case, no later than 10 business days , after it becomes aware of a material information security control weakness which the entity expects it will not be able to remediate in a timely manner. 13 For the avoidance of doubt, paragraph 34 of this Prudential Standard applies to all information assets managed by related parties and third parties, not only those captured under agreements with service providers of outsourced material business activities under Prudential Standard CPS 231 Outsourcing or Prudential Standard SPS 231 Outsourcing. 14 For the avoidance of doubt, paragraph 35 of this Prudential Standard applies to notifications of information security incidents not already captured as notifications under Prudential Standard CPS 231 Outsourcing, Prudential Standard SPS 231 Outsourcing, Prudential Standard CPS 232 Business Continuity Management or Prudential Standard SPS 232 Business Continuity Management. Other regulators include domestic government agencies and international regulators."
+    }
+  ]
+}
