@@ -37,6 +37,7 @@ assertUniqueIds(catalogue.functionApis, "FunctionApi");
 
 const functionIds = new Set(catalogue.functions.map((item) => item.id));
 const functionApiIds = new Set(catalogue.functionApis.map((item) => item.id));
+const roleIds = new Set(catalogue.roles.map((item) => item.id));
 for (const role of catalogue.roles) {
   for (const functionId of role.functionIds) {
     assert(
@@ -46,12 +47,39 @@ for (const role of catalogue.roles) {
   }
 }
 for (const platformFunction of catalogue.functions) {
+  for (const roleId of platformFunction.roleIds ?? []) {
+    assert(
+      roleIds.has(roleId),
+      `Function ${platformFunction.id} references missing Role ${roleId}`,
+    );
+  }
+  const roleSideRoleIds = catalogue.roles
+    .filter((role) => role.functionIds.includes(platformFunction.id))
+    .map((role) => role.id)
+    .sort();
+  const functionSideRoleIds = [...(platformFunction.roleIds ?? [])].sort();
+  assert(
+    JSON.stringify(functionSideRoleIds) === JSON.stringify(roleSideRoleIds),
+    `Function ${platformFunction.id} Role membership must match Role.functionIds`,
+  );
   for (const functionApiId of platformFunction.functionApiIds ?? []) {
     assert(
       functionApiIds.has(functionApiId),
       `Function ${platformFunction.id} references missing FunctionApi ${functionApiId}`,
     );
   }
+  const apiSideFunctionApiIds = catalogue.functionApis
+    .filter((functionApi) => functionApi.functionId === platformFunction.id)
+    .map((functionApi) => functionApi.id)
+    .sort();
+  const functionSideFunctionApiIds = [
+    ...(platformFunction.functionApiIds ?? []),
+  ].sort();
+  assert(
+    JSON.stringify(functionSideFunctionApiIds) ===
+      JSON.stringify(apiSideFunctionApiIds),
+    `Function ${platformFunction.id} FunctionApi membership must match FunctionApi.functionId`,
+  );
 }
 for (const functionApi of catalogue.functionApis) {
   assert(

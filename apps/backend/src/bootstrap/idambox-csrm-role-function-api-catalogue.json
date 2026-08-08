@@ -93,6 +93,7 @@
       "menuPath": "Dashboard:Dashboard",
       "roleIds": [
         "role.security_analyst",
+        "role.security_analyst_agent",
         "role.requestor"
       ],
       "functionApiIds": [
@@ -150,6 +151,7 @@
       "menuPath": "Risk Assessment Requests:Request Details",
       "roleIds": [
         "role.security_analyst",
+        "role.security_analyst_agent",
         "role.requestor"
       ],
       "functionApiIds": [
@@ -250,7 +252,8 @@
       "description": "Lists all assessment requests available to Security Analysts for triage, review, and workflow processing.",
       "menuPath": "Risk Assessment Requests:Requests",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_assessment_requests.requests.api.01",
@@ -268,7 +271,8 @@
       "description": "Lists generated questionnaires and their associated requests for Security Analyst review.",
       "menuPath": "Questionnaires:Questionnaires",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.questionnaires.questionnaires.api.01",
@@ -285,7 +289,8 @@
       "description": "Allows a Security Analyst to review questionnaire responses, record question-level comments, complete review, and initiate assessment drafting.",
       "menuPath": "Questionnaires:Questionnaire Details",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.questionnaires.questionnaire_details.api.01",
@@ -308,7 +313,8 @@
       "description": "Lists generated and manually managed risk assessments for analyst review, approval, and release.",
       "menuPath": "Risk Assessments:Risk Assessments",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_assessments.risk_assessments.api.01",
@@ -328,7 +334,8 @@
       "description": "Allows a Security Analyst to review and edit an assessment, manage its contextualized risks, progress workflow status, approve it, and release it to the Requestor.",
       "menuPath": "Risk Assessments:Risk Assessment Details",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_assessments.risk_assessment_details.api.01",
@@ -355,7 +362,8 @@
       "description": "Lists contextualized risks across assessments with ratings, owners, treatment status, and target dates.",
       "menuPath": "Risk Register:Risk Register",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_register.risk_register.api.01",
@@ -376,7 +384,8 @@
       "description": "Displays and edits a contextualized risk, its affected systems or assets, owners, ratings, treatment plan, and mitigation controls.",
       "menuPath": "Risk Register:Risk Details",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_register.risk_details.api.01",
@@ -400,7 +409,8 @@
       "description": "Lists contextual control implementations used to mitigate identified risks, including owner, status, effectiveness, evidence, and due dates.",
       "menuPath": "Risk Register:Mitigation Controls",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_register.mitigation_controls.api.01",
@@ -421,7 +431,8 @@
       "description": "Displays and edits one contextual mitigation control implementation, including owner, status, effectiveness, evidence, and delivery dates.",
       "menuPath": "Risk Register:Mitigation Control Details",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.risk_register.mitigation_control_details.api.01",
@@ -442,7 +453,8 @@
       "description": "Lists and creates reusable risk definitions used by the AI and analysts to contextualize risks within assessments.",
       "menuPath": "Administration:Risk Types",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.administration.risk_types.api.01",
@@ -458,7 +470,8 @@
       "description": "Displays and edits a reusable risk definition and its applicable control catalogue mappings.",
       "menuPath": "Administration:Risk Type Details",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.administration.risk_type_details.api.01",
@@ -479,7 +492,8 @@
       "description": "Lists and creates reusable control definitions that may be selected as mitigation controls for contextualized risks.",
       "menuPath": "Administration:Controls",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.administration.controls.api.01",
@@ -495,7 +509,8 @@
       "description": "Displays and edits a reusable control definition and shows where it is applied.",
       "menuPath": "Administration:Control Details",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.administration.control_details.api.01",
@@ -517,7 +532,8 @@
       "description": "Provides aggregated reporting over requests, questionnaires, assessments, risks, owners, treatments, and mitigation controls.",
       "menuPath": "Reports:Reports",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.reports.reports.api.01",
@@ -539,7 +555,8 @@
       "description": "Shows operational and risk alerts derived from overdue work, high residual risk, ineffective controls, and upcoming treatment or review dates.",
       "menuPath": "Reports:Alerts",
       "roleIds": [
-        "role.security_analyst"
+        "role.security_analyst",
+        "role.security_analyst_agent"
       ],
       "functionApiIds": [
         "function.reports.alerts.api.01",
