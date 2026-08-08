@@ -1,16 +1,17 @@
 import { createRequire } from "node:module";
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, realpath, rmdir, unlink } from "node:fs/promises";
 import path from "node:path";
 
 const root = await realpath(process.cwd());
 const backendRoot = await realpath(path.join(root, "apps", "backend"));
 const temporaryRoot = path.join(backendRoot, ".tmp");
-const databaseEnvironmentKeys = [
+const overriddenEnvironmentKeys = [
   "APP_KEYS",
   "API_TOKEN_SALT",
   "ADMIN_JWT_SECRET",
   "TRANSFER_TOKEN_SALT",
   "JWT_SECRET",
+  "ENCRYPTION_KEY",
   "DATABASE_CLIENT",
   "DATABASE_FILENAME",
   "IDAMBOX_SEED_CORE",
@@ -46,6 +47,21 @@ const assertDisposableDirectory = (directory, expectedParent) => {
   );
 };
 
+const assertDisposableDirectoryIdentity = async (
+  directory,
+  expectedParent,
+  expectedIdentity,
+) => {
+  assertDisposableDirectory(directory, expectedParent);
+  const stats = await lstat(directory);
+  assert(!stats.isSymbolicLink(), "Disposable directory must not be a symlink");
+  assert(stats.isDirectory(), "Disposable path must remain a directory");
+  assert(
+    stats.dev === expectedIdentity.dev && stats.ino === expectedIdentity.ino,
+    "Disposable directory identity changed; refusing cleanup",
+  );
+};
+
 const assertRelativeDatabaseFilename = (filename, databaseFile) => {
   assert(filename.length > 0, "DATABASE_FILENAME must not be empty");
   assert(!path.isAbsolute(filename), "DATABASE_FILENAME must be relative");
@@ -54,7 +70,7 @@ const assertRelativeDatabaseFilename = (filename, databaseFile) => {
     "DATABASE_FILENAME must not contain parent-directory segments",
   );
   assert(
-    filename.startsWith(".tmp/verify-csrm-seed-"),
+    filename.startsWith(path.join(".tmp", "verify-csrm-seed-")),
     "DATABASE_FILENAME must target the verifier-owned .tmp child",
   );
   assert(
@@ -202,9 +218,10 @@ const loadAndAssert = async (strapi, expectedCounts) => {
 };
 
 const savedEnvironment = new Map(
-  databaseEnvironmentKeys.map((key) => [key, process.env[key]]),
+  overriddenEnvironmentKeys.map((key) => [key, process.env[key]]),
 );
 let disposableDir;
+let disposableDirIdentity;
 let strapi;
 
 try {
@@ -212,6 +229,13 @@ try {
   const canonicalTemporaryRoot = await realpath(temporaryRoot);
   disposableDir = await mkdtemp(path.join(canonicalTemporaryRoot, "verify-csrm-seed-"));
   assertDisposableDirectory(disposableDir, canonicalTemporaryRoot);
+  const disposableDirStats = await lstat(disposableDir);
+  assert(!disposableDirStats.isSymbolicLink(), "Disposable directory must not be a symlink");
+  assert(disposableDirStats.isDirectory(), "Disposable path must be a directory");
+  disposableDirIdentity = {
+    dev: disposableDirStats.dev,
+    ino: disposableDirStats.ino,
+  };
   const databaseFile = path.join(disposableDir, "data.db");
   const databaseFilename = path.relative(backendRoot, databaseFile);
   assertRelativeDatabaseFilename(databaseFilename, databaseFile);
@@ -222,6 +246,7 @@ try {
     ADMIN_JWT_SECRET: "verify-csrm-seed-admin-jwt-secret",
     TRANSFER_TOKEN_SALT: "verify-csrm-seed-transfer-token-salt",
     JWT_SECRET: "verify-csrm-seed-jwt-secret",
+    ENCRYPTION_KEY: "verify-csrm-seed-encryption-key",
     DATABASE_CLIENT: "sqlite",
     DATABASE_FILENAME: databaseFilename,
     IDAMBOX_SEED_CORE: "false",
@@ -269,9 +294,33 @@ try {
       process.env[key] = value;
     }
   }
-  if (disposableDir) {
+  if (disposableDir && disposableDirIdentity) {
     const canonicalTemporaryRoot = await realpath(temporaryRoot);
-    assertDisposableDirectory(disposableDir, canonicalTemporaryRoot);
-    await rm(disposableDir, { recursive: true, force: false });
+    const sqliteArtifacts = [
+      "data.db",
+      "data.db-wal",
+      "data.db-shm",
+      "data.db-journal",
+    ];
+    for (const artifact of sqliteArtifacts) {
+      await assertDisposableDirectoryIdentity(
+        disposableDir,
+        canonicalTemporaryRoot,
+        disposableDirIdentity,
+      );
+      try {
+        await unlink(path.join(disposableDir, artifact));
+      } catch (error) {
+        if (error?.code !== "ENOENT") {
+          throw error;
+        }
+      }
+    }
+    await assertDisposableDirectoryIdentity(
+      disposableDir,
+      canonicalTemporaryRoot,
+      disposableDirIdentity,
+    );
+    await rmdir(disposableDir);
   }
 }
