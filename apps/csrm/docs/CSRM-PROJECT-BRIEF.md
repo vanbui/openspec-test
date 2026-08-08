@@ -786,16 +786,34 @@ must always target the Strapi backend API.
 
 # 18. Authentication and Authorization
 
-Authentication technology is not yet the main focus and may be finalised
-separately.
+The CSRM application must use Keycloak as its OpenID Connect identity provider.
+The frontend must redirect unauthenticated users to Keycloak, establish an
+application session after the authorization-code flow succeeds and send a
+valid access token when calling the CSRM API. The API must validate the token's
+signature, issuer, audience and expiry, then resolve the Keycloak identity to
+the corresponding IdamBox user.
 
-Design authentication behind an abstraction.
+Keycloak proves the user's identity. CSRM application authorization remains in
+the IdamBox/Strapi data model and must not be duplicated as Keycloak realm or
+client roles.
 
-For development, allow a safe mock/dev identity mechanism so both roles can
-be tested easily:
+The frontend is responsible for rendering navigation, screens and actions that
+match the logged-on user's effective Functions. It should obtain this effective
+capability set from the authenticated CSRM API rather than trusting editable
+client state or deriving authority solely from token claims.
 
-- Requestor
-- Security Analyst
+The CSRM API must authorize every call server-side. For the logged-on user, it
+must resolve the user's effective Roles, the Functions granted by those Roles
+and the FunctionAPI records associated with those Functions. A request is
+allowed only when an effective FunctionAPI grant matches the requested backend
+operation and all applicable record-level rules also pass.
+
+`Requestor` is a birthright Role. Every successfully authenticated user has the
+Requestor Role as part of their effective authorization set even when it is not
+explicitly assigned to their IdamBox user record. Elevated Roles such as
+`Security Analyst` must still be assigned explicitly. The authorization
+resolver must combine the implicit Requestor grant with explicit assignments
+without requiring or creating duplicate persisted Role assignments.
 
 Do not scatter checks such as:
 
@@ -820,7 +838,9 @@ canImportLibraryData
 
 Navigation visibility is not a security control.
 
-The backend/server layer must also enforce authorization.
+Hiding a screen or action in the frontend is only a usability measure. The CSRM
+API remains the enforcement point and must deny calls that do not have a
+matching Role -> Function -> FunctionAPI authorization path.
 
 Protect against IDOR: a Requestor must not retrieve another user's restricted
 record merely by changing a URL identifier.
