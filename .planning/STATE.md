@@ -2,14 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_phase: 6
 status: ready_to_plan
-last_updated: 2026-05-29T09:33:11.921Z
+last_updated: "2026-08-08T11:50:43.959Z"
+last_activity: 2026-08-05
+last_activity_desc: "Completed quick task 260805-sm8: add FunctionApi to the Strapi backend data model"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 11
   completed_plans: 11
-  percent: 83
 stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 06
 ---
 
@@ -64,6 +66,7 @@ Last activity: 2026-08-05 - Completed quick task 260805-sm8: add FunctionApi to 
 | 260802-onb | review the changes and make any necessary adjustments | 2026-08-02 | 13cbce5 | [260802-onb-review-the-changes-and-make-any-necessar](./quick/260802-onb-review-the-changes-and-make-any-necessar/) |
 | 260805-sct | update the Strapi backend data schema to rename Entitlement object to Function and add menuPath | 2026-08-05 | b4f113e | [260805-sct-update-the-strapi-backend-data-schema-to](./quick/260805-sct-update-the-strapi-backend-data-schema-to/) |
 | 260805-sm8 | add FunctionApi to the Strapi backend data model with a one-way Function relation | 2026-08-05 | d15a950 | [260805-sm8-extend-the-strapi-backend-data-model-to-](./quick/260805-sm8-extend-the-strapi-backend-data-model-to-/) |
+| 4 | expand the CSRM project brief with analyst library management and CSV imports | 2026-08-08 | f048dbc | — |
 
 ## Memory
 
