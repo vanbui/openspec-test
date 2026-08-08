@@ -46,6 +46,30 @@
       ]
     },
     {
+      "id": "role.security_analyst_agent",
+      "name": "Security Analyst Agent",
+      "description": "Automation agent with the same CSRM Function grants as the Security Analyst role.",
+      "functionIds": [
+        "function.dashboard.dashboard",
+        "function.risk_assessment_requests.request_details",
+        "function.risk_assessment_requests.requests",
+        "function.questionnaires.questionnaires",
+        "function.questionnaires.questionnaire_details",
+        "function.risk_assessments.risk_assessments",
+        "function.risk_assessments.risk_assessment_details",
+        "function.risk_register.risk_register",
+        "function.risk_register.risk_details",
+        "function.risk_register.mitigation_controls",
+        "function.risk_register.mitigation_control_details",
+        "function.administration.risk_types",
+        "function.administration.risk_type_details",
+        "function.administration.controls",
+        "function.administration.control_details",
+        "function.reports.reports",
+        "function.reports.alerts"
+      ]
+    },
+    {
       "id": "role.requestor",
       "name": "Requestor",
       "description": "Creates and submits cyber risk assessment requests, collaborates on request details, completes assigned questionnaires, and views risk assessments after they have been released by a Security Analyst.",
