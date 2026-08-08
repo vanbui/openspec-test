@@ -113,7 +113,12 @@ A Security Analyst can:
 - release a completed Risk Assessment to the Requestor
 - manage the Risk Register
 - manage Risk Types
-- manage reusable Controls
+- manage the reusable Control library
+- manage the generic Risk library
+- manage Information Systems
+- manage Information Assets
+- import Controls, generic Risks, Information Systems and Information Assets
+  from CSV files through the frontend
 - view dashboards, reports and alerts
 
 Security Analyst capabilities are broader than Requestor capabilities.
@@ -166,10 +171,18 @@ Authorization must be enforced server-side as well as in the UI.
 - Mitigation Control Details
 
 ### Administration
-- Risk Types
-- Risk Type Details
-- Controls
+- Risk Library
+- Risk Details
+- Control Library
 - Control Details
+- Information Systems
+- Information System Details
+- Information Assets
+- Information Asset Details
+
+The Control Library, Risk Library, Information Systems and Information Assets
+list screens must each provide a Security Analyst action for importing records
+from a CSV file.
 
 ### Reports
 - Reports
@@ -379,6 +392,44 @@ A mitigation/control implementation represents use of a control in the
 context of a particular Risk or assessment.
 
 Follow the actual JDL terminology where names differ.
+
+## Security Analyst Library and Inventory Management
+
+Security Analysts must have dedicated functions/screens to manage:
+
+- the reusable Control library
+- the generic Risk library
+- Information Systems
+- Information Assets
+
+Each object type needs a list screen and a detail/create/edit experience. List
+screens should support the common administration patterns defined elsewhere in
+this brief, including search, filtering, sorting and pagination where the data
+volume warrants them.
+
+The generic Risk library contains reusable risk definitions used as inputs to
+assessments. It is distinct from contextual Risk records created for a specific
+assessment and shown in the Risk Register. Use the existing reusable risk
+definition entity from the data model (currently `CsrmRiskType`) rather than
+introducing a competing domain entity solely for the frontend label.
+
+For each of the four object types, the frontend must support CSV import. The
+import experience should:
+
+- provide the expected CSV columns or a downloadable template
+- allow a Security Analyst to select and upload a CSV file
+- validate the file type, headers and required values before import
+- show a preview and row-level validation errors before confirmation
+- require confirmation before creating or updating records
+- present an import result summary with created, updated and rejected rows
+- make duplicate or ambiguous matches visible rather than silently overwriting
+  records
+- preserve server-side authorization and validation; parsing in the browser is
+  not a substitute for backend enforcement
+
+CSV import services and DTOs must use the same typed API/service boundary as
+the rest of the application so the screens can move from mock implementations
+to real backend APIs without being rewritten.
 
 ---
 
@@ -632,6 +683,9 @@ QuestionnaireRenderer
 QuestionRenderer
 RiskSummary
 ControlSummary
+CsvImportDialog
+CsvImportPreview
+CsvImportResultSummary
 
 Use shadcn primitives internally where appropriate.
 
@@ -658,6 +712,9 @@ src/
     assessments/
     risks/
     controls/
+    information-systems/
+    information-assets/
+    imports/
     administration/
     reports/
   lib/
@@ -706,6 +763,13 @@ Examples include domain resources such as:
 /api/v1/mitigation-controls
 /api/v1/risk-types
 /api/v1/controls
+/api/v1/information-systems
+/api/v1/information-assets
+
+The typed service layer must also expose CSV import operations for Controls,
+generic Risks, Information Systems and Information Assets. Final endpoint
+shapes must follow the supplied API catalogue or be documented as an explicit
+catalogue extension.
 
 Do not treat these examples as permission to ignore the supplied API catalogue.
 
@@ -757,6 +821,9 @@ canEditAssessment
 canReleaseAssessment
 canManageRiskTypes
 canManageControls
+canManageInformationSystems
+canManageInformationAssets
+canImportLibraryData
 
 Navigation visibility is not a security control.
 
@@ -950,6 +1017,13 @@ Open Risk Register
 -> inspect Risk
 -> update mitigation information
 
+Security Analyst:
+Open each library or inventory
+-> import a CSV file
+-> review validation results
+-> confirm the import
+-> verify the resulting records
+
 Responsive layouts should be tested at desktop and mobile sizes.
 
 ---
@@ -1122,10 +1196,16 @@ Phase 5 — Risk Register
 - Mitigation Control Details
 
 Phase 6 — Administration
-- Risk Types
-- Risk Type Details
-- Controls
+- generic Risk Library
+- generic Risk Details
+- Control Library
 - Control Details
+- Information Systems
+- Information System Details
+- Information Assets
+- Information Asset Details
+- CSV import for Controls, generic Risks, Information Systems and Information
+  Assets
 
 Phase 7 — Dashboard / Reporting
 - analyst dashboard metrics
@@ -1234,4 +1314,3 @@ Security Analysts should feel in control.
 AI should assist, propose and accelerate.
 
 Humans remain responsible for assessment review and release.
-
