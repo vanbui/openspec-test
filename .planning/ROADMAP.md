@@ -245,11 +245,30 @@ Plans:
 4. A typed service abstraction targets the Strapi OpenAPI contract and supports production Strapi calls plus fixtures or an HTTP-level test double without introducing a competing mock-only contract.
 5. Unit, component, integration, and Playwright foundations cover core layout, capability, validation, and responsive behavior.
 
-**Plans:** 0 plans
+**Plans:** 6 plans
 
 Plans:
 
-- [ ] TBD (run `$gsd-plan-phase 6` to break down)
+**Wave 1**
+
+- [ ] `06-01-PLAN.md` — Audited workspace bootstrap and runnable CSRM foundation tracer
+
+**Wave 2**
+
+- [ ] `06-02-PLAN.md` — Generated Strapi transport boundary and fail-closed MSW integration
+- [ ] `06-03-PLAN.md` — Function-ID capabilities, routes, development identities, and access preflight
+
+**Wave 3**
+
+- [ ] `06-04-PLAN.md` — Semantic design primitives and complete reusable UI-state contract
+
+**Wave 4**
+
+- [ ] `06-05-PLAN.md` — Server-first responsive capability-driven application shell
+
+**Wave 5**
+
+- [ ] `06-06-PLAN.md` — Browser viewport, access, production-boundary, and visual approval evidence
 
 **Cross-cutting constraints:**
 
