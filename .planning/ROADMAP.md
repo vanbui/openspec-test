@@ -245,7 +245,7 @@ Plans:
 4. A typed service abstraction targets the Strapi OpenAPI contract and supports production Strapi calls plus fixtures or an HTTP-level test double without introducing a competing mock-only contract.
 5. Unit, component, integration, and Playwright foundations cover core layout, capability, validation, and responsive behavior.
 
-**Plans:** 6 plans
+**Plans:** 8 plans
 
 Plans:
 
@@ -260,15 +260,23 @@ Plans:
 
 **Wave 3**
 
-- [ ] `06-04-PLAN.md` — Semantic design primitives and complete reusable UI-state contract
+- [ ] `06-04-PLAN.md` — Semantic design tokens and reviewed local UI primitives
 
 **Wave 4**
 
-- [ ] `06-05-PLAN.md` — Server-first responsive capability-driven application shell
+- [ ] `06-05-PLAN.md` — Complete reusable loading, error, access, partial, overflow, and cardinality states
 
 **Wave 5**
 
-- [ ] `06-06-PLAN.md` — Browser viewport, access, production-boundary, and visual approval evidence
+- [ ] `06-06-PLAN.md` — Server-rendered capability shell and safe direct-route states
+
+**Wave 6**
+
+- [ ] `06-07-PLAN.md` — Responsive navigation, account, focus, and development-identity client islands
+
+**Wave 7**
+
+- [ ] `06-08-PLAN.md` — Browser viewport, access, production-boundary, and visual approval evidence
 
 **Cross-cutting constraints:**
 
