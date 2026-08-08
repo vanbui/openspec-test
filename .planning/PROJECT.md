@@ -27,7 +27,7 @@ IdamBox must provide a clean shared authorization model where each application c
 
 ### Active
 
-- Build the IdamBox CSRM Next.js application using Keycloak/OIDC and the Phase 5 CSRM backend model — Phase 6
+- Build and harden the IdamBox CSRM Next.js application through the eight-stage delivery sequence defined by the CSRM project brief — Phases 6-13
 
 ### Out of Scope
 

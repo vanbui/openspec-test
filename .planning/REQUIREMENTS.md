@@ -119,17 +119,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDP-04      | Phase 3 | Complete |
 | IDP-05      | Phase 4 | Complete |
 | IDP-06      | Phase 4 | Complete |
-| AUTH-01     | Phase 6 | Planned  |
+| AUTH-01     | Phase 13 | Planned  |
 | CSRM-01     | Phase 5 | Planned  |
 | CSRM-02     | Phase 5 | Planned  |
 | CSRM-03     | Phase 5 | Planned  |
 | CSRM-04     | Phase 5 | Planned  |
-| CSRM-05     | Phase 6 | Planned  |
-| CSRM-06     | Phase 6 | Planned  |
-| CSRM-07     | Phase 6 | Planned  |
-| CSRM-08     | Phase 6 | Planned  |
-| CSRM-09     | Phase 6 | Planned  |
-| APP-06      | Phase 6 | Planned  |
+| CSRM-05     | Phases 7, 13 | Planned  |
+| CSRM-06     | Phases 8, 13 | Planned  |
+| CSRM-07     | Phases 9, 13 | Planned  |
+| CSRM-08     | Phases 8-13 | Planned  |
+| CSRM-09     | Phases 9, 13 | Planned  |
+| APP-06      | Phases 6, 13 | Planned  |
 
 **Coverage:**
 

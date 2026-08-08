@@ -2,15 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_phase: 6
 status: ready_to_plan
-last_updated: 2026-05-29T09:33:11.921Z
+last_updated: "2026-08-08T12:34:49.461Z"
+last_activity: 2026-08-05
+last_activity_desc: "Completed quick task 260805-sm8: add FunctionApi to the Strapi backend data model"
 progress:
-  total_phases: 6
+  total_phases: 13
   completed_phases: 5
   total_plans: 11
   completed_plans: 11
-  percent: 83
-stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 06
+  percent: 38
+stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 06 CSRM Foundation
 ---
 
 # State: IdamBox Platform
@@ -20,14 +23,14 @@ stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 06
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** IdamBox must provide a clean shared authorization model where each application can define roles and users receive access indirectly through assigned role bundles.
-**Current focus:** Phase 06 — create the idambox csrm next js application
+**Current focus:** Phase 06 — establish the CSRM application foundation
 
 ## Current Phase
 
 | Field     | Value                      |
 | --------- | -------------------------- |
 | Phase     | 6                          |
-| Name      | IdamBox CSRM Next.js Application |
+| Name      | CSRM Foundation            |
 | Status    | Ready to discuss           |
 | Started   | -                          |
 | Completed | -                          |
@@ -55,6 +58,7 @@ Last activity: 2026-08-05 - Completed quick task 260805-sm8: add FunctionApi to 
 - Phase 5 context gathered: 2026-05-29
 - Phase 5 planned: 2026-05-29
 - Phase 5 executed: 2026-05-29
+- Phase 6 replaced with the eight CSRM project brief stages as Phases 6-13: 2026-08-08
 - Next command: `$gsd-discuss-phase 6`
 
 ### Quick Tasks Completed
@@ -82,7 +86,7 @@ Last activity: 2026-08-05 - Completed quick task 260805-sm8: add FunctionApi to 
 - Phase 4 executed as three waves: Keycloak admin client/configuration, backend provisioning integration, and verification/documentation closeout.
 - Phase 4 added Strapi-to-Keycloak provisioning gated by `IDAMBOX_KEYCLOAK_PROVISIONING=true`, using the dedicated local admin client `idambox-strapi-admin`, storing Keycloak user IDs in `externalSubject`, and clearing transient IdamBox user passwords after successful provisioning.
 - Phase 5 added the backend-only CSRM content model with seven Strapi collections, generated API files, `csrmAppIsEnabled` route policy guarding, `verify:csrm-model`, docs, and regenerated content type declarations.
-- Phase 6 will add the IdamBox CSRM Next.js application using Keycloak/OIDC.
+- Phases 6-13 follow the CSRM project brief progression: foundation, Requestor requests, questionnaires, assessments, Risk Register, administration, dashboard/reporting, and integration/hardening.
 
 ### Quick Tasks Completed
 
@@ -91,3 +95,9 @@ Last activity: 2026-08-05 - Completed quick task 260805-sm8: add FunctionApi to 
 | 260805-qzp | extend the CSRMRisk object with two more attributes: isExempted:Boolean and exemptionReviewDate:dateTime | 2026-08-05 | 867b9f0 | [260805-qzp-extend-the-csrmrisk-object-with-two-more](./quick/260805-qzp-extend-the-csrmrisk-object-with-two-more/) |
 
 Last activity: 2026-08-05 - Completed quick task 260805-qzp: extend the CSRMRisk object with two more attributes: isExempted:Boolean and exemptionReviewDate:dateTime
+
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 6 edited: replaced original Phase 6 with CSRM project brief stages across Phases 6-13

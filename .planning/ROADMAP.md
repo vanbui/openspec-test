@@ -13,7 +13,14 @@
 | 3   | Keycloak Identity Provider Setup     | Complete 2026-05-25. Added a top-level Keycloak Docker setup for IdamBox with CSRM users and an OIDC client.                                                       | IDP-01, IDP-02, IDP-03, IDP-04                                                                                      | 5                |
 | 4   | Strapi To Keycloak User Provisioning | Complete 2026-05-26. Added Strapi-to-Keycloak provisioning with a dedicated admin client, idempotent lookup, transient password handling, and static verification. | IDP-05, IDP-06                                                                                                      | 4                |
 | 5   | CSRM Backend Content Model           | Complete 2026-05-29. Added guarded CSRM assessment request, asset, system, questionnaire, question, assessment, and risk collections.                    | CSRM-01, CSRM-02, CSRM-03, CSRM-04                                                                                 | 5                |
-| 6   | IdamBox CSRM Next.js Application     | Create the first IdamBox application module for CSRM requestors and security analysts.                                                                             | AUTH-01, APP-06, CSRM-05, CSRM-06, CSRM-07, CSRM-08, CSRM-09                                                        | 6                |
+| 6   | CSRM Foundation                      | Establish the production-quality CSRM Next.js application foundation, design system, application shell, capability model, typed API boundary, and test infrastructure. | APP-06                                                                                                               | 5                |
+| 7   | Requestor Request Workflow           | Deliver the Requestor dashboard and complete draft, edit, and submit workflow for the Requestor's own risk assessment requests.                                      | CSRM-05                                                                                                              | 5                |
+| 8   | Questionnaire Workflow               | Deliver dynamic questionnaire completion for Requestors and questionnaire review for Security Analysts.                                                             | CSRM-06, CSRM-08                                                                                                     | 5                |
+| 9   | Assessment Workflow                  | Deliver analyst assessment review, editing, AI-assisted draft states, controlled release, and the Requestor's released read-only view.                               | CSRM-07, CSRM-08, CSRM-09                                                                                            | 5                |
+| 10  | Risk Register                        | Deliver the organisation-level Risk Register, contextual risk details, and mitigation-control workflows.                                                            | CSRM-08                                                                                                              | 5                |
+| 11  | Administration                       | Deliver Security Analyst management of risk types, controls, information systems, and information assets, including validated CSV imports.                           | CSRM-08                                                                                                              | 5                |
+| 12  | Dashboard / Reporting                | Deliver Security Analyst dashboard metrics, reports, and alerts using reusable, data-driven widgets.                                                                 | CSRM-08                                                                                                              | 4                |
+| 13  | Integration and Hardening            | Complete real Strapi, Keycloak/OIDC, AI-service, and authorization integration and harden accessibility, security, performance, and end-to-end coverage.              | AUTH-01, APP-06, CSRM-05, CSRM-06, CSRM-07, CSRM-08, CSRM-09                                                        | 5                |
 
 ## Phase Details
 
@@ -217,9 +224,236 @@ Plans:
 
 **UI hint:** no
 
-### Phase 6: IdamBox CSRM Next.js Application
+### Phase 6: CSRM Foundation
 
-**Goal:** Create the first IdamBox application module, IdamBox CSRM (Cybersecurity Risk Manager), as a Next.js app using `example-projects/idambox_old/keycloak/nextjs-app` as the template.
+**Goal:** Establish the production-quality CSRM Next.js application foundation with a reusable BProton-aligned design system, responsive application shell, centralized capability model, typed Strapi API boundary, and automated test infrastructure.
+
+**Requirements:**
+
+- APP-06
+
+**Depends on:** Phase 5
+
+**Success Criteria:**
+
+1. A strict-TypeScript Next.js App Router application exists under `apps/csrm` with Tailwind CSS, shadcn/ui, root workspace integration, and a maintainable feature-oriented structure.
+2. Semantic design tokens and reusable UI primitives establish the BProton/IdamBox visual treatment without scattering raw brand values through components.
+3. A responsive `AppShell` provides desktop sidebar, mobile navigation, application header, and navigation generated from centralized role/capability configuration.
+4. A typed service abstraction targets the Strapi OpenAPI contract and supports production Strapi calls plus fixtures or an HTTP-level test double without introducing a competing mock-only contract.
+5. Unit, component, integration, and Playwright foundations cover core layout, capability, validation, and responsive behavior.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 6` to break down)
+
+**Cross-cutting constraints:**
+
+- Use Next.js App Router, strict TypeScript, Tailwind CSS, and shadcn/ui.
+- Preserve explicit server/client boundaries and use Server Components by default where appropriate.
+- Keep domain logic outside presentation components and avoid scattered role checks or raw fetch calls.
+- Treat the Strapi OpenAPI specification as the transport source of truth.
+
+**UI hint:** yes
+
+### Phase 7: Requestor Request Workflow
+
+**Goal:** Deliver a vertical Requestor workflow for viewing, creating, saving, editing, and submitting the Requestor's own Cyber Risk Assessment Requests.
+
+**Requirements:**
+
+- CSRM-05
+
+**Depends on:** Phase 6
+
+**Success Criteria:**
+
+1. The Requestor dashboard highlights requests requiring action, recent submissions, request status, and relevant notifications using data-driven widgets.
+2. My Requests supports accessible search, filtering, sorting, pagination, and responsive list or table presentation.
+3. New Request and Request Details use persisted fields and terminology from the CSRM data model without inventing duplicate frontend-only domain fields.
+4. A Requestor can save a draft, return to it, edit while workflow state permits, confirm submission, and see workflow state clearly.
+5. Record access and available actions are expressed through centralized capabilities and preserve ownership boundaries for later server-side enforcement.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 7` to break down)
+
+**Cross-cutting constraints:**
+
+- Design for both desktop enterprise use and mobile widths beginning at approximately 375px.
+- Forms must expose validation, loading, empty, error, permission-denied, and unsaved-work behavior deliberately.
+- Requestors must never gain access to another user's restricted records through identifier changes.
+
+**UI hint:** yes
+
+### Phase 8: Questionnaire Workflow
+
+**Goal:** Deliver data-driven questionnaire completion for Requestors and questionnaire review for Security Analysts.
+
+**Requirements:**
+
+- CSRM-06
+- CSRM-08
+
+**Depends on:** Phase 7
+
+**Success Criteria:**
+
+1. My Questionnaires and Questionnaire Details show only questionnaires available to the Requestor and clearly communicate completion and workflow status.
+2. A reusable questionnaire renderer supports grouped sections, dynamic and conditional questions, validation, unanswered-question indication, and future AI-generated definitions without page redesign.
+3. Requestors can save responses as drafts, return later, and submit through an explicit confirmation flow.
+4. Security Analysts can view generated questionnaires and review submitted responses through capability-controlled analyst views.
+5. Critical draft, validation, submit, review, and responsive behaviors have automated integration and end-to-end coverage.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 8` to break down)
+
+**Cross-cutting constraints:**
+
+- Questionnaire fields must be rendered from data rather than hard-coded screen fields.
+- AI-generated or externally supplied content is untrusted and must not become privileged application instructions.
+- Preserve Requestor ownership boundaries and Security Analyst review authority.
+
+**UI hint:** yes
+
+### Phase 9: Assessment Workflow
+
+**Goal:** Deliver Security Analyst review and editing of Risk Assessments, visible AI-generation states, human-controlled release, and the Requestor's released read-only assessment experience.
+
+**Requirements:**
+
+- CSRM-07
+- CSRM-08
+- CSRM-09
+
+**Depends on:** Phase 8
+
+**Success Criteria:**
+
+1. Security Analysts can review assessment requests and questionnaire responses before producing or reviewing an initial Risk Assessment draft.
+2. Risk Assessment Details supports analyst editing of assessment context, risks, ratings, owners, dates, treatments, mitigation controls, and notes using CSRM domain terminology.
+3. AI operations expose queued, analysing, generating, completed, failed, and retry states without holding an indefinitely spinning browser request.
+4. Only a Security Analyst can explicitly release an assessment; AI output can never bypass mandatory human review.
+5. Requestors can access only their own released assessments through a purpose-built read-only presentation and cannot modify them.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 9` to break down)
+
+**Cross-cutting constraints:**
+
+- Keep AI behind a provider-independent service boundary.
+- Preserve provenance, generation, review, and human-modification metadata where supported by the backend model.
+- Enforce release and record-level authorization server-side during integration.
+
+**UI hint:** yes
+
+### Phase 10: Risk Register
+
+**Goal:** Deliver the Security Analyst's organisation-level Risk Register with contextual Risk details and mitigation-control management.
+
+**Requirements:**
+
+- CSRM-08
+
+**Depends on:** Phase 9
+
+**Success Criteria:**
+
+1. The Risk Register provides search, filtering, sorting, pagination, statuses, ratings, owners, due dates, related assessments, related systems or assets, and mitigation status.
+2. Risk Details presents the complete context for one contextual Risk, including inherent and residual ratings, treatment, ownership, dates, and related records.
+3. Mitigation Controls and Mitigation Control Details support analyst management of control implementations associated with contextual Risks.
+4. The UI and domain layer clearly distinguish reusable Risk Types from contextual Risks and reusable Controls from mitigation/control implementations.
+5. Data-heavy register and detail experiences remain accessible and usable across supported desktop, tablet, and mobile widths.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 10` to break down)
+
+**Cross-cutting constraints:**
+
+- Follow the JDL domain terminology wherever names differ from general product language.
+- Use URL/search parameters for shareable filters, pagination, and sorting where practical.
+- Avoid loading an entire large Risk Register to render a single page.
+
+**UI hint:** yes
+
+### Phase 11: Administration
+
+**Goal:** Deliver Security Analyst administration of Risk Types, the Control library, Information Systems, and Information Assets, including validated frontend CSV-import workflows.
+
+**Requirements:**
+
+- CSRM-08
+
+**Depends on:** Phase 10
+
+**Success Criteria:**
+
+1. Each administrative object has dedicated accessible list and create, view, and edit screens using shared search, filtering, sorting, pagination, form, and detail patterns.
+2. Each list provides CSV template guidance, file selection, file-type and header validation, and a preview with row-level validation errors.
+3. Imports require confirmation and report created, updated, and rejected rows while exposing duplicate or ambiguous matches instead of silently overwriting records.
+4. CSV services and DTOs use the same typed Strapi service boundary as the rest of the application, with missing operations treated as documented backend API gaps.
+5. Administration and import actions are capability-controlled in the UI and designed for server-side authorization and validation.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 11` to break down)
+
+**Cross-cutting constraints:**
+
+- Browser parsing does not replace backend validation or authorization.
+- Use existing CSRM entities and do not introduce competing frontend domain models.
+- Do not log imported sensitive content or expose unsafe error details.
+
+**UI hint:** yes
+
+### Phase 12: Dashboard / Reporting
+
+**Goal:** Deliver reusable Security Analyst dashboard metrics, reports, and alerts that make risk workload, urgency, and treatment status understandable.
+
+**Requirements:**
+
+- CSRM-08
+
+**Depends on:** Phase 11
+
+**Success Criteria:**
+
+1. The Security Analyst dashboard presents requests, questionnaires, and assessments awaiting review plus overdue mitigation activities and high or critical risks.
+2. Reusable data-driven widgets communicate treatment due dates, recent activity, and relevant alerts without hard-coded metric values.
+3. Reports and Alerts screens provide accessible loading, empty, populated, error, and permission-denied states with capability-controlled actions.
+4. Dashboard, chart, report, and alert layouts remain understandable and operable on supported desktop and mobile widths.
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run `$gsd-plan-phase 12` to break down)
+
+**Cross-cutting constraints:**
+
+- Colour must not be the only way status, severity, or risk rating is communicated.
+- Use the shared semantic chart, status, and risk-rating tokens.
+- Add a charting dependency only when native or existing component capabilities are insufficient.
+
+**UI hint:** yes
+
+### Phase 13: Integration and Hardening
+
+**Goal:** Integrate the CSRM application with the real Strapi API, Keycloak/OIDC identity, IdamBox authorization, and provider-independent AI services, then harden accessibility, security, performance, and critical end-to-end workflows.
 
 **Requirements:**
 
@@ -231,28 +465,28 @@ Plans:
 - CSRM-08
 - CSRM-09
 
-**Depends on:** Phase 5
+**Depends on:** Phase 12
 
 **Success Criteria:**
 
-1. A Next.js CSRM app is added to the monorepo as an IdamBox application module and uses the old Keycloak Next.js example as its template reference.
-2. Requestor users such as `jane.doe@idambox.com` can view, create, and edit their own assessment requests.
-3. Requestor users can view and fill out assessment questionnaires for their own assessment requests.
-4. Requestor users can view assessments for their own assessment requests after those assessments are released.
-5. Security Analyst users such as `bob.doe@idambox.com` can view and edit all assessment requests, assessment questionnaires, and assessments.
-6. Security Analyst users can release assessments for requestor viewing.
+1. Keycloak authorization-code login establishes an application session, Strapi validates token signature, issuer, audience, and expiry, and the identity resolves to the matching IdamBox user.
+2. Production services call the Strapi OpenAPI operations directly, contract drift is detectable, and any required missing backend operations are implemented and documented rather than replaced with frontend mock endpoints.
+3. Every protected operation is authorized server-side through effective `Role -> Function -> FunctionAPI` grants plus record-level rules, including implicit Requestor capability and explicit Security Analyst elevation.
+4. AI-assisted request, questionnaire, and assessment operations use the provider-independent boundary, remain recoverable, and preserve mandatory analyst review before release.
+5. WCAG 2.2 AA checks, security hardening, responsive and performance verification, and expanded Playwright journeys cover the complete Requestor-to-Analyst-to-release workflow and administrative CSV imports.
 
 **Plans:** 0 plans
 
 Plans:
 
-- [ ] TBD (run `$gsd-plan-phase 6` to break down)
+- [ ] TBD (run `$gsd-plan-phase 13` to break down)
 
 **Cross-cutting constraints:**
 
-- The CSRM app must use Keycloak/OIDC for authentication.
-- Authorization must align with Strapi's `IdamBoxUser -> Role -> ApplicationRole -> Application` model.
-- The app should remain one module under the Turbo monorepo, not a separate repository.
+- Never put secrets in client bundles or source control.
+- Protect against IDOR, XSS, unsafe input, sensitive logging, and authorization based only on navigation visibility or editable client state.
+- Do not duplicate IdamBox authorization as Keycloak realm or client roles.
+- AI may assist, propose, and accelerate, but humans remain responsible for assessment review and release.
 
 **UI hint:** yes
 
@@ -260,7 +494,7 @@ Plans:
 
 All 13 v1 requirements are mapped to Phase 1.
 
-The active roadmap now adds bootstrap data, Keycloak identity provider setup, Strapi-to-Keycloak provisioning, CSRM backend collections, and the first CSRM Next.js application across Phases 2-6.
+The active roadmap adds bootstrap data, Keycloak identity provider setup, Strapi-to-Keycloak provisioning, CSRM backend collections, and the eight-stage CSRM web application delivery across Phases 2-13.
 
 ## Future Milestones
 
