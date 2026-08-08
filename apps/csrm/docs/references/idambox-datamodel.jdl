@@ -1,0 +1,346 @@
+/**
+ * IdamBox Backend Data Model in JHipster Domain Language (JDL)
+ *
+ * Generated from the Strapi backend schemas under apps/backend/src/api.
+ *
+ * Authorization path:
+ *   IdamBoxUser -> Role -> Function -> Application
+ *
+ * Product users are represented by IdamBoxUser, separate from Strapi admin users.
+ * CSRM records are application-specific backend collections guarded by the
+ * csrmAppIsEnabled route policy in Strapi.
+ */
+
+/**
+ * Core platform model
+ */
+entity IdamBoxUser {
+  email String required unique,
+  username String required unique,
+  firstName String,
+  lastName String,
+  displayName String required,
+  accountStatus IdamBoxUserStatus required,
+  externalSubject String unique,
+  password String // Strapi password, private, minLength 6
+}
+
+enum IdamBoxUserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+entity Role {
+  name String required unique,
+  description TextBlob
+}
+
+entity Application {
+  name String required unique,
+  slug String required unique,
+  description TextBlob,
+  applicationStatus ApplicationStatus required
+}
+
+enum ApplicationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+entity Function {
+  name String required,
+  description TextBlob,
+  menuPath TextBlob
+}
+
+entity FunctionApi {
+  name String required,
+  description TextBlob,
+  url String required
+}
+
+/**
+ * CSRM backend model
+ */
+entity CsrmAssessmentRequest {
+  requestNumber String required unique,
+  title String required,
+  description TextBlob,
+  assessmentType CsrmAssessmentType,
+  division String,
+  businessUnit String,
+  businessPurpose TextBlob,
+  businessCriticality CsrmBusinessCriticality,
+  thirdPartyInvolvement Boolean,
+  thirdPartyDetails TextBlob,
+  regulatoryRequirements TextBlob,
+  submittedDate Instant,
+  dueDate LocalDate,
+  requestStatus CsrmRequestStatus required
+}
+
+enum CsrmAssessmentType {
+  BAU
+  PROJECT
+  OTHER
+}
+
+enum CsrmBusinessCriticality {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum CsrmRequestStatus {
+  DRAFT
+  SUBMITTED
+  QUESTIONNAIRE_IN_PROGRESS
+  RISK_ASSESSMENT_DRAFTED
+  UNDER_REVIEW
+  APPROVED
+  CLOSED
+}
+
+entity CsrmInformationAsset {
+  name String required,
+  description TextBlob,
+  location String,
+  type String,
+  dataClassification CsrmDataClassification,
+  confidentialityRating String,
+  integrityRating String,
+  availabilityRating String,
+  containsPersonalData Boolean,
+  containsLegalData Boolean,
+  containsCreditCardData Boolean,
+  comments TextBlob
+}
+
+enum CsrmDataClassification {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  CRITICAL_INFRASTRUCTURE_SENSITIVE
+}
+
+entity CsrmInformationSystem {
+  name String required,
+  description TextBlob,
+  systemType String,
+  environment CsrmSystemEnvironment,
+  deploymentModel CsrmDeploymentModel,
+  businessCriticality String,
+  internetFacing Boolean,
+  externalAccessRequired Boolean,
+  hostingLocation String,
+  lifecycleState CsrmSystemLifecycleState
+}
+
+enum CsrmSystemEnvironment {
+  PRODUCTION
+  NON_PRODUCTION
+}
+
+enum CsrmDeploymentModel {
+  ON_PREM
+  CLOUD
+  SAAS
+}
+
+enum CsrmSystemLifecycleState {
+  NEW
+  CHANGED
+  EXISTING
+  DECOMMISSIONING
+}
+
+entity CsrmQuestionnaire {
+  questionnaireNumber String unique,
+  title String required,
+  description TextBlob
+}
+
+entity CsrmQuestion {
+  questionText TextBlob required,
+  helpText TextBlob,
+  answerType CsrmAnswerType required,
+  options AnyBlob, // Strapi json
+  order Integer,
+  answer AnyBlob, // Strapi json
+  reviewComment TextBlob
+}
+
+enum CsrmAnswerType {
+  TEXT
+  LONG_TEXT
+  BOOLEAN
+  SINGLE_SELECT
+  MULTI_SELECT
+  DATE
+  FILE_UPLOAD
+}
+
+entity CsrmAssessment {
+  assessmentNumber String required unique,
+  assessmentStatus CsrmAssessmentStatus required,
+  assessmentDate Instant,
+  generatedDate Instant,
+  nextReviewDate LocalDate,
+  approvalDate Instant,
+  summary TextBlob,
+  overallRating String,
+  overallControlEffectiveness CsrmControlEffectiveness,
+  recommendationsSummary TextBlob,
+  overallRiskRationale TextBlob
+}
+
+enum CsrmAssessmentStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  CLOSED
+}
+
+entity CsrmRisk {
+  riskNumber String required unique,
+  issueStatement TextBlob,
+  riskStatement TextBlob required,
+  riskCategory String,
+  riskSubCategory String,
+  riskCause TextBlob,
+  potentialImpact TextBlob,
+  dataClassification CsrmDataClassification,
+  inherentLikelihood String,
+  highestInherentConsequence String,
+  inherentRating String,
+  inherentRatingRationale TextBlob,
+  residualLikelihood String,
+  highestResidualConsequence String,
+  residualRating String,
+  residualRatingRationale TextBlob,
+  controlEffectiveness CsrmControlEffectiveness,
+  riskVelocity CsrmRiskVelocity,
+  identifiedDate LocalDate,
+  targetDate LocalDate,
+  closureDate LocalDate,
+  isExempted Boolean,
+  exemptionReviewDate Instant,
+  escalationDetails TextBlob,
+  comments TextBlob,
+  riskCommunicationDate LocalDate,
+  treatmentAction CsrmTreatmentAction,
+  treatmentPlan TextBlob,
+  treatmentResolveDate LocalDate,
+  treatmentStatus CsrmTreatmentStatus
+}
+
+entity CsrmRiskType {
+  name String required unique,
+  description TextBlob
+}
+
+entity CsrmControl {
+  controlNumber String required unique,
+  name String required,
+  description TextBlob,
+  controlType CsrmControlType,
+  controlReference String
+}
+
+entity CsrmControlImplementation {
+  controlStatus CsrmControlStatus,
+  effectivenessRating CsrmControlEffectiveness,
+  evidence TextBlob,
+  implementationDueDate LocalDate,
+  implementedDate LocalDate,
+  reviewDate LocalDate
+}
+
+enum CsrmControlType {
+  PREVENTIVE
+  DETECTIVE
+  CORRECTIVE
+  COMPENSATING
+}
+
+enum CsrmControlStatus {
+  EXISTING
+  PLANNED
+  IMPLEMENTED
+  RETIRED
+}
+
+enum CsrmControlEffectiveness {
+  EFFECTIVE
+  PARTIALLY_EFFECTIVE
+  INEFFECTIVE
+  NOT_ASSESSED
+}
+
+enum CsrmRiskVelocity {
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
+}
+
+enum CsrmTreatmentAction {
+  ACCEPT
+  TREAT
+}
+
+enum CsrmTreatmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  OVERDUE
+  COMPLETE
+}
+
+/**
+ * Relationships
+ */
+relationship ManyToMany {
+  IdamBoxUser{roles} to Role{idamboxUsers}
+  Role{functions} to Function{roles}
+
+  CsrmAssessmentRequest{informationAssets} to CsrmInformationAsset{assessmentRequests}
+  CsrmAssessmentRequest{informationSystems} to CsrmInformationSystem{assessmentRequests}
+  CsrmRiskType{applicableControls} to CsrmControl
+}
+
+relationship OneToMany {
+  Application{functions} to Function{application required}
+  Function{functionApis} to FunctionApi
+  CsrmRiskType{risks} to CsrmRisk{riskType}
+
+  CsrmQuestionnaire{questions} to CsrmQuestion{questionnaire}
+  CsrmAssessment{risks} to CsrmRisk{assessment}
+  CsrmControl{implementations} to CsrmControlImplementation{control required}
+  CsrmRisk{controlImplementations} to CsrmControlImplementation{risk required}
+}
+
+relationship OneToOne {
+  CsrmAssessmentRequest{questionnaire} to CsrmQuestionnaire{assessmentRequest}
+  CsrmAssessmentRequest{assessment} to CsrmAssessment{assessmentRequest}
+}
+
+relationship ManyToOne {
+  CsrmAssessmentRequest{requestor} to IdamBoxUser
+  CsrmAssessmentRequest{sponsor} to IdamBoxUser
+
+  CsrmInformationSystem{owner} to IdamBoxUser
+
+  CsrmAssessment{generatedBy} to IdamBoxUser
+  CsrmAssessment{reviewedBy} to IdamBoxUser
+  CsrmAssessment{approvedBy} to IdamBoxUser
+
+  CsrmRisk{riskOwner} to IdamBoxUser
+  CsrmRisk{treatmentOwner} to IdamBoxUser
+  CsrmControlImplementation{controlOwner} to IdamBoxUser
+  CsrmRisk{informationSystemImpacted} to CsrmInformationSystem
+  CsrmRisk{informationAssetImpacted} to CsrmInformationAsset
+}
+
+paginate IdamBoxUser, Role, Application, Function, FunctionApi with pagination
+paginate CsrmAssessmentRequest, CsrmInformationAsset, CsrmInformationSystem, CsrmQuestionnaire, CsrmQuestion, CsrmAssessment, CsrmRiskType, CsrmRisk, CsrmControl, CsrmControlImplementation with pagination
