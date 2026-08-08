@@ -5,7 +5,8 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: Keycloak Identity Provider Setup
 status: planning
-last_updated: "2026-08-08T21:52:12.955Z"
+stopped_at: Phase 6 UI-SPEC approved
+last_updated: "2026-08-08T22:09:24.076Z"
 last_activity: 2026-08-09
 last_activity_desc: Phase 2 complete, transitioned to Phase 03
 progress:
@@ -13,7 +14,6 @@ progress:
   completed_phases: 5
   total_plans: 13
   completed_plans: 13
-stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 06 CSRM Foundation
 ---
 
 # State: IdamBox Platform
@@ -114,3 +114,9 @@ Last activity: 2026-08-05 - Completed quick task 260805-qzp: extend the CSRMRisk
 - [Phase ?]: Use IdamBoxUser -> Role -> Function -> Application with FunctionApi operation grants as the accepted Phase 1/2 authorization contract.
 - [Phase ?]: Retain Security Analyst Agent as the Function-grant-equivalent Role for historical D-07/D-08 without restoring ApplicationRole.
 - [Phase ?]: Use yarn verify:csrm-seed as the authoritative two-boot disposable SQLite seed acceptance check.
+
+## Session
+
+**Last session:** 2026-08-08T22:09:24.048Z
+**Stopped at:** Phase 6 UI-SPEC approved
+**Resume file:** .planning/phases/06-create-the-idambox-csrm-next-js-application/06-UI-SPEC.md

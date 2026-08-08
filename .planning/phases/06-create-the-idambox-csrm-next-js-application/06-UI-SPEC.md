@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: create-the-idambox-csrm-next-js-application
-status: draft
+status: approved
 shadcn_initialized: false
 preset: planned -- Next.js / Radix / CSS variables / Lucide / neutral base
 created: 2026-08-09
+reviewed_at: 2026-08-09
 ---
 
 # Phase 6 — UI Design Contract
@@ -26,6 +27,8 @@ The supplied Saviynt captures are interaction references only. Retain their usef
 | Capability source | Navigation, action visibility, and route guards consume typed Function identifiers from the catalogue. Requestor is always included as a birthright capability set; Security Analyst adds its explicitly granted Function set. No component may compare role-name strings. |
 | Authority boundary | Hidden navigation is usability only. A recognized, implemented target lacking its required capability renders the forbidden state before UI data is requested. Planned or unknown routes render not-found/unavailable, never a misleading forbidden screen. Backend authorization remains authoritative. |
 | Development identity | The deterministic Requestor and Security Analyst fixture selector is visible only for `development` and automated-test builds. It is absent from production bundles and cannot be enabled by a URL, local storage value, or client-side flag. |
+
+The foundation landing page's primary visual anchor is the `Cyber Risk Manager` display title with its supporting workspace-ready copy. The compact IdamBox product lock-up provides secondary brand context and must not compete with the page title.
 
 ---
 
@@ -279,11 +282,11 @@ Store snapshots under the app's Playwright output directory (not source-controll
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-08-09
