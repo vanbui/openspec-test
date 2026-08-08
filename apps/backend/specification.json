@@ -246,7 +246,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements"
+                    "functions"
                   ]
                 },
                 {
@@ -255,7 +255,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements"
+                      "functions"
                     ]
                   }
                 }
@@ -318,14 +318,14 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.013Z",
+                            "default": "2026-08-08T10:27:09.645Z",
                             "type": "string"
                           },
-                          "entitlements": {
+                          "functions": {
                             "description": "A relational field",
                             "type": "array",
                             "items": {
-                              "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                              "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                             }
                           }
                         },
@@ -414,7 +414,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements"
+                    "functions"
                   ]
                 },
                 {
@@ -423,7 +423,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements"
+                      "functions"
                     ]
                   }
                 }
@@ -484,14 +484,14 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.045Z",
+                          "default": "2026-08-08T10:27:09.668Z",
                           "type": "string"
                         },
-                        "entitlements": {
+                        "functions": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                            "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                           }
                         }
                       },
@@ -566,10 +566,10 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.043Z",
+                        "default": "2026-08-08T10:27:09.667Z",
                         "type": "string"
                       },
-                      "entitlements": {
+                      "functions": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -656,7 +656,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements"
+                    "functions"
                   ]
                 },
                 {
@@ -665,7 +665,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements"
+                      "functions"
                     ]
                   }
                 }
@@ -836,14 +836,14 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.038Z",
+                          "default": "2026-08-08T10:27:09.662Z",
                           "type": "string"
                         },
-                        "entitlements": {
+                        "functions": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                            "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                           }
                         }
                       },
@@ -943,7 +943,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements"
+                    "functions"
                   ]
                 },
                 {
@@ -952,7 +952,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements"
+                      "functions"
                     ]
                   }
                 }
@@ -1013,14 +1013,14 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.052Z",
+                          "default": "2026-08-08T10:27:09.673Z",
                           "type": "string"
                         },
-                        "entitlements": {
+                        "functions": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                            "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                           }
                         }
                       },
@@ -1095,10 +1095,10 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.050Z",
+                        "default": "2026-08-08T10:27:09.671Z",
                         "type": "string"
                       },
-                      "entitlements": {
+                      "functions": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -1177,7 +1177,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements"
+                    "functions"
                   ]
                 },
                 {
@@ -1186,7 +1186,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements"
+                      "functions"
                     ]
                   }
                 }
@@ -1271,14 +1271,14 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.057Z",
+                          "default": "2026-08-08T10:27:09.676Z",
                           "type": "string"
                         },
-                        "entitlements": {
+                        "functions": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                            "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                           }
                         }
                       },
@@ -1718,7 +1718,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.076Z",
+                            "default": "2026-08-08T10:27:09.688Z",
                             "type": "string"
                           },
                           "generatedBy": {
@@ -1950,7 +1950,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.136Z",
+                          "default": "2026-08-08T10:27:09.736Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2083,7 +2083,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.132Z",
+                        "default": "2026-08-08T10:27:09.734Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -2462,7 +2462,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.124Z",
+                          "default": "2026-08-08T10:27:09.729Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2705,7 +2705,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.148Z",
+                          "default": "2026-08-08T10:27:09.747Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2838,7 +2838,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.142Z",
+                        "default": "2026-08-08T10:27:09.741Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -3096,7 +3096,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.163Z",
+                          "default": "2026-08-08T10:27:09.752Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -3598,7 +3598,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.180Z",
+                            "default": "2026-08-08T10:27:09.761Z",
                             "type": "string"
                           },
                           "requestor": {
@@ -3863,7 +3863,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.212Z",
+                          "default": "2026-08-08T10:27:09.778Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4032,7 +4032,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.208Z",
+                        "default": "2026-08-08T10:27:09.775Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -4461,7 +4461,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.190Z",
+                          "default": "2026-08-08T10:27:09.768Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4737,7 +4737,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.229Z",
+                          "default": "2026-08-08T10:27:09.786Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4906,7 +4906,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.219Z",
+                        "default": "2026-08-08T10:27:09.783Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -5201,7 +5201,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.236Z",
+                          "default": "2026-08-08T10:27:09.791Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -5596,7 +5596,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.245Z",
+                            "default": "2026-08-08T10:27:09.798Z",
                             "type": "string"
                           },
                           "implementations": {
@@ -5767,7 +5767,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.262Z",
+                          "default": "2026-08-08T10:27:09.804Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -5853,7 +5853,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.261Z",
+                        "default": "2026-08-08T10:27:09.804Z",
                         "type": "string"
                       },
                       "implementations": {
@@ -6133,7 +6133,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.257Z",
+                          "default": "2026-08-08T10:27:09.802Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -6315,7 +6315,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.266Z",
+                          "default": "2026-08-08T10:27:09.807Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -6401,7 +6401,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.264Z",
+                        "default": "2026-08-08T10:27:09.806Z",
                         "type": "string"
                       },
                       "implementations": {
@@ -6584,7 +6584,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.270Z",
+                          "default": "2026-08-08T10:27:09.809Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -6975,7 +6975,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.278Z",
+                            "default": "2026-08-08T10:27:09.818Z",
                             "type": "string"
                           },
                           "control": {
@@ -7166,7 +7166,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.295Z",
+                          "default": "2026-08-08T10:27:09.825Z",
                           "type": "string"
                         },
                         "control": {
@@ -7267,7 +7267,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.293Z",
+                        "default": "2026-08-08T10:27:09.824Z",
                         "type": "string"
                       },
                       "control": {
@@ -7576,7 +7576,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.283Z",
+                          "default": "2026-08-08T10:27:09.821Z",
                           "type": "string"
                         },
                         "control": {
@@ -7778,7 +7778,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.301Z",
+                          "default": "2026-08-08T10:27:09.828Z",
                           "type": "string"
                         },
                         "control": {
@@ -7879,7 +7879,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.299Z",
+                        "default": "2026-08-08T10:27:09.827Z",
                         "type": "string"
                       },
                       "control": {
@@ -8087,7 +8087,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.304Z",
+                          "default": "2026-08-08T10:27:09.831Z",
                           "type": "string"
                         },
                         "control": {
@@ -8536,7 +8536,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.314Z",
+                            "default": "2026-08-08T10:27:09.841Z",
                             "type": "string"
                           },
                           "assessmentRequests": {
@@ -8747,7 +8747,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.335Z",
+                          "default": "2026-08-08T10:27:09.850Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -8890,7 +8890,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.333Z",
+                        "default": "2026-08-08T10:27:09.848Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -9245,7 +9245,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.328Z",
+                          "default": "2026-08-08T10:27:09.845Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -9467,7 +9467,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.342Z",
+                          "default": "2026-08-08T10:27:09.854Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -9610,7 +9610,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.339Z",
+                        "default": "2026-08-08T10:27:09.852Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -9838,7 +9838,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.346Z",
+                          "default": "2026-08-08T10:27:09.860Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -10274,7 +10274,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.362Z",
+                            "default": "2026-08-08T10:27:09.865Z",
                             "type": "string"
                           },
                           "owner": {
@@ -10488,7 +10488,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.375Z",
+                          "default": "2026-08-08T10:27:09.877Z",
                           "type": "string"
                         },
                         "owner": {
@@ -10626,7 +10626,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.373Z",
+                        "default": "2026-08-08T10:27:09.872Z",
                         "type": "string"
                       },
                       "owner": {
@@ -10976,7 +10976,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.369Z",
+                          "default": "2026-08-08T10:27:09.870Z",
                           "type": "string"
                         },
                         "owner": {
@@ -11201,7 +11201,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.387Z",
+                          "default": "2026-08-08T10:27:09.881Z",
                           "type": "string"
                         },
                         "owner": {
@@ -11339,7 +11339,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.379Z",
+                        "default": "2026-08-08T10:27:09.879Z",
                         "type": "string"
                       },
                       "owner": {
@@ -11571,7 +11571,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.394Z",
+                          "default": "2026-08-08T10:27:09.884Z",
                           "type": "string"
                         },
                         "owner": {
@@ -11970,7 +11970,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.403Z",
+                            "default": "2026-08-08T10:27:09.889Z",
                             "type": "string"
                           },
                           "questionnaire": {
@@ -12151,7 +12151,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.414Z",
+                          "default": "2026-08-08T10:27:09.899Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -12245,7 +12245,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.413Z",
+                        "default": "2026-08-08T10:27:09.897Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -12545,7 +12545,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.409Z",
+                          "default": "2026-08-08T10:27:09.892Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -12737,7 +12737,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.426Z",
+                          "default": "2026-08-08T10:27:09.902Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -12831,7 +12831,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.418Z",
+                        "default": "2026-08-08T10:27:09.901Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -13026,7 +13026,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.430Z",
+                          "default": "2026-08-08T10:27:09.904Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -13370,7 +13370,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.436Z",
+                            "default": "2026-08-08T10:27:09.908Z",
                             "type": "string"
                           },
                           "assessmentRequest": {
@@ -13530,7 +13530,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.443Z",
+                          "default": "2026-08-08T10:27:09.914Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -13605,7 +13605,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.442Z",
+                        "default": "2026-08-08T10:27:09.913Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -13866,7 +13866,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.440Z",
+                          "default": "2026-08-08T10:27:09.911Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -14037,7 +14037,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.447Z",
+                          "default": "2026-08-08T10:27:09.919Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -14112,7 +14112,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.446Z",
+                        "default": "2026-08-08T10:27:09.918Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -14285,7 +14285,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.456Z",
+                          "default": "2026-08-08T10:27:09.921Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -14375,6 +14375,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -14422,6 +14424,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -14552,6 +14556,8 @@
                     "identifiedDate",
                     "targetDate",
                     "closureDate",
+                    "isExempted",
+                    "exemptionReviewDate",
                     "escalationDetails",
                     "comments",
                     "riskCommunicationDate",
@@ -14590,6 +14596,8 @@
                       "identifiedDate",
                       "targetDate",
                       "closureDate",
+                      "isExempted",
+                      "exemptionReviewDate",
                       "escalationDetails",
                       "comments",
                       "riskCommunicationDate",
@@ -14629,6 +14637,8 @@
                       "identifiedDate",
                       "targetDate",
                       "closureDate",
+                      "isExempted",
+                      "exemptionReviewDate",
                       "escalationDetails",
                       "comments",
                       "riskCommunicationDate",
@@ -14677,6 +14687,8 @@
                         "identifiedDate",
                         "targetDate",
                         "closureDate",
+                        "isExempted",
+                        "exemptionReviewDate",
                         "escalationDetails",
                         "comments",
                         "riskCommunicationDate",
@@ -14720,6 +14732,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
+                    "riskType",
                     "riskOwner",
                     "informationSystemImpacted",
                     "informationAssetImpacted",
@@ -14734,6 +14747,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
+                      "riskType",
                       "riskOwner",
                       "informationSystemImpacted",
                       "informationAssetImpacted",
@@ -14873,6 +14887,14 @@
                             "description": "A date field",
                             "type": "string"
                           },
+                          "isExempted": {
+                            "description": "A boolean field",
+                            "type": "boolean"
+                          },
+                          "exemptionReviewDate": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
                           "escalationDetails": {
                             "description": "A text field",
                             "type": "string"
@@ -14921,8 +14943,12 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.472Z",
+                            "default": "2026-08-08T10:27:09.932Z",
                             "type": "string"
+                          },
+                          "riskType": {
+                            "description": "A relational field",
+                            "$ref": "#/components/schemas/ApiCsrmRiskTypeCsrmRiskTypeDocument"
                           },
                           "riskOwner": {
                             "description": "A relational field",
@@ -15027,6 +15053,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -15060,6 +15088,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
+                    "riskType",
                     "riskOwner",
                     "informationSystemImpacted",
                     "informationAssetImpacted",
@@ -15074,6 +15103,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
+                      "riskType",
                       "riskOwner",
                       "informationSystemImpacted",
                       "informationAssetImpacted",
@@ -15211,6 +15241,14 @@
                           "description": "A date field",
                           "type": "string"
                         },
+                        "isExempted": {
+                          "description": "A boolean field",
+                          "type": "boolean"
+                        },
+                        "exemptionReviewDate": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
                         "escalationDetails": {
                           "description": "A text field",
                           "type": "string"
@@ -15259,8 +15297,12 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.503Z",
+                          "default": "2026-08-08T10:27:09.955Z",
                           "type": "string"
+                        },
+                        "riskType": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskTypeCsrmRiskTypeDocument"
                         },
                         "riskOwner": {
                           "description": "A relational field",
@@ -15439,6 +15481,22 @@
                         "description": "A date field",
                         "type": "string"
                       },
+                      "isExempted": {
+                        "description": "A boolean field",
+                        "type": "string",
+                        "enum": [
+                          "0",
+                          "1",
+                          "t",
+                          "true",
+                          "f",
+                          "false"
+                        ]
+                      },
+                      "exemptionReviewDate": {
+                        "description": "A datetime field",
+                        "type": "string"
+                      },
                       "escalationDetails": {
                         "description": "A text field",
                         "type": "string"
@@ -15479,8 +15537,14 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.498Z",
+                        "default": "2026-08-08T10:27:09.949Z",
                         "type": "string"
+                      },
+                      "riskType": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
                       },
                       "riskOwner": {
                         "description": "A relational field",
@@ -15589,6 +15653,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -15622,6 +15688,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
+                    "riskType",
                     "riskOwner",
                     "informationSystemImpacted",
                     "informationAssetImpacted",
@@ -15636,6 +15703,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
+                      "riskType",
                       "riskOwner",
                       "informationSystemImpacted",
                       "informationAssetImpacted",
@@ -15681,6 +15749,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -15729,6 +15799,8 @@
                     "identifiedDate",
                     "targetDate",
                     "closureDate",
+                    "isExempted",
+                    "exemptionReviewDate",
                     "escalationDetails",
                     "comments",
                     "riskCommunicationDate",
@@ -15767,6 +15839,8 @@
                       "identifiedDate",
                       "targetDate",
                       "closureDate",
+                      "isExempted",
+                      "exemptionReviewDate",
                       "escalationDetails",
                       "comments",
                       "riskCommunicationDate",
@@ -15806,6 +15880,8 @@
                       "identifiedDate",
                       "targetDate",
                       "closureDate",
+                      "isExempted",
+                      "exemptionReviewDate",
                       "escalationDetails",
                       "comments",
                       "riskCommunicationDate",
@@ -15854,6 +15930,8 @@
                         "identifiedDate",
                         "targetDate",
                         "closureDate",
+                        "isExempted",
+                        "exemptionReviewDate",
                         "escalationDetails",
                         "comments",
                         "riskCommunicationDate",
@@ -16003,6 +16081,14 @@
                           "description": "A date field",
                           "type": "string"
                         },
+                        "isExempted": {
+                          "description": "A boolean field",
+                          "type": "boolean"
+                        },
+                        "exemptionReviewDate": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
                         "escalationDetails": {
                           "description": "A text field",
                           "type": "string"
@@ -16051,8 +16137,12 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.489Z",
+                          "default": "2026-08-08T10:27:09.943Z",
                           "type": "string"
+                        },
+                        "riskType": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskTypeCsrmRiskTypeDocument"
                         },
                         "riskOwner": {
                           "description": "A relational field",
@@ -16168,6 +16258,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -16201,6 +16293,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
+                    "riskType",
                     "riskOwner",
                     "informationSystemImpacted",
                     "informationAssetImpacted",
@@ -16215,6 +16308,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
+                      "riskType",
                       "riskOwner",
                       "informationSystemImpacted",
                       "informationAssetImpacted",
@@ -16352,6 +16446,14 @@
                           "description": "A date field",
                           "type": "string"
                         },
+                        "isExempted": {
+                          "description": "A boolean field",
+                          "type": "boolean"
+                        },
+                        "exemptionReviewDate": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
                         "escalationDetails": {
                           "description": "A text field",
                           "type": "string"
@@ -16400,8 +16502,12 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.523Z",
+                          "default": "2026-08-08T10:27:09.965Z",
                           "type": "string"
+                        },
+                        "riskType": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskTypeCsrmRiskTypeDocument"
                         },
                         "riskOwner": {
                           "description": "A relational field",
@@ -16580,6 +16686,22 @@
                         "description": "A date field",
                         "type": "string"
                       },
+                      "isExempted": {
+                        "description": "A boolean field",
+                        "type": "string",
+                        "enum": [
+                          "0",
+                          "1",
+                          "t",
+                          "true",
+                          "f",
+                          "false"
+                        ]
+                      },
+                      "exemptionReviewDate": {
+                        "description": "A datetime field",
+                        "type": "string"
+                      },
                       "escalationDetails": {
                         "description": "A text field",
                         "type": "string"
@@ -16620,8 +16742,14 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.512Z",
+                        "default": "2026-08-08T10:27:09.961Z",
                         "type": "string"
+                      },
+                      "riskType": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
                       },
                       "riskOwner": {
                         "description": "A relational field",
@@ -16723,6 +16851,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -16756,6 +16886,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
+                    "riskType",
                     "riskOwner",
                     "informationSystemImpacted",
                     "informationAssetImpacted",
@@ -16770,6 +16901,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
+                      "riskType",
                       "riskOwner",
                       "informationSystemImpacted",
                       "informationAssetImpacted",
@@ -16815,6 +16947,8 @@
                   "identifiedDate",
                   "targetDate",
                   "closureDate",
+                  "isExempted",
+                  "exemptionReviewDate",
                   "escalationDetails",
                   "comments",
                   "riskCommunicationDate",
@@ -16955,6 +17089,14 @@
                           "description": "A date field",
                           "type": "string"
                         },
+                        "isExempted": {
+                          "description": "A boolean field",
+                          "type": "boolean"
+                        },
+                        "exemptionReviewDate": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
                         "escalationDetails": {
                           "description": "A text field",
                           "type": "string"
@@ -17003,8 +17145,12 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.531Z",
+                          "default": "2026-08-08T10:27:09.973Z",
                           "type": "string"
+                        },
+                        "riskType": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiCsrmRiskTypeCsrmRiskTypeDocument"
                         },
                         "riskOwner": {
                           "description": "A relational field",
@@ -17073,9 +17219,9 @@
         ]
       }
     },
-    "/entitlements": {
+    "/csrm-risk-types": {
       "get": {
-        "operationId": "entitlement/get/entitlements",
+        "operationId": "csrm-risk-type/get/csrm_risk_types",
         "parameters": [
           {
             "name": "fields",
@@ -17299,8 +17445,8 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "application",
-                    "roles"
+                    "applicableControls",
+                    "risks"
                   ]
                 },
                 {
@@ -17309,8 +17455,8 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "application",
-                      "roles"
+                      "applicableControls",
+                      "risks"
                     ]
                   }
                 }
@@ -17360,18 +17506,21 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.537Z",
+                            "default": "2026-08-08T10:27:09.977Z",
                             "type": "string"
                           },
-                          "application": {
-                            "description": "A relational field",
-                            "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
-                          },
-                          "roles": {
+                          "applicableControls": {
                             "description": "A relational field",
                             "type": "array",
                             "items": {
-                              "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                              "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                            }
+                          },
+                          "risks": {
+                            "description": "A relational field",
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
                             }
                           }
                         },
@@ -17379,8 +17528,7 @@
                           "documentId",
                           "id",
                           "name",
-                          "publishedAt",
-                          "application"
+                          "publishedAt"
                         ],
                         "additionalProperties": false
                       }
@@ -17411,11 +17559,11 @@
           }
         },
         "tags": [
-          "entitlement"
+          "csrm-risk-type"
         ]
       },
       "post": {
-        "operationId": "entitlement/post/entitlements",
+        "operationId": "csrm-risk-type/post/csrm_risk_types",
         "parameters": [
           {
             "name": "fields",
@@ -17457,8 +17605,8 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "application",
-                    "roles"
+                    "applicableControls",
+                    "risks"
                   ]
                 },
                 {
@@ -17467,8 +17615,8 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "application",
-                      "roles"
+                      "applicableControls",
+                      "risks"
                     ]
                   }
                 }
@@ -17516,18 +17664,21 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.551Z",
+                          "default": "2026-08-08T10:27:09.982Z",
                           "type": "string"
                         },
-                        "application": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
-                        },
-                        "roles": {
+                        "applicableControls": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                          }
+                        },
+                        "risks": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
                           }
                         }
                       },
@@ -17535,8 +17686,7 @@
                         "documentId",
                         "id",
                         "name",
-                        "publishedAt",
-                        "application"
+                        "publishedAt"
                       ],
                       "additionalProperties": false
                     }
@@ -17566,7 +17716,7 @@
           }
         },
         "tags": [
-          "entitlement"
+          "csrm-risk-type"
         ],
         "requestBody": {
           "content": {
@@ -17588,16 +17738,19 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.550Z",
+                        "default": "2026-08-08T10:27:09.981Z",
                         "type": "string"
                       },
-                      "application": {
+                      "applicableControls": {
                         "description": "A relational field",
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
                       },
-                      "roles": {
+                      "risks": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -17609,8 +17762,7 @@
                     },
                     "required": [
                       "name",
-                      "publishedAt",
-                      "application"
+                      "publishedAt"
                     ],
                     "additionalProperties": false
                   }
@@ -17625,9 +17777,9 @@
         }
       }
     },
-    "/entitlements/{id}": {
+    "/csrm-risk-types/{id}": {
       "get": {
-        "operationId": "entitlement/get/entitlements_by_id",
+        "operationId": "csrm-risk-type/get/csrm_risk_types_by_id",
         "parameters": [
           {
             "name": "id",
@@ -17681,8 +17833,8 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "application",
-                    "roles"
+                    "applicableControls",
+                    "risks"
                   ]
                 },
                 {
@@ -17691,8 +17843,8 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "application",
-                      "roles"
+                      "applicableControls",
+                      "risks"
                     ]
                   }
                 }
@@ -17840,18 +17992,21 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.540Z",
+                          "default": "2026-08-08T10:27:09.980Z",
                           "type": "string"
                         },
-                        "application": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
-                        },
-                        "roles": {
+                        "applicableControls": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                          }
+                        },
+                        "risks": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
                           }
                         }
                       },
@@ -17859,8 +18014,7 @@
                         "documentId",
                         "id",
                         "name",
-                        "publishedAt",
-                        "application"
+                        "publishedAt"
                       ],
                       "additionalProperties": false
                     }
@@ -17890,11 +18044,11 @@
           }
         },
         "tags": [
-          "entitlement"
+          "csrm-risk-type"
         ]
       },
       "put": {
-        "operationId": "entitlement/put/entitlements_by_id",
+        "operationId": "csrm-risk-type/put/csrm_risk_types_by_id",
         "parameters": [
           {
             "name": "id",
@@ -17948,8 +18102,8 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "application",
-                    "roles"
+                    "applicableControls",
+                    "risks"
                   ]
                 },
                 {
@@ -17958,8 +18112,8 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "application",
-                      "roles"
+                      "applicableControls",
+                      "risks"
                     ]
                   }
                 }
@@ -18007,18 +18161,21 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.555Z",
+                          "default": "2026-08-08T10:27:09.984Z",
                           "type": "string"
                         },
-                        "application": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
-                        },
-                        "roles": {
+                        "applicableControls": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                          }
+                        },
+                        "risks": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
                           }
                         }
                       },
@@ -18026,8 +18183,7 @@
                         "documentId",
                         "id",
                         "name",
-                        "publishedAt",
-                        "application"
+                        "publishedAt"
                       ],
                       "additionalProperties": false
                     }
@@ -18057,7 +18213,7 @@
           }
         },
         "tags": [
-          "entitlement"
+          "csrm-risk-type"
         ],
         "requestBody": {
           "content": {
@@ -18079,16 +18235,19 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.554Z",
+                        "default": "2026-08-08T10:27:09.983Z",
                         "type": "string"
                       },
-                      "application": {
+                      "applicableControls": {
                         "description": "A relational field",
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
                       },
-                      "roles": {
+                      "risks": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -18111,7 +18270,7 @@
         }
       },
       "delete": {
-        "operationId": "entitlement/delete/entitlements_by_id",
+        "operationId": "csrm-risk-type/delete/csrm_risk_types_by_id",
         "parameters": [
           {
             "name": "id",
@@ -18165,8 +18324,8 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "application",
-                    "roles"
+                    "applicableControls",
+                    "risks"
                   ]
                 },
                 {
@@ -18175,8 +18334,8 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "application",
-                      "roles"
+                      "applicableControls",
+                      "risks"
                     ]
                   }
                 }
@@ -18246,8 +18405,540 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.557Z",
+                          "default": "2026-08-08T10:27:09.986Z",
                           "type": "string"
+                        },
+                        "applicableControls": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+                          }
+                        },
+                        "risks": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+                          }
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "publishedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-risk-type"
+        ]
+      }
+    },
+    "/functions": {
+      "get": {
+        "operationId": "function/get/functions",
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "_q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string"
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "pagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Pagination parameters",
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "withCount": {
+                      "description": "Include total count in response",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "anyOf": [
+                    {
+                      "description": "Page-based pagination",
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "description": "Page number (1-based)",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "pageSize": {
+                          "description": "Number of entries per page",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "pageSize"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "description": "Offset-based pagination",
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "description": "Number of entries to skip",
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "limit": {
+                          "description": "Maximum number of entries to return",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "limit"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Sort the result",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "name",
+                    "description",
+                    "menuPath",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "menuPath",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "menuPath",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "name",
+                        "description",
+                        "menuPath",
+                        "createdAt",
+                        "updatedAt",
+                        "publishedAt"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "functionApis",
+                    "application",
+                    "roles"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "functionApis",
+                      "application",
+                      "roles"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {
+                            "description": "The document ID, represented by a UUID",
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                          },
+                          "id": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "description": "A string field",
+                            "type": "string"
+                          },
+                          "description": {
+                            "description": "A text field",
+                            "type": "string"
+                          },
+                          "menuPath": {
+                            "description": "A text field",
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
+                          "publishedAt": {
+                            "description": "A datetime field",
+                            "default": "2026-08-08T10:27:09.993Z",
+                            "type": "string"
+                          },
+                          "functionApis": {
+                            "description": "A relational field",
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/ApiFunctionApiFunctionApiDocument"
+                            }
+                          },
+                          "application": {
+                            "description": "A relational field",
+                            "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
+                          },
+                          "roles": {
+                            "description": "A relational field",
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                            }
+                          }
+                        },
+                        "required": [
+                          "documentId",
+                          "id",
+                          "name",
+                          "publishedAt",
+                          "application"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function"
+        ]
+      },
+      "post": {
+        "operationId": "function/post/functions",
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "functionApis",
+                    "application",
+                    "roles"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "functionApis",
+                      "application",
+                      "roles"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "menuPath": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:09.999Z",
+                          "type": "string"
+                        },
+                        "functionApis": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiFunctionApiFunctionApiDocument"
+                          }
                         },
                         "application": {
                           "description": "A relational field",
@@ -18296,7 +18987,1967 @@
           }
         },
         "tags": [
-          "entitlement"
+          "function"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "description": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "menuPath": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "publishedAt": {
+                        "description": "A datetime field",
+                        "default": "2026-08-08T10:27:09.998Z",
+                        "type": "string"
+                      },
+                      "functionApis": {
+                        "description": "A relational field",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
+                      },
+                      "application": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      },
+                      "roles": {
+                        "description": "A relational field",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "publishedAt",
+                      "application"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/functions/{id}": {
+      "get": {
+        "operationId": "function/get/functions_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "functionApis",
+                    "application",
+                    "roles"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "functionApis",
+                      "application",
+                      "roles"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Sort the result",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "name",
+                    "description",
+                    "menuPath",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "menuPath",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "menuPath",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "name",
+                        "description",
+                        "menuPath",
+                        "createdAt",
+                        "updatedAt",
+                        "publishedAt"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "menuPath": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:09.996Z",
+                          "type": "string"
+                        },
+                        "functionApis": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiFunctionApiFunctionApiDocument"
+                          }
+                        },
+                        "application": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
+                        },
+                        "roles": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                          }
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "publishedAt",
+                        "application"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function"
+        ]
+      },
+      "put": {
+        "operationId": "function/put/functions_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "functionApis",
+                    "application",
+                    "roles"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "functionApis",
+                      "application",
+                      "roles"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "menuPath": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:10.002Z",
+                          "type": "string"
+                        },
+                        "functionApis": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiFunctionApiFunctionApiDocument"
+                          }
+                        },
+                        "application": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
+                        },
+                        "roles": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                          }
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "publishedAt",
+                        "application"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "description": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "menuPath": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "publishedAt": {
+                        "description": "A datetime field",
+                        "default": "2026-08-08T10:27:10.001Z",
+                        "type": "string"
+                      },
+                      "functionApis": {
+                        "description": "A relational field",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
+                      },
+                      "application": {
+                        "description": "A relational field",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                      },
+                      "roles": {
+                        "description": "A relational field",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "function/delete/functions_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": [
+                    "functionApis",
+                    "application",
+                    "roles"
+                  ]
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "functionApis",
+                      "application",
+                      "roles"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "menuPath",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "menuPath": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:10.004Z",
+                          "type": "string"
+                        },
+                        "functionApis": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiFunctionApiFunctionApiDocument"
+                          }
+                        },
+                        "application": {
+                          "description": "A relational field",
+                          "$ref": "#/components/schemas/ApiApplicationApplicationDocument"
+                        },
+                        "roles": {
+                          "description": "A relational field",
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApiRoleRoleDocument"
+                          }
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "publishedAt",
+                        "application"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function"
+        ]
+      }
+    },
+    "/function-apis": {
+      "get": {
+        "operationId": "function-api/get/function_apis",
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "_q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string"
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "pagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Pagination parameters",
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "withCount": {
+                      "description": "Include total count in response",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "anyOf": [
+                    {
+                      "description": "Page-based pagination",
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "description": "Page number (1-based)",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "pageSize": {
+                          "description": "Number of entries per page",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "pageSize"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "description": "Offset-based pagination",
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "description": "Number of entries to skip",
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "limit": {
+                          "description": "Maximum number of entries to return",
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "limit"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Sort the result",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "name",
+                    "description",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "url",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "url",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "name",
+                        "description",
+                        "url",
+                        "createdAt",
+                        "updatedAt",
+                        "publishedAt"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": []
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": []
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {
+                            "description": "The document ID, represented by a UUID",
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                          },
+                          "id": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "description": "A string field",
+                            "type": "string"
+                          },
+                          "description": {
+                            "description": "A text field",
+                            "type": "string"
+                          },
+                          "url": {
+                            "description": "A string field",
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "description": "A datetime field",
+                            "type": "string"
+                          },
+                          "publishedAt": {
+                            "description": "A datetime field",
+                            "default": "2026-08-08T10:27:10.007Z",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "documentId",
+                          "id",
+                          "name",
+                          "url",
+                          "publishedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function-api"
+        ]
+      },
+      "post": {
+        "operationId": "function-api/post/function_apis",
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": []
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": []
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "url": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:10.015Z",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "url",
+                        "publishedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function-api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "description": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "url": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "publishedAt": {
+                        "description": "A datetime field",
+                        "default": "2026-08-08T10:27:14.320Z",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "url",
+                      "publishedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/function-apis/{id}": {
+      "get": {
+        "operationId": "function-api/get/function_apis_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": []
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": []
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Sort the result",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "name",
+                    "description",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "url",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "name",
+                      "description",
+                      "url",
+                      "createdAt",
+                      "updatedAt",
+                      "publishedAt"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "name",
+                        "description",
+                        "url",
+                        "createdAt",
+                        "updatedAt",
+                        "publishedAt"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "url": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:10.013Z",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "url",
+                        "publishedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function-api"
+        ]
+      },
+      "put": {
+        "operationId": "function-api/put/function_apis_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": []
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": []
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "url": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:10.017Z",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "url",
+                        "publishedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function-api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "description": {
+                        "description": "A text field",
+                        "type": "string"
+                      },
+                      "url": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "publishedAt": {
+                        "description": "A datetime field",
+                        "default": "2026-08-08T10:27:10.016Z",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "function-api/delete/function_apis_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The document ID, represented by a UUID",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
+              "readOnly": true,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              }
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "populate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "anyOf": [
+                {
+                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
+                  "readOnly": true,
+                  "type": "string",
+                  "const": "*"
+                },
+                {
+                  "description": "Populate a single relation, component, file, or dynamic zone",
+                  "readOnly": true,
+                  "type": "string",
+                  "enum": []
+                },
+                {
+                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": []
+                  }
+                }
+              ]
+            },
+            "x-strapi-serialize": "querystring"
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Filters to apply to the query",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "description",
+                  "url",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt"
+                ]
+              },
+              "additionalProperties": {}
+            },
+            "x-strapi-serialize": "querystring"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "description": "The document ID, represented by a UUID",
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "A text field",
+                          "type": "string"
+                        },
+                        "url": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "A datetime field",
+                          "type": "string"
+                        },
+                        "publishedAt": {
+                          "description": "A datetime field",
+                          "default": "2026-08-08T10:27:10.019Z",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "id",
+                        "name",
+                        "url",
+                        "publishedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "function-api"
         ]
       }
     },
@@ -18642,7 +21293,7 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-02T07:47:56.564Z",
+                            "default": "2026-08-08T10:27:10.023Z",
                             "type": "string"
                           },
                           "roles": {
@@ -18826,7 +21477,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.579Z",
+                          "default": "2026-08-08T10:27:10.032Z",
                           "type": "string"
                         },
                         "roles": {
@@ -18923,7 +21574,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.572Z",
+                        "default": "2026-08-08T10:27:10.031Z",
                         "type": "string"
                       },
                       "roles": {
@@ -19226,7 +21877,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.569Z",
+                          "default": "2026-08-08T10:27:10.026Z",
                           "type": "string"
                         },
                         "roles": {
@@ -19421,7 +22072,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.586Z",
+                          "default": "2026-08-08T10:27:10.035Z",
                           "type": "string"
                         },
                         "roles": {
@@ -19518,7 +22169,7 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.585Z",
+                        "default": "2026-08-08T10:27:10.034Z",
                         "type": "string"
                       },
                       "roles": {
@@ -19714,7 +22365,7 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.590Z",
+                          "default": "2026-08-08T10:27:10.038Z",
                           "type": "string"
                         },
                         "roles": {
@@ -20190,7 +22841,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements",
+                    "functions",
                     "idamboxUsers"
                   ]
                 },
@@ -20200,7 +22851,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements",
+                      "functions",
                       "idamboxUsers"
                     ]
                   }
@@ -20249,14 +22900,14 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.615Z",
+                          "default": "2026-08-08T10:27:10.051Z",
                           "type": "string"
                         },
-                        "entitlements": {
+                        "functions": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                            "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                           }
                         },
                         "idamboxUsers": {
@@ -20323,10 +22974,10 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-02T07:47:56.607Z",
+                        "default": "2026-08-08T10:27:10.050Z",
                         "type": "string"
                       },
-                      "entitlements": {
+                      "functions": {
                         "description": "A relational field",
                         "type": "array",
                         "items": {
@@ -20412,7 +23063,7 @@
                   "readOnly": true,
                   "type": "string",
                   "enum": [
-                    "entitlements",
+                    "functions",
                     "idamboxUsers"
                   ]
                 },
@@ -20422,7 +23073,7 @@
                   "items": {
                     "type": "string",
                     "enum": [
-                      "entitlements",
+                      "functions",
                       "idamboxUsers"
                     ]
                   }
@@ -20493,14 +23144,14 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-02T07:47:56.618Z",
+                          "default": "2026-08-08T10:27:10.053Z",
                           "type": "string"
                         },
-                        "entitlements": {
+                        "functions": {
                           "description": "A relational field",
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+                            "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
                           }
                         },
                         "idamboxUsers": {
@@ -25959,6 +28610,55 @@
   },
   "components": {
     "schemas": {
+      "ApiFunctionApiFunctionApiDocument": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "description": "The document ID, represented by a UUID",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+          },
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "description": {
+            "description": "A text field",
+            "type": "string"
+          },
+          "url": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "publishedAt": {
+            "description": "A datetime field",
+            "default": "2026-08-08T10:27:09.651Z",
+            "type": "string"
+          }
+        },
+        "required": [
+          "documentId",
+          "id",
+          "name",
+          "url",
+          "publishedAt"
+        ],
+        "additionalProperties": false,
+        "id": "ApiFunctionApiFunctionApiDocument"
+      },
       "ApiApplicationApplicationDocument": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -26003,14 +28703,14 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.023Z",
+            "default": "2026-08-08T10:27:09.653Z",
             "type": "string"
           },
-          "entitlements": {
+          "functions": {
             "description": "A relational field",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+              "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
             }
           }
         },
@@ -26083,7 +28783,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.031Z",
+            "default": "2026-08-08T10:27:09.656Z",
             "type": "string"
           },
           "roles": {
@@ -26137,14 +28837,14 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.027Z",
+            "default": "2026-08-08T10:27:09.654Z",
             "type": "string"
           },
-          "entitlements": {
+          "functions": {
             "description": "A relational field",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ApiEntitlementEntitlementDocument"
+              "$ref": "#/components/schemas/ApiFunctionFunctionDocument"
             }
           },
           "idamboxUsers": {
@@ -26164,7 +28864,7 @@
         "additionalProperties": false,
         "id": "ApiRoleRoleDocument"
       },
-      "ApiEntitlementEntitlementDocument": {
+      "ApiFunctionFunctionDocument": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
@@ -26185,6 +28885,10 @@
             "description": "A text field",
             "type": "string"
           },
+          "menuPath": {
+            "description": "A text field",
+            "type": "string"
+          },
           "createdAt": {
             "description": "A datetime field",
             "type": "string"
@@ -26195,8 +28899,15 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.019Z",
+            "default": "2026-08-08T10:27:09.649Z",
             "type": "string"
+          },
+          "functionApis": {
+            "description": "A relational field",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiFunctionApiFunctionApiDocument"
+            }
           },
           "application": {
             "description": "A relational field",
@@ -26218,7 +28929,7 @@
           "application"
         ],
         "additionalProperties": false,
-        "id": "ApiEntitlementEntitlementDocument"
+        "id": "ApiFunctionFunctionDocument"
       },
       "ApiCsrmInformationAssetCsrmInformationAssetDocument": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -26300,7 +29011,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.084Z",
+            "default": "2026-08-08T10:27:09.693Z",
             "type": "string"
           },
           "assessmentRequests": {
@@ -26403,7 +29114,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.088Z",
+            "default": "2026-08-08T10:27:09.696Z",
             "type": "string"
           },
           "owner": {
@@ -26489,7 +29200,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.093Z",
+            "default": "2026-08-08T10:27:09.700Z",
             "type": "string"
           },
           "questionnaire": {
@@ -26542,7 +29253,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.090Z",
+            "default": "2026-08-08T10:27:09.698Z",
             "type": "string"
           },
           "assessmentRequest": {
@@ -26565,76 +29276,6 @@
         ],
         "additionalProperties": false,
         "id": "ApiCsrmQuestionnaireCsrmQuestionnaireDocument"
-      },
-      "ApiCsrmControlCsrmControlDocument": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "documentId": {
-            "description": "The document ID, represented by a UUID",
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
-          },
-          "id": {
-            "type": "number"
-          },
-          "controlNumber": {
-            "description": "A string field",
-            "type": "string"
-          },
-          "name": {
-            "description": "A string field",
-            "type": "string"
-          },
-          "description": {
-            "description": "A text field",
-            "type": "string"
-          },
-          "controlType": {
-            "description": "An enum field",
-            "type": "string",
-            "enum": [
-              "Preventive",
-              "Detective",
-              "Corrective",
-              "Compensating"
-            ]
-          },
-          "controlReference": {
-            "description": "A string field",
-            "type": "string"
-          },
-          "createdAt": {
-            "description": "A datetime field",
-            "type": "string"
-          },
-          "updatedAt": {
-            "description": "A datetime field",
-            "type": "string"
-          },
-          "publishedAt": {
-            "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.109Z",
-            "type": "string"
-          },
-          "implementations": {
-            "description": "A relational field",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
-            }
-          }
-        },
-        "required": [
-          "documentId",
-          "id",
-          "controlNumber",
-          "name",
-          "publishedAt"
-        ],
-        "additionalProperties": false,
-        "id": "ApiCsrmControlCsrmControlDocument"
       },
       "ApiCsrmControlImplementationCsrmControlImplementationDocument": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -26695,7 +29336,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.107Z",
+            "default": "2026-08-08T10:27:09.719Z",
             "type": "string"
           },
           "control": {
@@ -26720,6 +29361,134 @@
         ],
         "additionalProperties": false,
         "id": "ApiCsrmControlImplementationCsrmControlImplementationDocument"
+      },
+      "ApiCsrmControlCsrmControlDocument": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "description": "The document ID, represented by a UUID",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+          },
+          "id": {
+            "type": "number"
+          },
+          "controlNumber": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "name": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "description": {
+            "description": "A text field",
+            "type": "string"
+          },
+          "controlType": {
+            "description": "An enum field",
+            "type": "string",
+            "enum": [
+              "Preventive",
+              "Detective",
+              "Corrective",
+              "Compensating"
+            ]
+          },
+          "controlReference": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "publishedAt": {
+            "description": "A datetime field",
+            "default": "2026-08-08T10:27:09.717Z",
+            "type": "string"
+          },
+          "implementations": {
+            "description": "A relational field",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiCsrmControlImplementationCsrmControlImplementationDocument"
+            }
+          }
+        },
+        "required": [
+          "documentId",
+          "id",
+          "controlNumber",
+          "name",
+          "publishedAt"
+        ],
+        "additionalProperties": false,
+        "id": "ApiCsrmControlCsrmControlDocument"
+      },
+      "ApiCsrmRiskTypeCsrmRiskTypeDocument": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "description": "The document ID, represented by a UUID",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
+          },
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "description": {
+            "description": "A text field",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "A datetime field",
+            "type": "string"
+          },
+          "publishedAt": {
+            "description": "A datetime field",
+            "default": "2026-08-08T10:27:09.710Z",
+            "type": "string"
+          },
+          "applicableControls": {
+            "description": "A relational field",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiCsrmControlCsrmControlDocument"
+            }
+          },
+          "risks": {
+            "description": "A relational field",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiCsrmRiskCsrmRiskDocument"
+            }
+          }
+        },
+        "required": [
+          "documentId",
+          "id",
+          "name",
+          "publishedAt"
+        ],
+        "additionalProperties": false,
+        "id": "ApiCsrmRiskTypeCsrmRiskTypeDocument"
       },
       "ApiCsrmRiskCsrmRiskDocument": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -26836,6 +29605,14 @@
             "description": "A date field",
             "type": "string"
           },
+          "isExempted": {
+            "description": "A boolean field",
+            "type": "boolean"
+          },
+          "exemptionReviewDate": {
+            "description": "A datetime field",
+            "type": "string"
+          },
           "escalationDetails": {
             "description": "A text field",
             "type": "string"
@@ -26884,8 +29661,12 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.104Z",
+            "default": "2026-08-08T10:27:09.709Z",
             "type": "string"
+          },
+          "riskType": {
+            "description": "A relational field",
+            "$ref": "#/components/schemas/ApiCsrmRiskTypeCsrmRiskTypeDocument"
           },
           "riskOwner": {
             "description": "A relational field",
@@ -27005,7 +29786,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.098Z",
+            "default": "2026-08-08T10:27:09.703Z",
             "type": "string"
           },
           "generatedBy": {
@@ -27142,7 +29923,7 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-02T07:47:56.080Z",
+            "default": "2026-08-08T10:27:09.691Z",
             "type": "string"
           },
           "requestor": {
