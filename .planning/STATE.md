@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 6
 status: ready_to_plan
-last_updated: "2026-08-08T12:34:49.461Z"
+last_updated: "2026-08-08T14:50:40.720Z"
 last_activity: 2026-08-05
 last_activity_desc: "Completed quick task 260805-sm8: add FunctionApi to the Strapi backend data model"
 progress:
@@ -107,3 +107,10 @@ Last activity: 2026-08-05 - Completed quick task 260805-qzp: extend the CSRMRisk
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 02-create-strapi-backend-bootstrap-data-for-the-csrm-applicatio P02 | 18 min | 2 tasks | 6 files |
+| Phase 02 P03 | 7 min | 2 tasks | 9 files |
+
+## Decisions
+
+- [Phase ?]: Use IdamBoxUser -> Role -> Function -> Application with FunctionApi operation grants as the accepted Phase 1/2 authorization contract.
+- [Phase ?]: Retain Security Analyst Agent as the Function-grant-equivalent Role for historical D-07/D-08 without restoring ApplicationRole.
+- [Phase ?]: Use yarn verify:csrm-seed as the authoritative two-boot disposable SQLite seed acceptance check.
