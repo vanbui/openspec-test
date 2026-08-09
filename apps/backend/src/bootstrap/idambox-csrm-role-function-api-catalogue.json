@@ -41,6 +41,10 @@
         "function.administration.risk_type_details",
         "function.administration.controls",
         "function.administration.control_details",
+        "function.administration.information_systems",
+        "function.administration.information_system_details",
+        "function.administration.information_assets",
+        "function.administration.information_asset_details",
         "function.reports.reports",
         "function.reports.alerts"
       ]
@@ -65,6 +69,10 @@
         "function.administration.risk_type_details",
         "function.administration.controls",
         "function.administration.control_details",
+        "function.administration.information_systems",
+        "function.administration.information_system_details",
+        "function.administration.information_assets",
+        "function.administration.information_asset_details",
         "function.reports.reports",
         "function.reports.alerts"
       ]
@@ -458,7 +466,8 @@
       ],
       "functionApiIds": [
         "function.administration.risk_types.api.01",
-        "function.administration.risk_types.api.02"
+        "function.administration.risk_types.api.02",
+        "function.administration.risk_types.api.03"
       ],
       "sourceEntities": [
         "CsrmRiskType"
@@ -497,7 +506,8 @@
       ],
       "functionApiIds": [
         "function.administration.controls.api.01",
-        "function.administration.controls.api.02"
+        "function.administration.controls.api.02",
+        "function.administration.controls.api.03"
       ],
       "sourceEntities": [
         "CsrmControl"
@@ -523,6 +533,82 @@
         "CsrmControl",
         "CsrmControlImplementation",
         "CsrmRiskType",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems",
+      "name": "Information Systems",
+      "description": "Lists and creates information systems managed by the Security Analyst.",
+      "menuPath": "Administration:Information Systems",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "functionApiIds": [
+        "function.administration.information_systems.api.01",
+        "function.administration.information_systems.api.02",
+        "function.administration.information_systems.api.03"
+      ],
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_system_details",
+      "name": "Information System Details",
+      "description": "Displays and edits an information system and its related assessment context.",
+      "menuPath": "Administration:Information System Details",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "functionApiIds": [
+        "function.administration.information_system_details.api.01",
+        "function.administration.information_system_details.api.02",
+        "function.administration.information_system_details.api.03"
+      ],
+      "sourceEntities": [
+        "CsrmInformationSystem",
+        "CsrmAssessmentRequest",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.administration.information_assets",
+      "name": "Information Assets",
+      "description": "Lists and creates information assets managed by the Security Analyst.",
+      "menuPath": "Administration:Information Assets",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "functionApiIds": [
+        "function.administration.information_assets.api.01",
+        "function.administration.information_assets.api.02",
+        "function.administration.information_assets.api.03"
+      ],
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_asset_details",
+      "name": "Information Asset Details",
+      "description": "Displays and edits an information asset and its related assessment context.",
+      "menuPath": "Administration:Information Asset Details",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "functionApiIds": [
+        "function.administration.information_asset_details.api.01",
+        "function.administration.information_asset_details.api.02",
+        "function.administration.information_asset_details.api.03"
+      ],
+      "sourceEntities": [
+        "CsrmInformationAsset",
+        "CsrmAssessmentRequest",
         "CsrmRisk"
       ]
     },
@@ -1379,6 +1465,16 @@
       ]
     },
     {
+      "id": "function.administration.risk_types.api.03",
+      "name": "Import Risk Types",
+      "description": "Imports risk types from a validated CSV file selected through the frontend.",
+      "url": "POST:/api/v1/risk_types/import",
+      "functionId": "function.administration.risk_types",
+      "sourceEntities": [
+        "CsrmRiskType"
+      ]
+    },
+    {
       "id": "function.administration.risk_type_details.api.01",
       "name": "Get Risk Type",
       "description": "Returns a reusable risk definition and its applicable controls.",
@@ -1453,6 +1549,16 @@
       ]
     },
     {
+      "id": "function.administration.controls.api.03",
+      "name": "Import Controls",
+      "description": "Imports reusable controls from a validated CSV file selected through the frontend.",
+      "url": "POST:/api/v1/controls/import",
+      "functionId": "function.administration.controls",
+      "sourceEntities": [
+        "CsrmControl"
+      ]
+    },
+    {
       "id": "function.administration.control_details.api.01",
       "name": "Get Control",
       "description": "Returns a reusable control definition and reference information.",
@@ -1505,6 +1611,134 @@
       "sourceEntities": [
         "CsrmControl",
         "CsrmRiskType"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems.api.01",
+      "name": "List Information Systems",
+      "description": "Returns information systems with filtering, search, sorting, and pagination.",
+      "url": "GET:/api/v1/information_systems",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems.api.02",
+      "name": "Create Information System",
+      "description": "Creates an information system in the administration catalogue.",
+      "url": "POST:/api/v1/information_systems",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems.api.03",
+      "name": "Import Information Systems",
+      "description": "Imports information systems from a validated CSV file selected through the frontend.",
+      "url": "POST:/api/v1/information_systems/import",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_system_details.api.01",
+      "name": "Get Information System",
+      "description": "Returns an information system and its related assessment context.",
+      "url": "GET:/api/v1/information_systems/{informationSystemId}",
+      "functionId": "function.administration.information_system_details",
+      "sourceEntities": [
+        "CsrmInformationSystem",
+        "CsrmAssessmentRequest",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.administration.information_system_details.api.02",
+      "name": "Update Information System",
+      "description": "Updates an information system's administration fields.",
+      "url": "PATCH:/api/v1/information_systems/{informationSystemId}",
+      "functionId": "function.administration.information_system_details",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_system_details.api.03",
+      "name": "Delete Information System",
+      "description": "Deletes an information system subject to referential-integrity checks.",
+      "url": "DELETE:/api/v1/information_systems/{informationSystemId}",
+      "functionId": "function.administration.information_system_details",
+      "sourceEntities": [
+        "CsrmInformationSystem",
+        "CsrmAssessmentRequest",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.administration.information_assets.api.01",
+      "name": "List Information Assets",
+      "description": "Returns information assets with filtering, search, sorting, and pagination.",
+      "url": "GET:/api/v1/information_assets",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_assets.api.02",
+      "name": "Create Information Asset",
+      "description": "Creates an information asset in the administration catalogue.",
+      "url": "POST:/api/v1/information_assets",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_assets.api.03",
+      "name": "Import Information Assets",
+      "description": "Imports information assets from a validated CSV file selected through the frontend.",
+      "url": "POST:/api/v1/information_assets/import",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_asset_details.api.01",
+      "name": "Get Information Asset",
+      "description": "Returns an information asset and its related assessment context.",
+      "url": "GET:/api/v1/information_assets/{informationAssetId}",
+      "functionId": "function.administration.information_asset_details",
+      "sourceEntities": [
+        "CsrmInformationAsset",
+        "CsrmAssessmentRequest",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.administration.information_asset_details.api.02",
+      "name": "Update Information Asset",
+      "description": "Updates an information asset's administration fields.",
+      "url": "PATCH:/api/v1/information_assets/{informationAssetId}",
+      "functionId": "function.administration.information_asset_details",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_asset_details.api.03",
+      "name": "Delete Information Asset",
+      "description": "Deletes an information asset subject to referential-integrity checks.",
+      "url": "DELETE:/api/v1/information_assets/{informationAssetId}",
+      "functionId": "function.administration.information_asset_details",
+      "sourceEntities": [
+        "CsrmInformationAsset",
+        "CsrmAssessmentRequest",
+        "CsrmRisk"
       ]
     },
     {

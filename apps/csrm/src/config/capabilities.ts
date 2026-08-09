@@ -24,6 +24,10 @@ export const capabilityIds = [
   "function.administration.risk_type_details",
   "function.administration.controls",
   "function.administration.control_details",
+  "function.administration.information_systems",
+  "function.administration.information_system_details",
+  "function.administration.information_assets",
+  "function.administration.information_asset_details",
   "function.reports.reports",
   "function.reports.alerts",
 ] as const;
@@ -59,6 +63,10 @@ export const securityAnalystCapabilityIds = [
   "function.administration.risk_type_details",
   "function.administration.controls",
   "function.administration.control_details",
+  "function.administration.information_systems",
+  "function.administration.information_system_details",
+  "function.administration.information_assets",
+  "function.administration.information_asset_details",
   "function.reports.reports",
   "function.reports.alerts",
 ] as const satisfies readonly CapabilityId[];
