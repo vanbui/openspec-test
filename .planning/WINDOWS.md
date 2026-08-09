@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 5
 waived_count: 0
 fixed_count: 0
-total_count: 3
-last_updated: 2026-08-08T14:51:39.303Z
+total_count: 5
+last_updated: 2026-08-09T09:59:15.474Z
 ---
 
 # Broken Windows Ledger
@@ -18,6 +18,8 @@ last_updated: 2026-08-08T14:51:39.303Z
 | 1 | 02 | deviation | .planning/STATE.md |  | Historical Phase 02 state advancement could not parse the Phase 06-positioned STATE.md | open |  | 2026-08-08T14:39:01.019Z |  |
 | 2 | 02 | deviation | apps/backend/README.md |  | Corrected the backend README core-collection count from four to five. | open |  | 2026-08-08T14:50:41.194Z |  |
 | 3 | 02 | deviation | .planning/ROADMAP.md |  | Repaired duplicated Phase 2 plan metadata and preserved the active Phase 6 progress values after automated updates. | open |  | 2026-08-08T14:51:39.303Z |  |
+| 4 | 06 | deviation | apps/csrm/src/components/states/states.test.tsx |  | Avoided unavailable Jest-DOM matcher integration in the hoisted workspace. | open |  | 2026-08-09T09:59:15.326Z |  |
+| 5 | 06 | deviation | apps/csrm/src/components/states/access-denied-state.tsx |  | Replaced incompatible asChild home-action composition with Next Link button variants. | open |  | 2026-08-09T09:59:15.474Z |  |
 
 ````json
 [
@@ -55,6 +57,30 @@ last_updated: 2026-08-08T14:51:39.303Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-08T14:51:39.303Z",
+    "resolved_at": null
+  },
+  {
+    "id": 4,
+    "kind": "deviation",
+    "phase": "06",
+    "file": "apps/csrm/src/components/states/states.test.tsx",
+    "line": null,
+    "description": "Avoided unavailable Jest-DOM matcher integration in the hoisted workspace.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-09T09:59:15.326Z",
+    "resolved_at": null
+  },
+  {
+    "id": 5,
+    "kind": "deviation",
+    "phase": "06",
+    "file": "apps/csrm/src/components/states/access-denied-state.tsx",
+    "line": null,
+    "description": "Replaced incompatible asChild home-action composition with Next Link button variants.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-09T09:59:15.474Z",
     "resolved_at": null
   }
 ]
