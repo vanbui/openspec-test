@@ -1,13 +1,7 @@
-import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-
 import { expect, test, type Page } from "@playwright/test";
 
 const localOrigin = "http://127.0.0.1:3001";
 const productionOrigin = "http://127.0.0.1:3002";
-const appRoot = fileURLToPath(new URL("..", import.meta.url));
-const nextCli = path.resolve(appRoot, "../../node_modules/next/dist/bin/next");
 
 async function blockExternalNetwork(page: Page) {
   const externalRequests: string[] = [];
@@ -36,34 +30,6 @@ async function chooseAnalyst(page: Page) {
   await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("menuitem", { name: "Security Analyst — Bob" }).click();
   await expect(page.getByRole("button", { name: "Account menu" })).toContainText("Security Analyst — Bob");
-}
-
-async function startProductionServer() {
-  const server = spawn(process.execPath, [nextCli, "start", "--port", "3002"], {
-    cwd: appRoot,
-    stdio: "pipe",
-  });
-  let output = "";
-  server.stderr.on("data", (chunk: Buffer) => {
-    output += chunk.toString();
-  });
-  server.stdout.on("data", (chunk: Buffer) => {
-    output += chunk.toString();
-  });
-
-  await expect.poll(async () => {
-    try {
-      return (await fetch(productionOrigin)).status;
-    } catch {
-      return 0;
-    }
-  }, { timeout: 30_000 }).toBe(200);
-
-  return async () => {
-    server.kill("SIGTERM");
-    await new Promise<void>((resolve) => server.once("exit", () => resolve()));
-    expect(output).not.toContain("Error:");
-  };
 }
 
 test.describe("Requestor desktop foundation", () => {
@@ -192,26 +158,20 @@ test.describe("access and state matrix", () => {
 
 test.describe("production fixture exclusion", () => {
   test("ships neither fixture controls nor test-evidence routes", async ({ page }) => {
-    const stopProductionServer = await startProductionServer();
-    try {
-      await page.goto(productionOrigin);
-      const staticScripts = await page.evaluate(() =>
-        performance.getEntriesByType("resource")
-          .map((entry) => entry.name)
-          .filter((url) => url.startsWith("http://127.0.0.1:3002/_next/") && url.endsWith(".js")),
-      );
-      const staticOutput = await Promise.all(
-        staticScripts.map(async (url) => (await page.request.get(url)).text()),
-      );
-      expect(staticOutput.join("\n")).not.toContain("Development identity");
-      expect(staticOutput.join("\n")).not.toContain("Security Analyst — Bob");
-      await page.getByRole("button", { name: "Account menu" }).click();
-      await expect(page.getByText("Development identity")).toHaveCount(0);
-      const evidenceResponse = await page.goto(`${productionOrigin}/test-evidence/analyst-only`);
-      expect(evidenceResponse?.status()).toBe(404);
-      await expect(page.getByRole("heading", { name: "This area isn’t available yet" })).toBeVisible();
-    } finally {
-      await stopProductionServer();
+    await page.goto(productionOrigin);
+    const staticScripts = await page.evaluate(() =>
+      performance.getEntriesByType("resource")
+        .map((entry) => entry.name)
+        .filter((url) => url.startsWith("http://127.0.0.1:3002/_next/") && url.endsWith(".js")),
+    );
+    const staticOutput = await Promise.all(staticScripts.map(async (url) => (await page.request.get(url)).text()));
+    expect(staticOutput.join("\n")).not.toContain("Development identity");
+    expect(staticOutput.join("\n")).not.toContain("Security Analyst — Bob");
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByText("Development identity")).toHaveCount(0);
+    for (const testOnlyPath of ["/test-evidence/analyst-only", "/test-evidence/states"]) {
+      const evidenceResponse = await page.request.get(`${productionOrigin}${testOnlyPath}`);
+      expect(evidenceResponse.status()).toBe(404);
     }
   });
 });

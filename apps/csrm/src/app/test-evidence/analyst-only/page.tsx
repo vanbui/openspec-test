@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 
 import { AccessDeniedState } from "@/components/states/access-denied-state";
 import { resolveRouteAccess } from "@/domain/route-access";
 import type { IdentitySnapshot } from "@/domain/identity";
 import {
   isFixtureRuntime,
+  developmentFixtureCookieName,
   resolveDevelopmentIdentity,
 } from "@/lib/fixtures/resolve-identity";
 
@@ -53,7 +55,17 @@ export default async function AnalystOnlyEvidencePage() {
     notFound();
   }
 
-  const identity = resolveDevelopmentIdentity() ?? null;
+  let cookieValue: string | undefined;
+  try {
+    const cookieStore = await cookies();
+    cookieValue = cookieStore.get(developmentFixtureCookieName)?.value;
+  } catch {
+    // Unit tests exercise the page function directly, outside Next's request
+    // storage. In a real request this dynamic API is always available.
+  }
+  const identity = resolveDevelopmentIdentity({
+    cookieValue,
+  }) ?? null;
   const access = await resolveAnalystOnlyEvidence(identity);
 
   if (access === "forbidden") {

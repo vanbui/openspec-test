@@ -1,7 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  globalSetup: "./e2e/global-setup.ts",
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
@@ -18,10 +17,19 @@ export default defineConfig({
       reducedMotion: "reduce",
     },
   },
-  webServer: {
-    command: "yarn workspace @idambox/csrm dev",
-    url: "http://127.0.0.1:3001",
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "yarn workspace @idambox/csrm dev",
+      url: "http://127.0.0.1:3001",
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      command:
+        "NODE_ENV=production NEXT_DIST_DIR=.next-e2e-production yarn build && NODE_ENV=production NEXT_DIST_DIR=.next-e2e-production ./node_modules/.bin/next start --port 3002",
+      url: "http://127.0.0.1:3002",
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+  ],
 });

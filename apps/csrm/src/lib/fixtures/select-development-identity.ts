@@ -2,6 +2,7 @@
 
 import "server-only";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { setDevelopmentIdentity } from "./resolve-identity";
@@ -11,4 +12,5 @@ export async function selectDevelopmentIdentity(fixtureKey: unknown): Promise<vo
   const cookieStore = await cookies();
 
   setDevelopmentIdentity({ fixtureKey, cookieStore });
+  revalidatePath("/", "layout");
 }

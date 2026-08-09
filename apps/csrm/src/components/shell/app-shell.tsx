@@ -3,20 +3,13 @@ import type { ReactNode } from "react";
 import type { RouteDefinition } from "@/config/routes";
 import { visibleRoutes } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
+import { DevelopmentIdentitySelector } from "@/components/shell/development-identity-selector";
 
 import { AppHeader } from "./app-header";
 import { RouteAnnouncer } from "./route-announcer";
 import { Sidebar } from "./sidebar";
 
 function DevelopmentSelectorForRuntime() {
-  if (process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test") {
-    return null;
-  }
-
-  // The server-only runtime guard prevents fixture controls from rendering in
-  // production; the server action independently rejects production requests.
-  const { DevelopmentIdentitySelector } = require("./development-identity-selector") as typeof import("./development-identity-selector");
-
   return (
     <DevelopmentIdentitySelector
       identities={[

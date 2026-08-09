@@ -13,6 +13,7 @@ dist/
 build/
 .turbo/
 .next/
+.next-e2e-production/
 coverage/
 *.tsbuildinfo
 apps/csrm/test-results/
