@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import LoadingPage from "@/app/loading";
@@ -9,6 +10,13 @@ import { routeDefinitions } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 
 import { AppShell } from "./app-shell";
+import { MobileNavigation } from "./mobile-navigation";
+import { Sidebar } from "./sidebar";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
+}));
 
 const requestor: IdentitySnapshot = {
   fixtureKey: "requestor",
@@ -146,5 +154,59 @@ describe("AppShell", () => {
 
     vi.unstubAllEnvs();
     vi.doUnmock("@/lib/fixtures/resolve-identity");
+  });
+
+  it("opens and dismisses mobile navigation with Escape, route selection, and focus restoration", async () => {
+    const user = userEvent.setup();
+    render(<MobileNavigation routes={[routeDefinitions[0]]} />);
+
+    const trigger = screen.getByRole("button", { name: "Open navigation" });
+    await user.click(trigger);
+
+    expect(screen.getByRole("dialog", { name: "CSRM navigation" })).toBeDefined();
+    expect(screen.getByRole("navigation", { name: "CSRM navigation" })).toBeDefined();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "CSRM navigation" })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+
+    await user.click(trigger);
+    await user.click(screen.getByRole("link", { name: "Dashboard" }));
+    expect(screen.queryByRole("dialog", { name: "CSRM navigation" })).toBeNull();
+  });
+
+  it("persists only sidebar presentation", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    render(<Sidebar routes={[routeDefinitions[0]]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse navigation" }));
+
+    expect(setItem).toHaveBeenCalledWith(
+      "idambox-csrm-sidebar-collapsed",
+      "true",
+    );
+    expect(setItem.mock.calls.flat().join(" ")).not.toMatch(
+      /identity|capabilit|role|token/i,
+    );
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeDefined();
+  });
+
+  it("collapses desktop navigation while coordinating shell offsets", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <AppShell identity={requestor} routes={routeDefinitions}>
+        <h1>Cyber Risk Manager</h1>
+      </AppShell>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Collapse navigation" }));
+
+    expect(screen.getByRole("complementary").className).toContain("lg:w-16");
+    expect(container.querySelector("main")?.className).toContain(
+      "lg:pl-[var(--csrm-sidebar-width,272px)]",
+    );
+    expect(screen.getByRole("banner").className).toContain(
+      "lg:pl-[var(--csrm-sidebar-width,272px)]",
+    );
   });
 });
