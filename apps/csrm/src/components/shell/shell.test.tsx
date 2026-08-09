@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,13 +10,57 @@ import { routeDefinitions } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 
 import { AppShell } from "./app-shell";
+import { AccountMenu } from "./account-menu";
+import { DevelopmentIdentitySelector } from "./development-identity-selector";
 import { MobileNavigation } from "./mobile-navigation";
+import { RouteAnnouncer } from "./route-announcer";
 import { Sidebar } from "./sidebar";
+
+const { mockRouterRefresh, mockRouterReplace, mockSelectDevelopmentIdentity } = vi.hoisted(
+  () => ({
+    mockRouterRefresh: vi.fn(),
+    mockRouterReplace: vi.fn(),
+    mockSelectDevelopmentIdentity: vi.fn(),
+  }),
+);
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
-  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ refresh: mockRouterRefresh, replace: mockRouterReplace }),
 }));
+
+vi.mock("@/lib/fixtures/select-development-identity", () => ({
+  selectDevelopmentIdentity: mockSelectDevelopmentIdentity,
+}));
+
+vi.mock("@/components/ui/dropdown-menu", async () => {
+  const React = await import("react");
+  const MenuContext = React.createContext<{
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  } | null>(null);
+
+  return {
+    DropdownMenu: ({ children, open, onOpenChange }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => <MenuContext.Provider value={{ open, setOpen: onOpenChange }}>{children}</MenuContext.Provider>,
+    DropdownMenuTrigger: ({ children }: { children: React.ReactElement<{ onClick?: () => void }> }) => {
+      const context = React.useContext(MenuContext);
+      return React.cloneElement(children, { onClick: () => context?.setOpen(true) });
+    },
+    DropdownMenuContent: ({ children }: { children: React.ReactNode }) => {
+      const context = React.useContext(MenuContext);
+      return context?.open ? <div role="menu">{children}</div> : null;
+    },
+    DropdownMenuItem: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) => (
+      <button onClick={onSelect} role="menuitem" type="button">{children}</button>
+    ),
+    DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+    DropdownMenuSeparator: () => <hr />,
+  };
+});
 
 vi.mock("@/components/ui/tooltip", async () => {
   const React = await import("react");
@@ -99,9 +143,14 @@ const analyst: IdentitySnapshot = {
 };
 
 afterEach(cleanup);
-beforeEach(() => window.localStorage.clear());
+beforeEach(() => {
+  window.localStorage.clear();
+  mockRouterRefresh.mockReset();
+  mockRouterReplace.mockReset();
+  mockSelectDevelopmentIdentity.mockReset();
+});
 
-function renderShell(identity: IdentitySnapshot = requestor) {
+function renderShell(identity: IdentitySnapshot | null = requestor) {
   return render(
     <AppShell identity={identity} routes={routeDefinitions}>
       <h1>Cyber Risk Manager</h1>
@@ -268,6 +317,60 @@ describe("AppShell", () => {
     );
     expect(screen.getByRole("banner").className).toContain(
       "lg:pl-[var(--csrm-sidebar-width,272px)]",
+    );
+  });
+
+  it("changes development identity through the validated action and returns focus to the page title", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <h1 tabIndex={-1}>Cyber Risk Manager</h1>
+        <AccountMenu identity={requestor}>
+          <DevelopmentIdentitySelector
+            identities={[requestor, analyst]}
+          />
+        </AccountMenu>
+        <RouteAnnouncer />
+      </>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Account menu" }));
+    await user.click(screen.getByRole("button", { name: "Security Analyst — Bob" }));
+
+    await waitFor(() => expect(mockSelectDevelopmentIdentity).toHaveBeenCalledWith("analyst"));
+    expect(mockRouterRefresh).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: "Cyber Risk Manager" }),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Security Analyst — Bob is now active",
+    );
+  });
+
+  it("omits fixture controls in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    renderShell(null);
+
+    expect(screen.queryByText("Development identity")).toBeNull();
+    expect(screen.queryByText("Requestor — Jane")).toBeNull();
+    expect(screen.queryByText("Security Analyst — Bob")).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it("announces route and identity changes politely", async () => {
+    render(<RouteAnnouncer />);
+
+    window.dispatchEvent(
+      new CustomEvent("csrm:identity-changed", {
+        detail: { displayName: "Security Analyst — Bob" },
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Security Analyst — Bob is now active",
+      ),
     );
   });
 });
