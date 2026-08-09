@@ -15,7 +15,8 @@
     "generate:openapi": "node scripts/generate-openapi.mjs",
     "verify:openapi": "node scripts/check-openapi-drift.mjs",
     "verify:capabilities": "node scripts/verify-capabilities.mjs",
-    "verify:runtime": "node scripts/verify-runtime.mjs"
+    "verify:runtime": "node scripts/verify-runtime.mjs",
+    "verify": "yarn lint && yarn check-types && yarn test && yarn verify:openapi && yarn verify:capabilities"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "1.2.6",
