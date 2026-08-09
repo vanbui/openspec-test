@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { RouteDefinition } from "@/config/routes";
+import { visibleRoutes } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 
 import { AppHeader } from "./app-header";
@@ -19,6 +20,10 @@ export function AppShell({
   routes: readonly RouteDefinition[];
   children: ReactNode;
 }) {
+  const navigationRoutes = identity
+    ? visibleRoutes(identity.capabilities).filter((route) => routes.includes(route))
+    : [];
+
   return (
     <>
       <a
@@ -27,10 +32,10 @@ export function AppShell({
       >
         Skip to main content
       </a>
-      <AppHeader identity={identity} />
-      <Sidebar identity={identity} routes={routes} />
+      <AppHeader identity={identity} routes={navigationRoutes} />
+      <Sidebar routes={navigationRoutes} />
       <main
-        className="min-h-screen min-w-0 bg-background pt-16 lg:pl-[272px] lg:pt-16"
+        className="min-h-screen min-w-0 bg-background pt-14 lg:pl-[var(--csrm-sidebar-width,272px)] lg:pt-16"
         id="main-content"
       >
         <div className="mx-auto max-w-canvas px-md py-xl sm:px-lg lg:px-xl lg:py-3xl">

@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoadingPage from "@/app/loading";
 import NotFoundPage from "@/app/not-found";
@@ -17,6 +17,66 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
 }));
+
+vi.mock("@/components/ui/tooltip", async () => {
+  const React = await import("react");
+
+  return {
+    TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
+    Tooltip: ({ children }: { children: React.ReactNode }) => children,
+    TooltipTrigger: ({ children }: { children: React.ReactNode }) => children,
+    TooltipContent: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  };
+});
+
+vi.mock("@/components/ui/sheet", async () => {
+  const React = await import("react");
+  const SheetContext = React.createContext<{
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  } | null>(null);
+
+  function Sheet({
+    children,
+    open,
+    onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) {
+    React.useEffect(() => {
+      const dismiss = (event: KeyboardEvent) => {
+        if (event.key === "Escape") onOpenChange(false);
+      };
+      document.addEventListener("keydown", dismiss);
+      return () => document.removeEventListener("keydown", dismiss);
+    }, [onOpenChange]);
+
+    return (
+      <SheetContext.Provider value={{ open, setOpen: onOpenChange }}>
+        {children}
+      </SheetContext.Provider>
+    );
+  }
+
+  return {
+    Sheet,
+    SheetTrigger: ({
+      children,
+    }: {
+      children: React.ReactElement<{ onClick?: () => void }>;
+    }) => {
+      const context = React.useContext(SheetContext);
+      return React.cloneElement(children, { onClick: () => context?.setOpen(true) });
+    },
+    SheetContent: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+      const context = React.useContext(SheetContext);
+      return context?.open ? <div role="dialog" {...props}>{children}</div> : null;
+    },
+    SheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  };
+});
 
 const requestor: IdentitySnapshot = {
   fixtureKey: "requestor",
@@ -39,6 +99,7 @@ const analyst: IdentitySnapshot = {
 };
 
 afterEach(cleanup);
+beforeEach(() => window.localStorage.clear());
 
 function renderShell(identity: IdentitySnapshot = requestor) {
   return render(
