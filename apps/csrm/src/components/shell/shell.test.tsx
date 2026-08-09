@@ -1,8 +1,13 @@
 /** @vitest-environment jsdom */
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import LoadingPage from "@/app/loading";
+import NotFoundPage from "@/app/not-found";
+import AnalystOnlyEvidencePage, {
+  resolveAnalystOnlyEvidence,
+} from "@/app/__test__/analyst-only/page";
 import { routeDefinitions } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 
@@ -84,5 +89,51 @@ describe("AppShell", () => {
     expect(screen.getAllByRole("link", { name: "Dashboard" })).toHaveLength(1);
     expect(screen.queryByText("Administration")).toBeNull();
     expect(screen.queryByRole("link", { name: "Controls" })).toBeNull();
+  });
+
+  it("keeps loading geometry stable and renders planned routes as the shared unavailable state", () => {
+    const { rerender } = render(<LoadingPage />);
+
+    expect(screen.getByRole("status", { name: "Loading page" })).toBeDefined();
+    expect(screen.getAllByTestId("loading-skeleton")).toHaveLength(3);
+    expect(
+      document.querySelectorAll('[data-slot="skeleton"][aria-hidden="true"]'),
+    ).toHaveLength(3);
+
+    rerender(<NotFoundPage />);
+    expect(
+      screen.getByRole("heading", { name: "This area isn’t available yet" }),
+    ).toBeDefined();
+    expect(screen.getByRole("link", { name: "Go to CSRM home" })).toBeDefined();
+    expect(screen.queryByText(/assessment request|backend|http/i)).toBeNull();
+  });
+
+  it("guards the analyst-only evidence route before protected work", async () => {
+    const protectedLoad = vi.fn();
+
+    await expect(
+      resolveAnalystOnlyEvidence(requestor, protectedLoad),
+    ).resolves.toBe("forbidden");
+    expect(protectedLoad).not.toHaveBeenCalled();
+
+    await expect(
+      resolveAnalystOnlyEvidence(analyst, protectedLoad),
+    ).resolves.toBe("allowed");
+    expect(protectedLoad).toHaveBeenCalledTimes(1);
+
+    render(await AnalystOnlyEvidencePage());
+    expect(
+      screen.getByRole("heading", { name: "You don’t have access to this area" }),
+    ).toBeDefined();
+  });
+
+  it("makes the analyst-only evidence route unavailable in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    await expect(AnalystOnlyEvidencePage()).rejects.toMatchObject({
+      digest: "NEXT_HTTP_ERROR_FALLBACK;404",
+    });
+
+    vi.unstubAllEnvs();
   });
 });
