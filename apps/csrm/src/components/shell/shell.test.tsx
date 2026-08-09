@@ -48,9 +48,11 @@ describe("AppShell", () => {
     const navigation = screen.getByRole("navigation", { name: "CSRM navigation" });
     const main = screen.getByRole("main");
 
-    expect([skipLink, header, navigation, main]).toEqual(
+    const landmarks: readonly Element[] = [skipLink, header, navigation, main];
+
+    expect(landmarks).toEqual(
       [...container.querySelectorAll("a, header, nav, main")].filter((node) =>
-        [skipLink, header, navigation, main].includes(node),
+        landmarks.includes(node),
       ),
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);

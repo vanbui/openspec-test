@@ -1,16 +1,18 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from "@/components/shell/page-header";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-background px-md py-xl text-foreground sm:px-lg lg:px-xl">
-      <div className="mx-auto max-w-canvas">
-        <Card className="max-w-2xl">
-          <CardContent className="space-y-md p-lg">
-            <h1 className="text-display font-semibold">Cyber Risk Manager</h1>
-            <p className="text-body">Your cyber risk management workspace is ready.</p>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+    <>
+      <PageHeader
+        description="Your cyber risk management workspace is ready."
+        title="Cyber Risk Manager"
+      />
+      <Card className="mt-2xl max-w-2xl">
+        <CardContent className="p-lg text-body text-muted-foreground">
+          Use the CSRM workspace to prepare for the risk management work that follows.
+        </CardContent>
+      </Card>
+    </>
   );
 }
