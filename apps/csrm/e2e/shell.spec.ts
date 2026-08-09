@@ -1,7 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readdir, readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const localOrigin = "http://127.0.0.1:3001";
 const productionOrigin = "http://127.0.0.1:3002";
+const productionOutputPath = fileURLToPath(
+  new URL("../.next-e2e-production", import.meta.url),
+);
+
+async function emittedJavaScript(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return emittedJavaScript(entryPath);
+    return entry.name.endsWith(".js") ? [entryPath] : [];
+  }));
+
+  return files.flat();
+}
 
 async function blockExternalNetwork(page: Page) {
   const externalRequests: string[] = [];
@@ -157,16 +174,23 @@ test.describe("access and state matrix", () => {
 });
 
 test.describe("production fixture exclusion", () => {
-  test("ships neither fixture controls nor test-evidence routes", async ({ page }) => {
+  test("ships neither fixture data nor test-evidence routes", async ({ page }) => {
     await page.goto(productionOrigin);
-    const staticScripts = await page.evaluate(() =>
-      performance.getEntriesByType("resource")
-        .map((entry) => entry.name)
-        .filter((url) => url.startsWith("http://127.0.0.1:3002/_next/") && url.endsWith(".js")),
-    );
-    const staticOutput = await Promise.all(staticScripts.map(async (url) => (await page.request.get(url)).text()));
-    expect(staticOutput.join("\n")).not.toContain("Development identity");
-    expect(staticOutput.join("\n")).not.toContain("Security Analyst — Bob");
+    const output = (await Promise.all(
+      (await emittedJavaScript(productionOutputPath)).map((filePath) => readFile(filePath, "utf8")),
+    )).join("\n");
+    for (const fixtureOnlyValue of [
+      "Development identity",
+      "Requestor — Jane",
+      "Security Analyst — Bob",
+      "fixture:jane.doe@idambox.com",
+      "fixture:bob.doe@idambox.com",
+      "idambox-csrm-development-identity",
+      "function.administration.controls",
+      "function.reports.alerts",
+    ]) {
+      expect(output).not.toContain(fixtureOnlyValue);
+    }
     await page.getByRole("button", { name: "Account menu" }).click();
     await expect(page.getByText("Development identity")).toHaveCount(0);
     for (const testOnlyPath of ["/test-evidence/analyst-only", "/test-evidence/states"]) {

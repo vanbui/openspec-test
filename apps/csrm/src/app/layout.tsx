@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import localFont from "next/font/local";
 
-import { AppShell } from "@/components/shell/app-shell";
-import { routeDefinitions } from "@/config/routes";
-import {
-  developmentFixtureCookieName,
-  resolveDevelopmentIdentity,
-} from "@/lib/fixtures/resolve-identity";
+import { RuntimeShell } from "@/components/shell/runtime-shell";
 
 import "./globals.css";
 
@@ -28,17 +22,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const identity = resolveDevelopmentIdentity({
-    cookieValue: cookieStore.get(developmentFixtureCookieName)?.value,
-  });
-
   return (
     <html lang="en">
       <body className={inter.variable}>
-        <AppShell identity={identity ?? null} routes={routeDefinitions}>
-          {children}
-        </AppShell>
+        <RuntimeShell>{children}</RuntimeShell>
       </body>
     </html>
   );

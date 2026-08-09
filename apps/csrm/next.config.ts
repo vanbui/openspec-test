@@ -14,11 +14,16 @@ const nextConfig: NextConfig = {
     if (!dev) {
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(
-          /development-identity-selector$/,
-          path.join(
-            process.cwd(),
-            "src/components/shell/development-identity-selector.production.tsx",
-          ),
+          /runtime-shell$/,
+          path.join(process.cwd(), "src/components/shell/runtime-shell.production.tsx"),
+        ),
+        new webpack.NormalModuleReplacementPlugin(
+          /analyst-only-evidence$/,
+          path.join(process.cwd(), "src/components/test-evidence/analyst-only-evidence.production.tsx"),
+        ),
+        new webpack.NormalModuleReplacementPlugin(
+          /state-evidence$/,
+          path.join(process.cwd(), "src/components/test-evidence/state-evidence.production.tsx"),
         ),
       );
     }
