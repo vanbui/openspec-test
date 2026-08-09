@@ -1,6 +1,6 @@
 ---
 phase: 06-create-the-idambox-csrm-next-js-application
-verified: 2026-08-09T12:19:21Z
+verified: 2026-08-09T12:32:52Z
 status: passed
 score: 30/30 must-haves verified
 behavior_unverified: 0
@@ -13,15 +13,18 @@ re_verification:
     - "Durable user approval of all eight visual snapshots"
   gaps_remaining: []
   regressions: []
+  final_implementation:
+    commit: 75f679ecf53933faf31aad946a22c4224244f8c7
+    result: "UI remediation rechecked: 49 unit/component tests and 6 Playwright tests passed; approved snapshots remain unchanged."
 ---
 
 # Phase 6: CSRM Foundation Verification Report
 
 **Phase Goal:** Establish the production-quality CSRM Next.js application foundation with a reusable BProton-aligned design system, responsive application shell, centralized capability model, typed Strapi API boundary, and automated test infrastructure.
 
-**Verified:** 2026-08-09T12:19:21Z  
-**Status:** passed  
-**Re-verification:** Yes — approval-evidence closure
+**Verified:** 2026-08-09T12:32:52Z
+**Status:** passed
+**Re-verification:** Yes — approval-evidence closure and final UI-remediation regression check
 
 ## Goal Achievement
 
@@ -47,18 +50,18 @@ The five ROADMAP success criteria are included below: T02/T04/T07 satisfy criter
 | T14 | Only `/` is enabled; future routes stay planned, hidden from navigation, and unavailable when addressed directly. | ✓ VERIFIED | `routes.ts` has one `enabled` route; `visibleRoutes` filters enabled + capability; browser access tests cover planned and unknown routes. |
 | T15 | The development fixture selector is server-gated and cannot ship or activate in production. | ✓ VERIFIED | Server action validates runtime/key; production webpack replacement supplies null shell/evidence modules; Playwright scanned every `.next-e2e-production` server/client JS asset for fixture values and verified 404 test routes. |
 | T16 | Unauthorized evidence access is rejected before protected work and reveals no protected metadata. | ✓ VERIFIED | Non-production analyst evidence resolves fixture capabilities before rendering; browser test sees forbidden state/no protected text, then analyst-only evidence; no external traffic is allowed. |
-| T17 | Semantic light/dark-ready BProton/IdamBox tokens, geometry, typography, status/risk, and focus treatment are centralized without raw brand values in TSX. | ✓ VERIFIED | `globals.css` owns token values; token tests cover contrast/focus/overflow; source anti-pattern scan found no raw-brand TSX implementation. |
+| T17 | Semantic light/dark-ready BProton/IdamBox tokens, geometry, typography, status/risk, and focus treatment are centralized without raw brand values in TSX. | ✓ VERIFIED | `globals.css` owns token values; final remediation commit `75f679e` added a source-wide undeclared-text-size rejection test. The 49-test package gate passed. |
 | T18 | Approved local shadcn/Radix primitives supply the shell’s component variants and accessible behaviour. | ✓ VERIFIED | Reviewed `components/ui` primitives are substantive and compose `cn`; type/lint/unit/browser checks passed. |
 | T19 | The foundation landing page is neutral and contains one title, product identity, and workspace-ready copy only. | ✓ VERIFIED | `page.tsx`, runtime probe, and desktop visual assertion show no fabricated requests, risks, alerts, or metrics. |
 | T20 | Reusable loading, error, empty, ready, partial, overflow, and cardinality states are available through a typed boundary. | ✓ VERIFIED | `StateBoundary` selects composed state primitives; state tests and browser state evidence passed. |
 | T21 | Forbidden and unavailable states leak no protected metadata and return users home. | ✓ VERIFIED | Shared state components plus browser evidence confirm safe copy, absent protected text, and home affordance. |
 | T22 | A server-first AppShell provides skip link, header, capability-filtered navigation, landmarks, and account context without domain-data dependency. | ✓ VERIFIED | `RuntimeShell` resolves identity server-side; `AppShell` receives serializable identity/routes and renders semantic shell structure. |
 | T23 | Desktop shell reserves header/sidebar geometry and one page-title hierarchy without a client-wide provider. | ✓ VERIFIED | CSS/Tailwind geometry, narrow marked client islands only, component tests, and 1024/1440 browser snapshots. |
-| T24 | Mobile/tablet navigation uses a 56px compact header and accessible left Sheet; desktop sidebar collapses 272px→64px without overlay/overflow. | ✓ VERIFIED | `MobileNavigation`/`Sidebar` implementation plus Playwright 375, 390, 430, 768, 1024, and 1440 coverage passed. |
+| T24 | Mobile/tablet navigation uses a 56px compact header and accessible left Sheet; desktop sidebar collapses 272px→64px without overlay/overflow. | ✓ VERIFIED | Final remediation makes drawer route rows 44px below 768px and adds Playwright assertions for every visible drawer link/close control at 375px and 390px; all six browser tests passed. |
 | T25 | Client islands contain only interaction state; browser persistence is presentation-only. | ✓ VERIFIED | Client-boundary scan shows local drawer/menu/collapse/announcement islands; only `idambox-csrm-sidebar-collapsed` uses localStorage. |
 | T26 | Development identity changes refresh server-derived visibility, close the menu, focus the settled home title, and announce politely. | ✓ VERIFIED | Browser test switches identity from a non-root route and asserts destination-title focus; shell tests cover menu/announcement behaviour. |
-| T27 | Playwright provides deterministic visual baselines across all six required viewports. | ✓ VERIFIED | `test:e2e` passed all 6 tests and matched committed desktop, mobile, tablet, analyst, collapsed, and state snapshots. |
-| T28 | Focus containment/restoration, Escape/selection dismissal, account semantics, touch target size, overflow, long copy, and reduced motion have browser evidence. | ✓ VERIFIED | `shell.spec.ts` executes those semantic/geometry checks; six-test Playwright run passed. |
+| T27 | Playwright provides deterministic visual baselines across all six required viewports. | ✓ VERIFIED | Final `test:e2e` run passed all 6 tests and matched the approved committed desktop, mobile, tablet, analyst, collapsed, and state snapshots unchanged. |
+| T28 | Focus containment/restoration, Escape/selection dismissal, account semantics, touch target size, overflow, long copy, and reduced motion have browser evidence. | ✓ VERIFIED | Final `shell.spec.ts` run passed, including the newly expanded drawer-link and close-control 44px target assertions. |
 | T29 | Fixture contexts alter centralized capabilities only; planned/forbidden/unavailable states remain safe and browser HTTP cannot escape locally declared routes. | ✓ VERIFIED | Playwright blocks non-local origins, checks capability-specific evidence and safe states, and the MSW suite rejects undeclared HTTP. |
 | T30 | A human approved the final visual contract. | ✓ VERIFIED | [06-HUMAN-APPROVALS.md](./06-HUMAN-APPROVALS.md) records the user's explicit approval of all eight named snapshots and the visual criteria reviewed. |
 
@@ -122,9 +125,9 @@ There are no orphaned Phase 6 requirements: every plan declares APP-06, and the 
 
 ## Gaps Summary
 
-No gaps remain. The direct checkpoint record added in `97272a2` independently closes both prior human-only items: the dependency provenance approval and the user's visual/product approval. Automated code, wiring, data-flow, build, runtime, capability, OpenAPI, accessibility, responsive, and production-fixture-exclusion evidence remains verified.
+No gaps remain. The direct checkpoint record added in `97272a2` independently closes both prior human-only items: the dependency provenance approval and the user's visual/product approval. Final UI remediation `75f679e` is scoped to approved typography and mobile-target concerns; it passed the 49-test package gate and all six Playwright tests with the committed snapshots unchanged. Automated code, wiring, data-flow, build, runtime, capability, OpenAPI, accessibility, responsive, and production-fixture-exclusion evidence remains verified.
 
 ---
 
-_Verified: 2026-08-09T12:19:21Z_  
+_Verified: 2026-08-09T12:32:52Z_
 _Verifier: the agent (gsd-verifier)_
