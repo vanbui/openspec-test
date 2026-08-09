@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: Keycloak Identity Provider Setup
 status: planning
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-08-08T22:09:24.076Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-08-09T09:15:33.002Z"
 last_activity: 2026-08-09
 last_activity_desc: Phase 2 complete, transitioned to Phase 03
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 22
+  completed_plans: 14
 ---
 
 # State: IdamBox Platform
@@ -108,15 +108,18 @@ Last activity: 2026-08-05 - Completed quick task 260805-qzp: extend the CSRMRisk
 |------|----------|-------|-------|
 | Phase 02-create-strapi-backend-bootstrap-data-for-the-csrm-applicatio P02 | 18 min | 2 tasks | 6 files |
 | Phase 02 P03 | 7 min | 2 tasks | 9 files |
+| Phase 06-create-the-idambox-csrm-next-js-application P01 | 1h 43m | 2 tasks | 11 files |
 
 ## Decisions
 
 - [Phase ?]: Use IdamBoxUser -> Role -> Function -> Application with FunctionApi operation grants as the accepted Phase 1/2 authorization contract.
 - [Phase ?]: Retain Security Analyst Agent as the Function-grant-equivalent Role for historical D-07/D-08 without restoring ApplicationRole.
 - [Phase ?]: Use yarn verify:csrm-seed as the authoritative two-boot disposable SQLite seed acceptance check.
+- [Phase ?]: Pin CSRM TypeScript to 5.9.2 and ESLint to 9.39.2 for eslint-config-next compatibility.
+- [Phase ?]: Use NODE_PATH=./node_modules only in CSRM lint to bridge Yarn 1 hoisting of eslint-config-next.
 
 ## Session
 
-**Last session:** 2026-08-08T22:09:24.048Z
-**Stopped at:** Phase 6 UI-SPEC approved
-**Resume file:** .planning/phases/06-create-the-idambox-csrm-next-js-application/06-UI-SPEC.md
+**Last session:** 2026-08-09T09:15:32.983Z
+**Stopped at:** Completed 06-01-PLAN.md
+**Resume file:** None
