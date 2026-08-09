@@ -245,19 +245,19 @@ Plans:
 4. A typed service abstraction targets the Strapi OpenAPI contract and supports production Strapi calls plus fixtures or an HTTP-level test double without introducing a competing mock-only contract.
 5. Unit, component, integration, and Playwright foundations cover core layout, capability, validation, and responsive behavior.
 
-**Plans:** 1/9 plans executed
+**Plans:** 9/9 plans executed
 
 Plans:
 
 - [x] 06-01-PLAN.md
-- [ ] 06-02-PLAN.md
-- [ ] 06-03-PLAN.md
-- [ ] 06-04-PLAN.md
-- [ ] 06-05-PLAN.md
-- [ ] 06-06-PLAN.md
-- [ ] 06-07-PLAN.md
-- [ ] 06-08-PLAN.md
-- [ ] 06-09-PLAN.md
+- [x] 06-02-PLAN.md
+- [x] 06-03-PLAN.md
+- [x] 06-04-PLAN.md
+- [x] 06-05-PLAN.md
+- [x] 06-06-PLAN.md
+- [x] 06-07-PLAN.md
+- [x] 06-08-PLAN.md
+- [x] 06-09-PLAN.md
 
 **Wave 1**
 
