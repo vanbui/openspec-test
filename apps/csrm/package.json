@@ -12,8 +12,8 @@
     "test:unit": "vitest",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
-    "generate:openapi": "openapi-typescript docs/references/specification.json -o src/lib/api/generated/openapi.ts",
-    "verify:openapi": "yarn generate:openapi && git diff --exit-code -- src/lib/api/generated/openapi.ts",
+    "generate:openapi": "node scripts/generate-openapi.mjs",
+    "verify:openapi": "node scripts/check-openapi-drift.mjs",
     "verify:capabilities": "node scripts/verify-capabilities.mjs",
     "verify:runtime": "node scripts/verify-runtime.mjs"
   },
