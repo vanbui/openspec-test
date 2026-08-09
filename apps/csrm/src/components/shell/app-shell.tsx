@@ -5,7 +5,27 @@ import { visibleRoutes } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 
 import { AppHeader } from "./app-header";
+import { RouteAnnouncer } from "./route-announcer";
 import { Sidebar } from "./sidebar";
+
+function DevelopmentSelectorForRuntime() {
+  if (process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test") {
+    return null;
+  }
+
+  // The server-only runtime guard prevents fixture controls from rendering in
+  // production; the server action independently rejects production requests.
+  const { DevelopmentIdentitySelector } = require("./development-identity-selector") as typeof import("./development-identity-selector");
+
+  return (
+    <DevelopmentIdentitySelector
+      identities={[
+        { fixtureKey: "requestor", displayName: "Requestor — Jane" },
+        { fixtureKey: "analyst", displayName: "Security Analyst — Bob" },
+      ]}
+    />
+  );
+}
 
 /**
  * Server-compatible frame for CSRM. It receives only serializable identity and
@@ -23,6 +43,7 @@ export function AppShell({
   const navigationRoutes = identity
     ? visibleRoutes(identity.capabilities).filter((route) => routes.includes(route))
     : [];
+  const developmentSelector = <DevelopmentSelectorForRuntime />;
 
   return (
     <>
@@ -32,7 +53,11 @@ export function AppShell({
       >
         Skip to main content
       </a>
-      <AppHeader identity={identity} routes={navigationRoutes} />
+      <AppHeader
+        identity={identity}
+        routes={navigationRoutes}
+        developmentSelector={developmentSelector}
+      />
       <Sidebar routes={navigationRoutes} />
       <main
         className="min-h-screen min-w-0 bg-background pt-14 lg:pl-[var(--csrm-sidebar-width,272px)] lg:pt-16"
@@ -42,6 +67,7 @@ export function AppShell({
           {children}
         </div>
       </main>
+      <RouteAnnouncer />
     </>
   );
 }

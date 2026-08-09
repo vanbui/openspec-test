@@ -27,6 +27,9 @@ const { mockRouterRefresh, mockRouterReplace, mockSelectDevelopmentIdentity } = 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => ({ refresh: mockRouterRefresh, replace: mockRouterReplace }),
+  notFound: () => {
+    throw { digest: "NEXT_HTTP_ERROR_FALLBACK;404" };
+  },
 }));
 
 vi.mock("@/lib/fixtures/select-development-identity", () => ({
@@ -177,10 +180,10 @@ describe("AppShell", () => {
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(main.id).toBe("main-content");
-    expect(main.className).toContain("lg:pl-[272px]");
+    expect(main.className).toContain("lg:pl-[var(--csrm-sidebar-width,272px)]");
     expect(main.className).toContain("lg:pt-16");
     expect(main.querySelector(".max-w-canvas")).not.toBeNull();
-    expect(header.className).toContain("lg:pl-[272px]");
+    expect(header.className).toContain("lg:pl-[var(--csrm-sidebar-width,272px)]");
   });
 
   it("filters planned navigation for both requestor and analyst identities", () => {
@@ -335,7 +338,7 @@ describe("AppShell", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Account menu" }));
-    await user.click(screen.getByRole("button", { name: "Security Analyst — Bob" }));
+    await user.click(screen.getByRole("menuitem", { name: "Security Analyst — Bob" }));
 
     await waitFor(() => expect(mockSelectDevelopmentIdentity).toHaveBeenCalledWith("analyst"));
     expect(mockRouterRefresh).toHaveBeenCalledOnce();
@@ -343,7 +346,7 @@ describe("AppShell", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: "Cyber Risk Manager" }),
     );
-    expect(screen.getByRole("status")).toHaveTextContent(
+    expect(screen.getByRole("status").textContent).toBe(
       "Security Analyst — Bob is now active",
     );
   });
@@ -368,7 +371,7 @@ describe("AppShell", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(screen.getByRole("status").textContent).toBe(
         "Security Analyst — Bob is now active",
       ),
     );
