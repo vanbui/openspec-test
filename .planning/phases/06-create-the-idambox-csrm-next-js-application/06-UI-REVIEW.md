@@ -95,3 +95,7 @@ Registry audit: **0 third-party blocks checked, no flags.** [components.json](..
 - `yarn check-types` — **passed** (2026-08-09)
 - `yarn lint` — **passed with zero warnings** (2026-08-09)
 - `yarn test:e2e` — **6 passed** at the full viewport matrix; no snapshots changed (2026-08-09)
+
+## Final Re-audit
+
+Re-audited after `75f679e` on 2026-08-09. Source inspection confirms the three remediations above, `yarn workspace @idambox/csrm test:e2e` passed all six browser tests, and `yarn workspace @idambox/csrm vitest run src/styles/tokens.test.ts` passed all six token tests. The eight committed visual baselines are unchanged from the approved contract.
