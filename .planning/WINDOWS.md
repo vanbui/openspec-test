@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 0
 fixed_count: 0
-total_count: 5
-last_updated: 2026-08-09T09:59:15.474Z
+total_count: 6
+last_updated: 2026-08-09T10:11:44.527Z
 ---
 
 # Broken Windows Ledger
@@ -20,6 +20,7 @@ last_updated: 2026-08-09T09:59:15.474Z
 | 3 | 02 | deviation | .planning/ROADMAP.md |  | Repaired duplicated Phase 2 plan metadata and preserved the active Phase 6 progress values after automated updates. | open |  | 2026-08-08T14:51:39.303Z |  |
 | 4 | 06 | deviation | apps/csrm/src/components/states/states.test.tsx |  | Avoided unavailable Jest-DOM matcher integration in the hoisted workspace. | open |  | 2026-08-09T09:59:15.326Z |  |
 | 5 | 06 | deviation | apps/csrm/src/components/states/access-denied-state.tsx |  | Replaced incompatible asChild home-action composition with Next Link button variants. | open |  | 2026-08-09T09:59:15.474Z |  |
+| 6 | 06 | deviation | apps/csrm/src/app/test-evidence/analyst-only/page.tsx |  | Next 16 treats __test__ as a private segment; analyst evidence route moved to routable non-production /test-evidence/analyst-only. | open |  | 2026-08-09T10:11:44.527Z |  |
 
 ````json
 [
@@ -81,6 +82,18 @@ last_updated: 2026-08-09T09:59:15.474Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-09T09:59:15.474Z",
+    "resolved_at": null
+  },
+  {
+    "id": 6,
+    "kind": "deviation",
+    "phase": "06",
+    "file": "apps/csrm/src/app/test-evidence/analyst-only/page.tsx",
+    "line": null,
+    "description": "Next 16 treats __test__ as a private segment; analyst evidence route moved to routable non-production /test-evidence/analyst-only.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-09T10:11:44.527Z",
     "resolved_at": null
   }
 ]
