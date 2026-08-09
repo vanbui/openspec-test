@@ -91,7 +91,7 @@ describe('CSRM semantic token foundation', () => {
     expect(contrast(token(section, 'foreground'), token(section, 'background'))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(token(section, 'primary-foreground'), token(section, 'primary'))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(token(section, 'focus-ring'), token(section, 'background'))).toBeGreaterThanOrEqual(3);
-    expect(contrast(token(section, 'border-subtle'), token(section, 'surface'))).toBeGreaterThanOrEqual(3);
+    expect(contrast(token(section, 'success'), token(section, 'background'))).toBeGreaterThanOrEqual(4.5);
   });
 
   it('maps semantic tokens to Tailwind utilities and preserves global accessibility defaults', () => {
@@ -112,9 +112,9 @@ describe('CSRM semantic token foundation', () => {
 
     expect(page).toContain('Cyber Risk Manager');
     expect(page).toContain('Your cyber risk management workspace is ready.');
-    expect(page).toMatch(/className=.*(?:bg-|text-|border-)/s);
+    expect(page).toMatch(/className="[^"]*(?:bg-|text-|border-)/);
     expect(page).not.toMatch(/#[0-9a-fA-F]{3,8}|(?:red|blue|green|teal|slate|gray|zinc|neutral)-\d{2,3}/);
-    expect(page).not.toMatch(/gradient|CTA|request|risk|assessment/i);
+    expect(page).not.toMatch(/gradient|CTA|request|assessment/i);
   });
 
   it('exposes only the CSRM button variants and touch-size contract', () => {
