@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 7
 waived_count: 0
 fixed_count: 0
-total_count: 6
-last_updated: 2026-08-09T10:11:44.527Z
+total_count: 7
+last_updated: 2026-08-09T10:26:48.547Z
 ---
 
 # Broken Windows Ledger
@@ -21,6 +21,7 @@ last_updated: 2026-08-09T10:11:44.527Z
 | 4 | 06 | deviation | apps/csrm/src/components/states/states.test.tsx |  | Avoided unavailable Jest-DOM matcher integration in the hoisted workspace. | open |  | 2026-08-09T09:59:15.326Z |  |
 | 5 | 06 | deviation | apps/csrm/src/components/states/access-denied-state.tsx |  | Replaced incompatible asChild home-action composition with Next Link button variants. | open |  | 2026-08-09T09:59:15.474Z |  |
 | 6 | 06 | deviation | apps/csrm/src/app/test-evidence/analyst-only/page.tsx |  | Next 16 treats __test__ as a private segment; analyst evidence route moved to routable non-production /test-evidence/analyst-only. | open |  | 2026-08-09T10:11:44.527Z |  |
+| 7 | 06 | deviation | apps/csrm/src/components/shell/shell.test.tsx |  | Focused shell test doubles isolate the existing mixed React/Radix Vitest runtime boundary. | open |  | 2026-08-09T10:26:48.547Z |  |
 
 ````json
 [
@@ -94,6 +95,18 @@ last_updated: 2026-08-09T10:11:44.527Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-09T10:11:44.527Z",
+    "resolved_at": null
+  },
+  {
+    "id": 7,
+    "kind": "deviation",
+    "phase": "06",
+    "file": "apps/csrm/src/components/shell/shell.test.tsx",
+    "line": null,
+    "description": "Focused shell test doubles isolate the existing mixed React/Radix Vitest runtime boundary.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-09T10:26:48.547Z",
     "resolved_at": null
   }
 ]
