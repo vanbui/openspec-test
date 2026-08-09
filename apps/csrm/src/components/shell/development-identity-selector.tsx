@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 
 import type { FixtureKey } from "@/domain/identity";
 import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
@@ -14,25 +14,46 @@ type DevelopmentIdentityOption = {
 
 /** Small client island that submits a server-validated development fixture key. */
 export function DevelopmentIdentitySelector({
+  activeFixtureKey,
   identities,
 }: {
+  activeFixtureKey: FixtureKey;
   identities: readonly DevelopmentIdentityOption[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const focusPending = useRef(false);
 
-  const changeIdentity = (identity: DevelopmentIdentityOption) => {
-    startTransition(async () => {
-      await selectDevelopmentIdentity(identity.fixtureKey);
-      router.refresh();
-      if (pathname !== "/") {
-        router.replace("/");
-      }
+  useEffect(() => {
+    if (!focusPending.current || pathname !== "/") {
+      return;
+    }
+
+    focusPending.current = false;
+    const frame = window.requestAnimationFrame(() => {
       const title = document.querySelector("h1");
       if (title instanceof HTMLElement) {
         title.tabIndex = -1;
         title.focus({ preventScroll: true });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeFixtureKey, pathname]);
+
+  const changeIdentity = (identity: DevelopmentIdentityOption) => {
+    if (identity.fixtureKey === activeFixtureKey) {
+      return;
+    }
+
+    startTransition(async () => {
+      await selectDevelopmentIdentity(identity.fixtureKey);
+      focusPending.current = true;
+      if (pathname !== "/") {
+        router.replace("/");
+      } else {
+        router.refresh();
       }
       window.dispatchEvent(
         new CustomEvent("csrm:identity-changed", {

@@ -146,6 +146,19 @@ test.describe("remaining viewport matrix", () => {
 test.describe("access and state matrix", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
+  test("moves focus to the rendered home title after identity navigation settles", async ({ page }) => {
+    await page.goto("/test-evidence/states");
+    await expect(page.getByRole("heading", { name: /State evidence/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Security Analyst — Bob" }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    const homeTitle = page.getByRole("heading", { level: 1, name: "Cyber Risk Manager" });
+    await expect(homeTitle).toBeVisible();
+    await expect(homeTitle).toBeFocused();
+  });
+
   test("keeps access states, retry, long copy, and reduced motion local and safe", async ({ page }) => {
     const assertLocalNetwork = await blockExternalNetwork(page);
 

@@ -323,13 +323,14 @@ describe("AppShell", () => {
     );
   });
 
-  it("changes development identity through the validated action and returns focus to the page title", async () => {
+  it("changes development identity through the validated action without focusing the outgoing page", async () => {
     const user = userEvent.setup();
     render(
       <>
         <h1 tabIndex={-1}>Cyber Risk Manager</h1>
         <AccountMenu identity={requestor}>
           <DevelopmentIdentitySelector
+            activeFixtureKey={requestor.fixtureKey}
             identities={[requestor, analyst]}
           />
         </AccountMenu>
@@ -343,7 +344,7 @@ describe("AppShell", () => {
     await waitFor(() => expect(mockSelectDevelopmentIdentity).toHaveBeenCalledWith("analyst"));
     expect(mockRouterRefresh).toHaveBeenCalledOnce();
     expect(screen.queryByRole("menu")).toBeNull();
-    expect(document.activeElement).toBe(
+    expect(document.activeElement).not.toBe(
       screen.getByRole("heading", { name: "Cyber Risk Manager" }),
     );
     expect(screen.getByRole("status").textContent).toBe(

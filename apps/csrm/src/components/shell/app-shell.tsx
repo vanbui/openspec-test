@@ -9,9 +9,10 @@ import { AppHeader } from "./app-header";
 import { RouteAnnouncer } from "./route-announcer";
 import { Sidebar } from "./sidebar";
 
-function DevelopmentSelectorForRuntime() {
+function DevelopmentSelectorForRuntime({ fixtureKey }: { fixtureKey: "requestor" | "analyst" }) {
   return (
     <DevelopmentIdentitySelector
+      activeFixtureKey={fixtureKey}
       identities={[
         { fixtureKey: "requestor", displayName: "Requestor — Jane" },
         { fixtureKey: "analyst", displayName: "Security Analyst — Bob" },
@@ -36,7 +37,9 @@ export function AppShell({
   const navigationRoutes = identity
     ? visibleRoutes(identity.capabilities).filter((route) => routes.includes(route))
     : [];
-  const developmentSelector = <DevelopmentSelectorForRuntime />;
+  const developmentSelector = identity ? (
+    <DevelopmentSelectorForRuntime fixtureKey={identity.fixtureKey} />
+  ) : null;
 
   return (
     <>
