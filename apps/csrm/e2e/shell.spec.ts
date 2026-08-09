@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,6 +41,27 @@ async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
     .toBe(true);
+}
+
+async function expectVisibleTouchTargets(locator: Locator, description: string) {
+  let visibleCount = 0;
+
+  for (const target of await locator.all()) {
+    if (!(await target.isVisible())) continue;
+
+    visibleCount += 1;
+    const box = await target.boundingBox();
+    expect(box, `${description} bounding box`).not.toBeNull();
+    expect(box?.width, `${description} width`).toBeGreaterThanOrEqual(44);
+    expect(box?.height, `${description} height`).toBeGreaterThanOrEqual(44);
+  }
+
+  expect(visibleCount, `visible ${description} count`).toBeGreaterThan(0);
+}
+
+async function expectDrawerTouchTargets(dialog: Locator) {
+  await expectVisibleTouchTargets(dialog.getByRole("navigation").getByRole("link"), "drawer navigation link");
+  await expectVisibleTouchTargets(dialog.getByRole("button", { name: "Close" }), "drawer close control");
 }
 
 async function chooseAnalyst(page: Page) {
@@ -91,6 +112,7 @@ test.describe("Requestor mobile navigation", () => {
     const dialog = page.getByRole("dialog", { name: "CSRM navigation" });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole("navigation", { name: "CSRM navigation" })).toBeVisible();
+    await expectDrawerTouchTargets(dialog);
     await page.keyboard.press("Tab");
     await expect(dialog).toContainText("Dashboard");
     await page.keyboard.press("Escape");
@@ -117,6 +139,14 @@ test.describe("remaining viewport matrix", () => {
       await page.goto("/");
       await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
+      if (width === 375) {
+        await page.getByRole("button", { name: "Open navigation" }).click();
+        const dialog = page.getByRole("dialog", { name: "CSRM navigation" });
+        await expect(dialog).toBeVisible();
+        await expectDrawerTouchTargets(dialog);
+        await dialog.getByRole("button", { name: "Close" }).click();
+        await expect(dialog).toBeHidden();
+      }
       await expectNoHorizontalOverflow(page);
       await expect(page).toHaveScreenshot(screenshot, { fullPage: true });
     }

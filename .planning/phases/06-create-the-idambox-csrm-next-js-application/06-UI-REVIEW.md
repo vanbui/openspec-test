@@ -1,14 +1,15 @@
 # Phase 6 — UI Review
 
-**Audited:** 2026-08-09  
-**Baseline:** Approved [UI-SPEC.md](./06-UI-SPEC.md)  
+**Audited:** 2026-08-09<br>
+**Remediated:** 2026-08-09<br>
+**Baseline:** Approved [UI-SPEC.md](./06-UI-SPEC.md)<br>
 **Screenshots:** Eight committed Playwright baselines inspected; no pre-existing dev server was available on ports 3000, 5173, or 8080.
 
 ---
 
 ## Verdict
 
-**PASS WITH WARNINGS — 22/24.** The shipped foundation meets the approved light-first shell, state-copy, responsive-shell, accessibility, and production-fixture boundaries. No blocker was found. Two implementation details diverge from the explicit interaction/type contracts and should be corrected before later screens reuse these primitives.
+**PASS — 24/24.** The shipped foundation meets the approved light-first shell, state-copy, responsive-shell, accessibility, production-fixture, semantic typography, and mobile touch-target boundaries. All three audit warnings were remediated and verified on 2026-08-09.
 
 ## Pillar Scores
 
@@ -17,19 +18,19 @@
 | 1. Copywriting | 4/4 | Approved foundation and reusable-state copy is exact and task-specific. |
 | 2. Visuals | 4/4 | The desktop, collapsed, tablet, mobile, and state baselines preserve a calm, sparse operational hierarchy. |
 | 3. Color | 4/4 | Semantic tokens match the approved palette and visuals keep blue/teal restrained. |
-| 4. Typography | 3/4 | The shipped avatar primitive retains an undeclared 12px `text-xs` text style. |
+| 4. Typography | 4/4 | Avatar fallback text uses the approved semantic label size, guarded by a source-wide token test. |
 | 5. Spacing | 4/4 | Shell geometry, gutters, and content rhythm conform to the declared scale. |
-| 6. Experience Design | 3/4 | Touch drawer navigation links remain 40px high instead of the required 44px. |
+| 6. Experience Design | 4/4 | Touch drawer links and the close control are verified at 44×44px or larger at both required phone widths. |
 
-**Overall: 22/24**
+**Overall: 24/24**
 
 ---
 
-## Top 3 Priority Fixes
+## Resolution Summary
 
-1. **Make mobile drawer route rows at least 44px high.** — A touch target below the required minimum reduces reliable navigation on phones. — Change the route-link class in `NavigationGroup` to use `h-11 md:h-10` (or an equivalent mobile-first 44px minimum), and add bounding-box assertions for drawer links at 375px and 390px.
-2. **Remove the undeclared 12px avatar text style.** — The base component can introduce typography outside the approved four-size system when reused. — Replace `text-xs` in `avatar.tsx` with `text-label` (or remove the unused fallback variants) and extend the token scan test to reject size utilities outside the contract.
-3. **Add a contract test for all touch navigation targets, not just header triggers.** — The current E2E suite proves the menu and account triggers are 44px but misses the rows inside the opened drawer. — Assert each visible drawer link and close control is at least 44×44 at the 375px viewport.
+1. **Resolved: mobile drawer route rows are at least 44px high.** `NavigationGroup` now uses `h-11 md:h-10`, preserving the approved 40px desktop row.
+2. **Resolved: avatar typography uses the semantic scale.** Avatar fallback and group-count text now use `text-label`; the token test rejects undeclared Tailwind text-size utilities throughout application source.
+3. **Resolved: touch-target coverage includes drawer contents.** Playwright measures every visible drawer navigation link and the close control at both 375px and 390px.
 
 ---
 
@@ -50,9 +51,9 @@
 - **Verified:** Light and dark-ready semantic token values exactly implement the approved palette in [globals.css](../../../../apps/csrm/src/app/globals.css#L56) and [globals.css](../../../../apps/csrm/src/app/globals.css#L88); source components use semantic utilities rather than raw brand values.
 - **Verified:** The active route reserves teal for its 3px rule and primary-soft for selection in [navigation-group.tsx](../../../../apps/csrm/src/components/shell/navigation-group.tsx#L88). The screenshots show pale canvas/white structural surfaces dominating, with no decorative blue or teal fields.
 
-### Pillar 4: Typography (3/4)
+### Pillar 4: Typography (4/4)
 
-- **WARNING:** The approved UI contract permits only label/body/heading/display sizes (14/16/20/28px). The shipped [avatar.tsx](../../../../apps/csrm/src/components/ui/avatar.tsx#L49) includes `text-xs` (12px) as a fallback style. The audit found `text-sm` twice and `text-xs` once outside the named semantic type utilities. It is not visible in the current shell baselines, but it is reusable shipped UI and violates the foundation constraint.
+- **RESOLVED:** The approved UI contract permits only label/body/heading/display sizes (14/16/20/28px). [avatar.tsx](../../../../apps/csrm/src/components/ui/avatar.tsx) now uses `text-label` for fallback and group-count text, and [tokens.test.ts](../../../../apps/csrm/src/styles/tokens.test.ts) scans application source for undeclared Tailwind text-size utilities.
 - **Verified:** Current shell and state surfaces consistently use `text-label`, `text-body`, `text-heading`, and `text-display` with `font-semibold`; [globals.css](../../../../apps/csrm/src/app/globals.css#L42) centralizes the four sizes and two allowed weights.
 
 ### Pillar 5: Spacing (4/4)
@@ -60,9 +61,9 @@
 - **Verified:** Tokens declare only the approved 4/8/16/24/32/48/64px scale in [globals.css](../../../../apps/csrm/src/app/globals.css#L34). The only arbitrary geometry found is contract-required: 3px active rule and 272px desktop sidebar in [navigation-group.tsx](../../../../apps/csrm/src/components/shell/navigation-group.tsx#L88) and [sidebar.tsx](../../../../apps/csrm/src/components/shell/sidebar.tsx#L48).
 - **Verified:** The shell applies 16px mobile, 24px tablet, and 32px desktop gutters plus 64px desktop top rhythm in [app-shell.tsx](../../../../apps/csrm/src/components/shell/app-shell.tsx#L59). The committed viewport evidence has no horizontal overflow; this is also asserted in [shell.spec.ts](../../../../apps/csrm/e2e/shell.spec.ts#L40).
 
-### Pillar 6: Experience Design (3/4)
+### Pillar 6: Experience Design (4/4)
 
-- **WARNING:** Drawer navigation links use a fixed `h-10` / 40px row in [navigation-group.tsx](../../../../apps/csrm/src/components/shell/navigation-group.tsx#L88), including below the 768px mobile breakpoint. The contract requires 44px touch navigation rows. The E2E target-size check covers only the menu and account triggers at [shell.spec.ts](../../../../apps/csrm/e2e/shell.spec.ts#L83), so it cannot detect this deviation.
+- **RESOLVED:** Drawer navigation links use `h-11 md:h-10` in [navigation-group.tsx](../../../../apps/csrm/src/components/shell/navigation-group.tsx), giving touch layouts a 44px row while preserving the 40px desktop contract. [shell.spec.ts](../../../../apps/csrm/e2e/shell.spec.ts) measures every visible drawer link and the close control at both 375px and 390px.
 - **Verified:** Focus containment/restoration, Escape dismissal, selection dismissal, overflow safety, and reduced-motion behavior are exercised in [shell.spec.ts](../../../../apps/csrm/e2e/shell.spec.ts#L79) and [globals.css](../../../../apps/csrm/src/app/globals.css#L153). The just-run suite passed all six browser tests.
 - **Verified:** Production excludes the fixture selector and test-evidence routes: [next.config.ts](../../../../apps/csrm/next.config.ts#L13) supplies production replacements, [proxy.ts](../../../../apps/csrm/src/proxy.ts#L8) returns production 404s, and [shell.spec.ts](../../../../apps/csrm/e2e/shell.spec.ts#L189) scans emitted assets and HTTP responses.
 
@@ -90,4 +91,7 @@ Registry audit: **0 third-party blocks checked, no flags.** [components.json](..
 
 ## Validation Run
 
-- `yarn workspace @idambox/csrm test:e2e` — **6 passed** (2026-08-09)
+- `yarn vitest run src/styles/tokens.test.ts` — **6 passed** (2026-08-09)
+- `yarn check-types` — **passed** (2026-08-09)
+- `yarn lint` — **passed with zero warnings** (2026-08-09)
+- `yarn test:e2e` — **6 passed** at the full viewport matrix; no snapshots changed (2026-08-09)

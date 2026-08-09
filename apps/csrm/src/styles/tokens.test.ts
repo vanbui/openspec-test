@@ -1,10 +1,19 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 const appRoot = resolve(__dirname, '../..');
 const readAppFile = (relativePath: string) => readFileSync(resolve(appRoot, relativePath), 'utf8');
+
+function sourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = resolve(directory, entry.name);
+
+    if (entry.isDirectory()) return sourceFiles(entryPath);
+    return /\.[jt]sx?$/.test(entry.name) ? [entryPath] : [];
+  });
+}
 
 const expectedTokens = {
   light: {
@@ -105,6 +114,16 @@ describe('CSRM semantic token foundation', () => {
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
     expect(css).toContain('outline: 2px solid var(--focus-ring)');
     expect(css).toContain('overflow-wrap: anywhere');
+  });
+
+  it('uses only the declared semantic typography sizes in application source', () => {
+    const undeclaredTextSize = /\btext-(?:xs|sm|base|lg|xl|[2-9]xl)\b/g;
+    const violations = sourceFiles(resolve(appRoot, 'src')).flatMap((filePath) => {
+      const matches = readFileSync(filePath, 'utf8').match(undeclaredTextSize) ?? [];
+      return matches.map((utility) => `${filePath.slice(appRoot.length + 1)}: ${utility}`);
+    });
+
+    expect(violations).toEqual([]);
   });
 
   it('renders only the approved neutral foundation copy through semantic classes', () => {

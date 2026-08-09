@@ -85,7 +85,7 @@ export function NavigationGroup({
               aria-current={isActive ? "page" : undefined}
               aria-label={collapsed ? route.title : undefined}
               className={cn(
-                "flex h-10 min-w-0 items-center border-l-[3px] border-transparent px-md text-label font-semibold text-foreground transition-colors hover:bg-surface",
+                "flex h-11 min-w-0 items-center border-l-[3px] border-transparent px-md text-label font-semibold text-foreground transition-colors hover:bg-surface md:h-10",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                 collapsed && "justify-center px-0",
                 isActive && "border-l-accent bg-primary-soft",
