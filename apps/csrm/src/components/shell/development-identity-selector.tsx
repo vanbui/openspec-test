@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useRef, useTransition } from "react";
+import { useTransition } from "react";
 
 import type { FixtureKey } from "@/domain/identity";
 import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
@@ -11,6 +11,23 @@ type DevelopmentIdentityOption = {
   fixtureKey: FixtureKey;
   displayName: string;
 };
+
+function focusHomeTitleAfterNavigation(attempt = 0): void {
+  const title = document.querySelector("h1");
+  if (
+    window.location.pathname === "/" &&
+    title instanceof HTMLElement &&
+    title.textContent === "Cyber Risk Manager"
+  ) {
+    title.tabIndex = -1;
+    title.focus({ preventScroll: true });
+    return;
+  }
+
+  if (attempt < 120) {
+    window.requestAnimationFrame(() => focusHomeTitleAfterNavigation(attempt + 1));
+  }
+}
 
 /** Small client island that submits a server-validated development fixture key. */
 export function DevelopmentIdentitySelector({
@@ -23,24 +40,6 @@ export function DevelopmentIdentitySelector({
   const pathname = usePathname();
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const focusPending = useRef(false);
-
-  useEffect(() => {
-    if (!focusPending.current || pathname !== "/") {
-      return;
-    }
-
-    focusPending.current = false;
-    const frame = window.requestAnimationFrame(() => {
-      const title = document.querySelector("h1");
-      if (title instanceof HTMLElement) {
-        title.tabIndex = -1;
-        title.focus({ preventScroll: true });
-      }
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [activeFixtureKey, pathname]);
 
   const changeIdentity = (identity: DevelopmentIdentityOption) => {
     if (identity.fixtureKey === activeFixtureKey) {
@@ -49,12 +48,12 @@ export function DevelopmentIdentitySelector({
 
     startTransition(async () => {
       await selectDevelopmentIdentity(identity.fixtureKey);
-      focusPending.current = true;
       if (pathname !== "/") {
         router.replace("/");
       } else {
         router.refresh();
       }
+      window.requestAnimationFrame(() => focusHomeTitleAfterNavigation());
       window.dispatchEvent(
         new CustomEvent("csrm:identity-changed", {
           detail: { displayName: identity.displayName },
