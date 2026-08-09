@@ -11,9 +11,11 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3001",
     colorScheme: "light",
     locale: "en-AU",
-    reducedMotion: "reduce",
     timezoneId: "Australia/Melbourne",
     trace: "on-first-retry",
+    contextOptions: {
+      reducedMotion: "reduce",
+    },
   },
   webServer: {
     command: "yarn workspace @idambox/csrm dev",

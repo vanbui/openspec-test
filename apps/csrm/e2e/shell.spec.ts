@@ -43,6 +43,11 @@ test.describe("Requestor desktop foundation", () => {
     await expect(page.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("navigation", { name: "CSRM navigation" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Account menu" })).toContainText("Requestor — Jane");
+    expect(
+      await page
+        .getByText("Your cyber risk management workspace is ready.")
+        .evaluate((element) => element.getBoundingClientRect().width),
+    ).toBeGreaterThanOrEqual(320);
     await expect(page.getByText("My Requests")).toHaveCount(0);
     await expect(page.getByText("Risk Register", { exact: true })).toHaveCount(0);
     await expect(page).toHaveScreenshot("shell-requestor-desktop.png", { fullPage: true });

@@ -50,6 +50,7 @@
   --font-weight-normal: 400;
   --font-weight-semibold: 600;
   --container-canvas: 1440px;
+  --container-reading: 672px;
 }
 
 :root {

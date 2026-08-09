@@ -20,7 +20,7 @@ export function PageHeader({
         <div className="min-w-0">
           <h1 className="text-display font-semibold text-foreground">{title}</h1>
           {description ? (
-            <p className="mt-md max-w-2xl text-body text-muted-foreground">
+            <p className="mt-md max-w-reading text-body text-muted-foreground">
               {description}
             </p>
           ) : null}
