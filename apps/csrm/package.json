@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack --port 3001",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start --port 3001",
     "lint": "NODE_PATH=./node_modules eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
