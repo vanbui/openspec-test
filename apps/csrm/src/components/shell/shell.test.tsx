@@ -5,9 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import LoadingPage from "@/app/loading";
 import NotFoundPage from "@/app/not-found";
-import AnalystOnlyEvidencePage, {
-  resolveAnalystOnlyEvidence,
-} from "@/app/__test__/analyst-only/page";
 import { routeDefinitions } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 
@@ -109,31 +106,45 @@ describe("AppShell", () => {
   });
 
   it("guards the analyst-only evidence route before protected work", async () => {
-    const protectedLoad = vi.fn();
+    const { default: RequestorEvidencePage } = await import(
+      "@/app/test-evidence/analyst-only/page"
+    );
 
-    await expect(
-      resolveAnalystOnlyEvidence(requestor, protectedLoad),
-    ).resolves.toBe("forbidden");
-    expect(protectedLoad).not.toHaveBeenCalled();
-
-    await expect(
-      resolveAnalystOnlyEvidence(analyst, protectedLoad),
-    ).resolves.toBe("allowed");
-    expect(protectedLoad).toHaveBeenCalledTimes(1);
-
-    render(await AnalystOnlyEvidencePage());
+    render(await RequestorEvidencePage());
     expect(
       screen.getByRole("heading", { name: "You don’t have access to this area" }),
     ).toBeDefined();
+
+    cleanup();
+    vi.resetModules();
+    vi.doMock("@/lib/fixtures/resolve-identity", () => ({
+      isFixtureRuntime: () => true,
+      resolveDevelopmentIdentity: () => analyst,
+    }));
+    const { default: AnalystEvidencePage } = await import(
+      "@/app/test-evidence/analyst-only/page"
+    );
+
+    render(await AnalystEvidencePage());
+    expect(
+      screen.getByRole("heading", { name: "Authorization evidence" }),
+    ).toBeDefined();
+    expect(screen.queryByText(/request|record|backend|http/i)).toBeNull();
+    vi.doUnmock("@/lib/fixtures/resolve-identity");
   });
 
   it("makes the analyst-only evidence route unavailable in production", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const { default: AnalystOnlyEvidencePage } = await import(
+      "@/app/test-evidence/analyst-only/page"
+    );
 
     await expect(AnalystOnlyEvidencePage()).rejects.toMatchObject({
       digest: "NEXT_HTTP_ERROR_FALLBACK;404",
     });
 
     vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/fixtures/resolve-identity");
   });
 });

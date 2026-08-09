@@ -12,9 +12,9 @@ const analystOnlyCapability = "function.administration.controls" as const;
 
 /**
  * Explicit test-only access evidence. This has no registry entry, data request,
- * or production route surface; it proves that local guards run before work.
+ * or production capability surface; it proves local guards run before work.
  */
-export async function resolveAnalystOnlyEvidence(
+async function resolveAnalystOnlyEvidence(
   identity: IdentitySnapshot | null,
   beforeProtectedLoad?: () => void | Promise<void>,
 ): Promise<"allowed" | "forbidden"> {
@@ -34,6 +34,20 @@ export async function resolveAnalystOnlyEvidence(
   return "allowed";
 }
 
+function AnalystOnlyEvidenceContent() {
+  return (
+    <section aria-label="Authorization evidence" className="max-w-2xl">
+      <h1 className="text-display font-semibold text-foreground">
+        Authorization evidence
+      </h1>
+      <p className="mt-md text-body text-muted-foreground">
+        This non-production route confirms that the required capability passed
+        server preflight.
+      </p>
+    </section>
+  );
+}
+
 export default async function AnalystOnlyEvidencePage() {
   if (!isFixtureRuntime()) {
     notFound();
@@ -46,15 +60,5 @@ export default async function AnalystOnlyEvidencePage() {
     return <AccessDeniedState />;
   }
 
-  return (
-    <section aria-label="Authorization evidence" className="max-w-2xl">
-      <h1 className="text-display font-semibold text-foreground">
-        Authorization evidence
-      </h1>
-      <p className="mt-md text-body text-muted-foreground">
-        This non-production route confirms that the required capability passed
-        server preflight.
-      </p>
-    </section>
-  );
+  return <AnalystOnlyEvidenceContent />;
 }
