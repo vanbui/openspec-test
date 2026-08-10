@@ -18,8 +18,8 @@ IdamBox must provide a clean shared authorization model where each application c
 - ✓ IdamBox Strapi backend exists as the first application in the monorepo — Phase 1
 - ✓ Strapi native admin authentication remains the Phase 1 content administration path — Phase 1
 - ✓ Custom IdamBox user collection exists separately from Strapi admin users and future Auth0 users — Phase 1
-- ✓ Applications, application roles, roles, and user role assignments are modeled in Strapi — Phase 1
-- ✓ User access can be derived indirectly through assigned roles and those roles' application roles — Phase 1
+- ✓ Applications, application-owned Functions, FunctionApi operation grants, Roles, and user Role assignments are modeled in Strapi — Phase 1
+- ✓ User access can be derived indirectly through `IdamBoxUser -> Role -> Function -> Application`; FunctionApi records carry operation-level grants below each Function — Phase 1
 - ✓ CSRM bootstrap application access data and sample users exist behind local seed flags — Phase 2
 - ✓ Local Keycloak identity-provider setup exists for future application login — Phase 3
 - ✓ Strapi IdamBox users can be provisioned into Keycloak when provisioning is enabled — Phase 4
@@ -33,7 +33,7 @@ IdamBox must provide a clean shared authorization model where each application c
 
 - Auth0 app authentication - deferred until Next.js application modules are added.
 - Building IdamBox IAM, Compliance, Automation, Crypto Manager, LMS, or Cyber Risk Manager frontends - future phases.
-- Implementing fine-grained entitlement strings such as `users.read` or `roles.write` - application roles start with `name` and `description`.
+- Implementing free-floating fine-grained permission strings such as `users.read` or `roles.write` - application authorization remains modeled through application-owned Functions and their FunctionApi operation grants.
 - Building custom Strapi admin UI - use native Strapi administration for Phase 1.
 - Production deployment, SSO, audit reporting, and compliance workflows - future platform/application work.
 
@@ -41,7 +41,7 @@ IdamBox must provide a clean shared authorization model where each application c
 
 The root workspace contains example monorepos. The closest example is `example-projects/edalas-dylan`, which uses a Turbo monorepo with `apps/backend` for Strapi, `apps/web` for Next.js, and shared packages under `packages/*`. The IdamBox rebuild should follow that shape so future application modules can be added as independent Next.js apps under `apps/*`.
 
-BProton's public site frames IdamBox around identity, compliance, automation, crypto management, learning, and cyber risk modules. The rebuild should treat those products as applications that can define their own application roles while sharing the central IdamBox backend.
+BProton's public site frames IdamBox around identity, compliance, automation, crypto management, learning, and cyber risk modules. The rebuild should treat those products as applications that own Functions while sharing the central IdamBox backend.
 
 Strapi Phase 1 uses native Strapi admin authentication for administrators who enter and edit records in Strapi. Future Next.js apps will use Auth0 for end-user authentication and map external identities to the custom IdamBox user collection.
 
@@ -50,8 +50,8 @@ Strapi Phase 1 uses native Strapi admin authentication for administrators who en
 - **Scope**: Phase 1 is backend-only - avoid frontend shell work until application modules are planned.
 - **Authentication**: Strapi native admin authentication only for Phase 1 - Auth0 is deferred to app phases.
 - **User model**: Create an IdamBox-specific user collection - do not rely on Strapi admin users as product users.
-- **Role model**: Roles are bundles of application roles - application role assignment reaches users indirectly through roles.
-- **Application roles**: Start with `name` and `description` only, plus the relationship to the owning application.
+- **Authorization model**: Roles are reusable bundles of application-owned Functions; effective access follows `IdamBoxUser -> Role -> Function -> Application`.
+- **Operation grants**: Functions may expose FunctionApi records for operation-level grants. Keep grants attached to Functions rather than introducing free-floating permission strings.
 - **Monorepo pattern**: Follow the closest example project, `example-projects/edalas-dylan`, using an `apps/*` and `packages/*` Turbo workspace shape.
 
 ## Key Decisions
@@ -62,8 +62,9 @@ Strapi Phase 1 uses native Strapi admin authentication for administrators who en
 | Use Strapi native admin authentication in Phase 1 | Administrators only need to enter and manage backend data through Strapi. | - Pending |
 | Defer Auth0 to app phases | Auth0 is needed for future Next.js application users, not for the initial backend-only phase. | - Pending |
 | Create a custom IdamBox user collection | Product users should be separate from Strapi admin users and future external identity provider records. | - Pending |
-| Model application roles as separate records | Each IdamBox application needs its own role vocabulary, such as LMS `STUDENT` and `TUTOR`. | - Pending |
-| Assign application roles indirectly through roles | Roles act as reusable bundles of application roles assigned to users. | - Pending |
+| Model application-owned Functions as separate records | Each IdamBox application needs its own Function vocabulary, such as LMS `STUDENT` and `TUTOR`, without restoring the removed ApplicationRole model. | Completed — accepted Entitlement-to-Function migration |
+| Add FunctionApi operation grants | A Function can carry its concrete operation-level API grants while ownership of the Function supplies the Application relationship. | Completed — approved FunctionApi addition |
+| Assign Functions indirectly through Roles | Roles act as reusable bundles of application-owned Functions assigned to users. | Completed — live path is `IdamBoxUser -> Role -> Function -> Application` |
 | Follow the `edalas-dylan` monorepo pattern | It is the closest provided example for Strapi plus Next.js apps in a Turbo monorepo. | - Pending |
 | Add guarded core sample seeding | Local verification benefits from representative application and LMS role records, but production must not seed by default. | - Pending |
 

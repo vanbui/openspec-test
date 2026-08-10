@@ -17,7 +17,9 @@
         "dist/**",
         "build/**",
         ".strapi/**",
-        "!.strapi/client/app.js"
+        "!.strapi/client/app.js",
+        ".next/**",
+        "!.next/cache/**"
       ]
     },
     "dev": {

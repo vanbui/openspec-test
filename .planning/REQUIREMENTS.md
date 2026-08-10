@@ -23,11 +23,11 @@ Requirements for the initial backend foundation release. Each maps to roadmap ph
 
 - [x] **DATA-01**: Administrator can manage IdamBox users in a custom IdamBox-specific user collection.
 - [x] **DATA-02**: Administrator can manage applications representing IdamBox modules such as IAM, Compliance, Automation, Crypto Manager, LMS, and Cyber Risk Manager.
-- [x] **DATA-03**: Administrator can manage application roles as records with `name` and `description`.
-- [x] **DATA-04**: Administrator can associate each application role with its owning application.
-- [x] **DATA-05**: Administrator can manage roles as reusable bundles of application roles.
+- [x] **DATA-03**: Administrator can manage application-owned Functions as records with `name`, `description`, and navigation metadata.
+- [x] **DATA-04**: Administrator can associate each Function with its owning Application and manage FunctionApi operation grants beneath a Function.
+- [x] **DATA-05**: Administrator can manage Roles as reusable bundles of application-owned Functions.
 - [x] **DATA-06**: Administrator can assign one or more roles to an IdamBox user.
-- [x] **DATA-07**: Backend data relationships allow a user's effective application roles to be derived through user -> roles -> application roles -> application.
+- [x] **DATA-07**: Backend data relationships allow a user's effective application access to be derived through `IdamBoxUser -> Role -> Function -> Application`, with FunctionApi records supplying operation-level grants.
 
 ## v2 Requirements
 
@@ -50,8 +50,8 @@ Identity provider, CSRM bootstrap, and first application-module requirements add
 ### Bootstrap Data
 
 - [x] **BOOT-01**: Strapi can seed a CSRM application record at backend boot.
-- [x] **BOOT-02**: Strapi can seed CSRM application roles for Security Analyst and Security Analyst Agent.
-- [x] **BOOT-03**: Strapi can seed reusable roles matching the CSRM application roles.
+- [x] **BOOT-02**: Strapi can seed CSRM application-owned Function and FunctionApi access data for Security Analyst and the equivalent Security Analyst Agent Role.
+- [x] **BOOT-03**: Strapi can seed reusable Function-backed Roles for Security Analyst, Security Analyst Agent with the same Function grants, and the current Requestor catalogue Role.
 - [x] **BOOT-04**: Strapi can seed Jane Doe and Bob Doe as custom IdamBox users, assigning Bob Doe to the Security Analyst role.
 
 ### CSRM
@@ -65,6 +65,10 @@ Identity provider, CSRM bootstrap, and first application-module requirements add
 - **CSRM-07**: Requestor can view released assessments for their own assessment requests.
 - **CSRM-08**: Security Analyst can view and edit all CSRM assessment requests, questionnaires, and assessments.
 - **CSRM-09**: Security Analyst can release assessments for requestor viewing.
+
+### Accepted Authorization Migration
+
+The completed Phase 1/2 requirement wording above records the accepted migration from the former `ApplicationRole` terminology to the implemented Application/Function/FunctionApi/Role model. It supersedes the historical terminology without reopening completed Phase 1 or Phase 2 scope.
 
 ### Applications
 
@@ -86,7 +90,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | --------------------------------- | ---------------------------------------------------------------- |
 | Auth0 login in Phase 1            | App authentication starts when Next.js modules are added.        |
 | Next.js frontend shell in Phase 1 | Current scope is the Strapi backend and core model only.         |
-| Fine-grained permissions          | Application roles start as simple named roles with descriptions. |
+| Free-floating fine-grained permissions | Application authorization is modeled through Functions and FunctionApi operation grants, not standalone permission strings. |
 | Custom Strapi admin UI            | Native Strapi admin is sufficient for Phase 1.                   |
 | Production deployment             | First milestone is backend/data-model foundation.                |
 

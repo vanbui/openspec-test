@@ -4,6 +4,13 @@ import catalogue from "./idambox-csrm-role-function-api-catalogue.json";
 
 const CSRM_APPLICATION_SLUG = "idambox-csrm";
 const CSRM_SECURITY_ANALYST_ROLE_NAME = "Security Analyst";
+const CSRM_APPLICATION = {
+  name: "IdamBox CSRM",
+  slug: CSRM_APPLICATION_SLUG,
+  description:
+    "Cybersecurity Risk Manager module for automating cybersecurity risk management processes.",
+  applicationStatus: "active",
+} as const;
 
 type SeededFunction = {
   documentId: string;
@@ -53,12 +60,17 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     limit: 1,
   });
 
-  const application = existingApplications[0];
+  const application =
+    existingApplications[0] ??
+    (await applicationService.create({
+      data: CSRM_APPLICATION,
+    }));
 
-  if (!application) {
-    throw new Error(
-      `The IdamBox CSRM application was not found. Enable IDAMBOX_SEED_CORE=true to seed core applications before CSRM data.`,
-    );
+  if (existingApplications.length > 0) {
+    await applicationService.update({
+      documentId: application.documentId,
+      data: CSRM_APPLICATION,
+    });
   }
 
   const seededFunctions = new Map<string, SeededFunction>();
@@ -73,6 +85,9 @@ export async function seedCsrmData(strapi: Core.Strapi) {
           documentId: {
             $eq: application.documentId,
           },
+        },
+        menuPath: {
+          $eq: functionSeed.menuPath,
         },
       },
       populate: {
@@ -217,12 +232,18 @@ export async function seedCsrmData(strapi: Core.Strapi) {
 
   if (existingJaneUsers.length === 0) {
     await userService.create({
-      data: CSRM_USERS.jane,
+      data: {
+        ...CSRM_USERS.jane,
+        roles: [],
+      },
     });
   } else {
     await userService.update({
       documentId: existingJaneUsers[0].documentId,
-      data: CSRM_USERS.jane,
+      data: {
+        ...CSRM_USERS.jane,
+        roles: [],
+      },
     });
   }
 

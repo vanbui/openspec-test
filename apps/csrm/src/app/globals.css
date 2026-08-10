@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-focus-ring: var(--focus-ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-info: var(--info);
+  --color-risk-low: var(--risk-low);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-high: var(--risk-high);
+  --color-risk-critical: var(--risk-critical);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-border: var(--border-subtle);
+  --color-ring: var(--focus-ring);
+  --radius-card: 8px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --text-label: 14px;
+  --text-label--line-height: 1.2;
+  --text-body: 16px;
+  --text-body--line-height: 1.5;
+  --text-heading: 20px;
+  --text-heading--line-height: 1.2;
+  --text-display: 28px;
+  --text-display--line-height: 1.2;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+  --container-canvas: 1440px;
+  --container-reading: 672px;
+}
+
+:root {
+  --background: #F7FAFC;
+  --foreground: #17212B;
+  --surface: #FFFFFF;
+  --surface-muted: #EDF4F6;
+  --border-subtle: #D7E2E8;
+  --primary: #075E9B;
+  --primary-foreground: #FFFFFF;
+  --primary-soft: #E4F1F8;
+  --accent: #087F8C;
+  --focus-ring: #0B73C9;
+  --success: #16794D;
+  --warning: #9A5B00;
+  --destructive: #B42318;
+  --info: #075E9B;
+  --risk-low: #16794D;
+  --risk-medium: #9A5B00;
+  --risk-high: #C2410C;
+  --risk-critical: #B42318;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--foreground);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--foreground);
+  --duration-standard: 150ms;
+  --duration-drawer: 200ms;
+  --shadow-floating: 0 8px 24px rgb(23 33 43 / 8%);
+}
+
+.dark {
+  --background: #0B1220;
+  --foreground: #E6EDF3;
+  --surface: #131E2A;
+  --surface-muted: #1C2A38;
+  --border-subtle: #2D4152;
+  --primary: #4EA7E8;
+  --primary-foreground: #06111B;
+  --primary-soft: #17354A;
+  --accent: #36BFC1;
+  --focus-ring: #7BC5F5;
+  --success: #55C58A;
+  --warning: #F0B45B;
+  --destructive: #F28B82;
+  --info: #4EA7E8;
+  --risk-low: #55C58A;
+  --risk-medium: #F0B45B;
+  --risk-high: #FB923C;
+  --risk-critical: #F28B82;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--foreground);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--foreground);
+  --duration-standard: 150ms;
+  --duration-drawer: 200ms;
+  --shadow-floating: 0 8px 24px rgb(0 0 0 / 24%);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border-subtle);
+  }
+
+  html {
+    min-height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    overflow-x: clip;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--text-body);
+    font-weight: 400;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  main {
+    display: block;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

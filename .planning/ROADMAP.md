@@ -26,7 +26,7 @@
 
 ### Phase 1: Strapi Backend Foundation
 
-**Goal:** Create a runnable IdamBox Strapi backend inside a Turbo monorepo and implement the core data model for users, roles, applications, and application roles.
+**Goal:** Create a runnable IdamBox Strapi backend inside a Turbo monorepo and implement the core data model for IdamBox users, Roles, Applications, Functions, and FunctionApi operation grants.
 
 **Requirements:**
 
@@ -49,8 +49,8 @@
 1. Repository has a Turbo workspace layout matching the closest example, with Strapi located at `apps/backend` and room for future app modules under `apps/*`.
 2. Strapi backend can be installed, built, and run in development mode from root workspace scripts.
 3. Native Strapi admin authentication allows an administrator to enter and edit Phase 1 records.
-4. Content types exist for IdamBox user, role, application, and application role with the agreed Phase 1 attributes.
-5. Relationships support deriving application access through `IdamBoxUser -> Role -> ApplicationRole -> Application`.
+4. Content types exist for IdamBox user, Role, Application, Function, and FunctionApi with the agreed attributes and ownership relationships.
+5. Relationships support deriving application access through `IdamBoxUser -> Role -> Function -> Application`, with FunctionApi records carrying operation-level grants.
 
 **Plans:**
 
@@ -72,7 +72,7 @@
 - Strapi native admin authentication is the Phase 1 admin path.
 - Auth0 is deferred to later app phases.
 - Product users must use a custom IdamBox user collection, not Strapi admin users.
-- Effective access must follow `IdamBoxUser -> Role -> ApplicationRole -> Application`.
+- Effective access must follow `IdamBoxUser -> Role -> Function -> Application`; FunctionApi records carry operation-level grants below Functions.
 
 **UI hint:** no
 
@@ -92,22 +92,25 @@
 **Success Criteria:**
 
 1. Strapi bootstraps an `Application` record for CSRM, standing for Cybersecurity Risk Manager.
-2. Strapi bootstraps `ApplicationRole` records for `Security Analyst` and `Security Analyst Agent`, owned by the CSRM application.
-3. Strapi bootstraps matching reusable `Role` records for those two application roles.
+2. Strapi bootstraps CSRM-owned Functions and FunctionApi operation grants for the Security Analyst access catalogue.
+3. Strapi bootstraps reusable Function-backed Roles for `Security Analyst`, `Security Analyst Agent`, and the current `Requestor` catalogue Role; Security Analyst Agent has the same Function grant set as Security Analyst.
 4. Strapi bootstraps IdamBox users `Jane Doe <jane.doe@idambox.com>` and `Bob Doe <bob.doe@idambox.com>`.
-5. Bob Doe is assigned to the `Security Analyst` role, while Jane Doe remains an end-user/requestor account for later CSRM assessment requests.
+5. Bob Doe is assigned only to the `Security Analyst` Role, while Jane Doe has no Roles and remains an end-user/requestor account for later CSRM assessment requests; `Security Analyst Agent` is seeded but assigned to neither sample user.
 
-**Plans:** 1/1 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 
 - [x] `02-01-PLAN.md` - CSRM Seed Data, Documentation, And Verification
+- [x] `02-02-PLAN.md` - Function-Based CSRM Seed Runtime And Verification Gap Closure
+- [x] `02-03-PLAN.md` - Authorization Contract Documentation And Traceability Gap Closure
 
 **Cross-cutting constraints:**
 
-- Preserve the authorization path: `IdamBoxUser -> Role -> ApplicationRole -> Application`.
+- Preserve the authorization path: `IdamBoxUser -> Role -> Function -> Application`, with FunctionApi operation grants below Functions.
 - Bootstrap data must be idempotent so repeated Strapi starts do not create duplicate records.
 - Use the existing Phase 1 custom IdamBox user model, not Strapi admin users.
+- The accepted equivalent of historical D-07/D-08 is a reusable `Security Analyst Agent` Role with the same Function grant set as `Security Analyst`; do not restore ApplicationRole to match historical wording.
 
 **UI hint:** no
 
@@ -242,11 +245,52 @@ Plans:
 4. A typed service abstraction targets the Strapi OpenAPI contract and supports production Strapi calls plus fixtures or an HTTP-level test double without introducing a competing mock-only contract.
 5. Unit, component, integration, and Playwright foundations cover core layout, capability, validation, and responsive behavior.
 
-**Plans:** 0 plans
+**Plans:** 9/9 plans complete
 
 Plans:
 
-- [ ] TBD (run `$gsd-plan-phase 6` to break down)
+- [x] 06-01-PLAN.md
+- [x] 06-02-PLAN.md
+- [x] 06-03-PLAN.md
+- [x] 06-04-PLAN.md
+- [x] 06-05-PLAN.md
+- [x] 06-06-PLAN.md
+- [x] 06-07-PLAN.md
+- [x] 06-08-PLAN.md
+- [x] 06-09-PLAN.md
+
+**Wave 1**
+
+- [ ] `06-01-PLAN.md` — Audited dependency gate and strict CSRM workspace configuration
+
+**Wave 2**
+
+- [ ] `06-02-PLAN.md` — Runnable port-3001 foundation tracer, bounded runtime probe, and Turbo wiring
+
+**Wave 3**
+
+- [ ] `06-03-PLAN.md` — Generated Strapi transport boundary and fail-closed MSW integration
+- [ ] `06-04-PLAN.md` — Function-ID capabilities, routes, development identities, and access preflight
+
+**Wave 4**
+
+- [ ] `06-05-PLAN.md` — Semantic design tokens and reviewed local UI primitives
+
+**Wave 5**
+
+- [ ] `06-06-PLAN.md` — Complete reusable loading, error, access, partial, overflow, and cardinality states
+
+**Wave 6**
+
+- [ ] `06-07-PLAN.md` — Server-rendered capability shell and safe direct-route states
+
+**Wave 7**
+
+- [ ] `06-08-PLAN.md` — Responsive navigation, account, focus, and development-identity client islands
+
+**Wave 8**
+
+- [ ] `06-09-PLAN.md` — Browser viewport, access, production-boundary, and visual approval evidence
 
 **Cross-cutting constraints:**
 
@@ -498,7 +542,7 @@ The active roadmap adds bootstrap data, Keycloak identity provider setup, Strapi
 
 ## Future Milestones
 
-Future milestones should add more IdamBox application modules after CSRM, using the same shared platform, Keycloak/OIDC identity provider, and application-role authorization model.
+Future milestones should add more IdamBox application modules after CSRM, using the same shared platform, Keycloak/OIDC identity provider, and Application/Function/FunctionApi/Role authorization model.
 
 ---
 
