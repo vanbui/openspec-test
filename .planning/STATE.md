@@ -38,7 +38,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 ## Workflow State
 
-Last activity: 2026-08-09 — Phase 6 complete, transitioned to Phase 7
+Last activity: 2026-08-11 - Completed quick task 260811-ne2: move the apps/csrm/docs/references/controls folder to apps/backend/src/bootstrap and update the seed-csrm-data.ts script accordingly.
 
 - Project initialized: 2026-05-20
 - Requirements defined: 2026-05-20
@@ -71,6 +71,7 @@ Last activity: 2026-08-09 — Phase 6 complete, transitioned to Phase 7
 | 4 | update the CSRM project brief to reference the Strapi OpenAPI specification and use the Strapi backend API | 2026-08-08 | 0ed1b67 | — |
 | 5 | update CSRM authentication and authorization for Keycloak and Role Function FunctionAPI enforcement | 2026-08-08 | 961566e | — |
 | 260810-cjm | update the CSRM role/function/API catalogue with Administration Functions and CSV import grants | 2026-08-10 | e29ce18 | [260810-cjm-update-the-csrm-role-function-api-catalo](./quick/260810-cjm-update-the-csrm-role-function-api-catalo/) |
+| 260811-ne2 | move the apps/csrm/docs/references/controls folder to apps/backend/src/bootstrap and update the seed-csrm-data.ts script accordingly. | 2026-08-11 | a1b66f7 | [260811-ne2-move-the-apps-csrm-docs-references-contr](./quick/260811-ne2-move-the-apps-csrm-docs-references-contr/) |
 
 ## Memory
 
