@@ -1239,6 +1239,14 @@ export interface components {
             controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
             /** @description A string field */
             controlReference?: string;
+            /** @description A string field */
+            framework: string;
+            /** @description A string field */
+            frameworkVersion?: string;
+            /** @description A string field */
+            frameworkSource?: string;
+            /** @description A JSON field */
+            sourceData?: unknown;
             /** @description A datetime field */
             createdAt?: string;
             /** @description A datetime field */
@@ -3624,7 +3632,7 @@ export interface operations {
     "csrm-control/get/csrm_controls": {
         parameters: {
             query?: {
-                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[];
+                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[];
                 filters?: {
                     [key: string]: unknown;
                 };
@@ -3643,7 +3651,7 @@ export interface operations {
                     /** @description Maximum number of entries to return */
                     limit: number;
                 });
-                sort?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt") | ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[] | {
+                sort?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt") | ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[] | {
                     [key: string]: "asc" | "desc";
                 } | {
                     [key: string]: "asc" | "desc";
@@ -3683,6 +3691,14 @@ export interface operations {
                             controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                             /** @description A string field */
                             controlReference?: string;
+                            /** @description A string field */
+                            framework: string;
+                            /** @description A string field */
+                            frameworkVersion?: string;
+                            /** @description A string field */
+                            frameworkSource?: string;
+                            /** @description A JSON field */
+                            sourceData?: unknown;
                             /** @description A datetime field */
                             createdAt?: string;
                             /** @description A datetime field */
@@ -3738,7 +3754,7 @@ export interface operations {
     "csrm-control/post/csrm_controls": {
         parameters: {
             query?: {
-                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[];
+                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[];
                 populate?: "*" | "implementations" | "implementations"[];
             };
             header?: never;
@@ -3762,6 +3778,14 @@ export interface operations {
                         controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                         /** @description A string field */
                         controlReference?: string;
+                        /** @description A string field */
+                        framework: string;
+                        /** @description A string field */
+                        frameworkVersion?: string;
+                        /** @description A string field */
+                        frameworkSource?: string;
+                        /** @description A JSON field */
+                        sourceData?: unknown;
                         /**
                          * @description A datetime field
                          * @default 2026-08-08T10:27:09.804Z
@@ -3801,6 +3825,14 @@ export interface operations {
                             controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                             /** @description A string field */
                             controlReference?: string;
+                            /** @description A string field */
+                            framework: string;
+                            /** @description A string field */
+                            frameworkVersion?: string;
+                            /** @description A string field */
+                            frameworkSource?: string;
+                            /** @description A JSON field */
+                            sourceData?: unknown;
                             /** @description A datetime field */
                             createdAt?: string;
                             /** @description A datetime field */
@@ -3856,12 +3888,12 @@ export interface operations {
     "csrm-control/get/csrm_controls_by_id": {
         parameters: {
             query?: {
-                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[];
+                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[];
                 populate?: "*" | "implementations" | "implementations"[];
                 filters?: {
                     [key: string]: unknown;
                 };
-                sort?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt") | ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[] | {
+                sort?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt") | ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[] | {
                     [key: string]: "asc" | "desc";
                 } | {
                     [key: string]: "asc" | "desc";
@@ -3902,6 +3934,14 @@ export interface operations {
                             controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                             /** @description A string field */
                             controlReference?: string;
+                            /** @description A string field */
+                            framework: string;
+                            /** @description A string field */
+                            frameworkVersion?: string;
+                            /** @description A string field */
+                            frameworkSource?: string;
+                            /** @description A JSON field */
+                            sourceData?: unknown;
                             /** @description A datetime field */
                             createdAt?: string;
                             /** @description A datetime field */
@@ -3957,7 +3997,7 @@ export interface operations {
     "csrm-control/put/csrm_controls_by_id": {
         parameters: {
             query?: {
-                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[];
+                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[];
                 populate?: "*" | "implementations" | "implementations"[];
             };
             header?: never;
@@ -3983,6 +4023,14 @@ export interface operations {
                         controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                         /** @description A string field */
                         controlReference?: string;
+                        /** @description A string field */
+                        framework?: string;
+                        /** @description A string field */
+                        frameworkVersion?: string;
+                        /** @description A string field */
+                        frameworkSource?: string;
+                        /** @description A JSON field */
+                        sourceData?: unknown;
                         /**
                          * @description A datetime field
                          * @default 2026-08-08T10:27:09.806Z
@@ -4022,6 +4070,14 @@ export interface operations {
                             controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                             /** @description A string field */
                             controlReference?: string;
+                            /** @description A string field */
+                            framework: string;
+                            /** @description A string field */
+                            frameworkVersion?: string;
+                            /** @description A string field */
+                            frameworkSource?: string;
+                            /** @description A JSON field */
+                            sourceData?: unknown;
                             /** @description A datetime field */
                             createdAt?: string;
                             /** @description A datetime field */
@@ -4077,7 +4133,7 @@ export interface operations {
     "csrm-control/delete/csrm_controls_by_id": {
         parameters: {
             query?: {
-                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "createdAt" | "updatedAt" | "publishedAt")[];
+                fields?: ("controlNumber" | "name" | "description" | "controlType" | "controlReference" | "framework" | "frameworkVersion" | "frameworkSource" | "sourceData" | "createdAt" | "updatedAt" | "publishedAt")[];
                 populate?: "*" | "implementations" | "implementations"[];
                 filters?: {
                     [key: string]: unknown;
@@ -4118,6 +4174,14 @@ export interface operations {
                             controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
                             /** @description A string field */
                             controlReference?: string;
+                            /** @description A string field */
+                            framework: string;
+                            /** @description A string field */
+                            frameworkVersion?: string;
+                            /** @description A string field */
+                            frameworkSource?: string;
+                            /** @description A JSON field */
+                            sourceData?: unknown;
                             /** @description A datetime field */
                             createdAt?: string;
                             /** @description A datetime field */

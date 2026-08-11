@@ -113,9 +113,20 @@ for (const field of [
 ]) {
   assert(request.attributes[field], `Request must define ${field}`);
 }
-assert(request.attributes.requestNumber.required === true, "Request number must be required");
-assert(request.attributes.requestNumber.unique === true, "Request number must be unique");
-assertEnum(request, "assessmentType", ["BAU", "Project", "Other"], "Assessment type");
+assert(
+  request.attributes.requestNumber.required === true,
+  "Request number must be required",
+);
+assert(
+  request.attributes.requestNumber.unique === true,
+  "Request number must be unique",
+);
+assertEnum(
+  request,
+  "assessmentType",
+  ["BAU", "Project", "Other"],
+  "Assessment type",
+);
 assertEnum(
   request,
   "businessCriticality",
@@ -148,7 +159,10 @@ assertEnum(
   ],
   "Request status",
 );
-assert(request.attributes.requestStatus.default === "draft", "Request status must default to draft");
+assert(
+  request.attributes.requestStatus.default === "draft",
+  "Request status must default to draft",
+);
 
 for (const field of [
   "name",
@@ -165,9 +179,18 @@ for (const field of [
 ]) {
   assert(asset.attributes[field], `Information asset must define ${field}`);
 }
-assert(asset.attributes.containsPersonalData.default === false, "Asset personal data flag must default false");
-assert(asset.attributes.containsLegalData.default === false, "Asset legal data flag must default false");
-assert(asset.attributes.containsCreditCardData.default === false, "Asset credit card data flag must default false");
+assert(
+  asset.attributes.containsPersonalData.default === false,
+  "Asset personal data flag must default false",
+);
+assert(
+  asset.attributes.containsLegalData.default === false,
+  "Asset legal data flag must default false",
+);
+assert(
+  asset.attributes.containsCreditCardData.default === false,
+  "Asset credit card data flag must default false",
+);
 assertEnum(
   asset,
   "dataClassification",
@@ -261,15 +284,36 @@ assertRelationTarget(
   "Question questionnaire",
 );
 
-for (const field of ["questionText", "helpText", "options", "order", "answer", "reviewComment"]) {
+for (const field of [
+  "questionText",
+  "helpText",
+  "options",
+  "order",
+  "answer",
+  "reviewComment",
+]) {
   assert(question.attributes[field], `Question must define ${field}`);
 }
-assert(question.attributes.options.type === "json", "Question options must be JSON");
-assert(question.attributes.answer.type === "json", "Question answer must be JSON");
+assert(
+  question.attributes.options.type === "json",
+  "Question options must be JSON",
+);
+assert(
+  question.attributes.answer.type === "json",
+  "Question answer must be JSON",
+);
 assertEnum(
   question,
   "answerType",
-  ["Text", "Long text", "Boolean", "Single select", "Multi select", "Date", "File upload"],
+  [
+    "Text",
+    "Long text",
+    "Boolean",
+    "Single select",
+    "Multi select",
+    "Date",
+    "File upload",
+  ],
   "Question answer type",
 );
 
@@ -287,8 +331,14 @@ for (const field of [
 ]) {
   assert(assessment.attributes[field], `Assessment must define ${field}`);
 }
-assert(assessment.attributes.assessmentNumber.required === true, "Assessment number must be required");
-assert(assessment.attributes.assessmentNumber.unique === true, "Assessment number must be unique");
+assert(
+  assessment.attributes.assessmentNumber.required === true,
+  "Assessment number must be required",
+);
+assert(
+  assessment.attributes.assessmentNumber.unique === true,
+  "Assessment number must be unique",
+);
 assertEnum(
   assessment,
   "assessmentStatus",
@@ -369,9 +419,18 @@ for (const field of [
 ]) {
   assert(risk.attributes[field], `Risk must define ${field}`);
 }
-assert(risk.attributes.riskNumber.required === true, "Risk number must be required");
-assert(risk.attributes.riskNumber.unique === true, "Risk number must be unique");
-assert(risk.attributes.riskStatement.required === true, "Risk statement must be required");
+assert(
+  risk.attributes.riskNumber.required === true,
+  "Risk number must be required",
+);
+assert(
+  risk.attributes.riskNumber.unique === true,
+  "Risk number must be unique",
+);
+assert(
+  risk.attributes.riskStatement.required === true,
+  "Risk statement must be required",
+);
 assertRelationTarget(
   risk,
   "riskOwner",
@@ -402,7 +461,12 @@ assertEnum(
   ["Public", "Internal", "Restricted", "Critical Infrastructure Sensitive"],
   "Risk data classification",
 );
-assertEnum(risk, "treatmentAction", ["Accept", "Treat"], "Risk treatment action");
+assertEnum(
+  risk,
+  "treatmentAction",
+  ["Accept", "Treat"],
+  "Risk treatment action",
+);
 assertEnum(
   risk,
   "treatmentStatus",
@@ -431,8 +495,14 @@ assertRelationTarget(
 for (const field of ["name", "description", "applicableControls", "risks"]) {
   assert(riskType.attributes[field], `Risk type must define ${field}`);
 }
-assert(riskType.attributes.name.required === true, "Risk type name must be required");
-assert(riskType.attributes.name.unique === true, "Risk type name must be unique");
+assert(
+  riskType.attributes.name.required === true,
+  "Risk type name must be required",
+);
+assert(
+  riskType.attributes.name.unique === true,
+  "Risk type name must be unique",
+);
 assertRelationTarget(
   riskType,
   "applicableControls",
@@ -451,6 +521,10 @@ for (const field of [
   "name",
   "description",
   "controlReference",
+  "framework",
+  "frameworkVersion",
+  "frameworkSource",
+  "sourceData",
 ]) {
   assert(control.attributes[field], `Control must define ${field}`);
 }
@@ -472,8 +546,46 @@ for (const field of [
     `Control implementation must define ${field}`,
   );
 }
-assert(control.attributes.controlNumber.required === true, "Control number must be required");
-assert(control.attributes.controlNumber.unique === true, "Control number must be unique");
+assert(
+  control.attributes.controlNumber.required === true,
+  "Control number must be required",
+);
+assert(
+  control.attributes.controlNumber.unique === true,
+  "Control number must be unique",
+);
+assert(
+  control.attributes.framework.type === "string",
+  "Control framework must be a string",
+);
+assert(
+  control.attributes.framework.required === true,
+  "Control framework must be required",
+);
+assert(
+  control.attributes.frameworkVersion.type === "string",
+  "Control framework version must be a string",
+);
+assert(
+  control.attributes.frameworkVersion.required !== true,
+  "Control framework version must be optional",
+);
+assert(
+  control.attributes.frameworkSource.type === "string",
+  "Control framework source must be a string",
+);
+assert(
+  control.attributes.frameworkSource.required !== true,
+  "Control framework source must be optional",
+);
+assert(
+  control.attributes.sourceData.type === "json",
+  "Control source data must be JSON",
+);
+assert(
+  control.attributes.sourceData.required !== true,
+  "Control source data must be optional",
+);
 assertEnum(
   control,
   "controlType",
@@ -537,11 +649,20 @@ for (const routeName of routeNames) {
     `${routeName}.ts`,
   );
   assertIncludes(routeSource, "global::csrm-app-enabled", `${routeName} route`);
-  assert(!routeSource.includes("auth: false"), `${routeName} route must not disable auth`);
+  assert(
+    !routeSource.includes("auth: false"),
+    `${routeName} route must not disable auth`,
+  );
 }
 
 const configSource = read("apps", "backend", "src", "csrm", "config.ts");
-const policySource = read("apps", "backend", "src", "policies", "csrm-app-enabled.ts");
+const policySource = read(
+  "apps",
+  "backend",
+  "src",
+  "policies",
+  "csrm-app-enabled.ts",
+);
 const envExample = read("apps", "backend", ".env.example");
 const backendReadme = read("apps", "backend", "README.md");
 const rootReadme = read("README.md");

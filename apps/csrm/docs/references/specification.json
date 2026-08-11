@@ -5296,6 +5296,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5320,6 +5324,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5427,6 +5435,10 @@
                     "description",
                     "controlType",
                     "controlReference",
+                    "framework",
+                    "frameworkVersion",
+                    "frameworkSource",
+                    "sourceData",
                     "createdAt",
                     "updatedAt",
                     "publishedAt"
@@ -5442,6 +5454,10 @@
                       "description",
                       "controlType",
                       "controlReference",
+                      "framework",
+                      "frameworkVersion",
+                      "frameworkSource",
+                      "sourceData",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -5458,6 +5474,10 @@
                       "description",
                       "controlType",
                       "controlReference",
+                      "framework",
+                      "frameworkVersion",
+                      "frameworkSource",
+                      "sourceData",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -5483,6 +5503,10 @@
                         "description",
                         "controlType",
                         "controlReference",
+                        "framework",
+                        "frameworkVersion",
+                        "frameworkSource",
+                        "sourceData",
                         "createdAt",
                         "updatedAt",
                         "publishedAt"
@@ -5586,6 +5610,21 @@
                             "description": "A string field",
                             "type": "string"
                           },
+                          "framework": {
+                            "description": "A string field",
+                            "type": "string"
+                          },
+                          "frameworkVersion": {
+                            "description": "A string field",
+                            "type": "string"
+                          },
+                          "frameworkSource": {
+                            "description": "A string field",
+                            "type": "string"
+                          },
+                          "sourceData": {
+                            "description": "A JSON field"
+                          },
                           "createdAt": {
                             "description": "A datetime field",
                             "type": "string"
@@ -5612,6 +5651,7 @@
                           "id",
                           "controlNumber",
                           "name",
+                          "framework",
                           "publishedAt"
                         ],
                         "additionalProperties": false
@@ -5666,6 +5706,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5757,6 +5801,21 @@
                           "description": "A string field",
                           "type": "string"
                         },
+                        "framework": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkVersion": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkSource": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "sourceData": {
+                          "description": "A JSON field"
+                        },
                         "createdAt": {
                           "description": "A datetime field",
                           "type": "string"
@@ -5783,6 +5842,7 @@
                         "id",
                         "controlNumber",
                         "name",
+                        "framework",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -5851,6 +5911,21 @@
                         "description": "A string field",
                         "type": "string"
                       },
+                      "framework": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "frameworkVersion": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "frameworkSource": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "sourceData": {
+                        "description": "A JSON field"
+                      },
                       "publishedAt": {
                         "description": "A datetime field",
                         "default": "2026-08-08T10:27:09.804Z",
@@ -5869,6 +5944,7 @@
                     "required": [
                       "controlNumber",
                       "name",
+                      "framework",
                       "publishedAt"
                     ],
                     "additionalProperties": false
@@ -5917,6 +5993,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -5976,6 +6056,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6001,6 +6085,10 @@
                     "description",
                     "controlType",
                     "controlReference",
+                    "framework",
+                    "frameworkVersion",
+                    "frameworkSource",
+                    "sourceData",
                     "createdAt",
                     "updatedAt",
                     "publishedAt"
@@ -6016,6 +6104,10 @@
                       "description",
                       "controlType",
                       "controlReference",
+                      "framework",
+                      "frameworkVersion",
+                      "frameworkSource",
+                      "sourceData",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -6032,6 +6124,10 @@
                       "description",
                       "controlType",
                       "controlReference",
+                      "framework",
+                      "frameworkVersion",
+                      "frameworkSource",
+                      "sourceData",
                       "createdAt",
                       "updatedAt",
                       "publishedAt"
@@ -6057,6 +6153,10 @@
                         "description",
                         "controlType",
                         "controlReference",
+                        "framework",
+                        "frameworkVersion",
+                        "frameworkSource",
+                        "sourceData",
                         "createdAt",
                         "updatedAt",
                         "publishedAt"
@@ -6123,6 +6223,21 @@
                           "description": "A string field",
                           "type": "string"
                         },
+                        "framework": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkVersion": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkSource": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "sourceData": {
+                          "description": "A JSON field"
+                        },
                         "createdAt": {
                           "description": "A datetime field",
                           "type": "string"
@@ -6149,6 +6264,7 @@
                         "id",
                         "controlNumber",
                         "name",
+                        "framework",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -6214,6 +6330,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6305,6 +6425,21 @@
                           "description": "A string field",
                           "type": "string"
                         },
+                        "framework": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkVersion": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkSource": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "sourceData": {
+                          "description": "A JSON field"
+                        },
                         "createdAt": {
                           "description": "A datetime field",
                           "type": "string"
@@ -6331,6 +6466,7 @@
                         "id",
                         "controlNumber",
                         "name",
+                        "framework",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -6399,6 +6535,21 @@
                         "description": "A string field",
                         "type": "string"
                       },
+                      "framework": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "frameworkVersion": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "frameworkSource": {
+                        "description": "A string field",
+                        "type": "string"
+                      },
+                      "sourceData": {
+                        "description": "A JSON field"
+                      },
                       "publishedAt": {
                         "description": "A datetime field",
                         "default": "2026-08-08T10:27:09.806Z",
@@ -6458,6 +6609,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6517,6 +6672,10 @@
                   "description",
                   "controlType",
                   "controlReference",
+                  "framework",
+                  "frameworkVersion",
+                  "frameworkSource",
+                  "sourceData",
                   "createdAt",
                   "updatedAt",
                   "publishedAt"
@@ -6574,6 +6733,21 @@
                           "description": "A string field",
                           "type": "string"
                         },
+                        "framework": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkVersion": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "frameworkSource": {
+                          "description": "A string field",
+                          "type": "string"
+                        },
+                        "sourceData": {
+                          "description": "A JSON field"
+                        },
                         "createdAt": {
                           "description": "A datetime field",
                           "type": "string"
@@ -6600,6 +6774,7 @@
                         "id",
                         "controlNumber",
                         "name",
+                        "framework",
                         "publishedAt"
                       ],
                       "additionalProperties": false
@@ -29401,6 +29576,21 @@
             "description": "A string field",
             "type": "string"
           },
+          "framework": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "frameworkVersion": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "frameworkSource": {
+            "description": "A string field",
+            "type": "string"
+          },
+          "sourceData": {
+            "description": "A JSON field"
+          },
           "createdAt": {
             "description": "A datetime field",
             "type": "string"
@@ -29427,6 +29617,7 @@
           "id",
           "controlNumber",
           "name",
+          "framework",
           "publishedAt"
         ],
         "additionalProperties": false,

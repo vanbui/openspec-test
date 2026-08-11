@@ -26,15 +26,23 @@
     },
     "controlType": {
       "type": "enumeration",
-      "enum": [
-        "Preventive",
-        "Detective",
-        "Corrective",
-        "Compensating"
-      ]
+      "enum": ["Preventive", "Detective", "Corrective", "Compensating"]
     },
     "controlReference": {
       "type": "string"
+    },
+    "framework": {
+      "type": "string",
+      "required": true
+    },
+    "frameworkVersion": {
+      "type": "string"
+    },
+    "frameworkSource": {
+      "type": "string"
+    },
+    "sourceData": {
+      "type": "json"
     },
     "implementations": {
       "type": "relation",

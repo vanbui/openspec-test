@@ -245,7 +245,11 @@ entity CsrmControl {
   name String required,
   description TextBlob,
   controlType CsrmControlType,
-  controlReference String
+  controlReference String,
+  framework String required,
+  frameworkVersion String,
+  frameworkSource String,
+  sourceData AnyBlob // Strapi json
 }
 
 entity CsrmControlImplementation {

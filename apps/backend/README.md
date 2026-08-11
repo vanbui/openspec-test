@@ -74,7 +74,7 @@ Set `IDAMBOX_SEED_CORE=true` before startup to seed sample application records:
 
 The seed is disabled by default and is intended for local verification only.
 
-Set `IDAMBOX_SEED_CSRM=true` before startup to seed the CSRM catalogue independently. It lookup-or-creates the canonical `IdamBox CSRM` Application, so it does not require `IDAMBOX_SEED_CORE=true`. The seed is disabled by default and is intended for local verification only.
+Set `IDAMBOX_SEED_CSRM=true` before startup to seed the CSRM catalogue independently. It looks up or creates the canonical `IdamBox CSRM` Application, so it does not require `IDAMBOX_SEED_CORE=true`. It also validates and imports the 2,646 Controls from the 12 framework catalogues under `apps/csrm/docs/references/controls`, updating changed source records without deleting manually managed Controls or their relations. The seed is disabled by default and is intended for local verification only.
 
 CSRM authorization remains application-owned: each `Function` belongs to the CSRM `Application`, while each `FunctionApi` is an operation-level grant below its Function. Roles bundle Functions, so effective access follows `IdamBoxUser -> Role -> Function -> Application`.
 

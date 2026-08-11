@@ -1,13 +1,38 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
+const CONTROL_REFERENCE_DIRECTORY = [
+  "apps",
+  "csrm",
+  "docs",
+  "references",
+  "controls",
+];
+const CONTROL_REFERENCE_FILES = [
+  "aescsf-v2-toolkit-1.1.json",
+  "apra-cps-230-2026.json",
+  "apra-cps-234-2019.json",
+  "asd-ism-controls-2026.06.18.json",
+  "cis-controls-v8.1.json",
+  "essential-eight-2023-11.json",
+  "iso-iec-27001-2022-annex-a.json",
+  "nist-csf-2.0.json",
+  "owasp-asvs-5.0.0.json",
+  "privacy-act-app-ndb-2026-06-04.json",
+  "pspf-release-2026.json",
+  "soci-cirmp-2026-06-10.json",
+];
+const EXPECTED_CONTROL_REFERENCE_FILE_COUNT = 12;
+const EXPECTED_CONTROL_COUNT = 2_646;
 const assert = (condition, message) => {
   if (!condition) {
     throw new Error(message);
   }
 };
+const isNonBlankString = (value) =>
+  typeof value === "string" && value.trim().length > 0;
 const assertUniqueIds = (items, label) => {
   const ids = items.map((item) => item.id);
   assert(new Set(ids).size === ids.length, `${label} IDs must be unique`);
@@ -30,6 +55,84 @@ const seedSource = read(
   "seed-csrm-data.ts",
 );
 const packageJson = JSON.parse(read("package.json"));
+
+assert(
+  CONTROL_REFERENCE_FILES.length === EXPECTED_CONTROL_REFERENCE_FILE_COUNT,
+  `Control reference manifest must list exactly ${EXPECTED_CONTROL_REFERENCE_FILE_COUNT} files`,
+);
+
+const actualControlReferenceFiles = readdirSync(
+  join(root, ...CONTROL_REFERENCE_DIRECTORY),
+  { withFileTypes: true },
+)
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+  .map((entry) => entry.name)
+  .sort();
+const expectedControlReferenceFiles = [...CONTROL_REFERENCE_FILES].sort();
+
+assert(
+  actualControlReferenceFiles.length === EXPECTED_CONTROL_REFERENCE_FILE_COUNT,
+  `Expected exactly ${EXPECTED_CONTROL_REFERENCE_FILE_COUNT} control reference files, found ${actualControlReferenceFiles.length}`,
+);
+assert(
+  JSON.stringify(actualControlReferenceFiles) ===
+    JSON.stringify(expectedControlReferenceFiles),
+  "Control reference files must exactly match the verified manifest",
+);
+
+const allControlIds = [];
+let totalControlCount = 0;
+
+for (const referenceFile of CONTROL_REFERENCE_FILES) {
+  const referenceCatalogue = JSON.parse(
+    read(...CONTROL_REFERENCE_DIRECTORY, referenceFile),
+  );
+
+  assert(
+    Array.isArray(referenceCatalogue.controls),
+    `${referenceFile} must define a controls array`,
+  );
+  assert(
+    Number.isInteger(referenceCatalogue.controlCount),
+    `${referenceFile} must declare an integer controlCount`,
+  );
+  assert(
+    referenceCatalogue.controlCount === referenceCatalogue.controls.length,
+    `${referenceFile} declares ${referenceCatalogue.controlCount} controls but contains ${referenceCatalogue.controls.length}`,
+  );
+
+  const catalogueControlIds = referenceCatalogue.controls.map(
+    (control, index) => {
+      assert(
+        control && typeof control === "object" && !Array.isArray(control),
+        `${referenceFile} control at index ${index} must be an object`,
+      );
+      assert(
+        isNonBlankString(control.id),
+        `${referenceFile} control at index ${index} must have a nonblank ID`,
+      );
+
+      return control.id.trim();
+    },
+  );
+
+  assert(
+    new Set(catalogueControlIds).size === catalogueControlIds.length,
+    `${referenceFile} control IDs must be unique`,
+  );
+
+  allControlIds.push(...catalogueControlIds);
+  totalControlCount += referenceCatalogue.controls.length;
+}
+
+assert(
+  totalControlCount === EXPECTED_CONTROL_COUNT,
+  `Expected exactly ${EXPECTED_CONTROL_COUNT} controls, found ${totalControlCount}`,
+);
+assert(
+  new Set(allControlIds).size === allControlIds.length,
+  "Control reference IDs must be globally unique",
+);
 
 assertUniqueIds(catalogue.roles, "Role");
 assertUniqueIds(catalogue.functions, "Function");
@@ -111,6 +214,41 @@ assert(
 assert(
   seedSource.includes('process.env.IDAMBOX_SEED_CSRM !== "true"'),
   "CSRM seed must retain the independent IDAMBOX_SEED_CSRM guard",
+);
+for (const referenceFile of CONTROL_REFERENCE_FILES) {
+  assert(
+    seedSource.includes(referenceFile),
+    `CSRM seed must reference control catalogue ${referenceFile}`,
+  );
+}
+assert(
+  /strapi\.documents\(\s*["']api::csrm-control\.csrm-control["']\s*\)/.test(
+    seedSource,
+  ),
+  "CSRM seed must use the CSRM Control document service",
+);
+assert(
+  seedSource.includes("controlCount !== controls.length"),
+  "CSRM seed must validate each declared control count",
+);
+const seedFunctionSource = seedSource.slice(
+  seedSource.indexOf("export async function seedCsrmData"),
+);
+const loadControlCataloguesIndex = seedFunctionSource.indexOf(
+  "await loadControlCatalogues(strapi)",
+);
+const seedControlsIndex = seedFunctionSource.indexOf(
+  "await seedCsrmControls(strapi, controlSeeds)",
+);
+assert(
+  loadControlCataloguesIndex >= 0 &&
+    seedControlsIndex >= 0 &&
+    loadControlCataloguesIndex < seedControlsIndex,
+  "CSRM seed must load and validate control catalogues before seeding controls",
+);
+assert(
+  !/\bcontrolType\s*:/.test(seedSource),
+  "CSRM seed must not map a source type into controlType",
 );
 assert(
   seedSource.includes('const CSRM_APPLICATION_SLUG = "idambox-csrm"'),

@@ -631,6 +631,9 @@ export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
+    framework: Schema.Attribute.String & Schema.Attribute.Required;
+    frameworkSource: Schema.Attribute.String;
+    frameworkVersion: Schema.Attribute.String;
     implementations: Schema.Attribute.Relation<
       'oneToMany',
       'api::csrm-control-implementation.csrm-control-implementation'
@@ -643,6 +646,7 @@ export interface ApiCsrmControlCsrmControl extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     name: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
+    sourceData: Schema.Attribute.JSON;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
