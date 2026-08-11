@@ -55,9 +55,9 @@ const controlCatalogues = controlCatalogueFiles.map((sourceFile) => ({
     path.join(
       root,
       "apps",
-      "csrm",
-      "docs",
-      "references",
+      "backend",
+      "src",
+      "bootstrap",
       "controls",
       sourceFile,
     ),

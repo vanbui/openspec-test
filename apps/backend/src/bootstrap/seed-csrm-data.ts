@@ -197,10 +197,8 @@ async function loadControlCatalogues(
 ): Promise<ControlCatalogue[]> {
   const catalogueDirectory = path.resolve(
     strapi.dirs.app.root,
-    "..",
-    "csrm",
-    "docs",
-    "references",
+    "src",
+    "bootstrap",
     "controls",
   );
   const catalogues = await Promise.all(

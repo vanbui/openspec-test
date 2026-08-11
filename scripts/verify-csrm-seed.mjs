@@ -5,9 +5,9 @@ const root = process.cwd();
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
 const CONTROL_REFERENCE_DIRECTORY = [
   "apps",
-  "csrm",
-  "docs",
-  "references",
+  "backend",
+  "src",
+  "bootstrap",
   "controls",
 ];
 const CONTROL_REFERENCE_FILES = [
