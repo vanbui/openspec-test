@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 7
 current_phase_name: Requestor Request Workflow
 status: planning
-stopped_at: Phase 7 context gathered
-last_updated: "2026-08-22T12:06:10.870Z"
+stopped_at: Phase 7 UI-SPEC approved
+last_updated: "2026-08-22T12:18:36.902Z"
 last_activity: 2026-08-22
 last_activity_desc: "Completed quick task 260822-u5d: align the AccountMenu to the right in AppHeader."
 progress:
@@ -127,6 +127,6 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 
 ## Session
 
-**Last session:** 2026-08-22T12:06:10.848Z
-**Stopped at:** Phase 7 context gathered
-**Resume file:** .planning/phases/07-requestor-request-workflow/07-CONTEXT.md
+**Last session:** 2026-08-22T12:18:36.867Z
+**Stopped at:** Phase 7 UI-SPEC approved
+**Resume file:** .planning/phases/07-requestor-request-workflow/07-UI-SPEC.md
