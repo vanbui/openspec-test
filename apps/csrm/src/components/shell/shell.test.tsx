@@ -76,6 +76,44 @@ vi.mock("@/components/ui/tooltip", async () => {
   };
 });
 
+vi.mock("@/components/ui/collapsible", async () => {
+  const React = await import("react");
+  const CollapsibleContext = React.createContext<{
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  } | null>(null);
+
+  return {
+    Collapsible: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => (
+      <CollapsibleContext.Provider value={{ open, setOpen: onOpenChange }}>
+        {children}
+      </CollapsibleContext.Provider>
+    ),
+    CollapsibleTrigger: ({
+      children,
+    }: {
+      children: React.ReactElement<{ onClick?: () => void }>;
+    }) => {
+      const context = React.useContext(CollapsibleContext);
+      return React.cloneElement(children, {
+        onClick: () => context?.setOpen(!context.open),
+      });
+    },
+    CollapsibleContent: ({ children }: { children: React.ReactNode }) => {
+      const context = React.useContext(CollapsibleContext);
+      return context?.open ? children : null;
+    },
+  };
+});
+
 vi.mock("@/components/ui/sheet", async () => {
   const React = await import("react");
   const SheetContext = React.createContext<{

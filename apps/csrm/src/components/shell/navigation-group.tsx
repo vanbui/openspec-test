@@ -13,6 +13,12 @@ import {
 import { useState } from "react";
 
 import type { RouteDefinition } from "@/config/routes";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Tooltip,
   TooltipContent,
@@ -57,63 +63,64 @@ export function NavigationGroup({
   const headingId = `navigation-group-${id}`;
 
   return (
-    <section aria-labelledby={headingId} className="space-y-sm">
-      <button
-        aria-controls={`${headingId}-routes`}
-        aria-expanded={open}
-        className={cn(
-          "flex min-h-10 w-full items-center rounded-[var(--radius-card)] px-md text-left text-label font-semibold text-muted-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-          collapsed && "justify-center px-0",
-        )}
-        id={headingId}
-        onClick={() => setOpen((current) => !current)}
-        type="button"
-      >
-        <span className={cn("truncate", collapsed && "sr-only")}>{label}</span>
-        <span aria-hidden="true" className={cn("ml-auto", collapsed && "ml-0")}>⌄</span>
-      </button>
-      <ul
-        className={cn("space-y-xs", !open && "hidden")}
-        id={`${headingId}-routes`}
-        role="list"
-      >
-        {routes.map((route) => {
-          const isActive = route.href === activeHref;
-          const Icon = routeIcons[route.icon];
-          const link = (
-            <Link
-              aria-current={isActive ? "page" : undefined}
-              aria-label={collapsed ? route.title : undefined}
-              className={cn(
-                "flex h-11 min-w-0 items-center border-l-[3px] border-transparent px-md text-label font-semibold text-foreground transition-colors hover:bg-surface md:h-10",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                collapsed && "justify-center px-0",
-                isActive && "border-l-accent bg-primary-soft",
-              )}
-              href={route.href}
-              onClick={onRouteSelect}
-            >
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
-              <span className={cn("ml-sm truncate", collapsed && "sr-only")} title={route.title}>
-                {route.title}
-              </span>
-            </Link>
-          );
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <section aria-labelledby={headingId} className="space-y-sm">
+        <CollapsibleTrigger asChild>
+          <Button
+            aria-controls={`${headingId}-routes`}
+            className={cn(
+              "flex w-full justify-start text-left text-muted-foreground hover:bg-surface",
+              collapsed && "justify-center px-0",
+            )}
+            id={headingId}
+            size="sm"
+            variant="ghost"
+          >
+            <span className={cn("truncate", collapsed && "sr-only")}>{label}</span>
+            <span aria-hidden="true" className={cn("ml-auto", collapsed && "ml-0")}>⌄</span>
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent asChild>
+          <ul id={`${headingId}-routes`} className="space-y-xs" role="list">
+            {routes.map((route) => {
+              const isActive = route.href === activeHref;
+              const Icon = routeIcons[route.icon];
+              const link = (
+                <Link
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={collapsed ? route.title : undefined}
+                  className={cn(
+                    "flex h-11 min-w-0 items-center border-l-[3px] border-transparent px-md text-label font-semibold text-foreground transition-colors hover:bg-surface md:h-10",
+                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    collapsed && "justify-center px-0",
+                    isActive && "border-l-accent bg-primary-soft",
+                  )}
+                  href={route.href}
+                  onClick={onRouteSelect}
+                >
+                  <Icon aria-hidden="true" className="size-4 shrink-0" />
+                  <span className={cn("ml-sm truncate", collapsed && "sr-only")} title={route.title}>
+                    {route.title}
+                  </span>
+                </Link>
+              );
 
-          return (
-            <li key={route.id}>
-              {collapsed ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>{link}</TooltipTrigger>
-                    <TooltipContent>{route.title}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : link}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+              return (
+                <li key={route.id}>
+                  {collapsed ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipContent>{route.title}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : link}
+                </li>
+              );
+            })}
+          </ul>
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 }

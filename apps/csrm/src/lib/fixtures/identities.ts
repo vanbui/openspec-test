@@ -1,7 +1,7 @@
 import "server-only";
 
 import { securityAnalystCapabilityIds } from "@/config/capabilities";
-import type { FixtureKey } from "@/domain/identity";
+import { fixtureKeys, type FixtureKey } from "@/domain/identity";
 
 export interface DevelopmentIdentityFixture {
   fixtureKey: FixtureKey;
@@ -34,3 +34,13 @@ export const developmentIdentityFixtures: Readonly<
     explicitCapabilities: securityAnalystCapabilityIds,
   },
 };
+
+/** Display-only options for the development selector; capability data stays server-side. */
+export const developmentIdentityOptions = fixtureKeys.map((fixtureKey) => {
+  const fixture = developmentIdentityFixtures[fixtureKey];
+
+  return {
+    fixtureKey: fixture.fixtureKey,
+    displayName: fixture.displayName,
+  };
+}) as readonly { fixtureKey: FixtureKey; displayName: string }[];

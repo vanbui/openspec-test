@@ -4,19 +4,17 @@ import type { RouteDefinition } from "@/config/routes";
 import { visibleRoutes } from "@/config/routes";
 import type { IdentitySnapshot } from "@/domain/identity";
 import { DevelopmentIdentitySelector } from "@/components/shell/development-identity-selector";
+import { developmentIdentityOptions } from "@/lib/fixtures/identities";
 
 import { AppHeader } from "./app-header";
 import { RouteAnnouncer } from "./route-announcer";
 import { Sidebar } from "./sidebar";
 
-function DevelopmentSelectorForRuntime({ fixtureKey }: { fixtureKey: "requestor" | "analyst" }) {
+function DevelopmentSelectorForRuntime({ fixtureKey }: { fixtureKey: IdentitySnapshot["fixtureKey"] }) {
   return (
     <DevelopmentIdentitySelector
       activeFixtureKey={fixtureKey}
-      identities={[
-        { fixtureKey: "requestor", displayName: "Requestor — Jane" },
-        { fixtureKey: "analyst", displayName: "Security Analyst — Bob" },
-      ]}
+      identities={developmentIdentityOptions}
     />
   );
 }

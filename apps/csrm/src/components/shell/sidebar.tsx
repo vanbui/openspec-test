@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import type { RouteDefinition } from "@/config/routes";
 import { navigationGroupLabels } from "@/config/routes";
+import { Button } from "@/components/ui/button";
 
 import { NavigationGroup } from "./navigation-group";
 
@@ -59,15 +60,16 @@ export function Sidebar({
             </p>
           </>
         )}
-        <button
+        <Button
           aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
           aria-pressed={!collapsed}
-          className="ml-auto flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-card)] text-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          className="ml-auto shrink-0"
           onClick={() => setCollapsed((current) => !current)}
-          type="button"
+          size="icon"
+          variant="ghost"
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-        </button>
+        </Button>
       </div>
       <nav aria-label="CSRM navigation" className="h-[calc(100%-4rem)] overflow-y-auto space-y-lg px-sm py-lg">
         {groups.map((group) => (

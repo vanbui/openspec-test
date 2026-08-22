@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 /** Account interaction owns only its open state; identity remains server-derived. */
 export function AccountMenu({
@@ -31,10 +32,11 @@ export function AccountMenu({
   return (
     <DropdownMenu onOpenChange={setOpen} open={open}>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
           aria-label="Account menu"
-          className="flex min-h-11 min-w-11 items-center justify-end gap-sm rounded-[var(--radius-card)] px-sm text-right hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring md:min-h-10 md:min-w-10"
-          type="button"
+          className="min-h-11 min-w-11 justify-end px-sm text-right md:min-h-10 md:min-w-10"
+          size="md"
+          variant="ghost"
         >
           <CircleUserRound aria-hidden="true" className="size-5 shrink-0" />
           <span className="hidden min-w-0 lg:block">
@@ -47,7 +49,7 @@ export function AccountMenu({
               </span>
             ) : null}
           </span>
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" aria-label="Account menu">
         <DropdownMenuLabel>{identity?.displayName ?? "CSRM user"}</DropdownMenuLabel>
