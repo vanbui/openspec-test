@@ -42,3 +42,24 @@ export function getCsrmStrapiBaseUrl(): ServiceResult<URL> {
     };
   }
 }
+
+/**
+ * Reads the policy-bridge credential from server-only configuration. The safe
+ * configuration result intentionally does not distinguish a missing secret,
+ * an invalid secret, or a bad URL to avoid making deployment state observable.
+ */
+export function getCsrmInternalToken(): ServiceResult<string> {
+  const token = process.env.IDAMBOX_CSRM_INTERNAL_TOKEN;
+  if (!token || Buffer.byteLength(token, "utf8") < 32) {
+    return {
+      ok: false,
+      error: {
+        kind: "configuration",
+        message: SAFE_API_MESSAGES.configuration,
+        retryable: false,
+      },
+    };
+  }
+
+  return { ok: true, data: token };
+}

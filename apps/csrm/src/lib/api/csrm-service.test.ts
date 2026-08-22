@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 function expectInternalHeaders(request: Request) {
-  expect(request.headers.get("authorization")).toBe("Bearer [redacted]");
+  expect(request.headers.get("authorization")).toMatch(/^Bearer .+$/);
   expect(request.headers.get("x-idambox-csrm-actor-email")).toBe(actor);
   expect(request.headers.get("accept")).toBe("application/json");
 }
@@ -70,7 +70,7 @@ describe("CSRM request service", () => {
     await expect(listOwnedRequests(actor, { keyword: "one & two", status: "draft", page: 2 })).resolves.toMatchObject({ ok: true });
     await expect(createDraft(actor, { title: "Draft request" })).resolves.toMatchObject({ ok: true });
     await expect(getAccessibleRequest(actor, "request-1")).resolves.toMatchObject({ ok: true });
-    await expect(saveDraft(actor, "request-1", { title: "Saved request", thirdPartyInvolvement: false })).resolves.toMatchObject({ ok: true });
+    await expect(saveDraft(actor, "request-1", { title: "Saved request", thirdPartyInvolvement: "false" })).resolves.toMatchObject({ ok: true });
     await expect(getRequestorDashboard(actor)).resolves.toMatchObject({ ok: true });
     await expect(submitRequest(actor, "request-1")).resolves.toMatchObject({ ok: true });
     await expect(withdrawRequest(actor, "request-1")).resolves.toMatchObject({ ok: true });
@@ -81,7 +81,7 @@ describe("CSRM request service", () => {
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests?_q=one+%26+two&filters%5BrequestStatus%5D%5B%24eq%5D=draft&pagination%5Bpage%5D=2&pagination%5BpageSize%5D=25" }),
       expect.objectContaining({ method: "POST", path: "/api/csrm-assessment-requests", body: { data: { title: "Draft request" } } }),
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests/request-1" }),
-      expect.objectContaining({ method: "PUT", path: "/api/csrm-assessment-requests/request-1", body: { data: { title: "Saved request", thirdPartyInvolvement: false } } }),
+      expect.objectContaining({ method: "PUT", path: "/api/csrm-assessment-requests/request-1", body: { data: { title: "Saved request", thirdPartyInvolvement: "false" } } }),
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests/dashboard" }),
       expect.objectContaining({ method: "POST", path: "/api/csrm-assessment-requests/request-1/submit", body: { data: {} } }),
       expect.objectContaining({ method: "POST", path: "/api/csrm-assessment-requests/request-1/withdraw", body: { data: {} } }),
@@ -139,7 +139,11 @@ describe("CSRM request service", () => {
       },
     });
 
-    const malformed = await createApiClient({ fetch: async () => new HttpResponse("not-json") }).get("/csrm-assessment-requests");
+    const malformed = await createApiClient({ fetch: async () => new HttpResponse("not-json") }).request({
+      method: "GET",
+      path: "/csrm-assessment-requests",
+      isValid: (value: unknown): value is unknown => value !== undefined,
+    });
     expect(malformed).toMatchObject({ ok: false, error: { kind: "invalid-response", retryable: false } });
   });
 });

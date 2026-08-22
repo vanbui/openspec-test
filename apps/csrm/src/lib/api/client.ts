@@ -1,18 +1,27 @@
 import "server-only";
 
-import { getCsrmStrapiBaseUrl } from "@/config/env";
+import { getCsrmInternalToken, getCsrmStrapiBaseUrl } from "@/config/env";
 import {
   SAFE_API_MESSAGES,
   type ServiceResult,
 } from "@/domain/service-result";
 
 export type ApiClient = {
-  get<T>(path: string, isValid?: (value: unknown) => value is T): Promise<ServiceResult<T>>;
+  request<T>(request: ApiRequest<T>): Promise<ServiceResult<T>>;
+};
+
+export type ApiRequest<T> = {
+  method: "GET" | "POST" | "PUT";
+  path: string;
+  body?: unknown;
+  isValid: (value: unknown) => value is T;
+  isWrite?: boolean;
 };
 
 type ApiClientOptions = {
   fetch?: typeof fetch;
   timeoutMs?: number;
+  actorEmail?: string;
 };
 
 const defaultTimeoutMs = 10_000;
@@ -36,30 +45,75 @@ function error(
   };
 }
 
+function validationError(body: unknown): ServiceResult<never> | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const details = (body as { error?: { details?: { errors?: unknown } } }).error?.details;
+  if (!Array.isArray(details?.errors)) return undefined;
+
+  const fields: Record<string, string> = {};
+  for (const entry of details.errors) {
+    if (!entry || typeof entry !== "object") continue;
+    const path = (entry as { path?: unknown }).path;
+    const message = (entry as { message?: unknown }).message;
+    if (Array.isArray(path) && typeof path[0] === "string" && typeof message === "string") {
+      fields[path[0]] = message;
+    }
+  }
+
+  return Object.keys(fields).length > 0
+    ? {
+        ok: false,
+        error: {
+          kind: "validation",
+          message: SAFE_API_MESSAGES.validation,
+          retryable: false,
+          fields,
+        },
+      }
+    : undefined;
+}
+
 export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const fetchImpl = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? defaultTimeoutMs;
 
   return {
-    async get<T>(
-      path: string,
-      isValid?: (value: unknown) => value is T,
-    ): Promise<ServiceResult<T>> {
+    async request<T>(request: ApiRequest<T>): Promise<ServiceResult<T>> {
       const baseUrl = getCsrmStrapiBaseUrl();
       if (!baseUrl.ok) {
         return baseUrl;
       }
 
+      const token = getCsrmInternalToken();
+      if (!token.ok) return token;
+
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const response = await fetchImpl(buildRequestUrl(baseUrl.data, path), {
-          headers: { accept: "application/json" },
+        const headers: Record<string, string> = {
+          accept: "application/json",
+          authorization: `Bearer ${token.data}`,
+        };
+        if (options.actorEmail) headers["x-idambox-csrm-actor-email"] = options.actorEmail;
+        if (request.body !== undefined) headers["content-type"] = "application/json";
+
+        const response = await fetchImpl(buildRequestUrl(baseUrl.data, request.path), {
+          method: request.method,
+          headers,
+          body: request.body === undefined ? undefined : JSON.stringify(request.body),
           signal: controller.signal,
         });
 
         if (!response.ok) {
+          if (response.status === 400 && request.isWrite) {
+            try {
+              const parsed = validationError(await response.json());
+              if (parsed) return parsed;
+            } catch {
+              // The public error below intentionally discards malformed server content.
+            }
+          }
           return error("http", {
             status: response.status,
             retryable: response.status === 429 || response.status >= 500,
@@ -77,7 +131,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
           return error("invalid-response", { retryable: false });
         }
 
-        if (isValid && !isValid(body)) {
+        if (!request.isValid(body)) {
           return error("invalid-response", { retryable: false });
         }
 
