@@ -21,7 +21,9 @@ export function AppHeader({
         <MobileNavigation routes={routes} />
         <p className="truncate text-label font-semibold text-foreground">CSRM</p>
       </div>
-      <AccountMenu identity={identity}>{developmentSelector}</AccountMenu>
+      <div className="ml-auto">
+        <AccountMenu identity={identity}>{developmentSelector}</AccountMenu>
+      </div>
     </header>
   );
 }

@@ -222,6 +222,7 @@ describe("AppShell", () => {
     expect(main.className).toContain("lg:pt-16");
     expect(main.querySelector(".max-w-canvas")).not.toBeNull();
     expect(header.className).toContain("lg:pl-[var(--csrm-sidebar-width,272px)]");
+    expect(screen.getByRole("button", { name: "Account menu" }).parentElement?.className).toContain("ml-auto");
   });
 
   it("filters planned navigation for both requestor and analyst identities", () => {
