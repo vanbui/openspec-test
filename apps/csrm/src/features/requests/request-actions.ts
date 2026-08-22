@@ -14,71 +14,13 @@ import {
 } from "@/lib/api/csrm-service";
 
 import { resolveCurrentActor } from "./resolve-request-actor";
-
-const editableFieldIds = [
-  "title",
-  "description",
-  "assessmentType",
-  "division",
-  "businessUnit",
-  "businessPurpose",
-  "businessCriticality",
-  "thirdPartyInvolvement",
-  "thirdPartyDetails",
-  "regulatoryRequirements",
-  "dueDate",
-  "informationSystems",
-  "informationAssets",
-] as const;
-
-export type RequestFieldId = (typeof editableFieldIds)[number];
-
-export type RequestFormValues = {
-  title: string;
-  description: string;
-  assessmentType: "" | "BAU" | "Project" | "Other";
-  division: string;
-  businessUnit: string;
-  businessPurpose: string;
-  businessCriticality: "" | "Low" | "Moderate" | "High" | "Critical";
-  thirdPartyInvolvement: "" | "true" | "false";
-  thirdPartyDetails: string;
-  regulatoryRequirements: string;
-  dueDate: string;
-  informationSystems: string[];
-  informationAssets: string[];
-};
-
-export type RequestActionState = {
-  status: "idle" | "error" | "success";
-  values: RequestFormValues;
-  fieldErrors: Partial<Record<RequestFieldId, string>>;
-  formError?: string;
-  focus?: RequestFieldId;
-  announcement?: "Draft saved." | "Request submitted." | "Request returned to draft.";
-  revalidate?: readonly string[];
-  redirectTo?: string;
-};
-
-export const initialRequestActionState: RequestActionState = {
-  status: "idle",
-  values: {
-    title: "",
-    description: "",
-    assessmentType: "",
-    division: "",
-    businessUnit: "",
-    businessPurpose: "",
-    businessCriticality: "",
-    thirdPartyInvolvement: "",
-    thirdPartyDetails: "",
-    regulatoryRequirements: "",
-    dueDate: "",
-    informationSystems: [],
-    informationAssets: [],
-  },
-  fieldErrors: {},
-};
+import {
+  editableRequestFieldIds,
+  initialRequestActionState,
+  type RequestActionState,
+  type RequestFieldId,
+  type RequestFormValues,
+} from "./request-form-state";
 
 function textValue(formData: FormData, field: Exclude<RequestFieldId, "informationSystems" | "informationAssets">): string {
   const value = formData.get(field);
@@ -98,7 +40,7 @@ function enumValue<T extends string>(value: string, choices: readonly T[]): T | 
 }
 
 /** Parses only persisted, requestor-editable fields; all FormData system fields are ignored. */
-export function requestValuesFromFormData(formData: FormData): RequestFormValues {
+function requestValuesFromFormData(formData: FormData): RequestFormValues {
   return {
     title: textValue(formData, "title"),
     description: textValue(formData, "description"),
@@ -142,14 +84,14 @@ function actionError(
     values,
     fieldErrors,
     formError,
-    focus: editableFieldIds.find((field) => fieldErrors[field]),
+    focus: editableRequestFieldIds.find((field) => fieldErrors[field]),
   };
 }
 
 function safeServiceError(values: RequestFormValues, error: SafeApiError | SafeValidationError): RequestActionState {
   const fieldErrors: Partial<Record<RequestFieldId, string>> = {};
   if (error.kind === "validation") {
-    for (const field of editableFieldIds) {
+    for (const field of editableRequestFieldIds) {
       const message = error.fields[field];
       if (message) fieldErrors[field] = message;
     }

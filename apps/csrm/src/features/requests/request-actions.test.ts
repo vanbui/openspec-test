@@ -24,11 +24,11 @@ vi.mock("@/lib/api/csrm-service", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import {
-  initialRequestActionState,
   saveDraft,
   submitRequest,
   withdrawRequest,
 } from "./request-actions";
+import { initialRequestActionState } from "./request-form-state";
 
 function formData(values: Record<string, string | readonly string[]>): FormData {
   const data = new FormData();
