@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 7
 current_phase_name: Requestor Request Workflow
 status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-08-22T14:13:47.005Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-08-22T14:22:41.047Z"
 last_activity: 2026-08-22
 last_activity_desc: "Completed quick task 260822-u5d: align the AccountMenu to the right in AppHeader."
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 30
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 # State: IdamBox Platform
@@ -117,6 +117,7 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 | Phase 07 P01 | 18m | 2 tasks | 6 files |
 | Phase 07 P02 | 19m | 1 tasks | 8 files |
 | Phase 07 P03 | 27m | 2 tasks | 8 files |
+| Phase 07-requestor-request-workflow P04 | 12m | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -133,11 +134,13 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 - [Phase ?]: Normalize only generator-invented datetime defaults after Strapi OpenAPI generation to keep the committed contract reproducible.
 - [Phase ?]: Preserve the approved 105-operation OpenAPI contract: request DELETE remains prohibited while dashboard, submit, and withdraw are added.
 - [Phase ?]: Construct CSRM internal token and actor assertion headers only in server-only typed transport, with safe normalized failures.
+- [Phase ?]: Bind request identifiers outside FormData and derive the actor exclusively from the server cookie/runtime seam.
+- [Phase ?]: Keep the production resolver intentionally empty until Phase 13 supplies the OIDC implementation behind the same interface.
 
 ## Session
 
-**Last session:** 2026-08-22T14:13:46.966Z
-**Stopped at:** Completed 07-03-PLAN.md
+**Last session:** 2026-08-22T14:22:41.021Z
+**Stopped at:** Completed 07-04-PLAN.md
 **Resume file:** None
 
 ### Blockers
