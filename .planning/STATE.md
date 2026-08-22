@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 7
 current_phase_name: Requestor Request Workflow
 status: executing
-stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-08-22T13:12:22.849Z"
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-08-22T13:39:39.754Z"
 last_activity: 2026-08-22
 last_activity_desc: "Completed quick task 260822-u5d: align the AccountMenu to the right in AppHeader."
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 30
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # State: IdamBox Platform
@@ -114,6 +114,7 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 | Phase 02 P03 | 7 min | 2 tasks | 9 files |
 | Phase 06-create-the-idambox-csrm-next-js-application P01 | 1h 43m | 2 tasks | 11 files |
 | Phase 06-create-the-idambox-csrm-next-js-application P09 | 48min | 3 tasks | 23 files |
+| Phase 07 P01 | 18m | 2 tasks | 6 files |
 
 ## Decisions
 
@@ -124,9 +125,11 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 - [Phase ?]: Use NODE_PATH=./node_modules only in CSRM lint to bridge Yarn 1 hoisting of eslint-config-next.
 - [Phase ?]: Use an isolated NODE_ENV=production E2E server to verify shipped CSRM output.
 - [Phase ?]: Replace development identity client code with a null production module and proxy test-evidence paths to HTTP 404.
+- [Phase ?]: Use a digest-compared internal token and active IdamBoxUser actor assertion for direct CSRM request operations.
+- [Phase ?]: Derive analyst draft collaboration from the persisted Risk Assessment Requests:Requests Function and return metadata-safe ownership denials.
 
 ## Session
 
-**Last session:** 2026-08-22T12:18:36.867Z
-**Stopped at:** Phase 7 UI-SPEC approved
-**Resume file:** .planning/phases/07-requestor-request-workflow/07-UI-SPEC.md
+**Last session:** 2026-08-22T13:39:39.731Z
+**Stopped at:** Completed 07-01-PLAN.md
+**Resume file:** None
