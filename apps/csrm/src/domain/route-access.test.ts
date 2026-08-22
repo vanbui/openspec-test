@@ -24,16 +24,16 @@ describe("route-access preflight", () => {
     expect(protectedLoad).not.toHaveBeenCalled();
   });
 
-  it("returns unavailable for planned and unknown paths without protected work", async () => {
+  it("allows My Requests before protected work and leaves unknown paths unavailable", async () => {
     const protectedLoad = vi.fn(async () => undefined);
 
     await expect(
       resolveRouteAccess("/requests", requestorCapabilityIds, protectedLoad),
-    ).resolves.toEqual({ kind: "unavailable" });
+    ).resolves.toMatchObject({ kind: "allowed", route: { id: "my-requests" } });
     await expect(
       resolveRouteAccess("/not-a-csrm-route", requestorCapabilityIds, protectedLoad),
     ).resolves.toEqual({ kind: "unavailable" });
-    expect(protectedLoad).not.toHaveBeenCalled();
+    expect(protectedLoad).toHaveBeenCalledTimes(1);
   });
 
   it("matches enabled registered bracket segments before protected detail loading", async () => {

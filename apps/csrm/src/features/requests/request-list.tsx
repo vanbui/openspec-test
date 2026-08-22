@@ -79,10 +79,6 @@ export function RequestList({ canCreateRequest = true, failed = false, filters, 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [query, setQuery] = useState(filters.q);
 
-  useEffect(() => {
-    setQuery(filters.q);
-  }, [filters.q]);
-
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);

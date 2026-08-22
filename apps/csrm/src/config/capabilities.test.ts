@@ -45,9 +45,10 @@ describe("CSRM Function capability registry", () => {
       capability: "function.dashboard.dashboard",
       status: "enabled",
     });
-    expect(routeDefinitions.filter((route) => route.status === "planned")).toHaveLength(20);
+    expect(routeDefinitions.filter((route) => route.status === "planned")).toHaveLength(19);
     expect(visibleRoutes(resolveEffectiveCapabilities())).toEqual([
       expect.objectContaining({ href: "/", status: "enabled" }),
+      expect.objectContaining({ href: "/requests", status: "enabled" }),
       expect.objectContaining({ href: "/requests/new", status: "enabled" }),
       expect.objectContaining({ href: "/requests/[requestId]", status: "enabled" }),
     ]);

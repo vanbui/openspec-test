@@ -57,5 +57,5 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
   const filters = filtersFrom(query);
   const response = await listOwnedRequests(actor.email, { keyword: filters.q || undefined, status: filters.status || undefined, page: filters.page, sort: filters.sort });
   const canCreateRequest = identity?.capabilities.includes("function.risk_assessment_requests.new_request") ?? false;
-  return <><PageHeader action={canCreateRequest ? <Button asChild><Link href="/requests/new">New request</Link></Button> : undefined} description="Find and review your cyber risk assessment requests." title="My Requests" /><RequestList canCreateRequest={canCreateRequest} failed={!response.ok} filters={filters} requests={response.ok ? records(response.data) : []} total={response.ok ? listTotal(response.data) : 0} /></>;
+  return <><PageHeader action={canCreateRequest ? <Button asChild><Link href="/requests/new">New request</Link></Button> : undefined} description="Find and review your cyber risk assessment requests." title="My Requests" /><RequestList canCreateRequest={canCreateRequest} failed={!response.ok} filters={filters} key={`${filters.q}:${filters.status}:${filters.sort}:${filters.page}`} requests={response.ok ? records(response.data) : []} total={response.ok ? listTotal(response.data) : 0} /></>;
 }

@@ -126,14 +126,15 @@ describe('CSRM semantic token foundation', () => {
     expect(violations).toEqual([]);
   });
 
-  it('renders only the approved neutral foundation copy through semantic classes', () => {
+  it('renders dashboard copy through semantic classes without hard-coded colours', () => {
     const page = readAppFile('src/app/page.tsx');
+    const dashboard = readAppFile('src/features/requests/request-dashboard.tsx');
 
-    expect(page).toContain('Cyber Risk Manager');
-    expect(page).toContain('Your cyber risk management workspace is ready.');
-    expect(page).toMatch(/className="[^"]*(?:bg-|text-|border-)/);
-    expect(page).not.toMatch(/#[0-9a-fA-F]{3,8}|(?:red|blue|green|teal|slate|gray|zinc|neutral)-\d{2,3}/);
-    expect(page).not.toMatch(/gradient|CTA|request|assessment/i);
+    expect(page).toContain('Dashboard');
+    expect(page).toContain('Review your current cyber risk assessment request work.');
+    expect(dashboard).toContain('Needs your attention');
+    expect(dashboard).toMatch(/className="[^"]*(?:bg-|text-|border-)/);
+    expect(`${page}\n${dashboard}`).not.toMatch(/#[0-9a-fA-F]{3,8}|(?:red|blue|green|teal|slate|gray|zinc|neutral)-\d{2,3}/);
   });
 
   it('exposes only the CSRM button variants and touch-size contract', () => {
