@@ -319,11 +319,14 @@ Plans:
 4. A Requestor can save a draft, return to it, edit while workflow state permits, confirm submission, and see workflow state clearly.
 5. Record access and available actions are expressed through centralized capabilities and preserve ownership boundaries for later server-side enforcement.
 
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
 
-- [ ] TBD (run `$gsd-plan-phase 7` to break down)
+- [ ] `07-01-PLAN.md` — Prove real-Strapi ownership and lifecycle enforcement
+- [ ] `07-02-PLAN.md` — Regenerate OpenAPI and add typed request workflow coverage
+- [ ] `07-03-PLAN.md` — Deliver New Request and Request Details workflows
+- [ ] `07-04-PLAN.md` — Deliver Dashboard, My Requests, and real-stack browser evidence
 
 **Cross-cutting constraints:**
 
