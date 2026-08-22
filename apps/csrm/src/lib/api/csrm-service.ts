@@ -44,6 +44,7 @@ export type RequestListInput = {
   keyword?: string;
   status?: string;
   page?: number;
+  sort?: "updated-desc" | "updated-asc" | "title-asc";
 };
 
 const catalogueResultBound = 25;
@@ -106,10 +107,11 @@ export async function listOwnedRequests(
   return actorClient(actorEmail).request({
     method: "GET",
     path: `/csrm-assessment-requests${encodeQuery({
-      _q: input.keyword,
-      "filters[requestStatus][$eq]": input.status,
-      "pagination[page]": input.page ?? 1,
-      "pagination[pageSize]": requestPageSize,
+      keyword: input.keyword,
+      status: input.status,
+      page: input.page ?? 1,
+      pageSize: requestPageSize,
+      sort: input.sort === "updated-asc" ? "updatedAt:asc" : input.sort === "title-asc" ? "title:asc" : "updatedAt:desc",
     })}`,
     isValid: isCollection as (value: unknown) => value is RequestCollectionResponse,
   });

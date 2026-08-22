@@ -15,7 +15,7 @@ const REQUEST_STATUSES = [
   "draft", "submitted", "questionnaire-in-progress", "risk-assessment-drafted",
   "under-review", "approved", "closed",
 ] as const;
-const ALLOWED_SORTS = new Set(["updatedAt:desc", "createdAt:desc", "dueDate:asc"]);
+const ALLOWED_SORTS = new Set(["updatedAt:desc", "updatedAt:asc", "title:asc"]);
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 

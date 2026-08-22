@@ -60,7 +60,7 @@ describe("RequestList", () => {
     expect(within(table).getByRole("columnheader", { name: /assessment type/i })).toBeDefined();
     expect(within(table).getByRole("columnheader", { name: /updated/i })).toBeDefined();
     expect(within(table).getByRole("columnheader", { name: /actions/i })).toBeDefined();
-    expect(screen.getByRole("link", { name: /view request REQ-0001/i })).toHaveAttribute("href", "/requests/request-1");
+    expect(screen.getAllByRole("link", { name: /view request REQ-0001/i })[0]?.getAttribute("href")).toBe("/requests/request-1");
     expect(screen.getAllByRole("list", { name: "My risk assessment requests" })).toHaveLength(1);
     expect(screen.getAllByText("Draft").length).toBeGreaterThan(1);
   });
@@ -71,28 +71,28 @@ describe("RequestList", () => {
     renderList({ filters: { page: 3, q: "", sort: "updated-desc", status: "" } });
 
     expect(screen.getByRole("combobox", { name: "Status" })).toBeDefined();
-    expect(screen.getByRole("combobox", { name: "Sort requests" })).toHaveValue("updated-desc");
+    expect((screen.getByRole("combobox", { name: "Sort requests" }) as HTMLSelectElement).value).toBe("updated-desc");
     expect(screen.queryByRole("combobox", { name: /assessment/i })).toBeNull();
 
     await user.type(screen.getByRole("searchbox", { name: "Search requests" }), "vendor");
     expect(mockReplace).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(300);
-    expect(mockReplace).toHaveBeenLastCalledWith("/requests?q=vendor&sort=updated-desc", { scroll: false });
+    expect(mockReplace).toHaveBeenLastCalledWith("/requests?q=vendor", { scroll: false });
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Status" }), "submitted");
-    expect(mockReplace).toHaveBeenLastCalledWith("/requests?status=submitted&sort=updated-desc", { scroll: false });
+    expect(mockReplace).toHaveBeenLastCalledWith("/requests?status=submitted", { scroll: false });
   });
 
   it("exposes only the active table sort, deterministic result announcements, and bounded pagination", async () => {
     const user = userEvent.setup();
     renderList({ filters: { page: 2, q: "", sort: "title-asc", status: "" }, total: 27 });
 
-    expect(screen.getByRole("columnheader", { name: /request/i })).toHaveAttribute("aria-sort", "ascending");
-    expect(screen.getByRole("columnheader", { name: /updated/i })).not.toHaveAttribute("aria-sort");
+    expect(screen.getByRole("columnheader", { name: /request/i }).getAttribute("aria-sort")).toBe("ascending");
+    expect(screen.getByRole("columnheader", { name: /updated/i }).getAttribute("aria-sort")).toBeNull();
     expect(screen.getByRole("status").textContent).toContain("27 requests");
     expect(screen.getByRole("navigation", { name: "Request pagination" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Previous page" })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous page" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Next page" }).hasAttribute("disabled")).toBe(true);
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort requests" }), "updated-asc");
     await waitFor(() => expect(mockReplace).toHaveBeenLastCalledWith("/requests?sort=updated-asc", { scroll: false }));

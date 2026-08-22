@@ -67,7 +67,7 @@ describe("CSRM request service", () => {
       }),
     );
 
-    await expect(listOwnedRequests(actor, { keyword: "one & two", status: "draft", page: 2 })).resolves.toMatchObject({ ok: true });
+    await expect(listOwnedRequests(actor, { keyword: "one & two", status: "draft", page: 2, sort: "title-asc" })).resolves.toMatchObject({ ok: true });
     await expect(createDraft(actor, { title: "Draft request" })).resolves.toMatchObject({ ok: true });
     await expect(getAccessibleRequest(actor, "request-1")).resolves.toMatchObject({ ok: true });
     await expect(saveDraft(actor, "request-1", { title: "Saved request", thirdPartyInvolvement: "false" })).resolves.toMatchObject({ ok: true });
@@ -78,7 +78,7 @@ describe("CSRM request service", () => {
     await expect(listInformationAssets(actor, "asset name")).resolves.toMatchObject({ ok: true });
 
     expect(observed).toEqual([
-      expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests?_q=one+%26+two&filters%5BrequestStatus%5D%5B%24eq%5D=draft&pagination%5Bpage%5D=2&pagination%5BpageSize%5D=25" }),
+      expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests?keyword=one+%26+two&status=draft&page=2&pageSize=25&sort=title%3Aasc" }),
       expect.objectContaining({ method: "POST", path: "/api/csrm-assessment-requests", body: { data: { title: "Draft request" } } }),
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests/request-1" }),
       expect.objectContaining({ method: "PUT", path: "/api/csrm-assessment-requests/request-1", body: { data: { title: "Saved request", thirdPartyInvolvement: "false" } } }),

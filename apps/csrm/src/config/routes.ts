@@ -63,7 +63,7 @@ export const routeDefinitions = [
     group: "risk-assessment-requests",
     icon: "clipboard-list",
     capability: "function.risk_assessment_requests.my_requests",
-    status: "planned",
+    status: "enabled",
   },
   {
     id: "new-request",
