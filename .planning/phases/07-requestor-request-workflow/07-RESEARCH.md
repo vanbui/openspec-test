@@ -294,16 +294,15 @@ Use a Strapi custom controller/service and its documented input/query/output san
 
 The exact mechanism is intentionally not locked here; the non-negotiable contract is that browser input cannot choose the actor and the backend rejects unauthenticated calls. [ASSUMED]
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **What local machine-to-machine credential is used between Next Server Actions and Strapi before Phase 13 OIDC?**
+1. **RESOLVED — What local machine-to-machine credential is used between Next Server Actions and Strapi before Phase 13 OIDC?**
    - What we know: current development identities are server-only fixtures and production replaces their runtime shell; Strapi requires an authenticated caller before it can trust an actor assertion. [VERIFIED: apps/csrm/src/lib/fixtures/resolve-identity.ts:57-83] [VERIFIED: apps/csrm/e2e/shell.spec.ts:219-243]
-   - What's unclear: the repository has no existing CSRM service credential configuration. [VERIFIED: apps/csrm/src/config/env.ts:5-43]
-   - Recommendation: plan a configuration-only internal credential plus server-to-server policy as the Phase 7 bridge, with no browser exposure; Phase 13 replaces actor resolution with validated OIDC mapping, not ownership rules. [ASSUMED]
+   - Resolution: use `IDAMBOX_CSRM_INTERNAL_TOKEN`, a random 32-byte-or-longer environment secret shared only by Next Server Actions and a Strapi route policy. After authenticating that bridge, Strapi resolves the asserted IdamBoxUser and remains authoritative for ownership and lifecycle. The value is never `NEXT_PUBLIC_`, never accepted from browser input, and is covered by production emitted-asset exclusion. Phase 13 replaces actor authentication/mapping, not these ownership rules.
 
-2. **How are custom submit/withdraw operations represented in the generated Strapi OpenAPI specification?**
+2. **RESOLVED — How are custom submit/withdraw operations represented in the generated Strapi OpenAPI specification?**
    - What we know: generic request endpoints exist and the backend has `strapi openapi generate`; the brief requires missing operations to be added to the backend contract. [VERIFIED: apps/backend/package.json:7-17] [VERIFIED: apps/csrm/docs/CSRM-PROJECT-BRIEF.md:762-769]
-   - Recommendation: make specification regeneration/copy/type generation a same-change-set task and fail the phase on drift. [VERIFIED: apps/csrm/scripts/check-openapi-drift.mjs:8-33]
+   - Resolution: declare the custom dashboard, submit, and withdraw routes with Strapi route metadata/schema consumed by `strapi openapi generate`; regenerate `apps/backend/specification.json`, copy it byte-for-byte to the CSRM reference, then run `openapi-typescript`. The coverage gate requires all three path/verb pairs and exactly 106 decided operations, and fails on backend/reference/type drift.
 
 ## Environment Availability
 
