@@ -5,16 +5,16 @@ milestone_name: milestone
 current_phase: 7
 current_phase_name: Requestor Request Workflow
 current_plan: 8
-status: executing
-stopped_at: Completed 07-07-PLAN.md
-last_updated: "2026-08-22T15:03:49.916Z"
+status: verifying
+stopped_at: Completed 07-08-PLAN.md
+last_updated: "2026-08-22T15:52:47.613Z"
 last_activity: 2026-08-23
 last_activity_desc: Completed Plan 07-06
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 30
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # State: IdamBox Platform
@@ -39,7 +39,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 ## Current Position
 
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 **Current Phase:** 7
 **Current Phase Name:** Requestor Request Workflow
 **Current Plan:** 8
@@ -132,6 +132,7 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 | Phase 07 P05 | 9m | 1 tasks | 9 files |
 | Phase 07 P06 | 9m | 1 tasks | 9 files |
 | Phase 07 P07 | 9m | 2 tasks | 14 files |
+| Phase 07 P08 | 46min | 1 tasks | 10 files |
 
 ## Decisions
 
@@ -156,11 +157,13 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 - [Phase ?]: Reuse RequestForm detail modes so analyst draft edits remain save-only through trusted Server Actions.
 - [Phase ?]: Keep request discovery URL-driven while server-side services retain owner-bound loading and authorization.
 - [Phase ?]: Map exact UI sort choices to the protected backend allowlist rather than sorting owner data in browser code.
+- [Phase ?]: E2E Next servers use explicit Webpack so production-only fixture replacements apply under Next 16.
+- [Phase ?]: Mask generated CRA identifiers in visual baselines while asserting visible workflow titles separately.
 
 ## Session
 
-**Last session:** 2026-08-22T15:03:49.895Z
-**Stopped at:** Completed 07-07-PLAN.md
+**Last session:** 2026-08-22T15:52:47.593Z
+**Stopped at:** Completed 07-08-PLAN.md
 **Resume file:** None
 
 ### Blockers
