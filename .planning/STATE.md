@@ -4,16 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 7
 current_phase_name: Requestor Request Workflow
+current_plan: 7
 status: executing
-stopped_at: Completed 07-05-PLAN.md
-last_updated: "2026-08-22T14:35:38.335Z"
-last_activity: 2026-08-22
-last_activity_desc: "Completed quick task 260822-u5d: align the AccountMenu to the right in AppHeader."
+stopped_at: Completed 07-06-PLAN.md
+last_updated: "2026-08-22T14:50:04.507Z"
+last_activity: 2026-08-23
+last_activity_desc: Completed Plan 07-06
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 30
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # State: IdamBox Platform
@@ -23,18 +24,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** IdamBox must provide a clean shared authorization model where each application can define roles and users receive access indirectly through assigned role bundles.
-**Current focus:** Phase 06 — establish the CSRM application foundation
+**Current focus:** Phase 07 — Requestor Request Workflow
 
 ## Current Phase
 
 | Field     | Value                      |
 | --------- | -------------------------- |
 | Phase     | 7 — Requestor Request Workflow                          |
-| Name      | CSRM Foundation            |
+| Name      | Requestor Request Workflow |
 | Status    | Ready to execute           |
 | Started   | -                          |
 | Completed | -                          |
-| Plans     | 0                          |
+| Plans     | 6 / 8                      |
+
+## Current Position
+
+**Status:** Ready to execute
+**Current Phase:** 7
+**Current Phase Name:** Requestor Request Workflow
+**Current Plan:** 7
+**Total Plans in Phase:** 8
+**Last Activity:** 2026-08-23
+**Last Activity Description:** Completed Plan 07-06
 
 ## Workflow State
 
@@ -119,6 +130,7 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 | Phase 07 P03 | 27m | 2 tasks | 8 files |
 | Phase 07-requestor-request-workflow P04 | 12m | 1 tasks | 5 files |
 | Phase 07 P05 | 9m | 1 tasks | 9 files |
+| Phase 07 P06 | 9m | 1 tasks | 9 files |
 
 ## Decisions
 
@@ -139,11 +151,13 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 - [Phase ?]: Keep the production resolver intentionally empty until Phase 13 supplies the OIDC implementation behind the same interface.
 - [Phase ?]: Pass trusted Server Actions from the server page to the Client Component; never import server-only actions into browser code.
 - [Phase ?]: Use server-loaded typed catalogue choices with a 300ms client-side search debounce and no package mutation.
+- [Phase ?]: Use the backend’s indistinguishable unknown/non-owned 404 as metadata-safe access denial for Request Details.
+- [Phase ?]: Reuse RequestForm detail modes so analyst draft edits remain save-only through trusted Server Actions.
 
 ## Session
 
-**Last session:** 2026-08-22T14:35:38.301Z
-**Stopped at:** Completed 07-05-PLAN.md
+**Last session:** 2026-08-22T14:50:04.484Z
+**Stopped at:** Completed 07-06-PLAN.md
 **Resume file:** None
 
 ### Blockers

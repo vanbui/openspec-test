@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 14
+open_count: 15
 waived_count: 0
 fixed_count: 0
-total_count: 14
-last_updated: 2026-08-22T14:13:47.610Z
+total_count: 15
+last_updated: 2026-08-22T14:50:17.469Z
 ---
 
 # Broken Windows Ledger
@@ -29,6 +29,7 @@ last_updated: 2026-08-22T14:13:47.610Z
 | 12 | 07 | deviation | apps/backend/scripts/normalize-openapi-specification.mjs |  | Normalized generator-invented datetime defaults to make the backend OpenAPI contract reproducible. | open |  | 2026-08-22T14:01:54.567Z |  |
 | 13 | 07 | deviation | apps/backend/package.json |  | Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable. | open |  | 2026-08-22T14:01:54.710Z |  |
 | 14 | 07 | deviation | apps/csrm/scripts/verify-request-api-coverage.mjs |  | Coverage gate corrected stale plan total to the approved 105-operation secure request-workflow contract. | open |  | 2026-08-22T14:13:47.610Z |  |
+| 15 | 07 | deviation | apps/csrm/src/features/requests/request-form.tsx |  | Plan 07-06 extended the shared request form to preserve trusted analyst save-only detail controls. | open |  | 2026-08-22T14:50:17.469Z |  |
 
 ````json
 [
@@ -198,6 +199,18 @@ last_updated: 2026-08-22T14:13:47.610Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-22T14:13:47.610Z",
+    "resolved_at": null
+  },
+  {
+    "id": 15,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "apps/csrm/src/features/requests/request-form.tsx",
+    "line": null,
+    "description": "Plan 07-06 extended the shared request form to preserve trusted analyst save-only detail controls.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T14:50:17.469Z",
     "resolved_at": null
   }
 ]
