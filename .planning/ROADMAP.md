@@ -319,7 +319,7 @@ Plans:
 4. A Requestor can save a draft, return to it, edit while workflow state permits, confirm submission, and see workflow state clearly.
 5. Record access and available actions are expressed through centralized capabilities and preserve ownership boundaries for later server-side enforcement.
 
-**Plans:** 4/8 plans executed
+**Plans:** 5/8 plans executed
 
 Plans:
 
@@ -327,7 +327,7 @@ Plans:
 - [x] 07-02-PLAN.md
 - [x] 07-03-PLAN.md
 - [x] 07-04-PLAN.md
-- [ ] 07-05-PLAN.md
+- [x] 07-05-PLAN.md
 - [ ] 07-06-PLAN.md
 - [ ] 07-07-PLAN.md
 - [ ] 07-08-PLAN.md
