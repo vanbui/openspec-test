@@ -72,7 +72,7 @@ Last activity: 2026-08-22 - Completed quick task 260822-tdg: align CSRM shell co
 | 5 | update CSRM authentication and authorization for Keycloak and Role Function FunctionAPI enforcement | 2026-08-08 | 961566e | — |
 | 260810-cjm | update the CSRM role/function/API catalogue with Administration Functions and CSV import grants | 2026-08-10 | e29ce18 | [260810-cjm-update-the-csrm-role-function-api-catalo](./quick/260810-cjm-update-the-csrm-role-function-api-catalo/) |
 | 260811-ne2 | move the apps/csrm/docs/references/controls folder to apps/backend/src/bootstrap and update the seed-csrm-data.ts script accordingly. | 2026-08-11 | a1b66f7 | [260811-ne2-move-the-apps-csrm-docs-references-contr](./quick/260811-ne2-move-the-apps-csrm-docs-references-contr/) |
-| 260822-tdg | align CSRM shell controls and navigation with the engineering rules | 2026-08-22 | pending | [260822-tdg-check-the-csrm-engineering-rules-in-apps](./quick/260822-tdg-check-the-csrm-engineering-rules-in-apps/) |
+| 260822-tdg | align CSRM shell controls and navigation with the engineering rules | 2026-08-22 | e1ae64b | [260822-tdg-check-the-csrm-engineering-rules-in-apps](./quick/260822-tdg-check-the-csrm-engineering-rules-in-apps/) |
 
 ## Memory
 
