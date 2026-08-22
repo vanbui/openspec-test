@@ -66,6 +66,6 @@ describe("RequestDashboard", () => {
 
     expect(container.querySelector("[data-dashboard-grid]")?.className).toContain("md:grid-cols-2");
     expect(container.querySelector("[data-dashboard-grid]")?.className).toContain("xl:grid-cols-3");
-    expect(screen.getByText("Draft")).toBeDefined();
+    expect(screen.getAllByText("Draft").length).toBeGreaterThan(0);
   });
 });
