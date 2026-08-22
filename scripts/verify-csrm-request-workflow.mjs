@@ -95,6 +95,8 @@ try {
     displayName: "Ownership Verifier", accountStatus: "active",
   } });
   assert(secondUser.documentId, "Verifier must create a second active IdamBoxUser");
+  const informationSystem = await strapi.documents("api::csrm-information-system.csrm-information-system").create({ data: { name: "Verifier system" } });
+  const informationAsset = await strapi.documents("api::csrm-information-asset.csrm-information-asset").create({ data: { name: "Verifier asset" } });
 
   const baseUrl = await listen(strapi.server);
   const forgedCreate = await request(baseUrl, "/csrm-assessment-requests", {
@@ -126,6 +128,7 @@ try {
       title: "Lifecycle draft", description: "A complete request description.", assessmentType: "Project",
       businessPurpose: "Verify lifecycle boundaries.", businessCriticality: "High",
       thirdPartyInvolvement: true, thirdPartyDetails: "External service provider.",
+      informationSystems: [informationSystem.documentId], informationAssets: [informationAsset.documentId],
     };
     const saved = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`, {
       method: "PUT", headers: { "content-type": "application/json" },
@@ -139,6 +142,18 @@ try {
     assert(withdrawn.response.status === 200 && JSON.parse(withdrawn.body).data.requestStatus === "draft", "Owner withdraw must only return submitted work to draft");
     const cleared = JSON.parse(withdrawn.body).data;
     assert(!cleared.submittedDate, "Withdraw must clear submittedDate");
+    const invalidRelation = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`, {
+      method: "PUT", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: { informationSystems: ["unknown-catalogue-document"] } }),
+    });
+    assert(invalidRelation.response.status === 400, "Unknown catalogue relation IDs must be rejected");
+    await strapi.documents("api::csrm-assessment-request.csrm-assessment-request").update({
+      documentId: created.documentId, data: { requestStatus: "approved" },
+    });
+    const locked = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`, {
+      method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { title: "must not save" } }),
+    });
+    assert(locked.response.status === 403, "Later processing statuses must be owner read-only");
   }
 
   if (shouldRun("list-dashboard")) {
@@ -168,7 +183,7 @@ try {
     assert(analystSave.response.status === 200 && analystData.requestStatus === "draft", "Analyst saves must preserve draft status");
     assert(analystData.requestor?.documentId === created.requestor.documentId && !analystData.thirdPartyDetails, "Analyst saves preserve owner and clear hidden third-party details");
     const analystSubmit = await request(baseUrl, `/csrm-assessment-requests/${analystRequest.documentId}/submit`, { method: "POST", headers: { [actorHeader]: "bob.doe@idambox.com" } });
-    assert(analystSubmit.response.status === 403, "Analyst must not submit for the Requestor");
+    assert(analystSubmit.response.status === 404 && !analystSubmit.body.includes("Analyst collaboration draft"), "Analyst submission must be metadata-safe and denied");
   }
 
   console.log("CSRM request workflow verifier passed: ownership, lifecycle, list/dashboard, analyst collaboration, listener release, disposable cleanup");
