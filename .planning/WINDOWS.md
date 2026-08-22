@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 11
+open_count: 13
 waived_count: 0
 fixed_count: 0
-total_count: 11
-last_updated: 2026-08-09T11:30:47.521Z
+total_count: 13
+last_updated: 2026-08-22T14:01:54.710Z
 ---
 
 # Broken Windows Ledger
@@ -26,6 +26,8 @@ last_updated: 2026-08-09T11:30:47.521Z
 | 9 | 06 | deviation | apps/csrm/src/app/test-evidence/analyst-only/page.tsx |  | Passed development identity cookies into analyst direct-route evidence. | open |  | 2026-08-09T11:30:47.205Z |  |
 | 10 | 06 | deviation | apps/csrm/next.config.ts |  | Removed development identity fixture client code from production output. | open |  | 2026-08-09T11:30:47.362Z |  |
 | 11 | 06 | deviation | apps/csrm/playwright.config.ts |  | Isolated the production E2E build from the development server output. | open |  | 2026-08-09T11:30:47.521Z |  |
+| 12 | 07 | deviation | apps/backend/scripts/normalize-openapi-specification.mjs |  | Normalized generator-invented datetime defaults to make the backend OpenAPI contract reproducible. | open |  | 2026-08-22T14:01:54.567Z |  |
+| 13 | 07 | deviation | apps/backend/package.json |  | Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable. | open |  | 2026-08-22T14:01:54.710Z |  |
 
 ````json
 [
@@ -159,6 +161,30 @@ last_updated: 2026-08-09T11:30:47.521Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-09T11:30:47.521Z",
+    "resolved_at": null
+  },
+  {
+    "id": 12,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "apps/backend/scripts/normalize-openapi-specification.mjs",
+    "line": null,
+    "description": "Normalized generator-invented datetime defaults to make the backend OpenAPI contract reproducible.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T14:01:54.567Z",
+    "resolved_at": null
+  },
+  {
+    "id": 13,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "apps/backend/package.json",
+    "line": null,
+    "description": "Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T14:01:54.710Z",
     "resolved_at": null
   }
 ]

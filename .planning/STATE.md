@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 7
 current_phase_name: Requestor Request Workflow
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-08-22T13:39:39.754Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-08-22T14:02:20.314Z"
 last_activity: 2026-08-22
 last_activity_desc: "Completed quick task 260822-u5d: align the AccountMenu to the right in AppHeader."
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 30
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # State: IdamBox Platform
@@ -115,6 +115,7 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 | Phase 06-create-the-idambox-csrm-next-js-application P01 | 1h 43m | 2 tasks | 11 files |
 | Phase 06-create-the-idambox-csrm-next-js-application P09 | 48min | 3 tasks | 23 files |
 | Phase 07 P01 | 18m | 2 tasks | 6 files |
+| Phase 07 P02 | 19m | 1 tasks | 8 files |
 
 ## Decisions
 
@@ -127,9 +128,15 @@ Last activity: 2026-08-10 - Completed quick task 260810-cjm: update the CSRM rol
 - [Phase ?]: Replace development identity client code with a null production module and proxy test-evidence paths to HTTP 404.
 - [Phase ?]: Use a digest-compared internal token and active IdamBoxUser actor assertion for direct CSRM request operations.
 - [Phase ?]: Derive analyst draft collaboration from the persisted Risk Assessment Requests:Requests Function and return metadata-safe ownership denials.
+- [Phase ?]: Lock Phase 07 request OpenAPI at 105 real operations: dashboard, submit, and withdraw are added while generic request DELETE remains prohibited.
+- [Phase ?]: Normalize only generator-invented datetime defaults after Strapi OpenAPI generation to keep the committed contract reproducible.
 
 ## Session
 
-**Last session:** 2026-08-22T13:39:39.731Z
-**Stopped at:** Completed 07-01-PLAN.md
+**Last session:** 2026-08-22T14:02:20.292Z
+**Stopped at:** Completed 07-02-PLAN.md
 **Resume file:** None
+
+### Blockers
+
+- Plan 07-02 requires a 106-operation contract, but the authoritative Strapi generator emits 105: Plan 07-01 correctly removed DELETE /csrm-assessment-requests/{id} while adding dashboard, submit, and withdraw. Restoring/documenting DELETE would violate the approved request-workflow security boundary.
