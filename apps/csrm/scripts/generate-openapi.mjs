@@ -15,7 +15,7 @@ const openApiTypescriptCli = resolve(
   dirname(require.resolve("openapi-typescript/package.json")),
   "bin/cli.js",
 );
-const expectedOperationCount = 103;
+const expectedOperationCount = 106;
 
 function countOperations(specification) {
   const methods = new Set([
@@ -32,6 +32,34 @@ function countOperations(specification) {
   return Object.values(specification.paths).flatMap(Object.keys).filter((method) => methods.has(method)).length;
 }
 
+function hasJsonContent(content) {
+  return Boolean(content && typeof content === "object" && content["application/json"]);
+}
+
+function assertWorkflowOperation(specification, path, method) {
+  const operation = specification.paths?.[path]?.[method];
+
+  if (!operation?.operationId) {
+    throw new Error(`Expected documented ${method.toUpperCase()} ${path} operation with an operationId.`);
+  }
+
+  if (!hasJsonContent(operation.responses?.["200"]?.content)) {
+    throw new Error(`Expected documented JSON success response for ${method.toUpperCase()} ${path}.`);
+  }
+
+  if (!hasJsonContent(operation.responses?.["400"]?.content)) {
+    throw new Error(`Expected documented JSON error response for ${method.toUpperCase()} ${path}.`);
+  }
+
+  if (method === "post" && !hasJsonContent(operation.requestBody?.content)) {
+    throw new Error(`Expected documented JSON request body for ${method.toUpperCase()} ${path}.`);
+  }
+
+  if (path.includes("{id}") && !operation.parameters?.some((parameter) => parameter.in === "path" && parameter.name === "id")) {
+    throw new Error(`Expected documented id path parameter for ${method.toUpperCase()} ${path}.`);
+  }
+}
+
 async function assertSpecification() {
   const specification = JSON.parse(await readFile(specificationPath, "utf8"));
   const operationCount = countOperations(specification);
@@ -41,6 +69,10 @@ async function assertSpecification() {
       `Expected OpenAPI 3.1.0 with ${expectedOperationCount} operations; found ${specification.openapi} with ${operationCount}.`,
     );
   }
+
+  assertWorkflowOperation(specification, "/csrm-assessment-requests/dashboard", "get");
+  assertWorkflowOperation(specification, "/csrm-assessment-requests/{id}/submit", "post");
+  assertWorkflowOperation(specification, "/csrm-assessment-requests/{id}/withdraw", "post");
 
   return operationCount;
 }
