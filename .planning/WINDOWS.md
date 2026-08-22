@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
+open_count: 17
 waived_count: 0
 fixed_count: 0
-total_count: 15
-last_updated: 2026-08-22T14:50:17.469Z
+total_count: 17
+last_updated: 2026-08-22T15:03:50.524Z
 ---
 
 # Broken Windows Ledger
@@ -30,6 +30,8 @@ last_updated: 2026-08-22T14:50:17.469Z
 | 13 | 07 | deviation | apps/backend/package.json |  | Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable. | open |  | 2026-08-22T14:01:54.710Z |  |
 | 14 | 07 | deviation | apps/csrm/scripts/verify-request-api-coverage.mjs |  | Coverage gate corrected stale plan total to the approved 105-operation secure request-workflow contract. | open |  | 2026-08-22T14:13:47.610Z |  |
 | 15 | 07 | deviation | apps/csrm/src/features/requests/request-form.tsx |  | Plan 07-06 extended the shared request form to preserve trusted analyst save-only detail controls. | open |  | 2026-08-22T14:50:17.469Z |  |
+| 16 | 07 | deviation | apps/csrm/src/lib/api/csrm-service.ts |  | Aligned typed request list query keys and approved sort values with the protected backend workflow contract. | open |  | 2026-08-22T15:03:50.375Z |  |
+| 17 | 07 | deviation | apps/csrm/src/features/requests/request-list.tsx |  | Replaced lint-rejected effect-driven filter synchronization with URL-keyed remounting. | open |  | 2026-08-22T15:03:50.524Z |  |
 
 ````json
 [
@@ -211,6 +213,30 @@ last_updated: 2026-08-22T14:50:17.469Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-22T14:50:17.469Z",
+    "resolved_at": null
+  },
+  {
+    "id": 16,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "apps/csrm/src/lib/api/csrm-service.ts",
+    "line": null,
+    "description": "Aligned typed request list query keys and approved sort values with the protected backend workflow contract.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T15:03:50.375Z",
+    "resolved_at": null
+  },
+  {
+    "id": 17,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "apps/csrm/src/features/requests/request-list.tsx",
+    "line": null,
+    "description": "Replaced lint-rejected effect-driven filter synchronization with URL-keyed remounting.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T15:03:50.524Z",
     "resolved_at": null
   }
 ]
