@@ -24,9 +24,12 @@ The workspace uses Yarn workspaces and Turbo.
 ```powershell
 yarn install
 Copy-Item apps/backend/.env.example apps/backend/.env
+Copy-Item apps/csrm/.env.example apps/csrm/.env
 ```
 
-Before running Strapi, replace the placeholder secrets in `apps/backend/.env`.
+Before running Strapi, replace the placeholder secrets in `apps/backend/.env`. Then start up the Keycloak IDP by following the instructions in idp/README.md
+
+Before running CSRM, go to http://localhost:1337/admin/settings/api-tokens?sort=name:ASC and copy the Full Access API token and enter that into the apps/csrm/.env file.
 
 ## Development
 

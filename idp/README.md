@@ -13,6 +13,12 @@ docker compose up -d
 docker compose logs -f keycloak
 ```
 
+If the Keycloak Docker container had been launched previously then run this command to start the Keycloak Docker container instead:
+
+```powershell
+docker compose start
+```
+
 Open the admin console and login as admin/admin:
 
 ```text
@@ -22,7 +28,7 @@ http://localhost:8080/admin
 Stop the container and keep the imported realm data:
 
 ```powershell
-docker compose down
+docker compose stop
 ```
 
 Stop the container and remove the named volume so the checked-in realm JSON imports again on the next startup:
