@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 13
+open_count: 14
 waived_count: 0
 fixed_count: 0
-total_count: 13
-last_updated: 2026-08-22T14:01:54.710Z
+total_count: 14
+last_updated: 2026-08-22T14:13:47.610Z
 ---
 
 # Broken Windows Ledger
@@ -28,6 +28,7 @@ last_updated: 2026-08-22T14:01:54.710Z
 | 11 | 06 | deviation | apps/csrm/playwright.config.ts |  | Isolated the production E2E build from the development server output. | open |  | 2026-08-09T11:30:47.521Z |  |
 | 12 | 07 | deviation | apps/backend/scripts/normalize-openapi-specification.mjs |  | Normalized generator-invented datetime defaults to make the backend OpenAPI contract reproducible. | open |  | 2026-08-22T14:01:54.567Z |  |
 | 13 | 07 | deviation | apps/backend/package.json |  | Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable. | open |  | 2026-08-22T14:01:54.710Z |  |
+| 14 | 07 | deviation | apps/csrm/scripts/verify-request-api-coverage.mjs |  | Coverage gate corrected stale plan total to the approved 105-operation secure request-workflow contract. | open |  | 2026-08-22T14:13:47.610Z |  |
 
 ````json
 [
@@ -185,6 +186,18 @@ last_updated: 2026-08-22T14:01:54.710Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-22T14:01:54.710Z",
+    "resolved_at": null
+  },
+  {
+    "id": 14,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "apps/csrm/scripts/verify-request-api-coverage.mjs",
+    "line": null,
+    "description": "Coverage gate corrected stale plan total to the approved 105-operation secure request-workflow contract.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T14:13:47.610Z",
     "resolved_at": null
   }
 ]
