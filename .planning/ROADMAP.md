@@ -319,17 +319,18 @@ Plans:
 4. A Requestor can save a draft, return to it, edit while workflow state permits, confirm submission, and see workflow state clearly.
 5. Record access and available actions are expressed through centralized capabilities and preserve ownership boundaries for later server-side enforcement.
 
-**Plans:** 7 plans
+**Plans:** 8 plans
 
 Plans:
 
 - [ ] `07-01-PLAN.md` — Prove real-Strapi ownership and lifecycle enforcement
 - [ ] `07-02-PLAN.md` — Regenerate and lock the custom workflow OpenAPI contract
 - [ ] `07-03-PLAN.md` — Add typed request services, MSW parity, and API coverage gates
-- [ ] `07-04-PLAN.md` — Add trusted Server Actions and the progressive New Request form
-- [ ] `07-05-PLAN.md` — Deliver ownership-safe Request Details and lifecycle actions
-- [ ] `07-06-PLAN.md` — Deliver Dashboard and responsive My Requests
-- [ ] `07-07-PLAN.md` — Prove the real-stack workflow and production boundary
+- [ ] `07-04-PLAN.md` — Establish the trusted actor and Server Action boundary
+- [ ] `07-05-PLAN.md` — Deliver the progressive New Request form and catalogue UI
+- [ ] `07-06-PLAN.md` — Deliver ownership-safe Request Details and lifecycle actions
+- [ ] `07-07-PLAN.md` — Deliver Dashboard and responsive My Requests
+- [ ] `07-08-PLAN.md` — Prove the real-stack workflow and production boundary
 
 **Cross-cutting constraints:**
 

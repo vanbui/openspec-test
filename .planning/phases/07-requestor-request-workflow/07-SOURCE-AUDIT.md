@@ -4,28 +4,29 @@
 
 | Source | Item | Coverage |
 |---|---|---|
-| GOAL | Vertical Requestor workflow for viewing, creating, saving, editing, and submitting owned requests | 07-01 through 07-07 |
-| REQ | CSRM-05 | 07-01 through 07-07 |
+| GOAL | Vertical Requestor workflow for viewing, creating, saving, editing, and submitting owned requests | 07-01 through 07-08 |
+| REQ | CSRM-05 | 07-01 through 07-08 |
 | RESEARCH | Direct-Strapi ownership, actor resolution, lifecycle transition matrix, server-owned fields, and IDOR-safe failures | 07-01 |
 | RESEARCH | Generated OpenAPI contract | 07-02 |
 | RESEARCH | Typed transport/service boundary, MSW parity, and explicit API coverage classification | 07-03 |
-| RESEARCH | Persisted draft/submit validation, catalogue-backed relations, and safe Server Actions | 07-04 |
-| RESEARCH | Ownership-safe detail and lifecycle presentation | 07-05 |
-| RESEARCH | Responsive dashboard/list | 07-06 |
-| RESEARCH | Bounded real-stack browser evidence, fixture exclusion, and dependency provenance | 07-07 |
-| CONTEXT | D-01 real Strapi and backend ownership | 07-01, 07-02, 07-07 |
-| CONTEXT | D-02 centralized capabilities plus server ownership | 07-01, 07-04, 07-05 |
-| CONTEXT | D-03 submitted-to-draft withdrawal until later processing | 07-01, 07-05 |
-| CONTEXT | D-04 analyst access to unsubmitted drafts | 07-01, 07-05 |
-| CONTEXT | D-05 analyst edits retain draft and Requestor submits | 07-01, 07-05 |
-| CONTEXT | D-06 one progressive sectioned page | 07-04 |
-| CONTEXT | D-07 title-only save; essential persisted fields on submit | 07-01, 07-04 |
-| CONTEXT | D-08 optional searchable systems/assets | 07-03, 07-04 |
-| CONTEXT | D-09 conditional third-party details | 07-01, 07-04 |
-| CONTEXT | D-10 action-first dashboard | 07-06 |
-| CONTEXT | D-11 desktop table/mobile cards | 07-06 |
-| CONTEXT | D-12 updated-desc default plus keyword/status filters | 07-06 |
-| UI-SPEC | Route capability, dashboard, list, form, details, lifecycle actions, state/error/dirty behavior, responsive and accessibility contracts | 07-04 through 07-07 |
+| RESEARCH | Safe Server Actions and trusted actor boundary | 07-04 |
+| RESEARCH | Persisted draft/submit validation and catalogue-backed relations | 07-05 |
+| RESEARCH | Ownership-safe detail and lifecycle presentation | 07-06 |
+| RESEARCH | Responsive dashboard/list | 07-07 |
+| RESEARCH | Bounded real-stack browser evidence, fixture exclusion, and dependency provenance | 07-08 |
+| CONTEXT | D-01 real Strapi and backend ownership | 07-01, 07-02, 07-08 |
+| CONTEXT | D-02 centralized capabilities plus server ownership | 07-01, 07-04, 07-06 |
+| CONTEXT | D-03 submitted-to-draft withdrawal until later processing | 07-01, 07-06 |
+| CONTEXT | D-04 analyst access to unsubmitted drafts | 07-01, 07-06 |
+| CONTEXT | D-05 analyst edits retain draft and Requestor submits | 07-01, 07-06 |
+| CONTEXT | D-06 one progressive sectioned page | 07-05 |
+| CONTEXT | D-07 title-only save; essential persisted fields on submit | 07-01, 07-04, 07-05 |
+| CONTEXT | D-08 optional searchable systems/assets | 07-03, 07-05 |
+| CONTEXT | D-09 conditional third-party details | 07-01, 07-05 |
+| CONTEXT | D-10 action-first dashboard | 07-07 |
+| CONTEXT | D-11 desktop table/mobile cards | 07-07 |
+| CONTEXT | D-12 updated-desc default plus keyword/status filters | 07-07 |
+| UI-SPEC | Route capability, dashboard, list, form, details, lifecycle actions, state/error/dirty behavior, responsive and accessibility contracts | 07-05 through 07-08 |
 
 ## Explicit Exclusions
 
