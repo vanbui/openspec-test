@@ -52,7 +52,7 @@ const request = async (baseUrl, pathname, options = {}) => {
 const selectedCases = new Set(
   process.argv.flatMap((argument, index, values) => argument === "--case" ? [values[index + 1]] : []),
 );
-if (selectedCases.size > 0 && !selectedCases.has("owned-draft-tracer")) process.exit(0);
+const shouldRun = (name) => selectedCases.size === 0 || selectedCases.has(name);
 
 const savedEnvironment = new Map(environmentKeys.map((key) => [key, process.env[key]]));
 let disposableDir;
@@ -111,15 +111,67 @@ try {
   assert(created.requestStatus === "draft" && !created.submittedDate, "Forged workflow values must not persist");
   assert(created.requestor?.documentId !== secondUser.documentId, "Forged requestor must not persist");
 
-  const owned = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`);
-  assert(owned.response.status === 200, "Owner must read its draft");
-  const nonOwned = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`, { headers: { [actorHeader]: "ownership.verifier@idambox.com" } });
-  const unknown = await request(baseUrl, "/csrm-assessment-requests/aaaaaaaaaaaaaaaaaaaaaaaa");
-  assert(nonOwned.response.status === unknown.response.status && nonOwned.body === unknown.body, "Unknown and non-owned denials must be byte-equivalent");
+  if (shouldRun("owned-draft-tracer")) {
+    const owned = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`);
+    assert(owned.response.status === 200, "Owner must read its draft");
+    const nonOwned = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`, { headers: { [actorHeader]: "ownership.verifier@idambox.com" } });
+    const unknown = await request(baseUrl, "/csrm-assessment-requests/aaaaaaaaaaaaaaaaaaaaaaaa");
+    assert(nonOwned.response.status === unknown.response.status && nonOwned.body === unknown.body, "Unknown and non-owned denials must be byte-equivalent");
+    const unauthenticated = await fetch(`${baseUrl}/api/csrm-assessment-requests/${created.documentId}`);
+    assert(unauthenticated.status === 403 || unauthenticated.status === 401, "Requests must require an internal caller token");
+  }
 
-  const unauthenticated = await fetch(`${baseUrl}/api/csrm-assessment-requests/${created.documentId}`);
-  assert(unauthenticated.status === 403 || unauthenticated.status === 401, "Requests must require an internal caller token");
-  console.log("CSRM request workflow verifier passed: owned draft tracer, metadata-safe denial, listener release, disposable cleanup");
+  if (shouldRun("lifecycle")) {
+    const draftData = {
+      title: "Lifecycle draft", description: "A complete request description.", assessmentType: "Project",
+      businessPurpose: "Verify lifecycle boundaries.", businessCriticality: "High",
+      thirdPartyInvolvement: true, thirdPartyDetails: "External service provider.",
+    };
+    const saved = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}`, {
+      method: "PUT", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: { ...draftData, requestStatus: "approved", requestor: secondUser.documentId } }),
+    });
+    assert(saved.response.status === 200, "Owner must save a title-only draft");
+    assert(JSON.parse(saved.body).data.requestStatus === "draft", "Save must ignore client workflow fields");
+    const submitted = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}/submit`, { method: "POST" });
+    assert(submitted.response.status === 200 && JSON.parse(submitted.body).data.requestStatus === "submitted", "Owner submit must be server-controlled");
+    const withdrawn = await request(baseUrl, `/csrm-assessment-requests/${created.documentId}/withdraw`, { method: "POST" });
+    assert(withdrawn.response.status === 200 && JSON.parse(withdrawn.body).data.requestStatus === "draft", "Owner withdraw must only return submitted work to draft");
+    const cleared = JSON.parse(withdrawn.body).data;
+    assert(!cleared.submittedDate, "Withdraw must clear submittedDate");
+  }
+
+  if (shouldRun("list-dashboard")) {
+    const list = await request(baseUrl, "/csrm-assessment-requests?keyword=Lifecycle&sort=updatedAt:desc&page=1&pageSize=1");
+    const listData = JSON.parse(list.body).data;
+    assert(list.response.status === 200 && listData.length <= 1, "Owner list must use bounded pagination");
+    const invalidQuery = await request(baseUrl, "/csrm-assessment-requests?filters[requestStatus][$eq]=draft");
+    assert(invalidQuery.response.status === 400, "Arbitrary Strapi filters must be rejected");
+    const dashboard = await request(baseUrl, "/csrm-assessment-requests/dashboard");
+    assert(dashboard.response.status === 200, "Dashboard must be available through a protected bounded route");
+    assert(JSON.parse(dashboard.body).data.statusCounts, "Dashboard must return derived status counts");
+  }
+
+  if (shouldRun("analyst-draft")) {
+    const analystDraft = await request(baseUrl, "/csrm-assessment-requests", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: { title: "Analyst collaboration draft", thirdPartyInvolvement: false, thirdPartyDetails: "must clear" } }),
+    });
+    const analystRequest = JSON.parse(analystDraft.body).data;
+    const analystRead = await request(baseUrl, `/csrm-assessment-requests/${analystRequest.documentId}`, { headers: { [actorHeader]: "bob.doe@idambox.com" } });
+    assert(analystRead.response.status === 200, "Persisted analyst Function must permit reading an unsubmitted Requestor draft");
+    const analystSave = await request(baseUrl, `/csrm-assessment-requests/${analystRequest.documentId}`, {
+      method: "PUT", headers: { "content-type": "application/json", [actorHeader]: "bob.doe@idambox.com" },
+      body: JSON.stringify({ data: { title: "Analyst-enriched draft", thirdPartyInvolvement: false, thirdPartyDetails: "must clear" } }),
+    });
+    const analystData = JSON.parse(analystSave.body).data;
+    assert(analystSave.response.status === 200 && analystData.requestStatus === "draft", "Analyst saves must preserve draft status");
+    assert(analystData.requestor?.documentId === created.requestor.documentId && !analystData.thirdPartyDetails, "Analyst saves preserve owner and clear hidden third-party details");
+    const analystSubmit = await request(baseUrl, `/csrm-assessment-requests/${analystRequest.documentId}/submit`, { method: "POST", headers: { [actorHeader]: "bob.doe@idambox.com" } });
+    assert(analystSubmit.response.status === 403, "Analyst must not submit for the Requestor");
+  }
+
+  console.log("CSRM request workflow verifier passed: ownership, lifecycle, list/dashboard, analyst collaboration, listener release, disposable cleanup");
 } finally {
   if (strapi) await strapi.destroy();
   for (const [key, value] of savedEnvironment) {
