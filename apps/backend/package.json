@@ -13,7 +13,7 @@
     "strapi": "strapi",
     "lint": "tsc --noEmit",
     "check-types": "tsc --noEmit",
-    "openapi": "strapi openapi generate"
+    "openapi": "strapi openapi generate && node scripts/normalize-openapi-specification.mjs"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.23.6",

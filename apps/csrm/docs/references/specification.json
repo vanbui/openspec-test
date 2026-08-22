@@ -318,7 +318,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.645Z",
                             "type": "string"
                           },
                           "functions": {
@@ -484,7 +483,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.668Z",
                           "type": "string"
                         },
                         "functions": {
@@ -566,7 +564,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.667Z",
                         "type": "string"
                       },
                       "functions": {
@@ -836,7 +833,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.662Z",
                           "type": "string"
                         },
                         "functions": {
@@ -1013,7 +1009,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.673Z",
                           "type": "string"
                         },
                         "functions": {
@@ -1095,7 +1090,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.671Z",
                         "type": "string"
                       },
                       "functions": {
@@ -1271,7 +1265,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.676Z",
                           "type": "string"
                         },
                         "functions": {
@@ -1718,7 +1711,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.688Z",
                             "type": "string"
                           },
                           "generatedBy": {
@@ -1950,7 +1942,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.736Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2083,7 +2074,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.734Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -2462,7 +2452,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.729Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2705,7 +2694,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.747Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -2838,7 +2826,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.741Z",
                         "type": "string"
                       },
                       "generatedBy": {
@@ -3096,7 +3083,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.752Z",
                           "type": "string"
                         },
                         "generatedBy": {
@@ -3160,6 +3146,1206 @@
         "tags": [
           "csrm-assessment"
         ]
+      }
+    },
+    "/csrm-assessment-requests/dashboard": {
+      "get": {
+        "operationId": "csrm-assessment-request/get/csrm_assessment_requests_dashboard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "statusCounts": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        },
+                        "needsAttention": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "requestNumber": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "assessmentType": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "division": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "businessUnit": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "businessPurpose": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "businessCriticality": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "thirdPartyInvolvement": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "thirdPartyDetails": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "regulatoryRequirements": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "dueDate": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "requestStatus": {
+                                "type": "string"
+                              },
+                              "submittedDate": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "updatedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "requestor": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "documentId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "documentId",
+                                      "displayName"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "informationSystems": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "documentId": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "documentId"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "informationAssets": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "documentId": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "documentId"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "documentId",
+                              "requestNumber",
+                              "title",
+                              "description",
+                              "assessmentType",
+                              "division",
+                              "businessUnit",
+                              "businessPurpose",
+                              "businessCriticality",
+                              "thirdPartyInvolvement",
+                              "thirdPartyDetails",
+                              "regulatoryRequirements",
+                              "dueDate",
+                              "requestStatus",
+                              "submittedDate",
+                              "createdAt",
+                              "updatedAt",
+                              "requestor",
+                              "informationSystems",
+                              "informationAssets"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "recentSubmissions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "requestNumber": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "assessmentType": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "division": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "businessUnit": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "businessPurpose": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "businessCriticality": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "thirdPartyInvolvement": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "thirdPartyDetails": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "regulatoryRequirements": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "dueDate": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "requestStatus": {
+                                "type": "string"
+                              },
+                              "submittedDate": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "updatedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "requestor": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "documentId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "documentId",
+                                      "displayName"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "informationSystems": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "documentId": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "documentId"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "informationAssets": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "documentId": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "documentId"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "documentId",
+                              "requestNumber",
+                              "title",
+                              "description",
+                              "assessmentType",
+                              "division",
+                              "businessUnit",
+                              "businessPurpose",
+                              "businessCriticality",
+                              "thirdPartyInvolvement",
+                              "thirdPartyDetails",
+                              "regulatoryRequirements",
+                              "dueDate",
+                              "requestStatus",
+                              "submittedDate",
+                              "createdAt",
+                              "updatedAt",
+                              "requestor",
+                              "informationSystems",
+                              "informationAssets"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "notices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "statusCounts",
+                        "needsAttention",
+                        "recentSubmissions",
+                        "notices"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-assessment-request"
+        ]
+      }
+    },
+    "/csrm-assessment-requests/{id}/submit": {
+      "post": {
+        "operationId": "csrm-assessment-request/post/csrm_assessment_requests_by_id_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "type": "string"
+                        },
+                        "requestNumber": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "assessmentType": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "division": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "businessUnit": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "businessPurpose": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "businessCriticality": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "thirdPartyInvolvement": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "thirdPartyDetails": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "regulatoryRequirements": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "dueDate": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "requestStatus": {
+                          "type": "string"
+                        },
+                        "submittedDate": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "requestor": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "documentId": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "documentId",
+                                "displayName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "informationSystems": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "documentId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "informationAssets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "documentId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "requestNumber",
+                        "title",
+                        "description",
+                        "assessmentType",
+                        "division",
+                        "businessUnit",
+                        "businessPurpose",
+                        "businessCriticality",
+                        "thirdPartyInvolvement",
+                        "thirdPartyDetails",
+                        "regulatoryRequirements",
+                        "dueDate",
+                        "requestStatus",
+                        "submittedDate",
+                        "createdAt",
+                        "updatedAt",
+                        "requestor",
+                        "informationSystems",
+                        "informationAssets"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-assessment-request"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/csrm-assessment-requests/{id}/withdraw": {
+      "post": {
+        "operationId": "csrm-assessment-request/post/csrm_assessment_requests_by_id_withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documentId": {
+                          "type": "string"
+                        },
+                        "requestNumber": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "assessmentType": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "division": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "businessUnit": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "businessPurpose": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "businessCriticality": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "thirdPartyInvolvement": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "thirdPartyDetails": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "regulatoryRequirements": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "dueDate": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "requestStatus": {
+                          "type": "string"
+                        },
+                        "submittedDate": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "requestor": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "documentId": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "documentId",
+                                "displayName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "informationSystems": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "documentId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "informationAssets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "documentId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "requestNumber",
+                        "title",
+                        "description",
+                        "assessmentType",
+                        "division",
+                        "businessUnit",
+                        "businessPurpose",
+                        "businessCriticality",
+                        "thirdPartyInvolvement",
+                        "thirdPartyDetails",
+                        "regulatoryRequirements",
+                        "dueDate",
+                        "requestStatus",
+                        "submittedDate",
+                        "createdAt",
+                        "updatedAt",
+                        "requestor",
+                        "informationSystems",
+                        "informationAssets"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "csrm-assessment-request"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
       }
     },
     "/csrm-assessment-requests": {
@@ -3598,7 +4784,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.761Z",
                             "type": "string"
                           },
                           "requestor": {
@@ -3863,7 +5048,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.778Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4032,7 +5216,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.775Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -4461,7 +5644,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.768Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4737,7 +5919,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.786Z",
                           "type": "string"
                         },
                         "requestor": {
@@ -4906,7 +6087,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.783Z",
                         "type": "string"
                       },
                       "requestor": {
@@ -4963,316 +6143,6 @@
             }
           }
         }
-      },
-      "delete": {
-        "operationId": "csrm-assessment-request/delete/csrm_assessment_requests_by_id",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$schema": "https://json-schema.org/draft/2020-12/schema",
-              "description": "The document ID, represented by a UUID",
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
-            }
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "$schema": "https://json-schema.org/draft/2020-12/schema",
-              "description": "The fields to return, this doesn't include populatable fields like relations, components, files, or dynamic zones",
-              "readOnly": true,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "requestNumber",
-                  "title",
-                  "description",
-                  "assessmentType",
-                  "division",
-                  "businessUnit",
-                  "businessPurpose",
-                  "businessCriticality",
-                  "thirdPartyInvolvement",
-                  "thirdPartyDetails",
-                  "regulatoryRequirements",
-                  "submittedDate",
-                  "dueDate",
-                  "requestStatus",
-                  "createdAt",
-                  "updatedAt",
-                  "publishedAt"
-                ]
-              }
-            },
-            "x-strapi-serialize": "querystring"
-          },
-          {
-            "name": "populate",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "$schema": "https://json-schema.org/draft/2020-12/schema",
-              "anyOf": [
-                {
-                  "description": "Populate all the first level relations, components, files, and dynamic zones for the entry",
-                  "readOnly": true,
-                  "type": "string",
-                  "const": "*"
-                },
-                {
-                  "description": "Populate a single relation, component, file, or dynamic zone",
-                  "readOnly": true,
-                  "type": "string",
-                  "enum": [
-                    "requestor",
-                    "sponsor",
-                    "informationAssets",
-                    "informationSystems",
-                    "questionnaire",
-                    "assessment"
-                  ]
-                },
-                {
-                  "description": "Populate a selection of multiple relations, components, files, or dynamic zones",
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "requestor",
-                      "sponsor",
-                      "informationAssets",
-                      "informationSystems",
-                      "questionnaire",
-                      "assessment"
-                    ]
-                  }
-                }
-              ]
-            },
-            "x-strapi-serialize": "querystring"
-          },
-          {
-            "name": "filters",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "$schema": "https://json-schema.org/draft/2020-12/schema",
-              "description": "Filters to apply to the query",
-              "type": "object",
-              "propertyNames": {
-                "type": "string",
-                "enum": [
-                  "requestNumber",
-                  "title",
-                  "description",
-                  "assessmentType",
-                  "division",
-                  "businessUnit",
-                  "businessPurpose",
-                  "businessCriticality",
-                  "thirdPartyInvolvement",
-                  "thirdPartyDetails",
-                  "regulatoryRequirements",
-                  "submittedDate",
-                  "dueDate",
-                  "requestStatus",
-                  "createdAt",
-                  "updatedAt",
-                  "publishedAt"
-                ]
-              },
-              "additionalProperties": {}
-            },
-            "x-strapi-serialize": "querystring"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "documentId": {
-                          "description": "The document ID, represented by a UUID",
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$"
-                        },
-                        "id": {
-                          "type": "number"
-                        },
-                        "requestNumber": {
-                          "description": "A string field",
-                          "type": "string"
-                        },
-                        "title": {
-                          "description": "A string field",
-                          "type": "string"
-                        },
-                        "description": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "assessmentType": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "BAU",
-                            "Project",
-                            "Other"
-                          ]
-                        },
-                        "division": {
-                          "description": "A string field",
-                          "type": "string"
-                        },
-                        "businessUnit": {
-                          "description": "A string field",
-                          "type": "string"
-                        },
-                        "businessPurpose": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "businessCriticality": {
-                          "description": "An enum field",
-                          "type": "string",
-                          "enum": [
-                            "Low",
-                            "Moderate",
-                            "High",
-                            "Critical"
-                          ]
-                        },
-                        "thirdPartyInvolvement": {
-                          "description": "A boolean field",
-                          "type": "boolean"
-                        },
-                        "thirdPartyDetails": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "regulatoryRequirements": {
-                          "description": "A text field",
-                          "type": "string"
-                        },
-                        "submittedDate": {
-                          "description": "A datetime field",
-                          "type": "string"
-                        },
-                        "dueDate": {
-                          "description": "A date field",
-                          "type": "string"
-                        },
-                        "requestStatus": {
-                          "description": "An enum field",
-                          "default": "draft",
-                          "type": "string",
-                          "enum": [
-                            "draft",
-                            "submitted",
-                            "questionnaire-in-progress",
-                            "risk-assessment-drafted",
-                            "under-review",
-                            "approved",
-                            "closed"
-                          ]
-                        },
-                        "createdAt": {
-                          "description": "A datetime field",
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "description": "A datetime field",
-                          "type": "string"
-                        },
-                        "publishedAt": {
-                          "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.791Z",
-                          "type": "string"
-                        },
-                        "requestor": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
-                        },
-                        "sponsor": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiIdamboxUserIdamboxUserDocument"
-                        },
-                        "informationAssets": {
-                          "description": "A relational field",
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/ApiCsrmInformationAssetCsrmInformationAssetDocument"
-                          }
-                        },
-                        "informationSystems": {
-                          "description": "A relational field",
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/ApiCsrmInformationSystemCsrmInformationSystemDocument"
-                          }
-                        },
-                        "questionnaire": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiCsrmQuestionnaireCsrmQuestionnaireDocument"
-                        },
-                        "assessment": {
-                          "description": "A relational field",
-                          "$ref": "#/components/schemas/ApiCsrmAssessmentCsrmAssessmentDocument"
-                        }
-                      },
-                      "required": [
-                        "documentId",
-                        "id",
-                        "requestNumber",
-                        "title",
-                        "requestStatus",
-                        "publishedAt"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Not found"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "tags": [
-          "csrm-assessment-request"
-        ]
       }
     },
     "/csrm-controls": {
@@ -5635,7 +6505,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.798Z",
                             "type": "string"
                           },
                           "implementations": {
@@ -5826,7 +6695,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.804Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -5928,7 +6796,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.804Z",
                         "type": "string"
                       },
                       "implementations": {
@@ -6248,7 +7115,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.802Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -6450,7 +7316,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.807Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -6552,7 +7417,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.806Z",
                         "type": "string"
                       },
                       "implementations": {
@@ -6758,7 +7622,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.809Z",
                           "type": "string"
                         },
                         "implementations": {
@@ -7150,7 +8013,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.818Z",
                             "type": "string"
                           },
                           "control": {
@@ -7341,7 +8203,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.825Z",
                           "type": "string"
                         },
                         "control": {
@@ -7442,7 +8303,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.824Z",
                         "type": "string"
                       },
                       "control": {
@@ -7751,7 +8611,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.821Z",
                           "type": "string"
                         },
                         "control": {
@@ -7953,7 +8812,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.828Z",
                           "type": "string"
                         },
                         "control": {
@@ -8054,7 +8912,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.827Z",
                         "type": "string"
                       },
                       "control": {
@@ -8262,7 +9119,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.831Z",
                           "type": "string"
                         },
                         "control": {
@@ -8711,7 +9567,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.841Z",
                             "type": "string"
                           },
                           "assessmentRequests": {
@@ -8922,7 +9777,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.850Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -9065,7 +9919,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.848Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -9420,7 +10273,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.845Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -9642,7 +10494,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.854Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -9785,7 +10636,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.852Z",
                         "type": "string"
                       },
                       "assessmentRequests": {
@@ -10013,7 +10863,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.860Z",
                           "type": "string"
                         },
                         "assessmentRequests": {
@@ -10449,7 +11298,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.865Z",
                             "type": "string"
                           },
                           "owner": {
@@ -10663,7 +11511,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.877Z",
                           "type": "string"
                         },
                         "owner": {
@@ -10801,7 +11648,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.872Z",
                         "type": "string"
                       },
                       "owner": {
@@ -11151,7 +11997,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.870Z",
                           "type": "string"
                         },
                         "owner": {
@@ -11376,7 +12221,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.881Z",
                           "type": "string"
                         },
                         "owner": {
@@ -11514,7 +12358,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.879Z",
                         "type": "string"
                       },
                       "owner": {
@@ -11746,7 +12589,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.884Z",
                           "type": "string"
                         },
                         "owner": {
@@ -12145,7 +12987,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.889Z",
                             "type": "string"
                           },
                           "questionnaire": {
@@ -12326,7 +13167,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.899Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -12420,7 +13260,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.897Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -12720,7 +13559,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.892Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -12912,7 +13750,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.902Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -13006,7 +13843,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.901Z",
                         "type": "string"
                       },
                       "questionnaire": {
@@ -13201,7 +14037,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.904Z",
                           "type": "string"
                         },
                         "questionnaire": {
@@ -13545,7 +14380,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.908Z",
                             "type": "string"
                           },
                           "assessmentRequest": {
@@ -13705,7 +14539,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.914Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -13780,7 +14613,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.913Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -14041,7 +14873,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.911Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -14212,7 +15043,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.919Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -14287,7 +15117,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.918Z",
                         "type": "string"
                       },
                       "assessmentRequest": {
@@ -14460,7 +15289,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.921Z",
                           "type": "string"
                         },
                         "assessmentRequest": {
@@ -15118,7 +15946,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.932Z",
                             "type": "string"
                           },
                           "riskType": {
@@ -15472,7 +16299,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.955Z",
                           "type": "string"
                         },
                         "riskType": {
@@ -15712,7 +16538,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.949Z",
                         "type": "string"
                       },
                       "riskType": {
@@ -16312,7 +17137,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.943Z",
                           "type": "string"
                         },
                         "riskType": {
@@ -16677,7 +17501,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.965Z",
                           "type": "string"
                         },
                         "riskType": {
@@ -16917,7 +17740,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.961Z",
                         "type": "string"
                       },
                       "riskType": {
@@ -17320,7 +18142,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.973Z",
                           "type": "string"
                         },
                         "riskType": {
@@ -17681,7 +18502,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.977Z",
                             "type": "string"
                           },
                           "applicableControls": {
@@ -17839,7 +18659,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.982Z",
                           "type": "string"
                         },
                         "applicableControls": {
@@ -17913,7 +18732,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.981Z",
                         "type": "string"
                       },
                       "applicableControls": {
@@ -18167,7 +18985,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.980Z",
                           "type": "string"
                         },
                         "applicableControls": {
@@ -18336,7 +19153,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.984Z",
                           "type": "string"
                         },
                         "applicableControls": {
@@ -18410,7 +19226,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.983Z",
                         "type": "string"
                       },
                       "applicableControls": {
@@ -18580,7 +19395,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.986Z",
                           "type": "string"
                         },
                         "applicableControls": {
@@ -18935,7 +19749,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:09.993Z",
                             "type": "string"
                           },
                           "functionApis": {
@@ -19105,7 +19918,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.999Z",
                           "type": "string"
                         },
                         "functionApis": {
@@ -19188,7 +20000,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:09.998Z",
                         "type": "string"
                       },
                       "functionApis": {
@@ -19461,7 +20272,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:09.996Z",
                           "type": "string"
                         },
                         "functionApis": {
@@ -19642,7 +20452,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.002Z",
                           "type": "string"
                         },
                         "functionApis": {
@@ -19725,7 +20534,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:10.001Z",
                         "type": "string"
                       },
                       "functionApis": {
@@ -19909,7 +20717,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.004Z",
                           "type": "string"
                         },
                         "functionApis": {
@@ -20261,7 +21068,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:10.007Z",
                             "type": "string"
                           }
                         },
@@ -20405,7 +21211,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.015Z",
                           "type": "string"
                         }
                       },
@@ -20470,7 +21275,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:14.320Z",
                         "type": "string"
                       }
                     },
@@ -20711,7 +21515,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.013Z",
                           "type": "string"
                         }
                       },
@@ -20866,7 +21669,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.017Z",
                           "type": "string"
                         }
                       },
@@ -20931,7 +21733,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:10.016Z",
                         "type": "string"
                       }
                     },
@@ -21083,7 +21884,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.019Z",
                           "type": "string"
                         }
                       },
@@ -21468,7 +22268,6 @@
                           },
                           "publishedAt": {
                             "description": "A datetime field",
-                            "default": "2026-08-08T10:27:10.023Z",
                             "type": "string"
                           },
                           "roles": {
@@ -21652,7 +22451,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.032Z",
                           "type": "string"
                         },
                         "roles": {
@@ -21749,7 +22547,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:10.031Z",
                         "type": "string"
                       },
                       "roles": {
@@ -22052,7 +22849,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.026Z",
                           "type": "string"
                         },
                         "roles": {
@@ -22247,7 +23043,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.035Z",
                           "type": "string"
                         },
                         "roles": {
@@ -22344,7 +23139,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:10.034Z",
                         "type": "string"
                       },
                       "roles": {
@@ -22540,7 +23334,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.038Z",
                           "type": "string"
                         },
                         "roles": {
@@ -23075,7 +23868,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.051Z",
                           "type": "string"
                         },
                         "functions": {
@@ -23149,7 +23941,6 @@
                       },
                       "publishedAt": {
                         "description": "A datetime field",
-                        "default": "2026-08-08T10:27:10.050Z",
                         "type": "string"
                       },
                       "functions": {
@@ -23319,7 +24110,6 @@
                         },
                         "publishedAt": {
                           "description": "A datetime field",
-                          "default": "2026-08-08T10:27:10.053Z",
                           "type": "string"
                         },
                         "functions": {
@@ -28820,7 +29610,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.651Z",
             "type": "string"
           }
         },
@@ -28878,7 +29667,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.653Z",
             "type": "string"
           },
           "functions": {
@@ -28958,7 +29746,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.656Z",
             "type": "string"
           },
           "roles": {
@@ -29012,7 +29799,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.654Z",
             "type": "string"
           },
           "functions": {
@@ -29074,7 +29860,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.649Z",
             "type": "string"
           },
           "functionApis": {
@@ -29186,7 +29971,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.693Z",
             "type": "string"
           },
           "assessmentRequests": {
@@ -29289,7 +30073,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.696Z",
             "type": "string"
           },
           "owner": {
@@ -29375,7 +30158,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.700Z",
             "type": "string"
           },
           "questionnaire": {
@@ -29428,7 +30210,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.698Z",
             "type": "string"
           },
           "assessmentRequest": {
@@ -29511,7 +30292,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.719Z",
             "type": "string"
           },
           "control": {
@@ -29601,7 +30381,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.717Z",
             "type": "string"
           },
           "implementations": {
@@ -29654,7 +30433,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.710Z",
             "type": "string"
           },
           "applicableControls": {
@@ -29852,7 +30630,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.709Z",
             "type": "string"
           },
           "riskType": {
@@ -29977,7 +30754,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.703Z",
             "type": "string"
           },
           "generatedBy": {
@@ -30114,7 +30890,6 @@
           },
           "publishedAt": {
             "description": "A datetime field",
-            "default": "2026-08-08T10:27:09.691Z",
             "type": "string"
           },
           "requestor": {

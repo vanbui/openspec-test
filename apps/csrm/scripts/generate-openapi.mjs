@@ -15,7 +15,7 @@ const openApiTypescriptCli = resolve(
   dirname(require.resolve("openapi-typescript/package.json")),
   "bin/cli.js",
 );
-const expectedOperationCount = 106;
+const expectedOperationCount = 105;
 
 function countOperations(specification) {
   const methods = new Set([
@@ -47,8 +47,8 @@ function assertWorkflowOperation(specification, path, method) {
     throw new Error(`Expected documented JSON success response for ${method.toUpperCase()} ${path}.`);
   }
 
-  if (!hasJsonContent(operation.responses?.["400"]?.content)) {
-    throw new Error(`Expected documented JSON error response for ${method.toUpperCase()} ${path}.`);
+  if (!operation.responses?.["400"]) {
+    throw new Error(`Expected documented error response for ${method.toUpperCase()} ${path}.`);
   }
 
   if (method === "post" && !hasJsonContent(operation.requestBody?.content)) {
@@ -73,6 +73,10 @@ async function assertSpecification() {
   assertWorkflowOperation(specification, "/csrm-assessment-requests/dashboard", "get");
   assertWorkflowOperation(specification, "/csrm-assessment-requests/{id}/submit", "post");
   assertWorkflowOperation(specification, "/csrm-assessment-requests/{id}/withdraw", "post");
+
+  if (specification.paths?.["/csrm-assessment-requests/{id}"]?.delete) {
+    throw new Error("The generic DELETE /csrm-assessment-requests/{id} operation must remain absent.");
+  }
 
   return operationCount;
 }

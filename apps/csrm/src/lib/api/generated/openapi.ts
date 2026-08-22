@@ -68,6 +68,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/csrm-assessment-requests/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["csrm-assessment-request/get/csrm_assessment_requests_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/csrm-assessment-requests/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["csrm-assessment-request/post/csrm_assessment_requests_by_id_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/csrm-assessment-requests/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["csrm-assessment-request/post/csrm_assessment_requests_by_id_withdraw"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/csrm-assessment-requests": {
         parameters: {
             query?: never;
@@ -94,7 +142,7 @@ export interface paths {
         get: operations["csrm-assessment-request/get/csrm_assessment_requests_by_id"];
         put: operations["csrm-assessment-request/put/csrm_assessment_requests_by_id"];
         post?: never;
-        delete: operations["csrm-assessment-request/delete/csrm_assessment_requests_by_id"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -873,10 +921,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.651Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
         };
         ApiApplicationApplicationDocument: {
@@ -902,10 +947,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.653Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -942,10 +984,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.656Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             roles?: components["schemas"]["ApiRoleRoleDocument"][];
@@ -965,10 +1004,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.654Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -992,10 +1028,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.649Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             functionApis?: components["schemas"]["ApiFunctionApiFunctionApiDocument"][];
@@ -1051,10 +1084,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.693Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             assessmentRequests?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"][];
@@ -1105,10 +1135,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.696Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             owner?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -1143,10 +1170,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.700Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
@@ -1168,10 +1192,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.698Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
@@ -1207,10 +1228,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.719Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             control: components["schemas"]["ApiCsrmControlCsrmControlDocument"];
@@ -1251,10 +1269,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.717Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             implementations?: components["schemas"]["ApiCsrmControlImplementationCsrmControlImplementationDocument"][];
@@ -1274,10 +1289,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.710Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             applicableControls?: components["schemas"]["ApiCsrmControlCsrmControlDocument"][];
@@ -1370,10 +1382,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.709Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             riskType?: components["schemas"]["ApiCsrmRiskTypeCsrmRiskTypeDocument"];
@@ -1430,10 +1439,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.703Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             generatedBy?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -1495,10 +1501,7 @@ export interface components {
             createdAt?: string;
             /** @description A datetime field */
             updatedAt?: string;
-            /**
-             * @description A datetime field
-             * @default 2026-08-08T10:27:09.691Z
-             */
+            /** @description A datetime field */
             publishedAt: string;
             /** @description A relational field */
             requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -1587,10 +1590,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.645Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -1661,10 +1661,7 @@ export interface operations {
                          * @enum {string}
                          */
                         applicationStatus: "active" | "inactive";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.667Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /** @description A relational field */
                         functions?: string[];
@@ -1703,10 +1700,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.668Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -1803,10 +1797,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.662Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -1879,10 +1870,7 @@ export interface operations {
                          * @enum {string}
                          */
                         applicationStatus?: "active" | "inactive";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.671Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         functions?: string[];
@@ -1921,10 +1909,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.673Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -2016,10 +2001,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.676Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -2146,10 +2128,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.688Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             generatedBy?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -2245,10 +2224,7 @@ export interface operations {
                         recommendationsSummary?: string;
                         /** @description A text field */
                         overallRiskRationale?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.734Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -2324,10 +2300,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.736Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             generatedBy?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -2449,10 +2422,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.729Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             generatedBy?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -2550,10 +2520,7 @@ export interface operations {
                         recommendationsSummary?: string;
                         /** @description A text field */
                         overallRiskRationale?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.741Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -2629,10 +2596,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.747Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             generatedBy?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -2749,10 +2713,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.752Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             generatedBy?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -2764,6 +2725,320 @@ export interface operations {
                             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
                             /** @description A relational field */
                             risks?: components["schemas"]["ApiCsrmRiskCsrmRiskDocument"][];
+                        };
+                    };
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "csrm-assessment-request/get/csrm_assessment_requests_dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            statusCounts: {
+                                [key: string]: number;
+                            };
+                            needsAttention: {
+                                documentId: string;
+                                requestNumber: string;
+                                title: string | null;
+                                description: string | null;
+                                assessmentType: string | null;
+                                division: string | null;
+                                businessUnit: string | null;
+                                businessPurpose: string | null;
+                                businessCriticality: string | null;
+                                thirdPartyInvolvement: boolean | null;
+                                thirdPartyDetails: string | null;
+                                regulatoryRequirements: string | null;
+                                dueDate: string | null;
+                                requestStatus: string;
+                                submittedDate: string | null;
+                                createdAt: string | null;
+                                updatedAt: string | null;
+                                requestor: {
+                                    documentId: string;
+                                    displayName: string | null;
+                                } | null;
+                                informationSystems: {
+                                    documentId: string;
+                                    name?: string;
+                                }[];
+                                informationAssets: {
+                                    documentId: string;
+                                    name?: string;
+                                }[];
+                            }[];
+                            recentSubmissions: {
+                                documentId: string;
+                                requestNumber: string;
+                                title: string | null;
+                                description: string | null;
+                                assessmentType: string | null;
+                                division: string | null;
+                                businessUnit: string | null;
+                                businessPurpose: string | null;
+                                businessCriticality: string | null;
+                                thirdPartyInvolvement: boolean | null;
+                                thirdPartyDetails: string | null;
+                                regulatoryRequirements: string | null;
+                                dueDate: string | null;
+                                requestStatus: string;
+                                submittedDate: string | null;
+                                createdAt: string | null;
+                                updatedAt: string | null;
+                                requestor: {
+                                    documentId: string;
+                                    displayName: string | null;
+                                } | null;
+                                informationSystems: {
+                                    documentId: string;
+                                    name?: string;
+                                }[];
+                                informationAssets: {
+                                    documentId: string;
+                                    name?: string;
+                                }[];
+                            }[];
+                            notices: Record<string, never>[];
+                        };
+                    };
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "csrm-assessment-request/post/csrm_assessment_requests_by_id_submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    data: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            documentId: string;
+                            requestNumber: string;
+                            title: string | null;
+                            description: string | null;
+                            assessmentType: string | null;
+                            division: string | null;
+                            businessUnit: string | null;
+                            businessPurpose: string | null;
+                            businessCriticality: string | null;
+                            thirdPartyInvolvement: boolean | null;
+                            thirdPartyDetails: string | null;
+                            regulatoryRequirements: string | null;
+                            dueDate: string | null;
+                            requestStatus: string;
+                            submittedDate: string | null;
+                            createdAt: string | null;
+                            updatedAt: string | null;
+                            requestor: {
+                                documentId: string;
+                                displayName: string | null;
+                            } | null;
+                            informationSystems: {
+                                documentId: string;
+                                name?: string;
+                            }[];
+                            informationAssets: {
+                                documentId: string;
+                                name?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "csrm-assessment-request/post/csrm_assessment_requests_by_id_withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    data: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            documentId: string;
+                            requestNumber: string;
+                            title: string | null;
+                            description: string | null;
+                            assessmentType: string | null;
+                            division: string | null;
+                            businessUnit: string | null;
+                            businessPurpose: string | null;
+                            businessCriticality: string | null;
+                            thirdPartyInvolvement: boolean | null;
+                            thirdPartyDetails: string | null;
+                            regulatoryRequirements: string | null;
+                            dueDate: string | null;
+                            requestStatus: string;
+                            submittedDate: string | null;
+                            createdAt: string | null;
+                            updatedAt: string | null;
+                            requestor: {
+                                documentId: string;
+                                displayName: string | null;
+                            } | null;
+                            informationSystems: {
+                                documentId: string;
+                                name?: string;
+                            }[];
+                            informationAssets: {
+                                documentId: string;
+                                name?: string;
+                            }[];
                         };
                     };
                 };
@@ -2896,10 +3171,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.761Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -3009,10 +3281,7 @@ export interface operations {
                          * @enum {string}
                          */
                         requestStatus: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.775Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -3099,10 +3368,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.778Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -3235,10 +3501,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.768Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -3350,10 +3613,7 @@ export interface operations {
                          * @enum {string}
                          */
                         requestStatus?: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.783Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -3440,141 +3700,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.786Z
-                             */
-                            publishedAt: string;
-                            /** @description A relational field */
-                            requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
-                            /** @description A relational field */
-                            sponsor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
-                            /** @description A relational field */
-                            informationAssets?: components["schemas"]["ApiCsrmInformationAssetCsrmInformationAssetDocument"][];
-                            /** @description A relational field */
-                            informationSystems?: components["schemas"]["ApiCsrmInformationSystemCsrmInformationSystemDocument"][];
-                            /** @description A relational field */
-                            questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
-                            /** @description A relational field */
-                            assessment?: components["schemas"]["ApiCsrmAssessmentCsrmAssessmentDocument"];
-                        };
-                    };
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "csrm-assessment-request/delete/csrm_assessment_requests_by_id": {
-        parameters: {
-            query?: {
-                fields?: ("requestNumber" | "title" | "description" | "assessmentType" | "division" | "businessUnit" | "businessPurpose" | "businessCriticality" | "thirdPartyInvolvement" | "thirdPartyDetails" | "regulatoryRequirements" | "submittedDate" | "dueDate" | "requestStatus" | "createdAt" | "updatedAt" | "publishedAt")[];
-                populate?: "*" | ("requestor" | "sponsor" | "informationAssets" | "informationSystems" | "questionnaire" | "assessment") | ("requestor" | "sponsor" | "informationAssets" | "informationSystems" | "questionnaire" | "assessment")[];
-                filters?: {
-                    [key: string]: unknown;
-                };
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: {
-                            /**
-                             * Format: uuid
-                             * @description The document ID, represented by a UUID
-                             */
-                            documentId: string;
-                            id: number;
-                            /** @description A string field */
-                            requestNumber: string;
-                            /** @description A string field */
-                            title: string;
-                            /** @description A text field */
-                            description?: string;
-                            /**
-                             * @description An enum field
-                             * @enum {string}
-                             */
-                            assessmentType?: "BAU" | "Project" | "Other";
-                            /** @description A string field */
-                            division?: string;
-                            /** @description A string field */
-                            businessUnit?: string;
-                            /** @description A text field */
-                            businessPurpose?: string;
-                            /**
-                             * @description An enum field
-                             * @enum {string}
-                             */
-                            businessCriticality?: "Low" | "Moderate" | "High" | "Critical";
-                            /** @description A boolean field */
-                            thirdPartyInvolvement?: boolean;
-                            /** @description A text field */
-                            thirdPartyDetails?: string;
-                            /** @description A text field */
-                            regulatoryRequirements?: string;
                             /** @description A datetime field */
-                            submittedDate?: string;
-                            /** @description A date field */
-                            dueDate?: string;
-                            /**
-                             * @description An enum field
-                             * @default draft
-                             * @enum {string}
-                             */
-                            requestStatus: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
-                            /** @description A datetime field */
-                            createdAt?: string;
-                            /** @description A datetime field */
-                            updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.791Z
-                             */
                             publishedAt: string;
                             /** @description A relational field */
                             requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -3703,10 +3829,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.798Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             implementations?: components["schemas"]["ApiCsrmControlImplementationCsrmControlImplementationDocument"][];
@@ -3786,10 +3909,7 @@ export interface operations {
                         frameworkSource?: string;
                         /** @description A JSON field */
                         sourceData?: unknown;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.804Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /** @description A relational field */
                         implementations?: string[];
@@ -3837,10 +3957,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.804Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             implementations?: components["schemas"]["ApiCsrmControlImplementationCsrmControlImplementationDocument"][];
@@ -3946,10 +4063,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.802Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             implementations?: components["schemas"]["ApiCsrmControlImplementationCsrmControlImplementationDocument"][];
@@ -4031,10 +4145,7 @@ export interface operations {
                         frameworkSource?: string;
                         /** @description A JSON field */
                         sourceData?: unknown;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.806Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         implementations?: string[];
@@ -4082,10 +4193,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.807Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             implementations?: components["schemas"]["ApiCsrmControlImplementationCsrmControlImplementationDocument"][];
@@ -4186,10 +4294,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.809Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             implementations?: components["schemas"]["ApiCsrmControlImplementationCsrmControlImplementationDocument"][];
@@ -4305,10 +4410,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.818Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             control: components["schemas"]["ApiCsrmControlCsrmControlDocument"];
@@ -4389,10 +4491,7 @@ export interface operations {
                         implementedDate?: string;
                         /** @description A date field */
                         reviewDate?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.824Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -4450,10 +4549,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.825Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             control: components["schemas"]["ApiCsrmControlCsrmControlDocument"];
@@ -4560,10 +4656,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.821Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             control: components["schemas"]["ApiCsrmControlCsrmControlDocument"];
@@ -4646,10 +4739,7 @@ export interface operations {
                         implementedDate?: string;
                         /** @description A date field */
                         reviewDate?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.827Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -4707,10 +4797,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.828Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             control: components["schemas"]["ApiCsrmControlCsrmControlDocument"];
@@ -4812,10 +4899,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.831Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             control: components["schemas"]["ApiCsrmControlCsrmControlDocument"];
@@ -4953,10 +5037,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.841Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequests?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"][];
@@ -5054,10 +5135,7 @@ export interface operations {
                         containsCreditCardData: "0" | "1" | "t" | "true" | "f" | "false";
                         /** @description A text field */
                         comments?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.848Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /** @description A relational field */
                         assessmentRequests?: string[];
@@ -5120,10 +5198,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.850Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequests?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"][];
@@ -5244,10 +5319,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.845Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequests?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"][];
@@ -5347,10 +5419,7 @@ export interface operations {
                         containsCreditCardData?: "0" | "1" | "t" | "true" | "f" | "false";
                         /** @description A text field */
                         comments?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.852Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         assessmentRequests?: string[];
@@ -5413,10 +5482,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.854Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequests?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"][];
@@ -5532,10 +5598,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.860Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequests?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"][];
@@ -5668,10 +5731,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.865Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             owner?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -5769,10 +5829,7 @@ export interface operations {
                          * @enum {string}
                          */
                         lifecycleState?: "New" | "Changed" | "Existing" | "Decommissioning";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.872Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -5839,10 +5896,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.877Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             owner?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -5964,10 +6018,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.870Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             owner?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -6067,10 +6118,7 @@ export interface operations {
                          * @enum {string}
                          */
                         lifecycleState?: "New" | "Changed" | "Existing" | "Decommissioning";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.879Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -6137,10 +6185,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.881Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             owner?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -6257,10 +6302,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.884Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             owner?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
@@ -6377,10 +6419,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.889Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
@@ -6456,10 +6495,7 @@ export interface operations {
                         answer?: unknown;
                         /** @description A text field */
                         reviewComment?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.897Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -6506,10 +6542,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.899Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
@@ -6611,10 +6644,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.892Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
@@ -6692,10 +6722,7 @@ export interface operations {
                         answer?: unknown;
                         /** @description A text field */
                         reviewComment?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.901Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -6742,10 +6769,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.902Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
@@ -6842,10 +6866,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.904Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             questionnaire?: components["schemas"]["ApiCsrmQuestionnaireCsrmQuestionnaireDocument"];
@@ -6949,10 +6970,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.908Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
@@ -7019,10 +7037,7 @@ export interface operations {
                         title: string;
                         /** @description A text field */
                         description?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.913Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -7060,10 +7075,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.914Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
@@ -7156,10 +7168,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.911Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
@@ -7228,10 +7237,7 @@ export interface operations {
                         title?: string;
                         /** @description A text field */
                         description?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.918Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -7269,10 +7275,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.919Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
@@ -7360,10 +7363,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.921Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             assessmentRequest?: components["schemas"]["ApiCsrmAssessmentRequestCsrmAssessmentRequestDocument"];
@@ -7538,10 +7538,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.932Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             riskType?: components["schemas"]["ApiCsrmRiskTypeCsrmRiskTypeDocument"];
@@ -7690,10 +7687,7 @@ export interface operations {
                          * @enum {string}
                          */
                         treatmentStatus?: "Not Started" | "In Progress" | "Overdue" | "Complete";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.949Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /**
                          * Format: uuid
@@ -7825,10 +7819,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.955Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             riskType?: components["schemas"]["ApiCsrmRiskTypeCsrmRiskTypeDocument"];
@@ -8000,10 +7991,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.943Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             riskType?: components["schemas"]["ApiCsrmRiskTypeCsrmRiskTypeDocument"];
@@ -8154,10 +8142,7 @@ export interface operations {
                          * @enum {string}
                          */
                         treatmentStatus?: "Not Started" | "In Progress" | "Overdue" | "Complete";
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.961Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /**
                          * Format: uuid
@@ -8289,10 +8274,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.965Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             riskType?: components["schemas"]["ApiCsrmRiskTypeCsrmRiskTypeDocument"];
@@ -8459,10 +8441,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.973Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             riskType?: components["schemas"]["ApiCsrmRiskTypeCsrmRiskTypeDocument"];
@@ -8576,10 +8555,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.977Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             applicableControls?: components["schemas"]["ApiCsrmControlCsrmControlDocument"][];
@@ -8644,10 +8620,7 @@ export interface operations {
                         name: string;
                         /** @description A text field */
                         description?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.981Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /** @description A relational field */
                         applicableControls?: string[];
@@ -8680,10 +8653,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.982Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             applicableControls?: components["schemas"]["ApiCsrmControlCsrmControlDocument"][];
@@ -8774,10 +8744,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.980Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             applicableControls?: components["schemas"]["ApiCsrmControlCsrmControlDocument"][];
@@ -8844,10 +8811,7 @@ export interface operations {
                         name?: string;
                         /** @description A text field */
                         description?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.983Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         applicableControls?: string[];
@@ -8880,10 +8844,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.984Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             applicableControls?: components["schemas"]["ApiCsrmControlCsrmControlDocument"][];
@@ -8969,10 +8930,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.986Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             applicableControls?: components["schemas"]["ApiCsrmControlCsrmControlDocument"][];
@@ -9078,10 +9036,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.993Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functionApis?: components["schemas"]["ApiFunctionApiFunctionApiDocument"][];
@@ -9150,10 +9105,7 @@ export interface operations {
                         description?: string;
                         /** @description A text field */
                         menuPath?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:09.998Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /** @description A relational field */
                         functionApis?: string[];
@@ -9193,10 +9145,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.999Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functionApis?: components["schemas"]["ApiFunctionApiFunctionApiDocument"][];
@@ -9291,10 +9240,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:09.996Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functionApis?: components["schemas"]["ApiFunctionApiFunctionApiDocument"][];
@@ -9365,10 +9311,7 @@ export interface operations {
                         description?: string;
                         /** @description A text field */
                         menuPath?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:10.001Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         functionApis?: string[];
@@ -9408,10 +9351,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.002Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functionApis?: components["schemas"]["ApiFunctionApiFunctionApiDocument"][];
@@ -9501,10 +9441,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.004Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functionApis?: components["schemas"]["ApiFunctionApiFunctionApiDocument"][];
@@ -9612,10 +9549,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.007Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                         }[];
                     };
@@ -9678,10 +9612,7 @@ export interface operations {
                         description?: string;
                         /** @description A string field */
                         url: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:14.320Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                     };
                 };
@@ -9712,10 +9643,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.015Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                         };
                     };
@@ -9804,10 +9732,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.013Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                         };
                     };
@@ -9872,10 +9797,7 @@ export interface operations {
                         description?: string;
                         /** @description A string field */
                         url?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:10.016Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                     };
                 };
@@ -9906,10 +9828,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.017Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                         };
                     };
@@ -9993,10 +9912,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.019Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                         };
                     };
@@ -10113,10 +10029,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.023Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             roles?: components["schemas"]["ApiRoleRoleDocument"][];
@@ -10196,10 +10109,7 @@ export interface operations {
                         accountStatus: "active" | "inactive";
                         /** @description A string field */
                         externalSubject?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:10.031Z
-                         */
+                        /** @description A datetime field */
                         publishedAt: string;
                         /** @description A relational field */
                         roles?: string[];
@@ -10247,10 +10157,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.032Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             roles?: components["schemas"]["ApiRoleRoleDocument"][];
@@ -10356,10 +10263,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.026Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             roles?: components["schemas"]["ApiRoleRoleDocument"][];
@@ -10441,10 +10345,7 @@ export interface operations {
                         accountStatus?: "active" | "inactive";
                         /** @description A string field */
                         externalSubject?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:10.034Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         roles?: string[];
@@ -10492,10 +10393,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.035Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             roles?: components["schemas"]["ApiRoleRoleDocument"][];
@@ -10596,10 +10494,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.038Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             roles?: components["schemas"]["ApiRoleRoleDocument"][];
@@ -10894,10 +10789,7 @@ export interface operations {
                         name?: string;
                         /** @description A text field */
                         description?: string;
-                        /**
-                         * @description A datetime field
-                         * @default 2026-08-08T10:27:10.050Z
-                         */
+                        /** @description A datetime field */
                         publishedAt?: string;
                         /** @description A relational field */
                         functions?: string[];
@@ -10930,10 +10822,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.051Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
@@ -11019,10 +10908,7 @@ export interface operations {
                             createdAt?: string;
                             /** @description A datetime field */
                             updatedAt?: string;
-                            /**
-                             * @description A datetime field
-                             * @default 2026-08-08T10:27:10.053Z
-                             */
+                            /** @description A datetime field */
                             publishedAt: string;
                             /** @description A relational field */
                             functions?: components["schemas"]["ApiFunctionFunctionDocument"][];
