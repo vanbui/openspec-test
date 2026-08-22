@@ -27,7 +27,13 @@ function dashboardModel(value: unknown): RequestDashboardModel {
   const statusCounts = data.statusCounts && typeof data.statusCounts === "object" && !Array.isArray(data.statusCounts)
     ? Object.fromEntries(Object.entries(data.statusCounts).flatMap(([status, count]) => typeof count === "number" && count >= 0 ? [[status, count]] : []))
     : {};
-  const notices = Array.isArray(data.notices) ? data.notices.flatMap((notice) => notice && typeof notice === "object" && typeof (notice as { message?: unknown }).message === "string" ? [{ message: (notice as { message: string }).message }] : []) : [];
+  const notices = Array.isArray(data.notices) ? data.notices.flatMap((notice) => {
+    if (!notice || typeof notice !== "object") return [];
+    const candidate = notice as { documentId?: unknown; message?: unknown };
+    return typeof candidate.documentId === "string" && typeof candidate.message === "string"
+      ? [{ documentId: candidate.documentId, message: candidate.message }]
+      : [];
+  }) : [];
   return { statusCounts, needsAttention: requestRows(data.needsAttention), recentSubmissions: requestRows(data.recentSubmissions), notices };
 }
 

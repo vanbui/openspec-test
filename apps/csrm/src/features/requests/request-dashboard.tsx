@@ -21,7 +21,7 @@ export type RequestDashboardModel = {
   statusCounts: Record<string, number>;
   needsAttention: readonly DashboardRequest[];
   recentSubmissions: readonly DashboardRequest[];
-  notices: readonly { message?: string; documentId?: string }[];
+  notices: readonly { message: string; documentId: string }[];
 };
 
 type RequestDashboardProps = {
@@ -86,7 +86,7 @@ export function RequestDashboard({ dashboard, failedWidgets = [], loading = fals
         {failed.has("status") ? <WidgetError onRetry={() => router.refresh()} /> : <ul className="grid gap-sm" aria-label="Request status summary">{Object.entries(dashboard.statusCounts).map(([status, count]) => { const label = requestStatusLabel(status); const requestLabel = count === 1 ? "request" : "requests"; return <li key={status}><Link aria-label={`${count} ${label} ${requestLabel}`} className="flex min-h-11 items-center justify-between gap-md rounded-[var(--radius-card)] border border-border-subtle px-md text-body hover:bg-surface-muted" href={`/requests?status=${encodeURIComponent(status)}`}><span className="min-w-0 break-words">{label}</span><span className="shrink-0 font-semibold">{count}</span></Link></li>; })}</ul>}
       </DashboardCard>
       <DashboardCard title="Notifications">
-        {failed.has("notifications") ? <WidgetError onRetry={() => router.refresh()} /> : dashboard.notices.length > 0 ? <ul className="grid gap-sm" aria-label="Request notifications">{dashboard.notices.flatMap((notice, index) => typeof notice.message === "string" && notice.message.trim() ? [<li className="break-words text-body" key={notice.documentId ?? index}>{notice.message}</li>] : [])}</ul> : <p className="text-body text-muted-foreground">No new notifications.</p>}
+        {failed.has("notifications") ? <WidgetError onRetry={() => router.refresh()} /> : dashboard.notices.length > 0 ? <ul className="grid gap-sm" aria-label="Request notifications">{dashboard.notices.map((notice) => <li className="break-words text-body" key={notice.documentId}><Link className="text-primary underline-offset-4 hover:underline" href={`/requests/${notice.documentId}`}>{notice.message}</Link></li>)}</ul> : <p className="text-body text-muted-foreground">No new notifications.</p>}
       </DashboardCard>
     </div>
   );

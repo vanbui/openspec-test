@@ -2848,7 +2848,10 @@ export interface operations {
                                     name?: string;
                                 }[];
                             }[];
-                            notices: Record<string, never>[];
+                            notices: {
+                                documentId: string;
+                                message: string;
+                            }[];
                         };
                     };
                 };

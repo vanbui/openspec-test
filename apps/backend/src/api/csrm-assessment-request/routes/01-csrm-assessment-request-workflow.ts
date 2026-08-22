@@ -38,7 +38,7 @@ const dashboardResponse = z.object({
     statusCounts: z.record(z.string(), z.number()),
     needsAttention: z.array(requestDocumentSchema),
     recentSubmissions: z.array(requestDocumentSchema),
-    notices: z.array(z.object({}).strict()),
+    notices: z.array(z.object({ documentId: z.string(), message: z.string() }).strict()),
   }),
 });
 

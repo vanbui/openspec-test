@@ -3669,7 +3669,18 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "properties": {},
+                            "properties": {
+                              "documentId": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "documentId",
+                              "message"
+                            ],
                             "additionalProperties": false
                           }
                         }

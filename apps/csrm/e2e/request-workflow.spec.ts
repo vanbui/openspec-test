@@ -69,6 +69,41 @@ async function createRequestFor(
   return payload.data;
 }
 
+async function createSubmittedRequestFor(
+  page: Page,
+  actorEmail: string,
+  title: string,
+): Promise<CreatedRequest> {
+  const draft = await createRequestFor(page, actorEmail, title);
+  const saveResponse = await page.request.put(`${strapiOrigin}/api/csrm-assessment-requests/${draft.documentId}`, {
+    data: {
+      data: {
+        title,
+        description: "A persisted request used to verify owner-bound dashboard derivation.",
+        assessmentType: "Project",
+        businessPurpose: "Verify the Requestor dashboard workflow state.",
+        businessCriticality: "High",
+        thirdPartyInvolvement: false,
+      },
+    },
+    headers: {
+      authorization: `Bearer ${internalToken}`,
+      "x-idambox-csrm-actor-email": actorEmail,
+    },
+  });
+  expect(saveResponse.status()).toBe(200);
+
+  const submitResponse = await page.request.post(`${strapiOrigin}/api/csrm-assessment-requests/${draft.documentId}/submit`, {
+    data: { data: {} },
+    headers: {
+      authorization: `Bearer ${internalToken}`,
+      "x-idambox-csrm-actor-email": actorEmail,
+    },
+  });
+  expect(submitResponse.status()).toBe(200);
+  return draft;
+}
+
 test.describe("request workflow", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -143,6 +178,43 @@ test.describe("request workflow", () => {
     });
     expect(response.status()).toBe(404);
     expect(await response.text()).not.toContain(bobDraft.title);
+  });
+
+  test("derives Jane's dashboard widgets and notices from owned persisted workflow state", async ({ page }) => {
+    const janeDraft = await createRequestFor(page, "jane.doe@idambox.com", "Jane dashboard draft needing action");
+    const janeSubmitted = await createSubmittedRequestFor(page, "jane.doe@idambox.com", "Jane dashboard recent submission");
+    const bobDraft = await createRequestFor(page, "bob.doe@idambox.com", "Bob private dashboard draft");
+
+    const response = await page.request.get(`${strapiOrigin}/api/csrm-assessment-requests/dashboard`, {
+      headers: {
+        authorization: `Bearer ${internalToken}`,
+        "x-idambox-csrm-actor-email": "jane.doe@idambox.com",
+      },
+    });
+    expect(response.status()).toBe(200);
+    const dashboard = await response.json() as {
+      data: {
+        needsAttention: CreatedRequest[];
+        recentSubmissions: CreatedRequest[];
+        notices: { documentId: string; message: string }[];
+      };
+    };
+
+    expect(dashboard.data.needsAttention.map((request) => request.documentId)).toContain(janeDraft.documentId);
+    expect(dashboard.data.needsAttention.map((request) => request.documentId)).not.toContain(janeSubmitted.documentId);
+    expect(dashboard.data.needsAttention.map((request) => request.documentId)).not.toContain(bobDraft.documentId);
+    expect(dashboard.data.recentSubmissions.map((request) => request.documentId)).toContain(janeSubmitted.documentId);
+    expect(dashboard.data.recentSubmissions.map((request) => request.documentId)).not.toContain(janeDraft.documentId);
+    expect(dashboard.data.recentSubmissions.map((request) => request.documentId)).not.toContain(bobDraft.documentId);
+    expect(dashboard.data.notices).toEqual(expect.arrayContaining([
+      { documentId: janeDraft.documentId, message: 'Complete "Jane dashboard draft needing action" before submitting.' },
+      { documentId: janeSubmitted.documentId, message: '"Jane dashboard recent submission" was submitted and is awaiting Security Analyst review.' },
+    ]));
+
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: /Jane dashboard draft needing action CRA-/ })).toBeVisible();
+    await expect(page.getByText('Complete "Jane dashboard draft needing action" before submitting.')).toBeVisible();
+    await expect(page.getByText('"Jane dashboard recent submission" was submitted and is awaiting Security Analyst review.')).toBeVisible();
   });
 
   test("keeps request controls accessible, URL-driven, responsive, and overflow-free", async ({ page }) => {

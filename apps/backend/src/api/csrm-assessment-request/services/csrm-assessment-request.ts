@@ -189,6 +189,18 @@ function assertSubmittable(request: RequestRecord): void {
   }
 }
 
+function dashboardNotice(request: RequestRecord): { documentId: string; message: string } | null {
+  if (typeof request.documentId !== "string") return null;
+  const title = nonBlank(request.title) ? request.title.trim() : "Untitled request";
+  if (request.requestStatus === "draft") {
+    return { documentId: request.documentId, message: `Complete "${title}" before submitting.` };
+  }
+  if (request.requestStatus === "submitted") {
+    return { documentId: request.documentId, message: `"${title}" was submitted and is awaiting Security Analyst review.` };
+  }
+  return null;
+}
+
 export default factories.createCoreService(REQUEST_UID, ({ strapi }) => ({
   async createForActor(actor: CsrmActor, input: unknown): Promise<RequestRecord> {
     const data = normalizeDraftInput(input);
@@ -268,14 +280,19 @@ export default factories.createCoreService(REQUEST_UID, ({ strapi }) => ({
       ] as const),
     );
     const [needsAttention, recentSubmissions] = await Promise.all([
-      requestDocuments(strapi).findMany({ filters: { $and: [owner, { requestStatus: { $eq: "submitted" } }] }, sort: ["updatedAt:desc"], limit: 5, populate: requestPopulate() }),
+      requestDocuments(strapi).findMany({ filters: { $and: [owner, { requestStatus: { $eq: "draft" } }] }, sort: ["updatedAt:desc"], limit: 5, populate: requestPopulate() }),
       requestDocuments(strapi).findMany({ filters: { $and: [owner, { requestStatus: { $eq: "submitted" } }] }, sort: ["submittedDate:desc"], limit: 5, populate: requestPopulate() }),
     ]);
+    const attentionRequests = Array.isArray(needsAttention) ? needsAttention as RequestRecord[] : [];
+    const submittedRequests = Array.isArray(recentSubmissions) ? recentSubmissions as RequestRecord[] : [];
     return {
       statusCounts: Object.fromEntries(countByStatus),
-      needsAttention: Array.isArray(needsAttention) ? needsAttention.map(serializeRequest) : [],
-      recentSubmissions: Array.isArray(recentSubmissions) ? recentSubmissions.map(serializeRequest) : [],
-      notices: [],
+      needsAttention: attentionRequests.map(serializeRequest),
+      recentSubmissions: submittedRequests.map(serializeRequest),
+      notices: [...attentionRequests, ...submittedRequests].flatMap((request) => {
+        const notice = dashboardNotice(request);
+        return notice ? [notice] : [];
+      }),
     };
   },
 

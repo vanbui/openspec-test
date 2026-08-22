@@ -73,7 +73,9 @@ function isDashboardResponse(value: unknown): value is RequestDashboardResponse 
     isObject(statusCounts) &&
     Array.isArray(needsAttention) && needsAttention.every(isDocument) &&
     Array.isArray(recentSubmissions) && recentSubmissions.every(isDocument) &&
-    Array.isArray(notices)
+    Array.isArray(notices) && notices.every((notice) =>
+      isObject(notice) && typeof notice.documentId === "string" && typeof notice.message === "string",
+    )
   );
 }
 

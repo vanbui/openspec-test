@@ -21,7 +21,7 @@ const dashboard = {
   statusCounts: { draft: 1, submitted: 2, closed: 0 },
   needsAttention: [{ documentId: "request-1", requestNumber: "REQ-0001", title: "Vendor platform review", requestStatus: "draft", submittedDate: null }],
   recentSubmissions: [{ documentId: "request-2", requestNumber: "REQ-0002", title: "Customer data review", requestStatus: "submitted", submittedDate: "2026-08-22T10:00:00.000Z" }],
-  notices: [],
+  notices: [{ documentId: "request-1", message: "Complete Vendor platform review before submitting." }],
 } as const;
 
 describe("RequestDashboard", () => {
@@ -36,6 +36,7 @@ describe("RequestDashboard", () => {
     ]);
     expect(screen.getByRole("link", { name: /Vendor platform review REQ-0001/i }).getAttribute("href")).toBe("/requests/request-1");
     expect(screen.getByText("Continue editing before you submit this request.")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Complete Vendor platform review before submitting." }).getAttribute("href")).toBe("/requests/request-1");
     expect(screen.getByRole("link", { name: "1 Draft request" }).getAttribute("href")).toBe("/requests?status=draft");
     expect(screen.getByRole("link", { name: "2 Submitted requests" }).getAttribute("href")).toBe("/requests?status=submitted");
   });
