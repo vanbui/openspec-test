@@ -154,11 +154,11 @@ Selecting `Submit request` first runs submit validation. If valid, open a confir
 
 - Title: `Submit risk assessment request?`
 - Body: `Once submitted, your request will be available for Security Analyst review. You can withdraw it only until processing begins.`
-- Actions: `Cancel` (default focus) and `Submit request` (primary).
+- Actions: `Keep editing` (default focus) and `Submit request` (primary).
 
 On confirmed success, set the server-returned status, announce `Request submitted.`, keep the user on Request Details, and replace editing controls with the workflow panel. Do not optimistically claim a status change before server acknowledgement.
 
-For `submitted` before analyst processing, show `Withdraw submission` as a secondary action in the workflow panel. It opens a confirmation dialog: title `Withdraw this submission?`; body `This request will return to draft and will no longer be available for analyst processing.`; actions `Cancel` (default focus) and `Withdraw submission`. On success announce `Request returned to draft.` and show the editable form. It is a reversible workflow transition, not a delete action.
+For `submitted` before analyst processing, show `Withdraw submission` as a secondary action in the workflow panel. It opens a confirmation dialog: title `Withdraw this submission?`; body `This request will return to draft and will no longer be available for analyst processing.`; actions `Keep submission` (default focus) and `Withdraw submission`. On success announce `Request returned to draft.` and show the editable form. It is a reversible workflow transition, not a delete action.
 
 When a record is read-only to the current user, display all populated persisted values in the same section order with `Not provided` for optional omissions. The workflow panel names the status and next step: `Submitted — awaiting Security Analyst review.`, `Questionnaire in progress — a questionnaire is being prepared.`, `Risk assessment drafted — a risk assessment draft is being prepared.`, `Under review — a Security Analyst is reviewing this request.`, `Approved — the request has been approved.`, or `Closed — this request is closed.` Do not show disabled form controls as a substitute for a read-only surface.
 
@@ -208,9 +208,9 @@ All Phase 6 desktop sidebar, 56px mobile header/drawer, landmark order, route an
 | Filtered empty heading/body/action | `No matching requests` / `Try changing your search or status filter.` / `Clear filters` |
 | Empty catalogue search | `No Information Systems found` / `No Information Assets found` |
 | Draft feedback | `Draft saved.` |
-| Submit confirmation | `Submit risk assessment request?` / `Once submitted, your request will be available for Security Analyst review. You can withdraw it only until processing begins.` |
+| Submit confirmation | `Submit risk assessment request?` / `Once submitted, your request will be available for Security Analyst review. You can withdraw it only until processing begins.` / `Keep editing` / `Submit request` |
 | Submit feedback | `Request submitted.` |
-| Withdrawal confirmation | `Withdraw this submission?` / `This request will return to draft and will no longer be available for analyst processing.` |
+| Withdrawal confirmation | `Withdraw this submission?` / `This request will return to draft and will no longer be available for analyst processing.` / `Keep submission` / `Withdraw submission` |
 | Withdrawal feedback | `Request returned to draft.` |
 | Submit validation | `Check the highlighted fields` |
 | Draft title validation | `Enter a request title to save a draft.` |
