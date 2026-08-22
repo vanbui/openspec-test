@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
           path.join(process.cwd(), "src/features/requests/resolve-request-actor.production.ts"),
         ),
         new webpack.NormalModuleReplacementPlugin(
+          /resolve-identity$/,
+          path.join(process.cwd(), "src/lib/fixtures/resolve-identity.production.ts"),
+        ),
+        new webpack.NormalModuleReplacementPlugin(
           /analyst-only-evidence$/,
           path.join(process.cwd(), "src/components/test-evidence/analyst-only-evidence.production.tsx"),
         ),

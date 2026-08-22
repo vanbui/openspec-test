@@ -6,12 +6,23 @@ import { UnavailableState } from "@/components/states/unavailable-state";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
 import { resolveRouteAccess } from "@/domain/route-access";
-import { RequestList, type RequestListFilters, type RequestListRecord, requestSortOptions, requestStatuses } from "@/features/requests/request-list";
+import { RequestList, type RequestListFilters, type RequestListRecord } from "@/features/requests/request-list";
 import { resolveCurrentActor } from "@/features/requests/resolve-request-actor";
 import { listOwnedRequests } from "@/lib/api/csrm-service";
 import { developmentFixtureCookieName, resolveDevelopmentIdentity } from "@/lib/fixtures/resolve-identity";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+
+const requestStatuses = [
+  "draft",
+  "submitted",
+  "questionnaire-in-progress",
+  "risk-assessment-drafted",
+  "under-review",
+  "approved",
+  "closed",
+] as const;
+const requestSortValues = ["updated-desc", "updated-asc", "title-asc"] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" ? value : undefined;
@@ -25,7 +36,7 @@ function filtersFrom(searchParams: SearchParams): RequestListFilters {
   return {
     q,
     status: status && requestStatuses.includes(status as (typeof requestStatuses)[number]) ? status : "",
-    sort: requestSortOptions.some((option) => option.value === sort) ? sort as RequestListFilters["sort"] : "updated-desc",
+    sort: requestSortValues.includes(sort as RequestListFilters["sort"]) ? sort as RequestListFilters["sort"] : "updated-desc",
     page: Number.isSafeInteger(page) && page > 0 ? page : 1,
   };
 }

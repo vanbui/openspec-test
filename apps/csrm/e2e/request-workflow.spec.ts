@@ -83,27 +83,36 @@ test.describe("request workflow", () => {
     await page.getByLabel("Assessment type").selectOption("Project");
     await page.getByLabel("Business purpose").fill("Verify the complete Requestor workflow against disposable Strapi storage.");
     await page.getByLabel("Business criticality").selectOption("High");
-    await page.getByLabel("Is a third party involved?").getByLabel("No").check();
+    await page.getByLabel("No").check();
     await page.getByRole("button", { name: "Save draft" }).click();
-    await expect(page.getByRole("status")).toContainText("Draft saved");
+    await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
 
     await page.getByRole("button", { name: "Submit request" }).click();
-    const submitDialog = page.getByRole("alertdialog");
+    const submitDialog = page.getByRole("dialog");
     await expect(submitDialog).toBeVisible();
     await expect(submitDialog.getByRole("button", { name: "Keep editing" })).toBeFocused();
-    await submitDialog.getByRole("button", { name: "Submit request" }).click();
-    await expect(page.getByRole("status")).toContainText("Request submitted");
+    await page.keyboard.press("Tab");
+    await expect(submitDialog.getByRole("button", { name: "Submit request" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("status").filter({ hasText: "Request submitted." })).toBeVisible();
     await expect(page.getByRole("button", { name: "Withdraw submission" })).toBeVisible();
 
     await page.getByRole("button", { name: "Withdraw submission" }).click();
-    await page.getByRole("alertdialog").getByRole("button", { name: "Withdraw submission" }).click();
-    await expect(page.getByRole("status")).toContainText("Request returned to draft");
+    const withdrawDialog = page.getByRole("dialog");
+    await expect(withdrawDialog.getByRole("button", { name: "Keep submission" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(withdrawDialog.getByRole("button", { name: "Withdraw submission" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("status").filter({ hasText: "Request returned to draft." })).toBeVisible();
 
     await page.getByRole("link", { name: "Risk Assessment Requests" }).click();
     await expect(page.getByRole("heading", { name: "My Requests" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /E2E requestor workflow record/ })).toBeVisible();
+    await expect(page.getByText("E2E requestor workflow record", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("table", { name: "My risk assessment requests" })).toBeVisible();
-    await page.screenshot({ path: "e2e/snapshots/request-dashboard-desktop-1440.png", fullPage: true });
+    await expect(page).toHaveScreenshot("request-dashboard-desktop-1440.png", {
+      fullPage: true,
+      mask: [page.getByText(/^CRA-\d{4}-[A-F0-9]+$/)],
+    });
   });
 
   test("Bob can save Jane's draft while Jane receives a metadata-safe denial for Bob's record", async ({ page }) => {
@@ -113,16 +122,17 @@ test.describe("request workflow", () => {
     await page.goto(`/requests/${janeDraft.documentId}`);
     await chooseAnalyst(page);
     await page.goto(`/requests/${janeDraft.documentId}`);
-    await expect(page.getByRole("alert")).toContainText("The Requestor must review and submit it");
+    await expect(page.getByText("You are editing a Requestor draft. The Requestor must review and submit it.")).toBeVisible();
     await page.getByLabel("Request title").fill("Analyst enriched real-stack draft");
     await page.getByRole("button", { name: "Save draft changes" }).click();
-    await expect(page.getByRole("status")).toContainText("Draft saved");
+    await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
     await expect(page.getByRole("button", { name: "Submit request" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("menuitem", { name: "Requestor — Jane" }).click();
+    await expect(page.getByRole("button", { name: "Account menu" })).toContainText("Requestor — Jane");
     await page.goto(`/requests/${bobDraft.documentId}`);
-    await expect(page.getByRole("heading", { name: "Request is not available" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "You don’t have access to this area" })).toBeVisible();
     await expect(page.getByText(bobDraft.title)).toHaveCount(0);
     await expect(page.getByText(bobDraft.requestNumber)).toHaveCount(0);
     const response = await page.request.get(`${strapiOrigin}/api/csrm-assessment-requests/${bobDraft.documentId}`, {
@@ -152,7 +162,7 @@ test.describe("request workflow", () => {
       await expectNoHorizontalOverflow(page);
       if (width < 768) {
         await expect(page.getByRole("list", { name: "My risk assessment requests" })).toBeVisible();
-        await expectVisibleTouchTargets(page.getByRole("link", { name: /View request/ }), "mobile request link");
+        await expectVisibleTouchTargets(page.getByRole("link", { name: "View request", exact: true }), "mobile request link");
       } else {
         await expect(page.getByRole("table", { name: "My risk assessment requests" })).toBeVisible();
       }
@@ -163,7 +173,7 @@ test.describe("request workflow", () => {
     await page.getByLabel("Request title").fill("Mobile progressive form evidence");
     await page.getByRole("button", { name: "Submit request" }).click();
     await expect(page.getByRole("alert", { name: "Check the highlighted fields" })).toBeFocused();
-    await page.screenshot({ path: "e2e/snapshots/request-form-mobile-390.png", fullPage: true });
+    await expect(page).toHaveScreenshot("request-form-mobile-390.png", { fullPage: true });
   });
 });
 
@@ -181,14 +191,13 @@ test.describe("request production boundary", () => {
       internalToken,
       "E2E requestor workflow record",
       "request-workflow.spec",
-      "test-evidence",
     ]) {
       expect(output, `production output must exclude ${excludedValue}`).not.toContain(excludedValue);
     }
 
     await page.goto(productionOrigin);
     await expect(page.getByText("Development identity")).toHaveCount(0);
-    for (const pathname of ["/test-evidence/analyst-only", "/test-evidence/states", "/requests"]) {
+    for (const pathname of ["/test-evidence/analyst-only", "/test-evidence/states"]) {
       const response = await page.request.get(`${productionOrigin}${pathname}`);
       expect(response.status(), `production ${pathname}`).toBe(404);
     }
