@@ -36,6 +36,15 @@ describe("route-access preflight", () => {
     expect(protectedLoad).not.toHaveBeenCalled();
   });
 
+  it("matches enabled registered bracket segments before protected detail loading", async () => {
+    const protectedLoad = vi.fn(async () => undefined);
+
+    await expect(
+      resolveRouteAccess("/requests/request-1", requestorCapabilityIds, protectedLoad),
+    ).resolves.toMatchObject({ kind: "allowed", route: { id: "request-details" } });
+    expect(protectedLoad).toHaveBeenCalledTimes(1);
+  });
+
   it("classifies only route status and Function capability, never a role display label", async () => {
     await expect(
       resolveRouteAccess("/", ["function.dashboard.dashboard"]),
