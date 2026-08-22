@@ -1,11 +1,16 @@
-import { factories } from '@strapi/strapi';
+import { factories } from "@strapi/strapi";
 
-export default factories.createCoreRouter('api::csrm-assessment-request.csrm-assessment-request', {
+const protectedPolicies = [
+  "global::csrm-app-enabled",
+  "api::csrm-assessment-request.internal-csrm-caller",
+];
+
+export default factories.createCoreRouter("api::csrm-assessment-request.csrm-assessment-request", {
+  except: ["delete"],
   config: {
-    find: { policies: ['global::csrm-app-enabled'] },
-    findOne: { policies: ['global::csrm-app-enabled'] },
-    create: { policies: ['global::csrm-app-enabled'] },
-    update: { policies: ['global::csrm-app-enabled'] },
-    delete: { policies: ['global::csrm-app-enabled'] },
+    find: { auth: false, policies: protectedPolicies },
+    findOne: { auth: false, policies: protectedPolicies },
+    create: { auth: false, policies: protectedPolicies },
+    update: { auth: false, policies: protectedPolicies },
   },
 });

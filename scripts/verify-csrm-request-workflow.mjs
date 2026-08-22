@@ -27,10 +27,11 @@ const assertDisposableDirectory = async (directory, expectedParent, identity) =>
 };
 
 const listen = (server) => new Promise((resolve, reject) => {
-  server.once("error", reject);
+  const httpServer = server.httpServer ?? server;
+  httpServer.once("error", reject);
   server.listen(0, "127.0.0.1", () => {
-    server.off("error", reject);
-    const address = server.address();
+    httpServer.off("error", reject);
+    const address = httpServer.address();
     resolve(`http://127.0.0.1:${address.port}`);
   });
 });
@@ -95,7 +96,7 @@ try {
   } });
   assert(secondUser.documentId, "Verifier must create a second active IdamBoxUser");
 
-  const baseUrl = await listen(strapi.server.httpServer);
+  const baseUrl = await listen(strapi.server);
   const forgedCreate = await request(baseUrl, "/csrm-assessment-requests", {
     method: "POST",
     headers: { "content-type": "application/json" },
