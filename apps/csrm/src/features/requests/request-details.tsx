@@ -92,10 +92,6 @@ export function RequestDetails({ request, actorKind, initialCatalogue, saveDraft
   const analystDraft = canEditDraft && actorKind === "analyst";
 
   useEffect(() => {
-    setStatus(request.requestStatus);
-  }, [request.requestStatus]);
-
-  useEffect(() => {
     if (announcement) workflowRef.current?.focus();
   }, [announcement, status]);
 

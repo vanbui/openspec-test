@@ -40,16 +40,16 @@ describe("CSRM Function capability registry", () => {
     expect(analystCapabilities).toHaveLength(23);
   });
 
-  it("enables only the foundation route and filters every planned destination", () => {
+  it("enables the foundation and Phase 7 direct-request routes only when their Functions are present", () => {
     expect(routeDefinitions.find((route) => route.href === "/")).toMatchObject({
       capability: "function.dashboard.dashboard",
       status: "enabled",
     });
-    expect(routeDefinitions.filter((route) => route.status === "planned")).toHaveLength(
-      22,
-    );
+    expect(routeDefinitions.filter((route) => route.status === "planned")).toHaveLength(20);
     expect(visibleRoutes(resolveEffectiveCapabilities())).toEqual([
       expect.objectContaining({ href: "/", status: "enabled" }),
+      expect.objectContaining({ href: "/requests/new", status: "enabled" }),
+      expect.objectContaining({ href: "/requests/[requestId]", status: "enabled" }),
     ]);
   });
 

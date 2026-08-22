@@ -23,13 +23,11 @@ export default async function RequestDetailsPage({ params }: { params: Promise<{
   const cookieStore = await cookies();
   const identity = resolveDevelopmentIdentity({ cookieValue: cookieStore.get(developmentFixtureCookieName)?.value });
   const actor = await resolveCurrentActor();
-  let detail: Awaited<ReturnType<typeof getAccessibleRequest>> | undefined;
-  const routeAccess = await resolveRouteAccess(`/requests/${requestId}`, identity?.capabilities ?? [], async () => {
-    if (actor) detail = await getAccessibleRequest(actor.email, requestId);
-  });
+  const routeAccess = await resolveRouteAccess(`/requests/${requestId}`, identity?.capabilities ?? []);
 
   if (routeAccess.kind === "unavailable" || !actor) return <UnavailableState />;
   if (routeAccess.kind === "forbidden") return <AccessDeniedState />;
+  const detail = await getAccessibleRequest(actor.email, requestId);
   if (!detail || !detail.ok) {
     // Strapi deliberately makes unknown and non-owned records indistinguishable.
     return detail?.error.kind === "http" && detail.error.status === 404 ? <AccessDeniedState /> : <UnavailableState />;
