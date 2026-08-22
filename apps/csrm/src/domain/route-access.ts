@@ -11,7 +11,17 @@ export type RouteAccess =
   | { kind: "unavailable" };
 
 function routeForPathname(pathname: string): RouteDefinition | undefined {
-  return routeDefinitions.find((route) => route.href === pathname);
+  const pathSegments = pathname.split("/").filter(Boolean);
+
+  return routeDefinitions.find((route) => {
+    const routeSegments = route.href.split("/").filter(Boolean);
+    if (routeSegments.length !== pathSegments.length) return false;
+
+    return routeSegments.every((segment, index) => {
+      const isDynamicSegment = segment.startsWith("[") && segment.endsWith("]");
+      return isDynamicSegment ? pathSegments[index].length > 0 : segment === pathSegments[index];
+    });
+  });
 }
 
 function classifyRouteAccess(

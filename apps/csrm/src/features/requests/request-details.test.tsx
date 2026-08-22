@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { initialRequestActionState } from "./request-form-state";
@@ -14,7 +15,7 @@ vi.mock("./request-form", () => ({
 vi.mock("@/components/ui/request-form-primitives", async () => {
   const React = await import("react");
   return {
-    RequestConfirmationDialog: ({ open, title, description, cancelLabel, confirmLabel }: { open: boolean; title: string; description: string; cancelLabel: string; confirmLabel: string }) => open ? <div aria-label={title} role="dialog"><p>{description}</p><button autoFocus>{cancelLabel}</button><button>{confirmLabel}</button></div> : null,
+    RequestConfirmationDialog: ({ open, title, description, cancelLabel, confirmLabel, onConfirm }: { open: boolean; title: string; description: string; cancelLabel: string; confirmLabel: string; onConfirm: () => void }) => open ? <div aria-label={title} role="dialog"><p>{description}</p><button autoFocus>{cancelLabel}</button><button onClick={onConfirm}>{confirmLabel}</button></div> : null,
   };
 });
 
@@ -87,8 +88,10 @@ describe("RequestDetails", () => {
     expect(screen.getByTestId("request-form").textContent).toBe("Save draft changes");
   });
 
-  it("renders submitted withdrawal with the approved confirmation and read-only later statuses", () => {
-    const { rerender } = render(
+  it("renders submitted withdrawal with the approved confirmation and focuses workflow after acknowledgement", async () => {
+    const user = userEvent.setup();
+    mockWithdraw.mockResolvedValue({ ...initialRequestActionState, status: "success", announcement: "Request returned to draft." });
+    render(
       <RequestDetails
         actorKind="owner"
         initialCatalogue={catalogue}
@@ -102,22 +105,37 @@ describe("RequestDetails", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Workflow" }).textContent).toBe("Workflow");
     expect(screen.getByText("Submitted — awaiting Security Analyst review.")).toBeDefined();
     expect(screen.getByRole("button", { name: "Withdraw submission" })).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Withdraw submission" }));
+    const dialog = screen.getByRole("dialog", { name: "Withdraw this submission?" });
+    expect(dialog.textContent).toContain("This request will return to draft and will no longer be available for analyst processing.");
+    await user.click(within(dialog).getByRole("button", { name: "Withdraw submission" }));
+    await waitFor(() => expect(mockWithdraw).toHaveBeenCalledWith("request-1"));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Request returned to draft."));
+    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 2, name: "Workflow" }));
+  });
 
-    rerender(
+  it.each([
+    ["questionnaire-in-progress", "Questionnaire in progress — a questionnaire is being prepared."],
+    ["risk-assessment-drafted", "Risk assessment drafted — a risk assessment draft is being prepared."],
+    ["under-review", "Under review — a Security Analyst is reviewing this request."],
+    ["approved", "Approved — the request has been approved."],
+    ["closed", "Closed — this request is closed."],
+  ])("renders %s as semantic read-only details", (status, copy) => {
+    render(
       <RequestDetails
         actorKind="owner"
         initialCatalogue={catalogue}
-        request={request("under-review")}
+        request={request(status)}
         saveDraftAction={vi.fn()}
         submitRequestAction={vi.fn()}
         withdrawRequestAction={mockWithdraw}
       />,
     );
 
-    expect(screen.getByText("Under review — a Security Analyst is reviewing this request.")).toBeDefined();
+    expect(screen.getByText(copy)).toBeDefined();
     expect(screen.queryByTestId("request-form")).toBeNull();
     expect(screen.queryByRole("button", { name: "Withdraw submission" })).toBeNull();
-    expect(screen.getByText("Not provided")).toBeDefined();
+    expect(screen.getAllByText("Not provided").length).toBeGreaterThan(0);
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

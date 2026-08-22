@@ -72,7 +72,7 @@ export const routeDefinitions = [
     group: "risk-assessment-requests",
     icon: "clipboard-list",
     capability: "function.risk_assessment_requests.new_request",
-    status: "planned",
+    status: "enabled",
   },
   {
     id: "request-details",
@@ -81,7 +81,7 @@ export const routeDefinitions = [
     group: "risk-assessment-requests",
     icon: "clipboard-list",
     capability: "function.risk_assessment_requests.request_details",
-    status: "planned",
+    status: "enabled",
   },
   {
     id: "analyst-requests",

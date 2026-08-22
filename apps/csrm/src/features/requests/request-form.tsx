@@ -17,6 +17,11 @@ import { RequestConfirmationDialog, RequestFormField, RequestFormSection } from 
 type RequestFormProps = {
   requestId?: string;
   initialValues?: RequestFormValues;
+  showHeader?: boolean;
+  saveLabel?: string;
+  allowSubmit?: boolean;
+  onSaveSuccess?: () => void;
+  onSubmitSuccess?: () => void;
   initialCatalogue: {
     informationSystems: readonly CatalogueOption[];
     informationAssets: readonly CatalogueOption[];
@@ -48,7 +53,7 @@ function submitValidation(values: RequestFormValues): Partial<Record<RequestFiel
   return errors;
 }
 
-export function RequestForm({ requestId, initialValues = initialRequestActionState.values, initialCatalogue, saveDraftAction, submitRequestAction }: RequestFormProps) {
+export function RequestForm({ requestId, initialValues = initialRequestActionState.values, showHeader = true, saveLabel = "Save draft", allowSubmit = true, onSaveSuccess, onSubmitSuccess, initialCatalogue, saveDraftAction, submitRequestAction }: RequestFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<RequestFormValues>(initialValues);
   const [savedValues, setSavedValues] = useState<RequestFormValues>(initialValues);
@@ -100,7 +105,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
     setErrors((current) => ({ ...current, [field]: undefined }));
   }
 
-  function acceptResult(result: RequestActionState, redirect = true) {
+  function acceptResult(result: RequestActionState, redirect = true, onSuccess?: () => void) {
     setValues(result.values);
     if (result.status === "error") {
       setErrors(result.fieldErrors);
@@ -111,6 +116,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
     setSavedValues(result.values);
     setAnnouncement(result.announcement);
     if (redirect && result.redirectTo) router.replace(result.redirectTo);
+    onSuccess?.();
   }
 
   function onSaveDraft() {
@@ -118,7 +124,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
       setErrors({ title: "Enter a request title to save a draft." });
       return;
     }
-    startSaveTransition(async () => acceptResult(await saveDraftAction(requestId, initialRequestActionState, formDataFor(values))));
+    startSaveTransition(async () => acceptResult(await saveDraftAction(requestId, initialRequestActionState, formDataFor(values)), true, onSaveSuccess));
   }
 
   function onBeginSubmit() {
@@ -145,7 +151,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
       }
       if (!effectiveRequestId) return;
       const submitted = await submitRequestAction(effectiveRequestId, initialRequestActionState, formDataFor(values));
-      acceptResult(submitted, false);
+      acceptResult(submitted, false, onSubmitSuccess);
       setSubmitOpen(false);
       if (submitted.status === "success" && !requestId) router.replace(`/requests/${effectiveRequestId}`);
     });
@@ -165,7 +171,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
 
   return (
     <div className="max-w-[672px]">
-      <PageHeader breadcrumbs={[{ href: "/requests", label: "Risk Assessment Requests" }, { label: "New request" }]} title="New risk assessment request" />
+      {showHeader ? <PageHeader breadcrumbs={[{ href: "/requests", label: "Risk Assessment Requests" }, { label: "New request" }]} title="New risk assessment request" /> : null}
       <form className="mt-2xl space-y-xl" noValidate onSubmit={(event) => { event.preventDefault(); onBeginSubmit(); }}>
         {Object.keys(errors).length ? (
           <div aria-labelledby="request-error-summary-heading" className="rounded-[var(--radius-card)] border border-destructive bg-surface p-lg" ref={errorSummaryRef} role="alert" tabIndex={-1}>
@@ -221,8 +227,8 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
         </RequestFormSection>
 
         <div className="flex flex-col gap-sm sm:flex-row">
-          <Button disabled={savePending} onClick={onSaveDraft} type="button">{savePending ? "Saving draft…" : "Save draft"}</Button>
-          <Button disabled={submitPending} onClick={onBeginSubmit} type="button" variant="secondary">{submitPending ? "Submitting request…" : "Submit request"}</Button>
+          <Button disabled={savePending} onClick={onSaveDraft} type="button">{savePending ? `${saveLabel.replace(/\.$/, "")}…` : saveLabel}</Button>
+          {allowSubmit ? <Button disabled={submitPending} onClick={onBeginSubmit} type="button" variant="secondary">{submitPending ? "Submitting request…" : "Submit request"}</Button> : null}
         </div>
       </form>
       <RequestConfirmationDialog cancelLabel="Keep editing" confirmLabel="Submit request" description="Once submitted, your request will be available for Security Analyst review. You can withdraw it only until processing begins." onConfirm={onConfirmSubmit} onOpenChange={setSubmitOpen} open={submitOpen} pending={submitPending} title="Submit risk assessment request?" />
