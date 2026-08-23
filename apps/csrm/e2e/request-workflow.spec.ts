@@ -33,6 +33,32 @@ async function expectNoHorizontalOverflow(page: Page) {
   )).toBe(true);
 }
 
+async function expectConfirmationDialogLayout(page: Page, dialog: Locator) {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error("The confirmation-dialog assertion requires a fixed viewport.");
+
+  const dialogBox = await dialog.boundingBox();
+  if (!dialogBox) throw new Error("The confirmation dialog must have a bounding box.");
+
+  expect(dialogBox.width, "confirmation dialog must not collapse to a narrow column").toBeGreaterThan(300);
+  expect(dialogBox.x, "confirmation dialog left gutter").toBeGreaterThanOrEqual(16);
+  expect(dialogBox.x + dialogBox.width, "confirmation dialog right gutter").toBeLessThanOrEqual(viewport.width - 16);
+  expect(dialogBox.y, "confirmation dialog top viewport bound").toBeGreaterThanOrEqual(16);
+  expect(dialogBox.y + dialogBox.height, "confirmation dialog bottom viewport bound").toBeLessThanOrEqual(viewport.height - 16);
+
+  for (const [name, target] of [
+    ["confirmation title", dialog.getByRole("heading", { name: "Submit risk assessment request?" })],
+    ["confirmation description", dialog.getByText("Once submitted, your request will be available for Security Analyst review. You can withdraw it only until processing begins.")],
+  ] as const) {
+    const box = await target.boundingBox();
+    if (!box) throw new Error(`${name} must have a bounding box.`);
+    expect(box.width, `${name} usable content width`).toBeGreaterThanOrEqual(200);
+  }
+
+  await expect.poll(() => dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await expectNoHorizontalOverflow(page);
+}
+
 async function expectVisibleTouchTargets(targets: Locator, description: string) {
   let visibleCount = 0;
   for (const target of await targets.all()) {
@@ -125,12 +151,23 @@ test.describe("request workflow", () => {
     await page.getByRole("button", { name: "Submit request" }).click();
     const submitDialog = page.getByRole("dialog");
     await expect(submitDialog).toBeVisible();
+    await expectConfirmationDialogLayout(page, submitDialog);
+    await expect(submitDialog.getByRole("button", { name: "Keep editing" })).toBeFocused();
+    await submitDialog.getByRole("button", { name: "Keep editing" }).click();
+    await expect(submitDialog).toBeHidden();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "Submit request" }).click();
+    await expect(submitDialog).toBeVisible();
+    await expectConfirmationDialogLayout(page, submitDialog);
     await expect(submitDialog.getByRole("button", { name: "Keep editing" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(submitDialog.getByRole("button", { name: "Submit request" })).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("status").filter({ hasText: "Request submitted." })).toBeVisible();
     await expect(page.getByRole("button", { name: "Withdraw submission" })).toBeVisible();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
 
     await page.getByRole("button", { name: "Withdraw submission" }).click();
     const withdrawDialog = page.getByRole("dialog");

@@ -77,7 +77,7 @@ export function RequestConfirmationDialog({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/40" />
-        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-card)] border border-border-subtle bg-surface p-xl shadow-[var(--shadow-floating)] focus:outline-none">
+        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-card)] border border-border-subtle bg-surface p-xl shadow-[var(--shadow-floating)] focus:outline-none">
           <DialogPrimitive.Title className="text-heading font-semibold text-foreground">
             {title}
           </DialogPrimitive.Title>
