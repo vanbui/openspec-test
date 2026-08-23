@@ -49,7 +49,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 ## Workflow State
 
-Last activity: 2026-08-23 - Completed quick task 260823-fcv: Fix the New request form so field validation and the Check the highlighted fields summary run only on submit or save draft, preserving text-field focus while typing.
+Last activity: 2026-08-23 - Completed quick task 260823-fro: Fix the Submit request confirmation dialog rendering vertically with one letter per line and overflowing the viewport.
 
 - Project initialized: 2026-05-20
 - Requirements defined: 2026-05-20
@@ -86,6 +86,7 @@ Last activity: 2026-08-23 - Completed quick task 260823-fcv: Fix the New request
 | 260822-tdg | align CSRM shell controls and navigation with the engineering rules | 2026-08-22 | e1ae64b | [260822-tdg-check-the-csrm-engineering-rules-in-apps](./quick/260822-tdg-check-the-csrm-engineering-rules-in-apps/) |
 | 260822-u5d | align the AccountMenu to the right in AppHeader | 2026-08-22 | 85ce2eb | [260822-u5d-in-the-appheader-align-the-accountmenu-t](./quick/260822-u5d-in-the-appheader-align-the-accountmenu-t/) |
 | 260823-fcv | Fix the New request form so field validation and the Check the highlighted fields summary run only on submit or save draft, preserving text-field focus while typing | 2026-08-23 | 5d98509 | [260823-fcv-fix-the-new-request-form-so-field-valida](./quick/260823-fcv-fix-the-new-request-form-so-field-valida/) |
+| 260823-fro | Fix the Submit request confirmation dialog rendering vertically with one letter per line and overflowing the viewport | 2026-08-23 | bad2191 | [260823-fro-fix-the-submit-request-confirmation-dial](./quick/260823-fro-fix-the-submit-request-confirmation-dial/) |
 
 ## Memory
 
