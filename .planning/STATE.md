@@ -49,7 +49,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 ## Workflow State
 
-Last activity: 2026-08-22 - Completed quick task 260822-u5d: align the AccountMenu to the right in AppHeader.
+Last activity: 2026-08-23 - Completed quick task 260823-fcv: Fix the New request form so field validation and the Check the highlighted fields summary run only on submit or save draft, preserving text-field focus while typing.
 
 - Project initialized: 2026-05-20
 - Requirements defined: 2026-05-20
@@ -85,6 +85,7 @@ Last activity: 2026-08-22 - Completed quick task 260822-u5d: align the AccountMe
 | 260811-ne2 | move the apps/csrm/docs/references/controls folder to apps/backend/src/bootstrap and update the seed-csrm-data.ts script accordingly. | 2026-08-11 | a1b66f7 | [260811-ne2-move-the-apps-csrm-docs-references-contr](./quick/260811-ne2-move-the-apps-csrm-docs-references-contr/) |
 | 260822-tdg | align CSRM shell controls and navigation with the engineering rules | 2026-08-22 | e1ae64b | [260822-tdg-check-the-csrm-engineering-rules-in-apps](./quick/260822-tdg-check-the-csrm-engineering-rules-in-apps/) |
 | 260822-u5d | align the AccountMenu to the right in AppHeader | 2026-08-22 | 85ce2eb | [260822-u5d-in-the-appheader-align-the-accountmenu-t](./quick/260822-u5d-in-the-appheader-align-the-accountmenu-t/) |
+| 260823-fcv | Fix the New request form so field validation and the Check the highlighted fields summary run only on submit or save draft, preserving text-field focus while typing | 2026-08-23 | 5d98509 | [260823-fcv-fix-the-new-request-form-so-field-valida](./quick/260823-fcv-fix-the-new-request-form-so-field-valida/) |
 
 ## Memory
 
