@@ -64,13 +64,14 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
   const [submitOpen, setSubmitOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string>();
+  const [errorSummaryFocusRequest, setErrorSummaryFocusRequest] = useState(0);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   const dirty = useMemo(() => JSON.stringify(values) !== JSON.stringify(savedValues), [savedValues, values]);
 
   useEffect(() => {
-    if (Object.keys(errors).length) errorSummaryRef.current?.focus();
-  }, [errors]);
+    if (errorSummaryFocusRequest) errorSummaryRef.current?.focus();
+  }, [errorSummaryFocusRequest]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -102,13 +103,19 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
       [field]: value,
       ...(field === "thirdPartyInvolvement" && value === "false" ? { thirdPartyDetails: "" } : {}),
     }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const remaining = { ...current };
+      delete remaining[field];
+      return remaining;
+    });
   }
 
   function acceptResult(result: RequestActionState, redirect = true, onSuccess?: () => void) {
     setValues(result.values);
     if (result.status === "error") {
       setErrors(result.fieldErrors);
+      setErrorSummaryFocusRequest((current) => current + 1);
       setAnnouncement(result.formError);
       return;
     }
@@ -122,6 +129,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
   function onSaveDraft() {
     if (!values.title.trim()) {
       setErrors({ title: "Enter a request title to save a draft." });
+      setErrorSummaryFocusRequest((current) => current + 1);
       return;
     }
     startSaveTransition(async () => acceptResult(await saveDraftAction(requestId, initialRequestActionState, formDataFor(values)), true, onSaveSuccess));
@@ -131,6 +139,7 @@ export function RequestForm({ requestId, initialValues = initialRequestActionSta
     const fieldErrors = submitValidation(values);
     if (Object.keys(fieldErrors).length) {
       setErrors(fieldErrors);
+      setErrorSummaryFocusRequest((current) => current + 1);
       return;
     }
     setErrors({});

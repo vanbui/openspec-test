@@ -72,21 +72,44 @@ describe("RequestForm", () => {
     expect(screen.queryByLabelText(/system owner/i)).toBeNull();
   });
 
-  it("validates title only for a draft and waits for acknowledgement before routing", async () => {
+  it("shows validation only for save or submit actions and preserves text-field focus while editing", async () => {
     const user = userEvent.setup();
     mockSaveDraft.mockResolvedValue(successfulDraft());
     renderForm();
 
+    const title = screen.getByLabelText("Request title");
+    await user.type(title, "Vendor platform");
+    expect(screen.queryByRole("alert", { name: "Check the highlighted fields" })).toBeNull();
+    expect(title.getAttribute("aria-invalid")).toBe("false");
+
+    await user.clear(title);
     await user.click(screen.getByRole("button", { name: "Save draft" }));
+    expect(document.activeElement).toBe(screen.getByRole("alert", { name: "Check the highlighted fields" }));
     expect(screen.getAllByText("Enter a request title to save a draft.")).toHaveLength(2);
     expect(mockSaveDraft).not.toHaveBeenCalled();
 
-    await user.type(screen.getByLabelText("Request title"), "Vendor platform");
+    await user.type(title, "Vendor platform");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => expect(mockSaveDraft).toHaveBeenCalledTimes(1));
     expect(screen.getByRole("status").textContent).toContain("Draft saved.");
     expect(mockReplace).toHaveBeenCalledWith("/requests/request-1");
+  });
+
+  it("does not refocus the summary until a later save or submit action", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const title = screen.getByLabelText("Request title");
+    await user.type(title, "Vendor");
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect(document.activeElement).toBe(screen.getByRole("alert", { name: "Check the highlighted fields" }));
+
+    await user.click(title);
+    await user.type(title, " platform");
+
+    expect(document.activeElement).toBe(title);
+    expect((title as HTMLInputElement).value).toBe("Vendor platform");
   });
 
   it("focuses the exact validation summary and only opens submission confirmation when valid", async () => {
