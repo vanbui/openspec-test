@@ -33,7 +33,9 @@ Set that in both the backend's and the csrm's .env files, like so:
 IDAMBOX_CSRM_INTERNAL_TOKEN=your-csrm-api-token-here
 ```
 
-Before running Strapi, replace the placeholder secrets in `apps/backend/.env`. Then start up the Keycloak IDP by following the instructions in idp/README.md
+Before running Strapi, replace the placeholder secrets in `apps/backend/.env`.
+
+Later on, when we have IDAMBOX_KEYCLOAK_PROVISIONING=true in .env then you will need to start up the Keycloak IDP by following the instructions in idp/README.md before running Strapi.
 
 ## Development
 
