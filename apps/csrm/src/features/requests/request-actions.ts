@@ -142,7 +142,7 @@ export async function saveDraft(
   if ("status" in actor) return actor;
 
   if (!requestId) {
-    const created = await createDraft(actor.email, { title: values.title });
+    const created = await createDraft(actor.email, saveInput(values));
     if (!created.ok) return safeServiceError(values, created.error);
     const id = created.data.data.documentId;
     return {

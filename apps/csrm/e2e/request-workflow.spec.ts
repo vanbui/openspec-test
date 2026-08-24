@@ -136,17 +136,49 @@ test.describe("request workflow", () => {
   test("Jane persists, submits, withdraws, and discovers a request through real Strapi", async ({ page }) => {
     await page.goto("/requests/new");
     await page.getByLabel("Request title").fill("E2E requestor workflow record");
+    await page.getByLabel("Request description").fill("A persisted request description for the end-to-end workflow.");
+    await page.getByLabel("Assessment type").selectOption("Project");
+    await page.getByLabel("Division").fill("Technology");
+    await page.getByLabel("Business unit").fill("Platform engineering");
+    await page.getByLabel("Business purpose").fill("Verify the complete Requestor workflow against disposable Strapi storage.");
+    await page.getByLabel("Business criticality").selectOption("High");
+    await page.getByLabel("Yes").check();
+    await page.getByLabel("Third-party details").fill("Managed workflow testing provider.");
+    await page.getByLabel("Regulatory requirements").fill("APRA CPS 234");
+    await page.getByLabel("Requested due date").fill("2026-09-01");
+
+    let selectedSystemName: string | undefined;
+    await page.getByRole("button", { name: "Select information systems" }).click();
+    const systemOptions = page.getByRole("option");
+    if (await systemOptions.count()) {
+      selectedSystemName = (await systemOptions.first().textContent())?.trim();
+      await systemOptions.first().getByRole("button").click();
+    }
+
+    let selectedAssetName: string | undefined;
+    await page.getByRole("button", { name: "Select information assets" }).click();
+    const assetOptions = page.getByRole("option");
+    if (await assetOptions.count()) {
+      selectedAssetName = (await assetOptions.first().textContent())?.trim();
+      await assetOptions.first().getByRole("button").click();
+    }
+
     await page.getByRole("button", { name: "Save draft" }).click();
     await expect(page).toHaveURL(/\/requests\/[A-Za-z0-9_-]+$/);
     await expect(page.getByRole("heading", { level: 1, name: "E2E requestor workflow record" })).toBeFocused();
-
-    await page.getByLabel("Request description").fill("A persisted request description for the end-to-end workflow.");
-    await page.getByLabel("Assessment type").selectOption("Project");
-    await page.getByLabel("Business purpose").fill("Verify the complete Requestor workflow against disposable Strapi storage.");
-    await page.getByLabel("Business criticality").selectOption("High");
-    await page.getByLabel("No").check();
-    await page.getByRole("button", { name: "Save draft" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Request description")).toHaveValue("A persisted request description for the end-to-end workflow.");
+    await expect(page.getByLabel("Assessment type")).toHaveValue("Project");
+    await expect(page.getByLabel("Division")).toHaveValue("Technology");
+    await expect(page.getByLabel("Business unit")).toHaveValue("Platform engineering");
+    await expect(page.getByLabel("Business purpose")).toHaveValue("Verify the complete Requestor workflow against disposable Strapi storage.");
+    await expect(page.getByLabel("Business criticality")).toHaveValue("High");
+    await expect(page.getByLabel("Yes")).toBeChecked();
+    await expect(page.getByLabel("Third-party details")).toHaveValue("Managed workflow testing provider.");
+    await expect(page.getByLabel("Regulatory requirements")).toHaveValue("APRA CPS 234");
+    await expect(page.getByLabel("Requested due date")).toHaveValue("2026-09-01");
+    if (selectedSystemName) await expect(page.getByRole("button", { name: `Remove ${selectedSystemName}` })).toBeVisible();
+    if (selectedAssetName) await expect(page.getByRole("button", { name: `Remove ${selectedAssetName}` })).toBeVisible();
 
     await page.getByRole("button", { name: "Submit request" }).click();
     const submitDialog = page.getByRole("dialog");

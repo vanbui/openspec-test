@@ -20,10 +20,8 @@ export type RequestResponse = JsonResponse<"/csrm-assessment-requests/{id}", "ge
 export type RequestDashboardResponse = JsonResponse<"/csrm-assessment-requests/dashboard", "get">;
 export type InformationSystemCollectionResponse = JsonResponse<"/csrm-information-systems", "get">;
 export type InformationAssetCollectionResponse = JsonResponse<"/csrm-information-assets", "get">;
-type CreateRequestData = JsonBody<"/csrm-assessment-requests", "post">["data"];
 type SaveRequestData = JsonBody<"/csrm-assessment-requests/{id}", "put">["data"];
-export type CreateDraftInput = Pick<CreateRequestData, "title">;
-export type SaveDraftInput = Pick<
+type EditableDraftInput = Pick<
   SaveRequestData,
   | "title"
   | "description"
@@ -39,6 +37,8 @@ export type SaveDraftInput = Pick<
   | "informationAssets"
   | "informationSystems"
 >;
+export type CreateDraftInput = EditableDraftInput;
+export type SaveDraftInput = EditableDraftInput;
 
 export type RequestListInput = {
   keyword?: string;
