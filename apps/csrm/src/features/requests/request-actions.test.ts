@@ -60,14 +60,28 @@ describe("request Server Actions", () => {
     withdrawRequestService.mockResolvedValue({ ok: true, data: { data: { documentId: "request-1" } } });
   });
 
-  it("accepts only a nonblank title for a draft and never forwards system-owned fields", async () => {
+  it("forwards every normalized editable field for a new draft and never forwards system-owned fields", async () => {
     const entered = formData({
       title: "  Edge access review  ",
-      description: "Saved description",
+      description: "  Saved description  ",
+      assessmentType: "Project",
+      division: "  Technology  ",
+      businessUnit: "  Platform engineering  ",
+      businessPurpose: "  Protect customer data  ",
+      businessCriticality: "High",
+      thirdPartyInvolvement: "false",
+      thirdPartyDetails: "Must be cleared",
+      regulatoryRequirements: "  APRA CPS 234  ",
+      dueDate: "  2026-09-01  ",
+      informationSystems: ["  system-1  ", "system-2"],
+      informationAssets: ["  asset-1  "],
+      actorEmail: "attacker@example.test",
+      owner: "attacker@example.test",
       requestor: "attacker@example.test",
       requestNumber: "RA-9999",
       requestStatus: "approved",
       submittedDate: "2026-08-22T00:00:00.000Z",
+      transition: "approved",
       capability: "function.administration.controls",
     });
 
@@ -75,12 +89,35 @@ describe("request Server Actions", () => {
 
     expect(createDraft).toHaveBeenCalledWith("jane.doe@idambox.com", {
       title: "Edge access review",
+      description: "Saved description",
+      assessmentType: "Project",
+      division: "Technology",
+      businessUnit: "Platform engineering",
+      businessPurpose: "Protect customer data",
+      businessCriticality: "High",
+      thirdPartyInvolvement: "false",
+      thirdPartyDetails: "",
+      regulatoryRequirements: "APRA CPS 234",
+      dueDate: "2026-09-01",
+      informationSystems: ["system-1", "system-2"],
+      informationAssets: ["asset-1"],
     });
     expect(saved).toMatchObject({
       status: "success",
       announcement: "Draft saved.",
       redirectTo: "/requests/request-1",
-      values: { title: "Edge access review", description: "Saved description" },
+      values: {
+        title: "Edge access review",
+        description: "Saved description",
+        division: "Technology",
+        businessUnit: "Platform engineering",
+        businessPurpose: "Protect customer data",
+        thirdPartyDetails: "Must be cleared",
+        regulatoryRequirements: "APRA CPS 234",
+        dueDate: "2026-09-01",
+        informationSystems: ["system-1", "system-2"],
+        informationAssets: ["asset-1"],
+      },
     });
 
     const invalid = await saveDraft(undefined, initialRequestActionState, formData({ title: "  ", description: "Keep this" }));

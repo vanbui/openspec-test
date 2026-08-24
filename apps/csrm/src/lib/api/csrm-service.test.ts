@@ -68,7 +68,21 @@ describe("CSRM request service", () => {
     );
 
     await expect(listOwnedRequests(actor, { keyword: "one & two", status: "draft", page: 2, sort: "title-asc" })).resolves.toMatchObject({ ok: true });
-    await expect(createDraft(actor, { title: "Draft request" })).resolves.toMatchObject({ ok: true });
+    await expect(createDraft(actor, {
+      title: "Draft request",
+      description: "Persist every requestor-editable field.",
+      assessmentType: "Project",
+      division: "Technology",
+      businessUnit: "Platform engineering",
+      businessPurpose: "Verify draft persistence.",
+      businessCriticality: "High",
+      thirdPartyInvolvement: "false",
+      thirdPartyDetails: "",
+      regulatoryRequirements: "APRA CPS 234",
+      dueDate: "2026-09-01",
+      informationSystems: ["system-1"],
+      informationAssets: ["asset-1"],
+    })).resolves.toMatchObject({ ok: true });
     await expect(getAccessibleRequest(actor, "request-1")).resolves.toMatchObject({ ok: true });
     await expect(saveDraft(actor, "request-1", { title: "Saved request", thirdPartyInvolvement: "false" })).resolves.toMatchObject({ ok: true });
     await expect(getRequestorDashboard(actor)).resolves.toMatchObject({ ok: true });
@@ -79,7 +93,27 @@ describe("CSRM request service", () => {
 
     expect(observed).toEqual([
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests?keyword=one+%26+two&status=draft&page=2&pageSize=25&sort=title%3Aasc" }),
-      expect.objectContaining({ method: "POST", path: "/api/csrm-assessment-requests", body: { data: { title: "Draft request" } } }),
+      expect.objectContaining({
+        method: "POST",
+        path: "/api/csrm-assessment-requests",
+        body: {
+          data: {
+            title: "Draft request",
+            description: "Persist every requestor-editable field.",
+            assessmentType: "Project",
+            division: "Technology",
+            businessUnit: "Platform engineering",
+            businessPurpose: "Verify draft persistence.",
+            businessCriticality: "High",
+            thirdPartyInvolvement: "false",
+            thirdPartyDetails: "",
+            regulatoryRequirements: "APRA CPS 234",
+            dueDate: "2026-09-01",
+            informationSystems: ["system-1"],
+            informationAssets: ["asset-1"],
+          },
+        },
+      }),
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests/request-1" }),
       expect.objectContaining({ method: "PUT", path: "/api/csrm-assessment-requests/request-1", body: { data: { title: "Saved request", thirdPartyInvolvement: "false" } } }),
       expect.objectContaining({ method: "GET", path: "/api/csrm-assessment-requests/dashboard" }),
