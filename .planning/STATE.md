@@ -49,7 +49,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 ## Workflow State
 
-Last activity: 2026-08-23 - Completed quick task 260823-fro: Fix the Submit request confirmation dialog rendering vertically with one letter per line and overflowing the viewport.
+Last activity: 2026-08-24 - Completed quick task 260824-qb2: Fix the issue where only the Request Number and Request Title fields are persisted when clicking on the Save draft button on the New Request form.
 
 - Project initialized: 2026-05-20
 - Requirements defined: 2026-05-20
@@ -87,6 +87,7 @@ Last activity: 2026-08-23 - Completed quick task 260823-fro: Fix the Submit requ
 | 260822-u5d | align the AccountMenu to the right in AppHeader | 2026-08-22 | 85ce2eb | [260822-u5d-in-the-appheader-align-the-accountmenu-t](./quick/260822-u5d-in-the-appheader-align-the-accountmenu-t/) |
 | 260823-fcv | Fix the New request form so field validation and the Check the highlighted fields summary run only on submit or save draft, preserving text-field focus while typing | 2026-08-23 | 5d98509 | [260823-fcv-fix-the-new-request-form-so-field-valida](./quick/260823-fcv-fix-the-new-request-form-so-field-valida/) |
 | 260823-fro | Fix the Submit request confirmation dialog rendering vertically with one letter per line and overflowing the viewport | 2026-08-23 | bad2191 | [260823-fro-fix-the-submit-request-confirmation-dial](./quick/260823-fro-fix-the-submit-request-confirmation-dial/) |
+| 260824-qb2 | Fix the issue where only the Request Number and Request Title fields are persisted when clicking on the Save draft button on the New Request form. | 2026-08-24 | 5e0fea7 | [260824-qb2-fix-the-issue-where-only-the-request-num](./quick/260824-qb2-fix-the-issue-where-only-the-request-num/) |
 
 ## Memory
 
