@@ -26,10 +26,14 @@ yarn install
 Copy-Item apps/backend/.env.example apps/backend/.env
 Copy-Item apps/csrm/.env.example apps/csrm/.env
 ```
+Generate an API token for CSRM to call the Strapi API with: openssl rand -hex 32
+
+Set that in both the backend's and the csrm's .env files, like so:
+```
+IDAMBOX_CSRM_INTERNAL_TOKEN=your-csrm-api-token-here
+```
 
 Before running Strapi, replace the placeholder secrets in `apps/backend/.env`. Then start up the Keycloak IDP by following the instructions in idp/README.md
-
-Before running CSRM, go to http://localhost:1337/admin/settings/api-tokens?sort=name:ASC and copy the Full Access API token and enter that into the apps/csrm/.env file.
 
 ## Development
 
