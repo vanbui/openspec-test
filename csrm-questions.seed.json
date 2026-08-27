@@ -1,0 +1,1302 @@
+[
+  {
+    "questionText": "What services are provided by \\[APPLICATION]?",
+    "answerType": "Long text",
+    "helpText": "The response describes functionality but does not define all included product components.",
+    "options": null,
+    "order": 1,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is \\[APPLICATION] a tool, platform, web service, software-as-a-service application or licence-based service?",
+    "answerType": "Boolean",
+    "helpText": "The response does not describe maintenance, upgrade or support entitlements.",
+    "options": null,
+    "order": 2,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What are the primary business use cases for \\[APPLICATION]?",
+    "answerType": "Long text",
+    "helpText": "Specific operational dependencies and outage tolerances were not requested.",
+    "options": null,
+    "order": 3,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who is the technical or system owner?",
+    "answerType": "Text",
+    "helpText": "Operational support ownership and endpoint-management responsibility were not separately identified.",
+    "options": null,
+    "order": 4,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who is accountable for risk acceptance if acceptance is required for \\[APPLICATION]?",
+    "answerType": "Text",
+    "helpText": "The response does not identify an authorised individual or delegated approval authority.",
+    "options": null,
+    "order": 5,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What types of information does \\[APPLICATION] process, store or transmit?",
+    "answerType": "Long text",
+    "helpText": "Processing was described, but storage locations, transmission paths, derived outputs, logs and temporary artefacts were not addressed.",
+    "options": null,
+    "order": 6,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What is the highest information classification involved?",
+    "answerType": "Long text",
+    "helpText": "The response does not map the classification to specific datasets or outputs.",
+    "options": null,
+    "order": 7,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is any information owned by \\[ORGANISATION] stored in \\[APPLICATION]?",
+    "answerType": "Boolean",
+    "helpText": "The approved assessment later identified insufficient evidence regarding local caches, temporary extracts, query results, credentials and exported artefacts.",
+    "options": null,
+    "order": 8,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Does any information leave the country?",
+    "answerType": "Boolean",
+    "helpText": "The answer does not separately address diagnostic information, support artefacts, telemetry, update services or supplier subprocessors.",
+    "options": null,
+    "order": 9,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is \\[APPLICATION] cloud-hosted, on-premises or hybrid?",
+    "answerType": "Boolean",
+    "helpText": "Network communications, dependencies and identity integrations were not described.",
+    "options": null,
+    "order": 10,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Has the legal function been engaged and reviewed the contract?",
+    "answerType": "Boolean",
+    "helpText": "Contract status, security schedules, incident-notification obligations and vulnerability-management commitments were not provided.",
+    "options": null,
+    "order": 11,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What information, metadata, credentials, tokens, logs, exports, cache files and temporary files can each component of \\[APPLICATION] write to an endpoint, and where are those artefacts stored?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 12,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "During support or troubleshooting, what screenshots, logs, extracts or other diagnostic artefacts may be provided to \\[SUPPLIER], and what review, redaction, approval and transfer controls apply?",
+    "answerType": "Text",
+    "options": null,
+    "order": 13,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are users authenticated to \\[APPLICATION] today, and what multi-factor authentication, identity integration, role segregation and privileged-access controls are currently enforced?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 14,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which secure-development, dependency-management, vulnerability-disclosure and patch-notification controls are currently operational for \\[APPLICATION], and which are planned but not yet implemented?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 15,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What contractual security, confidentiality, incident-notification, vulnerability-remediation and data-handling obligations apply to \\[SUPPLIER], and have they been reviewed by the appropriate legal and security functions?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 16,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How many devices and users are in scope, which endpoint types are supported, and are installation, configuration and security settings centrally managed and consistently enforced?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 17,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are security updates identified, tested, approved and deployed for \\[APPLICATION], and what are the expected remediation timeframes for critical and high-severity vulnerabilities?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 18,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What services and capabilities are provided by \\[APPLICATION]?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 19,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What are the primary business use cases and operational dependencies?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 20,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is the service cloud-hosted, on-premises or hybrid?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 21,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What information is processed, stored or transmitted by the software?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 22,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What is the highest information classification involved?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 23,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is organisational information stored by the software?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 24,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Does any information leave the applicable jurisdiction?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 25,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who owns the system and who is authorised to accept its risks?",
+    "answerType": "Text",
+    "options": null,
+    "order": 26,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Has the relevant contract undergone legal and security review?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 27,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What caches, temporary files, exports, logs, credentials, tokens and metadata are written by the software?",
+    "answerType": "Text",
+    "options": null,
+    "order": 28,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are locally stored artefacts encrypted, retained and deleted?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 29,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What support artefacts may be shared with the supplier and how are they reviewed and redacted?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 30,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are users authenticated and authorised, including privileged users?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 31,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are software versions, configurations and updates centrally managed?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 32,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What secure-development, dependency and component-inventory controls are currently operational?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 33,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How will the supplier notify \\[ORGANISATION] of vulnerabilities and security incidents?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 34,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What contractual remediation and notification timeframes apply?",
+    "answerType": "Text",
+    "options": null,
+    "order": 35,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What network connections and external service dependencies are required?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 36,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How many users and endpoints are in scope?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 37,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What process should be followed for the cyber assessment after completion of the architecture review?",
+    "answerType": "Long text",
+    "helpText": "The evidence does not provide a complete approval workflow or final decision criteria.",
+    "options": null,
+    "order": 38,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which member of the specialist team should receive the libraries and source files for inspection?",
+    "answerType": "Long text",
+    "helpText": "A specific assessor was not identified in the reviewed chain.",
+    "options": null,
+    "order": 39,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What tools and libraries are used to build the test automation framework?",
+    "answerType": "Text",
+    "helpText": "The inventory does not clearly distinguish direct dependencies, transitive dependencies, development-only packages or runtime components.",
+    "options": null,
+    "order": 40,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which source files should be assessed for the tools included in scope?",
+    "answerType": "Long text",
+    "helpText": "The reviewed chain does not contain the compiled source-file submission.",
+    "options": null,
+    "order": 41,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can component-level code or dependency scanning be incorporated into the framework’s delivery pipeline?",
+    "answerType": "Boolean",
+    "helpText": "Enforcement, frequency, thresholds and failure behaviour were not documented.",
+    "options": null,
+    "order": 42,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can the relevant tool source files be added to a repository and scanned periodically for security issues?",
+    "answerType": "Boolean",
+    "helpText": "The accessible evidence does not identify which source files or repositories were included.",
+    "options": null,
+    "order": 43,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which projects, repositories and pipelines use the shared framework or its common libraries, and how is dependency usage traced across them?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 44,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "For each repository and component, when is scanning executed, what dependency types are covered, what findings block builds, who reviews results and how are exceptions approved?",
+    "answerType": "Text",
+    "options": null,
+    "order": 45,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What direct and transitive dependency coverage did the scan achieve, which repositories and versions were scanned, and what evidence confirms that all in-scope components were included?",
+    "answerType": "Text",
+    "options": null,
+    "order": 46,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which listed packages are actually invoked by the framework, what resources do they access and what information, credentials or secrets do they process?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 47,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What environments can the framework access, what network paths exist between those environments and production, and are any production-derived datasets or reusable credentials present?",
+    "answerType": "Text",
+    "options": null,
+    "order": 48,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is each open-source component assessed for maintainer reputation, release provenance, maintenance activity, vulnerability disclosure, licence obligations and risk of abandonment?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 49,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who verifies that package versions remain supported and current, how frequently is this reviewed and what is the process for replacing deprecated or unmaintained components?",
+    "answerType": "Text",
+    "options": null,
+    "order": 50,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which components are available as source code, packages or binaries, and what assessment method will be used for each artefact type?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 51,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are changes to the shared framework reviewed, approved, tested, versioned and distributed to consuming projects?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 52,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who owns the framework, who owns the affected delivery pipelines, who is accountable for remediation and who is authorised to accept any residual open-source supply-chain risk?",
+    "answerType": "Text",
+    "options": null,
+    "order": 53,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What tools, libraries and versions form part of the test automation framework?",
+    "answerType": "Text",
+    "options": null,
+    "order": 54,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which projects, repositories and environments use the framework?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 55,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which components are direct dependencies, transitive dependencies, runtime components or development-only tools?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 56,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What code and dependency scanning is applied?",
+    "answerType": "Text",
+    "options": null,
+    "order": 57,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which source files or package artefacts are available for assessment?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 58,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is the shared framework maintained and distributed?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 59,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What information and credentials are processed by test suites and reporting outputs?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 60,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Does the framework process production-derived or sensitive test information?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 61,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What connectivity exists between testing environments and production systems?",
+    "answerType": "Text",
+    "options": null,
+    "order": 62,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are repositories, pipelines, package feeds and secrets protected?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 63,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are scans mandatory and build-blocking?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 64,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Do scans cover direct, transitive and container or binary dependencies?",
+    "answerType": "Text",
+    "options": null,
+    "order": 65,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who reviews findings and owns remediation?",
+    "answerType": "Text",
+    "options": null,
+    "order": 66,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are package provenance and integrity verified?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 67,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are new or upgraded dependencies approved?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 68,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are deprecated, abandoned or vulnerable packages replaced?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 69,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is framework usage traced across consuming projects?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 70,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What incident-response process applies to a compromised dependency?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 71,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who is authorised to accept residual supply-chain risk?",
+    "answerType": "Text",
+    "options": null,
+    "order": 72,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What information is exchanged through the API?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 73,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is API traffic encrypted?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 74,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is access to the API authenticated and authorised?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 75,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are API services separated by audience, trust zone or information sensitivity?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 76,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is a current network architecture diagram available?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 77,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are vulnerabilities identified, prioritised and remediated?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 78,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are patching activities performed according to documented schedules?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 79,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are risk-based remediation targets defined?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 80,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What API, authentication, administrative and system events are logged?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 81,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How long are logs retained?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 82,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are security events reviewed and escalated?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 83,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can logs be supplied to \\[ORGANISATION] during an investigation?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 84,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is privileged access protected?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 85,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is access removed when personnel leave or change roles?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 86,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is temporary access approved, expired and evidenced?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 87,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are shared or generic accounts attributable to individual users?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 88,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which administrative systems enforce MFA?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 89,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which security improvements are incomplete?",
+    "answerType": "Text",
+    "options": null,
+    "order": 90,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What evidence will demonstrate completion?",
+    "answerType": "Text",
+    "options": null,
+    "order": 91,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is data protected in transit?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 92,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is the API segmented?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 93,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is current architecture documentation available?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 94,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is API access authenticated?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 95,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are vulnerabilities and patches managed?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 96,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are events monitored?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 97,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can evidence be provided during an incident?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 98,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How is administrative access controlled?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 99,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What exact mechanism authenticates each API request?",
+    "answerType": "Long text",
+    "helpText": "Encryption does not establish that the calling system is authorised.",
+    "options": null,
+    "order": 100,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Where are API credentials created, stored, rotated and revoked?",
+    "answerType": "Text",
+    "helpText": "Credential compromise could permit unauthorised automated access.",
+    "options": null,
+    "order": 101,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is access restricted by source network, certificate, workload identity or approved endpoint?",
+    "answerType": "Boolean",
+    "helpText": "Additional restrictions reduce reliance on a single credential.",
+    "options": null,
+    "order": 102,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are request rate limits, throttling and abuse-detection rules configured?",
+    "answerType": "Boolean",
+    "helpText": "Excessive or malicious requests could affect availability.",
+    "options": null,
+    "order": 103,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which request and response fields could contain sensitive information?",
+    "answerType": "Long text",
+    "helpText": "Data classification determines encryption, logging and retention requirements.",
+    "options": null,
+    "order": 104,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are successful requests, failed requests, authentication failures and administrative changes logged?",
+    "answerType": "Boolean",
+    "helpText": "A statement that “logs are generated” does not establish adequate forensic coverage.",
+    "options": null,
+    "order": 105,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is the log-retention period aligned with contractual, incident-response and regulatory requirements?",
+    "answerType": "Boolean",
+    "helpText": "Logs may be deleted before suspicious activity is discovered.",
+    "options": null,
+    "order": 106,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide a recent example of a vulnerability being identified, prioritised, patched and verified.",
+    "answerType": "Long text",
+    "helpText": "A worked example demonstrates whether the process operates in practice. \\*\\*\\*",
+    "options": null,
+    "order": 107,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Describe the complete authentication and authorisation sequence for a request from \\[ORGANISATION] to the API, including the identity used, credential type, credential owner, storage location, permissions, rotation process, revocation process and failure handling.",
+    "answerType": "Long text",
+    "options": null,
+    "order": 108,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide the current logical architecture showing externally reachable endpoints, trust boundaries, security gateways, authentication components, supporting services, administrative interfaces and logging destinations.",
+    "answerType": "Long text",
+    "options": null,
+    "order": 109,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Describe how vulnerabilities are identified and remediated, including scanning frequency, severity methodology, remediation targets, exception approval, overdue escalation and remediation verification.",
+    "answerType": "Long text",
+    "options": null,
+    "order": 110,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "List all security events generated for the API and supporting environment, their review frequency, alert thresholds, retention periods, escalation paths and evidence-access arrangements.",
+    "answerType": "Long text",
+    "options": null,
+    "order": 111,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Which assurance frameworks and certifications apply to the service?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 112,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What independent audits are performed?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 113,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What application and administrative activities are logged?",
+    "answerType": "Text",
+    "options": null,
+    "order": 114,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are successful and failed authentication events recorded?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 115,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can activity reporting be enabled for customer administrators?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 116,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can critical events generate alerts?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 117,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can logs be integrated with the customer’s monitoring environment?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 118,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is SSO enforced for all users?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 119,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are local accounts disabled or restricted?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 120,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is MFA enforced for administrators?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 121,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are external users authenticated?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 122,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What password settings can the customer configure?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 123,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Has the supplier experienced a relevant security incident?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 124,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Was customer information affected?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 125,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What independent assurance exists?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 126,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "What events are logged?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 127,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Are successful logins recorded?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 128,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Can administrators review activity?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 129,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Is central monitoring integration available?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 130,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are users authenticated?",
+    "answerType": "Long text",
+    "options": null,
+    "order": 131,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Was the supplier affected by an incident?",
+    "answerType": "Boolean",
+    "options": null,
+    "order": 132,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide evidence that successful login tracking is enabled in the production tenant.",
+    "answerType": "Long text",
+    "helpText": "A configurable feature is not an implemented control.",
+    "options": null,
+    "order": 133,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Who reviews administrator and authentication activity, at what frequency and against which criteria?",
+    "answerType": "Text",
+    "helpText": "Reports provide little value if no accountable review process exists.",
+    "options": null,
+    "order": 134,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "List every account that can bypass federated SSO.",
+    "answerType": "Long text",
+    "helpText": "Local and external accounts may bypass enterprise authentication controls.",
+    "options": null,
+    "order": 135,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "How are break-glass accounts controlled, monitored and tested?",
+    "answerType": "Long text",
+    "helpText": "Emergency accounts can create an unmanaged privileged-access path.",
+    "options": null,
+    "order": 136,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide the scope, exclusions and unresolved findings from independent audits.",
+    "answerType": "Long text",
+    "helpText": "Certification alone does not establish that the assessed service and supporting components were in scope.",
+    "options": null,
+    "order": 137,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide a redacted incident chronology and the basis for concluding that customer application data was unaffected.",
+    "answerType": "Long text",
+    "helpText": "Supplier assurance should be supported by investigation evidence. \\*\\*\\*",
+    "options": null,
+    "order": 138,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Identify every authentication path available to standard users, external users, administrators, support personnel and emergency accounts. For each path, state whether SSO and MFA are mandatory and provide tenant-level configuration evidence.",
+    "answerType": "Text",
+    "options": null,
+    "order": 139,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide the current tenant audit configuration, including enabled event types, retention, alerting, administrator review and export capability.",
+    "answerType": "Long text",
+    "options": null,
+    "order": 140,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  },
+  {
+    "questionText": "Provide the independent assurance evidence applicable to the service, including scope, exclusions, subservice organisations, exceptions and remediation status.",
+    "answerType": "Long text",
+    "options": null,
+    "order": 141,
+    "answer": null,
+    "reviewComment": null,
+    "questionnaire": null
+  }
+]
