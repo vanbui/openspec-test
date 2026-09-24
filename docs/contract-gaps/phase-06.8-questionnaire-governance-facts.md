@@ -1,0 +1,90 @@
+# Phase 06.8: Questionnaire Governance Facts
+
+## Gap
+
+Phase 06.8 makes questionnaire release an authorization gate and gives both actors an
+auditable revision history. The frozen CSRM JDL supports neither.
+
+Two distinct facts are missing:
+
+1. **No release fact.** `CsrmQuestionnaire` carries `generatedDate`/`generatedBy` and
+   the Phase 06.1 reversal facts, but nothing that records whether a generated
+   questionnaire has been released to its Requestor. Authorization for questionnaire
+   reads is currently ownership-only, so a generated questionnaire is visible to its
+   Requestor immediately. Decision D-05 requires that it stay analyst-only until an
+   explicit Analyst release, which needs a persisted, server-owned release fact to gate
+   on.
+2. **No revision history.** The Phase 06.1 record states plainly that `revertReason`,
+   `revertedAt`, and `revertedBy` "persist only the most recent reversal facts" and "do
+   not form an immutable or complete reversal-event history", and it defers a full
+   event-history model "pending a future domain-model decision". Decisions D-02, D-07,
+   and D-09 require exactly that history: a dated timeline of releases, returns to
+   review, question edits, question deletions, and cleared answers, in which later
+   records are never silently deleted. Phase 06.8 is the deferred decision.
+
+Neither gap can be closed by reusing an existing attribute. `CsrmQuestionnaire` has no
+status attribute and no unused JSON attribute. A new audit content type is excluded: the
+Phase 06.1 record requires that no competing audit entity be introduced outside the
+frozen JDL.
+
+## Approved Compatibility Extension
+
+`CsrmQuestionnaire` receives three optional attributes.
+
+| Attribute | Type | Meaning |
+| --- | --- | --- |
+| `releasedAt` | datetime | Server-owned time of the latest successful release to the Requestor. Absent means never released. |
+| `releasedBy` | many-to-one `IdamBoxUser` | Server-derived Analyst who performed the latest successful release. |
+| `governanceLog` | json | Append-only, schema-versioned array of governance events: release, return to analyst review, question added, question edited, question deleted, and answer cleared. |
+
+Each attribute is optional so records created before this extension remain valid.
+
+`releasedAt` and `releasedBy` are the authoritative release gate, read directly by the
+authorization policy. The gate deliberately does not derive itself from `governanceLog`:
+an access-control decision must not depend on parsing a mutable JSON array, where a
+malformed or truncated log failing safe would deny every read of an already-released
+questionnaire. `governanceLog` carries narrative history only and is never consulted for
+an authorization decision.
+
+The questionnaire still keeps no status attribute. Its submitted state stays derived from
+its answer envelopes, and its released state is now a pair of audit facts about an event
+in the same shape as the Phase 06.1 reversal facts. This extension therefore adds audit
+facts and an event log only; it does not introduce a competing questionnaire status
+field, and it does not add an entity.
+
+## Write Discipline
+
+`governanceLog` is append-only. The protected workflow operation appends one entry in the
+same transaction as the state change it documents. No code path may remove, reorder, or
+rewrite a prior entry. Reads validate the array against a closed schema and fail safe on
+a malformed envelope, in the same posture as the existing questionnaire-definition and
+answer-envelope parsers.
+
+`releasedAt` and `releasedBy` are written only by the protected release operation.
+Returning a questionnaire to analyst review clears them, and appends the return event to
+`governanceLog` with its mandatory reason, so the history of releases survives the
+clearing of the current release fact.
+
+## What This Extension Does Not Add
+
+No schema change is needed, and none is approved, for:
+
+- **The request lifecycle stepper (D-01).** Its eight visible steps are derived from the
+  existing `CsrmAssessmentRequest.requestStatus` enum, the questionnaire release facts
+  above, the per-answer submitted envelopes, and the existing
+  `CsrmAssessment.assessmentStatus` enum. No value is added to any existing enumeration,
+  because the stepper is a read-only projection rather than a stored state.
+- **Soft-deleted questions (D-07).** A deletion marker lives inside the existing
+  versioned `CsrmQuestion.options` JSON envelope, which already carries parsed,
+  schema-versioned question definition data.
+- **The assessment review regression (D-13).** `CsrmAssessment.assessmentStatus` already
+  enumerates `draft`, so returning a reviewed but unreleased assessment to `draft` is an
+  ordinary transition within the existing vocabulary.
+
+## Audit Semantics and Limitation
+
+`governanceLog` is an append-only log inside its aggregate, not a global audit store. It
+is scoped to one questionnaire and is readable only through the same ownership and
+collection-scope checks as every other questionnaire read; no separate unscoped history
+endpoint is introduced. A cross-aggregate audit trail spanning requests, assessments, and
+risks remains out of scope and is deferred to a future domain-model decision.

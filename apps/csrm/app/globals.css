@@ -1,0 +1,844 @@
+@import "tailwindcss";
+
+/*
+ * CSRM semantic tokens — single source of truth for color, radius, and motion.
+ * Values follow docs/design/csrm-design-direction.md, which adopts the BProton
+ * design system (docs/adr/0001-adopt-bproton-design-system.md). BProton tokens
+ * carry their exact published values; anything marked "CSRM extension" is a
+ * decision the design system leaves to the product. Feature components must
+ * consume tokens (or the Tailwind utilities mapped from them below), never raw
+ * values.
+ */
+:root {
+  color-scheme: light;
+
+  /* BProton colour — exact values from the design system */
+  --background: #f6f5f2;
+  --foreground: #141413;
+  --card: #ffffff;
+  --muted: #eceae5;
+  --muted-foreground: #6b6962;
+  --border: #d8d5cd;
+  --surface-dark: #121211;
+  --surface-dark-muted: #a8a59c;
+  --accent: #141413;
+  --accent-foreground: #f6f5f2;
+  --line-ink-15: #14141326;
+  --line-ink-20: #14141333;
+  --grid-line: #1414130a;
+  --selection: #1414131f;
+  --line-on-dark: #ffffff1a;
+  --line-on-dark-strong: #ffffff26;
+  --line-on-dark-button: #ffffff33;
+  --fill-on-dark: #ffffff08;
+  --fill-on-dark-button: #ffffff0a;
+
+  /* Surfaces */
+  --surface: var(--card);
+  --surface-muted: var(--muted);
+  --surface-hover: var(--grid-line);
+  --surface-selected: var(--muted);
+  --overlay-background: rgb(18 18 17 / 50%); /* CSRM extension: surface-dark at 50% */
+
+  /* Text */
+  --foreground-secondary: var(--muted-foreground);
+  --text-link: var(--foreground);
+  --text-link-decoration: var(--muted-foreground);
+  --text-link-decoration-thickness: 1px;
+  --text-link-underline-offset: 3px;
+
+  /* Dense data typography */
+  --text-table-size: 13px;
+  --text-micro-size: 11px;
+  --tracking-micro: 0.14em;
+  --text-button-size: 14px;
+  --text-button-line-height: 20px;
+  --text-button-tracking: -0.025em;
+  --text-heading-sm-size: 16px;
+  --text-heading-sm-line-height: 24px;
+  --text-heading-sm-tracking: -0.01em;
+  --text-heading-md-size: 20px;
+  --text-heading-md-line-height: 28px;
+  --text-heading-md-tracking: -0.015em;
+  --text-wordmark-size: 20px;
+  --text-wordmark-line-height: 28px;
+  --text-wordmark-tracking: -0.02em;
+  --text-heading-lg-size: 28px;
+  --text-heading-lg-line-height: 32px;
+  --text-heading-lg-tracking: -0.02em;
+  --text-display-size: 30px;
+  --text-display-line-height: 36px;
+  --text-display-tracking: -0.02em;
+
+  /* Borders */
+  --border-strong: var(--muted-foreground); /* CSRM extension: 5.5:1 control boundary */
+
+  /* Primary — ink is the only interactive colour; hover lifts, never recolours */
+  --primary: var(--accent);
+  --primary-hover: var(--accent);
+  --primary-active: var(--accent);
+  --primary-subtle: var(--muted);
+  --primary-foreground: var(--accent-foreground);
+  --focus-ring: var(--foreground);
+
+  /* Sidebar — the one dark section */
+  --sidebar: var(--surface-dark);
+  --sidebar-foreground: var(--accent-foreground);
+  --sidebar-muted: var(--surface-dark-muted);
+  --sidebar-active: var(--fill-on-dark-button);
+  --sidebar-focus-ring: var(--accent-foreground);
+  --sidebar-border: var(--line-on-dark);
+
+  /* Status (CSRM extension): tinted bg + same-hue dark fg + soft border */
+  --info: #1d4ed8;
+  --info-bg: #eff6ff;
+  --info-border: #b2ccff;
+  --success: #067647;
+  --success-bg: #ecfdf3;
+  --success-border: #abefc6;
+  --warning: #b54708;
+  --warning-bg: #fffaeb;
+  --warning-border: #fedf89;
+  --destructive: #b42318;
+  --destructive-bg: #fef2f2;
+  --destructive-border: #fecdca;
+  --destructive-solid: #d92d20;
+  --destructive-foreground: #ffffff;
+
+  /* Risk severity ladder (CSRM extension; never rendered color-only) */
+  --risk-low: #067647;
+  --risk-low-bg: #ecfdf3;
+  --risk-medium: #b54708;
+  --risk-medium-bg: #fffaeb;
+  --risk-high: #b93815;
+  --risk-high-bg: #fff4ed;
+  --risk-critical: #912018;
+  --risk-critical-bg: #fee4e2;
+  --risk-critical-solid: #b42318;
+
+  /* Radii — BProton uses Tailwind's default scale unchanged */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+  --radius: 0.5rem; /* shadcn base, kept equal to radius-lg */
+
+  /* Spacing — BProton layout tokens */
+  --container-max: 72rem;
+  --grid-max: 90rem;
+  --gutter-xs: 1rem;
+  --gutter-sm: 1.5rem;
+  --gutter-md: 2.5rem;
+  --gutter-lg: 3.5rem;
+  --section-y-sm: 4rem;
+  --section-y-md: 5rem;
+  --section-y-lg: 7rem;
+  --section-y-xl: 8rem;
+  --header-h-sm: 3.5rem;
+  --header-h-md: 4rem;
+  --control-h: 3rem;
+
+  /* Motion */
+  --duration-micro: 80ms;
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 220ms;
+  --duration-slower: 260ms;
+  --duration-shimmer: 1400ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9); /* CSRM extension */
+  --ease-in: cubic-bezier(0.2, 0, 1, 0.9); /* CSRM extension */
+
+  /* Shadows — the primary button pair and the one floating-layer shadow */
+  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-button-hover: 0 10px 30px rgba(0, 0, 0, 0.1);
+  --shadow-button-light: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-button-light-hover: 0 10px 30px rgba(0, 0, 0, 0.15);
+  --shadow-overlay: var(--shadow-button-hover); /* CSRM extension role */
+
+  /* shadcn/ui compatibility aliases — keep stock components on our theme */
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--foreground);
+  --input: var(--border-strong);
+  --ring: var(--focus-ring);
+  --chart-1: var(--foreground);
+  --chart-2: var(--muted-foreground);
+  --chart-grid: var(--border);
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display:
+    var(--font-instrument), "Instrument Serif", "Plus Jakarta Sans", system-ui,
+    serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-overlay: var(--overlay-background);
+  --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-muted: var(--surface-dark-muted);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-text-link: var(--text-link);
+  --color-text-link-decoration: var(--text-link-decoration);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-line-ink-15: var(--line-ink-15);
+  --color-line-ink-20: var(--line-ink-20);
+  --color-grid-line: var(--grid-line);
+  --color-selection: var(--selection);
+  --color-line-on-dark: var(--line-on-dark);
+  --color-line-on-dark-strong: var(--line-on-dark-strong);
+  --color-line-on-dark-button: var(--line-on-dark-button);
+  --color-fill-on-dark: var(--fill-on-dark);
+  --color-fill-on-dark-button: var(--fill-on-dark-button);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-destructive: var(--destructive);
+  --color-destructive-subtle: var(--destructive-bg);
+  --color-destructive-border: var(--destructive-border);
+  --color-destructive-solid: var(--destructive-solid);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-risk-low: var(--risk-low);
+  --color-risk-low-subtle: var(--risk-low-bg);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-medium-subtle: var(--risk-medium-bg);
+  --color-risk-high: var(--risk-high);
+  --color-risk-high-subtle: var(--risk-high-bg);
+  --color-risk-critical: var(--risk-critical);
+  --color-risk-critical-subtle: var(--risk-critical-bg);
+  --color-risk-critical-solid: var(--risk-critical-solid);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  --spacing-container-max: var(--container-max);
+  --spacing-grid-max: var(--grid-max);
+  --spacing-gutter-xs: var(--gutter-xs);
+  --spacing-gutter-sm: var(--gutter-sm);
+  --spacing-gutter-md: var(--gutter-md);
+  --spacing-gutter-lg: var(--gutter-lg);
+  --spacing-section-y-sm: var(--section-y-sm);
+  --spacing-section-y-md: var(--section-y-md);
+  --spacing-section-y-lg: var(--section-y-lg);
+  --spacing-section-y-xl: var(--section-y-xl);
+  --spacing-header-h-sm: var(--header-h-sm);
+  --spacing-header-h-md: var(--header-h-md);
+  --spacing-control-h: var(--control-h);
+
+  --ease-out-expo: var(--ease-out-expo);
+  --ease-out-soft: var(--ease-out-soft);
+  --ease-standard: var(--ease-standard);
+  --ease-exit: var(--ease-in);
+
+  --shadow-button: var(--shadow-button);
+  --shadow-button-hover: var(--shadow-button-hover);
+  --shadow-button-light: var(--shadow-button-light);
+  --shadow-button-light-hover: var(--shadow-button-light-hover);
+  --shadow-overlay: var(--shadow-overlay);
+
+  --text-button: var(--text-button-size);
+  --text-button--line-height: var(--text-button-line-height);
+  --text-button--letter-spacing: var(--text-button-tracking);
+  --text-button--font-weight: 500;
+  --text-heading-sm: var(--text-heading-sm-size);
+  --text-heading-sm--line-height: var(--text-heading-sm-line-height);
+  --text-heading-sm--letter-spacing: var(--text-heading-sm-tracking);
+  --text-heading-sm--font-weight: 600;
+  --text-heading-md: var(--text-heading-md-size);
+  --text-heading-md--line-height: var(--text-heading-md-line-height);
+  --text-heading-md--letter-spacing: var(--text-heading-md-tracking);
+  --text-heading-md--font-weight: 600;
+  --text-wordmark: var(--text-wordmark-size);
+  --text-wordmark--line-height: var(--text-wordmark-line-height);
+  --text-wordmark--letter-spacing: var(--text-wordmark-tracking);
+  --text-wordmark--font-weight: 400;
+  --text-heading-lg: var(--text-heading-lg-size);
+  --text-heading-lg--line-height: var(--text-heading-lg-line-height);
+  --text-heading-lg--letter-spacing: var(--text-heading-lg-tracking);
+  --text-heading-lg--font-weight: 400;
+  --text-display: var(--text-display-size);
+  --text-display--line-height: var(--text-display-line-height);
+  --text-display--letter-spacing: var(--text-display-tracking);
+  --text-display--font-weight: 600;
+
+  --animate-shimmer: shimmer var(--duration-shimmer) linear infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+
+/*
+ * Tailwind's preflight leaves border colour as currentColor, so a bare
+ * border utility (table rows, cards, separators) would draw in the text
+ * colour. The hairline token is the default; colour utilities still win
+ * because this sits in the base layer.
+ */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+::selection {
+  background: var(--selection);
+  color: var(--foreground);
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  overflow-x: hidden;
+  font-size: 14px;
+  line-height: 20px;
+}
+/*
+ * Layered deliberately. Unlayered CSS wins over every @layer, so an unlayered
+ * anchor reset silently defeated `text-*` and `underline` utilities on links
+ * throughout the product: a link could carry the right classes and still render
+ * as plain body text. In @layer base it stays the default that link styling
+ * builds on, and a utility on the element wins as intended.
+ */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.sidebar :focus-visible,
+.sheet-content :focus-visible {
+  outline-color: var(--sidebar-focus-ring);
+}
+
+/* Micro-label lockup: BProton `label`, 11px uppercase tracked mono */
+.micro-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro-size);
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+}
+
+/*
+ * Record-link contract (design direction §4 Record links). Declarations are
+ * !important because the treatment is owned here, not by call sites: a
+ * feature class such as text-foreground or no-underline must not be able to
+ * restyle a record link, which is how the surfaces drifted apart before.
+ * Consumers may still add layout classes.
+ */
+.record-link {
+  color: var(--text-link) !important;
+  font-weight: 500 !important;
+  text-decoration-line: underline !important;
+  text-decoration-color: var(--text-link-decoration) !important;
+  text-decoration-thickness: var(--text-link-decoration-thickness) !important;
+  text-underline-offset: var(--text-link-underline-offset) !important;
+  transition: text-decoration-color var(--duration-micro) var(--ease-standard) !important;
+}
+
+.record-link:hover,
+.record-link:focus-visible {
+  text-decoration-color: var(--text-link) !important;
+}
+
+/* Caption treatment: 12px regular helper text. */
+.caption,
+.role-switcher p {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.role-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--sidebar-border);
+}
+.role-switcher .micro-label {
+  color: var(--sidebar-muted);
+}
+.role-switcher select {
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--sidebar-muted);
+  border-radius: var(--radius-md);
+  background: var(--fill-on-dark-button);
+  color: var(--sidebar-foreground);
+  font-size: 13px;
+}
+.role-switcher select:disabled {
+  opacity: 0.6;
+}
+.role-switcher p {
+  margin: 2px 0 0;
+  color: var(--sidebar-muted);
+}
+
+.skip-link {
+  left: 16px;
+  position: fixed;
+  top: -100px;
+  z-index: 100;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+}
+.skip-link:focus {
+  top: 16px;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+}
+.shell-content {
+  min-width: 0;
+}
+.sidebar {
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.shell-footer {
+  margin-top: auto;
+}
+/* Logo lockup: the mark on a foreground tile, then "BProton" in wordmark. */
+.wordmark {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  font-family: var(--font-display);
+  font-size: var(--text-wordmark-size);
+  line-height: var(--text-wordmark-line-height);
+  font-weight: 400;
+  letter-spacing: var(--text-wordmark-tracking);
+}
+.wordmark-tile {
+  display: inline-flex;
+  flex: none;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: var(--foreground);
+}
+.wordmark-mark {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.nav-link {
+  position: relative;
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sidebar-muted);
+  transition:
+    background-color var(--duration-micro) var(--ease-standard),
+    color var(--duration-micro) var(--ease-standard);
+}
+.nav-link-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.nav-link:hover {
+  background: var(--sidebar-active);
+  color: var(--sidebar-foreground);
+}
+.nav-link[aria-current="page"] {
+  background: var(--sidebar-active);
+  color: var(--sidebar-foreground);
+}
+.nav-link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--sidebar-foreground);
+  transform-origin: center;
+  animation: nav-line-grow var(--duration-base) var(--ease-out-expo);
+}
+@keyframes nav-line-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: var(--header-h-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 var(--gutter-md);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(8px);
+}
+.header-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.header-role {
+  flex: none;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  border: 1px solid var(--line-ink-15);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+}
+.page {
+  width: min(100%, var(--grid-max));
+  margin: 0 auto;
+  padding: 32px var(--gutter-md);
+}
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.page-header h1 {
+  margin: 0;
+}
+.page-header p {
+  color: var(--muted-foreground);
+  margin: 6px 0 0;
+}
+
+.button-primary,
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-size: var(--text-button-size);
+  line-height: var(--text-button-line-height);
+  font-weight: 500;
+  letter-spacing: var(--text-button-tracking);
+  transition:
+    transform var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+.button-primary {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-button);
+}
+.button-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-button-hover);
+}
+.button-primary:active:not(:disabled),
+.button-secondary:active:not(:disabled) {
+  transform: scale(0.995);
+}
+.button-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+.button-secondary:hover:not(:disabled) {
+  background: var(--surface-muted);
+  transform: translateY(-1px);
+}
+.button-primary:disabled,
+.button-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.state {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 48px 24px;
+  text-align: center;
+}
+.state h2 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.state p {
+  color: var(--foreground-secondary);
+  margin: 0 auto 16px;
+  max-width: 560px;
+}
+
+.mobile-trigger {
+  display: none;
+}
+.mobile-nav {
+  display: none;
+}
+.sheet-overlay {
+  background: var(--overlay-background);
+  inset: 0;
+  position: fixed;
+  z-index: 40;
+}
+.sheet-content {
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  inset: 0 auto 0 0;
+  padding: 16px 12px;
+  position: fixed;
+  width: min(264px, 85vw);
+  z-index: 50;
+  animation: sheet-slide-in var(--duration-slower) var(--ease-out-expo);
+}
+@keyframes sheet-slide-in {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.sheet-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  margin: 0;
+  padding: 0 8px;
+  color: var(--sidebar-foreground);
+}
+
+@media (max-width: 1023px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    display: none;
+  }
+  .mobile-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--foreground);
+  }
+  .header {
+    padding: 0 var(--gutter-sm);
+  }
+  .page {
+    padding: 24px var(--gutter-sm);
+  }
+  .mobile-nav {
+    display: block;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(264px, 85vw);
+    z-index: 20;
+  }
+  .mobile-nav::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-background);
+    z-index: -1;
+  }
+}
+@media (max-width: 767px) {
+  .header-title {
+    display: none;
+  }
+  .header {
+    min-height: var(--header-h-sm);
+    padding: 0 var(--gutter-xs);
+  }
+  .page {
+    padding: 24px var(--gutter-xs);
+  }
+  .page-header {
+    flex-direction: column;
+  }
+  .page-header .button-primary {
+    width: 100%;
+  }
+  .mobile-nav {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Development sign-in: a single centred card on the app background. */
+.sign-in {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+.sign-in-card {
+  width: min(100%, 420px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: grid;
+  gap: 16px;
+}
+.sign-in-card .wordmark {
+  margin: 0;
+  padding: 0;
+}
+.sign-in-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted-foreground);
+}
+.sign-in-eyebrow svg {
+  width: 14px;
+  height: 14px;
+}
+.sign-in-card h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-heading-lg-size);
+  line-height: var(--text-heading-lg-line-height);
+  font-weight: 400;
+  letter-spacing: var(--text-heading-lg-tracking);
+}
+.sign-in-lead {
+  margin: 0;
+  color: var(--foreground-secondary);
+}
+.sign-in-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.sign-in-note {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}

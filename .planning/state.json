@@ -1,0 +1,12 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.0",
+  "phases": [],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (discuss phase 06.10)",
+    "reason": "Phase 06.9 of 19 complete — Phase 06.10 needs discussion and a plan"
+  },
+  "updated_at": "2026-09-23T12:24:09.790Z"
+}

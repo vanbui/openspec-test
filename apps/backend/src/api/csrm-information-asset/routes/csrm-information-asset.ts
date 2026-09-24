@@ -1,11 +1,17 @@
 import { factories } from '@strapi/strapi';
+import { CSRM_INFORMATION_ASSET_OPERATIONS } from '../operations';
 
 export default factories.createCoreRouter('api::csrm-information-asset.csrm-information-asset', {
+  only: ['find'],
   config: {
-    find: { policies: ['global::csrm-app-enabled'] },
-    findOne: { policies: ['global::csrm-app-enabled'] },
-    create: { policies: ['global::csrm-app-enabled'] },
-    update: { policies: ['global::csrm-app-enabled'] },
-    delete: { policies: ['global::csrm-app-enabled'] },
+    find: {
+      policies: [
+        'global::csrm-app-enabled',
+        {
+          name: 'global::csrm-authorization',
+          config: { operation: CSRM_INFORMATION_ASSET_OPERATIONS.find },
+        },
+      ],
+    },
   },
 });

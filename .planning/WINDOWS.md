@@ -1,242 +1,60 @@
 ---
 schema_version: 1
-open_count: 17
+open_count: 1
 waived_count: 0
-fixed_count: 0
-total_count: 17
-last_updated: 2026-08-22T15:03:50.524Z
+fixed_count: 2
+total_count: 3
+last_updated: 2026-09-10T09:22:21.231Z
 ---
 
 # Broken Windows Ledger
 
-> Cross-phase defect register. `/gsd-ship` blocks while `open_count > 0`.
+> Cross-phase defect register. With `workflow.windows_enforce` enabled, `/gsd-ship` blocks while `open_count > 0`.
 > Waive with `gsd-tools windows waive <id> "<reason>"` (reason required).
 > Mark fixed with `gsd-tools windows fixed <id>`.
 
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
-| 1 | 02 | deviation | .planning/STATE.md |  | Historical Phase 02 state advancement could not parse the Phase 06-positioned STATE.md | open |  | 2026-08-08T14:39:01.019Z |  |
-| 2 | 02 | deviation | apps/backend/README.md |  | Corrected the backend README core-collection count from four to five. | open |  | 2026-08-08T14:50:41.194Z |  |
-| 3 | 02 | deviation | .planning/ROADMAP.md |  | Repaired duplicated Phase 2 plan metadata and preserved the active Phase 6 progress values after automated updates. | open |  | 2026-08-08T14:51:39.303Z |  |
-| 4 | 06 | deviation | apps/csrm/src/components/states/states.test.tsx |  | Avoided unavailable Jest-DOM matcher integration in the hoisted workspace. | open |  | 2026-08-09T09:59:15.326Z |  |
-| 5 | 06 | deviation | apps/csrm/src/components/states/access-denied-state.tsx |  | Replaced incompatible asChild home-action composition with Next Link button variants. | open |  | 2026-08-09T09:59:15.474Z |  |
-| 6 | 06 | deviation | apps/csrm/src/app/test-evidence/analyst-only/page.tsx |  | Next 16 treats __test__ as a private segment; analyst evidence route moved to routable non-production /test-evidence/analyst-only. | open |  | 2026-08-09T10:11:44.527Z |  |
-| 7 | 06 | deviation | apps/csrm/src/components/shell/shell.test.tsx |  | Focused shell test doubles isolate the existing mixed React/Radix Vitest runtime boundary. | open |  | 2026-08-09T10:26:48.547Z |  |
-| 8 | 06 | deviation | apps/csrm/src/app/globals.css |  | Fixed a Tailwind reading-width token that rendered desktop copy vertically. | open |  | 2026-08-09T11:30:47.048Z |  |
-| 9 | 06 | deviation | apps/csrm/src/app/test-evidence/analyst-only/page.tsx |  | Passed development identity cookies into analyst direct-route evidence. | open |  | 2026-08-09T11:30:47.205Z |  |
-| 10 | 06 | deviation | apps/csrm/next.config.ts |  | Removed development identity fixture client code from production output. | open |  | 2026-08-09T11:30:47.362Z |  |
-| 11 | 06 | deviation | apps/csrm/playwright.config.ts |  | Isolated the production E2E build from the development server output. | open |  | 2026-08-09T11:30:47.521Z |  |
-| 12 | 07 | deviation | apps/backend/scripts/normalize-openapi-specification.mjs |  | Normalized generator-invented datetime defaults to make the backend OpenAPI contract reproducible. | open |  | 2026-08-22T14:01:54.567Z |  |
-| 13 | 07 | deviation | apps/backend/package.json |  | Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable. | open |  | 2026-08-22T14:01:54.710Z |  |
-| 14 | 07 | deviation | apps/csrm/scripts/verify-request-api-coverage.mjs |  | Coverage gate corrected stale plan total to the approved 105-operation secure request-workflow contract. | open |  | 2026-08-22T14:13:47.610Z |  |
-| 15 | 07 | deviation | apps/csrm/src/features/requests/request-form.tsx |  | Plan 07-06 extended the shared request form to preserve trusted analyst save-only detail controls. | open |  | 2026-08-22T14:50:17.469Z |  |
-| 16 | 07 | deviation | apps/csrm/src/lib/api/csrm-service.ts |  | Aligned typed request list query keys and approved sort values with the protected backend workflow contract. | open |  | 2026-08-22T15:03:50.375Z |  |
-| 17 | 07 | deviation | apps/csrm/src/features/requests/request-list.tsx |  | Replaced lint-rejected effect-driven filter synchronization with URL-keyed remounting. | open |  | 2026-08-22T15:03:50.524Z |  |
+| 1 | 06.3 | unrun-verify | apps/strapi/tests/questionnaire-workflow.integration.test.ts |  | Mounted Strapi integration suite did not complete. Cause was not the Node version: better-sqlite3's native binary was still built for Node 22, and once rebuilt the suite deadlocked because Node 24 runs `node --test` files more concurrently than Node 22 did. Resolved by rebuilding the addon and running the suite one file at a time; 144/144 on Node 24. | fixed |  | 2026-09-08T00:16:39.918Z | 2026-09-08T06:48:41.912Z |
+| 2 | 06.4 | unrun-verify | apps/web/e2e/requestor-request-workflow.spec.ts; apps/web/e2e/questionnaire-workflow.spec.ts |  | Playwright workflow verification was not run because that execution excluded browser-suite execution. Run afterwards: 23 of 23 pass, after fixing a detail-URL capture that matched the create route, a list-row locator that required an explicit role attribute, an overflow assertion measured through a transient toast, and a genuine layout defect where a 500-character reversal reason scrolled the page sideways. | fixed |  | 2026-09-08T00:00:00.000Z | 2026-09-09T00:53:40.446Z |
+| 3 | 06.5 | unrun-verify | apps/web/e2e/design-system-conformance.spec.ts |  | Isolated Playwright conformance run did not return after Strapi startup in this host. Run afterwards: 3 of 3 pass, with app-shell 7/7 as the environment control. The stall was not environmental. Eight defects in the spec itself were fixed: normalize() called inside page.evaluate but defined in Node scope, a sign-in helper asserting only the URL and racing the session cookie, the same race in the Requestor helper which silently ran the denial proof as an analyst, a token parser dropping the document's inline weight exceptions and its section 4 nav-item size, a tracking assertion widened beyond what the application implements, a widget locator walking up one parent too few, recovery assertions expecting links where routes render buttons, and desktop-table assertions run at 375px where DataTable renders cards. One genuine product defect was found and fixed: the My Requests empty fixture zeroed pagination but passed the real rows, so RequestTable derived populated and the empty state never rendered. | fixed |  | 2026-09-10T09:22:21.231Z | 2026-09-10T21:30:00.000Z |
 
 ````json
 [
   {
     "id": 1,
-    "kind": "deviation",
-    "phase": "02",
-    "file": ".planning/STATE.md",
+    "kind": "unrun-verify",
+    "phase": "06.3",
+    "file": "apps/strapi/tests/questionnaire-workflow.integration.test.ts",
     "line": null,
-    "description": "Historical Phase 02 state advancement could not parse the Phase 06-positioned STATE.md",
-    "status": "open",
+    "description": "Mounted Strapi integration suite did not complete. Cause was not the Node version: better-sqlite3's native binary was still built for Node 22, and once rebuilt the suite deadlocked because Node 24 runs `node --test` files more concurrently than Node 22 did. Resolved by rebuilding the addon and running the suite one file at a time; 144/144 on Node 24.",
+    "status": "fixed",
     "reason": "",
-    "recorded_at": "2026-08-08T14:39:01.019Z",
-    "resolved_at": null
+    "recorded_at": "2026-09-08T00:16:39.918Z",
+    "resolved_at": "2026-09-08T06:48:41.912Z"
   },
   {
     "id": 2,
-    "kind": "deviation",
-    "phase": "02",
-    "file": "apps/backend/README.md",
+    "kind": "unrun-verify",
+    "phase": "06.4",
+    "file": "apps/web/e2e/requestor-request-workflow.spec.ts; apps/web/e2e/questionnaire-workflow.spec.ts",
     "line": null,
-    "description": "Corrected the backend README core-collection count from four to five.",
-    "status": "open",
+    "description": "Playwright workflow verification was not run because that execution excluded browser-suite execution. Run afterwards: 23 of 23 pass, after fixing a detail-URL capture that matched the create route, a list-row locator that required an explicit role attribute, an overflow assertion measured through a transient toast, and a genuine layout defect where a 500-character reversal reason scrolled the page sideways.",
+    "status": "fixed",
     "reason": "",
-    "recorded_at": "2026-08-08T14:50:41.194Z",
-    "resolved_at": null
+    "recorded_at": "2026-09-08T00:00:00.000Z",
+    "resolved_at": "2026-09-09T00:53:40.446Z"
   },
   {
     "id": 3,
-    "kind": "deviation",
-    "phase": "02",
-    "file": ".planning/ROADMAP.md",
+    "kind": "unrun-verify",
+    "phase": "06.5",
+    "file": "apps/web/e2e/design-system-conformance.spec.ts",
     "line": null,
-    "description": "Repaired duplicated Phase 2 plan metadata and preserved the active Phase 6 progress values after automated updates.",
-    "status": "open",
+    "description": "Isolated Playwright conformance run did not return after Strapi startup in this host. Run afterwards: 3 of 3 pass with app-shell 7/7 as control; eight spec defects and one product defect fixed.",
+    "status": "fixed",
     "reason": "",
-    "recorded_at": "2026-08-08T14:51:39.303Z",
-    "resolved_at": null
-  },
-  {
-    "id": 4,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/src/components/states/states.test.tsx",
-    "line": null,
-    "description": "Avoided unavailable Jest-DOM matcher integration in the hoisted workspace.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T09:59:15.326Z",
-    "resolved_at": null
-  },
-  {
-    "id": 5,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/src/components/states/access-denied-state.tsx",
-    "line": null,
-    "description": "Replaced incompatible asChild home-action composition with Next Link button variants.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T09:59:15.474Z",
-    "resolved_at": null
-  },
-  {
-    "id": 6,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/src/app/test-evidence/analyst-only/page.tsx",
-    "line": null,
-    "description": "Next 16 treats __test__ as a private segment; analyst evidence route moved to routable non-production /test-evidence/analyst-only.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T10:11:44.527Z",
-    "resolved_at": null
-  },
-  {
-    "id": 7,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/src/components/shell/shell.test.tsx",
-    "line": null,
-    "description": "Focused shell test doubles isolate the existing mixed React/Radix Vitest runtime boundary.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T10:26:48.547Z",
-    "resolved_at": null
-  },
-  {
-    "id": 8,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/src/app/globals.css",
-    "line": null,
-    "description": "Fixed a Tailwind reading-width token that rendered desktop copy vertically.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T11:30:47.048Z",
-    "resolved_at": null
-  },
-  {
-    "id": 9,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/src/app/test-evidence/analyst-only/page.tsx",
-    "line": null,
-    "description": "Passed development identity cookies into analyst direct-route evidence.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T11:30:47.205Z",
-    "resolved_at": null
-  },
-  {
-    "id": 10,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/next.config.ts",
-    "line": null,
-    "description": "Removed development identity fixture client code from production output.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T11:30:47.362Z",
-    "resolved_at": null
-  },
-  {
-    "id": 11,
-    "kind": "deviation",
-    "phase": "06",
-    "file": "apps/csrm/playwright.config.ts",
-    "line": null,
-    "description": "Isolated the production E2E build from the development server output.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-09T11:30:47.521Z",
-    "resolved_at": null
-  },
-  {
-    "id": 12,
-    "kind": "deviation",
-    "phase": "07",
-    "file": "apps/backend/scripts/normalize-openapi-specification.mjs",
-    "line": null,
-    "description": "Normalized generator-invented datetime defaults to make the backend OpenAPI contract reproducible.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-22T14:01:54.567Z",
-    "resolved_at": null
-  },
-  {
-    "id": 13,
-    "kind": "deviation",
-    "phase": "07",
-    "file": "apps/backend/package.json",
-    "line": null,
-    "description": "Disabled optional bootstrap integrations only for OpenAPI generation because the local Keycloak service is unavailable.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-22T14:01:54.710Z",
-    "resolved_at": null
-  },
-  {
-    "id": 14,
-    "kind": "deviation",
-    "phase": "07",
-    "file": "apps/csrm/scripts/verify-request-api-coverage.mjs",
-    "line": null,
-    "description": "Coverage gate corrected stale plan total to the approved 105-operation secure request-workflow contract.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-22T14:13:47.610Z",
-    "resolved_at": null
-  },
-  {
-    "id": 15,
-    "kind": "deviation",
-    "phase": "07",
-    "file": "apps/csrm/src/features/requests/request-form.tsx",
-    "line": null,
-    "description": "Plan 07-06 extended the shared request form to preserve trusted analyst save-only detail controls.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-22T14:50:17.469Z",
-    "resolved_at": null
-  },
-  {
-    "id": 16,
-    "kind": "deviation",
-    "phase": "07",
-    "file": "apps/csrm/src/lib/api/csrm-service.ts",
-    "line": null,
-    "description": "Aligned typed request list query keys and approved sort values with the protected backend workflow contract.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-22T15:03:50.375Z",
-    "resolved_at": null
-  },
-  {
-    "id": 17,
-    "kind": "deviation",
-    "phase": "07",
-    "file": "apps/csrm/src/features/requests/request-list.tsx",
-    "line": null,
-    "description": "Replaced lint-rejected effect-driven filter synchronization with URL-keyed remounting.",
-    "status": "open",
-    "reason": "",
-    "recorded_at": "2026-08-22T15:03:50.524Z",
+    "recorded_at": "2026-09-10T09:22:21.231Z",
     "resolved_at": null
   }
 ]

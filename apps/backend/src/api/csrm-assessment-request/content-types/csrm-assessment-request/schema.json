@@ -72,6 +72,17 @@
     "submittedDate": {
       "type": "datetime"
     },
+    "revertReason": {
+      "type": "text"
+    },
+    "revertedAt": {
+      "type": "datetime"
+    },
+    "revertedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
     "dueDate": {
       "type": "date"
     },

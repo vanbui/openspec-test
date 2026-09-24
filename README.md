@@ -1,166 +1,93 @@
-# IdamBox Platform
+# IdamBox Cyber Risk Manager (CSRM)
 
-IdamBox is the shared platform foundation for BProton application modules such as IdamBox IAM, IdamBox Compliance, IdamBox Automation, IdamBox Crypto Manager, IdamBox LMS, and IdamBox Cyber Risk Manager.
-
-Phase 1 contains only the shared Strapi backend. Future application modules will be added as separate Next.js apps under `apps/*`.
-
-## Workspace
-
-This repository follows the closest provided example project shape:
-
-- `apps/backend` - Strapi backend
-- `apps/*` - future Next.js application modules
-- `packages/*` - future shared packages
-
-The workspace uses Yarn workspaces and Turbo.
+This Turborepo contains the Next.js client in `apps/web` and the Strapi API in `apps/strapi`.
 
 ## Prerequisites
 
-- Node.js 18 through 22
-- Yarn 1.22.x
+- Node.js `>=24.19.0 <25`
+- pnpm `11.24.0`
 
-## Setup
+## Build and run locally
 
-```powershell
-yarn install
-Copy-Item apps/backend/.env.example apps/backend/.env
-Copy-Item apps/csrm/.env.example apps/csrm/.env
-```
-Generate an API token for CSRM to call the Strapi API with: openssl rand -hex 32
+Run these steps from the repository root.
 
-Set that in both the backend's and the csrm's .env files, like so:
-```
-IDAMBOX_CSRM_INTERNAL_TOKEN=your-csrm-api-token-here
-```
+1. Install the workspace dependencies.
 
-Before running Strapi, replace the placeholder secrets in `apps/backend/.env`.
+   ```sh
+   pnpm install
+   ```
 
-Later on, when we have IDAMBOX_KEYCLOAK_PROVISIONING=true in .env then you will need to start up the Keycloak IDP by following the instructions in idp/README.md before running Strapi.
+2. Create the local Strapi configuration.
 
-## Development
+   ```sh
+   cp apps/strapi/.env.example apps/strapi/.env
+   ```
 
-Strapi backend is now dependent on Keycloak, so before launching the Strapi backend, please follow the instructions in the idp/README.md file to start up Keycloak. Basically run:
+### AI generation with Ollama
 
-```
-cd idp
-docker compose up -d
-```
+CSRM defaults to deterministic AI assistance. To generate questionnaires and
+assessment drafts with a locally hosted model, install Ollama using the
+[official Ollama installation instructions](https://ollama.com/download), then
+download the supported model:
 
-Wait 1 minute for Keycloak to be ready then start the Strapi backend:
-
-```powershell
-yarn develop:cms
+```sh
+ollama pull qwen3.5:9b
 ```
 
-Strapi runs on `http://localhost:1337` by default. The admin panel is available at `http://localhost:1337/admin`.
+Copy the commented `Local Ollama (OpenAI-compatible) configuration` block from
+`apps/strapi/.env.example` into the gitignored `apps/strapi/.env` file and
+remove the leading `# ` from each assignment. Restart Strapi after saving the
+file. The configuration applies `qwen3.5:9b` to questionnaire generation and
+assessment-draft generation. Generated content remains advisory and reviewable;
+it cannot release an assessment.
 
-## Keycloak Identity Provider
+### SaaS OpenAI-compatible AI providers
 
-Phase 3 adds a local-only Keycloak identity provider under `idp/` for the future CSRM Next.js app. It does not wire Next.js login yet, and product authorization remains in Strapi through `IdamBoxUser -> Role -> Entitlement -> Application`.
+To use an approved SaaS OpenAI-compatible provider instead, edit only your
+local `apps/strapi/.env` file. Set `CSRM_AI_PROVIDER=openai-compatible`, replace
+both `CSRM_AI_ASSESSMENT_BASE_URL` and `CSRM_AI_QUESTIONNAIRE_BASE_URL` with the
+service endpoints, and set the corresponding `*_MODEL` values to the service's
+model names. Put service-issued API keys only in `CSRM_AI_ASSESSMENT_API_KEY`
+and `CSRM_AI_QUESTIONNAIRE_API_KEY`; never add credentials to `.env.example` or
+commit `.env`. When required by the provider, tune structured output, request
+timeout, reasoning effort, and each operation's maximum output tokens. Restart
+Strapi after changing these settings. AI output remains advisory and cannot
+release an assessment.
 
-Start Keycloak from the `idp/` directory:
+3. Create the local CSRM web configuration.
 
-```powershell
-cd idp
-docker compose up -d
-docker compose logs -f keycloak
-```
+   ```sh
+   cp apps/web/.env.local.example apps/web/.env.local
+   ```
 
-The admin console runs at `http://localhost:8080/admin`.
+4. Update the apps/strapi/.env and apps/web/.env.local file with the Strapi Full Access token
 
-Local-only credentials and secrets:
+   ```sh
+   vi apps/strapi/.env
+   [set CSRM_DEV_API_TOKEN]
 
-| Purpose                        | Value                               |
-| ------------------------------ | ----------------------------------- |
-| Keycloak admin username        | `admin`                             |
-| Keycloak admin password        | `admin`                             |
-| Jane Doe login                 | `jane.doe` / `jane`                 |
-| Jane Doe email                 | `jane.doe@idambox.com`              |
-| Bob Doe login                  | `bob.doe` / `bob`                   |
-| Bob Doe email                  | `bob.doe@idambox.com`               |
-| CSRM client ID                 | `idambox-csrm`                      |
-| CSRM client secret             | `idambox-csrm-local-secret`         |
-| Strapi admin API client ID     | `idambox-strapi-admin`              |
-| Strapi admin API client secret | `idambox-strapi-admin-local-secret` |
+   vi apps/web/.env.local
+   [set CSRM_API_TOKEN]
+   ```
 
-OIDC values for local CSRM development:
+5. Start both development servers through Turborepo.
 
-| Setting              | Value                                                                   |
-| -------------------- | ----------------------------------------------------------------------- |
-| Issuer               | `http://localhost:8080/realms/idambox`                                  |
-| Discovery URL        | `http://localhost:8080/realms/idambox/.well-known/openid-configuration` |
-| Callback URL         | `http://localhost:3000/api/auth/callback/keycloak`                      |
-| Post-logout/home URL | `http://localhost:3000`                                                 |
-| Web origin           | `http://localhost:3000`                                                 |
+   ```sh
+   pnpm dev
+   ```
 
-These committed credentials are local-only development values and must not be reused outside local development.
+6. Create a Strapi admin user:
 
-Keycloak imports `idp/keycloak/import/idambox-realm.json` on first startup. If the `idambox` realm already exists in the `keycloak_data` Docker volume, startup import skips it. To force a clean re-import after changing the realm JSON, run this from `idp/`:
+   ```sh
+   cd apps/strapi
 
-```powershell
-docker compose down -v
-docker compose up -d
-```
+   pnpm run strapi admin:create-user \
+  --firstname=John \
+  --lastname=Doe \
+  --email=dev@bproton.com \
+  --password='Strapi123!'
+   ```
 
-Keycloak is the IdamBox OIDC provider. A future phase may configure it to broker Auth0, Ping Access Management, Okta, or Entra ID while keeping the application-facing issuer and client contract stable.
+Open the web client at http://localhost:3000 and Strapi admin at http://localhost:1337/admin.
 
-## Strapi To Keycloak Provisioning
-
-Set `IDAMBOX_KEYCLOAK_PROVISIONING=true` in `apps/backend/.env` to provision custom Strapi `IdamBox User` records into the Keycloak `idambox` realm. Provisioning is disabled by default and requires the dedicated local service-account client:
-
-```env
-KEYCLOAK_BASE_URL=http://localhost:8080
-KEYCLOAK_REALM=idambox
-KEYCLOAK_ADMIN_CLIENT_ID=idambox-strapi-admin
-KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
-```
-
-The `idambox-strapi-admin-local-secret` value is local-only and must not be reused outside local development. Strapi uses this dedicated client for Keycloak Admin API calls, not the bootstrap `admin` / `admin` account.
-
-When provisioning is enabled, a Keycloak API failure blocks the Strapi user save so Strapi and Keycloak do not silently drift. For local runtime verification, start Keycloak from `idp/`, run the backend with the provisioning env vars above, create or update an `IdamBox User`, and inspect the matching user in the Keycloak `idambox` realm. Use `docker compose down -v` from `idp/` to force a clean realm re-import after changing the checked-in realm JSON.
-
-## Core Data Model
-
-Phase 1 implements this access model:
-
-```text
-IdamBoxUser -> Role -> Entitlement -> Application
-```
-
-- `IdamBoxUser` is a custom product user collection, separate from Strapi admin users.
-- `Role` is a reusable bundle assigned to one or more IdamBox users.
-- `Entitlement` is a permission defined by one application, such as `LMS STUDENT` or `LMS TUTOR`.
-- `Application` represents an IdamBox module such as IAM, LMS, or Cyber Risk Manager.
-
-Strapi Content Manager reserves the request field `status` for document publication state. IdamBox domain state uses `accountStatus` on `IdamBoxUser` and `applicationStatus` on `Application`.
-
-## CSRM Backend Model
-
-Phase 5 adds the backend-only CSRM content model in Strapi: `csrm-assessment-request`, `csrm-information-asset`, `csrm-information-system`, `csrm-questionnaire`, `csrm-question`, `csrm-assessment`, `csrm-risk`, `csrm-control`, reusable `csrm-risk-type` definitions, and `csrm-control-implementation` records.
-
-Set `csrmAppIsEnabled=true` to enable application-facing CSRM routes. When the flag is false, CSRM schemas may still be registered in Strapi, but CSRM API behavior is guarded. CSRM Next.js workflows, request transitions, and Keycloak/OIDC login screens belong to Phase 6 or later.
-
-## Authentication Boundary
-
-Phase 1 uses native Strapi admin authentication only, so administrators can create and edit records in Strapi.
-
-Auth0 authentication for end users is intentionally deferred until Next.js application modules are added.
-
-## Verification
-
-Run the static project verifiers:
-
-```powershell
-yarn verify:keycloak-idp
-yarn verify:keycloak-provisioning
-yarn verify:schema
-yarn verify:csrm-model
-yarn verify:csrm-seed
-```
-
-After dependencies are installed, also run:
-
-```powershell
-yarn check-types
-yarn build
-```
+The secrets in `apps/strapi/.env.example` are local-development placeholders only. Use real secrets in your local environment and never commit them.

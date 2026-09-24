@@ -18,7 +18,8 @@
     "Risk Register mitigation-control screens use CsrmControlImplementation because this entity represents a control contextualized for a particular CsrmRisk. Administration control screens use CsrmControl because it represents the reusable control catalogue.",
     "API paths are proposed application APIs inferred from the UI functions and JDL model; they are not existing endpoints declared by the JDL.",
     "The JDL does not currently contain an explicit assessment release flag or release date. The proposed release endpoint requires either a new field/state or a separate publication record to enforce Requestor read-only visibility after release.",
-    "The JDL does not contain persisted Alert, ReportDefinition, Attachment, Comment, or Activity/Audit entities. The proposed report and alert endpoints may initially be computed services; persisted workflow collaboration, file uploads, alerts, and audit history require model extensions."
+    "The JDL does not contain persisted Alert, ReportDefinition, Attachment, Comment, or Activity/Audit entities. The proposed report and alert endpoints may initially be computed services; persisted workflow collaboration, file uploads, alerts, and audit history require model extensions.",
+    "Phase 3 serves only the eight questionnaire workflow operations represented in the authoritative OpenAPI contract. Review-comment, complete-review, and assessment-generation FunctionApi entries remain future catalogue intents and are not Phase 3 served routes."
   ],
   "roles": [
     {
@@ -46,7 +47,20 @@
         "function.administration.information_assets",
         "function.administration.information_asset_details",
         "function.reports.reports",
-        "function.reports.alerts"
+        "function.reports.alerts",
+        "function.risk_assessment_requests.core_api",
+        "function.risk_assessment_requests.delete_api",
+        "function.risk_assessment_requests.revert_to_draft_api",
+        "function.risk_assessment_requests.reference_data_api",
+        "function.questionnaire.revert_to_draft_api",
+        "function.questionnaire_generation.generate_api",
+        "function.questionnaire_generation.job_read_api",
+        "function.questionnaire_generation.retry_api",
+        "function.questionnaire_governance.release_api",
+        "function.questionnaire_governance.return_to_review_api",
+        "function.questionnaire_governance.add_question_api",
+        "function.questionnaire_governance.edit_question_api",
+        "function.questionnaire_governance.delete_question_api"
       ]
     },
     {
@@ -65,16 +79,11 @@
         "function.risk_register.risk_details",
         "function.risk_register.mitigation_controls",
         "function.risk_register.mitigation_control_details",
-        "function.administration.risk_types",
-        "function.administration.risk_type_details",
-        "function.administration.controls",
-        "function.administration.control_details",
-        "function.administration.information_systems",
-        "function.administration.information_system_details",
-        "function.administration.information_assets",
-        "function.administration.information_asset_details",
         "function.reports.reports",
-        "function.reports.alerts"
+        "function.reports.alerts",
+        "function.risk_assessment_requests.core_api",
+        "function.risk_assessment_requests.delete_api",
+        "function.risk_assessment_requests.reference_data_api"
       ]
     },
     {
@@ -89,11 +98,138 @@
         "function.questionnaire.my_questionnaires",
         "function.questionnaire.questionnaire_details",
         "function.risk_assessments.my_risk_assessments",
-        "function.risk_assessments.risk_assessment_details_read_only"
+        "function.risk_assessments.risk_assessment_details_read_only",
+        "function.risk_assessment_requests.core_api",
+        "function.risk_assessment_requests.revert_to_draft_api",
+        "function.risk_assessment_requests.reference_data_api",
+        "function.questionnaire.revert_to_draft_api"
       ]
     }
   ],
   "functions": [
+    {
+      "id": "function.questionnaire_generation.generate_api",
+      "name": "Generate Questionnaire API",
+      "description": "Human analyst-only generation grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_generation.generate_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmQuestion"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.job_read_api",
+      "name": "Questionnaire Generation Job Read API",
+      "description": "Human analyst-only job status grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_generation.job_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.retry_api",
+      "name": "Retry Questionnaire Generation API",
+      "description": "Human analyst-only failed-job retry grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_generation.retry_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.return_to_review_api",
+      "name": "Return Questionnaire to Analyst Review API",
+      "description": "Human analyst-only grant for returning a released or submitted questionnaire to analyst review. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_governance.return_to_review_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.add_question_api",
+      "name": "Add Questionnaire Question API",
+      "description": "Human analyst-only grant for adding a question to a questionnaire in analyst review. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_governance.add_question_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.edit_question_api",
+      "name": "Edit Questionnaire Question API",
+      "description": "Human analyst-only grant for editing a question on a questionnaire in analyst review. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_governance.edit_question_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.delete_question_api",
+      "name": "Delete Questionnaire Question API",
+      "description": "Human analyst-only grant for excluding a question from the active questionnaire while retaining it in history. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_governance.delete_question_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.release_api",
+      "name": "Release Questionnaire API",
+      "description": "Human analyst-only questionnaire release grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_governance.release_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessmentRequest"
+      ]
+    },
     {
       "id": "function.dashboard.dashboard",
       "name": "Dashboard",
@@ -108,6 +244,73 @@
         "function.dashboard.dashboard.api.01",
         "function.dashboard.dashboard.api.02",
         "function.dashboard.dashboard.api.03"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.core_api",
+      "name": "Assessment Request Core API",
+      "description": "Server-side operation grants for the four non-delete served assessment-request REST routes. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.core_api.api.01",
+        "function.risk_assessment_requests.core_api.api.02",
+        "function.risk_assessment_requests.core_api.api.03",
+        "function.risk_assessment_requests.core_api.api.04"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.revert_to_draft_api",
+      "name": "Assessment Request Revert to Draft API",
+      "description": "Server-side reversal grant for an owned submitted assessment request. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.revert_to_draft_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.delete_api",
+      "name": "Assessment Request Delete API",
+      "description": "Server-side elevated operation grant for the served assessment-request delete route. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.delete_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.reference_data_api",
+      "name": "Assessment Request Reference Data API",
+      "description": "Server-side read grants for the information-system and information-asset reference data used by assessment-request screens. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.reference_data_api.api.01",
+        "function.risk_assessment_requests.reference_data_api.api.02"
+      ],
+      "sourceEntities": [
+        "CsrmInformationSystem",
+        "CsrmInformationAsset"
       ]
     },
     {
@@ -140,10 +343,11 @@
         "function.risk_assessment_requests.new_request.api.03",
         "function.risk_assessment_requests.new_request.api.04",
         "function.risk_assessment_requests.new_request.api.05",
-        "function.risk_assessment_requests.new_request.api.06",
         "function.risk_assessment_requests.new_request.api.07",
         "function.risk_assessment_requests.new_request.api.08",
-        "function.risk_assessment_requests.new_request.api.09"
+        "function.risk_assessment_requests.new_request.api.09",
+        "function.risk_assessment_requests.new_request.api.10",
+        "function.risk_assessment_requests.new_request.api.11"
       ],
       "sourceEntities": [
         "CsrmAssessmentRequest",
@@ -167,8 +371,7 @@
         "function.risk_assessment_requests.request_details.api.02",
         "function.risk_assessment_requests.request_details.api.03",
         "function.risk_assessment_requests.request_details.api.04",
-        "function.risk_assessment_requests.request_details.api.05",
-        "function.risk_assessment_requests.request_details.api.06"
+        "function.risk_assessment_requests.request_details.api.05"
       ],
       "sourceEntities": [
         "CsrmAssessmentRequest",
@@ -316,6 +519,23 @@
       ]
     },
     {
+      "id": "function.questionnaire.revert_to_draft_api",
+      "name": "Questionnaire Revert to Draft API",
+      "description": "Server-side reversal grant for an authorised submitted questionnaire. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.questionnaire.revert_to_draft_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
       "id": "function.risk_assessments.risk_assessments",
       "name": "Risk Assessments",
       "description": "Lists generated and manually managed risk assessments for analyst review, approval, and release.",
@@ -353,7 +573,11 @@
         "function.risk_assessments.risk_assessment_details.api.05",
         "function.risk_assessments.risk_assessment_details.api.06",
         "function.risk_assessments.risk_assessment_details.api.07",
-        "function.risk_assessments.risk_assessment_details.api.08"
+        "function.risk_assessments.risk_assessment_details.api.08",
+        "function.risk_assessments.risk_assessment_details.api.09",
+        "function.risk_assessments.risk_assessment_details.api.10",
+        "function.risk_assessments.risk_assessment_details.api.11",
+        "function.risk_assessments.risk_assessment_details.api.12"
       ],
       "sourceEntities": [
         "CsrmAssessment",
@@ -361,7 +585,8 @@
         "CsrmQuestionnaire",
         "CsrmRisk",
         "CsrmRiskType",
-        "CsrmControl"
+        "CsrmControl",
+        "IdamBoxUser"
       ]
     },
     {
@@ -461,13 +686,13 @@
       "description": "Lists and creates reusable risk definitions used by the AI and analysts to contextualize risks within assessments.",
       "menuPath": "Administration:Risk Types",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.risk_types.api.01",
         "function.administration.risk_types.api.02",
-        "function.administration.risk_types.api.03"
+        "function.administration.risk_types.api.03",
+        "function.administration.risk_types.api.04"
       ],
       "sourceEntities": [
         "CsrmRiskType"
@@ -477,17 +702,12 @@
       "id": "function.administration.risk_type_details",
       "name": "Risk Type Details",
       "description": "Displays and edits a reusable risk definition and its applicable control catalogue mappings.",
-      "menuPath": "Administration:Risk Type Details",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.risk_type_details.api.01",
-        "function.administration.risk_type_details.api.02",
-        "function.administration.risk_type_details.api.03",
-        "function.administration.risk_type_details.api.04",
-        "function.administration.risk_type_details.api.05"
+        "function.administration.risk_type_details.api.02"
       ],
       "sourceEntities": [
         "CsrmRiskType",
@@ -501,13 +721,13 @@
       "description": "Lists and creates reusable control definitions that may be selected as mitigation controls for contextualized risks.",
       "menuPath": "Administration:Controls",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.controls.api.01",
         "function.administration.controls.api.02",
-        "function.administration.controls.api.03"
+        "function.administration.controls.api.03",
+        "function.administration.controls.api.04"
       ],
       "sourceEntities": [
         "CsrmControl"
@@ -517,17 +737,12 @@
       "id": "function.administration.control_details",
       "name": "Control Details",
       "description": "Displays and edits a reusable control definition and shows where it is applied.",
-      "menuPath": "Administration:Control Details",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.control_details.api.01",
-        "function.administration.control_details.api.02",
-        "function.administration.control_details.api.03",
-        "function.administration.control_details.api.04",
-        "function.administration.control_details.api.05"
+        "function.administration.control_details.api.02"
       ],
       "sourceEntities": [
         "CsrmControl",
@@ -542,13 +757,13 @@
       "description": "Lists and creates information systems managed by the Security Analyst.",
       "menuPath": "Administration:Information Systems",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.information_systems.api.01",
         "function.administration.information_systems.api.02",
-        "function.administration.information_systems.api.03"
+        "function.administration.information_systems.api.03",
+        "function.administration.information_systems.api.04"
       ],
       "sourceEntities": [
         "CsrmInformationSystem"
@@ -558,15 +773,12 @@
       "id": "function.administration.information_system_details",
       "name": "Information System Details",
       "description": "Displays and edits an information system and its related assessment context.",
-      "menuPath": "Administration:Information System Details",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.information_system_details.api.01",
-        "function.administration.information_system_details.api.02",
-        "function.administration.information_system_details.api.03"
+        "function.administration.information_system_details.api.02"
       ],
       "sourceEntities": [
         "CsrmInformationSystem",
@@ -580,13 +792,13 @@
       "description": "Lists and creates information assets managed by the Security Analyst.",
       "menuPath": "Administration:Information Assets",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.information_assets.api.01",
         "function.administration.information_assets.api.02",
-        "function.administration.information_assets.api.03"
+        "function.administration.information_assets.api.03",
+        "function.administration.information_assets.api.04"
       ],
       "sourceEntities": [
         "CsrmInformationAsset"
@@ -596,15 +808,12 @@
       "id": "function.administration.information_asset_details",
       "name": "Information Asset Details",
       "description": "Displays and edits an information asset and its related assessment context.",
-      "menuPath": "Administration:Information Asset Details",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.administration.information_asset_details.api.01",
-        "function.administration.information_asset_details.api.02",
-        "function.administration.information_asset_details.api.03"
+        "function.administration.information_asset_details.api.02"
       ],
       "sourceEntities": [
         "CsrmInformationAsset",
@@ -659,6 +868,87 @@
     }
   ],
   "functionApis": [
+    {
+      "id": "function.risk_assessment_requests.revert_to_draft_api.api.01",
+      "name": "Revert Assessment Request to Draft",
+      "description": "Returns an eligible submitted assessment request to draft with server-owned latest reversal facts.",
+      "url": "POST:/api/v1/assessment_requests/{requestId}/revert_to_draft",
+      "functionId": "function.risk_assessment_requests.revert_to_draft_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.core_api.api.01",
+      "name": "List Served Assessment Requests",
+      "description": "Canonical served collection read operation; proposed /api/v1 contracts remain separately documented.",
+      "url": "GET:/api/csrm-assessment-requests",
+      "functionId": "function.risk_assessment_requests.core_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.core_api.api.02",
+      "name": "Create Served Assessment Request",
+      "description": "Canonical served collection create operation.",
+      "url": "POST:/api/csrm-assessment-requests",
+      "functionId": "function.risk_assessment_requests.core_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.core_api.api.03",
+      "name": "Read Served Assessment Request",
+      "description": "Canonical served item read operation.",
+      "url": "GET:/api/csrm-assessment-requests/{id}",
+      "functionId": "function.risk_assessment_requests.core_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.core_api.api.04",
+      "name": "Update Served Assessment Request",
+      "description": "Canonical served item replacement operation.",
+      "url": "PUT:/api/csrm-assessment-requests/{id}",
+      "functionId": "function.risk_assessment_requests.core_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.delete_api.api.01",
+      "name": "Delete Served Assessment Request",
+      "description": "Canonical served item delete operation.",
+      "url": "DELETE:/api/csrm-assessment-requests/{id}",
+      "functionId": "function.risk_assessment_requests.delete_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.reference_data_api.api.01",
+      "name": "List Assessment Request Information Systems",
+      "description": "Lists information systems available as assessment-request reference data.",
+      "url": "GET:/api/csrm-information-systems",
+      "functionId": "function.risk_assessment_requests.reference_data_api",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.reference_data_api.api.02",
+      "name": "List Assessment Request Information Assets",
+      "description": "Lists information assets available as assessment-request reference data.",
+      "url": "GET:/api/csrm-information-assets",
+      "functionId": "function.risk_assessment_requests.reference_data_api",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
     {
       "id": "function.dashboard.dashboard.api.01",
       "name": "Get Dashboard Summary",
@@ -735,7 +1025,7 @@
       "id": "function.risk_assessment_requests.new_request.api.02",
       "name": "Search Information Systems",
       "description": "Searches existing information systems that may be associated with the request.",
-      "url": "GET:/api/v1/information_systems?search={query}",
+      "url": "GET:/api/v1/information_systems?q={q}&page={page}&pageSize={pageSize}",
       "functionId": "function.risk_assessment_requests.new_request",
       "sourceEntities": [
         "CsrmInformationSystem"
@@ -745,7 +1035,7 @@
       "id": "function.risk_assessment_requests.new_request.api.03",
       "name": "Search Information Assets",
       "description": "Searches existing information assets that may be associated with the request.",
-      "url": "GET:/api/v1/information_assets?search={query}",
+      "url": "GET:/api/v1/information_assets?q={q}&page={page}&pageSize={pageSize}",
       "functionId": "function.risk_assessment_requests.new_request",
       "sourceEntities": [
         "CsrmInformationAsset"
@@ -766,16 +1056,6 @@
       "name": "Create Assessment Request",
       "description": "Creates a new draft assessment request for the signed-in Requestor.",
       "url": "POST:/api/v1/assessment_requests",
-      "functionId": "function.risk_assessment_requests.new_request",
-      "sourceEntities": [
-        "CsrmAssessmentRequest"
-      ]
-    },
-    {
-      "id": "function.risk_assessment_requests.new_request.api.06",
-      "name": "Update Draft Assessment Request",
-      "description": "Saves changes to an assessment request while it remains editable.",
-      "url": "PATCH:/api/v1/assessment_requests/{requestId}",
       "functionId": "function.risk_assessment_requests.new_request",
       "sourceEntities": [
         "CsrmAssessmentRequest"
@@ -812,6 +1092,22 @@
       "sourceEntities": [
         "CsrmAssessmentRequest"
       ]
+    },
+    {
+      "id": "function.risk_assessment_requests.new_request.api.10",
+      "name": "Hydrate Information System Selections",
+      "description": "Returns bounded Information System selector summaries for exact selected identifiers.",
+      "url": "POST:/api/v1/information_systems/selected",
+      "functionId": "function.risk_assessment_requests.new_request",
+      "sourceEntities": ["CsrmInformationSystem"]
+    },
+    {
+      "id": "function.risk_assessment_requests.new_request.api.11",
+      "name": "Hydrate Information Asset Selections",
+      "description": "Returns bounded Information Asset selector summaries for exact selected identifiers.",
+      "url": "POST:/api/v1/information_assets/selected",
+      "functionId": "function.risk_assessment_requests.new_request",
+      "sourceEntities": ["CsrmInformationAsset"]
     },
     {
       "id": "function.risk_assessment_requests.request_details.api.01",
@@ -868,21 +1164,6 @@
       "functionId": "function.risk_assessment_requests.request_details",
       "sourceEntities": [
         "CsrmAssessmentRequest"
-      ]
-    },
-    {
-      "id": "function.risk_assessment_requests.request_details.api.06",
-      "name": "Generate Request Questionnaire",
-      "description": "Invokes the agentic workflow to analyse the request context and generate or refresh its questionnaire.",
-      "url": "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
-      "functionId": "function.risk_assessment_requests.request_details",
-      "sourceEntities": [
-        "CsrmAssessmentRequest",
-        "CsrmInformationSystem",
-        "CsrmInformationAsset",
-        "CsrmQuestionnaire",
-        "CsrmQuestion",
-        "CsrmRiskType"
       ]
     },
     {
@@ -1251,6 +1532,38 @@
       ]
     },
     {
+      "id": "function.risk_assessments.risk_assessment_details.api.09",
+      "name": "Get Assessment Draft Job",
+      "description": "Returns the bounded volatile state of an authorised assessment draft job.",
+      "url": "GET:/api/v1/assessment_draft_jobs/{jobId}",
+      "functionId": "function.risk_assessments.risk_assessment_details",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.risk_assessments.risk_assessment_details.api.10",
+      "name": "Retry Assessment Draft Job",
+      "description": "Retries an authorised failed assessment draft job without creating a release fact.",
+      "url": "POST:/api/v1/assessment_draft_jobs/{jobId}/retry",
+      "functionId": "function.risk_assessments.risk_assessment_details",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.risk_assessments.risk_assessment_details.api.11",
+      "name": "Search Active Assessment Owners",
+      "description": "Returns the minimal active-user projection available for assessment and risk owner selection.",
+      "url": "GET:/api/v1/users?search={query}",
+      "functionId": "function.risk_assessments.risk_assessment_details",
+      "sourceEntities": [
+        "IdamBoxUser"
+      ]
+    },
+    {
       "id": "function.risk_register.risk_register.api.01",
       "name": "List Risks",
       "description": "Returns contextualized risks with filtering, sorting, search, and pagination.",
@@ -1435,10 +1748,20 @@
       ]
     },
     {
+      "id": "function.risk_assessments.risk_assessment_details.api.12",
+      "name": "List Assessment Risk Type Picker",
+      "description": "Returns the legacy unpaginated reusable Risk Type projection used by assessment workflows.",
+      "url": "GET:/api/v1/risk_types?picker=assessment",
+      "functionId": "function.risk_assessments.risk_assessment_details",
+      "sourceEntities": [
+        "CsrmRiskType"
+      ]
+    },
+    {
       "id": "function.risk_register.mitigation_control_details.api.04",
-      "name": "Get Reusable Control Definition",
-      "description": "Returns the reusable control catalogue record referenced by the implementation.",
-      "url": "GET:/api/v1/controls/{controlId}",
+      "name": "List Assessment Control Picker",
+      "description": "Returns the legacy unpaginated reusable Control projection used by assessment workflows.",
+      "url": "GET:/api/v1/controls?picker=assessment",
       "functionId": "function.risk_register.mitigation_control_details",
       "sourceEntities": [
         "CsrmControl"
@@ -1475,6 +1798,16 @@
       ]
     },
     {
+      "id": "function.administration.risk_types.api.04",
+      "name": "Preview Risk Type Import",
+      "description": "Validates and classifies a bounded Risk Type CSV before confirmation.",
+      "url": "POST:/api/v1/risk_types/import/preview",
+      "functionId": "function.administration.risk_types",
+      "sourceEntities": [
+        "CsrmRiskType"
+      ]
+    },
+    {
       "id": "function.administration.risk_type_details.api.01",
       "name": "Get Risk Type",
       "description": "Returns a reusable risk definition and its applicable controls.",
@@ -1493,39 +1826,6 @@
       "functionId": "function.administration.risk_type_details",
       "sourceEntities": [
         "CsrmRiskType"
-      ]
-    },
-    {
-      "id": "function.administration.risk_type_details.api.03",
-      "name": "Delete Risk Type",
-      "description": "Deletes an unused risk type subject to referential-integrity checks.",
-      "url": "DELETE:/api/v1/risk_types/{riskTypeId}",
-      "functionId": "function.administration.risk_type_details",
-      "sourceEntities": [
-        "CsrmRiskType",
-        "CsrmRisk"
-      ]
-    },
-    {
-      "id": "function.administration.risk_type_details.api.04",
-      "name": "List Applicable Controls",
-      "description": "Returns reusable controls mapped as applicable to the risk type.",
-      "url": "GET:/api/v1/risk_types/{riskTypeId}/applicable_controls",
-      "functionId": "function.administration.risk_type_details",
-      "sourceEntities": [
-        "CsrmRiskType",
-        "CsrmControl"
-      ]
-    },
-    {
-      "id": "function.administration.risk_type_details.api.05",
-      "name": "Replace Applicable Controls",
-      "description": "Replaces the set of reusable controls mapped as applicable to the risk type.",
-      "url": "PUT:/api/v1/risk_types/{riskTypeId}/applicable_controls",
-      "functionId": "function.administration.risk_type_details",
-      "sourceEntities": [
-        "CsrmRiskType",
-        "CsrmControl"
       ]
     },
     {
@@ -1559,6 +1859,16 @@
       ]
     },
     {
+      "id": "function.administration.controls.api.04",
+      "name": "Preview Control Import",
+      "description": "Validates and classifies a bounded Control CSV before confirmation.",
+      "url": "POST:/api/v1/controls/import/preview",
+      "functionId": "function.administration.controls",
+      "sourceEntities": [
+        "CsrmControl"
+      ]
+    },
+    {
       "id": "function.administration.control_details.api.01",
       "name": "Get Control",
       "description": "Returns a reusable control definition and reference information.",
@@ -1576,41 +1886,6 @@
       "functionId": "function.administration.control_details",
       "sourceEntities": [
         "CsrmControl"
-      ]
-    },
-    {
-      "id": "function.administration.control_details.api.03",
-      "name": "Delete Control",
-      "description": "Deletes an unused reusable control subject to referential-integrity checks.",
-      "url": "DELETE:/api/v1/controls/{controlId}",
-      "functionId": "function.administration.control_details",
-      "sourceEntities": [
-        "CsrmControl",
-        "CsrmControlImplementation",
-        "CsrmRiskType"
-      ]
-    },
-    {
-      "id": "function.administration.control_details.api.04",
-      "name": "List Control Implementations",
-      "description": "Returns contextual implementations that reference the reusable control.",
-      "url": "GET:/api/v1/controls/{controlId}/implementations",
-      "functionId": "function.administration.control_details",
-      "sourceEntities": [
-        "CsrmControl",
-        "CsrmControlImplementation",
-        "CsrmRisk"
-      ]
-    },
-    {
-      "id": "function.administration.control_details.api.05",
-      "name": "List Applicable Risk Types",
-      "description": "Returns reusable risk types to which the control is mapped.",
-      "url": "GET:/api/v1/controls/{controlId}/risk_types",
-      "functionId": "function.administration.control_details",
-      "sourceEntities": [
-        "CsrmControl",
-        "CsrmRiskType"
       ]
     },
     {
@@ -1644,6 +1919,16 @@
       ]
     },
     {
+      "id": "function.administration.information_systems.api.04",
+      "name": "Preview Information System Import",
+      "description": "Validates and classifies a bounded Information System CSV before confirmation.",
+      "url": "POST:/api/v1/information_systems/import/preview",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
       "id": "function.administration.information_system_details.api.01",
       "name": "Get Information System",
       "description": "Returns an information system and its related assessment context.",
@@ -1663,18 +1948,6 @@
       "functionId": "function.administration.information_system_details",
       "sourceEntities": [
         "CsrmInformationSystem"
-      ]
-    },
-    {
-      "id": "function.administration.information_system_details.api.03",
-      "name": "Delete Information System",
-      "description": "Deletes an information system subject to referential-integrity checks.",
-      "url": "DELETE:/api/v1/information_systems/{informationSystemId}",
-      "functionId": "function.administration.information_system_details",
-      "sourceEntities": [
-        "CsrmInformationSystem",
-        "CsrmAssessmentRequest",
-        "CsrmRisk"
       ]
     },
     {
@@ -1708,6 +1981,16 @@
       ]
     },
     {
+      "id": "function.administration.information_assets.api.04",
+      "name": "Preview Information Asset Import",
+      "description": "Validates and classifies a bounded Information Asset CSV before confirmation.",
+      "url": "POST:/api/v1/information_assets/import/preview",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
       "id": "function.administration.information_asset_details.api.01",
       "name": "Get Information Asset",
       "description": "Returns an information asset and its related assessment context.",
@@ -1727,18 +2010,6 @@
       "functionId": "function.administration.information_asset_details",
       "sourceEntities": [
         "CsrmInformationAsset"
-      ]
-    },
-    {
-      "id": "function.administration.information_asset_details.api.03",
-      "name": "Delete Information Asset",
-      "description": "Deletes an information asset subject to referential-integrity checks.",
-      "url": "DELETE:/api/v1/information_assets/{informationAssetId}",
-      "functionId": "function.administration.information_asset_details",
-      "sourceEntities": [
-        "CsrmInformationAsset",
-        "CsrmAssessmentRequest",
-        "CsrmRisk"
       ]
     },
     {
@@ -1830,6 +2101,114 @@
       "url": "PATCH:/api/v1/alerts/{alertId}/acknowledge",
       "functionId": "function.reports.alerts",
       "sourceEntities": [
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.questionnaire.revert_to_draft_api.api.01",
+      "name": "Revert Questionnaire to Draft",
+      "description": "Returns an eligible submitted questionnaire answer batch to draft.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/revert_to_draft",
+      "functionId": "function.questionnaire.revert_to_draft_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.generate_api.api.01",
+      "name": "Generate Questionnaire",
+      "description": "Queues a contextual questionnaire only for a human Security Analyst.",
+      "url": "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
+      "functionId": "function.questionnaire_generation.generate_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmQuestion"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.job_read_api.api.01",
+      "name": "Get Questionnaire Generation Job",
+      "description": "Returns an initiating analyst's retained questionnaire generation job.",
+      "url": "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
+      "functionId": "function.questionnaire_generation.job_read_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.retry_api.api.01",
+      "name": "Retry Questionnaire Generation Job",
+      "description": "Retries an initiating analyst's failed questionnaire generation job.",
+      "url": "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
+      "functionId": "function.questionnaire_generation.retry_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.return_to_review_api.api.01",
+      "name": "Return Questionnaire to Analyst Review",
+      "description": "Returns a released or submitted questionnaire to analyst review with a mandatory recorded reason.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/return_to_review",
+      "functionId": "function.questionnaire_governance.return_to_review_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessmentRequest",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.add_question_api.api.01",
+      "name": "Add Questionnaire Question",
+      "description": "Adds a question to a questionnaire that is in analyst review.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/questions",
+      "functionId": "function.questionnaire_governance.add_question_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.edit_question_api.api.01",
+      "name": "Edit Questionnaire Question",
+      "description": "Edits a question on a questionnaire that is in analyst review.",
+      "url": "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+      "functionId": "function.questionnaire_governance.edit_question_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.delete_question_api.api.01",
+      "name": "Delete Questionnaire Question",
+      "description": "Excludes a question from the active questionnaire while retaining it and its submitted answer in history.",
+      "url": "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+      "functionId": "function.questionnaire_governance.delete_question_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.questionnaire_governance.release_api.api.01",
+      "name": "Release Questionnaire",
+      "description": "Releases an analyst-only questionnaire to its Requestor and records the release event.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/release",
+      "functionId": "function.questionnaire_governance.release_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessmentRequest",
         "IdamBoxUser"
       ]
     }

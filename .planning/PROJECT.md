@@ -1,89 +1,102 @@
-# IdamBox Platform
+# IdamBox Cyber Risk Manager (CSRM)
 
 ## What This Is
 
-IdamBox is a rebuilt platform foundation for BProton application modules such as IdamBox IAM, IdamBox Compliance, IdamBox Automation, IdamBox Crypto Manager, IdamBox LMS, and IdamBox Cyber Risk Manager. The platform starts with one shared Strapi backend that owns the core identity and authorization data model, while application-specific Next.js modules are added to the monorepo over time.
+CSRM is a production-quality, agentic-AI-assisted cyber security risk-management application in the BProton / IdamBox product family. It guides Requestors through risk assessment requests and questionnaires while giving Security Analysts controlled review, editing, risk and mitigation management, and final release responsibility.
 
-The current platform foundation includes the Strapi backend, core authorization collections, local Keycloak identity-provider setup, Strapi-to-Keycloak user provisioning, and the backend-only CSRM assessment content model. The CSRM Next.js application remains a future phase.
+The repository will be a Turborepo monorepo with the existing Strapi backend at `apps/strapi` and a strict TypeScript Next.js App Router application at `apps/web`.
 
 ## Core Value
 
-IdamBox must provide a clean shared authorization model where each application can define roles and users receive access indirectly through assigned role bundles.
+Make a complex cyber-risk workflow simple and auditable while keeping Security Analysts—not AI—in control of assessment review and release.
 
 ## Requirements
 
 ### Validated
 
-- ✓ Turbo monorepo with `apps/backend` as the Strapi application and room for future `apps/*` modules — Phase 1
-- ✓ IdamBox Strapi backend exists as the first application in the monorepo — Phase 1
-- ✓ Strapi native admin authentication remains the Phase 1 content administration path — Phase 1
-- ✓ Custom IdamBox user collection exists separately from Strapi admin users and future Auth0 users — Phase 1
-- ✓ Applications, application-owned Functions, FunctionApi operation grants, Roles, and user Role assignments are modeled in Strapi — Phase 1
-- ✓ User access can be derived indirectly through `IdamBoxUser -> Role -> Function -> Application`; FunctionApi records carry operation-level grants below each Function — Phase 1
-- ✓ CSRM bootstrap application access data and sample users exist behind local seed flags — Phase 2
-- ✓ Local Keycloak identity-provider setup exists for future application login — Phase 3
-- ✓ Strapi IdamBox users can be provisioned into Keycloak when provisioning is enabled — Phase 4
-- ✓ Backend-only CSRM assessment content model exists behind `csrmAppIsEnabled` route guarding — Phase 5
+<!-- Shipped and confirmed valuable. -->
+
+- [x] Establish a maintainable Turborepo with Strapi and Next.js workspaces. — Validated in Phase 1: Monorepo Foundation and Secure Application Shell.
+- [x] Deliver the authorised Requestor assessment-request workflow from creation and draft editing through confirmed submission and tracking. — Validated in Phase 2: Requestor Risk Assessment Request Workflow.
+- [x] Deliver the authorised data-defined questionnaire workflow from draft completion through confirmed submission and shared analyst review. — Validated in Phase 3: Dynamic Questionnaire Workflow.
+- [x] Keep the owner-scoped screens truthful for every actor, since Requestor is a birthright role that a Security Analyst also holds. — Validated in Phase 06.3: Correctness, Search, and Selection.
+- [x] Make every list and every record picker searchable and filterable, because the reference inventories and record volumes will outgrow what a screen can render. — Validated in Phase 06.3: Correctness, Search, and Selection.
+- [x] Give both actors a shared, read-only lifecycle stepper and an actor-aware request hub that names the current state and the next required action, so neither actor has to infer where work stands. — Validated in Phase 06.8: Workflow Visibility and Questionnaire Governance.
+- [x] Keep questionnaire generation, editing, release, and revision under explicit Security Analyst control with a mandatory-reason, audited backward transition and a dated revision timeline visible to both actors. — Validated in Phase 06.8: Workflow Visibility and Questionnaire Governance.
 
 ### Active
 
-- Build and harden the IdamBox CSRM Next.js application through the eight-stage delivery sequence defined by the CSRM project brief — Phases 6-13
+- [ ] Deliver the Requestor-to-Security-Analyst assessment workflow: request, questionnaire, assessment, analyst review, release, and Requestor read-only access.
+- [ ] Use a typed frontend service layer targeting the Strapi OpenAPI contract and preserve CSRM domain terminology.
+- [ ] Enforce effective CSRM capabilities and record-level authorization server-side and reflect them in UI navigation/actions.
+- [ ] Provide Risk Register, reusable library/inventory management, and safe CSV import workflows.
+- [ ] Build a responsive, accessible BProton/IdamBox-branded design system and reusable application primitives.
+- [ ] Establish testing, security, performance, and accessibility practices from the foundation onward.
+- [ ] Allow a submitted Request or Questionnaire to be returned to draft, with a recorded reason, so mistakes can be corrected and resubmitted.
+- [ ] Let a Security Analyst generate a contextualised questionnaire from a submitted Request through the same reviewable, provider-independent AI job pattern used for assessment drafts.
+- [ ] Let a person move between a request, its questionnaire, and its assessment directly, and meet the same control behaving the same way on every screen.
 
 ### Out of Scope
 
-- Auth0 app authentication - deferred until Next.js application modules are added.
-- Building IdamBox IAM, Compliance, Automation, Crypto Manager, LMS, or Cyber Risk Manager frontends - future phases.
-- Implementing free-floating fine-grained permission strings such as `users.read` or `roles.write` - application authorization remains modeled through application-owned Functions and their FunctionApi operation grants.
-- Building custom Strapi admin UI - use native Strapi administration for Phase 1.
-- Production deployment, SSO, audit reporting, and compliance workflows - future platform/application work.
+- Automatic release or acceptance of AI-generated assessments — analyst review and release are mandatory.
+- Complex multi-tenant administration and tenant theme editing — defer until a validated need exists.
+- Real-time Google-Docs-style collaborative editing — normal save, comment, and activity workflows are sufficient initially.
+- Native mobile application — deliver a responsive web application first.
+- Fully configurable workflow designer, full enterprise GRC suite, custom ML training, and premature microservices — not required for the first useful milestone.
 
 ## Context
 
-The root workspace contains example monorepos. The closest example is `example-projects/edalas-dylan`, which uses a Turbo monorepo with `apps/backend` for Strapi, `apps/web` for Next.js, and shared packages under `packages/*`. The IdamBox rebuild should follow that shape so future application modules can be added as independent Next.js apps under `apps/*`.
-
-BProton's public site frames IdamBox around identity, compliance, automation, crypto management, learning, and cyber risk modules. The rebuild should treat those products as applications that own Functions while sharing the central IdamBox backend.
-
-Strapi Phase 1 uses native Strapi admin authentication for administrators who enter and edit records in Strapi. Future Next.js apps will use Auth0 for end-user authentication and map external identities to the custom IdamBox user collection.
+- The CSRM project brief at `docs/CSRM-PROJECT-BRIEF.md` is the primary product and implementation reference.
+- The Strapi OpenAPI contract in `docs/references/specification.json` is authoritative for backend communication. The JDL data model and Role/Function/FunctionAPI catalogue preserve domain terms and traceability.
+- Keycloak is the OpenID Connect identity provider; application authorization remains in the IdamBox/Strapi data model. Requestor is an implicit birthright role and elevated roles, including Security Analyst, are explicitly assigned.
+- AI operations must use a provider-independent boundary, can be asynchronous, must expose meaningful status, and must never bypass human review.
+- The initial milestone should prove the full vertical journey, with deterministic AI implementations permitted while real integration matures.
 
 ## Constraints
 
-- **Scope**: Phase 1 is backend-only - avoid frontend shell work until application modules are planned.
-- **Authentication**: Strapi native admin authentication only for Phase 1 - Auth0 is deferred to app phases.
-- **User model**: Create an IdamBox-specific user collection - do not rely on Strapi admin users as product users.
-- **Authorization model**: Roles are reusable bundles of application-owned Functions; effective access follows `IdamBoxUser -> Role -> Function -> Application`.
-- **Operation grants**: Functions may expose FunctionApi records for operation-level grants. Keep grants attached to Functions rather than introducing free-floating permission strings.
-- **Monorepo pattern**: Follow the closest example project, `example-projects/edalas-dylan`, using an `apps/*` and `packages/*` Turbo workspace shape.
+- **Monorepo**: Turborepo with `apps/strapi` and `apps/web` — backend and frontend must remain independently maintainable while sharing orchestration.
+- **Frontend stack**: Next.js App Router, React, strict TypeScript, Tailwind CSS, and shadcn/ui — required by the project brief.
+- **API contract**: Strapi OpenAPI specification — prevents invented or mock-only production contracts.
+- **Identity and authorization**: Keycloak authentication plus server-side IdamBox Role → Function → FunctionAPI authorization — required to protect sensitive risk data and prevent IDOR.
+- **Accessibility**: WCAG 2.2 AA — enterprise application quality baseline.
+- **Security**: No client secrets, strict validation, safe rendering/error handling, security headers, auditability, and dependency hygiene — this is a cyber-security product.
+- **Design**: Semantic BProton/IdamBox theme tokens, not scattered raw values — enables future tenant branding without component rewrites.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Use Strapi as the shared backend | The platform is underpinned by Strapi and Phase 1 is focused on core data modeling. | - Pending |
-| Use Strapi native admin authentication in Phase 1 | Administrators only need to enter and manage backend data through Strapi. | - Pending |
-| Defer Auth0 to app phases | Auth0 is needed for future Next.js application users, not for the initial backend-only phase. | - Pending |
-| Create a custom IdamBox user collection | Product users should be separate from Strapi admin users and future external identity provider records. | - Pending |
-| Model application-owned Functions as separate records | Each IdamBox application needs its own Function vocabulary, such as LMS `STUDENT` and `TUTOR`, without restoring the removed ApplicationRole model. | Completed — accepted Entitlement-to-Function migration |
-| Add FunctionApi operation grants | A Function can carry its concrete operation-level API grants while ownership of the Function supplies the Application relationship. | Completed — approved FunctionApi addition |
-| Assign Functions indirectly through Roles | Roles act as reusable bundles of application-owned Functions assigned to users. | Completed — live path is `IdamBoxUser -> Role -> Function -> Application` |
-| Follow the `edalas-dylan` monorepo pattern | It is the closest provided example for Strapi plus Next.js apps in a Turbo monorepo. | - Pending |
-| Add guarded core sample seeding | Local verification benefits from representative application and LMS role records, but production must not seed by default. | - Pending |
+| Use a Turborepo monorepo | Coordinate frontend and Strapi backend while retaining clear workspace boundaries | ✓ Validated in Phase 1 |
+| Place Strapi at `apps/strapi` | Turborepo workspaces must live inside the repository; the existing sibling project will be moved in | ✓ Validated in Phase 1 |
+| Place the Next.js application at `apps/web` | Provides an obvious, conventional web workspace alongside the backend | ✓ Validated in Phase 1 |
+| Follow the brief's eight vertical phases | It preserves demonstrable user journeys and avoids a collection of disconnected screens | — Pending |
+| Keep AI advisory and reviewable | Analysts must retain responsibility for assessment approval and release | — Pending |
+| Revert-to-draft only from the earliest submitted state | Reverting a Request only from `submitted`, and a Questionnaire only before an assessment draft exists, avoids orphaned or stale downstream records | — Pending (Phase 06.1) |
+| Persist reverter identity, timestamp, and mandatory reason | This is an auditable cyber-risk product; a silent reversal of a submitted record is not defensible | — Pending (Phase 06.1) |
+| Ship deterministic AI providers first, substitute a real provider behind the same interface | Each phase stays demonstrable and hermetically testable; real model integration becomes a swap, not a rewrite | ✓ Validated in Phase 06.2; real provider pending in 06.7 |
+| Owner-scoped screens stay owner-scoped for every role | Requestor is a birthright role, so an analyst who raises a request is a Requestor for that record; conflating it with the review queues hides their own work | ✓ Validated in Phase 06.3 |
+| Preserve separate owner and analyst-review surfaces | The shared Requestor birthright and explicit analyst review grant have different server-enforced scopes; UI must not conflate them | ✓ Validated in Phase 06.3 |
+| A record opens from its identifier or title, never a separate row button | One affordance per action reads as one product and keeps dense tables free of a redundant column | — Pending (Phase 06.4) |
+| Exactly one explicit, Analyst-only, mandatory-reason return-to-analyst-review transition governs every questionnaire backward move | An implicit backward transition triggered by an edit could not carry the reason and audit record the workflow requires; one operation with no hidden state changes covers both the released and submitted cases | ✓ Validated in Phase 06.8 |
+| A questionnaire's release gate reads dedicated release-fact fields, never a scan of the governance log | Access control must read an explicit validated field rather than derive itself from parsing a mutable JSON array, where a malformed or truncated log failing safe would deny every read; the log carries narrative history, the fields carry the gate | ✓ Validated in Phase 06.8 |
+| Durable audit trails without a modeled entity go through `docs/contract-gaps/` before implementation | The authoritative JDL/OpenAPI/catalogue carry no audit-revision representation; documenting the gap and reconciling the contract avoids a competing entity invented only in the frontend or a second source of truth in the web app | ✓ Applied in Phase 06.8 (`docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md`) |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `$gsd-transition`):
-1. Requirements invalidated? -> Move to Out of Scope with reason
-2. Requirements validated? -> Move to Validated with phase reference
-3. New requirements emerged? -> Add to Active
-4. Decisions to log? -> Add to Key Decisions
-5. "What This Is" still accurate? -> Update if drifted
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. “What This Is” still accurate? → Update if drifted
 
 **After each milestone** (via `$gsd-complete-milestone`):
 1. Full review of all sections
-2. Core Value check - still the right priority?
-3. Audit Out of Scope - reasons still valid?
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-29 after Phase 5 completion*
+*Last updated: 2026-09-21 after completing Phase 06.8*

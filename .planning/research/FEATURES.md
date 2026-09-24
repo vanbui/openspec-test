@@ -1,25 +1,21 @@
-# Feature Research: IdamBox Platform Foundation
+# Feature Research
 
-## Table Stakes For Phase 1
+## Table stakes for CSRM v1
 
-- Strapi backend exists in the monorepo.
-- Backend can be run and administered through native Strapi admin.
-- Core collection types exist for IdamBox user, role, application, and application role.
-- Application roles belong to applications.
-- Roles bundle application roles.
-- IdamBox users can be assigned roles.
-- The model supports deriving a user's application roles through their assigned roles.
+- Controlled request creation, draft editing, submission, and clear workflow status.
+- Dynamic, resumable questionnaires with progress, validation, grouped sections, and analyst review.
+- Analyst-owned assessment review, risk and mitigation treatment editing, and an explicit release action.
+- Read-only Requestor access only after release.
+- Searchable, paginated risk and administration collections; CSV import with preview, row errors, confirmation, and outcome summary.
+- Capability-driven navigation and UI affordances backed by server-side record authorization.
+- Accessible, responsive states for loading, empty, error, permission-denied, desktop, and mobile.
 
-## Deferred Platform Features
+## Differentiators to retain in v1 architecture
 
-- Auth0 authentication for Next.js application users.
-- One Next.js app per IdamBox module.
-- Application-specific navigation and UI authorization.
-- Fine-grained permissions/entitlements.
-- Audit logs, governance reports, compliance evidence, and lifecycle automation.
+- Provider-independent, asynchronous AI job states with provenance and human modifications.
+- Semantic BProton/IdamBox design tokens and risk-rating semantics.
+- Reusable, data-driven dashboards and a typed OpenAPI service boundary.
 
-## Anti-Features For Phase 1
+## Anti-features for this milestone
 
-- Do not build a frontend shell just to prove future app behavior.
-- Do not couple IdamBox product users to Strapi admin users.
-- Do not over-model application role permissions before the module requirements exist.
+- Automatic AI release, custom ML training, real-time co-editing, full GRC expansion, and tenant administration.

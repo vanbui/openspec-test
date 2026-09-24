@@ -1,41 +1,38 @@
-# Dependencies
+# Dependencies and build output
 node_modules/
-.yarn/cache/
-.pnp.*
+.pnpm-store/
+.turbo/
+.next/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
 
-# Environment
+# Local runtime state and secrets
 .env
 .env.*
 !.env.example
-
-# Build outputs
-dist/
-build/
-.turbo/
-.next/
-.next-e2e-production/
-coverage/
-*.tsbuildinfo
-apps/csrm/test-results/
-apps/csrm/playwright-report/
-
-# Strapi runtime
-.tmp/
-.cache/
-.strapi/
-.strapi-updater.json
-public/uploads/*
-!public/uploads/.gitkeep
-
-# Logs
+!.env.local.example
+apps/strapi/.tmp/
+apps/web/.tmp/
+apps/strapi/.strapi/
+apps/strapi/dist/
+apps/strapi/build/
+apps/strapi/public/uploads/*
+!apps/strapi/public/uploads/.gitkeep
+*.sqlite
+*.sqlite3
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# OS/editor
-.DS_Store
-Thumbs.db
+# Strapi migration exclusions
+apps/strapi/node_modules/
+apps/strapi/.planning/
+apps/strapi/.git/
+apps/strapi/package-lock.json
+apps/strapi/yarn.lock
 
-# Ingore the example-projects folder which we have the example grad and edalas-dylan projects for Codex to use as reference
-example-projects/
+# GSD workflow runtime state (per-run dispatch sentinel)
+.gsd/
+
+# Browser automation output
+.playwright-mcp/

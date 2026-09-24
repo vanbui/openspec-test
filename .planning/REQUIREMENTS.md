@@ -1,148 +1,119 @@
-# Requirements: IdamBox Platform
+# Requirements: IdamBox Cyber Risk Manager (CSRM)
 
-**Defined:** 2026-05-20
-**Core Value:** IdamBox must provide a clean shared authorization model where each application can define roles and users receive access indirectly through assigned role bundles.
+**Defined:** 2026-08-27  
+**Core Value:** Make a complex cyber-risk workflow simple and auditable while keeping Security Analysts—not AI—in control of assessment review and release.
 
 ## v1 Requirements
 
-Requirements for the initial backend foundation release. Each maps to roadmap phases.
+### Foundation
 
-### Monorepo
+- [x] **FOUND-01**: The repository provides reproducible Turborepo tasks for the `apps/strapi` and `apps/web` workspaces.
+- [x] **FOUND-02**: The web application provides a strict-TypeScript Next.js App Router foundation with semantic BProton/IdamBox theme tokens and reusable responsive application shell.
+- [x] **FOUND-03**: The web application uses a typed service boundary derived from the Strapi OpenAPI specification rather than page-level raw fetch calls.
+- [x] **FOUND-04**: The application renders navigation and actions from effective capability configuration, while Strapi enforces Role → Function → FunctionAPI grants and record-level authorization.
+- [x] **FOUND-05**: The foundation provides automated unit, component/integration, and end-to-end test infrastructure with deliberate loading, empty, error, and permission-denied states.
 
-- [x] **MONO-01**: Developer can work in a Turbo monorepo structured like the closest example, with applications under `apps/*` and shared packages under `packages/*`.
-- [x] **MONO-02**: Developer can run the IdamBox Strapi backend from `apps/backend` through root workspace scripts.
-- [x] **MONO-03**: Developer can add future Next.js application modules under `apps/*` without restructuring the repository.
+### Requests
 
-### Backend
+- [x] **REQ-01**: A Requestor can view only authorised Risk Assessment Requests with status, search, filtering, sorting, and pagination.
+- [x] **REQ-02**: A Requestor can create a structured Risk Assessment Request using persisted CSRM fields and assessment context.
+- [x] **REQ-03**: A Requestor can save, resume, and edit a draft while its workflow state permits it.
+- [x] **REQ-04**: A Requestor can submit a valid request and receive an unambiguous workflow-state confirmation.
+- [x] **REQ-05**: A Requestor dashboard shows requests and questionnaires requiring action and recently released assessments from data-driven widgets.
+- [x] **REQ-06**: An owning Requestor or an authorised Security Analyst can revert a `submitted` Risk Assessment Request to `draft` with a mandatory recorded reason, then edit and resubmit it.
 
-- [x] **BACK-01**: Administrator can access the Strapi admin panel using native Strapi admin authentication.
-- [x] **BACK-02**: Administrator can create and edit IdamBox platform records through Strapi content management.
-- [x] **BACK-03**: Backend configuration supports local development without requiring a Phase 1 frontend application.
+### Questionnaires
 
-### Data Model
+- [x] **QUES-01**: A Requestor can view only questionnaires associated with authorised requests.
+- [x] **QUES-02**: A Requestor can complete a data-defined, grouped, conditional questionnaire with progress and unanswered-question indication.
+- [x] **QUES-03**: A Requestor can save questionnaire responses as a draft and resume later.
+- [x] **QUES-04**: A Requestor can submit a valid questionnaire after an explicit confirmation.
+- [x] **QUES-05**: A Security Analyst can review questionnaire definitions and submitted responses.
+- [x] **QUES-06**: An owning Requestor or an authorised Security Analyst can revert a submitted questionnaire to draft with a mandatory recorded reason while no assessment draft exists, then edit and resubmit it with answer values preserved.
+- [x] **QUES-07**: A Security Analyst can trigger a reviewable AI job from a submitted Risk Assessment Request that generates a contextualised questionnaire, with queued, running, completed, failed, and retry states and recorded provenance.
 
-- [x] **DATA-01**: Administrator can manage IdamBox users in a custom IdamBox-specific user collection.
-- [x] **DATA-02**: Administrator can manage applications representing IdamBox modules such as IAM, Compliance, Automation, Crypto Manager, LMS, and Cyber Risk Manager.
-- [x] **DATA-03**: Administrator can manage application-owned Functions as records with `name`, `description`, and navigation metadata.
-- [x] **DATA-04**: Administrator can associate each Function with its owning Application and manage FunctionApi operation grants beneath a Function.
-- [x] **DATA-05**: Administrator can manage Roles as reusable bundles of application-owned Functions.
-- [x] **DATA-06**: Administrator can assign one or more roles to an IdamBox user.
-- [x] **DATA-07**: Backend data relationships allow a user's effective application access to be derived through `IdamBoxUser -> Role -> Function -> Application`, with FunctionApi records supplying operation-level grants.
+### Assessments
+
+- [x] **ASSESS-01**: A Security Analyst can view and review submitted requests authorised to them.
+- [x] **ASSESS-02**: A Security Analyst can trigger or observe a reviewable AI assessment-draft job with queued, running, completed, failed, and retry states.
+- [x] **ASSESS-03**: A Security Analyst can edit assessment metadata, contextual risks, ratings, owners, treatments, target dates, and mitigation-control implementations.
+- [x] **ASSESS-04**: A Security Analyst can explicitly release a completed assessment only after required review.
+- [x] **ASSESS-05**: A Requestor can view an authorised released assessment read-only and cannot modify it.
+
+### Risk Register
+
+- [x] **RISK-01**: A Security Analyst can search, filter, sort, and paginate contextual Risk records by status, ratings, owners, dates, assessments, systems/assets, and mitigation status.
+- [x] **RISK-02**: A Security Analyst can view Risk details and maintain its mitigation-control implementation information.
+
+### Administration
+
+- [x] **ADMIN-01**: A Security Analyst can list and create, view, or edit CsrmRiskType records without conflating them with contextual Risks.
+- [x] **ADMIN-02**: A Security Analyst can list and create, view, or edit reusable CsrmControl records without conflating them with control implementations.
+- [x] **ADMIN-03**: A Security Analyst can list and create, view, or edit CsrmInformationSystem and CsrmInformationAsset records.
+- [x] **ADMIN-04**: A Security Analyst can import Risk Types, Controls, Information Systems, and Information Assets from CSV with template/column guidance, client validation, preview, row errors, confirmation, and result summary.
+
+### Workflow Experience
+
+- [x] **UX-01**: The "My Requests", "My Questionnaires", and "My Risk Assessments" screens are owner-scoped for every actor, so a Security Analyst who submits a request sees that request, its questionnaire, and its released assessment there and no other Requestor's records.
+- [x] **UX-02**: A Requestor selects zero or more CsrmInformationSystem and CsrmInformationAsset records through a searchable server-backed selector, and a Security Analyst assigns a Risk owner by searching IdamBox users rather than typing free text.
+- [x] **UX-03**: "My Questionnaires", "My Risk Assessments", and the three analyst review screens each offer server-backed search and status filtering consistent with "My Requests", and an authorised released assessment opens without a service-unavailable failure.
+- [ ] **UX-04**: A Risk Assessment Request links to its questionnaire and to an assessment tile reporting Low, Moderate, High, and Critical contextual Risk counts; a Questionnaire links back to its request; and release readiness names the specific record and field behind every outstanding requirement.
+- [ ] **UX-05**: Every list opens a record from its identifier or title with no redundant open control, and shared controls present consistently across screens.
+
+### Dashboards and Reports
+
+- [ ] **DASH-01**: A Security Analyst dashboard presents data-driven review queues, high/critical risks, overdue treatments, due dates, recent activity, and alerts.
+- [ ] **DASH-02**: A Security Analyst can view reports and alerts through authorised, responsive screens.
+
+### Integration and Assurance
+
+- [ ] **INT-01**: The production web service implementation calls Strapi operations defined in the OpenAPI contract; missing operations are documented and added to the backend contract.
+- [ ] **INT-02**: The application uses Keycloak authorization-code authentication and Strapi validates token issuer, audience, signature, expiry, and effective CSRM authorisation server-side.
+- [x] **INT-03**: AI integrations preserve provenance, review state, human modifications, safe failure/retry behaviour, and never release an assessment automatically.
+- [ ] **INT-04**: Critical journeys, responsive behaviour, WCAG 2.2 AA concerns, security controls, performance, and IDOR protection are verified.
 
 ## v2 Requirements
 
-Identity provider, CSRM bootstrap, and first application-module requirements added after Phase 1 completion.
-
-### Authentication
-
-- [x] **IDP-01**: Developer can run a top-level Keycloak Docker Compose setup for IdamBox from an `idp` directory.
-- [x] **IDP-02**: Keycloak bootstraps IdamBox test users matching the Strapi sample users.
-- [x] **IDP-03**: Keycloak bootstraps an OIDC client for the CSRM Next.js application.
-- [x] **IDP-04**: Documentation explains launching Keycloak and its future role as a broker to customer IdPs such as Auth0, Ping Access Management, Okta, and Entra ID.
-- **IDP-05**: Strapi can provision custom IdamBox user records into Keycloak through the Keycloak API.
-- **IDP-06**: Keycloak provisioning is idempotent and configured through environment values rather than hard-coded secrets.
-- **AUTH-01**: User can authenticate into a Next.js IdamBox application using Keycloak/OIDC.
-
-### Future Identity Broker
-
-- **AUTH-02**: Customer IdP identities, including Auth0 identities, can be brokered through Keycloak and mapped to IdamBox user records.
-
-### Bootstrap Data
-
-- [x] **BOOT-01**: Strapi can seed a CSRM application record at backend boot.
-- [x] **BOOT-02**: Strapi can seed CSRM application-owned Function and FunctionApi access data for Security Analyst and the equivalent Security Analyst Agent Role.
-- [x] **BOOT-03**: Strapi can seed reusable Function-backed Roles for Security Analyst, Security Analyst Agent with the same Function grants, and the current Requestor catalogue Role.
-- [x] **BOOT-04**: Strapi can seed Jane Doe and Bob Doe as custom IdamBox users, assigning Bob Doe to the Security Analyst role.
-
-### CSRM
-
-- **CSRM-01**: Administrator can enable CSRM backend collections through the `csrmAppIsEnabled` environment flag.
-- **CSRM-02**: Backend can manage CSRM Assessment Request records.
-- **CSRM-03**: Backend can manage CSRM Assessment Questionnaire records associated with assessment requests.
-- **CSRM-04**: Backend can manage CSRM Assessment records associated with assessment requests and release state.
-- **CSRM-05**: Requestor can create, view, and edit their own CSRM assessment requests in a Next.js application.
-- **CSRM-06**: Requestor can view and fill out assessment questionnaires for their own assessment requests.
-- **CSRM-07**: Requestor can view released assessments for their own assessment requests.
-- **CSRM-08**: Security Analyst can view and edit all CSRM assessment requests, questionnaires, and assessments.
-- **CSRM-09**: Security Analyst can release assessments for requestor viewing.
-
-### Accepted Authorization Migration
-
-The completed Phase 1/2 requirement wording above records the accepted migration from the former `ApplicationRole` terminology to the implemented Application/Function/FunctionApi/Role model. It supersedes the historical terminology without reopening completed Phase 1 or Phase 2 scope.
-
-### Applications
-
-- **APP-06**: IdamBox Cyber Risk Manager can be added as a Next.js application module.
-
-### Deferred Application Modules
-
-- **APP-01**: IdamBox IAM can be added as a Next.js application module.
-- **APP-02**: IdamBox Compliance can be added as a Next.js application module.
-- **APP-03**: IdamBox Automation can be added as a Next.js application module.
-- **APP-04**: IdamBox Crypto Manager can be added as a Next.js application module.
-- **APP-05**: IdamBox LMS can be added as a Next.js application module.
+- **COLLAB-01**: Users can add comments and activity history to permitted requests, questionnaires, and assessments when the data model/API supports it.
+- **NOTIFY-01**: Users receive configurable notifications for workflow events and due dates.
+- **TENANT-01**: Customers can administer tenant-specific branding and multi-tenant configuration.
+- **WORKFLOW-01**: Administrators can configure no-code workflow definitions.
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
-| Feature                           | Reason                                                           |
-| --------------------------------- | ---------------------------------------------------------------- |
-| Auth0 login in Phase 1            | App authentication starts when Next.js modules are added.        |
-| Next.js frontend shell in Phase 1 | Current scope is the Strapi backend and core model only.         |
-| Free-floating fine-grained permissions | Application authorization is modeled through Functions and FunctionApi operation grants, not standalone permission strings. |
-| Custom Strapi admin UI            | Native Strapi admin is sufficient for Phase 1.                   |
-| Production deployment             | First milestone is backend/data-model foundation.                |
+| Feature | Reason |
+|---|---|
+| Automatic AI assessment release | Human analyst review and release are mandatory. |
+| Real-time collaborative editing | Normal save/edit flows meet the first-milestone need. |
+| Native mobile app | Responsive web application is the first delivery. |
+| Full GRC suite and custom ML training | Not part of the core assessment workflow. |
+| Frontend API facade | The Strapi OpenAPI contract is the production service contract. |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
-| Requirement | Phase   | Status   |
-| ----------- | ------- | -------- |
-| MONO-01     | Phase 1 | Complete |
-| MONO-02     | Phase 1 | Complete |
-| MONO-03     | Phase 1 | Complete |
-| BACK-01     | Phase 1 | Complete |
-| BACK-02     | Phase 1 | Complete |
-| BACK-03     | Phase 1 | Complete |
-| DATA-01     | Phase 1 | Complete |
-| DATA-02     | Phase 1 | Complete |
-| DATA-03     | Phase 1 | Complete |
-| DATA-04     | Phase 1 | Complete |
-| DATA-05     | Phase 1 | Complete |
-| DATA-06     | Phase 1 | Complete |
-| DATA-07     | Phase 1 | Complete |
-| BOOT-01     | Phase 2 | Complete |
-| BOOT-02     | Phase 2 | Complete |
-| BOOT-03     | Phase 2 | Complete |
-| BOOT-04     | Phase 2 | Complete |
-| IDP-01      | Phase 3 | Complete |
-| IDP-02      | Phase 3 | Complete |
-| IDP-03      | Phase 3 | Complete |
-| IDP-04      | Phase 3 | Complete |
-| IDP-05      | Phase 4 | Complete |
-| IDP-06      | Phase 4 | Complete |
-| AUTH-01     | Phase 13 | Planned  |
-| CSRM-01     | Phase 5 | Planned  |
-| CSRM-02     | Phase 5 | Planned  |
-| CSRM-03     | Phase 5 | Planned  |
-| CSRM-04     | Phase 5 | Planned  |
-| CSRM-05     | Phases 7, 13 | Planned  |
-| CSRM-06     | Phases 8, 13 | Planned  |
-| CSRM-07     | Phases 9, 13 | Planned  |
-| CSRM-08     | Phases 8-13 | Planned  |
-| CSRM-09     | Phases 9, 13 | Planned  |
-| APP-06      | Phases 6, 13 | Planned  |
+| Requirement | Phase | Status |
+|---|---|---|
+| FOUND-01–FOUND-05 | Phase 1 | Complete; ready for re-verification |
+| REQ-01–REQ-05 | Phase 2 | Complete |
+| REQ-06 | Phase 06.1 | Complete |
+| QUES-01–QUES-05 | Phase 3 | Complete |
+| QUES-06 | Phase 06.1 | Complete |
+| QUES-07 | Phase 06.2 | Complete |
+| ASSESS-01–ASSESS-05 | Phase 4 | Complete |
+| RISK-01–RISK-02 | Phase 5 | Complete |
+| ADMIN-01–ADMIN-04 | Phase 6 | Complete |
+| UX-01–UX-03 | Phase 06.3 | Pending |
+| UX-04–UX-05 | Phase 06.4 | Pending |
+| DASH-01–DASH-02 | Phase 7 | Pending |
+| INT-03 | Phase 06.7 (advanced, complete 2026-09-15), Phase 8 (verified) | Complete |
+| INT-01, INT-02, INT-04 | Phase 8 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 13 total
-- v2 active roadmap requirements: 21 total
-- Mapped to phases: 34
-- Unmapped: 0
+- v1 requirements: 40 total
+- Mapped to phases: 40
+- Unmapped: 0 ✓
 
 ---
-
-_Requirements defined: 2026-05-20_
-_Last updated: 2026-05-25 after completing Phase 3_
+*Requirements defined: 2026-08-27*  
+*Last updated: 2026-09-15 after completing Phase 06.7*

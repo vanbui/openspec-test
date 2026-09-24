@@ -1,43 +1,12 @@
-import type { NextConfig } from "next";
-import path from "node:path";
-import webpack from "webpack";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  distDir: process.env.NEXT_DIST_DIR ?? ".next",
-  // Playwright starts the local app on its required loopback origin. Next's
-  // development resource guard otherwise prevents the interactive islands
-  // from hydrating during browser evidence collection.
-  allowedDevOrigins: ["127.0.0.1"],
-  // Development chrome is test-runner noise, not product UI evidence.
-  devIndicators: false,
-  webpack: (config, { dev }) => {
-    if (!dev) {
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(
-          /runtime-shell$/,
-          path.join(process.cwd(), "src/components/shell/runtime-shell.production.tsx"),
-        ),
-        new webpack.NormalModuleReplacementPlugin(
-          /resolve-request-actor$/,
-          path.join(process.cwd(), "src/features/requests/resolve-request-actor.production.ts"),
-        ),
-        new webpack.NormalModuleReplacementPlugin(
-          /resolve-identity$/,
-          path.join(process.cwd(), "src/lib/fixtures/resolve-identity.production.ts"),
-        ),
-        new webpack.NormalModuleReplacementPlugin(
-          /analyst-only-evidence$/,
-          path.join(process.cwd(), "src/components/test-evidence/analyst-only-evidence.production.tsx"),
-        ),
-        new webpack.NormalModuleReplacementPlugin(
-          /state-evidence$/,
-          path.join(process.cwd(), "src/components/test-evidence/state-evidence.production.tsx"),
-        ),
-      );
-    }
-
-    return config;
+  reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
   },
+  ...(process.env.CSRM_NEXT_DIST_DIR ? { distDir: process.env.CSRM_NEXT_DIST_DIR } : {}),
 };
-
 export default nextConfig;

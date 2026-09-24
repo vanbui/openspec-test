@@ -1,0 +1,40 @@
+import 'server-only';
+
+import type { CapabilityAdapter } from '@/lib/capabilities/capability-adapter';
+
+export const developmentRoles = ['Requestor', 'Secondary Requestor', 'Security Analyst'] as const;
+
+export type DevelopmentRole = (typeof developmentRoles)[number];
+export type SessionRuntimeMode = 'development' | 'unavailable';
+
+export interface Session {
+  displayName: string;
+  developmentRole: DevelopmentRole;
+}
+
+export interface SessionAdapter {
+  current(): Promise<Session | null>;
+  setDevelopmentRole(role: DevelopmentRole): Promise<void>;
+  capabilitiesFor(session: Session): CapabilityAdapter;
+  signIn(returnTo: string): Promise<never>;
+}
+
+export function parseDevelopmentRole(value: unknown): DevelopmentRole | null {
+  return typeof value === 'string' && developmentRoles.includes(value as DevelopmentRole)
+    ? value as DevelopmentRole
+    : null;
+}
+
+export function requireDevelopmentRole(value: FormDataEntryValue | null): DevelopmentRole {
+  const role = parseDevelopmentRole(value);
+
+  if (!role) {
+    throw new Error('Invalid development role.');
+  }
+
+  return role;
+}
+
+export function parseSessionRuntimeMode(nodeEnvironment: string | undefined): SessionRuntimeMode {
+  return nodeEnvironment === 'development' ? 'development' : 'unavailable';
+}

@@ -52,11 +52,11 @@ type ControlCatalogue = {
 
 type ControlSeed = {
   controlNumber: string;
-  controlReference: null | string;
-  description: null | string;
+  controlReference: string | undefined;
+  description: string | undefined;
   framework: string;
-  frameworkSource: null | string;
-  frameworkVersion: null | string;
+  frameworkSource: string | undefined;
+  frameworkVersion: string | undefined;
   name: string;
   sourceData: JsonObject;
 };
@@ -235,7 +235,7 @@ function controlName(control: JsonObject): string {
   return label ? `${control.id} — ${label}` : (control.id as string);
 }
 
-function controlReference(control: JsonObject): null | string {
+function controlReference(control: JsonObject): string | undefined {
   const clause =
     typeof control.clause === "number"
       ? `Clause ${control.clause}`
@@ -252,23 +252,26 @@ function controlReference(control: JsonObject): null | string {
       nestedString(control, "category", "id"),
       nestedString(control, "section", "id"),
       sectionNumber ? `Section ${sectionNumber}` : undefined,
-    ) ?? null
+    )
   );
 }
 
 function createControlSeeds(catalogues: ControlCatalogue[]): ControlSeed[] {
   return catalogues.flatMap((catalogue) => {
-    const frameworkVersion =
-      firstString(catalogue.framework.version, catalogue.framework.release) ??
-      null;
-    const frameworkSource = firstString(catalogue.framework.source) ?? null;
+    const frameworkVersion = firstString(
+      catalogue.framework.version,
+      catalogue.framework.release,
+    );
+    const frameworkSource = firstString(catalogue.framework.source);
 
     return catalogue.controls.map((control) => ({
       controlNumber: control.id,
       controlReference: controlReference(control),
-      description:
-        firstString(control.statement, control.legalText, control.title) ??
-        null,
+      description: firstString(
+        control.statement,
+        control.legalText,
+        control.title,
+      ),
       framework: catalogue.framework.name,
       frameworkSource,
       frameworkVersion,
@@ -399,6 +402,8 @@ export async function seedCsrmData(strapi: Core.Strapi) {
   const functionApiService = strapi.documents("api::function-api.function-api");
   const roleService = strapi.documents("api::role.role");
   const userService = strapi.documents("api::idambox-user.idambox-user");
+  const informationSystemService = strapi.documents("api::csrm-information-system.csrm-information-system");
+  const informationAssetService = strapi.documents("api::csrm-information-asset.csrm-information-asset");
 
   await seedCsrmControls(strapi, controlSeeds);
 
@@ -620,6 +625,36 @@ export async function seedCsrmData(strapi: Core.Strapi) {
       data: {
         roles: [securityAnalystRole.documentId],
         ...CSRM_USERS.bob,
+      },
+    });
+  }
+
+  const existingSystems = await informationSystemService.findMany({
+    filters: { name: { $eq: "Customer portal" } },
+    limit: 1,
+  });
+  if (existingSystems.length === 0) {
+    await informationSystemService.create({
+      data: {
+        name: "Customer portal",
+        description: "Development fixture for authorised Requestor workflow verification.",
+        environment: "Production",
+        lifecycleState: "Existing",
+      },
+    });
+  }
+
+  const existingAssets = await informationAssetService.findMany({
+    filters: { name: { $eq: "Customer records" } },
+    limit: 1,
+  });
+  if (existingAssets.length === 0) {
+    await informationAssetService.create({
+      data: {
+        name: "Customer records",
+        description: "Development fixture for authorised Requestor workflow verification.",
+        dataClassification: "Restricted",
+        containsPersonalData: true,
       },
     });
   }

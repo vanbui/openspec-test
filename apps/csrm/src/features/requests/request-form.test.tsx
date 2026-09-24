@@ -1,183 +1,276 @@
-/** @vitest-environment jsdom */
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ComponentType } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RequestDraftInput, RequestMutationResult } from './request-schema';
+import type { CsrmAssessmentRequest } from './request-domain';
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { initialRequestActionState, type RequestActionState } from "./request-form-state";
-
-const { mockReplace, mockSaveDraft, mockSubmitRequest } = vi.hoisted(() => ({
-  mockReplace: vi.fn(),
-  mockSaveDraft: vi.fn(),
-  mockSubmitRequest: vi.fn(),
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: mockReplace }),
-}));
-
-vi.mock("@/components/ui/request-form-primitives", async () => {
-  const React = await import("react");
-  return {
-    RequestFormSection: ({ title, children }: { title: string; children: React.ReactNode }) => <section><h2>{title}</h2>{children}</section>,
-    RequestFormField: ({ id, label, error, children }: { id: string; label: string; error?: string; children: React.ReactNode }) => <div><label htmlFor={id}>{label}</label>{children}{error ? <p id={`${id}-error`}>{error}</p> : null}</div>,
-    RequestConfirmationDialog: ({ open, title, description, cancelLabel, confirmLabel, onOpenChange, onConfirm }: { open: boolean; title: string; description: string; cancelLabel: string; confirmLabel: string; onOpenChange: (open: boolean) => void; onConfirm: () => void }) => open ? <div aria-label={title} role="dialog"><h2>{title}</h2><p>{description}</p><button autoFocus onClick={() => onOpenChange(false)} type="button">{cancelLabel}</button><button onClick={onConfirm} type="button">{confirmLabel}</button></div> : null,
-  };
+vi.stubGlobal('ResizeObserver', class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
 });
 
-import { RequestForm } from "./request-form";
+const createRequestAction = vi.hoisted(() => vi.fn());
+const updateRequestAction = vi.hoisted(() => vi.fn());
+const submitRequestAction = vi.hoisted(() => vi.fn());
+// Widened deliberately: a test that returns a record the initial page never
+// contained is the point of the retained-selection case below.
+type RelationSearchStub = Promise<{ ok: true; data: readonly { documentId: string; name: string }[] }>;
+const searchInformationSystemsAction = vi.hoisted(() => vi.fn((): RelationSearchStub => Promise.resolve({ ok: true, data: systems })));
+const searchInformationAssetsAction = vi.hoisted(() => vi.fn((): RelationSearchStub => Promise.resolve({ ok: true, data: assets })));
 
-afterEach(() => {
-  cleanup();
-  mockReplace.mockReset();
-  mockSaveDraft.mockReset();
-  mockSubmitRequest.mockReset();
+const routerPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: routerPush, refresh: vi.fn() }) }));
+vi.mock('./request-actions', () => ({ createRequestAction, updateRequestAction, submitRequestAction, searchInformationSystemsAction, searchInformationAssetsAction }));
+
+type InventoryOption = { documentId: string; name: string };
+type RequestFormProps = {
+  assets: readonly InventoryOption[];
+  defaultValues?: Partial<RequestDraftInput>;
+  documentId?: string;
+  mode: 'create' | 'edit';
+  systems: readonly InventoryOption[];
+};
+
+type RequestFormModule = {
+  RequestForm?: ComponentType<RequestFormProps>;
+  RequestWorkflowActions?: ComponentType<{ request: CsrmAssessmentRequest }>;
+};
+
+const formPath = resolve(process.cwd(), 'src/features/requests/request-form.tsx');
+const workflowPath = resolve(process.cwd(), 'app/(app)/app/requests/[documentId]/page.tsx');
+const sentinel = 'PHASE2_RED_W0_03B_FORM_WORKFLOW_UI_ABSENT';
+
+const systems = [
+  { documentId: 'system-1', name: 'Customer portal' },
+  { documentId: 'system-2', name: 'Identity platform' },
+] as const;
+const assets = [
+  { documentId: 'asset-1', name: 'Customer records' },
+  { documentId: 'asset-2', name: 'Audit logs' },
+] as const;
+
+const persistedDraft: RequestDraftInput = {
+  title: 'Customer portal review',
+  description: 'Review the customer portal.',
+  assessmentType: 'Project',
+  division: 'Digital',
+  businessUnit: 'Customer platforms',
+  businessPurpose: 'Serve customers online',
+  businessCriticality: 'High',
+  thirdPartyInvolvement: true,
+  thirdPartyDetails: 'Hosted by an approved provider',
+  regulatoryRequirements: 'Privacy Act',
+  dueDate: '2026-09-12',
+  informationSystems: ['system-1'],
+  informationAssets: ['asset-1'],
+};
+
+const submitted: RequestMutationResult = {
+  ...persistedDraft,
+  documentId: 'request-1',
+  requestNumber: 'RAR-2026-X7K4Q2',
+  requestStatus: 'submitted',
+  submittedDate: '2026-08-29T00:00:00.000Z',
+};
+
+async function loadRequestForm(): Promise<ComponentType<RequestFormProps>> {
+  if (!existsSync(formPath) || !existsSync(workflowPath)) throw new Error(sentinel);
+  const moduleName = './request-' + 'form';
+  const module = await import(/* @vite-ignore */ moduleName) as RequestFormModule;
+  if (!module.RequestForm) throw new Error(sentinel);
+  return module.RequestForm;
+}
+
+async function loadRequestWorkflowActions(): Promise<ComponentType<{ request: CsrmAssessmentRequest }> > {
+  const moduleName = './request-' + 'form';
+  const module = await import(/* @vite-ignore */ moduleName) as RequestFormModule;
+  if (!module.RequestWorkflowActions) throw new Error(sentinel);
+  return module.RequestWorkflowActions;
+}
+
+beforeEach(() => {
+  createRequestAction.mockReset();
+  updateRequestAction.mockReset();
+  submitRequestAction.mockReset();
 });
 
-function successfulDraft(): RequestActionState {
-  return {
-    ...initialRequestActionState,
-    status: "success",
-    values: { ...initialRequestActionState.values, title: "Vendor platform" },
-    announcement: "Draft saved.",
-    redirectTo: "/requests/request-1",
-  };
-}
+describe('RequestForm', () => {
+  it('offers the primary return-to-draft trigger first only in the eligible submitted state', async () => {
+    const RequestWorkflowActions = await loadRequestWorkflowActions();
+    const request = {
+      documentId: 'request-1',
+      requestNumber: 'RAR-2026-X7K4Q2',
+      title: persistedDraft.title,
+      requestStatus: 'submitted' as const,
+      submittedDate: '2026-08-29T00:00:00.000Z',
+      questionnaire: null,
+      assessment: null,
+    } as CsrmAssessmentRequest;
+    const view = render(<RequestWorkflowActions request={request} />);
+    const trigger = screen.getByRole('button', { name: 'Return to draft' });
+    expect(trigger).toHaveAttribute('data-variant', 'default');
+    expect(trigger.parentElement?.parentElement?.firstElementChild).toContainElement(trigger);
 
-function renderForm() {
-  return render(
-    <RequestForm
-      initialCatalogue={{
-        informationSystems: [{ documentId: "system-1", name: "Payments platform" }],
-        informationAssets: [{ documentId: "asset-1", name: "Customer records" }],
-      }}
-      saveDraftAction={mockSaveDraft}
-      submitRequestAction={mockSubmitRequest}
-    />,
-  );
-}
-
-describe("RequestForm", () => {
-  it("renders the one progressive persisted-field form in the approved section order", () => {
-    renderForm();
-
-    expect(screen.getByRole("heading", { level: 1, name: "New risk assessment request" })).toBeDefined();
-    expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
-      "Request details",
-      "Business context",
-      "Third-party and regulatory context",
-      "Related CSRM catalogue records",
-    ]);
-    expect(screen.queryByLabelText(/sponsor/i)).toBeNull();
-    expect(screen.queryByLabelText(/system owner/i)).toBeNull();
+    view.rerender(<RequestWorkflowActions request={{ ...request, requestStatus: 'draft' }} />);
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
   });
 
-  it("shows validation only for save or submit actions and preserves text-field focus while editing", async () => {
-    const user = userEvent.setup();
-    mockSaveDraft.mockResolvedValue(successfulDraft());
-    renderForm();
+  it('maps every authoritative editable field and documents the sponsor contract gap', async () => {
+    const RequestForm = await loadRequestForm();
+    render(<RequestForm assets={assets} mode="create" systems={systems} />);
 
-    const title = screen.getByLabelText("Request title");
-    await user.type(title, "Vendor platform");
-    expect(screen.queryByRole("alert", { name: "Check the highlighted fields" })).toBeNull();
-    expect(title.getAttribute("aria-invalid")).toBe("false");
+    for (const label of [
+      'Request title', 'Description', 'Assessment type', 'Division', 'Business unit',
+      'Business purpose', 'Business criticality', 'Third-party involvement',
+      'Third-party details', 'Regulatory requirements', 'Due date',
+      'Information systems', 'Information assets',
+    ]) {
+      if (label === 'Due date') {
+        expect(screen.getByLabelText(label)).toBeInTheDocument();
+        continue;
+      }
+      expect(screen.getByRole(label === 'Third-party involvement' ? 'checkbox' : /Information/.test(label) ? 'group' : /Description|purpose|details|requirements/.test(label) ? 'textbox' : /type|criticality/.test(label) ? 'combobox' : 'textbox', { name: label })).toBeInTheDocument();
+    }
 
-    await user.clear(title);
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-    expect(document.activeElement).toBe(screen.getByRole("alert", { name: "Check the highlighted fields" }));
-    expect(screen.getAllByText("Enter a request title to save a draft.")).toHaveLength(2);
-    expect(mockSaveDraft).not.toHaveBeenCalled();
-
-    await user.type(title, "Vendor platform");
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-
-    await waitFor(() => expect(mockSaveDraft).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole("status").textContent).toContain("Draft saved.");
-    expect(mockReplace).toHaveBeenCalledWith("/requests/request-1");
+    expect(screen.queryByLabelText(/sponsor/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Sponsor selection is unavailable until a least-privilege directory contract exists/i)).toBeInTheDocument();
   });
 
-  it("does not refocus the summary until a later save or submit action", async () => {
+  it('validates the authoritative title on blur and preserves values after a draft error', async () => {
+    const RequestForm = await loadRequestForm();
     const user = userEvent.setup();
-    renderForm();
+    createRequestAction.mockResolvedValueOnce({ ok: false, formError: 'The request service is unavailable. Please try again later.' });
+    render(<RequestForm assets={assets} mode="create" systems={systems} />);
 
-    const title = screen.getByLabelText("Request title");
-    await user.type(title, "Vendor");
-    await user.click(screen.getByRole("button", { name: "Submit request" }));
-    expect(document.activeElement).toBe(screen.getByRole("alert", { name: "Check the highlighted fields" }));
-
+    const title = screen.getByRole('textbox', { name: 'Request title' });
     await user.click(title);
-    await user.type(title, " platform");
+    await user.tab();
+    const titleError = await screen.findByText('Enter a request title.');
+    expect(titleError.closest('[data-slot="form-message"]')).toHaveClass('text-xs');
+    expect(titleError.closest('[data-slot="form-message"]')?.querySelector('svg')).not.toBeNull();
 
-    expect(document.activeElement).toBe(title);
-    expect((title as HTMLInputElement).value).toBe("Vendor platform");
+    await user.type(title, 'Customer portal review');
+    await user.type(screen.getByRole('textbox', { name: 'Division' }), 'Digital');
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('request service is unavailable');
+    expect(title).toHaveValue('Customer portal review');
+    expect(screen.getByRole('textbox', { name: 'Division' })).toHaveValue('Digital');
+    expect(createRequestAction).toHaveBeenCalledWith(expect.objectContaining({ title: 'Customer portal review', division: 'Digital' }));
   });
 
-  it("focuses the exact validation summary and only opens submission confirmation when valid", async () => {
+  it('keeps confirm-time validation visible and associates relation errors', async () => {
+    const RequestForm = await loadRequestForm();
     const user = userEvent.setup();
-    renderForm();
+    updateRequestAction.mockResolvedValueOnce({
+      ok: false,
+      fieldErrors: { informationSystems: ['Choose an authorised information system.'] },
+    });
+    render(<RequestForm assets={assets} defaultValues={{ ...persistedDraft, title: '' }} documentId="request-1" mode="edit" systems={systems} />);
 
-    await user.click(screen.getByRole("button", { name: "Submit request" }));
-    const summary = screen.getByRole("alert", { name: "Check the highlighted fields" });
-    expect(document.activeElement).toBe(summary);
-    expect(screen.getByLabelText("Request title").getAttribute("aria-invalid")).toBe("true");
-    expect(screen.queryByRole("dialog", { name: "Submit risk assessment request?" })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Check the highlighted fields before submitting this request.');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Request title' })).toHaveFocus());
+
+    await user.type(screen.getByRole('textbox', { name: 'Request title' }), persistedDraft.title);
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+    const systemsGroup = await screen.findByRole('group', { name: 'Information systems' });
+    expect(systemsGroup).toHaveAttribute('aria-invalid', 'true');
+    expect(systemsGroup.getAttribute('aria-describedby')).toMatch(/description.*message/);
+    const relationError = screen.getByText('Choose an authorised information system.').closest('[data-slot="form-message"]');
+    expect(relationError?.querySelector('svg')).not.toBeNull();
   });
 
-  it("opens the safe-default submit confirmation only after every required value is present", async () => {
+  it('keeps a system chosen from search that was never in the initially rendered page', async () => {
+    // The selector only renders one bounded page, so anything the user finds by
+    // searching is absent from it. Deriving the chosen summaries from that page
+    // dropped such an item from the display while still submitting its id.
+    const offPage = { documentId: 'system-9', name: 'Payments gateway' };
+    searchInformationSystemsAction.mockResolvedValueOnce({ ok: true, data: [offPage] });
     const user = userEvent.setup();
-    renderForm();
+    const RequestForm = await loadRequestForm();
+    render(<RequestForm assets={assets} mode="create" systems={systems} />);
 
-    await user.type(screen.getByLabelText("Request title"), "Vendor platform");
-    await user.type(screen.getByLabelText("Request description"), "A new managed platform for customer work.");
-    await user.selectOptions(screen.getByLabelText("Assessment type"), "Project");
-    await user.type(screen.getByLabelText("Business purpose"), "Support a regulated customer service.");
-    await user.selectOptions(screen.getByLabelText("Business criticality"), "High");
-    await user.click(screen.getByRole("radio", { name: "No" }));
-    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    await user.type(screen.getByRole('combobox', { name: 'Search information systems' }), 'payments');
+    const option = await screen.findByRole('option', { name: offPage.name }, { timeout: 5_000 });
+    await user.click(option);
 
-    expect(screen.getByRole("dialog", { name: "Submit risk assessment request?" }).textContent).toContain(
-      "Once submitted, your request will be available for Security Analyst review.",
+    const chosen = await screen.findByRole('list', { name: 'Selected Information systems' });
+    expect(chosen).toHaveTextContent(offPage.name);
+    expect(screen.getByRole('button', { name: `Remove ${offPage.name}` })).toBeInTheDocument();
+  });
+
+  it('preserves draft values and confirms irreversible submission', async () => {
+    const RequestForm = await loadRequestForm();
+    const user = userEvent.setup();
+    let resolveSubmission!: (value: { ok: true; data: RequestMutationResult }) => void;
+    submitRequestAction.mockImplementationOnce(() => new Promise((resolve) => { resolveSubmission = resolve; }));
+
+    render(
+      <RequestForm
+        assets={assets}
+        defaultValues={persistedDraft}
+        documentId="request-1"
+        mode="edit"
+        systems={systems}
+      />,
     );
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep editing" }));
+
+    expect(screen.getByRole('textbox', { name: 'Request title' })).toHaveValue(persistedDraft.title);
+    expect(screen.getByRole('list', { name: 'Selected Information systems' })).toHaveTextContent('Customer portal');
+    expect(screen.getByRole('list', { name: 'Selected Information assets' })).toHaveTextContent('Customer records');
+
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent(/cannot be edited after submission/i);
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(submitRequestAction).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    const confirm = screen.getByRole('button', { name: 'Submit request' });
+    await user.click(confirm);
+    await user.click(confirm);
+    expect(submitRequestAction).toHaveBeenCalledTimes(1);
+    expect(submitRequestAction).toHaveBeenCalledWith({ documentId: 'request-1', ...persistedDraft });
+
+    resolveSubmission({ ok: true, data: submitted });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(screen.getByText('Submitted')).toBeInTheDocument();
+    expect(screen.getByText(/29 Aug 2026/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit request' })).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Selected Information systems' })).toHaveTextContent('Customer portal');
+    expect(screen.getByRole('list', { name: 'Selected Information assets' })).toHaveTextContent('Customer records');
   });
 
-  it("shows and clears third-party details only for the Yes choice", async () => {
+  it('keeps edit values available for retry after conflict and permission failures', async () => {
+    const RequestForm = await loadRequestForm();
     const user = userEvent.setup();
-    renderForm();
+    updateRequestAction.mockResolvedValueOnce({
+      ok: false,
+      formError: 'This request changed while you were editing it. Reload and try again.',
+    });
+    submitRequestAction.mockResolvedValueOnce({
+      ok: false,
+      formError: 'You do not have permission to save this request.',
+    });
 
-    expect(screen.queryByLabelText("Third-party details")).toBeNull();
-    await user.click(screen.getByRole("radio", { name: "Yes" }));
-    await user.type(screen.getByLabelText("Third-party details"), "Cloud provider");
-    await user.click(screen.getByRole("radio", { name: "No" }));
+    render(<RequestForm assets={assets} defaultValues={persistedDraft} documentId="request-1" mode="edit" systems={systems} />);
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('changed while you were editing');
+    expect(screen.getByRole('textbox', { name: 'Request title' })).toHaveValue(persistedDraft.title);
+    expect(updateRequestAction).toHaveBeenCalledWith({ documentId: 'request-1', ...persistedDraft });
 
-    expect(screen.queryByLabelText("Third-party details")).toBeNull();
-    expect(screen.queryByDisplayValue("Cloud provider")).toBeNull();
-  });
-
-  it("keeps optional catalogue relations keyboard-selectable and removable", async () => {
-    const user = userEvent.setup();
-    renderForm();
-
-    const systems = screen.getByRole("button", { name: "Select information systems" });
-    await user.click(systems);
-    await user.type(screen.getByRole("searchbox", { name: "Search information systems" }), "Payments");
-    await user.keyboard("{ArrowDown}{Enter}");
-
-    expect(screen.getByRole("button", { name: "Remove Payments platform" })).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "Remove Payments platform" }));
-    expect(screen.queryByRole("button", { name: "Remove Payments platform" })).toBeNull();
-  });
-
-  it("intercepts dirty breadcrumb navigation with the exact unsaved-work confirmation", async () => {
-    const user = userEvent.setup();
-    renderForm();
-
-    await user.type(screen.getByLabelText("Request title"), "Unfinished draft");
-    await user.click(screen.getByRole("link", { name: "Risk Assessment Requests" }));
-
-    expect(screen.getByRole("dialog", { name: "Discard unsaved changes?" }).textContent).toContain(
-      "Your changes have not been saved. Do you want to keep editing or discard them?",
-    );
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep editing" }));
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('do not have permission');
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('list', { name: 'Selected Information systems' })).toHaveTextContent('Customer portal');
+    expect(screen.getByRole('list', { name: 'Selected Information assets' })).toHaveTextContent('Customer records');
   });
 });

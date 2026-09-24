@@ -1,0 +1,18 @@
+export const CSRM_QUESTIONNAIRE_OPERATIONS = {
+  listMine: "GET:/api/v1/my_questionnaires",
+  statusSummary: "GET:/api/v1/my_questionnaires/status_summary",
+  listAll: "GET:/api/v1/questionnaires",
+  reviewSummary: "GET:/api/v1/questionnaires/review_summary",
+  findOne: "GET:/api/v1/questionnaires/{questionnaireId}",
+  listQuestions: "GET:/api/v1/questionnaires/{questionnaireId}/questions",
+  generateAssessment: "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",
+  revertToDraft: "POST:/api/v1/questionnaires/{questionnaireId}/revert_to_draft",
+  release: "POST:/api/v1/questionnaires/{questionnaireId}/release",
+  returnToReview: "POST:/api/v1/questionnaires/{questionnaireId}/return_to_review",
+  addQuestion: "POST:/api/v1/questionnaires/{questionnaireId}/questions",
+  editQuestion: "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+  deleteQuestion: "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+  generate: "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
+  getGenerationJob: "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
+  retryGenerationJob: "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
+} as const;

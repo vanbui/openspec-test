@@ -1,17 +1,7 @@
-# Research Summary: IdamBox Platform
+# Research Summary
 
-## Stack
+The implementation should be a pnpm/Turborepo monorepo with Strapi retained as the authoritative CSRM API and a Next.js App Router client. The critical architectural rule is a single typed client-to-Strapi service boundary, backed by Keycloak identity and Strapi-enforced effective CSRM authorization.
 
-Use a Turbo monorepo with Yarn workspaces following `example-projects/edalas-dylan`: `apps/backend` for Strapi and future Next.js modules under `apps/*`.
+The delivery plan must prioritise one controlled vertical workflow instead of empty screens: request creation and submission, questionnaire completion, analyst assessment/risk editing, release, and Requestor read-only viewing. Reusable design, status, permission, list, import, and test primitives make that workflow safe to expand into the Risk Register and administration.
 
-## Table Stakes
-
-Phase 1 must produce a runnable Strapi backend with custom IdamBox collections for users, roles, applications, and application roles. The relationships must support user access derived through assigned roles and those roles' application roles.
-
-## Watch Out For
-
-Keep Strapi admin users separate from IdamBox users, defer Auth0 until app phases, and avoid fine-grained entitlement modeling until module-specific requirements exist.
-
-## Roadmap Implication
-
-The current v1 scope is a single backend foundation phase. Application frontends and Auth0 integration belong in later milestones or added phases.
+Key risks are authorization bypass/IDOR, contract drift, unsafe AI automation, nested-repository/package-manager migration mistakes, and desktop-first UX that fails on mobile. Each has an explicit roadmap phase and verification path.

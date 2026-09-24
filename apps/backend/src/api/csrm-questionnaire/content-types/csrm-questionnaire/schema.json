@@ -23,6 +23,20 @@
     "description": {
       "type": "text"
     },
+    "generatedDate": {
+      "type": "datetime"
+    },
+    "generatedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "providerName": {
+      "type": "string"
+    },
+    "providerVersion": {
+      "type": "string"
+    },
     "assessmentRequest": {
       "type": "relation",
       "relation": "oneToOne",
@@ -34,6 +48,28 @@
       "relation": "oneToMany",
       "target": "api::csrm-question.csrm-question",
       "mappedBy": "questionnaire"
+    },
+    "revertReason": {
+      "type": "text"
+    },
+    "revertedAt": {
+      "type": "datetime"
+    },
+    "revertedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "releasedAt": {
+      "type": "datetime"
+    },
+    "releasedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "governanceLog": {
+      "type": "json"
     }
   }
 }

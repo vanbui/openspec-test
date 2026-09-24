@@ -1,67 +1,37 @@
-import type { ReactNode } from "react";
+import type { DevelopmentRole } from '@/lib/auth/session-adapter';
+import type { Capability } from '@/lib/capabilities/capability-adapter';
+export { PageHeader, type PageHeaderProps } from '@/components/csrm/page-header';
+import { CapabilityNavigation, MobileNavigation } from './capability-navigation';
+import { RoleSwitcher } from './role-switcher';
+import { Wordmark } from './wordmark';
 
-import type { RouteDefinition } from "@/config/routes";
-import { visibleRoutes } from "@/config/routes";
-import type { IdentitySnapshot } from "@/domain/identity";
-import { DevelopmentIdentitySelector } from "@/components/shell/development-identity-selector";
-import { developmentIdentityOptions } from "@/lib/fixtures/identities";
-
-import { AppHeader } from "./app-header";
-import { RouteAnnouncer } from "./route-announcer";
-import { Sidebar } from "./sidebar";
-
-function DevelopmentSelectorForRuntime({ fixtureKey }: { fixtureKey: IdentitySnapshot["fixtureKey"] }) {
-  return (
-    <DevelopmentIdentitySelector
-      activeFixtureKey={fixtureKey}
-      identities={developmentIdentityOptions}
-    />
-  );
+interface AppShellProps {
+  children: React.ReactNode;
+  granted: ReadonlySet<Capability>;
+  role?: DevelopmentRole;
 }
 
-/**
- * Server-compatible frame for CSRM. It receives only serializable identity and
- * registry data; interactive navigation controls remain explicit future islands.
- */
-export function AppShell({
-  identity,
-  routes,
-  children,
-}: {
-  identity: IdentitySnapshot | null;
-  routes: readonly RouteDefinition[];
-  children: ReactNode;
-}) {
-  const navigationRoutes = identity
-    ? visibleRoutes(identity.capabilities).filter((route) => routes.includes(route))
-    : [];
-  const developmentSelector = identity ? (
-    <DevelopmentSelectorForRuntime fixtureKey={identity.fixtureKey} />
-  ) : null;
+export function AppShell({ children, granted, role }: AppShellProps) {
+  const roleSwitcher = role ? <RoleSwitcher role={role} /> : undefined;
 
   return (
     <>
-      <a
-        className="sr-only fixed left-md top-md z-50 bg-surface px-md py-sm text-label font-semibold text-primary focus:not-sr-only focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-        href="#main-content"
-      >
-        Skip to main content
-      </a>
-      <AppHeader
-        identity={identity}
-        routes={navigationRoutes}
-        developmentSelector={developmentSelector}
-      />
-      <Sidebar routes={navigationRoutes} />
-      <main
-        className="min-h-screen min-w-0 bg-background pt-14 lg:pl-[var(--csrm-sidebar-width,272px)] lg:pt-16"
-        id="main-content"
-      >
-        <div className="mx-auto max-w-canvas px-md py-xl sm:px-lg lg:px-xl lg:py-3xl">
-          {children}
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <div className="shell">
+        <aside className="sidebar">
+          <Wordmark />
+          <CapabilityNavigation granted={granted} />
+          {roleSwitcher ? <div className="shell-footer">{roleSwitcher}</div> : null}
+        </aside>
+        <div className="shell-content">
+          <header className="header">
+            <MobileNavigation footer={roleSwitcher} granted={granted} />
+            <span className="header-title">Cyber Risk Manager</span>
+            {role ? <span className="header-role micro-label">{role}</span> : null}
+          </header>
+          <main className="page" id="main-content">{children}</main>
         </div>
-      </main>
-      <RouteAnnouncer />
+      </div>
     </>
   );
 }

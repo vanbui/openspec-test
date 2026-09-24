@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@csrm/web",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "strapi",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@csrm/strapi",
+        "develop"
+      ],
+      "port": 1337
+    }
+  ]
+}

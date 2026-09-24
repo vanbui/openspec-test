@@ -39,6 +39,12 @@
       "relation": "manyToOne",
       "target": "api::idambox-user.idambox-user"
     },
+    "providerName": {
+      "type": "string"
+    },
+    "providerVersion": {
+      "type": "string"
+    },
     "reviewedBy": {
       "type": "relation",
       "relation": "manyToOne",

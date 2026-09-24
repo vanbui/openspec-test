@@ -1,0 +1,2 @@
+# Strapi regenerates these with LF; keep them LF so the working tree stays clean
+apps/strapi/types/generated/*.d.ts text eol=lf

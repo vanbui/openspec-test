@@ -1,0 +1,423 @@
+'use client';
+
+import {
+  columnFilteringFeature,
+  createColumnHelper,
+  functionalUpdate,
+  rowPaginationFeature,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
+  type SortingState,
+} from '@tanstack/react-table';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, Rows3, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+
+const dataTableFeatures = tableFeatures({
+  columnFilteringFeature,
+  rowSortingFeature,
+  rowPaginationFeature,
+});
+
+export type DataTableDensity = 'default' | 'compact';
+export type DataTableState = 'populated' | 'loading' | 'empty' | 'error' | 'permission';
+export type DataTableNumericKind = 'magnitude' | 'identity';
+
+export const tableHeaderMicroClassName =
+  'font-mono text-[length:var(--text-micro-size)] font-normal uppercase tracking-[var(--tracking-micro)] text-muted-foreground';
+
+const sortableHeaderTextTransformClassName = 'uppercase';
+
+export type DataTableColumn<TData extends object> = {
+  id?: string;
+  accessorKey: keyof TData & string;
+  header: string;
+  cell?: (value: unknown, row: TData) => ReactNode;
+  enableSorting?: boolean;
+  numeric?: DataTableNumericKind;
+};
+
+export type DataTableFilter = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+export type DataTableProps<TData extends object> = {
+  ariaLabel: string;
+  columns: DataTableColumn<TData>[];
+  data: TData[];
+  densityUserId: string;
+  filters?: DataTableFilter[];
+  getRowId: (row: TData) => string;
+  onClearFilter?: (id: string) => void;
+  onClearFilters?: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  onSortingChange?: (sorting: SortingState) => void;
+  page: number;
+  pageSize: number;
+  pageSizeOptions?: readonly number[];
+  renderMobileCard: (row: TData) => ReactNode;
+  sorting?: SortingState;
+  stickyFirstColumn?: boolean;
+  state: DataTableState;
+  loadingLabel: string;
+  stateSlots: {
+    empty: ReactNode;
+    error: ReactNode;
+    permission: ReactNode;
+  };
+  totalCount: number;
+};
+
+function densityStorageKey(userId: string) {
+  return `csrm:data-table-density:${userId}`;
+}
+
+function readDensity(userId: string): DataTableDensity {
+  if (typeof window === 'undefined') return 'default';
+  return window.localStorage.getItem(densityStorageKey(userId)) === 'compact' ? 'compact' : 'default';
+}
+
+function columnClasses(numeric: DataTableNumericKind | undefined) {
+  if (numeric === 'magnitude') return 'text-right tabular-nums';
+  if (numeric === 'identity') return 'text-left tabular-nums';
+  return 'text-left';
+}
+
+function SortIndicator({ direction }: { direction: false | 'asc' | 'desc' }) {
+  if (direction === 'asc') return <ChevronUp aria-hidden="true" />;
+  if (direction === 'desc') return <ChevronDown aria-hidden="true" />;
+  return <ChevronsUpDown aria-hidden="true" className="text-muted-foreground" />;
+}
+
+function TableLoading<TData extends object>({ columns, density, label, pageSize }: {
+  columns: DataTableColumn<TData>[];
+  density: DataTableDensity;
+  label: string;
+  pageSize: number;
+}) {
+  const rowClass = density === 'compact' ? 'h-9' : 'h-11';
+
+  return (
+    <div role="status" aria-label={label} aria-live="polite">
+      <span className="sr-only">{label}</span>
+      <div data-slot="data-table-loading-mobile" className="space-y-2 md:hidden">
+        {Array.from({ length: pageSize }, (_, rowIndex) => (
+          <div key={rowIndex} className={cn('space-y-2 rounded-lg border border-border bg-surface p-3', rowClass)}>
+            <Skeleton className="h-3 w-2/5" />
+            <Skeleton className="h-4 w-4/5" />
+          </div>
+        ))}
+      </div>
+      <div data-slot="data-table-loading-desktop" className="hidden overflow-hidden rounded-lg border border-border bg-surface md:block [&>[data-slot=table-container]]:overflow-visible">
+        <Table aria-label={`${label} layout`} className="text-[length:var(--text-table-size)]">
+          <TableHeader className="border-b border-border bg-surface/95">
+            <TableRow className="hover:bg-transparent">
+              {columns.map((column, columnIndex) => (
+                <TableHead key={`${column.id ?? column.accessorKey}-${columnIndex}`} className={cn('h-10 px-4', tableHeaderMicroClassName)}>
+                  {column.header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: pageSize }, (_, rowIndex) => (
+              <TableRow key={rowIndex} data-testid="data-table-skeleton-row" className={rowClass}>
+                {columns.map((column, columnIndex) => (
+                  <TableCell key={`${column.id ?? column.accessorKey}-${columnIndex}`} className="px-4 py-0">
+                    <Skeleton className="h-3 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+export function DataTable<TData extends object>({
+  ariaLabel,
+  columns,
+  data,
+  densityUserId,
+  filters = [],
+  getRowId,
+  onClearFilter,
+  onClearFilters,
+  onPageChange,
+  onPageSizeChange,
+  onSortingChange,
+  page,
+  pageSize,
+  pageSizeOptions = [10, 25, 50, 100],
+  renderMobileCard,
+  sorting = [],
+  stickyFirstColumn = false,
+  state,
+  loadingLabel,
+  stateSlots,
+  totalCount,
+}: DataTableProps<TData>) {
+  const [density, setDensity] = useState<DataTableDensity>('default');
+
+  useEffect(() => {
+    setDensity(readDensity(densityUserId));
+  }, [densityUserId]);
+
+  // Sorting is a caller capability; it must stay in the memo key so a handler supplied after
+  // the first render enables sorting rather than being ignored.
+  const sortable = Boolean(onSortingChange);
+  const tableColumns = useMemo(() => {
+    const helper = createColumnHelper<typeof dataTableFeatures, TData>();
+    const usedIds = new Set<string>();
+
+    return helper.columns(
+      columns.map((column, index) => {
+        const baseId = column.id ?? column.accessorKey;
+        const id = usedIds.has(baseId) ? `${baseId}-${index}` : baseId;
+        usedIds.add(baseId);
+
+        return helper.accessor((row) => row[column.accessorKey], {
+          id,
+          header: column.header,
+          enableSorting: sortable && Boolean(column.enableSorting),
+          cell: (context) => {
+            const value = context.getValue();
+            return column.cell ? column.cell(value, context.row.original) : String(value ?? '');
+          },
+        });
+      }),
+    );
+  }, [columns, sortable]);
+
+  const pagination = useMemo(() => ({ pageIndex: Math.max(0, page - 1), pageSize }), [page, pageSize]);
+  const columnFilters = useMemo(
+    () => filters.map((filter) => ({ id: filter.id, value: filter.value })),
+    [filters],
+  );
+  const table = useTable({
+    features: dataTableFeatures,
+    columns: tableColumns,
+    data,
+    getRowId,
+    manualFiltering: true,
+    manualSorting: true,
+    manualPagination: true,
+    rowCount: totalCount,
+    state: { sorting, pagination, columnFilters },
+    onSortingChange: onSortingChange
+      ? (updater) => onSortingChange(functionalUpdate(updater, sorting))
+      : undefined,
+  });
+
+  const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+  const rowClass = density === 'compact' ? 'h-9' : 'h-11';
+  const toggleDensity = () => {
+    const nextDensity = density === 'default' ? 'compact' : 'default';
+    window.localStorage.setItem(densityStorageKey(densityUserId), nextDensity);
+    setDensity(nextDensity);
+  };
+
+  const stateContent =
+    state === 'loading' ? (
+      <TableLoading columns={columns} density={density} label={loadingLabel} pageSize={pageSize} />
+    ) : state === 'empty' ? (
+      stateSlots.empty
+    ) : state === 'error' ? (
+      stateSlots.error
+    ) : state === 'permission' ? (
+      stateSlots.permission
+    ) : null;
+
+  return (
+    <section className="space-y-3" aria-label={`${ariaLabel} controls`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {filters.map((filter) => (
+            <span key={filter.id} className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-surface-muted px-2 text-xs text-foreground">
+              {filter.label}: {filter.value}
+              {onClearFilter ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Remove ${filter.label} filter`}
+                  onClick={() => onClearFilter(filter.id)}
+                >
+                  <X aria-hidden="true" />
+                </Button>
+              ) : null}
+            </span>
+          ))}
+          {filters.length > 0 && onClearFilters ? (
+            <Button type="button" variant="link" size="sm" onClick={onClearFilters}>
+              Clear filters
+            </Button>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {state === 'loading' ? null : <output className="tabular-nums">{new Intl.NumberFormat('en-AU').format(totalCount)} {totalCount === 1 ? 'result' : 'results'}</output>}
+          <Button type="button" variant="outline" size="sm" onClick={toggleDensity}>
+            <Rows3 aria-hidden="true" />
+            {density === 'default' ? 'Use compact density' : 'Use default density'}
+          </Button>
+        </div>
+      </div>
+
+      {stateContent ? (
+        // The state primitives draw their own frame; wrapping them again nests two boxes.
+        <div data-slot="data-table-state">{stateContent}</div>
+      ) : (
+        <>
+          {/* Cards are a list of records, so assistive technology announces the count. */}
+          <div data-slot="data-table-mobile" role="list" aria-label={ariaLabel} className="space-y-2 md:hidden">
+            {table.getRowModel().rows.map((row) => (
+              <div key={row.id} role="listitem" className="rounded-lg border border-border bg-surface p-3">
+                {renderMobileCard(row.original)}
+              </div>
+            ))}
+          </div>
+
+          <div
+            data-slot="data-table-desktop"
+            role={stickyFirstColumn ? 'region' : undefined}
+            aria-label={stickyFirstColumn ? `${ariaLabel}, scrolls horizontally` : undefined}
+            tabIndex={stickyFirstColumn ? 0 : undefined}
+            className={cn(
+              // The table primitive wraps every table in its own overflow container. Inside
+              // DataTable that inner box must not scroll: this labelled region is the
+              // scroller, so it is the one keyboard users focus and the one sticky cells
+              // anchor to.
+              'hidden scroll-pt-10 overflow-auto rounded-lg border border-border bg-surface md:block [&>[data-slot=table-container]]:overflow-visible',
+              stickyFirstColumn && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            )}
+          >
+            <Table aria-label={ariaLabel} className="text-[length:var(--text-table-size)]">
+              <TableHeader
+                aria-label="Table header"
+                className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur-sm"
+              >
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                    {headerGroup.headers.map((header, index) => {
+                      const sourceColumn = columns[index];
+                      const sorted = header.column.getIsSorted();
+                      return (
+                        <TableHead
+                          key={header.id}
+                          aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
+                          className={cn(
+                            'h-10 scroll-mt-10 px-4',
+                            tableHeaderMicroClassName,
+                            columnClasses(sourceColumn?.numeric),
+                            stickyFirstColumn && index === 0 && 'sticky left-0 z-20 border-r border-border bg-surface',
+                          )}
+                        >
+                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                            <button
+                              type="button"
+                              className={cn(
+                                'inline-flex min-h-6 min-w-6 items-center gap-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                sortableHeaderTextTransformClassName,
+                                sourceColumn?.numeric === 'magnitude' && 'ml-auto',
+                              )}
+                              aria-label={`Sort by ${sourceColumn?.header ?? header.id}`}
+                              onClick={() => header.column.toggleSorting(sorted === 'asc')}
+                            >
+                              <span>{sourceColumn?.header}</span>
+                              <SortIndicator direction={sorted} />
+                            </button>
+                          ) : (
+                            <span>{sourceColumn?.header}</span>
+                          )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody aria-label="Table body">
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className={cn(
+                      'scroll-mt-10 transition-colors duration-80 ease-standard hover:bg-surface-hover [&_button]:min-h-6 [&_button]:min-w-6',
+                      'group',
+                      rowClass,
+                    )}
+                  >
+                    {row.getAllCells().map((cell, index) => (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          'px-4 py-0 text-[length:var(--text-table-size)]',
+                          columnClasses(columns[index]?.numeric),
+                          stickyFirstColumn
+                            && index === 0
+                            && // The hover tint is an alpha colour, so it is layered over the opaque
+                            // surface rather than replacing it; otherwise scrolled cells show through.
+                            'sticky left-0 z-10 border-r border-border bg-surface group-hover:bg-[image:linear-gradient(var(--surface-hover),var(--surface-hover))] group-data-[state=selected]:bg-surface-selected',
+                        )}
+                      >
+                        <table.FlexRender cell={cell} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        {onPageSizeChange ? (
+          <label className="flex items-center gap-2">
+            Rows per page
+            <select
+              aria-label="Rows per page"
+              className="h-8 rounded-md border border-input bg-surface px-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={pageSize}
+              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            >
+              {pageSizeOptions.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
+        ) : <span />}
+        <div className="flex items-center gap-2">
+          {state === 'loading' ? null : <output className="tabular-nums">Page {page} of {pageCount}</output>}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            aria-label="Previous page"
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            aria-label="Next page"
+            disabled={page >= pageCount}
+            onClick={() => onPageChange(page + 1)}
+          >
+            <ChevronRight aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}

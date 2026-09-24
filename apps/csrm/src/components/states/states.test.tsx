@@ -1,180 +1,59 @@
-/** @vitest-environment jsdom */
+import { fireEvent, render, screen } from '@testing-library/react';
+import type { AnchorHTMLAttributes } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
-import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+vi.mock('next/link', () => ({
+  default: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
+}));
 
-import { StateBoundary } from './state-boundary';
-import { AccessDeniedState } from './access-denied-state';
-import { OptionalValue } from './optional-value';
-import { UnavailableState } from './unavailable-state';
+import { EmptyState, ErrorState, LoadingState, PermissionDeniedState } from './states';
 
-afterEach(() => {
-  cleanup();
-});
+describe('shell state components', () => {
+  it('presents the locked loading and empty-state copy accessibly', () => {
+    const { rerender } = render(<LoadingState />);
 
-describe('StateBoundary', () => {
-  it('renders geometry-stable loading with one concise status announcement and hidden decorative skeletons', () => {
-    const { container } = render(
-      <StateBoundary status="loading">
-        <div>Safe content</div>
-      </StateBoundary>,
-    );
+    expect(screen.getByRole('status')).toHaveTextContent('Loading workspace…');
+    expect(screen.getByText('Preparing your authorised workspace.')).toBeInTheDocument();
 
-    expect(screen.getByRole('status', { name: 'Loading page' })).toBeDefined();
-    expect(screen.getAllByTestId('loading-skeleton')).toHaveLength(3);
-    expect(container.querySelectorAll('[data-slot="skeleton"][aria-hidden="true"]')).toHaveLength(3);
-    expect(screen.queryByText('Safe content')).toBeNull();
+    rerender(<EmptyState />);
+    expect(screen.getByRole('heading', { name: 'Nothing to show yet' })).toBeInTheDocument();
+    expect(screen.getByText('Items available to you will appear here. Try changing your filters or return when work has been assigned.')).toBeInTheDocument();
   });
 
-  it('renders a recoverable error with fixed safe copy and retries without exposing raw fields', async () => {
+  it('announces errors, invokes retry, and returns denied users to the workspace', () => {
     const retry = vi.fn();
-    const user = userEvent.setup();
+    const { rerender } = render(<ErrorState retry={retry} />);
 
-    render(
-      <StateBoundary
-        status="error"
-        error={{
-          kind: 'http',
-          status: 502,
-          message: 'Bearer secret-token from https://strapi.internal/api',
-          retryable: true,
-        }}
-        onRetry={retry}
-      >
-        <div>Safe content</div>
-      </StateBoundary>,
-    );
-
-    expect(screen.getByRole('alert').textContent).toContain('We couldn’t load this page');
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Check your connection and try again. If the problem continues, contact your CSRM administrator.',
-    );
-    expect((screen.getByRole('button', { name: 'Try again' }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.queryByText(/secret-token|strapi\.internal|502/i)).toBeNull();
-
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load this workspace');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(retry).toHaveBeenCalledOnce();
+
+    rerender(<PermissionDeniedState />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Navigation visibility is not an authorization control.');
+    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
   });
 
-  it('renders the exact neutral empty copy without a Phase 6 feature action', () => {
-    render(
-      <StateBoundary status="empty">
-        <div>Safe content</div>
-      </StateBoundary>,
-    );
+  it('owns parameterised list-state copy, actions, data markers, and compact density', () => {
+    const clearFilters = vi.fn();
+    const { rerender } = render(<EmptyState noun="assessments" filtered onClearFilters={clearFilters} density="compact" headingLevel="h3" />);
 
-    expect(screen.getByRole('heading', { name: 'Nothing to show yet' })).toBeDefined();
-    expect(screen.getByText('There are no items available here yet. When work is available, it will appear in this list.')).toBeDefined();
-    expect(screen.queryByRole('button')).toBeNull();
-  });
+    expect(screen.getByRole('heading', { name: 'No assessments match these filters', level: 3 })).toHaveClass('text-heading-sm');
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(clearFilters).toHaveBeenCalledOnce();
+    expect(screen.getByRole('heading').parentElement).toHaveAttribute('data-slot', 'state');
+    expect(screen.getByRole('heading').parentElement).toHaveAttribute('data-state-kind', 'empty');
+    expect(screen.getByRole('heading').parentElement?.querySelector('svg')).toHaveClass('size-4');
 
-  it('renders ready children unchanged for one or many records', () => {
-    const { rerender } = render(
-      <StateBoundary status="ready">
-        <ul aria-label="Records">
-          <li>One record</li>
-        </ul>
-      </StateBoundary>,
-    );
+    rerender(<ErrorState noun="requests" action={{ label: 'Return to requests', href: '/app/requests' }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load requests');
+    expect(screen.getByRole('link', { name: 'Return to requests' })).toHaveAttribute('href', '/app/requests');
 
-    expect(screen.getByRole('list', { name: 'Records' }).textContent).toContain('One record');
+    rerender(<PermissionDeniedState area="the Risk Register" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the Risk Register');
 
-    rerender(
-      <StateBoundary status="ready">
-        <ul aria-label="Records">
-          <li>First record</li>
-          <li>Second record</li>
-        </ul>
-      </StateBoundary>,
-    );
-
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByRole('list', { name: 'Records' }).textContent).toContain('First record');
-    expect(screen.getByRole('list', { name: 'Records' }).textContent).toContain('Second record');
-  });
-
-  it('renders Not provided only for absent optional values while preserving zero and false', () => {
-    const { rerender } = render(<OptionalValue value={undefined} />);
-
-    expect(screen.getByText('Not provided').className).toContain('text-muted-foreground');
-
-    rerender(<OptionalValue value={0} />);
-    expect(screen.getByText('0')).toBeDefined();
-
-    rerender(<OptionalValue value={false} />);
-    expect(screen.getByText('false')).toBeDefined();
-  });
-
-  it('uses the recoverable error path for a required missing region', () => {
-    render(
-      <StateBoundary
-        status="error"
-        error={{ kind: 'invalid-response', message: 'missing required section', retryable: true }}
-        onRetry={() => undefined}
-      >
-        <div>Partial content</div>
-      </StateBoundary>,
-    );
-
-    expect(screen.getByRole('alert').textContent).toContain('We couldn’t load this page');
-    expect(screen.queryByText('Partial content')).toBeNull();
-  });
-
-  it('renders exact forbidden and unavailable copy with only a CSRM home return action', () => {
-    const { rerender } = render(<AccessDeniedState />);
-
-    expect(screen.getByRole('heading', { name: 'You don’t have access to this area' })).toBeDefined();
-    expect(screen.getByText('Your current CSRM access does not include this page. Return to a page available to you or switch the development identity.')).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Go to CSRM home' }).getAttribute('href')).toBe('/');
-    expect(screen.queryByText(/assessment request|protected record|internal/i)).toBeNull();
-
-    rerender(<UnavailableState />);
-
-    expect(screen.getByRole('heading', { name: 'This area isn’t available yet' })).toBeDefined();
-    expect(screen.getByText('This CSRM capability will be available in a later release.')).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Go to CSRM home' }).getAttribute('href')).toBe('/');
-  });
-
-  it('uses EmptyState for zero records while preserving the ready layout for one and many', () => {
-    const { rerender } = render(
-      <StateBoundary status="empty">
-        <ul aria-label="Records" />
-      </StateBoundary>,
-    );
-
-    expect(screen.getByRole('heading', { name: 'Nothing to show yet' })).toBeDefined();
-
-    rerender(
-      <StateBoundary status="ready">
-        <ul aria-label="Records">
-          <li>One record</li>
-        </ul>
-      </StateBoundary>,
-    );
-    expect(screen.getByRole('list', { name: 'Records' }).parentElement?.getAttribute('data-slot')).toBe('state-boundary');
-
-    rerender(
-      <StateBoundary status="ready">
-        <ul aria-label="Records">
-          <li>First record</li>
-          <li>Second record</li>
-        </ul>
-      </StateBoundary>,
-    );
-    expect(screen.getByRole('list', { name: 'Records' }).parentElement?.getAttribute('data-slot')).toBe('state-boundary');
-  });
-
-  it('contains overflow in a labelled content region without page-level horizontal layout rules', () => {
-    const { container } = render(
-      <StateBoundary status="ready">
-        <p>{'Long content '.repeat(100)}</p>
-      </StateBoundary>,
-    );
-
-    const region = screen.getByLabelText('CSRM content');
-    expect(region.className).toContain('min-w-0');
-    expect(region.className).toContain('overflow-x-auto');
-    expect(container.firstElementChild).toBe(region);
+    rerender(<PermissionDeniedState action={{ label: 'Open My Requests', href: '/app/requests' }} area="your dashboard" />);
+    expect(screen.getByRole('link', { name: 'Open My Requests' })).toHaveAttribute('href', '/app/requests');
+    expect(screen.queryByRole('link', { name: 'Return to workspace' })).not.toBeInTheDocument();
   });
 });

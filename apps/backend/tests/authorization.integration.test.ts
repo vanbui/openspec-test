@@ -1,0 +1,472 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import test, { after } from "node:test";
+
+import catalogue from "../src/bootstrap/idambox-csrm-role-function-api-catalogue.json";
+import { CSRM_ADMINISTRATION_OPERATIONS } from "../src/api/csrm-administration/operations";
+import administrationRoutes from "../src/api/csrm-administration/routes/csrm-administration";
+import { CSRM_ASSESSMENT_REQUEST_OPERATIONS } from "../src/api/csrm-assessment-request/operations";
+import riskRoutes from "../src/api/csrm-risk/routes/csrm-risk";
+import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
+
+const harnessPromise = startAuthorizationHttpHarness();
+after(async () => (await harnessPromise).close());
+
+// This test is emitted to `.tmp/tests-dist/tests`, so three parents resolve
+// the Strapi app root without depending on the process working directory.
+const appDir = path.resolve(__dirname, "..", "..", "..");
+const catalogueFilename = "idambox-csrm-role-function-api-catalogue.json";
+
+async function request(path: string, identity?: string, init: RequestInit = {}) {
+  const harness = await harnessPromise;
+  return harness.request({ path, identity, init });
+}
+
+function documentIds(payload: unknown): string[] {
+  assert.equal(typeof payload, "object");
+  assert.ok(payload !== null);
+  const data = (payload as { data?: unknown }).data;
+  assert.ok(Array.isArray(data));
+  return data.map((item) => (item as { documentId: string }).documentId).sort();
+}
+
+test("PHASE2 RED development identity bridge", async () => {
+  const harness = await harnessPromise;
+  const endpoint = `/api/csrm-assessment-requests/${harness.requests.owner}`;
+  const requestAsDevelopmentIdentity = (email?: string) => harness.request({
+    path: endpoint,
+    init: { headers: email ? { "x-csrm-dev-identity": email } : {} },
+  });
+
+  const enabledJane = await harness.withDevelopmentEnvironment("development", "development", "true", () =>
+    requestAsDevelopmentIdentity(harness.developmentEmails.jane));
+  const enabledBob = await harness.withDevelopmentEnvironment("development", "development", "true", () =>
+    requestAsDevelopmentIdentity(harness.developmentEmails.bob));
+  assert.equal(enabledJane.status, 200, "UNEXPECTED_ENABLED_JANE_STATUS");
+  assert.equal(enabledBob.status, 200, "UNEXPECTED_ENABLED_BOB_STATUS");
+
+  const rejectedCases = [
+    ["missing header", "development", "development", "true", undefined],
+    ["unknown email", "development", "development", "true", harness.developmentEmails.unknown],
+    ["inactive identity", "development", "development", "true", harness.developmentEmails.inactive],
+    ["missing flag", "development", "development", undefined, harness.developmentEmails.jane],
+    ["false flag", "development", "development", "false", harness.developmentEmails.jane],
+    ["missing marker", "development", undefined, "true", harness.developmentEmails.jane],
+    ["mismatched marker", "development", "production", "true", harness.developmentEmails.jane],
+    ["non-development runtime", "production", "development", "true", harness.developmentEmails.jane],
+    ["missing runtime", undefined, "development", "true", harness.developmentEmails.jane],
+  ] as const;
+  for (const [name, nodeEnv, environment, flag, email] of rejectedCases) {
+    const response = await harness.withDevelopmentEnvironment(nodeEnv, environment, flag, () => requestAsDevelopmentIdentity(email));
+    const diagnosticName = name.toUpperCase().replace(/ /g, "_");
+    assert.equal(response.status, 403, `UNEXPECTED_${diagnosticName}_STATUS`);
+    if (email) {
+      assert.equal(harness.getObservedDevelopmentIdentity(email), undefined, `UNEXPECTED_${diagnosticName}_IDENTITY`);
+    }
+  }
+});
+
+test("historical development public permissions are deleted idempotently", async () => {
+  const harness = await harnessPromise;
+  const unrelatedAction = "plugin::users-permissions.auth.callback";
+  const expectedActions = [
+    ...harness.developmentPermissionActions,
+    "api::csrm-questionnaire.csrm-questionnaire.saveAnswers",
+    "api::csrm-questionnaire.csrm-questionnaire.submitQuestionnaire",
+    "api::csrm-questionnaire.csrm-questionnaire.generateAssessment",
+    "api::csrm-assessment.csrm-assessment.statusSummary",
+    "api::csrm-assessment.csrm-assessment.listAssessments",
+    "api::csrm-assessment.csrm-assessment.updateAssessment",
+    "api::csrm-assessment.csrm-assessment.getAssessment",
+    "api::csrm-assessment.csrm-assessment.releaseAssessment",
+    "api::csrm-assessment.csrm-assessment.listMyReleasedAssessments",
+    "api::csrm-assessment.csrm-assessment.myRatingSummary",
+    "api::csrm-assessment.csrm-assessment.listAssessmentRisks",
+    "api::csrm-assessment.csrm-assessment.listRiskControlImplementations",
+    "api::csrm-assessment.csrm-assessment.getDraftJob",
+    "api::csrm-assessment.csrm-assessment.retryDraftJob",
+    "api::csrm-risk.csrm-risk.createAssessmentRisk",
+    "api::csrm-risk.csrm-risk.updateRisk",
+    "api::csrm-risk.csrm-risk.listRiskTypes",
+    "api::csrm-risk.csrm-risk.listControls",
+    "api::csrm-risk.csrm-risk.searchActiveUsers",
+    "api::csrm-control-implementation.csrm-control-implementation.createRiskControlImplementation",
+    "api::csrm-control-implementation.csrm-control-implementation.updateControlImplementation",
+    "api::csrm-control-implementation.csrm-control-implementation.deleteControlImplementation",
+  ] as const;
+  await harness.ensurePublicPermission(unrelatedAction);
+
+  for (const action of expectedActions) await harness.ensurePublicPermission(action);
+  const declaredActions = await harness.withDevelopmentEnvironment("development", "development", "true", () =>
+    harness.reconcileDevelopmentPermissions());
+  assert.deepEqual([...declaredActions].sort(), [...expectedActions].sort(), "UNEXPECTED_DECLARED_PERMISSION_ALLOWLIST");
+  const actionsAfterFirstReconciliation = await harness.getPublicPermissionActions();
+  assert.equal(actionsAfterFirstReconciliation.includes(unrelatedAction), true, "UNEXPECTED_UNRELATED_PERMISSION_REMOVAL");
+  assert.deepEqual(actionsAfterFirstReconciliation.filter((action) => (expectedActions as readonly string[]).includes(action)), []);
+
+  for (const [nodeEnv, environment, flag] of [
+    ["development", undefined, "true"],
+    ["development", "development", "false"],
+    ["production", "development", "true"],
+  ] as const) {
+    await harness.withDevelopmentEnvironment(nodeEnv, environment, flag, () => harness.reconcileDevelopmentPermissions());
+    assert.deepEqual(await harness.getPublicPermissionActions(), actionsAfterFirstReconciliation, "UNEXPECTED_NON_IDEMPOTENT_PERMISSION_REMOVAL");
+  }
+});
+
+test("deterministic development API token seed is triple-gated, hashed, and idempotent", async () => {
+  const harness = await harnessPromise;
+  const previousToken = process.env.CSRM_DEV_API_TOKEN;
+  const testAccessKey = "isolated-development-api-credential";
+  try {
+    await harness.clearDevelopmentApiTokens();
+    process.env.CSRM_DEV_API_TOKEN = testAccessKey;
+    for (const [nodeEnv, environment, flag] of [
+      ["production", "development", "true"],
+      ["development", "local", "true"],
+      ["development", "development", "false"],
+    ] as const) {
+      await harness.withDevelopmentEnvironment(nodeEnv, environment, flag, () => harness.seedDevelopmentApiToken());
+      assert.equal((await harness.getDevelopmentApiTokens()).length, 0);
+    }
+
+    await harness.withDevelopmentEnvironment("development", "development", "true", () => harness.seedDevelopmentApiToken());
+    await harness.withDevelopmentEnvironment("development", "development", "true", () => harness.seedDevelopmentApiToken());
+    const tokens = await harness.getDevelopmentApiTokens();
+    assert.equal(tokens.length, 1);
+    assert.equal(tokens[0]?.kind, "content-api");
+    assert.equal(tokens[0]?.type, "full-access");
+    assert.equal(tokens[0]?.lifespan, null);
+    assert.equal(tokens[0]?.expiresAt, null);
+    assert.equal(tokens[0]?.encryptedKey, null);
+    assert.equal(tokens[0]?.accessKey, harness.hashApiToken(testAccessKey));
+    assert.notEqual(tokens[0]?.accessKey, testAccessKey);
+  } finally {
+    if (previousToken === undefined) delete process.env.CSRM_DEV_API_TOKEN;
+    else process.env.CSRM_DEV_API_TOKEN = previousToken;
+  }
+});
+
+test("stale generic Administration detail, mutation, and delete routes are absent without persistence disclosure", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await harness.seedAdministrationFixtures();
+  const resources = [
+    {
+      kind: "risk-types" as const,
+      base: "/api/csrm-risk-types",
+      documentId: fixtures.riskTypes.update,
+    },
+    {
+      kind: "controls" as const,
+      base: "/api/csrm-controls",
+      documentId: fixtures.controls.update,
+    },
+    {
+      kind: "information-systems" as const,
+      base: "/api/csrm-information-systems",
+      documentId: fixtures.informationSystems.update,
+    },
+    {
+      kind: "information-assets" as const,
+      base: "/api/csrm-information-assets",
+      documentId: fixtures.informationAssets.update,
+    },
+  ] as const;
+
+  for (const resource of resources) {
+    const countBefore = await harness.countAdministrationRecords(resource.kind);
+    const recordBefore = await harness.getAdministrationRecord(resource.kind, resource.documentId);
+    assert.ok(recordBefore, `NON_TAUTOLOGICAL_FIXTURE_MISSING_${resource.kind}`);
+    const cases = [
+      [`${resource.base}/${resource.documentId}`, { method: "GET" }],
+      [resource.base, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { name: "Stale create" } }) }],
+      [`${resource.base}/${resource.documentId}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { name: "Stale update" } }) }],
+      [`${resource.base}/${resource.documentId}`, { method: "DELETE" }],
+    ] as const;
+    for (const [url, init] of cases) {
+      const response = await request(url, harness.identities.analyst, init);
+      assert.ok([404, 405].includes(response.status), `STALE_GENERIC_ROUTE_${init.method}_${url}_${response.status}`);
+      assert.equal(await harness.countAdministrationRecords(resource.kind), countBefore);
+      assert.deepEqual(await harness.getAdministrationRecord(resource.kind, resource.documentId), recordBefore);
+    }
+  }
+
+  for (const base of ["/api/csrm-information-systems", "/api/csrm-information-assets"]) {
+    assert.equal((await request(base, harness.identities.owner)).status, 200, `REQUESTOR_REFERENCE_READ_REMOVED_${base}`);
+  }
+});
+
+test("catalogue provides exactly one API-only grant for every served operation", () => {
+  const authoritativeBytes = readFileSync(path.resolve(appDir, "..", "..", "docs", "references", catalogueFilename));
+  const bootstrapBytes = readFileSync(path.resolve(appDir, "src", "bootstrap", catalogueFilename));
+  assert.equal(Buffer.compare(authoritativeBytes, bootstrapBytes), 0, "catalogue copies must be byte-identical");
+
+  const coreFunctionId = "function.risk_assessment_requests.core_api";
+  const deleteFunctionId = "function.risk_assessment_requests.delete_api";
+  // Reversal is a separate grant from ordinary request writes so that it can be
+  // withdrawn without withdrawing create/update, and so an analyst agent never
+  // inherits it from the core API grant.
+  const revertFunctionId = "function.risk_assessment_requests.revert_to_draft_api";
+  const core = catalogue.functions.find((entry) => entry.id === "function.risk_assessment_requests.core_api");
+  assert.ok(core);
+  assert.equal("menuPath" in core, false);
+  assert.deepEqual([...core.roleIds].sort(), ["role.requestor", "role.security_analyst", "role.security_analyst_agent"]);
+  assert.deepEqual(core.functionApiIds, [
+    "function.risk_assessment_requests.core_api.api.01",
+    "function.risk_assessment_requests.core_api.api.02",
+    "function.risk_assessment_requests.core_api.api.03",
+    "function.risk_assessment_requests.core_api.api.04",
+  ], "RED_EXPECTED_CATALOGUE_REQUESTOR_DELETE_OVERGRANT");
+
+  const deleteFunction = catalogue.functions.find((entry) => entry.id === deleteFunctionId);
+  assert.ok(deleteFunction);
+  assert.equal("menuPath" in deleteFunction, false);
+  assert.deepEqual([...deleteFunction.roleIds].sort(), ["role.security_analyst", "role.security_analyst_agent"]);
+  assert.deepEqual(deleteFunction.functionApiIds, ["function.risk_assessment_requests.delete_api.api.01"]);
+
+  const requestor = catalogue.roles.find((entry) => entry.id === "role.requestor");
+  const analyst = catalogue.roles.find((entry) => entry.id === "role.security_analyst");
+  const analystAgent = catalogue.roles.find((entry) => entry.id === "role.security_analyst_agent");
+  assert.ok(requestor && analyst && analystAgent);
+  assert.equal(requestor.functionIds.includes(coreFunctionId), true);
+  assert.equal(requestor.functionIds.includes(deleteFunctionId), false);
+  for (const role of [analyst, analystAgent]) {
+    assert.equal(role.functionIds.includes(coreFunctionId), true);
+    assert.equal(role.functionIds.includes(deleteFunctionId), true);
+  }
+  // REQ-06: the owning Requestor and a human Security Analyst may return a
+  // submitted request to draft; the service analyst agent must not.
+  assert.equal(requestor.functionIds.includes(revertFunctionId), true);
+  assert.equal(analyst.functionIds.includes(revertFunctionId), true);
+  assert.equal(analystAgent.functionIds.includes(revertFunctionId), false);
+
+  for (const operation of Object.values(CSRM_ASSESSMENT_REQUEST_OPERATIONS)) {
+    const matches = catalogue.functionApis.filter((entry) => entry.url === operation);
+    assert.equal(matches.length, 1, `${operation} must have exactly one canonical FunctionAPI`);
+    const expectedFunctionId = operation === CSRM_ASSESSMENT_REQUEST_OPERATIONS.delete
+      ? deleteFunctionId
+      : operation === CSRM_ASSESSMENT_REQUEST_OPERATIONS.revertToDraft
+        ? revertFunctionId
+        : coreFunctionId;
+    assert.equal(matches[0]?.functionId, expectedFunctionId);
+  }
+  assert.equal(catalogue.functionApis.some((entry) => entry.id === "function.risk_assessment_requests.new_request.api.06"), false);
+  assert.ok(catalogue.functionApis.some((entry) => entry.id === "function.risk_assessment_requests.request_details.api.02"));
+});
+
+test("ADMIN-01 ADMIN-02 ADMIN-03 ADMIN-04 catalogue grants exactly 24 no-delete human-analyst Administration operations", () => {
+  const operations = Object.values(CSRM_ADMINISTRATION_OPERATIONS).sort();
+  assert.equal(operations.length, 24, "PHASE6_OPERATION_INVENTORY_MISSING");
+  assert.equal(new Set(operations).size, 24, "DUPLICATE_ADMINISTRATION_OPERATION");
+  assert.equal(operations.some((operation) => operation.startsWith("DELETE:")), false, "T-06-08_DELETE_OPERATION_EXPOSED");
+
+  for (const operation of operations) {
+    const matches = catalogue.functionApis.filter((entry) => entry.url === operation);
+    assert.equal(matches.length, 1, `${operation} must have exactly one canonical FunctionAPI grant`);
+    assert.match(matches[0]!.functionId, /^function\.administration\./);
+  }
+  const administrationFunctions = catalogue.functions.filter((entry) => entry.id.startsWith("function.administration."));
+  assert.equal(administrationFunctions.length, 8);
+  for (const entry of administrationFunctions) {
+    assert.deepEqual(entry.roleIds, ["role.security_analyst"], `${entry.id} must exclude Requestor and analyst agents`);
+    assert.equal("menuPath" in entry, entry.id.endsWith("risk_types") || entry.id.endsWith("controls")
+      || entry.id.endsWith("information_systems") || entry.id.endsWith("information_assets"));
+  }
+});
+
+test("Administration route inventory is token-only, exact-grant, human-only, and duplicate-free", () => {
+  type RoutePolicy = string | {
+    name: string;
+    config?: { operation?: string; administrationListOperation?: string; requireAnalystAdministrationScope?: boolean };
+  };
+  type RouteConfig = {
+    method: string;
+    path: string;
+    config?: { auth?: unknown; policies?: RoutePolicy[] };
+  };
+  const administrationRouteList = (administrationRoutes as { routes: RouteConfig[] }).routes;
+  const riskRouteList = (riskRoutes as { routes: RouteConfig[] }).routes;
+  const routes = [...administrationRouteList, ...riskRouteList];
+  const administrationOperations = new Set(Object.values(CSRM_ADMINISTRATION_OPERATIONS));
+  const mountedOperations: string[] = [];
+
+  for (const route of routes) {
+    const policies = route.config?.policies ?? [];
+    const authorization = policies.find((policy: RoutePolicy) => typeof policy === "object" && policy !== null
+      && "name" in policy && policy.name === "global::csrm-authorization") as {
+        config?: { operation?: string; administrationListOperation?: string; requireAnalystAdministrationScope?: boolean };
+      } | undefined;
+    for (const operation of [authorization?.config?.operation, authorization?.config?.administrationListOperation]) {
+      if (operation && administrationOperations.has(operation as never)) mountedOperations.push(operation);
+    }
+    if (!authorization || ![authorization.config?.operation, authorization.config?.administrationListOperation]
+      .some((operation) => operation && administrationOperations.has(operation as never))) continue;
+    assert.deepEqual(route.config?.auth, { strategies: ["content-api-token"] });
+    assert.equal(policies[0], "global::csrm-app-enabled");
+    if (!authorization.config?.administrationListOperation) {
+      assert.equal(authorization.config?.requireAnalystAdministrationScope, true);
+    }
+    assert.notEqual(route.method, "DELETE");
+  }
+
+  assert.equal(mountedOperations.length, 24);
+  assert.equal(new Set(mountedOperations).size, 24);
+  for (const path of ["/v1/risk_types", "/v1/controls"]) {
+    assert.equal(routes.filter((route) => route.method === "GET" && route.path === path).length, 1);
+    assert.equal(administrationRouteList.some((route: RouteConfig) => route.method === "GET" && route.path === path), false);
+  }
+});
+
+test("single-owner picker routes keep the legacy envelope and deny canonical Administration queries to agents", async () => {
+  const harness = await harnessPromise;
+  for (const path of ["risk_types", "controls"] as const) {
+    const legacy = await harness.request({ path: `/api/v1/${path}`, identity: harness.identities.serviceAnalystAgent });
+    assert.equal(legacy.status, 200, `LEGACY_${path}_PICKER_GRANT_CHANGED`);
+    assert.deepEqual(Object.keys(await legacy.json() as Record<string, unknown>), ["data"]);
+
+    const canonical = await harness.request({
+      path: `/api/v1/${path}?q=&sort=name%3Aasc&page=1&pageSize=25`,
+      identity: harness.identities.serviceAnalystAgent,
+    });
+    assert.equal(canonical.status, 403, `AGENT_REACHED_${path}_ADMINISTRATION_LIST`);
+  }
+});
+
+test("mounted GET routes enforce owner scope and explicit analyst collection scope", async () => {
+  const harness = await harnessPromise;
+  const owner = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.owner);
+  assert.equal(owner.status, 200);
+  const other = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.otherRequestor);
+  assert.equal(other.status, 403);
+
+  const ownCollection = await request(`/api/csrm-assessment-requests?filters[requestor][documentId][$eq]=${harness.requests.otherRequestor}`, harness.identities.owner);
+  assert.equal(ownCollection.status, 200);
+  assert.deepEqual(documentIds(await ownCollection.json()), [harness.requests.owner]);
+
+  const missingGrantCollection = await request("/api/csrm-assessment-requests", harness.identities.analystAgent);
+  assert.equal(missingGrantCollection.status, 200);
+  assert.deepEqual(documentIds(await missingGrantCollection.json()), []);
+
+  // The My route is owner-scoped for every actor now, including the analyst:
+  // their own screens behave like a Requestor's. This analyst owns no requests,
+  // so their My collection is empty rather than the whole estate.
+  const analystCollection = await request("/api/csrm-assessment-requests", harness.identities.analyst);
+  assert.equal(analystCollection.status, 200);
+  assert.deepEqual(documentIds(await analystCollection.json()), []);
+
+  // The analyst still reviews other people's requests through the review queue,
+  // which is a separate route carrying the wider grant. Both requests seeded
+  // here are drafts, which the queue excludes by status, so this asserts the
+  // surface is reachable and paged rather than naming a row.
+  const analystQueue = await request("/api/v1/assessment_requests?pagination[page]=1&pagination[pageSize]=100", harness.identities.analyst);
+  assert.equal(analystQueue.status, 200, "ANALYST_REVIEW_QUEUE_UNREACHABLE");
+  const queueBody = await analystQueue.json() as { data?: unknown; meta?: { pagination?: unknown } };
+  assert.ok(Array.isArray(queueBody.data), "ANALYST_REVIEW_QUEUE_SHAPE");
+  assert.ok(queueBody.meta?.pagination, "ANALYST_REVIEW_QUEUE_UNPAGED");
+
+  const inactive = await request("/api/csrm-assessment-requests", harness.identities.inactiveAnalyst);
+  assert.equal(inactive.status, 403);
+});
+
+test("mounted POST derives requestor ownership and rejects PATCH", async () => {
+  const harness = await harnessPromise;
+  const created = await request("/api/csrm-assessment-requests", harness.identities.owner, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ data: { requestNumber: "AUTH-FORGED-001", title: "Forged owner", requestStatus: "draft", requestor: harness.users.otherRequestor } }),
+  });
+  assert.equal(created.status, 200);
+  const createdDocument = (await created.json() as { data: { documentId: string } }).data;
+  const persisted = await harness.getRequest(createdDocument.documentId);
+  assert.equal((persisted?.requestor as { documentId?: string } | undefined)?.documentId, harness.users.owner);
+  const ownerCanRead = await request(`/api/csrm-assessment-requests/${createdDocument.documentId}`, harness.identities.owner);
+  assert.equal(ownerCanRead.status, 200);
+  const otherCannotRead = await request(`/api/csrm-assessment-requests/${createdDocument.documentId}`, harness.identities.otherRequestor);
+  assert.equal(otherCannotRead.status, 403);
+
+  const patch = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.owner, { method: "PATCH" });
+  assert.notEqual(patch.status, 200);
+});
+
+test("mounted canonical PUT persists only owner and exact-grant analyst changes", async () => {
+  const harness = await harnessPromise;
+  const ownerUpdate = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.owner, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { title: "Owner updated" } }) });
+  assert.equal(ownerUpdate.status, 200);
+  assert.equal((await harness.getRequest(harness.requests.owner))?.title, "Owner updated");
+
+  const crossRequestor = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.otherRequestor, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { title: "Cross requestor update" } }) });
+  assert.equal(crossRequestor.status, 403);
+  assert.equal((await harness.getRequest(harness.requests.owner))?.title, "Owner updated");
+
+  const analystUpdate = await request(`/api/csrm-assessment-requests/${harness.requests.otherRequestor}`, harness.identities.analyst, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { title: "Analyst updated" } }) });
+  assert.equal(analystUpdate.status, 200);
+  assert.equal((await harness.getRequest(harness.requests.otherRequestor))?.title, "Analyst updated");
+
+  const missingGrant = await request(`/api/csrm-assessment-requests/${harness.requests.otherRequestor}`, harness.identities.analystAgent, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { title: "Missing grant update" } }) });
+  assert.equal(missingGrant.status, 403);
+  assert.equal((await harness.getRequest(harness.requests.otherRequestor))?.title, "Analyst updated");
+});
+
+test("mounted DELETE denies an owning Requestor before an exact-grant analyst removes the record", async () => {
+  const harness = await harnessPromise;
+  const denied = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.owner, { method: "DELETE" });
+  if (denied.status === 204) {
+    assert.fail("RED_EXPECTED_OWNER_REQUESTOR_DELETE_DENIED");
+  }
+  assert.equal(denied.status, 403, "UNEXPECTED_OWNER_REQUESTOR_DELETE_STATUS");
+  assert.ok(await harness.getRequest(harness.requests.owner));
+
+  const allowed = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`, harness.identities.analyst, { method: "DELETE" });
+  assert.equal(allowed.status, 204);
+  assert.equal(await harness.getRequest(harness.requests.owner), null);
+});
+
+test("mounted route fails closed when no test identity is mapped", async () => {
+  const harness = await harnessPromise;
+  const response = await request(`/api/csrm-assessment-requests/${harness.requests.owner}`);
+  assert.equal(response.status, 403);
+});
+
+test("mounted route requires a token before IdamBox authorization", async () => {
+  const harness = await harnessPromise;
+  const fixture = await harness.seedQuestionnaireWorkflowFixtures();
+  const path = `/api/v1/questionnaires/${fixture.questionnaires.ownerSubmitted}/generate_assessment`;
+  const identityWithoutToken = await harness.request({
+    path,
+    identity: harness.identities.owner,
+    init: { method: "POST" },
+    omitApiToken: true,
+  });
+  assert.equal(identityWithoutToken.status, 401);
+  const tokenWithoutIdentity = await harness.request({ path, init: { method: "POST" } });
+  assert.equal(tokenWithoutIdentity.status, 403);
+  const tokenWithIdentity = await harness.request({ path, identity: harness.identities.analyst, init: { method: "POST" } });
+  assert.equal(tokenWithIdentity.status, 202);
+});
+
+test("Requestor selector routes return bounded summaries and reject invalid inventory input", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await harness.seedAdministrationFixtures();
+  for (const [path, fixture, extra] of [
+    ["information_systems", fixtures.informationSystems.update, "systemType"],
+    ["information_assets", fixtures.informationAssets.update, "type"],
+  ] as const) {
+    const response = await harness.request({ path: `/api/v1/${path}?q=Administration&page=1&pageSize=10`, identity: harness.identities.owner });
+    assert.equal(response.status, 200, await response.clone().text());
+    const body = await response.json() as { data: Array<Record<string, unknown>> };
+    assert.ok(body.data.length > 0);
+    assert.deepEqual(Object.keys(body.data[0] ?? {}).sort(), ["documentId", "name", extra].sort());
+    for (const invalidPath of [`/api/v1/${path}?q=${"x".repeat(101)}`, `/api/v1/${path}?q=x&page=0`, `/api/v1/${path}?q=x&pageSize=100`, `/api/v1/${path}?q=x&unexpected=true`]) {
+      assert.equal((await harness.request({ path: invalidPath, identity: harness.identities.owner })).status, 400);
+    }
+    const denied = await harness.request({ path: `/api/v1/${path}?q=Administration`, identity: harness.identities.inactiveAnalyst });
+    assert.equal(denied.status, 403);
+    const selected = await harness.request({ path: `/api/v1/${path}/selected`, identity: harness.identities.owner, init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ selectedIds: [fixture] }) } });
+    assert.equal(selected.status, 200, await selected.clone().text());
+    assert.equal(((await selected.json() as { data: Array<{ documentId: string }> }).data[0]?.documentId), fixture);
+    for (const selectedIds of [[fixture, fixture], ["missing-record"], Array.from({ length: 51 }, (_, index) => `selected-${index}`)]) {
+      const invalid = await harness.request({ path: `/api/v1/${path}/selected`, identity: harness.identities.owner, init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ selectedIds }) } });
+      assert.equal(invalid.status, 400);
+    }
+  }
+});
