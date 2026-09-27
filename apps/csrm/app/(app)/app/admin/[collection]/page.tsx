@@ -27,14 +27,14 @@ export default async function AdministrationCollectionPage({ params, searchParam
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
-  if (!can('administration:manage', granted)) return <AdministrationAccessDenied />;
+  if (!can('administration:manage', granted)) return <AdministrationAccessDenied kind={kind} />;
   const paramsValue = await searchParams;
   const query = parseAdministrationQuery(kind, paramsValue);
   const result = kind === 'controls' ? await listAdministrationControls(query) : kind === 'information-systems' ? await listInformationSystems(query) : kind === 'information-assets' ? await listInformationAssets(query) : await listRiskTypes(query);
-  if (result.error?.status === 403) return <AdministrationAccessDenied />;
+  if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
   if (result.error) return <><AdministrationBreadcrumbs kind={kind} /><AdministrationWorkspace densityUserId={session?.displayName} items={[]} kind={kind} pagination={{ page: query.page, pageSize: query.pageSize, pageCount: 0, total: 0 }} query={query} state="error" /></>;
   const fixtureState = resolveE2eUiState(paramsValue);
-  if (fixtureState === 'permission') return <E2eUiStateBoundary state={fixtureState}><AdministrationAccessDenied /></E2eUiStateBoundary>;
+  if (fixtureState === 'permission') return <E2eUiStateBoundary state={fixtureState}><AdministrationAccessDenied kind={kind} /></E2eUiStateBoundary>;
   if (fixtureState && fixtureState !== 'populated') {
     return <><AdministrationBreadcrumbs kind={kind} /><E2eUiStateBoundary state={fixtureState}><AdministrationWorkspace densityUserId={session?.displayName} items={[]} kind={kind} pagination={{ page: query.page, pageSize: query.pageSize, pageCount: 0, total: 0 }} query={query} state={fixtureState === 'empty' ? 'empty' : fixtureState} /></E2eUiStateBoundary></>;
   }

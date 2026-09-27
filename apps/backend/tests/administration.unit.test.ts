@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test from "node:test";
 
 import type { AdministrationRepository } from "../src/api/csrm-administration/services/administration-repository";
@@ -41,9 +41,22 @@ function loadCsvModule(): CsvImportModule {
   return require(modulePath) as CsvImportModule;
 }
 
+type MiddlewareEntry = string | { name?: string; config?: { formidable?: Record<string, unknown> } };
+
+/**
+ * The compiled middleware configuration as Strapi's config loader resolves it: a function export is
+ * called with Strapi's own env helper (the middlewares file reads CSRM_CORS_ALLOWED_ORIGINS through it).
+ */
+function loadMiddlewareConfig(): MiddlewareEntry[] {
+  const exported = (require(join(process.cwd(), "dist/config/middlewares")) as { default: unknown }).default;
+  if (typeof exported !== "function") return exported as MiddlewareEntry[];
+  const strapiEntry = require.resolve("@strapi/strapi");
+  const { env } = require(require.resolve("@strapi/utils", { paths: [dirname(strapiEntry)] })) as { env: unknown };
+  return (exported as (params: { env: unknown }) => MiddlewareEntry[])({ env });
+}
+
 test("ADMIN-04 bounds global multipart transport while import routes retain stricter workflow limits", () => {
-  const middlewarePath = join(process.cwd(), "dist/config/middlewares");
-  const middlewareConfig = (require(middlewarePath) as { default: Array<string | { name?: string; config?: { formidable?: Record<string, unknown> } }> }).default;
+  const middlewareConfig = loadMiddlewareConfig();
   const body = middlewareConfig.find((entry) => typeof entry === "object" && entry.name === "strapi::body");
   assert.equal(typeof body, "object");
   const formidable = body && typeof body === "object" ? body.config?.formidable : undefined;

@@ -59,7 +59,15 @@ export function assertClosedAssessmentQuery(query: unknown): void {
 }
 
 export type AssessmentPagination = { page: number; pageSize: number };
-const ASSESSMENT_STATUSES = ["draft", "in-review", "approved"] as const;
+/*
+ * The complete assessment-status vocabulary of the CSRM datamodel. Every status,
+ * closed included, is within the analyst assessment scope: the analyst
+ * collection adds no status predicate of its own, and an analyst may read any
+ * assessment. The owner collection shares this filter but always adds its
+ * released-owner predicate, so there a status can narrow the scope but never
+ * widen it, and anything other than approved selects nothing.
+ */
+const ASSESSMENT_STATUSES = ["draft", "in-review", "approved", "closed"] as const;
 
 function assertCollectionKeys(query: RecordValue): void {
   if (Object.keys(query).some((key) => !["q", "status", "sort", "page", "pageSize"].includes(key))) {

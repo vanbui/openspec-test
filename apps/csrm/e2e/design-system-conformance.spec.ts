@@ -1,12 +1,41 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
+import { harnessPort } from '../src/lib/testing/e2e-harness-ports';
 import { strapiHealthUrl } from './harness-urls';
+import { expectPortFree } from './helpers/ports';
 
 const auditedRoutes = ['/app', '/app/requests', '/app/risks', '/app/review/assessments', '/app/review/questionnaires', '/app/admin/controls'] as const;
+/*
+ * Phase 7 routes join their own matrix as each screen lands (plan 05: Alerts; plans 07 and 08 add
+ * the reports and the analyst dashboard), so the Phase 6 matrix keeps its ten-minute ceiling.
+ */
+const phase7AuditedRoutes = [
+  '/app/alerts',
+  '/app/reports',
+  '/app/reports/risk-exposure',
+  '/app/reports/treatment-performance',
+  '/app/reports/assessment-throughput',
+  '/app/reports/control-effectiveness',
+  '/app/review',
+] as const;
+type Phase7AuditedRoute = typeof phase7AuditedRoutes[number];
+
+/*
+ * What each Phase 7 route shows once its real content has rendered: a record link on Alerts, the
+ * report cards on the index, a section table on each report, and the four KPI tiles on the analyst
+ * dashboard. A type scan runs only after it.
+ */
+function phase7PopulatedContent(page: Page, route: Phase7AuditedRoute): Locator {
+  if (route === '/app/alerts') return page.locator('a.record-link:visible').first();
+  if (route === '/app/reports') return page.locator('[data-slot="report-card"] a:visible').first();
+  // The fourth tile's figure; the loop also counts all four.
+  if (route === '/app/review') return page.locator('[data-slot="kpi-tile"] [data-slot="kpi-tile-value"]:visible').nth(3);
+  return page.locator('[data-slot="report-section"] table:visible').first();
+}
 const states = ['populated', 'loading', 'empty', 'error', 'permission'] as const;
 const viewports = [375, 1440] as const;
 type UiState = typeof states[number];
@@ -30,11 +59,15 @@ function parseTypographyContract(): TypographyToken[] {
 
 const typographyTokens = parseTypographyContract();
 
+/*
+ * Sign-in helpers assert the shell, never the URL: '/sign-in?returnTo=/app' also ends in '/app', so a
+ * URL match passes on a click that never left sign-in.
+ */
 async function signIn(page: Page) {
   const response = await page.goto('/sign-in?returnTo=/app');
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
   await page.getByRole('button', { name: 'Continue as Security Analyst' }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
   await expect(page.getByRole('banner').getByText('Security Analyst', { exact: true })).toBeVisible();
 }
 
@@ -42,10 +75,10 @@ async function signInAsRequestor(page: Page) {
   const response = await page.goto('/sign-in?returnTo=/app');
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
   await page.getByRole('button', { name: 'Continue as Requestor' }).click();
-  await expect(page).toHaveURL(/\/app$/);
-  // Wait for the banner to show the new role. Asserting the URL alone returns while the
-  // previous Security Analyst session is still in effect, which would silently run the
-  // denial proof as the wrong actor and let an authorised render look like a pass.
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+  // Wait for the banner to show the new role. Every actor's dashboard has the same heading, so only
+  // the role proves the previous Security Analyst session is gone; otherwise the denial proof could
+  // silently run as the wrong actor and let an authorised render look like a pass.
   await expect(page.getByRole('banner').getByText('Requestor', { exact: true })).toBeVisible();
 }
 
@@ -60,6 +93,15 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
 }
 
 function fixtureUrl(route: string, state: UiState) { return `${route}?__e2eState=${state}`; }
+
+/** Every visible text element whose size, weight, tracking and case match no documented type token. */
+async function typographyViolations(page: Page) {
+  return page.evaluate((tokens) => Array.from(document.querySelectorAll<HTMLElement>('body *'))
+    .filter((element) => element.offsetParent !== null && element.matches('h1,h2,h3,h4,h5,h6,p,span,a,button,label,select,option,input,textarea,th,td,[role="status"]'))
+    .filter((element) => (element.textContent ?? element.getAttribute('placeholder') ?? '').trim())
+    .map((element) => { const style = getComputedStyle(element); return { size: style.fontSize, weight: style.fontWeight, tracking: style.letterSpacing === 'normal' ? 0 : Number.parseFloat(style.letterSpacing), transform: style.textTransform }; })
+    .filter((actual) => !tokens.some((token) => token.size === actual.size && token.weight === actual.weight && (!token.tracking || Math.abs(actual.tracking - Number.parseFloat(token.tracking) * Number.parseFloat(token.size)) <= 0.05) && (!token.uppercase || actual.transform === 'uppercase'))), typographyTokens);
+}
 
 async function expectStateMeaning(page: Page, route: string, state: UiState, width: number) {
   const boundary = page.locator(`[data-ui-state="${state}"]`);
@@ -115,10 +157,15 @@ test.describe('dashboard state matrix', () => {
         await expect(page.getByRole('link', { name: /REQ-|ASM-/ }), `${state} dashboard state must not expose populated records`).toHaveCount(0);
       }
     }
-    const port = 47_000 + (process.pid % 1_000);
+    // Its own band, below every default ephemeral range (SR-10), checked free before it starts.
+    const port = harnessPort('ordinaryDevelopment', process.pid);
     const origin = `http://127.0.0.1:${port}`;
+    await expectPortFree(port, 'the ordinary next dev server');
     const next = resolve(process.cwd(), 'node_modules/next/dist/bin/next');
-    const env: NodeJS.ProcessEnv = { ...process.env, CSRM_NEXT_DIST_DIR: `.tmp/ordinary-next-${process.pid}` };
+    // Named by the run, so the runner removes it with the run's other artifacts when the run passes (SR-09).
+    const distDir = process.env.CSRM_E2E_ORDINARY_NEXT_DIST_DIR;
+    if (!distDir) throw new Error('CONFORMANCE_RUN_VALUE_MISSING: playwright.config.ts did not expose CSRM_E2E_ORDINARY_NEXT_DIST_DIR');
+    const env: NodeJS.ProcessEnv = { ...process.env, CSRM_NEXT_DIST_DIR: distDir };
     delete env.CSRM_E2E_UI_STATE_HARNESS;
     const server = spawn(process.execPath, [next, 'dev', '--hostname', '127.0.0.1', '--port', String(port)], { cwd: process.cwd(), env, stdio: 'ignore' });
     try {
@@ -152,6 +199,27 @@ test.describe('dashboard state matrix', () => {
     }
   });
 
+  test('renders the analyst dashboard Top alerts failure beside intact sibling widgets', async ({ page }) => {
+    test.setTimeout(300_000);
+    await signIn(page);
+    for (const width of viewports) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/app/review?__e2eState=populated&__e2ePartial=analyst-top-alerts-error');
+      await expect(page.locator('[data-ui-state="populated"]'), `the attested populated boundary renders at ${width}px`).toBeVisible();
+      const topAlerts = page.getByRole('region', { name: 'Top alerts', exact: true });
+      await expect(topAlerts.locator('[data-slot="state"][data-state-kind="error"]'), `the failed widget uses the shared error state at ${width}px`).toBeVisible();
+      await expect(topAlerts.locator('a.record-link'), `the failed widget exposes no record link at ${width}px`).toHaveCount(0);
+      // The failure is Top alerts' alone: it is the page's only error state, and its siblings show their content.
+      await expect(page.locator('[data-state-kind="error"]'), `only Top alerts failed at ${width}px`).toHaveCount(1);
+      const reviewQueue = page.getByRole('region', { name: 'Review queue', exact: true });
+      await expect(reviewQueue, `the Review queue sibling remains visible at ${width}px`).toBeVisible();
+      await expect(reviewQueue.getByRole('link'), `the Review queue sibling keeps its queue rows at ${width}px`).toHaveCount(6);
+      const riskExposure = page.getByRole('region', { name: 'Risk exposure', exact: true });
+      await expect(riskExposure, `the Risk exposure sibling remains visible at ${width}px`).toBeVisible();
+      await expect(riskExposure.getByRole('list', { name: 'Open contextual Risks by residual rating' }), `the Risk exposure sibling keeps its figures at ${width}px`).toBeVisible();
+      await expectNoSeriousAxeViolations(page);
+    }
+  });
 });
 
 test.describe('design-system type contract', () => {
@@ -159,11 +227,7 @@ test.describe('design-system type contract', () => {
     test.setTimeout(600_000); expect(typographyTokens.length).toBeGreaterThan(0); await signIn(page);
     for (const width of viewports) for (const route of auditedRoutes) {
       await page.setViewportSize({ width, height: 900 }); await page.goto(route);
-      const violations = await page.evaluate((tokens) => Array.from(document.querySelectorAll<HTMLElement>('body *'))
-        .filter((element) => element.offsetParent !== null && element.matches('h1,h2,h3,h4,h5,h6,p,span,a,button,label,select,option,input,textarea,th,td,[role="status"]'))
-        .filter((element) => (element.textContent ?? element.getAttribute('placeholder') ?? '').trim())
-        .map((element) => { const style = getComputedStyle(element); return { size: style.fontSize, weight: style.fontWeight, tracking: style.letterSpacing === 'normal' ? 0 : Number.parseFloat(style.letterSpacing), transform: style.textTransform }; })
-        .filter((actual) => !tokens.some((token) => token.size === actual.size && token.weight === actual.weight && (!token.tracking || Math.abs(actual.tracking - Number.parseFloat(token.tracking) * Number.parseFloat(token.size)) <= 0.05) && (!token.uppercase || actual.transform === 'uppercase'))), typographyTokens);
+      const violations = await typographyViolations(page);
       // Every documented tracking value is checked against the rendered type contract.
       expect(violations, `${route} at ${width}px contains typography outside the document contract`).toEqual([]);
     }
@@ -179,6 +243,33 @@ test.describe('design-system type contract', () => {
       await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
       await expect(page.getByRole('table')).toHaveCount(0);
       await expect(page.locator('a[href*="/app/review/assessments/"], a[href*="/app/review/questionnaires/"], a[href*="/app/admin/controls/"]')).toHaveCount(0);
+    }
+  });
+
+  test('Phase 7 audited route state, type, and authorization matrix', async ({ page }) => {
+    // Seven routes, five states and two widths, each with an axe scan: a fifteen-minute ceiling.
+    test.setTimeout(900_000); expect(typographyTokens.length).toBeGreaterThan(0); await signIn(page);
+    for (const width of viewports) for (const route of phase7AuditedRoutes) {
+      await page.setViewportSize({ width, height: 900 }); await page.goto(route);
+      // Scan the populated screen, never an error state standing in for it.
+      await expect(phase7PopulatedContent(page, route), `${route} at ${width}px renders its content before its type scan`).toBeVisible();
+      if (route === '/app/review') {
+        await expect(page.locator('[data-slot="kpi-tile"]:visible'), `${route} at ${width}px shows its four KPI tiles before its type scan`).toHaveCount(4);
+      }
+      await expect(page.locator('[data-state-kind="error"]'), `${route} at ${width}px renders no error state before its type scan`).toHaveCount(0);
+      expect(await typographyViolations(page), `${route} at ${width}px contains typography outside the document contract`).toEqual([]);
+    }
+    for (const width of viewports) for (const route of phase7AuditedRoutes) for (const state of states) {
+      await page.setViewportSize({ width, height: 900 }); await page.goto(fixtureUrl(route, state)); await expectStateMeaning(page, route, state, width);
+    }
+    await signInAsRequestor(page);
+    for (const route of phase7AuditedRoutes) {
+      await page.goto(fixtureUrl(route, 'error'));
+      await expect(page.locator('[data-ui-state]'), `${route} Requestor denial must not expose a fixture boundary`).toHaveCount(0);
+      await expect(page.getByRole('main').getByRole('alert'), `${route} Requestor denial is one permission alert`).toHaveCount(1);
+      await expect(page.getByRole('main').locator('[data-slot="state"][data-state-kind="permission"]'), `${route} Requestor denial is the permission state`).toBeVisible();
+      await expect(page.getByRole('table')).toHaveCount(0);
+      await expect(page.locator('a[href*="/app/risks/"], a[href*="/app/review/"]'), `${route} Requestor denial must not expose analyst record links`).toHaveCount(0);
     }
   });
 
@@ -204,5 +295,219 @@ test.describe('design-system type contract', () => {
       await page.goto('/app/review/assessments');
       if (width < 768) await expect(page.getByRole('list')).toBeVisible(); else await expect(page.getByRole('table', { name: 'Risk assessments for review' })).toBeVisible();
     }
+  });
+});
+
+/*
+ * Print (direction section 4 Print, X-4; D-33). A4 is 794px wide at 96 CSS pixels per inch; 718px
+ * is what remains inside the browser's default print margins, below md, where the screen shows
+ * cards. At both widths a page prints its content only: no shell, no interaction-only control, no
+ * sticky, scrolling or blurred box, no scroll cue or vertical rule, headers that repeat, rows and
+ * badges that keep together and keep their tints, and nothing wider than the paper.
+ *
+ * One table is allowed past the paper: the eight-column Risk Register, whose narrowest layout at the
+ * screen type scale is wider than A4 (08-09 summary). For it the proof is that nothing clips it,
+ * every cell wraps and nothing else is wider; the browser's print scaling brings it onto the page,
+ * which the A4 samples in the summary show.
+ */
+const printWidths = [794, 718] as const;
+
+type PrintLayout = {
+  shownControls: string[];
+  sticky: string[];
+  cues: number;
+  backdrops: string[];
+  verticalRules: string[];
+  unwrappedCells: number;
+  headerGroups: string[];
+  breakableRows: number;
+  untintedMarks: string[];
+  clamped: string[];
+  scrollWidth: number;
+  viewport: number;
+};
+
+async function printLayout(page: Page): Promise<PrintLayout> {
+  return page.evaluate(() => {
+    const describe = (element: Element) => [element.tagName.toLowerCase(), element.getAttribute('data-slot'), element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 40)].filter(Boolean).join(' ');
+    const laidOut = (element: Element) => element.getClientRects().length > 0;
+    const inMain = (selector: string) => Array.from(document.querySelectorAll(`main ${selector}`)).filter(laidOut);
+    return {
+      // The markers and everything inside them, so a box-less marker cannot hide a control that still prints.
+      shownControls: Array.from(document.querySelectorAll('[data-print="hidden"], [data-print="hidden"] *, form[role="search"], form[role="search"] *')).filter(laidOut).map(describe),
+      sticky: inMain('*').filter((element) => getComputedStyle(element).position === 'sticky').map(describe),
+      cues: Array.from(document.querySelectorAll('[data-overflow]')).filter((element) => getComputedStyle(element, '::after').content !== 'none').length,
+      // Chromium prints an element behind a blurred backdrop blank, which emptied the table header row.
+      backdrops: inMain('*').filter((element) => getComputedStyle(element).backdropFilter !== 'none').map(describe),
+      verticalRules: inMain('td, th').filter((cell) => Number.parseFloat(getComputedStyle(cell).borderRightWidth) > 0).map(describe),
+      unwrappedCells: inMain('td, th').filter((cell) => getComputedStyle(cell).whiteSpace !== 'normal').length,
+      headerGroups: inMain('thead').map((thead) => getComputedStyle(thead).display).filter((display) => display !== 'table-header-group'),
+      breakableRows: inMain('tr').filter((row) => getComputedStyle(row).breakInside !== 'avoid').length,
+      untintedMarks: inMain('[data-slot="badge"], [data-slot="bar-chart-mark"]').filter((mark) => {
+        const style = getComputedStyle(mark) as CSSStyleDeclaration & { printColorAdjust?: string; webkitPrintColorAdjust?: string };
+        return (style.printColorAdjust || style.webkitPrintColorAdjust) !== 'exact';
+      }).map(describe),
+      // Text a long-text column clamps on screen prints whole (X-4, W-4).
+      clamped: inMain('*').filter((element) => {
+        const clamp = getComputedStyle(element).getPropertyValue('-webkit-line-clamp');
+        return clamp !== '' && clamp !== 'none';
+      }).map(describe),
+      scrollWidth: document.documentElement.scrollWidth,
+      viewport: window.innerWidth,
+    };
+  });
+}
+
+/** Nothing clips the table: its scroller and every ancestor up to main let it overflow visibly. */
+async function clippingAncestors(table: Locator): Promise<string[]> {
+  return table.evaluate((element) => {
+    const clipping: string[] = [];
+    for (let node = element.parentElement; node && node.tagName !== 'MAIN'; node = node.parentElement) {
+      const { overflowX } = getComputedStyle(node);
+      if (overflowX !== 'visible') clipping.push(`${node.tagName.toLowerCase()}[data-slot=${node.getAttribute('data-slot')}] overflow-x ${overflowX}`);
+    }
+    return clipping;
+  });
+}
+
+async function expectPrintedWithoutShell(page: Page, surface: string, content: (width: number) => Promise<void>, widerThanPaper?: Locator): Promise<void> {
+  await page.emulateMedia({ media: 'print' });
+  for (const width of printWidths) {
+    await page.setViewportSize({ width, height: 1123 });
+    const label = `${surface} printed at ${width}px`;
+    for (const chrome of ['.sidebar', '.header', '.skip-link']) await expect(page.locator(chrome), `${label} drops ${chrome}`).toBeHidden();
+    await expect(page.getByRole('main'), `${label} prints the page content`).toBeVisible();
+    await content(width);
+    const layout = await printLayout(page);
+    expect(layout.shownControls, `${label} prints no interaction-only control`).toEqual([]);
+    expect(layout.sticky, `${label} has no sticky element inside main`).toEqual([]);
+    expect(layout.cues, `${label} draws no scroll cue`).toBe(0);
+    expect(layout.backdrops, `${label} prints nothing behind a blurred backdrop`).toEqual([]);
+    expect(layout.verticalRules, `${label} draws no vertical rule in a table`).toEqual([]);
+    expect(layout.unwrappedCells, `${label} lets every table cell wrap`).toBe(0);
+    expect(layout.headerGroups, `${label} repeats every table header`).toEqual([]);
+    expect(layout.breakableRows, `${label} keeps every table row on one page`).toBe(0);
+    expect(layout.untintedMarks, `${label} keeps badge and chart mark tints`).toEqual([]);
+    expect(layout.clamped, `${label} prints no text cut short`).toEqual([]);
+    if (widerThanPaper) {
+      expect(await clippingAncestors(widerThanPaper), `${label} clips nothing of its table`).toEqual([]);
+      // One pixel absorbs the rounding between the table's fractional edge and the document's integer width.
+      const tableRight = await widerThanPaper.evaluate((element) => Math.ceil(element.getBoundingClientRect().right));
+      expect(layout.scrollWidth, `${label} is no wider than its table`).toBeLessThanOrEqual(Math.max(layout.viewport, tableRight + 1));
+    } else {
+      expect(layout.scrollWidth, `${label} fits the paper`).toBeLessThanOrEqual(layout.viewport);
+    }
+  }
+  await page.emulateMedia({ media: null });
+}
+
+test.describe('print', () => {
+  test('prints application pages without the shell', async ({ page }) => {
+    test.setTimeout(300_000);
+    await signIn(page);
+    await page.setViewportSize({ width: 794, height: 1123 });
+
+    // A filtered register: the chip's label and the counts print, the chip's control does not.
+    await page.goto('/app/risks?state=open');
+    const register = page.getByRole('table', { name: 'Risk Register results' });
+    await expect(register.locator('a.record-link').first(), 'the register shows its records before printing').toBeVisible();
+    const firstRiskHref = await register.locator('a.record-link[href^="/app/risks/"]').first().getAttribute('href');
+    expect(firstRiskHref).toMatch(/^\/app\/risks\/[^/]+$/);
+    await expectPrintedWithoutShell(page, 'the Risk Register', async (width) => {
+      await expect(register, `the register prints as a table at ${width}px`).toBeVisible();
+      await expect(register.getByRole('columnheader'), `the register prints its eight column headers at ${width}px`).toHaveCount(8);
+      for (const header of await register.getByRole('columnheader').all()) await expect(header, `a column header prints at ${width}px`).toBeVisible();
+      await expect(page.locator('[data-slot="data-table-mobile"]'), `the register prints no cards at ${width}px`).toBeHidden();
+      await expect(page.getByText('Risk state: Open', { exact: true }), `the active filter prints at ${width}px`).toBeVisible();
+      await expect(page.locator('output').filter({ hasText: /\d+ results?$/ }), `the result count prints at ${width}px`).toBeVisible();
+      await expect(page.locator('output').filter({ hasText: /^Page \d+ of \d+$/ }), `the page position prints at ${width}px`).toBeVisible();
+      // The sorted column's direction prints the table's order; the unsorted columns' cue does not (verdict 4c).
+      await expect(register.locator('thead svg.lucide-chevrons-up-down').filter({ visible: true }), `no unsorted sort cue prints at ${width}px`).toHaveCount(0);
+      await expect(register.locator('thead svg.lucide-chevron-up, thead svg.lucide-chevron-down').filter({ visible: true }), `the sorted column's direction prints at ${width}px`).toHaveCount(1);
+    }, register);
+
+    await page.goto('/app/reports/risk-exposure');
+    const sectionTables = page.locator('[data-slot="report-section"] table');
+    await expect(sectionTables.first(), 'the report shows its section tables before printing').toBeVisible();
+    await expectPrintedWithoutShell(page, 'the risk-exposure report', async (width) => {
+      const count = await sectionTables.count();
+      expect(count, `the report has section tables at ${width}px`).toBeGreaterThan(0);
+      for (let index = 0; index < count; index += 1) await expect(sectionTables.nth(index), `section table ${index + 1} prints at ${width}px`).toBeVisible();
+    });
+
+    await page.goto(firstRiskHref!);
+    const heading = page.getByRole('main').getByRole('heading', { level: 1 });
+    // The header's ratings and status are content, not controls, so they print (PageHeader status).
+    const ratings = page.locator('.page-header [aria-label="Risk ratings and status"]');
+    await expect(heading, 'the Risk detail shows its heading before printing').toBeVisible();
+    await expect(ratings, 'the Risk detail shows its ratings before printing').toContainText('Residual');
+    await expectPrintedWithoutShell(page, 'a Risk detail', async (width) => {
+      await expect(heading, `the Risk number prints at ${width}px`).toBeVisible();
+      await expect(ratings, `the Risk ratings print at ${width}px`).toBeVisible();
+      await expect(ratings, `the Risk ratings print at ${width}px`).toContainText('Inherent');
+    });
+
+    // In-page workflow actions are interaction-only, so they do not print (X-4, W-14).
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/app/review/questionnaires');
+    await page.getByRole('main').getByRole('link', { name: 'Customer portal questionnaire awaiting release', exact: true }).filter({ visible: true }).first().click();
+    const questionnaireTitle = page.getByRole('main').getByRole('heading', { level: 1, name: 'Customer portal questionnaire awaiting release' });
+    const workflowActions = page.getByRole('main').getByRole('button', { name: /^(Release questionnaire|Add question|Edit|Delete)\b/ });
+    await expect(questionnaireTitle, 'the analyst questionnaire review shows its title before printing').toBeVisible();
+    await expect(page.getByRole('main').getByRole('button', { name: 'Release questionnaire', exact: true }), 'the questionnaire is in analyst review, with its workflow actions, before printing').toBeVisible();
+    expect(await workflowActions.count(), 'the analyst review offers its question editor actions before printing').toBeGreaterThan(2);
+    await expectPrintedWithoutShell(page, 'the analyst questionnaire review', async (width) => {
+      await expect(questionnaireTitle, `the questionnaire title prints at ${width}px`).toBeVisible();
+      await expect(workflowActions.filter({ visible: true }), `no questionnaire workflow action prints at ${width}px`).toHaveCount(0);
+    });
+  });
+});
+
+/*
+ * Direction section 4: a page header's actions sit beside the title from 768px and stack full-width
+ * below it (W-13), and a status or risk badge is 20px tall (W-11).
+ */
+test.describe('components at the direction values', () => {
+  test('draws every status and risk badge 20px tall', async ({ page }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const route of ['/app/risks', '/app/review/assessments'] as const) {
+      await page.goto(route);
+      const badges = page.getByRole('main').locator('[data-slot="badge"]').filter({ visible: true });
+      await expect(badges.first(), `${route} shows its badges`).toBeVisible();
+      const heights = await badges.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
+      expect(heights.filter((height) => Math.abs(height - 20) > 0.5), `every badge on ${route} is 20px tall`).toEqual([]);
+    }
+  });
+
+  test('stacks page header actions full-width below 768px', async ({ page }) => {
+    test.setTimeout(180_000);
+    await signIn(page);
+    const header = page.locator('.page-header');
+    for (const width of [375, 700, 767, 768, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/app/admin/risk-types');
+      const actions = [
+        header.getByRole('link', { name: 'Create Risk Type', exact: true }),
+        header.getByRole('link', { name: 'Import CSV', exact: true }),
+      ];
+      for (const action of actions) await expect(action, `the Risk Types header action shows at ${width}px`).toBeVisible();
+      const headerBox = await header.boundingBox();
+      for (const action of actions) {
+        const actionBox = await action.boundingBox();
+        const name = await action.textContent();
+        if (width < 768) {
+          expect(Math.abs((actionBox?.width ?? 0) - (headerBox?.width ?? 0)), `${name} spans the header at ${width}px`).toBeLessThanOrEqual(1);
+        } else {
+          expect(actionBox?.width ?? 0, `${name} keeps its own width beside the title at ${width}px`).toBeLessThan((headerBox?.width ?? 0) / 2);
+        }
+      }
+    }
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/app/admin/not-a-collection');
+    const returnLink = header.getByRole('link', { name: 'Return to workspace', exact: true });
+    await expect(returnLink, 'the in-shell not-found offers its action').toBeVisible();
+    const [notFoundHeader, returnBox] = await Promise.all([header.boundingBox(), returnLink.boundingBox()]);
+    expect(Math.abs((returnBox?.width ?? 0) - (notFoundHeader?.width ?? 0)), 'Return to workspace spans the header at 375px').toBeLessThanOrEqual(1);
   });
 });

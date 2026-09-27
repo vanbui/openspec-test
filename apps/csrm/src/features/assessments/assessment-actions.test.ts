@@ -223,3 +223,52 @@ describe('assessment Server Action boundary', () => {
     ]);
   });
 });
+
+/*
+ * WR-04: the analyst editor's Add Risk and Add mitigation control forms show the messages these actions
+ * return under each field, so every message is the product's own copy (direction section 4 Forms), never a
+ * validation library default. The forms send an emptied field as null.
+ */
+describe('analyst editor validation copy', () => {
+  it('asks for the Risk statement when Add Risk has none', async () => {
+    for (const riskStatement of [null, '', '   ']) {
+      await expect(actions.createRiskAction({ assessmentId: 'assessment-1', values: { riskStatement } })).resolves.toEqual({
+        ok: false,
+        values: { riskStatement },
+        fieldErrors: { riskStatement: ['Enter a risk statement.'] },
+        formError: 'Check the assessment details and try again.',
+      });
+    }
+    expect(createRisk).not.toHaveBeenCalled();
+  });
+
+  it('states the length limit of Risk text and the format of the exemption review date', async () => {
+    const result = await actions.createRiskAction({
+      assessmentId: 'assessment-1',
+      values: { riskStatement: 'r'.repeat(65_536), treatmentPlan: 't'.repeat(65_536), exemptionReviewDate: '2026-12-01' },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: {
+        riskStatement: ['Use 65,535 characters or fewer.'],
+        treatmentPlan: ['Use 65,535 characters or fewer.'],
+        exemptionReviewDate: ['Enter the date and time as YYYY-MM-DDTHH:mm:ssZ.'],
+      },
+    });
+    expect(createRisk).not.toHaveBeenCalled();
+  });
+
+  it('asks for a reusable Control when Add mitigation control has none, and states the evidence limit', async () => {
+    for (const control of [null, '', '  ']) {
+      await expect(actions.createControlImplementationAction({ assessmentId: 'assessment-1', riskId: 'risk-1', values: { control } })).resolves.toMatchObject({
+        ok: false,
+        fieldErrors: { control: ['Select a reusable Control.'] },
+      });
+    }
+    await expect(actions.createControlImplementationAction({
+      assessmentId: 'assessment-1', riskId: 'risk-1', values: { control: 'control-1', evidence: 'e'.repeat(65_536) },
+    })).resolves.toMatchObject({ ok: false, fieldErrors: { evidence: ['Use 65,535 characters or fewer.'] } });
+    expect(createControlImplementation).not.toHaveBeenCalled();
+  });
+});

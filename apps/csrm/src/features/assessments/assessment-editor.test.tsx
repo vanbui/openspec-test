@@ -196,6 +196,24 @@ describe('analyst assessment editor contract', () => {
     }
   });
 
+  it('shows the header status through the shared tinted badge and announces it politely', () => {
+    const headerBadge = (root: HTMLElement) => root.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
+    const inReview = render(<AssessmentEditor {...editorProps} />);
+    const reviewBadge = headerBadge(inReview.container);
+    expect(reviewBadge).toHaveTextContent('In review');
+    expect(reviewBadge).toHaveAttribute('data-tone', 'warning');
+    expect(reviewBadge).toHaveAttribute('data-variant', 'warning');
+    expect(reviewBadge).toHaveAttribute('aria-live', 'polite');
+    expect(reviewBadge?.querySelectorAll('svg')).toHaveLength(1);
+    inReview.unmount();
+
+    const released = render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, assessmentStatus: 'approved', assessmentDate: '2026-08-30T02:00:00.000Z', approvalDate: '2026-08-30T02:00:00.000Z', approvedBy: analyst }} />);
+    const releasedBadge = headerBadge(released.container);
+    expect(releasedBadge).toHaveTextContent(/^Released$/);
+    expect(releasedBadge).toHaveAttribute('data-tone', 'success');
+    expect(releasedBadge).toHaveAttribute('aria-live', 'polite');
+  });
+
   it('renders the analyst request link and shared read-only lifecycle context', () => {
     const { container } = render(<AssessmentEditor {...editorProps} />);
 

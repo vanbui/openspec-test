@@ -300,13 +300,11 @@ test("request revert returns only eligible submitted requests to draft with serv
   assert.equal(maxLengthResult.status, 200, "UNEXPECTED_500_CHARACTER_REVERT_STATUS");
 
   const relationRequest = await createSubmitted("Relation guarded revert");
-  const attachQuestionnaire = await request(
-    `/api/csrm-assessment-requests/${relationRequest}`,
-    harness.identities.analyst,
-    jsonRequest("PUT", { questionnaire: fixtures.relations.questionnaire }),
-  );
-  assert.equal(attachQuestionnaire.status, 200, "UNEXPECTED_QUESTIONNAIRE_ATTACHMENT_STATUS");
+  // A questionnaire is linked from its own side, as generation writes it. No request write can link
+  // one: the link is a server-owned fact of the request (T-08-A2).
+  await harness.createQuestionnaireLifecycleFixture({ requestDocumentId: relationRequest, released: false, answerState: "none" });
   const relationBefore = await harness.getRequest(relationRequest);
+  assert.ok(relationBefore?.questionnaire, "UNEXPECTED_QUESTIONNAIRE_FIXTURE_UNLINKED");
   const relationResult = await request(requestPath(relationRequest), harness.identities.analyst, revertRequest({ reason: "Questionnaire exists" }));
   assert.equal(relationResult.status, 409, "UNEXPECTED_QUESTIONNAIRE_GUARD_STATUS");
   assert.deepEqual(await harness.getRequest(relationRequest), relationBefore, "UNEXPECTED_QUESTIONNAIRE_GUARD_WRITE");

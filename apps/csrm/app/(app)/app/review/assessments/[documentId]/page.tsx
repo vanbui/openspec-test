@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
+import { cache, Suspense } from 'react';
 
 import {
   AssessmentEditor,
@@ -13,14 +14,21 @@ import {
 } from '@/features/assessments/assessment-service';
 import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
 import { listInformationAssets, listInformationSystems } from '@/features/requests/request-service';
+import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
 type AssessmentReviewPageProps = { params: Promise<{ documentId: string }> };
 
-export const metadata = { title: 'Risk Assessment Review | IdamBox CSRM' };
+// One read per request, shared by the document title and the page.
+const readAnalystAssessment = cache(getAnalystAssessment);
+
+// An assessment id that does not exist takes the not-found's title; any other outcome keeps the route's.
+export async function generateMetadata({ params }: AssessmentReviewPageProps): Promise<Metadata> {
+  return recordRouteMetadata(readAnalystAssessment((await params).documentId), 'Risk Assessment Review | IdamBox CSRM');
+}
 
 async function AssessmentEditorContent({ params }: AssessmentReviewPageProps) {
   const { documentId } = await params;
-  const assessmentResult = await getAnalystAssessment(documentId);
+  const assessmentResult = await readAnalystAssessment(documentId);
   if (assessmentResult.error?.status === 404) notFound();
   if (assessmentResult.error) return <AssessmentEditor state={assessmentResult.error.status === 403 ? 'permission' : 'error'} />;
   if (!assessmentResult.data) notFound();

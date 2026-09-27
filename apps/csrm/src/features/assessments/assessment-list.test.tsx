@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 const navigationMocks = vi.hoisted(() => ({ replace: vi.fn() }));
@@ -29,6 +29,66 @@ const assessment: AssessmentSummary = {
   generatedBy: { documentId: 'bob-id', displayName: 'Bob Doe' },
   approvalDate: null,
 };
+
+/* W-3: a refused list is the page header (the route's) and the permission state alone, as the Risk Register's is. */
+function expectOnlyTheRefusal(heading: string) {
+  expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Queue:/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^\d+ results?$/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Page \d+ of \d+$/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^(Previous page|Next page|Use (compact|default) density)$/ })).not.toBeInTheDocument();
+}
+
+describe('the analyst review lists refused to their reader', () => {
+  it('shows only the refusal on the assessment request queue', () => {
+    render(<AssessmentRequestList requests={[assessmentRequest]} state="permission" />);
+    expectOnlyTheRefusal('You don’t have access to assessment requests');
+    expect(screen.queryByText(assessmentRequest.title)).not.toBeInTheDocument();
+  });
+
+  it('shows only the refusal on the risk assessment list', () => {
+    render(<AssessmentList assessments={[assessment]} state="permission" />);
+    expectOnlyTheRefusal('You don’t have access to risk assessments');
+    expect(screen.queryByText(assessment.assessmentNumber)).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * Verdict 4a: both analyst review lists show the direction's filter chips (section 4 DataTable) for their status and
+ * search filters, so a filtered list never looks, or prints, like an unfiltered one. The queue has its own line.
+ */
+describe('filter chips on the analyst review lists', () => {
+  it('shows the status and search of the request queue as chips, each removable', () => {
+    navigationMocks.replace.mockClear();
+    render(<AssessmentRequestList query={{ q: 'portal', queue: 'released', sort: 'submittedDate:desc', page: 1, pageSize: 25, status: 'approved' }} requests={[assessmentRequest]} />);
+
+    expect(screen.getByText('Search: portal')).toBeInTheDocument();
+    expect(screen.getByText('Status: Approved')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Status filter' }));
+    expect(navigationMocks.replace).toHaveBeenLastCalledWith('/app/review/assessments?q=portal&queue=released&sort=submittedDate%3Adesc&pageSize=25', { scroll: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Search filter' }));
+    expect(navigationMocks.replace).toHaveBeenLastCalledWith('/app/review/assessments?status=approved&queue=released&sort=submittedDate%3Adesc&pageSize=25', { scroll: false });
+    // The chips' Clear filters clears what the chips show and keeps the chosen queue.
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(navigationMocks.replace).toHaveBeenLastCalledWith('/app/review/assessments?queue=released&sort=submittedDate%3Adesc&pageSize=25', { scroll: false });
+  });
+
+  it('shows the status of the risk assessment list by its label, Released for approved', () => {
+    render(<AssessmentList assessments={[assessment]} query={{ q: 'vendor', sort: 'generatedDate:desc', page: 1, pageSize: 25, status: 'approved' }} />);
+
+    expect(screen.getByText('Search: vendor')).toBeInTheDocument();
+    expect(screen.getByText('Status: Released')).toBeInTheDocument();
+    expect(screen.queryByText('Status: approved')).not.toBeInTheDocument();
+  });
+
+  it('shows no chip while no filter is active', () => {
+    render(<AssessmentList assessments={[assessment]} />);
+    expect(screen.queryByText(/^(Status|Search): /)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
+  });
+});
 
 describe('assessment review list record navigation', () => {
   it('uses the encoded identifier as the only record opener in card and table variants', () => {
@@ -84,7 +144,8 @@ describe('assessment review list record navigation', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    // The empty state's Clear filters; the chip row above the table offers its own (verdict 4a).
+    fireEvent.click(within(document.querySelector<HTMLElement>('[data-state-kind="empty"]')!).getByRole('button', { name: 'Clear filters' }));
 
     expect(navigationMocks.replace).toHaveBeenCalledWith(
       '/app/review/assessments?sort=submittedDate%3Adesc&pageSize=25',
@@ -130,11 +191,59 @@ describe('assessment review list record navigation', () => {
     expect(statusOptions()).toEqual(expectedLabels);
   });
 
-  it('offers all labelled assessment statuses', () => {
+  it('names each search input after the records it searches, visible label and name alike (D-30)', () => {
+    // The retired generic label, in any capitalisation.
+    const genericSearchLabel = /search collection/i;
+    const view = render(<AssessmentRequestList requests={[]} />);
+    const requestSearch = screen.getByRole('searchbox', { name: 'Search assessment requests' });
+    expect(requestSearch.closest('label')?.firstChild?.textContent).toBe('Search assessment requests');
+    expect(screen.queryByText(genericSearchLabel)).not.toBeInTheDocument();
+    expect(screen.queryByRole('searchbox', { name: genericSearchLabel })).not.toBeInTheDocument();
+    view.unmount();
+
+    render(<AssessmentList assessments={[]} />);
+    const assessmentSearch = screen.getByRole('searchbox', { name: 'Search risk assessments' });
+    expect(assessmentSearch.closest('label')?.firstChild?.textContent).toBe('Search risk assessments');
+    expect(screen.queryByText(genericSearchLabel)).not.toBeInTheDocument();
+    expect(screen.queryByRole('searchbox', { name: genericSearchLabel })).not.toBeInTheDocument();
+  });
+
+  it('offers all labelled assessment statuses, the released one as Released', () => {
     render(<AssessmentList assessments={[]} />);
 
-    expect([...screen.getByRole('combobox', { name: 'Filter by status' }).querySelectorAll('option')].map((option) => option.textContent)).toEqual([
-      'All statuses', 'Draft', 'In review', 'Approved', 'Closed',
+    const options = [...screen.getByRole('combobox', { name: 'Filter by status' }).querySelectorAll('option')];
+    expect(options.map((option) => option.textContent)).toEqual([
+      'All statuses', 'Draft', 'In review', 'Released', 'Closed',
     ]);
+    // Only the label changes: the stored value and query parameter stay approved.
+    expect(options.map((option) => option.value)).toEqual(['', 'draft', 'in-review', 'approved', 'closed']);
+  });
+
+  it('shows each risk assessment status through the shared tinted badge in the table and the cards', () => {
+    const released: AssessmentSummary = { ...assessment, documentId: 'released-id', assessmentNumber: 'ASM-0043', assessmentStatus: 'approved' };
+    const { container } = render(<AssessmentList assessments={[assessment, released]} />);
+
+    for (const slot of ['data-table-desktop', 'data-table-mobile']) {
+      const surface = container.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
+      expect(surface, slot).not.toBeNull();
+      const badges = [...(surface as HTMLElement).querySelectorAll<HTMLElement>('[data-slot="badge"]')];
+      expect(badges.map((badge) => [badge.textContent, badge.dataset.tone, badge.dataset.variant]), slot).toEqual([
+        ['Draft', 'warning', 'warning'],
+        ['Released', 'success', 'success'],
+      ]);
+      for (const badge of badges) expect(badge.querySelectorAll('svg'), `${slot} ${badge.textContent}`).toHaveLength(1);
+    }
+    expect(screen.queryByText('Approved')).not.toBeInTheDocument();
+  });
+
+  it('keeps the request badges on the request review list, in the submitted success tone', () => {
+    const { container } = render(<AssessmentRequestList requests={[assessmentRequest]} />);
+
+    const badges = [...container.querySelectorAll<HTMLElement>('[data-slot="badge"]')];
+    expect(badges).toHaveLength(2);
+    for (const badge of badges) {
+      expect(badge).toHaveTextContent('Submitted');
+      expect(badge).toHaveAttribute('data-tone', 'success');
+    }
   });
 });

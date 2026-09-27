@@ -22554,9 +22554,22 @@
         "operationId": "assessment-workflow/get-assessment-request-queue",
         "summary": "List assessment requests available for analyst review",
         "tags": ["assessment-workflow"],
-        "parameters": [{"name":"filters[queue]","in":"query","schema":{"type":"string","enum":["requires-attention","awaiting-requestor","generation-in-progress","released"]}},{"name":"filters[requestStatus]","in":"query","schema":{"type":"string","enum":["submitted","questionnaire-in-progress","risk-assessment-drafted","under-review"]}},{"name":"filters[title]","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"filters[requestNumber]","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"filters[dueDate]","in":"query","schema":{"type":"string","format":"date"}},{"name":"sort","in":"query","schema":{"type":"string"}},{"name":"pagination[page]","in":"query","schema":{"type":"integer","minimum":1,"default":1}},{"name":"pagination[pageSize]","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}}],
+        "parameters": [{"name":"filters[queue]","in":"query","schema":{"type":"string","enum":["requires-attention","awaiting-requestor","generation-in-progress","released"]}},{"name":"filters[requestStatus]","in":"query","description":"Request status to filter by. Every request status is accepted in every queue, and the filter intersects the selected queue rather than widening it. The requires-attention, awaiting-requestor and generation-in-progress queues read only submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests; the released queue reads only approved and closed requests; no queue reads a draft. A status outside the selected queue returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400.","schema":{"type":"string","enum":["draft","submitted","questionnaire-in-progress","risk-assessment-drafted","under-review","approved","closed"]}},{"name":"filters[title]","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"filters[requestNumber]","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"filters[dueDate]","in":"query","schema":{"type":"string","format":"date"}},{"name":"sort","in":"query","schema":{"type":"string"}},{"name":"pagination[page]","in":"query","schema":{"type":"integer","minimum":1,"default":1}},{"name":"pagination[pageSize]","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}}],
         "responses": {
           "200": { "description": "Bounded analyst request queue", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentRequestQueueResponse" } } } },
+          "400": { "$ref": "#/components/responses/AssessmentBadRequest" },
+          "403": { "$ref": "#/components/responses/AssessmentForbidden" }
+        }
+      }
+    },
+    "/v1/my_requests/status_summary": {
+      "get": {
+        "operationId": "assessment-workflow/get-my-request-status-summary",
+        "summary": "Get the signed-in actor's own assessment request counts by status",
+        "description": "Counts only the assessment requests whose requestor is the signed-in actor, for every actor, a Security Analyst included. The operation takes no query parameters: any query key is rejected with 400.",
+        "tags": ["assessment-workflow"],
+        "responses": {
+          "200": { "description": "Owner-scoped assessment request counts by status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MyRequestStatusSummaryResponse" } } } },
           "400": { "$ref": "#/components/responses/AssessmentBadRequest" },
           "403": { "$ref": "#/components/responses/AssessmentForbidden" }
         }
@@ -22624,7 +22637,7 @@
         "operationId": "assessment-workflow/get-risk-assessments",
         "summary": "List assessments visible to the authorised analyst",
         "tags": ["assessment-workflow"],
-        "parameters": [{"name":"q","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"status","in":"query","schema":{"type":"string","enum":["draft","in-review","approved"]}},{"name":"sort","in":"query","schema":{"type":"string","enum":["generatedDate:asc","generatedDate:desc","approvalDate:asc","approvalDate:desc","assessmentNumber:asc","assessmentNumber:desc","assessmentStatus:asc","assessmentStatus:desc"]}},{"name":"page","in":"query","schema":{"type":"integer","minimum":1,"default":1}},{"name":"pageSize","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}}],
+        "parameters": [{"name":"q","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"status","in":"query","description":"Assessment status to filter by. Every assessment status, closed included, is within the analyst assessment scope. A value outside this enum, a repeated parameter or an operator object is rejected with 400.","schema":{"type":"string","enum":["draft","in-review","approved","closed"]}},{"name":"sort","in":"query","schema":{"type":"string","enum":["generatedDate:asc","generatedDate:desc","approvalDate:asc","approvalDate:desc","assessmentNumber:asc","assessmentNumber:desc","assessmentStatus:asc","assessmentStatus:desc"]}},{"name":"page","in":"query","schema":{"type":"integer","minimum":1,"default":1}},{"name":"pageSize","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}}],
         "responses": {
           "200": { "description": "Assessment list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentListResponse" } } } },
           "400": { "$ref": "#/components/responses/AssessmentBadRequest" },
@@ -22716,6 +22729,7 @@
           { "name": "system", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9_-]+$" } },
           { "name": "asset", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9_-]+$" } },
           { "name": "mitigationStatus", "in": "query", "required": false, "schema": { "type": "string", "enum": ["Existing", "Planned", "Implemented", "Retired", "none"] } },
+          { "name": "state", "in": "query", "required": false, "schema": { "type": "string", "enum": ["open", "closed"] }, "description": "open: no closure date recorded. closed: a closure date is recorded. Absent returns both." },
           { "name": "targetDateFrom", "in": "query", "required": false, "schema": { "type": "string", "format": "date" } },
           { "name": "targetDateTo", "in": "query", "required": false, "schema": { "type": "string", "format": "date" } },
           { "name": "sort", "in": "query", "required": false, "schema": { "type": "string", "enum": ["riskNumber:asc", "riskNumber:desc", "riskStatement:asc", "riskStatement:desc", "inherentRating:asc", "inherentRating:desc", "residualRating:asc", "residualRating:desc", "treatmentStatus:asc", "treatmentStatus:desc", "treatmentOwner:asc", "treatmentOwner:desc", "targetDate:asc", "targetDate:desc", "assessment:asc", "assessment:desc"], "default": "targetDate:asc" } },
@@ -23159,7 +23173,7 @@
         "operationId": "assessment-workflow/get-my-released-risk-assessments",
         "summary": "List owner-scoped completely released assessments",
         "tags": ["assessment-workflow"],
-        "parameters": [{"name":"q","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"status","in":"query","schema":{"type":"string","enum":["draft","in-review","approved"]}},{"name":"sort","in":"query","schema":{"type":"string","enum":["generatedDate:asc","generatedDate:desc","approvalDate:asc","approvalDate:desc","assessmentNumber:asc","assessmentNumber:desc","assessmentStatus:asc","assessmentStatus:desc"]}},{"name":"page","in":"query","schema":{"type":"integer","minimum":1,"default":1}},{"name":"pageSize","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}}],
+        "parameters": [{"name":"q","in":"query","schema":{"type":"string","minLength":1,"maxLength":200}},{"name":"status","in":"query","description":"Assessment status to filter by. This collection holds only the Requestor's completely released assessments, so the filter intersects that scope: any status other than approved returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400.","schema":{"type":"string","enum":["draft","in-review","approved","closed"]}},{"name":"sort","in":"query","schema":{"type":"string","enum":["generatedDate:asc","generatedDate:desc","approvalDate:asc","approvalDate:desc","assessmentNumber:asc","assessmentNumber:desc","assessmentStatus:asc","assessmentStatus:desc"]}},{"name":"page","in":"query","schema":{"type":"integer","minimum":1,"default":1}},{"name":"pageSize","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}}],
         "responses": {
           "200": { "description": "Released owner assessment list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentListResponse" } } } },
           "400": { "$ref": "#/components/responses/AssessmentBadRequest" },
@@ -24792,6 +24806,90 @@
           }
         }
       }
+    },
+    "/v1/dashboard/summary": {
+      "get": {
+        "operationId": "analyst-insights/get-dashboard-summary",
+        "summary": "Summarise the analyst's workload for the analyst dashboard",
+        "description": "Every figure is computed on read inside the Security Analyst's review and Risk Register scopes, with the predicate of the list it opens: each review queue count equals that queue's total, the Questionnaire and Risk Assessment counts equal their review lists filtered by status, each exposure count equals the Risk Register filtered by that residual rating and state=open, and each treatment count equals the total of the matching treatment alert list. Recent activity lists the most recent workflow events, newest first. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.",
+        "tags": ["analyst-insights"],
+        "responses": {
+          "200": { "description": "The analyst dashboard summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DashboardSummaryResponse" } } } },
+          "400": { "$ref": "#/components/responses/AnalystInsightBadRequest" },
+          "403": { "$ref": "#/components/responses/AnalystInsightForbidden" }
+        }
+      }
+    },
+    "/v1/alerts": {
+      "get": {
+        "operationId": "analyst-insights/get-alerts",
+        "summary": "List the derived analyst alerts, most urgent first",
+        "description": "Alerts are conditions derived on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored. The list is ordered by urgency (overdue, due soon, attention), then dated before undated, then governing date ascending, source identifier, kind and source documentId. Human Security Analyst only.",
+        "tags": ["analyst-insights"],
+        "parameters": [
+          {
+            "name": "kind", "in": "query", "required": false, "style": "form", "explode": true,
+            "description": "One or more alert kinds, each at most once. Absent lists every kind.",
+            "schema": { "type": "array", "items": { "$ref": "#/components/schemas/AlertKind" }, "minItems": 1, "maxItems": 8, "uniqueItems": true }
+          },
+          { "name": "urgency", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/AlertUrgency" } },
+          { "name": "page", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 1000000, "default": 1 } },
+          { "name": "pageSize", "in": "query", "required": false, "schema": { "type": "integer", "enum": [5, 10, 25, 50], "minimum": 5, "default": 25 } }
+        ],
+        "responses": {
+          "200": { "description": "One page of derived alerts", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AlertListResponse" } } } },
+          "400": { "$ref": "#/components/responses/AnalystInsightBadRequest" },
+          "403": { "$ref": "#/components/responses/AnalystInsightForbidden" }
+        }
+      }
+    },
+    "/v1/alerts/summary": {
+      "get": {
+        "operationId": "analyst-insights/get-alert-summary",
+        "summary": "Count the derived analyst alerts by kind and by urgency",
+        "description": "Counts exactly the alerts GET /v1/alerts lists, over the same predicate, so each count equals the total of the list filtered to that kind or urgency. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.",
+        "tags": ["analyst-insights"],
+        "responses": {
+          "200": { "description": "Derived alert counts by kind and by urgency", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AlertSummaryResponse" } } } },
+          "400": { "$ref": "#/components/responses/AnalystInsightBadRequest" },
+          "403": { "$ref": "#/components/responses/AnalystInsightForbidden" }
+        }
+      }
+    },
+    "/v1/reports": {
+      "get": {
+        "operationId": "analyst-insights/get-reports",
+        "summary": "List the analyst reports",
+        "description": "The closed set of read-only analyst reports in display order, each with its key, title and description, so the Reports index is data-driven. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.",
+        "tags": ["analyst-insights"],
+        "responses": {
+          "200": { "description": "The analyst report definitions", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReportDefinitionListResponse" } } } },
+          "400": { "$ref": "#/components/responses/AnalystInsightBadRequest" },
+          "403": { "$ref": "#/components/responses/AnalystInsightForbidden" }
+        }
+      }
+    },
+    "/v1/reports/{reportKey}": {
+      "get": {
+        "operationId": "analyst-insights/get-report",
+        "summary": "Compute one analyst report from current records",
+        "description": "Each report is computed on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored and no report widens that scope. Risk and Control Implementation figures count open contextual Risks, those with no closure date. Only assessment-throughput takes a query parameter, period; a period on any other report, or any other query key, is rejected with 400. A key that names no report answers 404. Human Security Analyst only.",
+        "tags": ["analyst-insights"],
+        "parameters": [
+          { "name": "reportKey", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/ReportKey" } },
+          {
+            "name": "period", "in": "query", "required": false,
+            "description": "assessment-throughput only: the calendar months, ending with the current UTC month, that the release figures cover. Absent means 6.",
+            "schema": { "type": "integer", "enum": [6, 12], "minimum": 6, "default": 6 }
+          }
+        ],
+        "responses": {
+          "200": { "description": "One computed report, discriminated by its key", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReportResponse" } } } },
+          "400": { "$ref": "#/components/responses/AnalystInsightBadRequest" },
+          "403": { "$ref": "#/components/responses/AnalystInsightForbidden" },
+          "404": { "$ref": "#/components/responses/ReportNotFound" }
+        }
+      }
     }
   },
   "components": {
@@ -24845,7 +24943,7 @@
           "documentId": { "type": "string" },
           "requestNumber": { "type": "string" },
           "title": { "type": "string" },
-          "requestStatus": { "type": "string", "enum": ["submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review"] },
+          "requestStatus": { "type": "string", "description": "Every status a review queue reads: the action queues return submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests, the released queue returns approved and closed requests, and no queue returns a draft.", "enum": ["submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review", "approved", "closed"] },
           "submittedDate": { "type": ["string", "null"], "format": "date-time" }
         },
         "required": ["documentId", "requestNumber", "title", "requestStatus", "submittedDate"],
@@ -24944,6 +25042,524 @@
         "properties": { "data": { "type": "object", "properties": { "draft": { "type": "integer", "minimum": 0 }, "inReview": { "type": "integer", "minimum": 0 }, "approved": { "type": "integer", "minimum": 0 }, "total": { "type": "integer", "minimum": 0 } }, "required": ["draft", "inReview", "approved", "total"], "additionalProperties": false } },
         "required": ["data"], "additionalProperties": false
       },
+      "MyRequestStatusSummaryResponse": {
+        "type": "object",
+        "properties": { "data": { "$ref": "#/components/schemas/MyRequestStatusSummary" } },
+        "required": ["data"],
+        "additionalProperties": false
+      },
+      "MyRequestStatusSummary": {
+        "type": "object",
+        "description": "The signed-in actor's own assessment requests counted by requestStatus, one key per status. total is the sum of the seven status counts.",
+        "properties": {
+          "draft": { "type": "integer", "minimum": 0 },
+          "submitted": { "type": "integer", "minimum": 0 },
+          "questionnaireInProgress": { "type": "integer", "minimum": 0 },
+          "riskAssessmentDrafted": { "type": "integer", "minimum": 0 },
+          "underReview": { "type": "integer", "minimum": 0 },
+          "approved": { "type": "integer", "minimum": 0 },
+          "closed": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["draft", "submitted", "questionnaireInProgress", "riskAssessmentDrafted", "underReview", "approved", "closed", "total"],
+        "additionalProperties": false
+      },
+      "DashboardSummaryResponse": {
+        "type": "object",
+        "properties": { "data": { "$ref": "#/components/schemas/DashboardSummary" } },
+        "required": ["data"],
+        "additionalProperties": false
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "description": "The analyst dashboard's figures on the server's UTC calendar date, today. dueSoonWindowDays is the due-soon window every treatment due state and treatment count uses.",
+        "properties": {
+          "today": { "type": "string", "format": "date" },
+          "dueSoonWindowDays": { "type": "integer", "minimum": 1 },
+          "reviewQueue": { "$ref": "#/components/schemas/DashboardReviewQueue" },
+          "riskExposure": { "$ref": "#/components/schemas/RatingCounts" },
+          "highCriticalRisks": { "$ref": "#/components/schemas/DashboardHighCriticalRisks" },
+          "treatmentsDue": { "$ref": "#/components/schemas/DashboardTreatmentsDue" },
+          "recentActivity": { "$ref": "#/components/schemas/DashboardRecentActivity" }
+        },
+        "required": ["today", "dueSoonWindowDays", "reviewQueue", "riskExposure", "highCriticalRisks", "treatmentsDue", "recentActivity"],
+        "additionalProperties": false
+      },
+      "DashboardReviewQueue": {
+        "type": "object",
+        "description": "Work waiting in each analyst review list, each count equal to that list's total. requiresAttention, awaitingRequestor and generationInProgress are the Assessment Request queues. questionnairesReadyForReview counts the questionnaires whose answers are submitted. assessmentsDraft and assessmentsInReview count Risk Assessments by status.",
+        "properties": {
+          "requiresAttention": { "type": "integer", "minimum": 0 },
+          "awaitingRequestor": { "type": "integer", "minimum": 0 },
+          "generationInProgress": { "type": "integer", "minimum": 0 },
+          "questionnairesReadyForReview": { "type": "integer", "minimum": 0 },
+          "assessmentsDraft": { "type": "integer", "minimum": 0 },
+          "assessmentsInReview": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["requiresAttention", "awaitingRequestor", "generationInProgress", "questionnairesReadyForReview", "assessmentsDraft", "assessmentsInReview"],
+        "additionalProperties": false
+      },
+      "DashboardHighCriticalRisks": {
+        "type": "object",
+        "description": "Open contextual Risks rated High or Critical after treatment: Critical first, then target date ascending with undated Risks last, then Risk number. total counts every such Risk and truncated says rows is capped.",
+        "properties": {
+          "rows": { "type": "array", "items": { "$ref": "#/components/schemas/DashboardRiskRow" }, "maxItems": 5 },
+          "total": { "type": "integer", "minimum": 0 },
+          "truncated": { "type": "boolean" }
+        },
+        "required": ["rows", "total", "truncated"],
+        "additionalProperties": false
+      },
+      "DashboardRiskRow": {
+        "type": "object",
+        "description": "One open High or Critical residual Risk. treatmentDueState is derived by the server on its UTC calendar date.",
+        "properties": {
+          "documentId": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "riskNumber": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "riskStatement": { "type": ["string", "null"] },
+          "residualRating": { "type": "string", "enum": ["Critical", "High"] },
+          "targetDate": { "type": ["string", "null"], "format": "date" },
+          "treatmentDueState": { "$ref": "#/components/schemas/TreatmentDueState" }
+        },
+        "required": ["documentId", "riskNumber", "riskStatement", "residualRating", "targetDate", "treatmentDueState"],
+        "additionalProperties": false
+      },
+      "DashboardTreatmentsDue": {
+        "type": "object",
+        "description": "Open Risk treatments past their target date or due within the window, over the risk-treatment-overdue and risk-treatment-due-soon alert predicates: overdue and dueSoon each equal the total of that kind's alert list, and total equals the list of both kinds.",
+        "properties": {
+          "overdue": { "type": "integer", "minimum": 0 },
+          "dueSoon": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["overdue", "dueSoon", "total"],
+        "additionalProperties": false
+      },
+      "DashboardRecentActivity": {
+        "type": "object",
+        "description": "The most recent workflow events in the analyst review scope, newest first. truncated says there are more events than rows shows.",
+        "properties": {
+          "rows": { "type": "array", "items": { "$ref": "#/components/schemas/ActivityItem" }, "maxItems": 8 },
+          "truncated": { "type": "boolean" }
+        },
+        "required": ["rows", "truncated"],
+        "additionalProperties": false
+      },
+      "ActivityKind": {
+        "type": "string",
+        "description": "The closed set of workflow events. A generated draft is advisory and names no one; a release names the Security Analyst who released it.",
+        "enum": ["request-submitted", "request-returned-to-draft", "questionnaire-generated", "questionnaire-released", "questionnaire-returned-to-draft", "assessment-draft-generated", "assessment-released"]
+      },
+      "ActivityItem": {
+        "type": "object",
+        "description": "One workflow event. recordType names the kind of record the event is about and documentId identifies it. identifier is its request, questionnaire or assessment number, and is null for a questionnaire that has no number. title is the request title, the questionnaire title, or the owning request's title for an assessment. actorDisplayName is the display name of the identity the event names, and is null when the event names no one or none is recorded. occurredAt is the instant the event was recorded.",
+        "properties": {
+          "kind": { "$ref": "#/components/schemas/ActivityKind" },
+          "recordType": { "type": "string", "enum": ["assessment-request", "questionnaire", "assessment"] },
+          "documentId": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "identifier": { "type": ["string", "null"], "minLength": 1, "maxLength": 255 },
+          "title": { "type": ["string", "null"] },
+          "actorDisplayName": { "type": ["string", "null"] },
+          "occurredAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["kind", "recordType", "documentId", "identifier", "title", "actorDisplayName", "occurredAt"],
+        "additionalProperties": false
+      },
+      "AlertKind": {
+        "type": "string",
+        "description": "The closed set of derived alert conditions.",
+        "enum": ["risk-treatment-overdue", "risk-treatment-due-soon", "request-overdue", "request-due-soon", "control-implementation-overdue", "assessment-review-due", "critical-residual-risk-untreated", "ineffective-control"]
+      },
+      "AlertUrgency": {
+        "type": "string",
+        "description": "How soon an alert needs action. It is never a Risk rating.",
+        "enum": ["overdue", "due-soon", "attention"]
+      },
+      "AlertSourceType": { "type": "string", "enum": ["risk", "assessment-request", "assessment", "control-implementation"] },
+      "AlertLinkType": {
+        "type": "string",
+        "description": "The record an alert links to. A Control Implementation alert links to its parent Risk.",
+        "enum": ["risk", "assessment-request", "assessment"]
+      },
+      "AlertSource": {
+        "type": "object",
+        "description": "The record whose facts raise the alert. identifier is the Risk number for Risk and Control Implementation sources, the request number for requests and the assessment number for assessments. released is true when that work's assessment is released and read-only.",
+        "properties": {
+          "type": { "$ref": "#/components/schemas/AlertSourceType" },
+          "documentId": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "identifier": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "title": { "type": ["string", "null"] },
+          "released": { "type": "boolean" }
+        },
+        "required": ["type", "documentId", "identifier", "title", "released"],
+        "additionalProperties": false
+      },
+      "AlertLink": {
+        "type": "object",
+        "properties": {
+          "type": { "$ref": "#/components/schemas/AlertLinkType" },
+          "documentId": { "type": "string", "minLength": 1, "maxLength": 255 }
+        },
+        "required": ["type", "documentId"],
+        "additionalProperties": false
+      },
+      "AlertItem": {
+        "type": "object",
+        "description": "One derived alert. id is the kind and the source documentId joined by a colon. dayOffset counts whole UTC days from the server's today to the governing date, negative once it has passed, and is null without a date. residualRating is the (parent) Risk's residual rating, null for requests and assessments.",
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "kind": { "$ref": "#/components/schemas/AlertKind" },
+          "urgency": { "$ref": "#/components/schemas/AlertUrgency" },
+          "governingDate": { "type": ["string", "null"], "format": "date" },
+          "dayOffset": { "type": ["integer", "null"] },
+          "source": { "$ref": "#/components/schemas/AlertSource" },
+          "link": { "$ref": "#/components/schemas/AlertLink" },
+          "residualRating": { "anyOf": [{ "$ref": "#/components/schemas/AssessmentRating" }, { "type": "null" }] }
+        },
+        "required": ["id", "kind", "urgency", "governingDate", "dayOffset", "source", "link", "residualRating"],
+        "additionalProperties": false
+      },
+      "AlertPagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+          "pageSize": { "type": "integer", "enum": [5, 10, 25, 50], "minimum": 5 },
+          "pageCount": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["page", "pageSize", "pageCount", "total"],
+        "additionalProperties": false
+      },
+      "AlertListMeta": {
+        "type": "object",
+        "description": "today is the UTC calendar date the alerts were derived on. dueSoonWindowDays is the window, in days from today inclusive, that counts as due soon.",
+        "properties": {
+          "pagination": { "$ref": "#/components/schemas/AlertPagination" },
+          "today": { "type": "string", "format": "date" },
+          "dueSoonWindowDays": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["pagination", "today", "dueSoonWindowDays"],
+        "additionalProperties": false
+      },
+      "AlertListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AlertItem" }, "maxItems": 50 },
+          "meta": { "$ref": "#/components/schemas/AlertListMeta" }
+        },
+        "required": ["data", "meta"],
+        "additionalProperties": false
+      },
+      "AlertCountsByKind": {
+        "type": "object",
+        "properties": {
+          "risk-treatment-overdue": { "type": "integer", "minimum": 0 },
+          "risk-treatment-due-soon": { "type": "integer", "minimum": 0 },
+          "request-overdue": { "type": "integer", "minimum": 0 },
+          "request-due-soon": { "type": "integer", "minimum": 0 },
+          "control-implementation-overdue": { "type": "integer", "minimum": 0 },
+          "assessment-review-due": { "type": "integer", "minimum": 0 },
+          "critical-residual-risk-untreated": { "type": "integer", "minimum": 0 },
+          "ineffective-control": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["risk-treatment-overdue", "risk-treatment-due-soon", "request-overdue", "request-due-soon", "control-implementation-overdue", "assessment-review-due", "critical-residual-risk-untreated", "ineffective-control"],
+        "additionalProperties": false
+      },
+      "AlertCountsByUrgency": {
+        "type": "object",
+        "properties": {
+          "overdue": { "type": "integer", "minimum": 0 },
+          "due-soon": { "type": "integer", "minimum": 0 },
+          "attention": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["overdue", "due-soon", "attention"],
+        "additionalProperties": false
+      },
+      "AlertSummary": {
+        "type": "object",
+        "description": "Every current alert counted by kind and by urgency over the same predicate as GET /v1/alerts. total is the number of alerts.",
+        "properties": {
+          "byKind": { "$ref": "#/components/schemas/AlertCountsByKind" },
+          "byUrgency": { "$ref": "#/components/schemas/AlertCountsByUrgency" },
+          "total": { "type": "integer", "minimum": 0 },
+          "today": { "type": "string", "format": "date" },
+          "dueSoonWindowDays": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["byKind", "byUrgency", "total", "today", "dueSoonWindowDays"],
+        "additionalProperties": false
+      },
+      "AlertSummaryResponse": {
+        "type": "object",
+        "properties": { "data": { "$ref": "#/components/schemas/AlertSummary" } },
+        "required": ["data"],
+        "additionalProperties": false
+      },
+      "ReportKey": {
+        "type": "string",
+        "description": "The closed set of analyst reports.",
+        "enum": ["risk-exposure", "treatment-performance", "assessment-throughput", "control-effectiveness"]
+      },
+      "ReportDefinition": {
+        "type": "object",
+        "description": "One analyst report as the Reports index lists it.",
+        "properties": {
+          "key": { "$ref": "#/components/schemas/ReportKey" },
+          "title": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 }
+        },
+        "required": ["key", "title", "description"],
+        "additionalProperties": false
+      },
+      "ReportDefinitionListResponse": {
+        "type": "object",
+        "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/ReportDefinition" }, "maxItems": 4 } },
+        "required": ["data"],
+        "additionalProperties": false
+      },
+      "RatingCounts": {
+        "type": "object",
+        "description": "Risks by rating on the closed ladder. notRated counts a Risk with no rating, or one outside the ladder. The parts add up to total.",
+        "properties": {
+          "Critical": { "type": "integer", "minimum": 0 },
+          "High": { "type": "integer", "minimum": 0 },
+          "Moderate": { "type": "integer", "minimum": 0 },
+          "Low": { "type": "integer", "minimum": 0 },
+          "notRated": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["Critical", "High", "Moderate", "Low", "notRated", "total"],
+        "additionalProperties": false
+      },
+      "TreatmentStatusCounts": {
+        "type": "object",
+        "description": "Risks by the treatment status recorded on each Risk. notProvided counts a Risk with no recorded status. The parts add up to total.",
+        "properties": {
+          "notStarted": { "type": "integer", "minimum": 0 },
+          "inProgress": { "type": "integer", "minimum": 0 },
+          "overdue": { "type": "integer", "minimum": 0 },
+          "complete": { "type": "integer", "minimum": 0 },
+          "notProvided": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["notStarted", "inProgress", "overdue", "complete", "notProvided", "total"],
+        "additionalProperties": false
+      },
+      "ControlStatusCounts": {
+        "type": "object",
+        "description": "Control Implementations by implementation status. notProvided counts one with no recorded status. The parts add up to total.",
+        "properties": {
+          "existing": { "type": "integer", "minimum": 0 },
+          "planned": { "type": "integer", "minimum": 0 },
+          "implemented": { "type": "integer", "minimum": 0 },
+          "retired": { "type": "integer", "minimum": 0 },
+          "notProvided": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["existing", "planned", "implemented", "retired", "notProvided", "total"],
+        "additionalProperties": false
+      },
+      "EffectivenessCounts": {
+        "type": "object",
+        "description": "Control Implementations by effectiveness rating. notProvided counts one with no recorded rating. The parts add up to total.",
+        "properties": {
+          "effective": { "type": "integer", "minimum": 0 },
+          "partiallyEffective": { "type": "integer", "minimum": 0 },
+          "ineffective": { "type": "integer", "minimum": 0 },
+          "notAssessed": { "type": "integer", "minimum": 0 },
+          "notProvided": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["effective", "partiallyEffective", "ineffective", "notAssessed", "notProvided", "total"],
+        "additionalProperties": false
+      },
+      "RequestStatusCounts": {
+        "type": "object",
+        "description": "Assessment Requests in the Security Analyst's review scope by status. A draft is outside that scope and is never counted. The parts add up to total.",
+        "properties": {
+          "submitted": { "type": "integer", "minimum": 0 },
+          "questionnaireInProgress": { "type": "integer", "minimum": 0 },
+          "riskAssessmentDrafted": { "type": "integer", "minimum": 0 },
+          "underReview": { "type": "integer", "minimum": 0 },
+          "approved": { "type": "integer", "minimum": 0 },
+          "closed": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["submitted", "questionnaireInProgress", "riskAssessmentDrafted", "underReview", "approved", "closed", "total"],
+        "additionalProperties": false
+      },
+      "ResidualByTreatmentStatus": {
+        "type": "object",
+        "description": "Open contextual Risks by residual rating, each split by recorded treatment status. notRated holds the Risks with no rating on the ladder.",
+        "properties": {
+          "Critical": { "$ref": "#/components/schemas/TreatmentStatusCounts" },
+          "High": { "$ref": "#/components/schemas/TreatmentStatusCounts" },
+          "Moderate": { "$ref": "#/components/schemas/TreatmentStatusCounts" },
+          "Low": { "$ref": "#/components/schemas/TreatmentStatusCounts" },
+          "notRated": { "$ref": "#/components/schemas/TreatmentStatusCounts" }
+        },
+        "required": ["Critical", "High", "Moderate", "Low", "notRated"],
+        "additionalProperties": false
+      },
+      "ExposedSystem": {
+        "type": "object",
+        "description": "One Information System with the open High and Critical residual Risks that impact it.",
+        "properties": {
+          "documentId": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "critical": { "type": "integer", "minimum": 0 },
+          "high": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["documentId", "name", "critical", "high", "total"],
+        "additionalProperties": false
+      },
+      "ExposedSystems": {
+        "type": "object",
+        "description": "The Information Systems carrying the most open High and Critical residual Risks: most Critical first, then most in total, then by name. total counts every such system and truncated says rows is capped. risksWithoutSystem counts the open High and Critical residual Risks that impact no Information System.",
+        "properties": {
+          "rows": { "type": "array", "items": { "$ref": "#/components/schemas/ExposedSystem" }, "maxItems": 10 },
+          "total": { "type": "integer", "minimum": 0 },
+          "truncated": { "type": "boolean" },
+          "risksWithoutSystem": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["rows", "total", "truncated", "risksWithoutSystem"],
+        "additionalProperties": false
+      },
+      "TreatmentDueStateCounts": {
+        "type": "object",
+        "description": "Open treatments that are not Complete, by due state on the server's today: overdue has a target date before today, dueWithinWindow one from today to today plus dueWindowDays inclusive, later one after that, and noTargetDate none. The parts add up to total.",
+        "properties": {
+          "overdue": { "type": "integer", "minimum": 0 },
+          "dueWithinWindow": { "type": "integer", "minimum": 0 },
+          "later": { "type": "integer", "minimum": 0 },
+          "noTargetDate": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["overdue", "dueWithinWindow", "later", "noTargetDate", "total"],
+        "additionalProperties": false
+      },
+      "MostOverdueTreatments": {
+        "type": "object",
+        "description": "The risk-treatment-overdue alerts with the oldest target dates, oldest first. total counts every such alert and truncated says rows is capped.",
+        "properties": {
+          "rows": { "type": "array", "items": { "$ref": "#/components/schemas/AlertItem" }, "maxItems": 5 },
+          "total": { "type": "integer", "minimum": 0 },
+          "truncated": { "type": "boolean" }
+        },
+        "required": ["rows", "total", "truncated"],
+        "additionalProperties": false
+      },
+      "ThroughputMonth": {
+        "type": "object",
+        "description": "One UTC calendar month. monthStart is its first day, count the Risk Assessments released in it, and partial marks the current month, which is still in progress.",
+        "properties": {
+          "monthStart": { "type": "string", "format": "date" },
+          "count": { "type": "integer", "minimum": 0 },
+          "partial": { "type": "boolean" }
+        },
+        "required": ["monthStart", "count", "partial"],
+        "additionalProperties": false
+      },
+      "ThroughputReleased": {
+        "type": "object",
+        "description": "Released Risk Assessments per month over the period, oldest month first. total is the sum of the months.",
+        "properties": {
+          "months": { "type": "array", "items": { "$ref": "#/components/schemas/ThroughputMonth" }, "maxItems": 12 },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["months", "total"],
+        "additionalProperties": false
+      },
+      "MedianDaysToRelease": {
+        "type": "object",
+        "description": "The median days from request submission to release, rounded to one decimal, over the releases in the period whose request records a submission. value is null when there is none. The sample is capped, newest first, and truncated says so.",
+        "properties": {
+          "value": { "type": ["number", "null"], "minimum": 0 },
+          "sampleSize": { "type": "integer", "minimum": 0 },
+          "truncated": { "type": "boolean" }
+        },
+        "required": ["value", "sampleSize", "truncated"],
+        "additionalProperties": false
+      },
+      "RiskExposureReport": {
+        "type": "object",
+        "description": "Open contextual Risks by residual and by inherent rating, residual rating by treatment status, and the most exposed Information Systems. today is the UTC calendar date the report was computed on.",
+        "properties": {
+          "key": { "type": "string", "enum": ["risk-exposure"] },
+          "today": { "type": "string", "format": "date" },
+          "byResidualRating": { "$ref": "#/components/schemas/RatingCounts" },
+          "byInherentRating": { "$ref": "#/components/schemas/RatingCounts" },
+          "residualByTreatmentStatus": { "$ref": "#/components/schemas/ResidualByTreatmentStatus" },
+          "exposedSystems": { "$ref": "#/components/schemas/ExposedSystems" }
+        },
+        "required": ["key", "today", "byResidualRating", "byInherentRating", "residualByTreatmentStatus", "exposedSystems"],
+        "additionalProperties": false
+      },
+      "TreatmentPerformanceReport": {
+        "type": "object",
+        "description": "Open treatments by due state over a window of dueWindowDays, open contextual Risks by recorded treatment status, and the most overdue treatments. today is the UTC calendar date the report was computed on.",
+        "properties": {
+          "key": { "type": "string", "enum": ["treatment-performance"] },
+          "today": { "type": "string", "format": "date" },
+          "dueWindowDays": { "type": "integer", "minimum": 1 },
+          "dueState": { "$ref": "#/components/schemas/TreatmentDueStateCounts" },
+          "treatmentStatus": { "$ref": "#/components/schemas/TreatmentStatusCounts" },
+          "mostOverdue": { "$ref": "#/components/schemas/MostOverdueTreatments" }
+        },
+        "required": ["key", "today", "dueWindowDays", "dueState", "treatmentStatus", "mostOverdue"],
+        "additionalProperties": false
+      },
+      "AssessmentThroughputReport": {
+        "type": "object",
+        "description": "Risk Assessments released per UTC calendar month over the period months ending with the current month, which begins on periodStart, the median days from submission to release over the same period, and Assessment Requests by status as a current snapshot. today is the UTC calendar date the report was computed on.",
+        "properties": {
+          "key": { "type": "string", "enum": ["assessment-throughput"] },
+          "today": { "type": "string", "format": "date" },
+          "period": { "type": "integer", "enum": [6, 12], "minimum": 6 },
+          "periodStart": { "type": "string", "format": "date" },
+          "released": { "$ref": "#/components/schemas/ThroughputReleased" },
+          "medianDaysToRelease": { "$ref": "#/components/schemas/MedianDaysToRelease" },
+          "requestsByStatus": { "$ref": "#/components/schemas/RequestStatusCounts" }
+        },
+        "required": ["key", "today", "period", "periodStart", "released", "medianDaysToRelease", "requestsByStatus"],
+        "additionalProperties": false
+      },
+      "ControlEffectivenessReport": {
+        "type": "object",
+        "description": "Control Implementations on open contextual Risks by implementation status and by effectiveness rating. today is the UTC calendar date the report was computed on.",
+        "properties": {
+          "key": { "type": "string", "enum": ["control-effectiveness"] },
+          "today": { "type": "string", "format": "date" },
+          "implementationStatus": { "$ref": "#/components/schemas/ControlStatusCounts" },
+          "effectivenessRating": { "$ref": "#/components/schemas/EffectivenessCounts" }
+        },
+        "required": ["key", "today", "implementationStatus", "effectivenessRating"],
+        "additionalProperties": false
+      },
+      "ReportResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/RiskExposureReport" },
+              { "$ref": "#/components/schemas/TreatmentPerformanceReport" },
+              { "$ref": "#/components/schemas/AssessmentThroughputReport" },
+              { "$ref": "#/components/schemas/ControlEffectivenessReport" }
+            ],
+            "discriminator": {
+              "propertyName": "key",
+              "mapping": {
+                "risk-exposure": "#/components/schemas/RiskExposureReport",
+                "treatment-performance": "#/components/schemas/TreatmentPerformanceReport",
+                "assessment-throughput": "#/components/schemas/AssessmentThroughputReport",
+                "control-effectiveness": "#/components/schemas/ControlEffectivenessReport"
+              }
+            }
+          }
+        },
+        "required": ["data"],
+        "additionalProperties": false
+      },
       "AssessmentRequestSummary": { "type": "object", "properties": { "documentId": { "type": "string" }, "requestNumber": { "type": "string" }, "title": { "type": "string" }, "requestStatus": { "type": "string", "enum": ["draft", "submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review", "approved", "closed"] } }, "required": ["documentId", "requestNumber", "title", "requestStatus"], "additionalProperties": false },
       "AssessmentDetail": {
         "type": "object",
@@ -25018,10 +25634,16 @@
           "treatmentStatus": { "type": ["string", "null"], "enum": ["Not Started", "In Progress", "Overdue", "Complete", null] },
           "treatmentOwner": { "anyOf": [{ "$ref": "#/components/schemas/RiskRegisterUser" }, { "type": "null" }] },
           "targetDate": { "type": ["string", "null"], "format": "date" },
+          "treatmentDueState": { "$ref": "#/components/schemas/TreatmentDueState" },
           "assessment": { "$ref": "#/components/schemas/RiskRegisterAssessment" }
         },
-        "required": ["documentId", "riskNumber", "riskStatement", "inherentRating", "residualRating", "treatmentStatus", "treatmentOwner", "targetDate", "assessment"],
+        "required": ["documentId", "riskNumber", "riskStatement", "inherentRating", "residualRating", "treatmentStatus", "treatmentOwner", "targetDate", "treatmentDueState", "assessment"],
         "additionalProperties": false
+      },
+      "TreatmentDueState": {
+        "type": "string",
+        "enum": ["overdue", "due-soon", "later", "no-target-date", "complete-or-closed"],
+        "description": "The server-derived treatment due state on the server's UTC calendar date. complete-or-closed: the treatment is Complete or the Risk has a closure date. no-target-date: an open treatment with no target date. overdue: the target date is before today. due-soon: the target date is today or within the next 14 days. later: the target date is further out. The stored Overdue treatment status is never read."
       },
       "RiskRegisterSelectedLabel": {
         "type": "object",
@@ -28630,6 +29252,18 @@
       "QuestionnaireConflict": {
         "description": "The questionnaire is not in an answerable workflow state",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/QuestionnaireWorkflowErrorResponse" } } }
+      },
+      "AnalystInsightBadRequest": {
+        "description": "The analyst insight query is invalid",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentWorkflowErrorResponse" } } }
+      },
+      "AnalystInsightForbidden": {
+        "description": "The signed-in identity is not a human Security Analyst holding the analyst insight grants",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentWorkflowErrorResponse" } } }
+      },
+      "ReportNotFound": {
+        "description": "The report key names no analyst report",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentWorkflowErrorResponse" } } }
       }
     }
   }

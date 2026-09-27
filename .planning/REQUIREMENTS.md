@@ -1,83 +1,195 @@
 # Requirements: IdamBox Cyber Risk Manager (CSRM)
 
-**Defined:** 2026-08-27  
+**Milestone:** v2.0 Assessment Lifecycle and Oversight
+**Defined:** 2026-09-27; milestone started 2026-09-28
 **Core Value:** Make a complex cyber-risk workflow simple and auditable while keeping Security Analysts—not AI—in control of assessment review and release.
 
-## v1 Requirements
+v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
-### Foundation
+## v2.0 Requirements
 
-- [x] **FOUND-01**: The repository provides reproducible Turborepo tasks for the `apps/strapi` and `apps/web` workspaces.
-- [x] **FOUND-02**: The web application provides a strict-TypeScript Next.js App Router foundation with semantic BProton/IdamBox theme tokens and reusable responsive application shell.
-- [x] **FOUND-03**: The web application uses a typed service boundary derived from the Strapi OpenAPI specification rather than page-level raw fetch calls.
-- [x] **FOUND-04**: The application renders navigation and actions from effective capability configuration, while Strapi enforces Role → Function → FunctionAPI grants and record-level authorization.
-- [x] **FOUND-05**: The foundation provides automated unit, component/integration, and end-to-end test infrastructure with deliberate loading, empty, error, and permission-denied states.
+**Defined:** 2026-09-27, from the product gap UAT (`.planning/uat/product-gaps/`). Each requirement has acceptance criteria and a trace to the operator's intended product (IDs from `BRIEF.md`: roles R1–R3, flow F1–F10, A1–A2, oversight O1–O2, qualities Q1–Q5), to the findings it closes (`FINDINGS.md`) and to its phase. Decision numbers refer to `.planning/NEXT-WAVE-DECISIONS.md`.
 
 ### Requests
 
-- [x] **REQ-01**: A Requestor can view only authorised Risk Assessment Requests with status, search, filtering, sorting, and pagination.
-- [x] **REQ-02**: A Requestor can create a structured Risk Assessment Request using persisted CSRM fields and assessment context.
-- [x] **REQ-03**: A Requestor can save, resume, and edit a draft while its workflow state permits it.
-- [x] **REQ-04**: A Requestor can submit a valid request and receive an unambiguous workflow-state confirmation.
-- [x] **REQ-05**: A Requestor dashboard shows requests and questionnaires requiring action and recently released assessments from data-driven widgets.
-- [x] **REQ-06**: An owning Requestor or an authorised Security Analyst can revert a `submitted` Risk Assessment Request to `draft` with a mandatory recorded reason, then edit and resubmit it.
+- [ ] **REQ-07**: A Security Analyst sees every field the Requestor submitted, and each actor's request actions refresh after every workflow transition.
+  - Acceptance: (1) the analyst's request page shows third-party involvement, third-party details and regulatory requirements, grouped as on the Requestor's form; (2) after a request returns to draft, both actors see the draft actions without reloading.
+  - Trace: F1, F2 · UAT-015, UAT-037 · Phase 10
+- [ ] **REQ-08**: A Security Analyst can pick up a submitted request, assign or reassign it to a Security Analyst, or release it back to the queue, and every analyst on the request can follow its generation jobs.
+  - Acceptance: (1) pick-up, assignment, reassignment and release record actor and time, and the assignee's name shows on the request, the review queue and the dashboards; (2) the review queue has an "Assigned to me" view that the analyst dashboard counts; (3) any Security Analyst who may read the request can read its questionnaire and draft generation jobs; (4) one analyst is accountable, and assignment does not restrict which analysts may contribute (decision 10); (5) an analyst cannot pick up or be assigned a request they raised, enforced in Strapi (G-1).
+  - Trace: F2, R2 · UAT-014 · Phase 13
+
+### Collaboration
+
+- [ ] **COLLAB-01**: The Requestor and Security Analysts can add attributed plain-text notes to a request at any point after submission and read its notes history.
+  - Acceptance: (1) each note records author, local time and text, and notes are append-only; (2) a new note is flagged on the analyst queue and the Requestor's Home until read; (3) a note can be marked as changing the AI inputs, and the AI context (INT-05) includes notes; (4) another Requestor cannot list or read the notes by any route, enforced in Strapi.
+  - Trace: A1, A2 · UAT-013 · Phase 13
+- [ ] **COLLAB-02**: The Requestor and Security Analysts can attach supporting files (PDF, office documents, spreadsheets) to a request at intake and at any later stage.
+  - Acceptance: (1) allowed files (PDF, DOCX, XLSX, PPTX, CSV, TXT, PNG and JPEG, checked by content; up to 25 MB each and 20 per request) upload at creation and later, each showing name, size, uploader and time, and download only through an authorised operation; (2) a disallowed type, an oversize file or a file that fails the malware scan is refused with its reason; (3) only actors who may read the request can list or download its files, and another Requestor is refused at every route; (4) removal records actor and time, and retention follows the assessment's; (5) the analyst opts each file's extracted text into the AI context, off by default; included text is size-capped, marked as untrusted, and never sent above the provider's approved classification ceiling (decision 2, G-3).
+  - Trace: F1, A1 · UAT-012 · Phase 14
 
 ### Questionnaires
 
-- [x] **QUES-01**: A Requestor can view only questionnaires associated with authorised requests.
-- [x] **QUES-02**: A Requestor can complete a data-defined, grouped, conditional questionnaire with progress and unanswered-question indication.
-- [x] **QUES-03**: A Requestor can save questionnaire responses as a draft and resume later.
-- [x] **QUES-04**: A Requestor can submit a valid questionnaire after an explicit confirmation.
-- [x] **QUES-05**: A Security Analyst can review questionnaire definitions and submitted responses.
-- [x] **QUES-06**: An owning Requestor or an authorised Security Analyst can revert a submitted questionnaire to draft with a mandatory recorded reason while no assessment draft exists, then edit and resubmit it with answer values preserved.
-- [x] **QUES-07**: A Security Analyst can trigger a reviewable AI job from a submitted Risk Assessment Request that generates a contextualised questionnaire, with queued, running, completed, failed, and retry states and recorded provenance.
+- [ ] **QUES-08**: A Security Analyst can govern any questionnaire, including AI-generated ones, without errors or lost work.
+  - Acceptance: (1) adding a question to an existing section or to a new named section succeeds on generated and seeded questionnaires; (2) Add and Edit open where invoked with focus in the first field, and errors show beside the form; (3) regenerating first states how many analyst edits it discards, and the timeline records a Regenerated event while earlier entries stay attached to their questions; (4) after release the analyst sees the released questions read-only and the Requestor's answered count, without answer content before submission (default).
+  - Trace: F4, F5 · UAT-005, UAT-016, UAT-019, UAT-020 · Phase 10
+- [ ] **QUES-09**: A Requestor answers a questionnaire without losing work and with clear guidance.
+  - Acceptance: (1) answers autosave with a visible saved state, or leaving with unsaved answers warns first; (2) the questionnaire opens with an introduction and the first section, the unanswered-required list appears only after a submit attempt and in form order, and the history follows the questions; (3) radio groups follow the ARIA radio pattern, so arrow keys move and select; (4) submission dialogs say what happens next and how to change it, matching the actions the page then offers.
+  - Trace: F5, Q5 · UAT-021, UAT-022, UAT-023, UAT-064 · Phase 10
+- [ ] **QUES-10**: Generated questionnaires suit a Requestor who is not a security expert.
+  - Acceptance: (1) generated questions ask one thing each in plain language, offer choices with "Not sure" where a choice fits, are optional where appropriate and carry short help text; (2) generation receives the assessment context (INT-05), regulatory requirements and the selected systems and assets included.
+  - Trace: F3, Q5 · UAT-043 · Phase 12
+- [ ] **QUES-11**: A Security Analyst can instruct the AI to add, change or remove questions, and accept or reject each proposed change.
+  - Acceptance: (1) an instruction such as "add questions about offshore support" or "rewrite in plain language" returns a proposal of additions, edits and deletions; (2) each proposed change is accepted or rejected on its own, and nothing changes until accepted; (3) the run record and the revision timeline show the instruction, the initiating analyst, the time and the provider; (4) the instruction travels in its own slot, never mixed with Requestor text (decision 5).
+  - Trace: F4, A2 · UAT-017 · Phase 15
+- [ ] **QUES-12**: After answers exist, a Security Analyst can ask the AI for follow-up questions that keep every answered question and its answer unchanged.
+  - Acceptance: (1) the proposal uses the request, the notes and the answered questions as fixed context and adds or revises unanswered questions only; (2) no proposal changes or removes an answered question or its answer; (3) revised questions reach the Requestor only when the analyst releases them.
+  - Trace: A2, F4 · UAT-018 · Phase 15 (decision 4, reversing the pre-06.2 rule that regeneration is refused once any answer exists)
 
 ### Assessments
 
-- [x] **ASSESS-01**: A Security Analyst can view and review submitted requests authorised to them.
-- [x] **ASSESS-02**: A Security Analyst can trigger or observe a reviewable AI assessment-draft job with queued, running, completed, failed, and retry states.
-- [x] **ASSESS-03**: A Security Analyst can edit assessment metadata, contextual risks, ratings, owners, treatments, target dates, and mitigation-control implementations.
-- [x] **ASSESS-04**: A Security Analyst can explicitly release a completed assessment only after required review.
-- [x] **ASSESS-05**: A Requestor can view an authorised released assessment read-only and cannot modify it.
+- [ ] **ASSESS-06**: A Security Analyst edits risks and control implementations with fitting pickers and clear feedback.
+  - Acceptance: (1) mitigation control, impacted system, impacted asset and control owner use server-backed searchable pickers, with the Risk Type's applicable controls first and the request's systems and assets first; (2) every date field, the exemption review date included, uses the shared date input; (3) saving a risk or a control implementation confirms inline; (4) release readiness is summarised per risk with its outstanding count and a link to the risk, and met items are hidden by default.
+  - Trace: F7, F9, F10 · UAT-006, UAT-009, UAT-010, UAT-011, UAT-034 · Phase 10
+- [ ] **ASSESS-07**: The released assessment shows each risk's full treatment for both actors.
+  - Acceptance: controls show by number and name, and each risk shows its treatment action and plan, owners and dates, read-only.
+  - Trace: F10, O1 · UAT-033 · Phase 10
+- [ ] **ASSESS-08**: AI draft generation uses the organisation's Risk Type library and proposes controls and treatments for the analyst to accept.
+  - Acceptance: (1) drafts draw on the active Risk Type library, whose active types the Admin controls from Phase 22 (decision 14), and may propose several risks per type; (2) each proposed risk carries suggested controls from the whole control library as one-click "add as planned control" proposals; (3) a draft may propose Accept, with a rationale, only for Low or Moderate residual risk (decision 8), and the analyst confirms.
+  - Trace: F6, F7 · UAT-029, UAT-031, UAT-044 · Phase 12
+- [ ] **ASSESS-09**: A Security Analyst can withdraw an unreleased risk with a reason.
+  - Acceptance: (1) a withdrawn risk leaves the assessment, release readiness and counts, and the history keeps it with reason, actor and time; (2) no persisted risk is ever hard-deleted: an unsaved row is discarded, and a rejected AI proposal is recorded as rejected in the run record (decision 6); (3) Strapi refuses to withdraw a released risk, which closes through the register instead.
+  - Trace: F7 · UAT-027 · Phase 16
+- [ ] **ASSESS-10**: A Security Analyst can re-run the AI for one risk or to propose additional risks.
+  - Acceptance: (1) "Suggest more risks" proposes risks that do not duplicate existing ones, each accepted or rejected on its own; (2) "Rewrite this risk" proposes field changes as a diff accepted per field; (3) each run is recorded with instruction, analyst, time and provider, and released risks cannot be re-run.
+  - Trace: F7, A2 · UAT-028 · Phase 16
+- [ ] **ASSESS-11**: A Security Analyst can release the initial risks to the Requestor for a response.
+  - Acceptance: (1) in a "Released for response" stage the owning Requestor reads the initial risks, and sees nothing of them before it; (2) the Requestor edits only the response, never the risk fields, and the analyst can close the round and open another; (3) another Requestor cannot see or respond to the risks at any stage.
+  - Trace: F8 · UAT-025 · Phase 17 (decision 3, reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only")
+- [ ] **ASSESS-12**: The Requestor responds to each initial risk with mitigating controls, and the analyst decides on each.
+  - Acceptance: (1) per risk, the Requestor proposes existing or planned controls with owner, evidence and due date, then submits the response; (2) the analyst accepts, edits or rejects each proposed control with a reason, and accepted ones become control implementations.
+  - Trace: F8, F9 · UAT-025 · Phase 17
+- [ ] **ASSESS-13**: The AI proposes a residual-risk write-up from the recorded controls and responses.
+  - Acceptance: (1) "Reassess residual risk", per risk or for the assessment, proposes residual likelihood, consequence, rating and rationale citing the accepted controls; (2) the analyst accepts proposals per field and can re-run.
+  - Trace: F9 · UAT-026 · Phase 17
+- [ ] **ASSESS-14**: A Security Analyst marks an assessment reviewed explicitly.
+  - Acceptance: (1) "Mark reviewed" is offered once the release requirements are met and records reviewer and time; (2) edits after review show as "changed since review" and need review again before release; (3) when any residual risk is Critical, a threshold the Admin can change from Phase 22, a second Security Analyst approves before release; (4) neither the reviewer nor the approver can be the Requestor of that request (G-1).
+  - Trace: F10 · UAT-040 · Phase 17.1 (decision 17, reversing save-driven review, 06.8 D-04 and D-13)
+- [ ] **ASSESS-15**: An assessment's risks are available as a table with configurable columns, sort, filter, a frozen first column and saved views.
+  - Acceptance: (1) one row per risk with the default columns of `REPORT.md` §7 and every other field through a column chooser; (2) sort by any column, per-column filters, quick search, a row count, and named saved views that are personal by default and shareable with analysts; (3) below 768px the risks show as a stacked card list with a detail sheet, with no grid editing on phones; (4) 150 risks scroll and edit without visible lag at 1440px within the route JavaScript budget or a recorded exception.
+  - Trace: Q4, F7 · UAT-039, UAT-055 · Phase 18
+- [ ] **ASSESS-16**: A Security Analyst edits risks inline in the table with validation, batch save, undo and conflict handling.
+  - Acceptance: (1) cell editors fit the field type (pick lists, user search, dates in the local format, multi-line text, the control picker) and apply the server's validation per cell; (2) changed cells are marked, "Save changes" saves a batch through a Strapi bulk operation, and Discard, undo and redo work within the session; (3) a save with stale rows returns the conflicts, resolved per cell; (4) every change records who, when and the old and new values.
+  - Trace: Q4, F7 · UAT-055 · Phase 18
+- [ ] **ASSESS-17**: The risk table follows the WCAG 2.2 AA grid keyboard pattern and copies and pastes with Excel and SharePoint in both directions.
+  - Acceptance: (1) grid role, roving focus, arrow and jump keys, Enter, F2 and Escape editing, and announced changes, with the risks reachable without tabbing through the readiness list; (2) a copied range is tab-separated text plus an HTML table with display values, and pastes into Excel as rows and columns; (3) an Excel or SharePoint range pastes from the active cell with column mapping and type conversion ("High", dd/mm/yyyy, names, control numbers), previewed with every change and error, and nothing applies partially without the analyst choosing; (4) released and Requestor views are read-only but copyable.
+  - Trace: Q4 · UAT-056, UAT-057, UAT-063 · Phase 18
+- [ ] **ASSESS-18**: Likelihood and consequence use controlled scales, with a derived rating the analyst can override with a reason.
+  - Acceptance: (1) likelihood (Rare, Unlikely, Possible, Likely, Almost certain) and consequence (Insignificant, Minor, Moderate, Major, Severe) are pick lists from the organisation's 5 × 5 scales (decision 8), enforced by the API on the existing string fields, with a recorded rule for existing free text; (2) the rating derives as values change, as the product of the two scores banded 1–4 Low, 5–9 Moderate, 10–16 High and 20–25 Critical, and can be overridden with a recorded reason.
+  - Trace: F7, Q1 · UAT-008 · Phase 18
+- [ ] **ASSESS-19**: A Security Analyst imports rows into, and exports rows from, an assessment's risks.
+  - Acceptance: (1) CSV or XLSX import creates and updates risks by risk number, and bulk-imports control implementations by risk number and control number, through the five-step preview; (2) export writes the current view (visible columns, filters, sort) to CSV and XLSX with formula-injection protection.
+  - Trace: Q3, Q4 · UAT-050 · Phase 18
+- [ ] **ASSESS-20**: The risk owner approves each risk's treatment plan and accepts its residual risk before release, within the authority the risk appetite sets.
+  - Acceptance: (1) each risk's owner sees an acceptance request on their Home and accepts or declines with a rationale, and a decline returns the risk to the analyst with its reason; (2) the risk owner accepts Low and Moderate residual risk, High also needs a named executive approver, and only a named executive approver accepts Critical risk, as a time-limited exception (decision 8); (3) each acceptance records who accepted, under what authority, the rationale and a review date from the appetite's interval, and shows in the released assessment and in the register's "Accepted risks" view; (4) release is refused until every risk's treatment plan is approved and its residual risk accepted.
+  - Trace: F8, F10 · UAT-025, UAT-040 · Phase 17.1 (G-2; ISO/IEC 27001:2022 clause 6.1.3 f)
 
-### Risk Register
+### Risk Register and Oversight
 
-- [x] **RISK-01**: A Security Analyst can search, filter, sort, and paginate contextual Risk records by status, ratings, owners, dates, assessments, systems/assets, and mitigation status.
-- [x] **RISK-02**: A Security Analyst can view Risk details and maintain its mitigation-control implementation information.
+- [ ] **RISK-03**: Assessment type (BAU, Project, Other), division and business unit are register columns, filters, saved views and report dimensions.
+  - Acceptance: (1) the register, the review queues and the assessment list show and filter by assessment type, with "Project" and "BAU" saved views; (2) the exposure and throughput reports and the analyst Home break down by type.
+  - Trace: O1 · UAT-045 · Phase 20
+- [ ] **RISK-04**: Released risks track treatment to closure without reopening the assessment.
+  - Acceptance: (1) after release, treatment owners and analysts update treatment status, progress notes, dates and evidence, and a Security Analyst re-rates residual risk after treatment and closes the risk with a reason, each as a recorded review, while statements and inherent ratings stay frozen (decision 9); (2) the released assessment is unchanged, and the risk's history shows each change with actor and time.
+  - Trace: O1 · UAT-046 · Phase 20
+- [ ] **RISK-05**: Risk, treatment and control owners see the risks and treatments they own.
+  - Acceptance: (1) "My risks and treatments" lists, scoped by Strapi, the records where the viewer is risk, treatment or control owner, with due-soon and overdue flags, and the acceptances awaiting them or due for review, and nobody else's; (2) owners can update treatment progress on their released risks where RISK-04 allows.
+  - Trace: O1, Q1 · UAT-058 · Phase 20
 
 ### Administration
 
-- [x] **ADMIN-01**: A Security Analyst can list and create, view, or edit CsrmRiskType records without conflating them with contextual Risks.
-- [x] **ADMIN-02**: A Security Analyst can list and create, view, or edit reusable CsrmControl records without conflating them with control implementations.
-- [x] **ADMIN-03**: A Security Analyst can list and create, view, or edit CsrmInformationSystem and CsrmInformationAsset records.
-- [x] **ADMIN-04**: A Security Analyst can import Risk Types, Controls, Information Systems, and Information Assets from CSV with template/column guidance, client validation, preview, row errors, confirmation, and result summary.
+- [ ] **ADMIN-05**: Reference records read as real content.
+  - Acceptance: (1) system and asset owners show by name, and the lists show owner and criticality columns; (2) controls carry meaningful names (decision 15: the framework's own control name where it has one, otherwise a short descriptive title in CSRM's words, with the source reference kept), and seeded Risk Types carry user-facing descriptions.
+  - Trace: O2 · UAT-007, UAT-053 · Phase 10
+  - Remainder (2026-09-27, Phase 10 plan check): the Information Asset owner needs a content-type change and moves to Phase 22 with a contract-gap record. Control titles are decided (decision 15) and stay in Phase 10.
+- [ ] **ADMIN-06**: Systems, assets, controls and Risk Types show where they are used.
+  - Acceptance: (1) each record has a "Used in" panel (requests, open risks by residual rating, control implementations by status) whose figures open the filtered list; (2) the lists show usage counts.
+  - Trace: O2 · UAT-047 · Phase 20
+- [ ] **ADMIN-07**: An Admin role owns reference data and product configuration, and Security Analysts keep read access.
+  - Acceptance: (1) a user with the Admin role manages Risk Types, Controls, Information Systems and Information Assets and their imports, and a Security Analyst without it can read but not change them, enforced in Strapi; (2) the Admin maintains the configuration (the likelihood and consequence scales, the rating bands, the risk appetite with its acceptance authority and review intervals, divisions and business units, the active Risk Types, shared register views, the peer-review threshold and the AI data policy), and the forms, the AI and release readiness use it; (3) direct URLs to Admin screens show the permission state to everyone else; (4) the Admin holds no Security Analyst rights by default, and every configuration change records who, when, and the old and new values (decision 1, G-1).
+  - Trace: R1, O2 · UAT-061 · Phase 22
+- [ ] **ADMIN-08**: The Admin sees who holds which CSRM role, and any role change is audited.
+  - Acceptance: (1) a read-only view lists role holders from the identity records and exports for an access review; (2) role assignment stays in the identity platform unless the operator approves it in CSRM with dual control and audit (decision 1).
+  - Trace: R1 · UAT-061 · Phase 22
 
 ### Workflow Experience
 
-- [x] **UX-01**: The "My Requests", "My Questionnaires", and "My Risk Assessments" screens are owner-scoped for every actor, so a Security Analyst who submits a request sees that request, its questionnaire, and its released assessment there and no other Requestor's records.
-- [x] **UX-02**: A Requestor selects zero or more CsrmInformationSystem and CsrmInformationAsset records through a searchable server-backed selector, and a Security Analyst assigns a Risk owner by searching IdamBox users rather than typing free text.
-- [x] **UX-03**: "My Questionnaires", "My Risk Assessments", and the three analyst review screens each offer server-backed search and status filtering consistent with "My Requests", and an authorised released assessment opens without a service-unavailable failure.
-- [ ] **UX-04**: A Risk Assessment Request links to its questionnaire and to an assessment tile reporting Low, Moderate, High, and Critical contextual Risk counts; a Questionnaire links back to its request; and release readiness names the specific record and field behind every outstanding requirement.
-- [ ] **UX-05**: Every list opens a record from its identifier or title with no redundant open control, and shared controls present consistently across screens.
+- [ ] **UX-06**: Actions, refusals, timestamps and copy tell each actor the truth in their own terms.
+  - Acceptance: (1) offered actions match what Strapi allows, and a refusal states its real reason in plain words; (2) an in-flight or recent generation job shows when the analyst returns to the request, in place of a new Generate action; (3) revision timelines show the viewer's local time and name questions by their text; (4) interface copy avoids back-end and internal terms; (5) a Requestor who opens an analyst route sees the permission state, and analyst-only actions never show to a Requestor.
+  - Trace: Q5, R3 · UAT-024, UAT-036, UAT-041, UAT-054, UAT-062 · Phase 10
+- [ ] **UX-07**: The sidebar is divided into sections named by job, with labels that match page headings and counts on items that hold work.
+  - Acceptance: (1) each actor's sidebar follows `REPORT.md` §5 (Requestor: a New request button, Home and My work; Security Analyst: Home, Assessment work, Oversight, Reference data and a collapsed section for their own requests); (2) every label matches its page heading, review items show counts, and the phone drawer shows the same sections.
+  - Trace: Q2 · UAT-002 · Phase 11
+- [ ] **UX-08**: Each actor lands on one Home that leads with their next actions, on a phone as on a desktop.
+  - Acceptance: (1) the Security Analyst lands on their queue, deadlines and alerts, with their own requests secondary; (2) the Requestor's Home separates "Needs your action" from "With the Security Analyst", naming who holds each item, and shows the action panel first at 375px; (3) on a phone the request's lifecycle reads "Step n of m" with the next action and expands on demand.
+  - Trace: Q1, Q5 · UAT-001, UAT-003, UAT-004, UAT-038 · Phase 11
+- [ ] **UX-09**: Review lists carry the columns needed to triage, figures open their records, and statuses use user terms.
+  - Acceptance: (1) the request queue shows requestor, assessment type, criticality, due date and age, and the assessment list shows request title, risk count and highest residual rating; (2) every dashboard and report figure opens its filtered list, and assessments can be searched by request title; (3) a request whose assessment is released reads "Released", with the stored value unchanged (decision 16).
+  - Trace: F2, Q1, Q5 · UAT-035, UAT-048, UAT-065 · Phase 11
+- [ ] **UX-10**: Quick find opens any record the user may read by number or title.
+  - Acceptance: (1) Ctrl+K, or ⌘K on a Mac, and a visible search control in the header open a quick-find dialog that searches requests, questionnaires, assessments and risks by number or title as the user types; (2) results show only records the user may read, through the existing server-side list searches, and open with Enter; (3) the dialog follows the dialog and combobox keyboard patterns at 375px and 1440px.
+  - Trace: Q2, Q5 · UAT-048 · Phase 11 (G-5)
 
 ### Dashboards and Reports
 
-- [ ] **DASH-01**: A Security Analyst dashboard presents data-driven review queues, high/critical risks, overdue treatments, due dates, recent activity, and alerts.
-- [ ] **DASH-02**: A Security Analyst can view reports and alerts through authorised, responsive screens.
+- [ ] **DASH-03**: Exposure figures state their scope and separate released risks from risks still under assessment.
+  - Acceptance: exposure widgets and reports default to released risks, show "under assessment" separately and say so on the widget, and accepted risks are marked (decision 11).
+  - Trace: Q1 · UAT-060 · Phase 11
+- [ ] **DASH-04**: Each audience has a metric set that answers its questions, with every figure opening its records.
+  - Acceptance: (1) Requestor, Security Analyst and risk-manager metric sets as in `REPORT.md` §4, each widget stating its scope; (2) failed AI jobs in the last seven days are visible to analysts.
+  - Trace: Q1 · UAT-059 · Phase 21
+- [ ] **DASH-05**: Trends, a heat map, cycle times and ageing come from recorded history.
+  - Acceptance: (1) open released risks by residual rating over 12 months; (2) a likelihood-by-consequence heat map of inherent and residual positions for the filtered set, readable without colour (decision 13: accessible SVG components with a data-table alternative); (3) median and 90th-percentile time per stage linking to the slowest items, and queue ageing bands.
+  - Trace: Q1 · UAT-059 · Phase 21
 
 ### Integration and Assurance
 
-- [ ] **INT-01**: The production web service implementation calls Strapi operations defined in the OpenAPI contract; missing operations are documented and added to the backend contract.
-- [ ] **INT-02**: The application uses Keycloak authorization-code authentication and Strapi validates token issuer, audience, signature, expiry, and effective CSRM authorisation server-side.
-- [x] **INT-03**: AI integrations preserve provenance, review state, human modifications, safe failure/retry behaviour, and never release an assessment automatically.
-- [ ] **INT-04**: Critical journeys, responsive behaviour, WCAG 2.2 AA concerns, security controls, performance, and IDOR protection are verified.
+- [ ] **INT-05**: Both AI operations receive one reviewable assessment context built from everything the request holds.
+  - Acceptance: (1) the context holds the request fields (regulatory requirements and third-party details included), the selected systems and assets with classifications, the notes once COLLAB-01 exists, and each question's text with its answer; (2) the analyst can see the context a run used, and Requestor text is passed as quoted, untrusted data; (3) drafted risks pre-fill impacted system, asset and classification from the context for the analyst to confirm; (4) generation is refused, with a plain message, when the request's data classification is above the provider's approved ceiling, and each run records its context summary (G-3).
+  - Trace: F1, F3, F6 · UAT-030 · Phase 12
+- [ ] **INT-06**: AI-proposed content is marked until an analyst accepts or edits it, and cites its sources.
+  - Acceptance: (1) each AI-proposed field shows a proposed marker until accepted or edited, and the questionnaire and assessment show provider, time and initiating analyst; (2) each proposed statement cites the answers and request fields it used, and uncited claims are flagged; (3) the Requestor's released view says that AI assisted and a Security Analyst reviewed; (4) a run record keeps each generation's instruction, context summary, provider and outcome for Phases 15–17.
+  - Trace: F6, Q5 · UAT-032, UAT-042 · Phase 12
 
-## v2 Requirements
+### Notifications
 
-- **COLLAB-01**: Users can add comments and activity history to permitted requests, questionnaires, and assessments when the data model/API supports it.
-- **NOTIFY-01**: Users receive configurable notifications for workflow events and due dates.
-- **TENANT-01**: Customers can administer tenant-specific branding and multi-tenant configuration.
-- **WORKFLOW-01**: Administrators can configure no-code workflow definitions.
+- [ ] **NOTIFY-01**: Users are told in the app when work waits for them.
+  - Acceptance: (1) an in-app notification centre with an unread count and per-user read state tells people when work waits for them: assignment, questionnaire released and submitted, risks released for response, response submitted, acceptance requested and decided, assessment released, and new notes; (2) each notification opens the record it is about, within what the person may read (decision 18).
+  - Trace: F8 · UAT-025 · Phase 17
+- [ ] **NOTIFY-02**: Users receive due-date reminders in the app and by email.
+  - Acceptance: (1) treatments due within seven days or overdue, acceptance and exemption reviews due, and an assessment's next review due produce reminders to their owner, and overdue items escalate to the assigned analyst; (2) email goes through Strapi's email plugin, with a capture provider in development and tests so nothing leaves the machine, and the production mail provider is deployment configuration (decision 18).
+  - Trace: O1, Q1 · UAT-046, UAT-058 · Phase 20
+
+### CSV Import and Export
+
+- [ ] **CSV-01**: Registers, lists, queues, alerts and reports export to CSV and XLSX.
+  - Acceptance: (1) exports follow the current filters, search and sort, default to the visible columns with a column choice, and are named after the view and date; (2) Strapi scopes each export to what the viewer may read, and a Requestor exports only their own released assessments (decision 12); (3) values starting with `=`, `+`, `-`, `@`, tab or carriage return are neutralised, and CSV is UTF-8 with a BOM; (4) every export is logged with actor, view, filters and row count, and a released assessment prints as an A4 report (decision 12).
+  - Trace: Q3 · UAT-049 · Phase 19
+- [ ] **CSV-02**: Imports tolerate spreadsheet habits and return files a user can fix and re-import.
+  - Acceptance: (1) headers match case-insensitively and by display label, and unknown columns are ignored with a warning that names them; (2) a Windows-1252 file gets a "Save as CSV UTF-8" explanation, Yes/No, Y/N and TRUE/FALSE are accepted for flags, and an explicit clear token empties a field; (3) templates carry display headers, an example row and allowed values (CSV, and XLSX with a notes sheet), and error reports are the original rows plus an Issues column, with a BOM.
+  - Trace: Q3 · UAT-051 · Phase 19
+- [ ] **CSV-03**: A near-match name in an import needs an explicit decision.
+  - Acceptance: case- or whitespace-only matches show as "Matched by similar name" and are neither created nor updated until the user chooses.
+  - Trace: Q3 · UAT-052 · Phase 19
+
+## Future Requirements
+
+- **INT-02** (carried from v1.0, deferred by operator decision): the application uses Keycloak authorization-code authentication, and Strapi validates token issuer, audience, signature, expiry and effective CSRM authorisation server-side. Keycloak stays disabled until the operator provides an environment.
+- **COLLAB-03**: comments and activity history on questionnaires and assessments. Notes on requests are COLLAB-01.
+- **NOTIFY-03**: notification preferences per user, and further channels.
+- **TENANT-01**: customers can administer tenant-specific branding and multi-tenant configuration.
+- **WORKFLOW-01**: administrators can configure no-code workflow definitions.
+- **999.1**: local LLM evaluation and optimisation (backlog, from v1.0 Phase 06.10).
 
 ## Out of Scope
 
@@ -88,32 +200,33 @@
 | Native mobile app | Responsive web application is the first delivery. |
 | Full GRC suite and custom ML training | Not part of the core assessment workflow. |
 | Frontend API facade | The Strapi OpenAPI contract is the production service contract. |
+| Email and other external notification channels (next wave) | NOTIFY-01 is in-app only this wave; external channels need operator infrastructure. |
+| Role assignment inside CSRM (next wave) | Role assignment stays in the identity platform unless the operator approves it with dual control and audit (`REPORT.md` §9, decision 1); Phase 8 removed the IAM routes deliberately. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |---|---|---|
-| FOUND-01–FOUND-05 | Phase 1 | Complete; ready for re-verification |
-| REQ-01–REQ-05 | Phase 2 | Complete |
-| REQ-06 | Phase 06.1 | Complete |
-| QUES-01–QUES-05 | Phase 3 | Complete |
-| QUES-06 | Phase 06.1 | Complete |
-| QUES-07 | Phase 06.2 | Complete |
-| ASSESS-01–ASSESS-05 | Phase 4 | Complete |
-| RISK-01–RISK-02 | Phase 5 | Complete |
-| ADMIN-01–ADMIN-04 | Phase 6 | Complete |
-| UX-01–UX-03 | Phase 06.3 | Pending |
-| UX-04–UX-05 | Phase 06.4 | Pending |
-| DASH-01–DASH-02 | Phase 7 | Pending |
-| INT-03 | Phase 06.7 (advanced, complete 2026-09-15), Phase 8 (verified) | Complete |
-| INT-01, INT-02, INT-04 | Phase 8 | Pending |
+| REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, ADMIN-05, UX-06 | Phase 10 | Pending |
+| UX-07, UX-08, UX-09, UX-10, DASH-03 | Phase 11 | Pending |
+| INT-05, INT-06, ASSESS-08, QUES-10 | Phase 12 | Pending |
+| REQ-08, COLLAB-01 | Phase 13 | Pending |
+| COLLAB-02 | Phase 14 | Pending |
+| QUES-11, QUES-12 | Phase 15 | Pending |
+| ASSESS-09, ASSESS-10 | Phase 16 | Pending |
+| ASSESS-11, ASSESS-12, ASSESS-13, NOTIFY-01 | Phase 17 | Pending |
+| ASSESS-14, ASSESS-20 | Phase 17.1 | Pending |
+| ASSESS-15, ASSESS-16, ASSESS-17, ASSESS-18, ASSESS-19 | Phase 18 | Pending |
+| CSV-01, CSV-02, CSV-03 | Phase 19 | Pending |
+| RISK-03, RISK-04, RISK-05, ADMIN-06, NOTIFY-02 | Phase 20 | Pending |
+| DASH-04, DASH-05 | Phase 21 | Pending |
+| ADMIN-07, ADMIN-08 | Phase 22 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 40 total
-- Mapped to phases: 40
-- Unmapped: 0 ✓
+- v2.0 requirements: 46 total, mapped to Phases 10–22 and 17.1: 46, unmapped: 0 ✓
+- Product gap UAT findings: 65, each closed by exactly one phase ✓
 
 ---
-*Requirements defined: 2026-08-27*  
-*Last updated: 2026-09-15 after completing Phase 06.7*
+*Requirements defined: 2026-09-27*
+*Last updated: 2026-09-28 — v2.0 started. v1.0 requirements archived, and INT-02 carried as a future requirement.*

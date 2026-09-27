@@ -1,19 +1,55 @@
 import { ShieldCheckIcon } from 'lucide-react';
 
-import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { BrandLockup } from '@/components/shell/wordmark';
 import { Button } from '@/components/ui/button';
+import { resolveSessionRuntimeMode } from '@/lib/auth/development-runtime';
 import { validatedReturnTo } from '@/lib/auth/return-to';
-import { parseSessionRuntimeMode } from '@/lib/auth/session-adapter';
 import { completeDevelopmentSignIn } from './server-actions';
 
 interface SignInPageProps {
   searchParams: Promise<{ returnTo?: string }>;
 }
 
+function developmentSessionAvailable(): boolean {
+  return resolveSessionRuntimeMode(process.env) === 'development';
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return developmentSessionAvailable()
+    ? { title: 'Development sign-in | IdamBox CSRM' }
+    : { title: 'Sign-in unavailable | IdamBox CSRM' };
+}
+
+/*
+ * Without an available development session the page is the fail-closed landing
+ * for every unauthenticated visitor: the same card frame, no form, no button,
+ * and copy that names no development feature, fixture role or internal system.
+ */
+function SignInUnavailable() {
+  return (
+    <main className="sign-in">
+      <section className="sign-in-card">
+        <p className="wordmark"><BrandLockup /></p>
+        <p className="micro-label sign-in-eyebrow">
+          <ShieldCheckIcon aria-hidden="true" />
+          IdamBox CSRM
+        </p>
+        <h1>Sign-in unavailable</h1>
+        <p className="sign-in-lead">
+          Session authentication is not configured. Contact your administrator.
+        </p>
+        <p className="sign-in-note">
+          Access is granted by your organisation’s authorization service, never by navigation alone.
+        </p>
+      </section>
+    </main>
+  );
+}
+
 export default async function SignIn({ searchParams }: SignInPageProps) {
-  if (parseSessionRuntimeMode(process.env.NODE_ENV) !== 'development') {
-    notFound();
+  if (!developmentSessionAvailable()) {
+    return <SignInUnavailable />;
   }
 
   const { returnTo } = await searchParams;

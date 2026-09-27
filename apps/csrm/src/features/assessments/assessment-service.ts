@@ -2,7 +2,7 @@ import 'server-only';
 
 import { z } from 'zod';
 
-import type { components } from '../../lib/api/generated/schema';
+import type { components, paths } from '../../lib/api/generated/schema';
 import { requestStatuses } from '@/features/requests/request-domain';
 import {
   createStrapiClient,
@@ -122,8 +122,9 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
     // per-state fields, while its sibling AssessmentDraftJob is a discriminated
     // oneOf and the client models both as unions. Recorded in
     // docs/contract-gaps/; the restructure belongs to the phase that owns
-    // questionnaire generation.
-    narrowedPaths: ['data'],
+    // questionnaire generation. The queued job the guard is served refuses the
+    // fields only a later state carries, named one by one.
+    narrowedPaths: ['data.startedAt', 'data.completedAt', 'data.failureCode', 'data.failureMessage', 'data.questionnaire'],
   },
   {
     label: 'listMyReleasedAssessments',
@@ -197,11 +198,18 @@ export function parseAssessmentCollectionQuery(value: Record<string, string | st
 export function parseAssessmentRequestReviewQuery(value: Record<string, string | string[] | undefined>): AssessmentRequestReviewQuery { return requestReviewQuerySchema.parse({ q: Array.isArray(value.q) ? value.q[0] : value.q, queue: Array.isArray(value.queue) ? value.queue[0] : value.queue, status: Array.isArray(value.status) ? value.status[0] : value.status, sort: Array.isArray(value.sort) ? value.sort[0] : value.sort, page: Array.isArray(value.page) ? value.page[0] : value.page, pageSize: Array.isArray(value.pageSize) ? value.pageSize[0] : value.pageSize }); }
 
 /**
+ * The generated query parameters of the assessment collection routes. Typing the
+ * parameters here, rather than casting the call, makes typecheck fail if a
+ * status the list offers ever falls outside the published contract.
+ */
+type AssessmentCollectionParams = NonNullable<paths['/v1/risk_assessments']['get']['parameters']['query']>;
+
+/**
  * An empty search box is not a search term. Sending `q=` would ask the server to
  * filter on nothing, which it rejects, so the collection routes omit it — the
  * same shape the request and questionnaire services already use.
  */
-function collectionParams(query: AssessmentCollectionQuery): Record<string, unknown> {
+function collectionParams(query: AssessmentCollectionQuery): AssessmentCollectionParams {
   const { q, status, ...rest } = query;
   return { ...rest, ...(q ? { q } : {}), ...(status ? { status } : {}) };
 }
@@ -322,7 +330,7 @@ export function listAssessmentRequests(): Promise<TransportResult<readonly z.inf
 export function listAssessmentRequests(query: AssessmentRequestReviewQuery): Promise<TransportResult<AssessmentCollectionResult<z.infer<typeof assessmentRequestQueueItemSchema>>>>;
 export async function listAssessmentRequests(query?: AssessmentRequestReviewQuery): Promise<TransportResult<AssessmentCollectionResult<z.infer<typeof assessmentRequestQueueItemSchema>> | readonly z.infer<typeof assessmentRequestQueueItemSchema>[]>> {
   const resolved = query ?? { q: '', queue: 'requires-attention' as const, sort: 'submittedDate:desc', page: 1, pageSize: 25 };
-  const result = await request((client) => client.GET('/v1/assessment_requests', { params: { query: { ...(resolved.q ? { 'filters[title]': resolved.q } : {}), 'filters[queue]': resolved.queue, ...(resolved.status ? { 'filters[requestStatus]': resolved.status } : {}), sort: resolved.sort, 'pagination[page]': resolved.page, 'pagination[pageSize]': resolved.pageSize } } } as never), (payload) => { const parsed = requestQueueResponseSchema.parse(payload); return { records: parsed.data, pagination: parsed.meta.pagination }; });
+  const result = await request((client) => client.GET('/v1/assessment_requests', { params: { query: { ...(resolved.q ? { 'filters[title]': resolved.q } : {}), 'filters[queue]': resolved.queue, ...(resolved.status ? { 'filters[requestStatus]': resolved.status } : {}), sort: resolved.sort, 'pagination[page]': resolved.page, 'pagination[pageSize]': resolved.pageSize } } }), (payload) => { const parsed = requestQueueResponseSchema.parse(payload); return { records: parsed.data, pagination: parsed.meta.pagination }; });
   return query || result.error ? result : { data: result.data.records, error: null };
 }
 
@@ -370,7 +378,7 @@ export function listAnalystAssessments(): Promise<TransportResult<readonly Asses
 export function listAnalystAssessments(query: AssessmentCollectionQuery): Promise<TransportResult<AssessmentCollectionResult<AssessmentSummary>>>;
 export async function listAnalystAssessments(query?: AssessmentCollectionQuery): Promise<TransportResult<AssessmentCollectionResult<AssessmentSummary> | readonly AssessmentSummary[]>> {
   const resolved = query ?? { q: '', sort: 'generatedDate:desc' as const, page: 1, pageSize: 25 };
-  const result = await request((client) => client.GET('/v1/risk_assessments', { params: { query: collectionParams(resolved) } } as never), (payload) => { const parsed = analystAssessmentListResponseSchema.parse(payload); return { records: parsed.data, pagination: parsed.meta.pagination }; });
+  const result = await request((client) => client.GET('/v1/risk_assessments', { params: { query: collectionParams(resolved) } }), (payload) => { const parsed = analystAssessmentListResponseSchema.parse(payload); return { records: parsed.data, pagination: parsed.meta.pagination }; });
   return query || result.error ? result : { data: result.data.records, error: null };
 }
 
@@ -479,7 +487,7 @@ export function listMyReleasedAssessments(): Promise<TransportResult<readonly Re
 export function listMyReleasedAssessments(query: AssessmentCollectionQuery): Promise<TransportResult<AssessmentCollectionResult<ReleasedAssessmentSummary>>>;
 export async function listMyReleasedAssessments(query?: AssessmentCollectionQuery): Promise<TransportResult<AssessmentCollectionResult<ReleasedAssessmentSummary> | readonly ReleasedAssessmentSummary[]>> {
   const resolved = query ?? { q: '', sort: 'generatedDate:desc' as const, page: 1, pageSize: 25 };
-  const result = await request((client) => client.GET('/v1/my_risk_assessments', { params: { query: collectionParams(resolved) } } as never), (payload) => { const parsed = releasedAssessmentListResponseSchema.parse(payload); return { records: parsed.data, pagination: parsed.meta.pagination }; });
+  const result = await request((client) => client.GET('/v1/my_risk_assessments', { params: { query: collectionParams(resolved) } }), (payload) => { const parsed = releasedAssessmentListResponseSchema.parse(payload); return { records: parsed.data, pagination: parsed.meta.pagination }; });
   return query || result.error ? result : { data: result.data.records, error: null };
 }
 

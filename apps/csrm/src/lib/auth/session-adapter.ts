@@ -34,7 +34,3 @@ export function requireDevelopmentRole(value: FormDataEntryValue | null): Develo
 
   return role;
 }
-
-export function parseSessionRuntimeMode(nodeEnvironment: string | undefined): SessionRuntimeMode {
-  return nodeEnvironment === 'development' ? 'development' : 'unavailable';
-}

@@ -5,18 +5,22 @@ subsystem: administration-and-csv-imports
 tags: [strapi, nextjs, csv, authorization, accessibility, openapi]
 requires:
   - phase-06 administration implementation
+
 provides:
   - hardened full-set CSV preview and commit workflow
   - accessible responsive administration routes and import UI
   - active-only OpenAPI administration contract
+
 affects:
   - phase-06 verification
+
 tech-stack:
   added: []
   patterns:
     - serialized full-record natural-key maps
     - timestamp-bound preview proofs
     - typed token-authenticated inventory pickers
+
 key-files:
   created:
     - apps/web/app/(app)/app/admin/loading.tsx
@@ -28,14 +32,20 @@ key-files:
     - apps/web/src/features/administration/csv-import-flow.tsx
     - docs/references/specification.json
     - scripts/verify-phase-06-integrity.mjs
+
 decisions:
   - Preserve the frozen 500-character system and asset location contract through the trusted repository boundary.
   - Permit queryless requestor inventory pickers while retaining analyst-only queried administration lists.
   - Bind reviewed update rows to persisted updatedAt values and reject whole-row drift.
+
 metrics:
   tasks: 3
   commits: 9
   completed: 2026-09-02
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-27
+  status: unknown
 ---
 
 # Quick Plan 260902-a9r: Phase 6 Independent Review Remediation Summary

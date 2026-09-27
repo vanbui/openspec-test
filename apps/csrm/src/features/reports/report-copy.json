@@ -1,0 +1,26 @@
+[
+  {
+    "key": "risk-exposure",
+    "title": "Risk exposure",
+    "description": "Open contextual Risks by rating and treatment status, and the Information Systems carrying the most High and Critical residual Risks.",
+    "metadataTitle": "Risk Exposure Report | IdamBox CSRM"
+  },
+  {
+    "key": "treatment-performance",
+    "title": "Treatment performance",
+    "description": "Risk treatments by due state and treatment status, and the most overdue treatments.",
+    "metadataTitle": "Treatment Performance Report | IdamBox CSRM"
+  },
+  {
+    "key": "assessment-throughput",
+    "title": "Assessment throughput",
+    "description": "Assessment Requests by lifecycle state, Risk Assessments released each month, and time from submission to release.",
+    "metadataTitle": "Assessment Throughput Report | IdamBox CSRM"
+  },
+  {
+    "key": "control-effectiveness",
+    "title": "Control effectiveness",
+    "description": "Control Implementations on open contextual Risks by implementation status and effectiveness rating.",
+    "metadataTitle": "Control Effectiveness Report | IdamBox CSRM"
+  }
+]

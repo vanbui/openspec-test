@@ -19,13 +19,19 @@ key-files:
     - apps/web/src/features/risks/risk-detail-editor.tsx
     - apps/web/src/features/risks/mitigation-control-list.tsx
     - apps/web/e2e/risk-register-workflow.spec.ts
+
 decisions:
   - List and detail use the same fail-closed mutable-or-completely-released parent rule.
   - Editable development fixture relations are assigned only on first creation.
   - Relation filters search through typed server actions and retain URL-selected labels outside result pages.
+
 metrics:
   duration: 61 min
   completed: 2026-09-01
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-27
+  status: unknown
 ---
 
 # Quick Task 260901-oiw: Phase 5 Review Remediation Summary

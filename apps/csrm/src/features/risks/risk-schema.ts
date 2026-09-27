@@ -1,16 +1,30 @@
 import { z } from 'zod';
 
 import { parseAdministrationListPayload } from '../administration/administration-schema';
+import {
+  calendarDate,
+  riskRegisterMitigationStatuses,
+  riskRegisterRatings,
+  riskRegisterSortValues,
+  riskRegisterStates,
+  riskRegisterTreatmentStatuses,
+  riskTreatmentDueStates,
+  type RiskPickerOption,
+} from './risk-domain';
 
-export const riskRegisterRatings = ['Low', 'Moderate', 'High', 'Critical'] as const;
-export const riskRegisterTreatmentStatuses = ['Not Started', 'In Progress', 'Overdue', 'Complete'] as const;
-export const riskRegisterMitigationStatuses = ['Existing', 'Planned', 'Implemented', 'Retired', 'none'] as const;
-export const riskRegisterSortValues = [
-  'riskNumber:asc', 'riskNumber:desc', 'riskStatement:asc', 'riskStatement:desc',
-  'inherentRating:asc', 'inherentRating:desc', 'residualRating:asc', 'residualRating:desc',
-  'treatmentStatus:asc', 'treatmentStatus:desc', 'treatmentOwner:asc', 'treatmentOwner:desc',
-  'targetDate:asc', 'targetDate:desc', 'assessment:asc', 'assessment:desc',
-] as const;
+// The vocabularies live in the zod-free risk-domain.ts, so client components can read them without zod.
+export {
+  formatRiskTargetDate,
+  riskRegisterMitigationStatuses,
+  riskRegisterRatings,
+  riskRegisterSortValues,
+  riskRegisterStateLabels,
+  riskRegisterStates,
+  riskRegisterTreatmentStatuses,
+  riskTreatmentDueStates,
+  type RiskPickerOption,
+  type RiskTreatmentDueState,
+} from './risk-domain';
 
 const firstValue = (value: unknown): unknown => Array.isArray(value) ? value[0] : value;
 const queryText = z.preprocess(firstValue, z.string().trim().max(200).catch(''));
@@ -27,22 +41,6 @@ const queryPageSize = z.preprocess((value) => {
   return parsed === 10 || parsed === 25 || parsed === 50 ? parsed : 25;
 }, z.union([z.literal(10), z.literal(25), z.literal(50)]));
 
-function calendarDate(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return undefined;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (year < 1) return undefined;
-  const date = new Date(0);
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCFullYear(year, month - 1, day);
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-    ? value
-    : undefined;
-}
-
 const targetDateQuerySchema = z.string()
   .refine((value) => calendarDate(value) === value, 'Target date must be a valid calendar date.')
   .optional();
@@ -58,6 +56,7 @@ export const riskRegisterQuerySchema = z.object({
   system: optionalOpaqueId,
   asset: optionalOpaqueId,
   mitigationStatus: optionalEnum(riskRegisterMitigationStatuses),
+  state: optionalEnum(riskRegisterStates),
   targetDateFrom: targetDateQuerySchema,
   targetDateTo: targetDateQuerySchema,
   sort: z.preprocess(firstValue, z.enum(riskRegisterSortValues).catch('targetDate:asc')).default('targetDate:asc'),
@@ -97,6 +96,7 @@ export function serializeRiskRegisterQuery(query: RiskRegisterQuery): RiskRegist
     ...(parsed.system ? { system: parsed.system } : {}),
     ...(parsed.asset ? { asset: parsed.asset } : {}),
     ...(parsed.mitigationStatus ? { mitigationStatus: parsed.mitigationStatus } : {}),
+    ...(parsed.state ? { state: parsed.state } : {}),
     ...(parsed.targetDateFrom ? { targetDateFrom: parsed.targetDateFrom } : {}),
     ...(parsed.targetDateTo ? { targetDateTo: parsed.targetDateTo } : {}),
     sort: parsed.sort,
@@ -131,6 +131,7 @@ export const riskRegisterItemSchema = z.object({
   treatmentStatus: z.enum(riskRegisterTreatmentStatuses).nullable(),
   treatmentOwner: userSchema.nullable(),
   targetDate: z.iso.date().nullable(),
+  treatmentDueState: z.enum(riskTreatmentDueStates),
   assessment: assessmentSchema,
 }).strict();
 
@@ -229,7 +230,7 @@ export const riskDetailSchema = z.object({
   controlImplementations: z.array(detailControlImplementationSchema).max(1_000),
 }).strict();
 
-const riskDetailPayloadSchema = z.object({ data: riskDetailSchema }).strict();
+export const riskDetailPayloadSchema = z.object({ data: riskDetailSchema }).strict();
 export type RiskDetail = z.infer<typeof riskDetailSchema>;
 
 export function parseRiskDetailPayload(payload: unknown): RiskDetail {
@@ -263,7 +264,6 @@ const pickerSchemas = {
 } as const;
 
 export type RiskPickerKind = keyof typeof pickerSchemas;
-export type RiskPickerOption = { documentId: string; label: string };
 
 /**
  * The collection routes these pickers read are paged now and answer with
@@ -325,14 +325,4 @@ export function mergeSelectedRiskPickerOption(
 
 export function riskRatingRank(rating: (typeof riskRegisterRatings)[number] | null): number {
   return rating === null ? riskRegisterRatings.length : riskRegisterRatings.indexOf(rating);
-}
-
-export function formatRiskTargetDate(value: string | null): string {
-  if (value === null) return 'No target date';
-  return new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00.000Z`));
-}
-
-export function isRiskOverdue(value: string | null, now = new Date()): boolean {
-  if (value === null) return false;
-  return value < now.toISOString().slice(0, 10);
 }

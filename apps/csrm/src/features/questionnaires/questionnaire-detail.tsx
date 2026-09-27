@@ -1,13 +1,13 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, FilePenLine } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { RecordLink } from '@/components/csrm/record-link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { PageHeader } from '@/components/csrm/page-header';
+import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
@@ -38,7 +38,7 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
   return (
     <>
       <PageHeader
-        action={<Badge className={submitted ? 'border-success-border bg-success-subtle text-success' : 'border-info-border bg-info-subtle text-info'} variant="outline">{submitted ? <CheckCircle2 aria-hidden="true" /> : <FilePenLine aria-hidden="true" />}{submitted ? 'Submitted' : 'In progress'}</Badge>}
+        status={<StatusBadge family="questionnaire" value={submitted ? 'submitted' : questionnaire.state} />}
         description={questionnaire.questionnaireNumber}
         title={questionnaire.title}
       />

@@ -1,17 +1,13 @@
 import { z } from 'zod';
 
+import { enterFieldMessage, enterOrLeaveEmptyMessage, maxCharactersMessage } from '@/lib/schemas/validation-messages';
+
 import { getAdministrationConfig, type AdministrationKind } from './administration-config';
 
-export const administrationPageSizes = [10, 25, 50, 100] as const;
-export const riskTypeSortValues = ['name:asc', 'name:desc', 'updatedAt:asc', 'updatedAt:desc'] as const;
-export const controlSortValues = ['controlNumber:asc', 'controlNumber:desc', 'name:asc', 'name:desc', 'updatedAt:asc', 'updatedAt:desc'] as const;
-export const controlTypeValues = ['Preventive', 'Detective', 'Corrective', 'Compensating'] as const;
-export const systemEnvironmentValues = ['Production', 'Non-production'] as const;
-export const deploymentModelValues = ['On-prem', 'Cloud', 'SaaS'] as const;
-export const lifecycleStateValues = ['New', 'Changed', 'Existing', 'Decommissioning'] as const;
-export const dataClassificationValues = ['Public', 'Internal', 'Restricted', 'Critical Infrastructure Sensitive'] as const;
-export const systemSortValues = ['name:asc', 'name:desc', 'systemType:asc', 'systemType:desc', 'environment:asc', 'environment:desc', 'lifecycleState:asc', 'lifecycleState:desc', 'updatedAt:asc', 'updatedAt:desc'] as const;
-export const assetSortValues = ['name:asc', 'name:desc', 'dataClassification:asc', 'dataClassification:desc', 'type:asc', 'type:desc', 'updatedAt:asc', 'updatedAt:desc'] as const;
+import { administrationPageSizes, assetSortValues, controlSortValues, controlTypeValues, dataClassificationValues, deploymentModelValues, lifecycleStateValues, riskTypeSortValues, systemEnvironmentValues, systemSortValues } from './administration-domain';
+
+// The vocabularies live in the zod-free administration-domain.ts, so the collection lists run in the browser without zod.
+export { administrationPageSizes, assetSortValues, controlSortValues, controlTypeValues, dataClassificationValues, deploymentModelValues, lifecycleStateValues, riskTypeSortValues, systemEnvironmentValues, systemSortValues } from './administration-domain';
 
 const firstValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value[0];
@@ -119,15 +115,25 @@ export function serializeAdministrationQuery(kindOrInput: AdministrationKind | A
 }
 
 export const administrationDocumentIdSchema = z.string().trim().min(1).max(200).regex(/^[A-Za-z0-9_-]+$/);
+
+/*
+ * Every bound a form field can hit carries the product's own message (WR-04), so the create and edit forms
+ * and their Server Actions never show a validation library default. The bounds themselves are unchanged.
+ */
+const requiredText = (label: string, maxLength: number) => z.string({ error: enterFieldMessage(label) })
+  .trim()
+  .min(1, enterFieldMessage(label))
+  .max(maxLength, maxCharactersMessage(maxLength));
+const nameSchema = requiredText('Name', 255);
 const descriptionSchema = z.preprocess(
   (value) => typeof value === 'string' && value.trim() === '' ? null : value,
-  z.string().trim().max(10_000).nullable(),
+  z.string().trim().max(10_000, maxCharactersMessage(10_000)).nullable(),
 );
-const applicableControlsSchema = z.array(administrationDocumentIdSchema).max(1_000)
+const applicableControlsSchema = z.array(administrationDocumentIdSchema).max(1_000, 'Select 1,000 Applicable Controls or fewer.')
   .refine((values) => new Set(values).size === values.length, 'Applicable Controls must be distinct.');
 
 export const riskTypeCreateInputSchema = z.object({
-  name: z.string().trim().min(1).max(255),
+  name: nameSchema,
   description: descriptionSchema.optional(),
   applicableControls: applicableControlsSchema.optional(),
 }).strict();
@@ -145,17 +151,22 @@ export const riskTypeAdministrationRecordSchema = z.object({
   applicableControls: applicableControlsSchema.optional(),
 }).strict();
 
-const optionalControlText = (maxLength: number) => z.string().trim().min(1).max(maxLength).nullable();
-const controlReferenceSchema = optionalControlText(500);
-const frameworkVersionSchema = optionalControlText(255);
-const frameworkSourceSchema = optionalControlText(2_000);
+// An optional Control field is empty (null) or holds text; the form submits one holding only spaces as null.
+const optionalControlText = (label: string, maxLength: number) => z.string()
+  .trim()
+  .min(1, enterOrLeaveEmptyMessage(label))
+  .max(maxLength, maxCharactersMessage(maxLength))
+  .nullable();
+const controlReferenceSchema = optionalControlText('Control reference', 500);
+const frameworkVersionSchema = optionalControlText('Framework version', 255);
+const frameworkSourceSchema = optionalControlText('Framework source', 2_000);
 export const controlCreateInputSchema = z.object({
-  controlNumber: z.string().trim().min(1).max(255),
-  name: z.string().trim().min(1).max(255),
+  controlNumber: requiredText('Control number', 255),
+  name: nameSchema,
   description: descriptionSchema.optional().nullable(),
   controlType: z.enum(controlTypeValues).optional().nullable(),
   controlReference: controlReferenceSchema.optional(),
-  framework: z.string().trim().min(1).max(255),
+  framework: requiredText('Framework', 255),
   frameworkVersion: frameworkVersionSchema.optional(),
   frameworkSource: frameworkSourceSchema.optional(),
 }).strict();
@@ -176,10 +187,10 @@ export const controlAdministrationRecordSchema = z.object({
   frameworkSource: frameworkSourceSchema,
 }).strict();
 
-const nullableShortText = z.string().trim().max(255).nullable();
-const nullableLocation = z.string().trim().max(500).nullable();
+const nullableShortText = z.string().trim().max(255, maxCharactersMessage(255)).nullable();
+const nullableLocation = z.string().trim().max(500, maxCharactersMessage(500)).nullable();
 export const informationSystemCreateInputSchema = z.object({
-  name: z.string().trim().min(1).max(255), description: descriptionSchema.optional(), systemType: nullableShortText.optional(),
+  name: nameSchema, description: descriptionSchema.optional(), systemType: nullableShortText.optional(),
   owner: administrationDocumentIdSchema.nullable().optional(), environment: z.enum(systemEnvironmentValues).nullable().optional(),
   deploymentModel: z.enum(deploymentModelValues).nullable().optional(), businessCriticality: nullableShortText.optional(),
   internetFacing: z.boolean().optional(), externalAccessRequired: z.boolean().optional(), hostingLocation: nullableLocation.optional(),
@@ -197,7 +208,7 @@ export type InformationSystemUpdateInput = z.infer<typeof informationSystemUpdat
 export type InformationSystemAdministrationRecord = z.infer<typeof informationSystemAdministrationRecordSchema>;
 
 export const informationAssetCreateInputSchema = z.object({
-  name: z.string().trim().min(1).max(255), description: descriptionSchema.optional(), location: nullableLocation.optional(), type: nullableShortText.optional(),
+  name: nameSchema, description: descriptionSchema.optional(), location: nullableLocation.optional(), type: nullableShortText.optional(),
   dataClassification: z.enum(dataClassificationValues).nullable().optional(), confidentialityRating: nullableShortText.optional(), integrityRating: nullableShortText.optional(), availabilityRating: nullableShortText.optional(),
   containsPersonalData: z.boolean().optional(), containsLegalData: z.boolean().optional(), containsCreditCardData: z.boolean().optional(), comments: descriptionSchema.optional(),
 }).strict();
@@ -241,17 +252,25 @@ export type AdministrationListPayload = {
   meta: { pagination: z.infer<typeof administrationPaginationSchema> };
 };
 
-export function parseAdministrationListPayload(kind: AdministrationKind, payload: unknown): AdministrationListPayload {
+/** The closed schema a collection's list response is parsed with; the contract parity guard reads the same one. */
+export function administrationListPayloadSchema(kind: AdministrationKind) {
   getAdministrationConfig(kind);
-  const schema = kind === 'controls' ? controlListPayloadSchema : kind === 'information-systems' ? informationSystemListPayloadSchema : kind === 'information-assets' ? informationAssetListPayloadSchema : riskTypeListPayloadSchema;
-  return schema.parse(payload) as AdministrationListPayload;
+  return kind === 'controls' ? controlListPayloadSchema : kind === 'information-systems' ? informationSystemListPayloadSchema : kind === 'information-assets' ? informationAssetListPayloadSchema : riskTypeListPayloadSchema;
+}
+
+/** The closed schema a collection's detail response is parsed with; the contract parity guard reads the same one. */
+export function administrationDetailPayloadSchema(kind: AdministrationKind) {
+  getAdministrationConfig(kind);
+  return kind === 'controls' ? controlDetailPayloadSchema : kind === 'information-systems' ? informationSystemDetailPayloadSchema : kind === 'information-assets' ? informationAssetDetailPayloadSchema : riskTypeDetailPayloadSchema;
+}
+
+export function parseAdministrationListPayload(kind: AdministrationKind, payload: unknown): AdministrationListPayload {
+  return administrationListPayloadSchema(kind).parse(payload) as AdministrationListPayload;
 }
 
 export function parseAdministrationDetailPayload(
   kind: AdministrationKind,
   payload: unknown,
 ): { data: AdministrationRecord } {
-  getAdministrationConfig(kind);
-  const schema = kind === 'controls' ? controlDetailPayloadSchema : kind === 'information-systems' ? informationSystemDetailPayloadSchema : kind === 'information-assets' ? informationAssetDetailPayloadSchema : riskTypeDetailPayloadSchema;
-  return schema.parse(payload) as { data: AdministrationRecord };
+  return administrationDetailPayloadSchema(kind).parse(payload) as { data: AdministrationRecord };
 }

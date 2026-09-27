@@ -2,7 +2,7 @@
 
 import { CheckCircle2, ClipboardPenLine, Plus, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { nativeSelectClassName } from '@/components/csrm/native-select';
@@ -15,7 +15,8 @@ import {
   addQuestionnaireQuestionAction, deleteQuestionnaireQuestionAction, editQuestionnaireQuestionAction,
   releaseQuestionnaireAction, returnQuestionnaireToAnalystReviewAction,
 } from './questionnaire-actions';
-import type { QuestionnaireDefinition } from './questionnaire-schema';
+import { orderQuestionnaire } from './questionnaire-domain';
+import type { QuestionnaireDefinition, QuestionnaireQuestion } from './questionnaire-schema';
 import type { QuestionnaireSummary } from './questionnaire-service';
 
 /*
@@ -38,6 +39,17 @@ function isChoiceType(answerType: DraftAnswerType): boolean {
   return answerType === 'Single select' || answerType === 'Multi select';
 }
 
+/** What the question asks for, and whether it must be answered: the caption under each question in the editor. */
+function questionCaption(question: QuestionnaireQuestion): string {
+  return `${question.answerType} · ${question.required ? 'Required' : 'Optional'}`;
+}
+
+/** The choice labels of a select question, in their stored order; null for any other answer type. */
+function questionChoices(question: QuestionnaireQuestion): string | null {
+  const isSelect = question.answerType === 'Single select' || question.answerType === 'Multi select';
+  return isSelect && question.choices?.length ? `Choices: ${question.choices.map((choice) => choice.label).join(', ')}` : null;
+}
+
 /** One choice per line, so the label is the analyst's words and the value is derived. */
 function parseChoices(value: string): Array<{ value: string; label: string }> {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((label) => ({
@@ -47,7 +59,7 @@ function parseChoices(value: string): Array<{ value: string; label: string }> {
 }
 
 export function QuestionnaireGovernance({ questionnaire, definition }: { questionnaire: QuestionnaireSummary; definition: QuestionnaireDefinition }) {
-  const router = useRouter(); const [error, setError] = useState<string | null>(null); const [cleared, setCleared] = useState<readonly { questionKey: string; explanation: string }[]>([]); const [draft, setDraft] = useState<DraftQuestion | null>(null); const [editing, setEditing] = useState<string | null>(null);
+  const router = useRouter(); const sectionIdPrefix = useId(); const [error, setError] = useState<string | null>(null); const [cleared, setCleared] = useState<readonly { questionKey: string; explanation: string }[]>([]); const [draft, setDraft] = useState<DraftQuestion | null>(null); const [editing, setEditing] = useState<string | null>(null);
   const inAnalystReview = questionnaire.release === null || questionnaire.release === undefined;
   async function release() { const result = await releaseQuestionnaireAction({ documentId: questionnaire.documentId }); if (!result.ok) { setError(result.formError); throw new Error('Release failed'); } router.refresh(); }
   async function returnToReview(reason?: string) { const result = await returnQuestionnaireToAnalystReviewAction({ documentId: questionnaire.documentId, reason }); if (!result.ok) { setError(result.formError); throw new Error('Return failed'); } router.refresh(); }
@@ -65,14 +77,21 @@ export function QuestionnaireGovernance({ questionnaire, definition }: { questio
   return <section aria-label="Questionnaire governance" className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4">
     <div className="flex items-start gap-3"><ClipboardPenLine aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" /><div><h2 className="text-heading-sm text-foreground">{inAnalystReview ? 'Analyst review' : 'Released to Requestor'}</h2><p className="text-sm text-muted-foreground">{inAnalystReview ? 'This questionnaire is visible to Analysts only until it is released.' : 'Return it to analyst review before changing its questions.'}</p></div></div>
     {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
-    {cleared.length ? <div aria-live="polite" className="rounded-lg border border-border p-3"><p className="font-medium">Answers cleared by this revision</p><ul className="mt-2 list-disc pl-5 text-sm">{cleared.map((answer) => <li key={`${answer.questionKey}-${answer.explanation}`}><strong>{answer.questionKey}</strong>: {answer.explanation}</li>)}</ul><Button className="mt-2" onClick={() => setCleared([])} size="sm" type="button" variant="outline">Dismiss</Button></div> : null}
+    {cleared.length ? <div aria-live="polite" className="rounded-lg border border-border p-3"><p className="font-medium">Answers cleared by this revision</p><ul className="mt-2 list-disc pl-5 text-sm">{cleared.map((answer) => <li key={`${answer.questionKey}-${answer.explanation}`}><strong>{answer.questionKey}</strong>: {answer.explanation}</li>)}</ul><Button className="mt-2" data-print="hidden" onClick={() => setCleared([])} size="sm" type="button" variant="outline">Dismiss</Button></div> : null}
     {inAnalystReview ? <>
-      <ConfirmDialog confirmLabel="Release questionnaire" confirmVariant="default" description="The Requestor can view this questionnaire after release." errorMessage={error} onConfirm={release} pendingLabel="Releasing questionnaire…" title="Release this questionnaire?" trigger={<Button type="button"><CheckCircle2 aria-hidden="true" />Release questionnaire</Button>} />
-      <div className="grid gap-3"><div className="flex items-center justify-between"><h3 className="font-medium">Question editor</h3><Button onClick={() => { setDraft({ ...blankQuestion, order: definition.length }); setEditing(null); }} size="sm" type="button"><Plus aria-hidden="true" />Add question</Button></div>
-      {definition.map((question) => { const isLastActive = definition.length <= 1; return <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3" key={question.documentId ?? question.questionKey}><div><p className="font-medium">{question.questionText}</p><p className="text-sm text-muted-foreground">{question.section.title} · {question.answerType}</p></div><div className="flex gap-2"><Button onClick={() => { setEditing(question.documentId ?? question.questionKey); setDraft({ questionText: question.questionText, answerType: question.answerType === 'File upload' ? 'Text' : question.answerType, required: question.required, sectionKey: question.section.key, sectionTitle: question.section.title, sectionDescription: question.section.description, sectionOrder: question.section.order, order: question.order, choices: (question.choices ?? []).map((choice) => choice.label).join('\n') }); }} size="sm" type="button" variant="outline">Edit</Button>{isLastActive ? <Button disabled size="sm" title="A questionnaire must retain at least one active question." type="button" variant="outline">Delete</Button> : <ConfirmDialog confirmLabel="Delete question" confirmVariant="destructive" description="The question and its answer are retained in the revision history." errorMessage={error} onConfirm={() => remove(question.documentId ?? question.questionKey)} pendingLabel="Deleting question…" title="Delete this question?" trigger={<Button size="sm" type="button" variant="outline">Delete</Button>} />}</div></div>; })}
+      <ConfirmDialog confirmLabel="Release questionnaire" confirmVariant="default" description="The Requestor can view this questionnaire after release." errorMessage={error} onConfirm={release} pendingLabel="Releasing questionnaire…" title="Release this questionnaire?" trigger={<Button data-print="hidden" type="button"><CheckCircle2 aria-hidden="true" />Release questionnaire</Button>} />
+      <div className="grid gap-3"><div className="flex items-center justify-between"><h3 className="font-medium">Question editor</h3><Button onClick={() => { setDraft({ ...blankQuestion, order: definition.length }); setEditing(null); }} data-print="hidden" size="sm" type="button"><Plus aria-hidden="true" />Add question</Button></div>
+      {/*
+        * The single list of questions on the analyst review page (D-32): grouped under a heading per section in
+        * definition order, one row per question in question order, each with its answer type, required flag and,
+        * for select questions, its choices.
+        */}
+      {orderQuestionnaire(definition).map((section, sectionIndex) => { const headingId = `${sectionIdPrefix}-section-${sectionIndex}`; return <div className="grid gap-2" key={section.key}><h4 className="micro-label text-muted-foreground" id={headingId}>{section.title}</h4><ul aria-labelledby={headingId} className="grid gap-2">
+      {section.questions.map((question) => { const isLastActive = definition.length <= 1; const choices = questionChoices(question); return <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3" key={question.documentId ?? question.questionKey}><div className="min-w-0 space-y-1"><p className="text-sm font-medium text-foreground">{question.questionText}</p><p className="text-xs text-foreground-secondary">{questionCaption(question)}</p>{choices ? <p className="text-xs text-foreground-secondary">{choices}</p> : null}</div><div className="flex gap-2" data-print="hidden"><Button onClick={() => { setEditing(question.documentId ?? question.questionKey); setDraft({ questionText: question.questionText, answerType: question.answerType === 'File upload' ? 'Text' : question.answerType, required: question.required, sectionKey: question.section.key, sectionTitle: question.section.title, sectionDescription: question.section.description, sectionOrder: question.section.order, order: question.order, choices: (question.choices ?? []).map((choice) => choice.label).join('\n') }); }} size="sm" type="button" variant="outline">Edit{' '}<span className="sr-only">question: {question.questionText}</span></Button>{isLastActive ? <Button disabled size="sm" title="A questionnaire must retain at least one active question." type="button" variant="outline">Delete{' '}<span className="sr-only">question: {question.questionText}</span></Button> : <ConfirmDialog confirmLabel="Delete question" confirmVariant="destructive" description="The question and its answer are retained in the revision history." errorMessage={error} onConfirm={() => remove(question.documentId ?? question.questionKey)} pendingLabel="Deleting question…" title="Delete this question?" trigger={<Button size="sm" type="button" variant="outline">Delete{' '}<span className="sr-only">question: {question.questionText}</span></Button>} />}</div></li>; })}
+      </ul></div>; })}
       </div>
       {draft ? <QuestionForm draft={draft} onCancel={() => { setDraft(null); setEditing(null); }} onChange={setDraft} onSave={save} /> : null}
-    </> : <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={error} onConfirm={returnToReview} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} />}
+    </> : <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={error} onConfirm={returnToReview} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} />}
   </section>;
 }
 

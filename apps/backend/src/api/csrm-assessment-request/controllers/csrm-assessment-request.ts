@@ -2,10 +2,9 @@ import { factories } from "@strapi/strapi";
 
 import {
   AssessmentRequestQueryError,
-  buildAnalystReviewCollectionQuery,
   buildAssessmentRequestCollectionQuery,
+  parseAnalystReviewQuery,
   projectAnalystReviewRequest,
-  selectReviewQueueBucket,
 } from "../services/collection-scope";
 import { createWithAssessmentRequestNumber } from "../services/request-number";
 import {
@@ -13,10 +12,12 @@ import {
   projectRequestRelationships,
 } from "../services/relationship-scope";
 import { projectRequestLifecycle } from "../services/request-lifecycle";
-import { hasActiveQuestionnaireGeneration } from "../../csrm-questionnaire/services/questionnaire-generation-workflow";
+import { createReviewQueueRepository } from "../services/review-queue-repository";
+import { activeQuestionnaireGenerationRequestIds } from "../../csrm-questionnaire/services/questionnaire-generation-workflow";
 import {
   AssessmentRequestWorkflowError,
   isRecord,
+  prepareAnalystUpdate,
   prepareRequestorCreate,
   prepareRequestorUpdate,
   revertRequestToDraft,
@@ -56,48 +57,42 @@ export default factories.createCoreController(
   ({ strapi }) => ({
     async find(ctx) {
       try {
-        const documents = strapi.documents(UID) as unknown as AssessmentRequestDocuments;
-        const analystReview = ctx.state.csrmAuthorization?.assessmentReviewCollectionScope === "all";
-        const reviewQuery = analystReview ? buildAnalystReviewCollectionQuery(ctx.query, ctx.state) : null;
-        const { dataQuery, countQuery, pagination } = reviewQuery ?? buildAssessmentRequestCollectionQuery(ctx.query, ctx.state);
-        const boundedDataQuery = analystReview ? { ...dataQuery, populate: { requestor: true, questionnaire: { populate: { questions: true } }, assessment: true } } : dataQuery;
-        let output: unknown[];
-        let total: number;
-        if (reviewQuery) {
-          /*
-           * Three of the four buckets are decided by facts no Strapi filter can
-           * express: a derived lifecycle step and the volatile generation-job
-           * registry. The reviewable scope is therefore read and classified in
-           * the application, under an explicit bound rather than an open scan,
-           * so one queue read can never become an unbounded query. Beyond the
-           * bound the queue reports what it read; pushing the classification
-           * into the database belongs with the Phase 8 hardening work.
-           */
-          const scope: unknown[] = [];
-          const pageSize = 100;
-          const scanLimit = 1_000;
-          for (let start = 0; start < scanLimit; start += pageSize) {
-            const page = await documents.findMany({ ...boundedDataQuery, start, limit: pageSize });
-            scope.push(...page);
-            if (page.length < pageSize) break;
+        if (ctx.state.csrmAuthorization?.assessmentReviewCollectionScope === "all") {
+          const reviewQuery = parseAnalystReviewQuery(ctx.query, ctx.state);
+          if (reviewQuery.kind === "outside-queue") {
+            /*
+             * The requested status is one the selected queue does not read, so
+             * the intersection is empty. Answer that directly: nothing is read,
+             * and no query that could return a record outside the queue is issued.
+             */
+            return { data: [], meta: { pagination: { ...reviewQuery.pagination, pageCount: 0, total: 0 } } };
           }
-          const filtered = scope.filter((document) => selectReviewQueueBucket(
-            reviewQuery.bucket,
-            document as Record<string, unknown>,
-            (requestId) => hasActiveQuestionnaireGeneration(strapi as never, requestId),
-          ));
-          total = filtered.length;
-          output = filtered.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize);
-        } else {
-          [output, total] = await Promise.all([documents.findMany(boundedDataQuery), documents.count(countQuery)]);
+          /*
+           * Each queue is a database predicate (review-queue-repository.ts), so
+           * the page and its total are exact at any volume. Only the two queues
+           * that read active questionnaire generation take the registry's
+           * bounded snapshot; a snapshot beyond its bound fails closed.
+           */
+          const activeIds = reviewQuery.bucket === "generation-in-progress" || reviewQuery.bucket === "requires-attention"
+            ? activeQuestionnaireGenerationRequestIds(strapi as never)
+            : [];
+          const repository = createReviewQueueRepository(strapi);
+          const [total, pageIds] = await Promise.all([
+            repository.count(reviewQuery, activeIds),
+            repository.selectPage(reviewQuery, activeIds),
+          ]);
+          const page = await repository.hydrate(pageIds);
+          const projected = page.map((document) => projectAnalystReviewRequest(document));
+          const sanitized = this.sanitizeOutput ? await this.sanitizeOutput(projected, ctx) : projected;
+          const { pagination } = reviewQuery;
+          return { data: sanitized, meta: { pagination: { ...pagination, pageCount: Math.ceil(total / pagination.pageSize), total } } };
         }
-        const projected = analystReview
-          ? output.map((document) => projectAnalystReviewRequest(document as Record<string, unknown>))
-          : output;
-        const sanitized = this.sanitizeOutput ? await this.sanitizeOutput(projected, ctx) : projected;
+        const documents = strapi.documents(UID) as unknown as AssessmentRequestDocuments;
+        const { dataQuery, countQuery, pagination } = buildAssessmentRequestCollectionQuery(ctx.query, ctx.state);
+        const [output, total] = await Promise.all([documents.findMany(dataQuery), documents.count(countQuery)]);
+        const sanitized = this.sanitizeOutput ? await this.sanitizeOutput(output, ctx) : output;
         const pageCount = Math.ceil(total / pagination.pageSize);
         const meta = { pagination: { ...pagination, pageCount, total } };
-        if (analystReview) return { data: sanitized, meta };
         return this.transformResponse
           ? this.transformResponse(sanitized, meta)
           : { data: sanitized, meta };
@@ -137,22 +132,24 @@ export default factories.createCoreController(
       };
     },
 
+    /**
+     * One create path for every actor (T-08-A1). The policy's actor decision says which grant
+     * admitted the caller, not whose request this is: an analyst or the service agent creates as
+     * a Requestor, so the request is theirs, and a body naming another owner or a server-owned
+     * fact changes nothing. prepareRequestorCreate refuses a caller with no trusted identity.
+     */
     async create(ctx) {
       try {
         const actor = ctx.state.csrmAuthorization?.assessmentRequestActor;
-        const identityDocumentId = ctx.state.idamboxUser?.documentId;
         const input = ctx.request.body?.data;
-        if (!actor || !isRecord(input) || (actor === "requestor" && !identityDocumentId)) {
+        if (!actor || !isRecord(input)) {
           return denyBadRequest(ctx, "CSRM assessment request data is invalid.");
         }
 
+        const identityDocumentId: unknown = ctx.state.idamboxUser?.documentId;
         const documents = strapi.documents(UID) as unknown as AssessmentRequestDocuments;
-        const document = await createWithAssessmentRequestNumber((requestNumber) => {
-          const data = actor === "requestor"
-            ? prepareRequestorCreate(input, identityDocumentId as string, requestNumber)
-            : { ...input, requestNumber };
-          return documents.create({ data });
-        });
+        const document = await createWithAssessmentRequestNumber((requestNumber) =>
+          documents.create({ data: prepareRequestorCreate(input, identityDocumentId, requestNumber) }));
         const sanitized = this.sanitizeOutput ? await this.sanitizeOutput(document, ctx) : document;
         ctx.status = 200;
         return this.transformResponse ? this.transformResponse(sanitized) : { data: sanitized };
@@ -174,9 +171,10 @@ export default factories.createCoreController(
         const documents = strapi.documents(UID) as unknown as AssessmentRequestDocuments;
         const persisted = await documents.findOne({ documentId, populate: { requestor: true } });
         if (!persisted) return denyBadRequest(ctx, "CSRM assessment request workflow is denied.");
+        // Both actors write only the published update body; neither can name an owner (T-08-A2).
         const data = actor === "requestor"
           ? prepareRequestorUpdate(persisted, input)
-          : { ...input, requestNumber: persisted.requestNumber };
+          : prepareAnalystUpdate(persisted, input);
         const document = await documents.update({ documentId, data });
         const sanitized = this.sanitizeOutput ? await this.sanitizeOutput(document, ctx) : document;
         return this.transformResponse ? this.transformResponse(sanitized) : { data: sanitized };

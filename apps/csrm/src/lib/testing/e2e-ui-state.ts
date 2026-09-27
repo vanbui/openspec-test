@@ -1,9 +1,7 @@
 import 'server-only';
 
 import { createElement, type ReactNode } from 'react';
-import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, relative, resolve } from 'node:path';
+import { isAttestedE2eRuntime } from './e2e-runtime-attestation';
 
 export type E2eUiState = 'populated' | 'loading' | 'empty' | 'error' | 'permission';
 
@@ -11,51 +9,18 @@ type RouteSearchParams = Record<string, string | string[] | undefined>;
 
 const allowedStates = new Set<E2eUiState>(['populated', 'loading', 'empty', 'error', 'permission']);
 
-/*
- * The attestation is written once, when the Playwright configuration loads, and
- * every request re-checks its age. The window must therefore outlast a whole
- * suite run. At ten minutes the guarded fixtures silently stopped resolving
- * partway through a run that now takes about fourteen: the state boundary
- * vanished from every later spec, which then failed with no sign of why, and
- * the cause was recorded as a load-sensitive flake. An hour covers the suite
- * with room to grow while keeping the harness unreachable from any
- * longer-lived process, which is what this freshness check exists to guarantee
- * alongside the nonce and the isolated runtime root.
+/**
+ * Fixture states exist only when the server harness is switched on and this
+ * process runs inside an attested Playwright runtime. The attestation itself is
+ * checked by the shared runtime predicate; the harness flag is this boundary's
+ * own gate and never influences the session.
  */
-const E2E_ATTESTATION_MAX_AGE_MS = 60 * 60 * 1000;
-const runtimeParent = resolve(tmpdir(), 'csrm-playwright-e2e');
-
-type RuntimeAttestation = {
-  nonce: string;
-  createdAt: string;
-};
-
-function isAttestedE2eRuntime(): boolean {
-  if (process.env.CSRM_E2E_UI_STATE_HARNESS !== '1') return false;
-
-  const runtimeRoot = process.env.CSRM_E2E_RUNTIME_ROOT;
-  const attestationPath = process.env.CSRM_E2E_RUNTIME_ATTESTATION_PATH;
-  const nonce = process.env.CSRM_E2E_RUNTIME_NONCE;
-  if (!runtimeRoot || !attestationPath || !nonce) return false;
-
-  const resolvedRuntimeRoot = resolve(runtimeRoot);
-  const resolvedAttestationPath = resolve(attestationPath);
-  const runtimeRelativePath = relative(runtimeParent, resolvedRuntimeRoot);
-  if (!runtimeRelativePath || runtimeRelativePath.startsWith('..') || !runtimeRelativePath ||
-    resolve(dirname(resolvedAttestationPath)) !== resolvedRuntimeRoot) return false;
-
-  try {
-    const parsed = JSON.parse(readFileSync(resolvedAttestationPath, 'utf8')) as RuntimeAttestation;
-    const createdAt = Date.parse(parsed.createdAt);
-    return parsed.nonce === nonce && Number.isFinite(createdAt) && createdAt <= Date.now()
-      && Date.now() - createdAt < E2E_ATTESTATION_MAX_AGE_MS;
-  } catch {
-    return false;
-  }
+function isAttestedUiStateHarness(): boolean {
+  return process.env.CSRM_E2E_UI_STATE_HARNESS === '1' && isAttestedE2eRuntime(process.env);
 }
 
 export function resolveE2eUiState(searchParams: RouteSearchParams): E2eUiState | undefined {
-  if (!isAttestedE2eRuntime()) return undefined;
+  if (!isAttestedUiStateHarness()) return undefined;
 
   const requestedState = searchParams.__e2eState;
   return typeof requestedState === 'string' && allowedStates.has(requestedState as E2eUiState)
@@ -65,7 +30,15 @@ export function resolveE2eUiState(searchParams: RouteSearchParams): E2eUiState |
 
 /** A second closed harness selector exercises an independently failed safe dashboard widget. */
 export function resolveE2eDashboardPartial(searchParams: RouteSearchParams): boolean {
-  return isAttestedE2eRuntime() && searchParams.__e2ePartial === 'draft-requests-error';
+  return isAttestedUiStateHarness() && searchParams.__e2ePartial === 'draft-requests-error';
+}
+
+/**
+ * The analyst dashboard's own closed partial selector (UI-SPEC §6.4): it fails the Top alerts widget
+ * while its siblings render. The route resolves it only after its real, authorised reads succeeded.
+ */
+export function resolveE2eAnalystDashboardPartial(searchParams: RouteSearchParams): boolean {
+  return isAttestedUiStateHarness() && searchParams.__e2ePartial === 'analyst-top-alerts-error';
 }
 
 export function E2eUiStateBoundary({ children, state }: { children: ReactNode; state: E2eUiState }) {

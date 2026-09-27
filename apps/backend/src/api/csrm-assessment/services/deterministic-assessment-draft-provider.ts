@@ -1,5 +1,6 @@
 import {
   parseAssessmentDraftProposal,
+  sortRiskProposals,
   type AssessmentDraftAnswerValue,
   type AssessmentDraftContext,
   type AssessmentDraftProposal,
@@ -141,7 +142,8 @@ function buildRisks(context: NormalizedContext): AssessmentRiskDraftProposal[] {
       residualRatingRationale: "Residual dependency remains until the analyst confirms supplier controls and treatment ownership.",
     }, context.controlsByRiskType.get("Third-Party Dependency") ?? []));
   }
-  return risks.sort((left, right) => left.riskTypeName.localeCompare(right.riskTypeName));
+  // The parser checks this order, so the draft is sorted by the same shared rule.
+  return sortRiskProposals(risks);
 }
 
 export const deterministicAssessmentDraftProvider: AssessmentDraftProvider = {

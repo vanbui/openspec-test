@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "CsrmAssessment Lifecycle",
+    "quality_profile": "showcase",
+    "viewBox": [
+      980,
+      566
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "assessmentStatus rail"
+    },
+    {
+      "id": "recovery",
+      "label": "Review regression"
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "type": "start",
+      "label": "Draft",
+      "sublabel": "AI proposal saved",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "draft"
+    },
+    {
+      "id": "in_review",
+      "type": "active",
+      "label": "In Review",
+      "sublabel": "analyst edits",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "in-review"
+    },
+    {
+      "id": "ready",
+      "type": "decision",
+      "label": "Release Ready",
+      "sublabel": "derived, not stored",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "in-review"
+    },
+    {
+      "id": "approved",
+      "type": "success",
+      "label": "Approved",
+      "sublabel": "released, immutable",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "approved"
+    },
+    {
+      "id": "closed",
+      "type": "neutral",
+      "label": "Closed",
+      "sublabel": "no writer yet",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "tag": "closed"
+    },
+    {
+      "id": "withdrawn",
+      "type": "failure",
+      "label": "Review Withdrawn",
+      "sublabel": "draft + reviewedBy",
+      "lane": "recovery",
+      "col": 0,
+      "tag": "draft"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "draft",
+      "to": "in_review",
+      "label": "analyst edit",
+      "labelDy": 55
+    },
+    {
+      "from": "in_review",
+      "to": "ready",
+      "label": "fields complete",
+      "variant": "dashed",
+      "labelDy": -25
+    },
+    {
+      "from": "ready",
+      "to": "approved",
+      "label": "release",
+      "variant": "security",
+      "labelDy": -25
+    },
+    {
+      "from": "approved",
+      "to": "closed",
+      "variant": "dashed"
+    },
+    {
+      "from": "ready",
+      "to": "withdrawn",
+      "label": "edit",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "from": "withdrawn",
+      "to": "in_review",
+      "label": "fresh review",
+      "fromSide": "left",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "How it moves",
+      "items": [
+        "AI draft generation creates the assessment as draft, advisory only",
+        "An analyst's first accepted edit sets in-review and stamps reviewedBy",
+        "Only an analyst release sets approved with approvedBy + approvalDate"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Guarded gates",
+      "items": [
+        "Release needs in-review, reviewer, summary, rating, rationale and risks",
+        "Editing a release-ready assessment regresses it to draft",
+        "Any release fact makes the record immutable: edits return 409"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Model gap",
+      "items": [
+        "Release Ready and Review Withdrawn are derived, not enum values",
+        "closed is in the JDL and schema enum, but no service writes it",
+        "Enum: draft, in-review, approved, closed"
+      ]
+    }
+  ]
+}

@@ -3,6 +3,8 @@ type RecordValue = Record<string, unknown>;
 export const RISK_REGISTER_RATINGS = ["Low", "Moderate", "High", "Critical"] as const;
 export const RISK_REGISTER_TREATMENT_STATUSES = ["Not Started", "In Progress", "Overdue", "Complete"] as const;
 export const RISK_REGISTER_MITIGATION_STATUSES = ["Existing", "Planned", "Implemented", "Retired", "none"] as const;
+/** D-36: open means no closure date is recorded, closed means one is. Absent returns both. */
+export const RISK_REGISTER_STATES = ["open", "closed"] as const;
 export const RISK_REGISTER_SORT_FIELDS = [
   "riskNumber",
   "riskStatement",
@@ -27,6 +29,7 @@ export type RiskRegisterFilters = {
   system?: string;
   asset?: string;
   mitigationStatus?: typeof RISK_REGISTER_MITIGATION_STATUSES[number];
+  state?: typeof RISK_REGISTER_STATES[number];
   targetDateFrom?: string;
   targetDateTo?: string;
 };
@@ -51,7 +54,7 @@ function isRecord(value: unknown): value is RecordValue {
 function assertOnlyKeys(value: RecordValue): void {
   const allowed = new Set([
     "q", "treatmentStatus", "inherentRating", "residualRating", "riskOwner", "treatmentOwner",
-    "assessment", "system", "asset", "mitigationStatus", "targetDateFrom", "targetDateTo", "sort", "page", "pageSize",
+    "assessment", "system", "asset", "mitigationStatus", "state", "targetDateFrom", "targetDateTo", "sort", "page", "pageSize",
   ]);
   if (Object.keys(value).some((key) => !allowed.has(key))) throw new RiskRegisterQueryError();
 }
@@ -136,6 +139,7 @@ export function parseRiskRegisterQuery(value: unknown): RiskRegisterQuery {
     system: opaqueId(value.system),
     asset: opaqueId(value.asset),
     mitigationStatus: enumValue(mitigationInput, RISK_REGISTER_MITIGATION_STATUSES),
+    state: enumValue(value.state, RISK_REGISTER_STATES),
     targetDateFrom: calendarDate(value.targetDateFrom),
     targetDateTo: calendarDate(value.targetDateTo),
   };

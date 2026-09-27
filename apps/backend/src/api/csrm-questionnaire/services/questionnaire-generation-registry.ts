@@ -23,7 +23,12 @@ export function createQuestionnaireGenerationRegistry(options: Options) {
   const get = (jobId: string, actor: QuestionnaireGenerationJobActor) => { cleanup(); const job = jobs.get(jobId); if (!job) throw new QuestionnaireGenerationRegistryError(404, "Questionnaire generation job was not found."); authorize(job, actor); job.lastAccess = ++sequence; return publicJob(job); };
   const retry = (jobId: string, actor: QuestionnaireGenerationJobActor) => { const job = jobs.get(jobId); if (!job) throw new QuestionnaireGenerationRegistryError(404, "Questionnaire generation job was not found."); authorize(job, actor); if (job.status !== "failed" || activeByRequest.has(job.requestId)) throw new QuestionnaireGenerationRegistryError(409, "Only failed jobs can be retried."); job.status = "queued"; job.attempt += 1; job.queuedAt = now().toISOString(); job.startedAt = undefined; job.completedAt = undefined; job.failure = undefined; job.questionnaireId = undefined; job.lastAccess = ++sequence; activeByRequest.set(job.requestId, jobId); launch(job); return publicJob(job); };
   // This is intentionally process-local. It is a transient operational hint,
-  // never an authorisation input or a persisted workflow fact.
+  // never an authorisation input or a persisted workflow fact. The review
+  // queues read the snapshot below as a bound id-set predicate, so the
+  // generation-in-progress queue is exact for one Strapi process only; a
+  // multi-process deployment needs a shared job store (a Phase 8 concern).
   const hasActiveJob = (requestId: string): boolean => activeByRequest.has(requestId);
-  return { enqueue, get, retry, cleanup, hasActiveJob };
+  /** A sorted copy of the request ids with a queued or running job. */
+  const activeRequestIds = (): readonly string[] => [...activeByRequest.keys()].sort();
+  return { enqueue, get, retry, cleanup, hasActiveJob, activeRequestIds };
 }

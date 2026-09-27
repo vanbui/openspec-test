@@ -1,9 +1,11 @@
 import '@testing-library/jest-dom/vitest';
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { installTestResizeObserver, stubHorizontalGeometry, TestResizeObserver } from '@/test/layout-stubs';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/app/admin/risk-types', useRouter: () => router }));
@@ -52,14 +54,17 @@ type CsvImportFlowProps = {
   commitAction: (formData: FormData) => Promise<unknown>;
 };
 type WorkspaceModule = {
+  AdministrationAccessDenied: ComponentType<{ kind?: AdministrationWorkspaceProps['kind'] }>;
   AdministrationForm: ComponentType<AdministrationFormProps>;
   AdministrationWorkspace: ComponentType<AdministrationWorkspaceProps>;
 };
 type ImportModule = { CsvImportFlow: ComponentType<CsvImportFlowProps> };
 
 async function loadWorkspace(): Promise<WorkspaceModule> {
-  const modulePath = './administration-workspace';
-  return import(modulePath) as Promise<WorkspaceModule>;
+  const workspacePath = './administration-workspace';
+  const formPath = './administration-form';
+  const [workspace, form] = await Promise.all([import(workspacePath), import(formPath)]);
+  return { ...workspace, ...form } as WorkspaceModule;
 }
 
 async function loadImportFlow(): Promise<ImportModule> {
@@ -139,7 +144,7 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(screen.getByRole('combobox', { name: 'Framework' })).toBeInTheDocument();
     const controlTypeFilter = screen.getByRole('combobox', { name: 'Control type' });
     expect(controlTypeFilter).toHaveClass('h-9', 'rounded-md', 'bg-surface', 'block', 'w-full');
-    expect(controlTypeFilter.closest('label')).toHaveClass('space-y-1');
+    expect(controlTypeFilter.closest('label')).toHaveClass('grid', 'gap-1.5');
     expect(screen.getByRole('table', { name: 'Controls results' })).toBeInTheDocument();
     expect(document.querySelector('[data-slot="data-table-mobile"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
@@ -166,6 +171,38 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     } });
     expect(screen.queryByLabelText(/source data/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  /*
+   * WR-04: a missing required field is asked for by its label in the product's words, never in a validation
+   * library's default English, and an optional field holding only spaces is empty rather than an error.
+   */
+  it('asks for each missing Control field in words and submits spaces-only optional text as empty', async () => {
+    const user = userEvent.setup();
+    const { AdministrationForm } = await loadWorkspace();
+    const createAction = vi.fn().mockResolvedValue({ ok: true, data: { documentId: 'control-3', controlNumber: 'AC-3', name: 'Access Enforcement' } });
+    render(<AdministrationForm kind="controls" mode="create" createAction={createAction} />);
+
+    await user.click(screen.getByRole('button', { name: 'Create Control' }));
+    expect(await screen.findByText('Enter a control number.')).toBeInTheDocument();
+    expect(screen.getByText('Enter a name.')).toBeInTheDocument();
+    expect(screen.getByText('Enter a framework.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Too small|Too big|Invalid input|expected string/);
+    expect(createAction).not.toHaveBeenCalled();
+
+    await user.type(screen.getByRole('textbox', { name: 'Control number' }), 'AC-3');
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Access Enforcement');
+    await user.type(screen.getByRole('textbox', { name: /^Framework$/ }), 'NIST SP 800-53');
+    for (const label of ['Framework version', 'Control reference', 'Framework source']) {
+      await user.type(screen.getByRole('textbox', { name: label }), '   ');
+    }
+    await user.click(screen.getByRole('button', { name: 'Create Control' }));
+
+    expect(createAction).toHaveBeenCalledWith({ values: expect.objectContaining({
+      controlNumber: 'AC-3', name: 'Access Enforcement', framework: 'NIST SP 800-53',
+      controlReference: null, frameworkVersion: null, frameworkSource: null,
+    }) });
+    expect(document.body.textContent).not.toMatch(/leave it empty|Too small/);
   });
 
   it('renders complete Information System and Information Asset lists and closed forms', async () => {
@@ -226,8 +263,34 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     view.rerender(<AdministrationWorkspace {...baseWorkspaceProps} state="permission" items={[]} />);
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to Administration records');
+    // The denial keeps the page's one level-one heading, naming the collection that refused (STATE follow-up 2026-09-25).
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Risk Types');
     expect(screen.queryByRole('search')).not.toBeInTheDocument();
     expect(screen.queryByText(/result/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /create|import/i })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['risk-types', 'Risk Types'],
+    ['controls', 'Controls'],
+    ['information-systems', 'Information Systems'],
+    ['information-assets', 'Information Assets'],
+    [undefined, 'Administration'],
+  ] as const)('names the refused page, %s, in the denial’s one level-one heading above the permission state', async (kind, heading) => {
+    const { AdministrationAccessDenied } = await loadWorkspace();
+    render(<AdministrationAccessDenied kind={kind} />);
+
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent(heading);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('You don’t have access to Administration records');
+    expect(alert).toHaveAttribute('data-state-kind', 'permission');
+    // The heading comes first, so the permission state reads as the page's content, not its title.
+    expect(headings[0]!.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
     expect(screen.queryByRole('link', { name: /create|import/i })).not.toBeInTheDocument();
   });
 
@@ -350,7 +413,20 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
   });
 });
 
+/** The element that scrolls a CSV import table: the region wrapper, never the table primitive's own container. */
+function scrollerOf(table: HTMLElement) {
+  return table.closest<HTMLElement>('[data-overflow]')!;
+}
+
 describe('ADMIN-04 five-step CSV import workflow', () => {
+  beforeEach(() => {
+    installTestResizeObserver();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('configures an exact import route for every closed Administration collection', async () => {
     const { administrationKinds, getAdministrationConfig } = await import('./administration-config');
     expect(administrationKinds.map((kind) => getAdministrationConfig(kind).importPath)).toEqual([
@@ -374,8 +450,44 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
       expect(screen.getByRole('heading', { level: 1, name: `Import ${candidate.label} from CSV` })).toBeInTheDocument();
       expect(screen.getByRole('cell', { name: candidate.column })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: `Return to ${candidate.label}` })).toHaveAttribute('href', candidate.listPath);
+      // The heading names the collection, so the template pill stays short enough for 375px (UI-SPEC section 11 addendum).
+      expect(screen.getByRole('button', { name: 'Download CSV template' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Download .+ CSV template/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Choose CSV file' })).toBeInTheDocument();
       view.unmount();
     }
+  });
+
+  it('scrolls the Guidance columns table in one wrapper that is a labelled, focusable region only while it overflows', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} />);
+
+    const table = screen.getByRole('table', { name: 'Risk Type CSV columns' });
+    const scroller = scrollerOf(table);
+    const container = table.closest('[data-slot="table-container"]')!;
+    expect(scroller).not.toBe(container);
+    expect(scroller).toHaveClass('overflow-x-auto', 'rounded-lg', 'border', '[&>[data-slot=table-container]]:overflow-visible');
+
+    expect(scroller).toHaveAttribute('data-overflow', 'false');
+    for (const attribute of ['role', 'aria-label', 'tabindex']) expect(scroller).not.toHaveAttribute(attribute);
+
+    // The 343px column at 375: the column guidance is wider than its wrapper.
+    stubHorizontalGeometry(scroller, { scrollWidth: 480, clientWidth: 311 });
+    act(() => TestResizeObserver.notifyAll());
+
+    expect(screen.getByRole('region', { name: 'Risk Type CSV columns, scrolls horizontally' })).toBe(scroller);
+    expect(scroller).toHaveAttribute('tabindex', '0');
+    expect(scroller).toHaveAttribute('data-overflow', 'true');
+    for (const attribute of ['role', 'tabindex']) expect(container).not.toHaveAttribute(attribute);
+  });
+
+  it('leaves focus with the page on first render and moves it to the step heading only on a step change', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const user = userEvent.setup();
+    render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Guidance' })).not.toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Select file' })).toHaveFocus();
   });
 
   it('shows all five ordered steps and all five row classifications', async () => {
@@ -396,12 +508,24 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
       expect(screen.getByRole('button', { name: new RegExp(`${state} \\(1\\)`) })).toBeInTheDocument();
       expect(screen.getByRole('row', { name: new RegExp(state, 'i') })).toBeInTheDocument();
     }
+    // WR-08: each row state is a status badge from the shared mapping, in the direction's tone vocabulary.
+    const tones = { Create: 'success', Update: 'success', Unchanged: 'neutral', Rejected: 'warning', Ambiguous: 'warning' } as const;
+    for (const [state, tone] of Object.entries(tones)) {
+      const badge = within(screen.getByRole('row', { name: new RegExp(state, 'i') })).getByText(state, { exact: true, selector: '[data-slot="badge"]' });
+      expect(badge, state).toHaveAttribute('data-tone', tone);
+      expect(badge.querySelectorAll('svg'), state).toHaveLength(1);
+    }
+    // An ambiguous row is never shown with the High severity triangle.
+    expect(document.querySelector('[data-slot="badge"] .lucide-triangle-alert')).toBeNull();
   });
 
   it('paginates preview rows at 100 and exposes the mobile card presentation', async () => {
     const { CsvImportFlow } = await loadImportFlow();
     const rows = Array.from({ length: 101 }, (_, index): CsvPreviewRow => ({ rowNumber: index + 2, naturalKey: `Row ${index}`, state: 'create', issues: [] }));
     const { user } = await renderPreview(CsvImportFlow, rows);
+    const previewScroller = scrollerOf(screen.getByRole('table', { name: 'Risk Type import preview' }));
+    expect(previewScroller).toHaveClass('hidden', 'md:grid', '[&>[data-slot=table-container]]:overflow-visible');
+    expect(previewScroller).toHaveAttribute('data-overflow', 'false');
     expect(screen.getByRole('table', { name: 'Risk Type import preview' }).querySelectorAll('tbody tr')).toHaveLength(100);
     expect(document.querySelectorAll('[data-slot="csv-import-mobile"] article')).toHaveLength(100);
     await user.click(screen.getByRole('button', { name: 'Next rows' }));
@@ -441,6 +565,10 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     const submitted = commitAction.mock.calls[0]?.[0] as FormData;
     expect(submitted.get('confirmed')).toBe('true');
     expect(submitted.get('previewDigest')).toBe(`sha256:${'1'.repeat(64)}`);
+
+    const resultsScroller = scrollerOf(await screen.findByRole('table', { name: 'Risk Type import results' }));
+    expect(resultsScroller).toHaveClass('hidden', 'md:grid', '[&>[data-slot=table-container]]:overflow-visible');
+    expect(resultsScroller).toHaveAttribute('data-overflow', 'false');
   });
 
   it('traverses backward and forward with focus, live status, authoritative results, and no automatic retry', async () => {

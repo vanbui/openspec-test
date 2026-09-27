@@ -1,4 +1,9 @@
 import type { Core } from "@strapi/strapi";
+import { CSRM_ANALYST_INSIGHT_OPERATIONS } from "../api/csrm-analyst-insight/operations";
+import { CSRM_ASSESSMENT_OPERATIONS } from "../api/csrm-assessment/operations";
+import { listAnalystReviewRequests } from "../api/csrm-assessment-request/operations";
+import { CSRM_QUESTIONNAIRE_OPERATIONS } from "../api/csrm-questionnaire/operations";
+import { CSRM_RISK_OPERATIONS } from "../api/csrm-risk/operations";
 import { isSelectorQuery } from "../utils/selector-query";
 
 const REQUESTOR_ROLE_NAME = "Requestor";
@@ -8,17 +13,30 @@ const SECURITY_ANALYST_ROLE_NAMES = new Set([
 ]);
 const HUMAN_SECURITY_ANALYST_ROLE_NAME = "Security Analyst";
 const RELEASE_ASSESSMENT_OPERATION = "POST:/api/v1/risk_assessments/{assessmentId}/release";
+const ANALYST_INSIGHT_OPERATIONS: ReadonlySet<string> = new Set(Object.values(CSRM_ANALYST_INSIGHT_OPERATIONS));
 
 /*
- * Operations no automation identity may reach, whatever the catalogue says.
+ * Operations no automation identity may reach, whatever the catalogue says: the
+ * assessment release, the five questionnaire governance operations and the five
+ * analyst insight operations. An identity holding an analyst-shaped role name is
+ * denied each of them unless the grant comes from the human Security Analyst role.
  *
- * The capability catalogue already grants each of these to `role.security_analyst`
- * only. This set is the second, independent refusal: an identity holding an
- * analyst-shaped role name is still denied unless the grant comes from the human
- * Security Analyst role, so a later catalogue edit that accidentally widened one
- * of these Functions could not turn AI-assisted automation into a releasing
- * authority. The five questionnaire governance URLs are listed as literals so the
- * guard is in place from the moment each handler is mounted.
+ * For the assessment release this set is the refusal itself. Its FunctionAPI
+ * belongs to the Risk Assessment Details Function
+ * (`function.risk_assessments.risk_assessment_details`), which the catalogue grants
+ * to `role.security_analyst_agent` as well as to `role.security_analyst`. The
+ * service agent's role therefore carries the release grant, and only this guard
+ * keeps AI-assisted automation from becoming a releasing authority (the
+ * authorization matrix's release row refuses the seeded agent).
+ *
+ * The catalogue grants the other ten to `role.security_analyst` only, so for them
+ * the set is a second, independent refusal: a later catalogue edit that
+ * accidentally widened one of those Functions still could not reach automation.
+ * The five questionnaire governance URLs are listed as literals so the guard is in
+ * place from the moment each handler is mounted. The analyst insight operations
+ * (D-07) summarise workload across every record in the analyst's scope, so they
+ * are human analyst work only, and the guard is in place before any insight
+ * handler is mounted.
  */
 const HUMAN_ANALYST_ONLY_OPERATIONS: ReadonlySet<string> = new Set([
   RELEASE_ASSESSMENT_OPERATION,
@@ -27,7 +45,27 @@ const HUMAN_ANALYST_ONLY_OPERATIONS: ReadonlySet<string> = new Set([
   "POST:/api/v1/questionnaires/{questionnaireId}/questions",
   "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
   "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+  ...ANALYST_INSIGHT_OPERATIONS,
 ]);
+
+/*
+ * D-14: an analyst insight must never widen scope. The dashboard, the alerts and
+ * the reports disclose facts from the Risk Register, the review queue, the
+ * questionnaire review list and the assessment review list, so the human analyst
+ * must hold each of those reads as well as the insight operation itself.
+ */
+const ANALYST_INSIGHT_UNDERLYING_READS = [
+  CSRM_RISK_OPERATIONS.listRegister,
+  listAnalystReviewRequests,
+  CSRM_QUESTIONNAIRE_OPERATIONS.listAll,
+  CSRM_ASSESSMENT_OPERATIONS.list,
+] as const;
+
+function humanAnalystDenialMessage(operation: string): string {
+  if (operation === RELEASE_ASSESSMENT_OPERATION) return "CSRM assessment release requires a human Security Analyst.";
+  if (ANALYST_INSIGHT_OPERATIONS.has(operation)) return "CSRM analyst insights require a human Security Analyst.";
+  return "CSRM questionnaire governance requires a human Security Analyst.";
+}
 
 type AuthorizationConfig = {
   operation: string;
@@ -35,6 +73,8 @@ type AuthorizationConfig = {
   requireReferenceDataScope?: boolean;
   requireAnalystAdministrationScope?: boolean;
   requireAnalystRiskRegisterScope?: boolean;
+  /** Set on every analyst insight route: the dashboard summary, alerts and reports. */
+  requireAnalystInsightScope?: boolean;
   requireAnalystRequestCollectionScope?: boolean;
   requireRequestOwnership?: boolean;
   requireRequestCollectionScope?: boolean;
@@ -76,6 +116,7 @@ type AuthorizationContext = {
       assessmentOwnerDocumentId?: string;
       assessmentReviewCollectionScope?: "all";
       riskRegisterCollectionScope?: "all";
+      analystInsightScope?: "all";
       administrationCollectionScope?: "all";
       referenceDataCollectionScope?: "all";
       questionnaireActor?: AssessmentRequestActor;
@@ -235,9 +276,7 @@ export default async function csrmAuthorization(
   }
   if (HUMAN_ANALYST_ONLY_OPERATIONS.has(operation)
     && !hasHumanAnalystOperation(grants.explicitRoles, operation)) {
-    return deny(policyContext, operation === RELEASE_ASSESSMENT_OPERATION
-      ? "CSRM assessment release requires a human Security Analyst."
-      : "CSRM questionnaire governance requires a human Security Analyst.");
+    return deny(policyContext, humanAnalystDenialMessage(operation));
   }
 
   setAssessmentRequestActor(policyContext, explicitAnalystOperation ? "analyst" : "requestor");
@@ -287,6 +326,18 @@ export default async function csrmAuthorization(
     policyContext.state.csrmAuthorization = {
       ...policyContext.state.csrmAuthorization,
       riskRegisterCollectionScope: "all",
+    };
+    return true;
+  }
+
+  if (config.requireAnalystInsightScope) {
+    const requiredOperations = [config.operation, ...ANALYST_INSIGHT_UNDERLYING_READS];
+    if (!requiredOperations.every((required) => hasHumanAnalystOperation(grants.explicitRoles, required))) {
+      return deny(policyContext, "CSRM analyst insight access is denied.");
+    }
+    policyContext.state.csrmAuthorization = {
+      ...policyContext.state.csrmAuthorization,
+      analystInsightScope: "all",
     };
     return true;
   }

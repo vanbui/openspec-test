@@ -3,6 +3,22 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test, { after } from "node:test";
 
+import { ALERT_LINK_TYPES, ALERT_SOURCE_TYPES } from "../src/api/csrm-analyst-insight/services/alert-repository";
+import { HIGH_CRITICAL_RATINGS } from "../src/api/csrm-analyst-insight/services/dashboard-summary";
+import { REPORT_DEFINITIONS, REPORT_KEYS } from "../src/api/csrm-analyst-insight/services/report-definitions";
+import { RISK_REGISTER_STATES } from "../src/api/csrm-risk/services/risk-register-query";
+import { ALERT_KINDS, ALERT_URGENCIES } from "../src/csrm/insights/alert-rules";
+import {
+  ALERT_PAGE_SIZES,
+  DASHBOARD_WIDGET_ROW_LIMIT,
+  EXPOSED_SYSTEMS_LIMIT,
+  MOST_OVERDUE_TREATMENTS_LIMIT,
+  RECENT_ACTIVITY_LIMIT,
+  THROUGHPUT_DEFAULT_PERIOD,
+  THROUGHPUT_PERIODS,
+} from "../src/csrm/insights/insight-constants";
+import { ACTIVITY_KINDS, ACTIVITY_RECORD_TYPES } from "../src/csrm/insights/recent-activity";
+import { TREATMENT_DUE_STATES } from "../src/csrm/insights/treatment-due-state";
 import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
 
 type JsonObject = Record<string, any>;
@@ -543,11 +559,13 @@ test("Phase 5 Risk Register list has a closed generated contract and exact catal
 
   const register = operation(specification, "/v1/risks", "get");
   assert.equal(register.operationId, "risk-register/get-risks");
+  // Phase 7 (D-36) adds the closed `state` filter after mitigationStatus, so the
+  // target-date pair still sits directly before sort (the regex below).
   assert.deepEqual(
     register.parameters.map((entry: JsonObject) => entry.name),
     [
       "q", "treatmentStatus", "inherentRating", "residualRating", "riskOwner", "treatmentOwner",
-      "assessment", "system", "asset", "mitigationStatus", "targetDateFrom", "targetDateTo", "sort", "page", "pageSize",
+      "assessment", "system", "asset", "mitigationStatus", "state", "targetDateFrom", "targetDateTo", "sort", "page", "pageSize",
     ],
   );
   for (const name of ["targetDateFrom", "targetDateTo"]) {
@@ -747,22 +765,29 @@ test("PHASE2 RED contract and reference-data grants", async () => {
   const harness = await harnessPromise;
   const mountedRequest = (url: string, identity: string, init: RequestInit = {}) =>
     harness.request({ path: url, identity, init });
+  // The grants above stay catalogued for traceability, but D-44 unmounts the
+  // generic reference-data reads: the served /v1/information_* selectors are
+  // the only read surface, so every request to the generic bases, anonymous or
+  // identified, meets no route at all. The IAM base meets no route either
+  // (D-36); docs/references/served-operations.json records both as unserved.
   for (const url of ["/api/csrm-information-systems", "/api/csrm-information-assets"]) {
     const anonymous = await harness.request({ path: url, omitApiToken: true });
-    assert.equal(anonymous.status, 403, `UNEXPECTED_ANONYMOUS_REFERENCE_READ_${url}`);
+    assert.equal(anonymous.status, 404, `UNEXPECTED_ANONYMOUS_REFERENCE_READ_${url}`);
   }
   for (const identity of [harness.identities.owner, harness.identities.analyst]) {
     for (const url of ["/api/csrm-information-systems", "/api/csrm-information-assets"]) {
       const response = await mountedRequest(url, identity);
-      assert.equal(response.status, 200, `UNEXPECTED_REFERENCE_READ_${identity}_${url}`);
+      assert.equal(response.status, 404, `UNEXPECTED_REFERENCE_READ_${identity}_${url}`);
     }
     const iam = await harness.request({ path: "/api/idambox-users", identity, omitApiToken: true });
-    assert.equal(iam.status, 403, `UNEXPECTED_IAM_STATUS_${identity}`);
+    assert.equal(iam.status, 404, `UNEXPECTED_IAM_STATUS_${identity}`);
+    // koa answers a mutation on any unmounted /api path with 405 and
+    // `Allow: HEAD, GET`, exactly as it does for a path that never existed.
     for (const method of ["POST", "PUT", "DELETE"]) {
       for (const url of ["/api/csrm-information-systems", "/api/csrm-information-assets"]) {
         const response = await mountedRequest(url, identity, { method });
         assert.ok(
-          response.status === 403 || response.status === 405,
+          response.status === 404 || response.status === 405,
           `UNEXPECTED_INVENTORY_${method}_${identity}_${url}_${response.status}`,
         );
       }
@@ -1005,5 +1030,764 @@ test("Phase 06.8 questionnaire governance surface is published and human-analyst
     Object.keys(specification.components.schemas.RelationAbsent.properties),
     ["availability"],
     "PHASE68_ABSENT_RELATION_DISCLOSURE",
+  );
+});
+
+/*
+ * GAP-1 (06.9-04): the two Analyst list filters offer the complete datamodel
+ * vocabularies, so the published parameters must accept exactly those values.
+ * The request queue filter intersects with the selected queue, and the
+ * description has to say so, because a client reading the enum alone would
+ * expect every value to return records in every queue.
+ */
+test("Phase 06.9 list status filters publish the complete datamodel vocabularies", () => {
+  const specification = parseJsonFile(
+    path.join(repositoryDir, "docs", "references", "specification.json"),
+    "UNEXPECTED_SPECIFICATION_PARSE",
+  );
+  const generatedSchema = readFileSync(
+    path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"),
+    "utf8",
+  );
+  const contentType = (name: string) => parseJsonFile(
+    path.join(appDir, "src", "api", name, "content-types", name, "schema.json"),
+    `UNEXPECTED_CONTENT_TYPE_PARSE_${name}`,
+  );
+  const requestStatuses: string[] = contentType("csrm-assessment-request").attributes.requestStatus.enum;
+  const assessmentStatuses: string[] = contentType("csrm-assessment").attributes.assessmentStatus.enum;
+  const union = (values: readonly string[]) => values.map((value) => `"${value}"`).join(" | ");
+
+  const requestStatus = parameter(operation(specification, "/v1/assessment_requests", "get"), "filters[requestStatus]");
+  assert.deepEqual(requestStatus?.schema?.enum, requestStatuses, "PHASE69_REQUEST_STATUS_FILTER_VOCABULARY");
+  assert.match(String(requestStatus?.description ?? ""), /intersect/i, "PHASE69_REQUEST_STATUS_FILTER_SEMANTICS");
+  assert.ok(
+    generatedSchema.includes(`"filters[requestStatus]"?: ${union(requestStatuses)};`),
+    "PHASE69_GENERATED_REQUEST_STATUS_FILTER",
+  );
+
+  for (const pathName of ["/v1/risk_assessments", "/v1/my_risk_assessments"]) {
+    const status = parameter(operation(specification, pathName, "get"), "status");
+    assert.deepEqual(status?.schema?.enum, assessmentStatuses, `PHASE69_ASSESSMENT_STATUS_FILTER_VOCABULARY_${pathName}`);
+    assert.equal(typeof status?.description, "string", `PHASE69_ASSESSMENT_STATUS_FILTER_SEMANTICS_${pathName}`);
+  }
+  assert.equal(
+    generatedSchema.split(`status?: ${union(assessmentStatuses)};`).length - 1,
+    2,
+    "PHASE69_GENERATED_ASSESSMENT_STATUS_FILTERS",
+  );
+
+  // The queue response carries every status a review queue reads. The Released
+  // queue returns approved and closed requests, and no queue ever returns a draft,
+  // so a closed client parser built from a narrower enum would turn every
+  // populated Released queue into an error.
+  assert.deepEqual(
+    specification.components?.schemas?.AssessmentRequestQueueItem?.properties?.requestStatus?.enum,
+    requestStatuses.filter((status) => status !== "draft"),
+    "PHASE69_QUEUE_ITEM_STATUS_VOCABULARY",
+  );
+});
+
+/* D-07: one API-only, human-analyst-only Function per served analyst insight operation. */
+const phase7InsightFunctions = [
+  { functionId: "function.dashboard.summary_api", url: "GET:/api/v1/dashboard/summary" },
+  { functionId: "function.alerts.list_api", url: "GET:/api/v1/alerts" },
+  { functionId: "function.alerts.summary_api", url: "GET:/api/v1/alerts/summary" },
+  { functionId: "function.reports.list_api", url: "GET:/api/v1/reports" },
+  { functionId: "function.reports.run_api", url: "GET:/api/v1/reports/{reportKey}" },
+] as const;
+
+/* D-06: catalogued, unserved, and kept under their menu Functions. */
+const phase7UnservedOperations = [
+  { method: "GET", path: "/v1/dashboard/reports", functionId: "function.dashboard.dashboard" },
+  { method: "GET", path: "/v1/dashboard/alerts", functionId: "function.dashboard.dashboard" },
+  { method: "GET", path: "/v1/alerts/{alertId}", functionId: "function.reports.alerts" },
+  { method: "PATCH", path: "/v1/alerts/{alertId}/acknowledge", functionId: "function.reports.alerts" },
+  { method: "POST", path: "/v1/reports/{reportKey}/export", functionId: "function.reports.reports" },
+] as const;
+
+test("Phase 7 analyst insight grants are API-only and human-analyst only", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_SPECIFICATION_PARSE");
+  const authoritativePath = path.join(repositoryDir, "docs", "references", catalogueFilename);
+  const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
+  const catalogue = parseJsonFile(authoritativePath, "PHASE7_CATALOGUE_PARSE");
+  assert.equal(Buffer.compare(readFileSync(authoritativePath), readFileSync(bootstrapPath)), 0, "PHASE7_CATALOGUE_BYTE_DRIFT");
+
+  const analystOperations = effectiveOperations(catalogue, "role.security_analyst");
+  const agentOperations = effectiveOperations(catalogue, "role.security_analyst_agent");
+  const requestorOperations = effectiveOperations(catalogue, "role.requestor");
+  const menuFunctionNames = new Set(
+    catalogue.functions.filter((entry: JsonObject) => "menuPath" in entry).map((entry: JsonObject) => entry.name),
+  );
+
+  for (const insight of phase7InsightFunctions) {
+    const functions = catalogue.functions.filter((entry: JsonObject) => entry.id === insight.functionId);
+    assert.equal(functions.length, 1, `PHASE7_FUNCTION_MISSING_${insight.functionId}`);
+    assert.deepEqual(functions[0].roleIds, ["role.security_analyst"], `PHASE7_ROLE_SCOPE_${insight.functionId}`);
+    assert.equal("menuPath" in functions[0], false, `PHASE7_UNEXPECTED_MENU_PATH_${insight.functionId}`);
+    // D-33: the seed reconciles an API-only Function by name, so it must never share a menu Function's name.
+    assert.equal(menuFunctionNames.has(functions[0].name), false, `PHASE7_NAME_COLLIDES_WITH_MENU_${insight.functionId}`);
+    assert.equal(
+      catalogue.functions.filter((entry: JsonObject) => entry.name === functions[0].name).length,
+      1,
+      `PHASE7_DUPLICATE_FUNCTION_NAME_${insight.functionId}`,
+    );
+
+    const apis = catalogue.functionApis.filter((entry: JsonObject) => entry.url === insight.url);
+    assert.equal(apis.length, 1, `PHASE7_FUNCTION_API_COUNT_${insight.url}`);
+    assert.equal(apis[0].id, `${insight.functionId}.api.01`, `PHASE7_FUNCTION_API_ID_${insight.url}`);
+    assert.equal(apis[0].functionId, insight.functionId, `PHASE7_FUNCTION_API_LINK_${insight.url}`);
+    assert.deepEqual(functions[0].functionApiIds, [apis[0].id], `PHASE7_FUNCTION_API_BACKLINK_${insight.url}`);
+
+    assert.ok(analystOperations.has(insight.url), `PHASE7_ANALYST_GRANT_${insight.url}`);
+    assert.ok(!agentOperations.has(insight.url), `PHASE7_AGENT_GRANT_${insight.url}`);
+    assert.ok(!requestorOperations.has(insight.url), `PHASE7_REQUESTOR_GRANT_${insight.url}`);
+  }
+
+  // The menu Functions stay as UI Functions and carry no served analyst insight API.
+  for (const [functionId, functionApiIds] of [
+    ["function.dashboard.dashboard", ["function.dashboard.dashboard.api.02", "function.dashboard.dashboard.api.03"]],
+    ["function.reports.reports", ["function.reports.reports.api.03"]],
+    ["function.reports.alerts", ["function.reports.alerts.api.03", "function.reports.alerts.api.04"]],
+  ] as const) {
+    const menuFunction = catalogue.functions.find((entry: JsonObject) => entry.id === functionId);
+    assert.ok(menuFunction, `PHASE7_MENU_FUNCTION_MISSING_${functionId}`);
+    assert.deepEqual(menuFunction.functionApiIds, functionApiIds, `PHASE7_MENU_FUNCTION_APIS_${functionId}`);
+  }
+
+  for (const unserved of phase7UnservedOperations) {
+    const catalogueUrl = `${unserved.method}:/api${unserved.path}`;
+    const apis = catalogue.functionApis.filter((entry: JsonObject) => entry.url === catalogueUrl);
+    assert.equal(apis.length, 1, `PHASE7_UNSERVED_CATALOGUE_COUNT_${catalogueUrl}`);
+    assert.equal(apis[0].functionId, unserved.functionId, `PHASE7_UNSERVED_OWNER_${catalogueUrl}`);
+    assert.equal(specification.paths?.[unserved.path], undefined, `PHASE7_UNSERVED_PATH_PUBLISHED_${unserved.path}`);
+  }
+
+  // D-28 serves the reserved Requestor status summary unchanged.
+  const statusSummaryUrl = "GET:/api/v1/my_requests/status_summary";
+  const statusSummary = catalogue.functionApis.filter((entry: JsonObject) => entry.url === statusSummaryUrl);
+  assert.deepEqual(
+    statusSummary.map((entry: JsonObject) => [entry.id, entry.functionId]),
+    [["function.risk_assessment_requests.my_requests.api.02", "function.risk_assessment_requests.my_requests"]],
+    "PHASE7_REQUESTOR_STATUS_SUMMARY_ENTRY",
+  );
+  assert.ok(requestorOperations.has(statusSummaryUrl), "PHASE7_REQUESTOR_STATUS_SUMMARY_GRANT");
+
+  // D-06: one design note names every unserved operation and says why.
+  const unservedNames = phase7UnservedOperations.map((unserved) => `${unserved.method} /api${unserved.path}`);
+  assert.equal(
+    catalogue.designNotes.filter((note: string) => unservedNames.every((name) => note.includes(name))).length,
+    1,
+    "PHASE7_UNSERVED_DESIGN_NOTE",
+  );
+});
+
+/*
+ * D-05, D-28: the catalogue-reserved Requestor status summary is published
+ * exactly as reserved. The Requestor role holds it through My Requests and the
+ * birthright extends it to every actor, so no other role carries its own grant.
+ * The counts are one closed key per datamodel request status, plus the total.
+ */
+test("Phase 7 Requestor status summary is published closed and granted through My Requests", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_SUMMARY_SPECIFICATION_PARSE");
+  const authoritativePath = path.join(repositoryDir, "docs", "references", catalogueFilename);
+  const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
+  const catalogue = parseJsonFile(authoritativePath, "PHASE7_SUMMARY_CATALOGUE_PARSE");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  assert.equal(Buffer.compare(readFileSync(authoritativePath), readFileSync(bootstrapPath)), 0, "PHASE7_SUMMARY_CATALOGUE_BYTE_DRIFT");
+
+  const catalogueUrl = "GET:/api/v1/my_requests/status_summary";
+  const functionId = "function.risk_assessment_requests.my_requests";
+  const apis = catalogue.functionApis.filter((entry: JsonObject) => entry.url === catalogueUrl);
+  assert.deepEqual(
+    apis.map((entry: JsonObject) => [entry.id, entry.functionId]),
+    [[`${functionId}.api.02`, functionId]],
+    "PHASE7_SUMMARY_FUNCTION_API",
+  );
+  const myRequests = catalogue.functions.find((entry: JsonObject) => entry.id === functionId);
+  assert.ok(myRequests, "PHASE7_SUMMARY_FUNCTION_MISSING");
+  assert.deepEqual(myRequests.roleIds, ["role.requestor"], "PHASE7_SUMMARY_FUNCTION_ROLES");
+  assert.ok(myRequests.functionApiIds.includes(`${functionId}.api.02`), "PHASE7_SUMMARY_FUNCTION_BACKLINK");
+  assert.ok(effectiveOperations(catalogue, "role.requestor").has(catalogueUrl), "PHASE7_SUMMARY_REQUESTOR_GRANT");
+  assert.ok(!effectiveOperations(catalogue, "role.security_analyst").has(catalogueUrl), "PHASE7_SUMMARY_EXPLICIT_ANALYST_GRANT");
+  assert.ok(!effectiveOperations(catalogue, "role.security_analyst_agent").has(catalogueUrl), "PHASE7_SUMMARY_EXPLICIT_AGENT_GRANT");
+
+  const summary = operation(specification, "/v1/my_requests/status_summary", "get");
+  assert.equal(summary.operationId, "assessment-workflow/get-my-request-status-summary", "PHASE7_SUMMARY_OPERATION_ID");
+  assert.deepEqual(summary.tags, ["assessment-workflow"], "PHASE7_SUMMARY_TAGS");
+  assert.equal(summary.parameters, undefined, "PHASE7_SUMMARY_TAKES_NO_PARAMETERS");
+  assert.equal(summary.requestBody, undefined, "PHASE7_SUMMARY_TAKES_NO_BODY");
+  assert.deepEqual(Object.keys(summary.responses).sort(), ["200", "400", "403"], "PHASE7_SUMMARY_RESPONSES");
+  assert.equal(responseSchema(summary).$ref, "#/components/schemas/MyRequestStatusSummaryResponse", "PHASE7_SUMMARY_SUCCESS_SCHEMA");
+  assert.equal(summary.responses["400"].$ref, "#/components/responses/AssessmentBadRequest", "PHASE7_SUMMARY_400");
+  assert.equal(summary.responses["403"].$ref, "#/components/responses/AssessmentForbidden", "PHASE7_SUMMARY_403");
+
+  assert.deepEqual(specification.components.schemas.MyRequestStatusSummaryResponse, {
+    type: "object",
+    properties: { data: { $ref: "#/components/schemas/MyRequestStatusSummary" } },
+    required: ["data"],
+    additionalProperties: false,
+  }, "PHASE7_SUMMARY_RESPONSE_SHAPE");
+  const counts = specification.components.schemas.MyRequestStatusSummary;
+  const requestStatuses: string[] = parseJsonFile(
+    path.join(appDir, "src", "api", "csrm-assessment-request", "content-types", "csrm-assessment-request", "schema.json"),
+    "PHASE7_SUMMARY_CONTENT_TYPE_PARSE",
+  ).attributes.requestStatus.enum;
+  const camelCase = (value: string) => value.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+  const keys = [...requestStatuses.map(camelCase), "total"];
+  assert.deepEqual(keys, [
+    "draft", "submitted", "questionnaireInProgress", "riskAssessmentDrafted", "underReview", "approved", "closed", "total",
+  ], "PHASE7_SUMMARY_DATAMODEL_VOCABULARY");
+  assert.equal(counts?.type, "object", "PHASE7_SUMMARY_COUNTS_TYPE");
+  assert.deepEqual(Object.keys(counts.properties), keys, "PHASE7_SUMMARY_COUNT_KEYS");
+  for (const key of keys) {
+    assert.deepEqual(counts.properties[key], { type: "integer", minimum: 0 }, `PHASE7_SUMMARY_COUNT_SHAPE_${key}`);
+  }
+  assert.deepEqual(counts.required, keys, "PHASE7_SUMMARY_COUNTS_REQUIRED");
+  assert.equal(counts.additionalProperties, false, "PHASE7_SUMMARY_COUNTS_OPEN");
+
+  assert.ok(generatedSchema.includes('"/v1/my_requests/status_summary": {'), "PHASE7_SUMMARY_GENERATED_PATH");
+  assert.ok(
+    generatedSchema.includes('get: operations["assessment-workflow/get-my-request-status-summary"];'),
+    "PHASE7_SUMMARY_GENERATED_OPERATION",
+  );
+  assert.ok(generatedSchema.includes("MyRequestStatusSummaryResponse: {"), "PHASE7_SUMMARY_GENERATED_RESPONSE");
+  assert.ok(generatedSchema.includes("MyRequestStatusSummary: {"), "PHASE7_SUMMARY_GENERATED_COUNTS");
+});
+
+/*
+ * D-04, D-26: every Risk Register row carries the server-derived treatment due
+ * state. The published vocabulary is exactly the one the shared insight rule
+ * derives, so the contract, the server and the web client agree on one list.
+ */
+test("Phase 7 Risk Register rows publish the server-derived treatment due state", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_DUE_STATE_SPECIFICATION_PARSE");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const dueStates = ["overdue", "due-soon", "later", "no-target-date", "complete-or-closed"];
+
+  const dueState = specification.components?.schemas?.TreatmentDueState;
+  assert.ok(dueState, "PHASE7_DUE_STATE_COMPONENT_MISSING");
+  assert.equal(dueState.type, "string", "PHASE7_DUE_STATE_TYPE");
+  assert.deepEqual(dueState.enum, dueStates, "PHASE7_DUE_STATE_VOCABULARY");
+  assert.deepEqual(dueState.enum, [...TREATMENT_DUE_STATES], "PHASE7_DUE_STATE_DIVERGES_FROM_THE_SHARED_RULE");
+
+  const item = specification.components.schemas.RiskRegisterItem;
+  assert.deepEqual(item.properties.treatmentDueState, { $ref: "#/components/schemas/TreatmentDueState" }, "PHASE7_DUE_STATE_PROPERTY");
+  assert.ok(item.required.includes("treatmentDueState"), "PHASE7_DUE_STATE_NOT_REQUIRED");
+  assert.deepEqual([...item.required].sort(), Object.keys(item.properties).sort(), "PHASE7_REGISTER_ROW_NOT_FULLY_REQUIRED");
+  assert.equal(item.additionalProperties, false, "PHASE7_REGISTER_ROW_OPEN");
+  assert.ok(!("closureDate" in item.properties), "PHASE7_REGISTER_ROW_DISCLOSES_CLOSURE_DATE");
+
+  assert.ok(
+    generatedSchema.includes(`TreatmentDueState: ${dueStates.map((value) => `"${value}"`).join(" | ")};`),
+    "PHASE7_DUE_STATE_GENERATED_UNION",
+  );
+  assert.ok(
+    generatedSchema.includes('treatmentDueState: components["schemas"]["TreatmentDueState"];'),
+    "PHASE7_DUE_STATE_GENERATED_PROPERTY",
+  );
+});
+
+/*
+ * D-36: the Risk Register takes a closed `state` filter, so every open-exposure
+ * figure can link to a list whose total equals it. The published values are
+ * exactly the ones the server parser accepts.
+ */
+test("Phase 7 Risk Register publishes the closed open and closed state filter", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_STATE_SPECIFICATION_PARSE");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const register = operation(specification, "/v1/risks", "get");
+
+  assert.deepEqual(parameter(register, "state"), {
+    name: "state",
+    in: "query",
+    required: false,
+    schema: { type: "string", enum: ["open", "closed"] },
+    description: "open: no closure date recorded. closed: a closure date is recorded. Absent returns both.",
+  }, "PHASE7_STATE_PARAMETER");
+  assert.deepEqual(parameter(register, "state")?.schema?.enum, [...RISK_REGISTER_STATES], "PHASE7_STATE_DIVERGES_FROM_THE_PARSER");
+  const names = register.parameters.map((entry: JsonObject) => entry.name);
+  assert.equal(names.indexOf("state"), names.indexOf("mitigationStatus") + 1, "PHASE7_STATE_POSITION");
+  assert.equal(names.filter((name: string) => name === "state").length, 1, "PHASE7_STATE_DUPLICATED");
+  assert.match(generatedSchema, /mitigationStatus\?: "Existing" \| "Planned" \| "Implemented" \| "Retired" \| "none";\s+\/\*\* @description open: no closure date recorded\. closed: a closure date is recorded\. Absent returns both\. \*\/\s+state\?: "open" \| "closed";\s+targetDateFrom\?: string;/, "PHASE7_STATE_GENERATED_QUERY");
+});
+
+/*
+ * D-05, D-08, D-10, D-11, D-12: the two served alert operations are published
+ * with closed components. The kind and urgency vocabularies are exactly the
+ * shared rule's, the source and link types exactly the repository's, and the
+ * page sizes exactly the named constant. Every string is unpatterned, so the
+ * web parsers never pin a format the contract does not promise.
+ */
+test("Phase 7 analyst alerts are published closed and match the shared alert vocabulary", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_ALERT_SPECIFICATION_PARSE");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const schemas = specification.components?.schemas ?? {};
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+
+  const list = operation(specification, "/v1/alerts", "get");
+  assert.equal(list.operationId, "analyst-insights/get-alerts", "PHASE7_ALERT_LIST_OPERATION_ID");
+  assert.deepEqual(list.tags, ["analyst-insights"], "PHASE7_ALERT_LIST_TAGS");
+  assert.equal(list.requestBody, undefined, "PHASE7_ALERT_LIST_TAKES_NO_BODY");
+  assert.deepEqual(list.parameters.map((entry: JsonObject) => entry.name), ["kind", "urgency", "page", "pageSize"], "PHASE7_ALERT_LIST_PARAMETERS");
+  assert.deepEqual(parameter(list, "kind"), {
+    name: "kind",
+    in: "query",
+    required: false,
+    style: "form",
+    explode: true,
+    description: "One or more alert kinds, each at most once. Absent lists every kind.",
+    schema: { type: "array", items: ref("AlertKind"), minItems: 1, maxItems: 8, uniqueItems: true },
+  }, "PHASE7_ALERT_KIND_PARAMETER");
+  assert.deepEqual(parameter(list, "urgency"), { name: "urgency", in: "query", required: false, schema: ref("AlertUrgency") }, "PHASE7_ALERT_URGENCY_PARAMETER");
+  assert.deepEqual(parameter(list, "page"), {
+    name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 1000000, default: 1 },
+  }, "PHASE7_ALERT_PAGE_PARAMETER");
+  assert.deepEqual(parameter(list, "pageSize"), {
+    name: "pageSize", in: "query", required: false, schema: { type: "integer", enum: [5, 10, 25, 50], minimum: 5, default: 25 },
+  }, "PHASE7_ALERT_PAGE_SIZE_PARAMETER");
+  assert.deepEqual(parameter(list, "pageSize")?.schema?.enum, [...ALERT_PAGE_SIZES], "PHASE7_ALERT_PAGE_SIZES_DIVERGE_FROM_THE_CONSTANT");
+  assert.deepEqual(Object.keys(list.responses).sort(), ["200", "400", "403"], "PHASE7_ALERT_LIST_RESPONSES");
+  assert.deepEqual(responseSchema(list), ref("AlertListResponse"), "PHASE7_ALERT_LIST_SUCCESS_SCHEMA");
+  assert.equal(list.responses["400"].$ref, "#/components/responses/AnalystInsightBadRequest", "PHASE7_ALERT_LIST_400");
+  assert.equal(list.responses["403"].$ref, "#/components/responses/AnalystInsightForbidden", "PHASE7_ALERT_LIST_403");
+
+  const summary = operation(specification, "/v1/alerts/summary", "get");
+  assert.equal(summary.operationId, "analyst-insights/get-alert-summary", "PHASE7_ALERT_SUMMARY_OPERATION_ID");
+  assert.deepEqual(summary.tags, ["analyst-insights"], "PHASE7_ALERT_SUMMARY_TAGS");
+  assert.equal(summary.parameters, undefined, "PHASE7_ALERT_SUMMARY_TAKES_NO_PARAMETERS");
+  assert.equal(summary.requestBody, undefined, "PHASE7_ALERT_SUMMARY_TAKES_NO_BODY");
+  assert.deepEqual(Object.keys(summary.responses).sort(), ["200", "400", "403"], "PHASE7_ALERT_SUMMARY_RESPONSES");
+  assert.deepEqual(responseSchema(summary), ref("AlertSummaryResponse"), "PHASE7_ALERT_SUMMARY_SUCCESS_SCHEMA");
+  assert.equal(summary.responses["400"].$ref, "#/components/responses/AnalystInsightBadRequest", "PHASE7_ALERT_SUMMARY_400");
+  assert.equal(summary.responses["403"].$ref, "#/components/responses/AnalystInsightForbidden", "PHASE7_ALERT_SUMMARY_403");
+
+  for (const name of ["AnalystInsightBadRequest", "AnalystInsightForbidden"]) {
+    const response = specification.components?.responses?.[name];
+    assert.ok(response, `PHASE7_ALERT_ERROR_RESPONSE_MISSING_${name}`);
+    assert.deepEqual(
+      response.content,
+      { "application/json": { schema: ref("AssessmentWorkflowErrorResponse") } },
+      `PHASE7_ALERT_ERROR_RESPONSE_SCHEMA_${name}`,
+    );
+  }
+
+  const enumeration = (name: string) => {
+    assert.equal(schemas[name]?.type, "string", `PHASE7_ALERT_ENUM_TYPE_${name}`);
+    return schemas[name].enum;
+  };
+  assert.deepEqual(enumeration("AlertKind"), [...ALERT_KINDS], "PHASE7_ALERT_KINDS_DIVERGE_FROM_THE_SHARED_RULE");
+  assert.deepEqual(enumeration("AlertUrgency"), [...ALERT_URGENCIES], "PHASE7_ALERT_URGENCIES_DIVERGE_FROM_THE_SHARED_RULE");
+  assert.deepEqual(enumeration("AlertSourceType"), [...ALERT_SOURCE_TYPES], "PHASE7_ALERT_SOURCE_TYPES_DIVERGE_FROM_THE_REPOSITORY");
+  assert.deepEqual(enumeration("AlertLinkType"), [...ALERT_LINK_TYPES], "PHASE7_ALERT_LINK_TYPES_DIVERGE_FROM_THE_REPOSITORY");
+
+  const closedComponents: Record<string, string[]> = {
+    AlertSource: ["type", "documentId", "identifier", "title", "released"],
+    AlertLink: ["type", "documentId"],
+    AlertItem: ["id", "kind", "urgency", "governingDate", "dayOffset", "source", "link", "residualRating"],
+    AlertPagination: ["page", "pageSize", "pageCount", "total"],
+    AlertListMeta: ["pagination", "today", "dueSoonWindowDays"],
+    AlertListResponse: ["data", "meta"],
+    AlertCountsByKind: [...ALERT_KINDS],
+    AlertCountsByUrgency: [...ALERT_URGENCIES],
+    AlertSummary: ["byKind", "byUrgency", "total", "today", "dueSoonWindowDays"],
+    AlertSummaryResponse: ["data"],
+  };
+  for (const [name, keys] of Object.entries(closedComponents)) {
+    const component = schemas[name];
+    assert.ok(component, `PHASE7_ALERT_COMPONENT_MISSING_${name}`);
+    assert.equal(component.type, "object", `PHASE7_ALERT_COMPONENT_TYPE_${name}`);
+    assert.equal(component.additionalProperties, false, `PHASE7_ALERT_COMPONENT_OPEN_${name}`);
+    assert.deepEqual(Object.keys(component.properties), keys, `PHASE7_ALERT_COMPONENT_KEYS_${name}`);
+    assert.deepEqual(component.required, keys, `PHASE7_ALERT_COMPONENT_NOT_FULLY_REQUIRED_${name}`);
+  }
+  for (const name of [...Object.keys(closedComponents), "AlertKind", "AlertUrgency", "AlertSourceType", "AlertLinkType"]) {
+    assert.equal(JSON.stringify(schemas[name]).includes('"pattern"'), false, `PHASE7_ALERT_COMPONENT_PATTERNED_${name}`);
+  }
+
+  const item = schemas.AlertItem.properties;
+  assert.deepEqual(item.kind, ref("AlertKind"), "PHASE7_ALERT_ITEM_KIND");
+  assert.deepEqual(item.urgency, ref("AlertUrgency"), "PHASE7_ALERT_ITEM_URGENCY");
+  assert.deepEqual(item.governingDate, { type: ["string", "null"], format: "date" }, "PHASE7_ALERT_ITEM_GOVERNING_DATE");
+  assert.deepEqual(item.dayOffset, { type: ["integer", "null"] }, "PHASE7_ALERT_ITEM_DAY_OFFSET");
+  assert.deepEqual(item.source, ref("AlertSource"), "PHASE7_ALERT_ITEM_SOURCE");
+  assert.deepEqual(item.link, ref("AlertLink"), "PHASE7_ALERT_ITEM_LINK");
+  assert.deepEqual(item.residualRating, { anyOf: [ref("AssessmentRating"), { type: "null" }] }, "PHASE7_ALERT_ITEM_RESIDUAL_RATING");
+  const source = schemas.AlertSource.properties;
+  assert.deepEqual(source.type, ref("AlertSourceType"), "PHASE7_ALERT_SOURCE_TYPE");
+  assert.deepEqual(source.title, { type: ["string", "null"] }, "PHASE7_ALERT_SOURCE_TITLE");
+  assert.deepEqual(source.released, { type: "boolean" }, "PHASE7_ALERT_SOURCE_RELEASED");
+  assert.deepEqual(schemas.AlertLink.properties.type, ref("AlertLinkType"), "PHASE7_ALERT_LINK_TYPE");
+  // The parity guard synthesises max(minimum, 1) for an integer, so the page-size enum declares its own minimum.
+  assert.deepEqual(schemas.AlertPagination.properties.pageSize, { type: "integer", enum: [5, 10, 25, 50], minimum: 5 }, "PHASE7_ALERT_PAGINATION_PAGE_SIZE");
+  assert.deepEqual(schemas.AlertListResponse.properties.data, { type: "array", items: ref("AlertItem"), maxItems: 50 }, "PHASE7_ALERT_LIST_DATA");
+  assert.deepEqual(schemas.AlertListResponse.properties.meta, ref("AlertListMeta"), "PHASE7_ALERT_LIST_META");
+  for (const name of ["AlertListMeta", "AlertSummary"]) {
+    assert.deepEqual(schemas[name].properties.today, { type: "string", format: "date" }, `PHASE7_ALERT_TODAY_${name}`);
+    assert.deepEqual(schemas[name].properties.dueSoonWindowDays, { type: "integer", minimum: 1 }, `PHASE7_ALERT_WINDOW_${name}`);
+  }
+  for (const name of ["AlertCountsByKind", "AlertCountsByUrgency"]) {
+    for (const [key, count] of Object.entries(schemas[name].properties)) {
+      assert.deepEqual(count, { type: "integer", minimum: 0 }, `PHASE7_ALERT_COUNT_SHAPE_${name}_${key}`);
+    }
+  }
+  assert.deepEqual(schemas.AlertSummary.properties.byKind, ref("AlertCountsByKind"), "PHASE7_ALERT_SUMMARY_BY_KIND");
+  assert.deepEqual(schemas.AlertSummary.properties.byUrgency, ref("AlertCountsByUrgency"), "PHASE7_ALERT_SUMMARY_BY_URGENCY");
+  assert.deepEqual(schemas.AlertSummaryResponse.properties.data, ref("AlertSummary"), "PHASE7_ALERT_SUMMARY_DATA");
+
+  assert.ok(generatedSchema.includes('"/v1/alerts": {'), "PHASE7_ALERT_LIST_GENERATED_PATH");
+  assert.ok(generatedSchema.includes('"/v1/alerts/summary": {'), "PHASE7_ALERT_SUMMARY_GENERATED_PATH");
+  assert.ok(generatedSchema.includes('get: operations["analyst-insights/get-alerts"];'), "PHASE7_ALERT_LIST_GENERATED_OPERATION");
+  assert.ok(generatedSchema.includes('get: operations["analyst-insights/get-alert-summary"];'), "PHASE7_ALERT_SUMMARY_GENERATED_OPERATION");
+  assert.ok(generatedSchema.includes("AlertListResponse: {"), "PHASE7_ALERT_LIST_GENERATED_RESPONSE");
+  assert.ok(generatedSchema.includes("AlertSummaryResponse: {"), "PHASE7_ALERT_SUMMARY_GENERATED_RESPONSE");
+
+  // The development public-permission reconciler never opens an analyst insight action.
+  const reconciler = readFileSync(path.join(appDir, "src", "bootstrap", "reconcile-development-public-permissions.ts"), "utf8");
+  assert.equal(reconciler.includes("csrm-analyst-insight"), false, "PHASE7_ALERT_PUBLIC_PERMISSION");
+});
+
+/*
+ * D-05, D-08, D-13: the two served report operations are published with closed
+ * components. The report keys are exactly the server's closed set, the period
+ * exactly the named throughput periods, and each capped list's maxItems exactly
+ * its named cap. Every report is a closed branch of one union discriminated by
+ * its key, so the web parses each report with its own closed parser. The
+ * partitions name exactly the datamodel's vocabularies.
+ */
+test("Phase 7 analyst reports are published closed and match the served report set", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_REPORT_SPECIFICATION_PARSE");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const schemas = specification.components?.schemas ?? {};
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+  const count = { type: "integer", minimum: 0 };
+
+  const index = operation(specification, "/v1/reports", "get");
+  assert.equal(index.operationId, "analyst-insights/get-reports", "PHASE7_REPORT_INDEX_OPERATION_ID");
+  assert.deepEqual(index.tags, ["analyst-insights"], "PHASE7_REPORT_INDEX_TAGS");
+  assert.equal(index.parameters, undefined, "PHASE7_REPORT_INDEX_TAKES_NO_PARAMETERS");
+  assert.equal(index.requestBody, undefined, "PHASE7_REPORT_INDEX_TAKES_NO_BODY");
+  assert.deepEqual(Object.keys(index.responses).sort(), ["200", "400", "403"], "PHASE7_REPORT_INDEX_RESPONSES");
+  assert.deepEqual(responseSchema(index), ref("ReportDefinitionListResponse"), "PHASE7_REPORT_INDEX_SUCCESS_SCHEMA");
+  assert.equal(index.responses["400"].$ref, "#/components/responses/AnalystInsightBadRequest", "PHASE7_REPORT_INDEX_400");
+  assert.equal(index.responses["403"].$ref, "#/components/responses/AnalystInsightForbidden", "PHASE7_REPORT_INDEX_403");
+
+  const detail = operation(specification, "/v1/reports/{reportKey}", "get");
+  assert.equal(detail.operationId, "analyst-insights/get-report", "PHASE7_REPORT_OPERATION_ID");
+  assert.deepEqual(detail.tags, ["analyst-insights"], "PHASE7_REPORT_TAGS");
+  assert.equal(detail.requestBody, undefined, "PHASE7_REPORT_TAKES_NO_BODY");
+  assert.deepEqual(detail.parameters.map((entry: JsonObject) => entry.name), ["reportKey", "period"], "PHASE7_REPORT_PARAMETERS");
+  assert.deepEqual(parameter(detail, "reportKey"), { name: "reportKey", in: "path", required: true, schema: ref("ReportKey") }, "PHASE7_REPORT_KEY_PARAMETER");
+  const period = parameter(detail, "period");
+  assert.equal(typeof period?.description, "string", "PHASE7_REPORT_PERIOD_DESCRIPTION");
+  assert.deepEqual({ ...period, description: undefined }, {
+    name: "period",
+    in: "query",
+    required: false,
+    description: undefined,
+    // The parity guard synthesises max(minimum, 1) for an integer, so the enum declares its own minimum.
+    schema: { type: "integer", enum: [6, 12], minimum: 6, default: 6 },
+  }, "PHASE7_REPORT_PERIOD_PARAMETER");
+  assert.deepEqual(period?.schema?.enum, [...THROUGHPUT_PERIODS], "PHASE7_REPORT_PERIODS_DIVERGE_FROM_THE_CONSTANT");
+  assert.equal(period?.schema?.default, THROUGHPUT_DEFAULT_PERIOD, "PHASE7_REPORT_DEFAULT_PERIOD_DIVERGES_FROM_THE_CONSTANT");
+  assert.deepEqual(Object.keys(detail.responses).sort(), ["200", "400", "403", "404"], "PHASE7_REPORT_RESPONSES");
+  assert.deepEqual(responseSchema(detail), ref("ReportResponse"), "PHASE7_REPORT_SUCCESS_SCHEMA");
+  assert.equal(detail.responses["400"].$ref, "#/components/responses/AnalystInsightBadRequest", "PHASE7_REPORT_400");
+  assert.equal(detail.responses["403"].$ref, "#/components/responses/AnalystInsightForbidden", "PHASE7_REPORT_403");
+  assert.equal(detail.responses["404"].$ref, "#/components/responses/ReportNotFound", "PHASE7_REPORT_404");
+  assert.deepEqual(
+    specification.components?.responses?.ReportNotFound?.content,
+    { "application/json": { schema: ref("AssessmentWorkflowErrorResponse") } },
+    "PHASE7_REPORT_NOT_FOUND_SCHEMA",
+  );
+
+  assert.equal(schemas.ReportKey?.type, "string", "PHASE7_REPORT_KEY_TYPE");
+  assert.deepEqual(schemas.ReportKey?.enum, [...REPORT_KEYS], "PHASE7_REPORT_KEYS_DIVERGE_FROM_THE_SERVER");
+  assert.deepEqual(REPORT_DEFINITIONS.map(({ key }) => key), [...REPORT_KEYS], "PHASE7_REPORT_DEFINITIONS_ORDER");
+
+  const reportComponents = {
+    "risk-exposure": "RiskExposureReport",
+    "treatment-performance": "TreatmentPerformanceReport",
+    "assessment-throughput": "AssessmentThroughputReport",
+    "control-effectiveness": "ControlEffectivenessReport",
+  } as const satisfies Record<typeof REPORT_KEYS[number], string>;
+  const closedComponents: Record<string, string[]> = {
+    ReportDefinition: ["key", "title", "description"],
+    ReportDefinitionListResponse: ["data"],
+    RatingCounts: ["Critical", "High", "Moderate", "Low", "notRated", "total"],
+    TreatmentStatusCounts: ["notStarted", "inProgress", "overdue", "complete", "notProvided", "total"],
+    ControlStatusCounts: ["existing", "planned", "implemented", "retired", "notProvided", "total"],
+    EffectivenessCounts: ["effective", "partiallyEffective", "ineffective", "notAssessed", "notProvided", "total"],
+    RequestStatusCounts: ["submitted", "questionnaireInProgress", "riskAssessmentDrafted", "underReview", "approved", "closed", "total"],
+    ResidualByTreatmentStatus: ["Critical", "High", "Moderate", "Low", "notRated"],
+    ExposedSystem: ["documentId", "name", "critical", "high", "total"],
+    ExposedSystems: ["rows", "total", "truncated", "risksWithoutSystem"],
+    TreatmentDueStateCounts: ["overdue", "dueWithinWindow", "later", "noTargetDate", "total"],
+    MostOverdueTreatments: ["rows", "total", "truncated"],
+    ThroughputMonth: ["monthStart", "count", "partial"],
+    ThroughputReleased: ["months", "total"],
+    MedianDaysToRelease: ["value", "sampleSize", "truncated"],
+    RiskExposureReport: ["key", "today", "byResidualRating", "byInherentRating", "residualByTreatmentStatus", "exposedSystems"],
+    TreatmentPerformanceReport: ["key", "today", "dueWindowDays", "dueState", "treatmentStatus", "mostOverdue"],
+    AssessmentThroughputReport: ["key", "today", "period", "periodStart", "released", "medianDaysToRelease", "requestsByStatus"],
+    ControlEffectivenessReport: ["key", "today", "implementationStatus", "effectivenessRating"],
+    ReportResponse: ["data"],
+  };
+  for (const [name, keys] of Object.entries(closedComponents)) {
+    const component = schemas[name];
+    assert.ok(component, `PHASE7_REPORT_COMPONENT_MISSING_${name}`);
+    assert.equal(component.type, "object", `PHASE7_REPORT_COMPONENT_TYPE_${name}`);
+    assert.equal(component.additionalProperties, false, `PHASE7_REPORT_COMPONENT_OPEN_${name}`);
+    assert.deepEqual(Object.keys(component.properties), keys, `PHASE7_REPORT_COMPONENT_KEYS_${name}`);
+    assert.deepEqual(component.required, keys, `PHASE7_REPORT_COMPONENT_NOT_FULLY_REQUIRED_${name}`);
+  }
+  for (const name of [...Object.keys(closedComponents), "ReportKey"]) {
+    assert.equal(JSON.stringify(schemas[name]).includes('"pattern"'), false, `PHASE7_REPORT_COMPONENT_PATTERNED_${name}`);
+  }
+
+  // Every partition names exactly the datamodel vocabulary it folds, then its total.
+  const frozenEnum = (api: string, attribute: string): string[] => parseJsonFile(
+    path.join(appDir, "src", "api", api, "content-types", api, "schema.json"),
+    `PHASE7_REPORT_CONTENT_TYPE_PARSE_${api}`,
+  ).attributes[attribute].enum;
+  const camelCase = (value: string) => value.replace(/[- ]([a-zA-Z])/g, (_match, letter: string) => letter.toUpperCase())
+    .replace(/^[A-Z]/, (letter) => letter.toLowerCase());
+  assert.deepEqual(
+    Object.keys(schemas.TreatmentStatusCounts.properties),
+    [...frozenEnum("csrm-risk", "treatmentStatus").map(camelCase), "notProvided", "total"],
+    "PHASE7_REPORT_TREATMENT_STATUS_VOCABULARY",
+  );
+  assert.deepEqual(
+    Object.keys(schemas.ControlStatusCounts.properties),
+    [...frozenEnum("csrm-control-implementation", "controlStatus").map(camelCase), "notProvided", "total"],
+    "PHASE7_REPORT_CONTROL_STATUS_VOCABULARY",
+  );
+  assert.deepEqual(
+    Object.keys(schemas.EffectivenessCounts.properties),
+    [...frozenEnum("csrm-control-implementation", "effectivenessRating").map(camelCase), "notProvided", "total"],
+    "PHASE7_REPORT_EFFECTIVENESS_VOCABULARY",
+  );
+  assert.deepEqual(
+    Object.keys(schemas.RequestStatusCounts.properties),
+    [...frozenEnum("csrm-assessment-request", "requestStatus").filter((status) => status !== "draft").map(camelCase), "total"],
+    "PHASE7_REPORT_REQUEST_STATUS_VOCABULARY",
+  );
+  for (const name of ["RatingCounts", "TreatmentStatusCounts", "ControlStatusCounts", "EffectivenessCounts", "RequestStatusCounts", "TreatmentDueStateCounts"]) {
+    for (const [key, value] of Object.entries(schemas[name].properties)) {
+      assert.deepEqual(value, count, `PHASE7_REPORT_COUNT_SHAPE_${name}_${key}`);
+    }
+  }
+  for (const [key, value] of Object.entries(schemas.ResidualByTreatmentStatus.properties)) {
+    assert.deepEqual(value, ref("TreatmentStatusCounts"), `PHASE7_REPORT_RESIDUAL_BY_STATUS_${key}`);
+  }
+
+  // Lists are bounded by their named caps.
+  assert.deepEqual(schemas.ReportDefinitionListResponse.properties.data, { type: "array", items: ref("ReportDefinition"), maxItems: REPORT_KEYS.length }, "PHASE7_REPORT_DEFINITION_LIST");
+  assert.deepEqual(schemas.ReportDefinition.properties, {
+    key: ref("ReportKey"),
+    title: { type: "string", minLength: 1 },
+    description: { type: "string", minLength: 1 },
+  }, "PHASE7_REPORT_DEFINITION");
+  assert.deepEqual(schemas.ExposedSystem.properties, {
+    documentId: { type: "string", minLength: 1, maxLength: 255 },
+    name: { type: "string", minLength: 1, maxLength: 255 },
+    critical: count,
+    high: count,
+    total: count,
+  }, "PHASE7_REPORT_EXPOSED_SYSTEM");
+  assert.deepEqual(schemas.ExposedSystems.properties, {
+    rows: { type: "array", items: ref("ExposedSystem"), maxItems: EXPOSED_SYSTEMS_LIMIT },
+    total: count,
+    truncated: { type: "boolean" },
+    risksWithoutSystem: count,
+  }, "PHASE7_REPORT_EXPOSED_SYSTEMS");
+  assert.deepEqual(schemas.MostOverdueTreatments.properties, {
+    rows: { type: "array", items: ref("AlertItem"), maxItems: MOST_OVERDUE_TREATMENTS_LIMIT },
+    total: count,
+    truncated: { type: "boolean" },
+  }, "PHASE7_REPORT_MOST_OVERDUE");
+  assert.deepEqual(schemas.ThroughputMonth.properties, {
+    monthStart: { type: "string", format: "date" },
+    count,
+    partial: { type: "boolean" },
+  }, "PHASE7_REPORT_THROUGHPUT_MONTH");
+  assert.deepEqual(schemas.ThroughputReleased.properties, {
+    months: { type: "array", items: ref("ThroughputMonth"), maxItems: Math.max(...THROUGHPUT_PERIODS) },
+    total: count,
+  }, "PHASE7_REPORT_THROUGHPUT_RELEASED");
+  assert.deepEqual(schemas.MedianDaysToRelease.properties, {
+    value: { type: ["number", "null"], minimum: 0 },
+    sampleSize: count,
+    truncated: { type: "boolean" },
+  }, "PHASE7_REPORT_MEDIAN");
+
+  // Each report is keyed by its own single value and carries the server's today.
+  for (const [key, name] of Object.entries(reportComponents)) {
+    assert.deepEqual(schemas[name].properties.key, { type: "string", enum: [key] }, `PHASE7_REPORT_BRANCH_KEY_${name}`);
+    assert.deepEqual(schemas[name].properties.today, { type: "string", format: "date" }, `PHASE7_REPORT_BRANCH_TODAY_${name}`);
+  }
+  assert.deepEqual(schemas.RiskExposureReport.properties, {
+    key: { type: "string", enum: ["risk-exposure"] },
+    today: { type: "string", format: "date" },
+    byResidualRating: ref("RatingCounts"),
+    byInherentRating: ref("RatingCounts"),
+    residualByTreatmentStatus: ref("ResidualByTreatmentStatus"),
+    exposedSystems: ref("ExposedSystems"),
+  }, "PHASE7_REPORT_RISK_EXPOSURE");
+  assert.deepEqual(schemas.TreatmentPerformanceReport.properties, {
+    key: { type: "string", enum: ["treatment-performance"] },
+    today: { type: "string", format: "date" },
+    dueWindowDays: { type: "integer", minimum: 1 },
+    dueState: ref("TreatmentDueStateCounts"),
+    treatmentStatus: ref("TreatmentStatusCounts"),
+    mostOverdue: ref("MostOverdueTreatments"),
+  }, "PHASE7_REPORT_TREATMENT_PERFORMANCE");
+  assert.deepEqual(schemas.AssessmentThroughputReport.properties, {
+    key: { type: "string", enum: ["assessment-throughput"] },
+    today: { type: "string", format: "date" },
+    period: { type: "integer", enum: [...THROUGHPUT_PERIODS], minimum: 6 },
+    periodStart: { type: "string", format: "date" },
+    released: ref("ThroughputReleased"),
+    medianDaysToRelease: ref("MedianDaysToRelease"),
+    requestsByStatus: ref("RequestStatusCounts"),
+  }, "PHASE7_REPORT_ASSESSMENT_THROUGHPUT");
+  assert.deepEqual(schemas.ControlEffectivenessReport.properties, {
+    key: { type: "string", enum: ["control-effectiveness"] },
+    today: { type: "string", format: "date" },
+    implementationStatus: ref("ControlStatusCounts"),
+    effectivenessRating: ref("EffectivenessCounts"),
+  }, "PHASE7_REPORT_CONTROL_EFFECTIVENESS");
+  assert.deepEqual(schemas.ReportResponse.properties.data, {
+    oneOf: REPORT_KEYS.map((key) => ref(reportComponents[key])),
+    discriminator: {
+      propertyName: "key",
+      mapping: Object.fromEntries(REPORT_KEYS.map((key) => [key, `#/components/schemas/${reportComponents[key]}`])),
+    },
+  }, "PHASE7_REPORT_RESPONSE_UNION");
+
+  // D-06: report export stays catalogued and unserved.
+  assert.equal(specification.paths?.["/v1/reports/{reportKey}/export"], undefined, "PHASE7_REPORT_EXPORT_PUBLISHED");
+
+  assert.ok(generatedSchema.includes('"/v1/reports": {'), "PHASE7_REPORT_INDEX_GENERATED_PATH");
+  assert.ok(generatedSchema.includes('"/v1/reports/{reportKey}": {'), "PHASE7_REPORT_GENERATED_PATH");
+  assert.ok(generatedSchema.includes('get: operations["analyst-insights/get-reports"];'), "PHASE7_REPORT_INDEX_GENERATED_OPERATION");
+  assert.ok(generatedSchema.includes('get: operations["analyst-insights/get-report"];'), "PHASE7_REPORT_GENERATED_OPERATION");
+  assert.ok(generatedSchema.includes("ReportDefinitionListResponse: {"), "PHASE7_REPORT_INDEX_GENERATED_RESPONSE");
+  assert.ok(generatedSchema.includes("ReportResponse: {"), "PHASE7_REPORT_GENERATED_RESPONSE");
+  assert.ok(
+    generatedSchema.includes(`ReportKey: ${REPORT_KEYS.map((key) => `"${key}"`).join(" | ")};`),
+    "PHASE7_REPORT_KEY_GENERATED_UNION",
+  );
+});
+
+/*
+ * D-05, D-08, D-34: the served analyst dashboard summary is published with
+ * closed components. Its capped lists' maxItems are exactly their named caps,
+ * the activity kinds and record types exactly the server's closed
+ * vocabularies, the High and Critical ratings exactly the served pair, and the
+ * exposure and due-state shapes reuse the published RatingCounts and
+ * TreatmentDueState, so the dashboard and the reports and register it links to
+ * describe one shape.
+ */
+test("Phase 7 analyst dashboard summary is published closed and matches the served summary", () => {
+  const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_DASHBOARD_SPECIFICATION_PARSE");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const schemas = specification.components?.schemas ?? {};
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+  const count = { type: "integer", minimum: 0 };
+
+  const summary = operation(specification, "/v1/dashboard/summary", "get");
+  assert.equal(summary.operationId, "analyst-insights/get-dashboard-summary", "PHASE7_DASHBOARD_OPERATION_ID");
+  assert.deepEqual(summary.tags, ["analyst-insights"], "PHASE7_DASHBOARD_TAGS");
+  assert.equal(summary.parameters, undefined, "PHASE7_DASHBOARD_TAKES_NO_PARAMETERS");
+  assert.equal(summary.requestBody, undefined, "PHASE7_DASHBOARD_TAKES_NO_BODY");
+  assert.deepEqual(Object.keys(summary.responses).sort(), ["200", "400", "403"], "PHASE7_DASHBOARD_RESPONSES");
+  assert.deepEqual(responseSchema(summary), ref("DashboardSummaryResponse"), "PHASE7_DASHBOARD_SUCCESS_SCHEMA");
+  assert.equal(summary.responses["400"].$ref, "#/components/responses/AnalystInsightBadRequest", "PHASE7_DASHBOARD_400");
+  assert.equal(summary.responses["403"].$ref, "#/components/responses/AnalystInsightForbidden", "PHASE7_DASHBOARD_403");
+
+  const closedComponents: Record<string, string[]> = {
+    DashboardSummaryResponse: ["data"],
+    DashboardSummary: ["today", "dueSoonWindowDays", "reviewQueue", "riskExposure", "highCriticalRisks", "treatmentsDue", "recentActivity"],
+    DashboardReviewQueue: [
+      "requiresAttention",
+      "awaitingRequestor",
+      "generationInProgress",
+      "questionnairesReadyForReview",
+      "assessmentsDraft",
+      "assessmentsInReview",
+    ],
+    DashboardHighCriticalRisks: ["rows", "total", "truncated"],
+    DashboardRiskRow: ["documentId", "riskNumber", "riskStatement", "residualRating", "targetDate", "treatmentDueState"],
+    DashboardTreatmentsDue: ["overdue", "dueSoon", "total"],
+    DashboardRecentActivity: ["rows", "truncated"],
+    ActivityItem: ["kind", "recordType", "documentId", "identifier", "title", "actorDisplayName", "occurredAt"],
+  };
+  for (const [name, keys] of Object.entries(closedComponents)) {
+    const component = schemas[name];
+    assert.ok(component, `PHASE7_DASHBOARD_COMPONENT_MISSING_${name}`);
+    assert.equal(component.type, "object", `PHASE7_DASHBOARD_COMPONENT_TYPE_${name}`);
+    assert.equal(component.additionalProperties, false, `PHASE7_DASHBOARD_COMPONENT_OPEN_${name}`);
+    assert.deepEqual(Object.keys(component.properties), keys, `PHASE7_DASHBOARD_COMPONENT_KEYS_${name}`);
+    assert.deepEqual(component.required, keys, `PHASE7_DASHBOARD_COMPONENT_NOT_FULLY_REQUIRED_${name}`);
+  }
+  for (const name of [...Object.keys(closedComponents), "ActivityKind"]) {
+    assert.equal(JSON.stringify(schemas[name]).includes('"pattern"'), false, `PHASE7_DASHBOARD_COMPONENT_PATTERNED_${name}`);
+  }
+
+  assert.equal(schemas.ActivityKind?.type, "string", "PHASE7_DASHBOARD_ACTIVITY_KIND_TYPE");
+  assert.deepEqual(schemas.ActivityKind?.enum, [...ACTIVITY_KINDS], "PHASE7_DASHBOARD_ACTIVITY_KINDS_DIVERGE_FROM_THE_SERVER");
+
+  assert.deepEqual(schemas.DashboardSummaryResponse.properties.data, ref("DashboardSummary"), "PHASE7_DASHBOARD_RESPONSE_DATA");
+  assert.deepEqual(schemas.DashboardSummary.properties, {
+    today: { type: "string", format: "date" },
+    dueSoonWindowDays: { type: "integer", minimum: 1 },
+    reviewQueue: ref("DashboardReviewQueue"),
+    riskExposure: ref("RatingCounts"),
+    highCriticalRisks: ref("DashboardHighCriticalRisks"),
+    treatmentsDue: ref("DashboardTreatmentsDue"),
+    recentActivity: ref("DashboardRecentActivity"),
+  }, "PHASE7_DASHBOARD_SUMMARY");
+  for (const name of ["DashboardReviewQueue", "DashboardTreatmentsDue"]) {
+    for (const [key, value] of Object.entries(schemas[name].properties)) {
+      assert.deepEqual(value, count, `PHASE7_DASHBOARD_COUNT_SHAPE_${name}_${key}`);
+    }
+  }
+  assert.deepEqual(schemas.DashboardHighCriticalRisks.properties, {
+    rows: { type: "array", items: ref("DashboardRiskRow"), maxItems: DASHBOARD_WIDGET_ROW_LIMIT },
+    total: count,
+    truncated: { type: "boolean" },
+  }, "PHASE7_DASHBOARD_HIGH_CRITICAL_RISKS");
+  assert.deepEqual(schemas.DashboardRiskRow.properties, {
+    documentId: { type: "string", minLength: 1, maxLength: 255 },
+    riskNumber: { type: "string", minLength: 1, maxLength: 255 },
+    riskStatement: { type: ["string", "null"] },
+    residualRating: { type: "string", enum: [...HIGH_CRITICAL_RATINGS] },
+    targetDate: { type: ["string", "null"], format: "date" },
+    treatmentDueState: ref("TreatmentDueState"),
+  }, "PHASE7_DASHBOARD_RISK_ROW");
+  assert.deepEqual(schemas.DashboardRecentActivity.properties, {
+    rows: { type: "array", items: ref("ActivityItem"), maxItems: RECENT_ACTIVITY_LIMIT },
+    truncated: { type: "boolean" },
+  }, "PHASE7_DASHBOARD_RECENT_ACTIVITY");
+  assert.deepEqual(schemas.ActivityItem.properties, {
+    kind: ref("ActivityKind"),
+    recordType: { type: "string", enum: [...ACTIVITY_RECORD_TYPES] },
+    documentId: { type: "string", minLength: 1, maxLength: 255 },
+    identifier: { type: ["string", "null"], minLength: 1, maxLength: 255 },
+    title: { type: ["string", "null"] },
+    actorDisplayName: { type: ["string", "null"] },
+    occurredAt: { type: "string", format: "date-time" },
+  }, "PHASE7_DASHBOARD_ACTIVITY_ITEM");
+
+  // D-06: the dashboard's report and alert reads stay catalogued and unserved.
+  assert.equal(specification.paths?.["/v1/dashboard/reports"], undefined, "PHASE7_DASHBOARD_REPORTS_PUBLISHED");
+  assert.equal(specification.paths?.["/v1/dashboard/alerts"], undefined, "PHASE7_DASHBOARD_ALERTS_PUBLISHED");
+
+  assert.ok(generatedSchema.includes('"/v1/dashboard/summary": {'), "PHASE7_DASHBOARD_GENERATED_PATH");
+  assert.ok(generatedSchema.includes('get: operations["analyst-insights/get-dashboard-summary"];'), "PHASE7_DASHBOARD_GENERATED_OPERATION");
+  assert.ok(generatedSchema.includes("DashboardSummaryResponse: {"), "PHASE7_DASHBOARD_GENERATED_RESPONSE");
+  assert.ok(
+    generatedSchema.includes(`ActivityKind: ${ACTIVITY_KINDS.map((kind) => `"${kind}"`).join(" | ")};`),
+    "PHASE7_DASHBOARD_ACTIVITY_KIND_GENERATED_UNION",
   );
 });

@@ -5,34 +5,42 @@ import { Menu, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useRef, useState, type ReactNode } from 'react';
 import { can, type Capability } from '../../lib/capabilities/capability-adapter';
-import { navigation } from '../../config/navigation/navigation';
+import {
+  activeNavigationHref,
+  navigation,
+  navigationGroups,
+  type NavigationItem,
+} from '../../config/navigation/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 
 interface CapabilityNavigationProps {
   granted: ReadonlySet<Capability>;
+  /** The items to offer; the shipped navigation unless a caller supplies its own list. */
+  items?: readonly NavigationItem[];
   onNavigate?: () => void;
 }
 
-function isActiveRoute(pathname: string, href: string): boolean {
-  return href === '/app'
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export function CapabilityNavigation({ granted, onNavigate }: CapabilityNavigationProps) {
+/*
+ * Presentation only: visibility follows the granted capabilities, and Strapi still authorises every
+ * read behind each route. Primary items render first, then each group in navigationGroups order.
+ */
+export function CapabilityNavigation({ granted, items = navigation, onNavigate }: CapabilityNavigationProps) {
   const pathname = usePathname();
-  const visible = navigation.filter((item) => can(item.capability, granted));
+  const visible = items.filter((item) => can(item.capability, granted));
+  const activeHref = activeNavigationHref(pathname, visible);
   const primary = visible.filter((item) => !item.group);
-  const administration = visible.filter((item) => item.group === 'Administration');
+  const groups = navigationGroups
+    .map((group) => ({ group, items: visible.filter((item) => item.group === group) }))
+    .filter((entry) => entry.items.length > 0);
 
-  const renderLink = (item: (typeof navigation)[number]) => {
+  const renderLink = (item: NavigationItem) => {
     const Icon = item.icon;
 
     return (
       <Link
-        aria-current={isActiveRoute(pathname, item.href) ? 'page' : undefined}
+        aria-current={item.href === activeHref ? 'page' : undefined}
         className="nav-link"
         href={item.href}
         key={item.href}
@@ -47,12 +55,12 @@ export function CapabilityNavigation({ granted, onNavigate }: CapabilityNavigati
   return (
     <nav aria-label="Primary navigation">
       {primary.map(renderLink)}
-      {administration.length ? (
-        <div aria-label="Administration" className="mt-4 space-y-1 border-t border-sidebar-border pt-3" role="group">
-          <p className="micro-label px-3 text-sidebar-muted">Administration</p>
-          {administration.map(renderLink)}
+      {groups.map(({ group, items: groupItems }) => (
+        <div aria-label={group} className="mt-4 space-y-1 border-t border-sidebar-border pt-3" key={group} role="group">
+          <p className="micro-label px-3 text-sidebar-muted">{group}</p>
+          {groupItems.map(renderLink)}
         </div>
-      ) : null}
+      ))}
     </nav>
   );
 }
@@ -108,10 +116,13 @@ export function MobileNavigation({ granted, footer }: MobileNavigationProps) {
   return (
     <>
       <Dialog.Root onOpenChange={handleOpenChange} open={open}>
+        {/*
+          * The visible label is the accessible name (WCAG 2.5.3 Label in Name), so the trigger
+          * carries no aria-label. Radix's trigger supplies aria-haspopup and aria-controls.
+          */}
         <Dialog.Trigger asChild>
           <Button
             aria-expanded={open}
-            aria-label="Open navigation"
             className="mobile-trigger"
             variant="outline"
             onClick={(event) => { triggerRef.current = event.currentTarget; }}

@@ -2,7 +2,8 @@ import { createControlAction, createInformationAssetAction, createInformationSys
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { administrationKinds, getAdministrationConfig, type AdministrationKind } from '@/features/administration/administration-config';
-import { AdministrationAccessDenied, AdministrationBreadcrumbs, AdministrationForm } from '@/features/administration/administration-workspace';
+import { AdministrationForm } from '@/features/administration/administration-form';
+import { AdministrationAccessDenied, AdministrationBreadcrumbs } from '@/features/administration/administration-workspace';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 import { listControls } from '@/features/assessments/assessment-service';
@@ -19,14 +20,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function NewAdministrationRecordPage({ params }: Props) {
+  const collection = (await params).collection;
+  // Read before the capability check, so a denial still names the collection it refused.
+  const knownKind = administrationKinds.includes(collection as AdministrationKind) ? collection as AdministrationKind : undefined;
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
-  if (!can('administration:manage', granted)) return <AdministrationAccessDenied />;
+  if (!can('administration:manage', granted)) return <AdministrationAccessDenied kind={knownKind} />;
 
-  const collection = (await params).collection;
-  if (!administrationKinds.includes(collection as AdministrationKind)) notFound();
-  const kind = collection as 'risk-types' | 'controls' | 'information-systems' | 'information-assets';
+  if (!knownKind) notFound();
+  const kind = knownKind;
   getAdministrationConfig(kind);
   if (kind === 'controls') {
     return <><AdministrationBreadcrumbs kind={kind} current="New" /><AdministrationForm createAction={createControlAction} kind="controls" mode="create" /></>;

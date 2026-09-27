@@ -10,13 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createRiskAction, updateRiskAction } from './assessment-actions';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from './owner-combobox';
-import {
-  riskWritableFields,
-  type ActiveUser,
-  type AnalystRisk,
-  type Risk,
-  type RiskType,
-  type RiskUpdateInput,
+import { riskWritableFields } from './assessment-domain';
+import type {
+  ActiveUser,
+  AnalystRisk,
+  Risk,
+  RiskType,
+  RiskUpdateInput,
 } from './assessment-schema';
 
 export type AssessmentRelationOption = { documentId: string; name: string };

@@ -1,13 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
   formatRiskTargetDate,
-  isRiskOverdue,
   mergeSelectedRiskPickerOption,
   parseRiskPickerPayload,
   parseRiskRegisterPayload,
   parseRiskRegisterQuery,
+  riskRegisterItemSchema,
+  riskRegisterQuerySchema,
   riskRegisterSortValues,
+  riskRegisterStateLabels,
+  riskRegisterStates,
+  riskTreatmentDueStates,
   serializeRiskRegisterQuery,
 } from './risk-schema';
 
@@ -20,6 +26,7 @@ const item = {
   treatmentStatus: 'In Progress',
   treatmentOwner: { documentId: 'user-1', displayName: 'Alex Analyst' },
   targetDate: '2026-09-30',
+  treatmentDueState: 'due-soon',
   assessment: { documentId: 'assessment-1', assessmentNumber: 'ASM-0001', title: 'Customer portal' },
 } as const;
 
@@ -40,16 +47,52 @@ describe('Risk Register canonical schemas', () => {
       q: ['  access  ', 'ignored'],
       treatmentStatus: 'In Progress', inherentRating: 'High', residualRating: 'Moderate',
       riskOwner: 'user_1', treatmentOwner: 'user-2', assessment: 'assessment-1',
-      system: 'system-1', asset: 'asset-1', mitigationStatus: 'Planned',
+      system: 'system-1', asset: 'asset-1', mitigationStatus: 'Planned', state: 'closed',
       sort: 'assessment:desc', page: '2', pageSize: '50',
       targetDateFrom: '2026-01-01', targetDateTo: '2026-12-31', forged: 'secret',
     });
     expect(parsed).toEqual({
       q: 'access', treatmentStatus: 'In Progress', inherentRating: 'High', residualRating: 'Moderate',
       riskOwner: 'user_1', treatmentOwner: 'user-2', assessment: 'assessment-1', system: 'system-1',
-      asset: 'asset-1', mitigationStatus: 'Planned', targetDateFrom: '2026-01-01',
+      asset: 'asset-1', mitigationStatus: 'Planned', state: 'closed', targetDateFrom: '2026-01-01',
       targetDateTo: '2026-12-31', sort: 'assessment:desc', page: 2, pageSize: 50,
     });
+  });
+
+  /*
+   * The shared parity guard cannot exercise the register parser (its synthesised
+   * page size of 1 is outside the closed [10, 25, 50] union, and the failure is
+   * reported at the root), so the register's own query and row parsers are
+   * pinned to the published operation and component here.
+   */
+  it('keeps the register query and row parsers in step with the published contract', () => {
+    const specification = JSON.parse(readFileSync(resolve(process.cwd(), '../../docs/references/specification.json'), 'utf8'));
+    const operation = specification.paths['/v1/risks'].get;
+    const parameterNames: string[] = operation.parameters.map((parameter: { name: string }) => parameter.name);
+    expect(Object.keys(riskRegisterQuerySchema.shape).sort()).toEqual([...parameterNames].sort());
+    expect(parameterNames).toContain('state');
+    const stateParameter = operation.parameters.find((parameter: { name: string }) => parameter.name === 'state');
+    expect(stateParameter.schema.enum).toEqual([...riskRegisterStates]);
+
+    const row = specification.components.schemas.RiskRegisterItem;
+    expect(Object.keys(riskRegisterItemSchema.shape).sort()).toEqual(Object.keys(row.properties).sort());
+    expect(specification.components.schemas.TreatmentDueState.enum).toEqual([...riskTreatmentDueStates]);
+  });
+
+  it('parses and serializes the closed Risk state filter, ignoring anything else', () => {
+    expect(riskRegisterStates).toEqual(['open', 'closed']);
+    expect(riskRegisterStateLabels).toEqual({ open: 'Open', closed: 'Closed' });
+    expect(parseRiskRegisterQuery({ state: 'open' }).state).toBe('open');
+    expect(parseRiskRegisterQuery({ state: 'closed' }).state).toBe('closed');
+    expect(parseRiskRegisterQuery({ state: ['closed', 'open'] }).state).toBe('closed');
+    for (const unknown of ['Open', 'all', '', 'none', 42, { $eq: 'open' }]) {
+      expect(parseRiskRegisterQuery({ state: unknown }).state, JSON.stringify(unknown)).toBeUndefined();
+    }
+    expect(serializeRiskRegisterQuery(parseRiskRegisterQuery({ state: 'open', residualRating: 'High' }))).toEqual({
+      residualRating: 'High', state: 'open', sort: 'targetDate:asc', page: 1, pageSize: 25,
+    });
+    // Absent means all Risks, so nothing is sent.
+    expect(serializeRiskRegisterQuery(parseRiskRegisterQuery({}))).not.toHaveProperty('state');
   });
 
   it.each([
@@ -102,7 +145,21 @@ describe('Risk Register canonical schemas', () => {
       { ...payload, data: [{ ...item, assessment: { ...item.assessment, requestor: 'hidden' } }] },
       { ...payload, data: [{ ...item, assessment: undefined }] },
       { ...payload, meta: { ...payload.meta, pagination: { ...payload.meta.pagination, total: -1 } } },
+      { ...payload, data: [{ ...item, treatmentDueState: 'soon' }] },
+      { ...payload, data: [{ ...item, treatmentDueState: null }] },
+      // The due state is server-derived and always served; a row without it is a contract defect.
+      { ...payload, data: [{ ...item, treatmentDueState: undefined }] },
+      { ...payload, data: [{ ...item, closureDate: '2026-09-01' }] },
     ]) expect(() => parseRiskRegisterPayload(hostile)).toThrow();
+  });
+
+  it('parses exactly the server treatment due-state vocabulary on every row', () => {
+    expect(riskTreatmentDueStates).toEqual(['overdue', 'due-soon', 'later', 'no-target-date', 'complete-or-closed']);
+    for (const treatmentDueState of riskTreatmentDueStates) {
+      expect(riskRegisterItemSchema.parse({ ...item, treatmentDueState }).treatmentDueState).toBe(treatmentDueState);
+    }
+    const { treatmentDueState: _omitted, ...withoutDueState } = item;
+    expect(riskRegisterItemSchema.safeParse(withoutDueState).success).toBe(false);
   });
 
   it('fails every picker at cap plus one and retains an off-page selected label', () => {
@@ -142,7 +199,5 @@ describe('Risk Register canonical schemas', () => {
   it('keeps rating and UTC date presentation logic outside JSX', () => {
     expect(formatRiskTargetDate('2026-09-30')).toBe('30 Sept 2026');
     expect(formatRiskTargetDate(null)).toBe('No target date');
-    expect(isRiskOverdue('2026-08-31', new Date('2026-09-01T00:00:00.000Z'))).toBe(true);
-    expect(isRiskOverdue(null, new Date('2026-09-01T00:00:00.000Z'))).toBe(false);
   });
 });

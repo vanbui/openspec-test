@@ -34,11 +34,17 @@ const defaultTiming: AssessmentDraftJobTiming = {
 type JobStatus = AssessmentDraftJobRecord['status'];
 
 const statusCopy = {
-  queued: 'Draft assistance is queued',
-  running: 'Draft assistance is running',
-  completed: 'Draft assistance is ready for analyst review',
-  failed: 'Draft assistance failed',
+  queued: 'Draft generation is queued',
+  running: 'Draft generation is running',
+  completed: 'Draft generation is ready for Security Analyst review',
+  failed: 'Draft generation failed',
 } satisfies Record<JobStatus, string>;
+
+/*
+ * A draft is generated from the questionnaire's submitted answers, so until the linked questionnaire is
+ * submitted the card offers no action and says why (WR-06). Strapi still refuses an early start (409).
+ */
+export const draftGenerationPrecondition = 'Draft generation can begin only after the linked questionnaire is submitted.';
 
 function assessmentHref(assessmentId: string): string {
   return `/app/review/assessments/${encodeURIComponent(assessmentId)}`;
@@ -46,13 +52,13 @@ function assessmentHref(assessmentId: string): string {
 
 function JobState({ job }: { job: AssessmentDraftJobRecord }) {
   if (job.status === 'completed') {
-    return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">The generated content remains a reviewable draft and has not been released.</p></div></div>;
+    return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">The generated draft is advisory and has not been released.</p></div></div>;
   }
   if (job.status === 'failed') {
     return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{job.failureMessage}</AlertDescription></Alert>;
   }
   if (job.status === 'running') {
-    return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy.running}</p><p className="text-sm text-muted-foreground">Deterministic draft assistance is preparing a reviewable proposal.</p></div></div>;
+    return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy.running}</p><p className="text-sm text-muted-foreground">A reviewable draft is being prepared from the questionnaire answers.</p></div></div>;
   }
   return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><Clock3 aria-hidden="true" /><div><p className="font-medium">{statusCopy.queued}</p><p className="text-sm text-muted-foreground">The job is waiting to begin. This page will remain available while its status is checked.</p></div></div>;
 }
@@ -65,19 +71,30 @@ function JobLifecycle({ job }: { job: AssessmentDraftJobRecord }) {
   ].filter((step) => step.reached);
 
   return (
-    <ol aria-label="Draft assistance lifecycle" className="flex flex-wrap gap-2 text-sm">
+    <ol aria-label="Draft generation lifecycle" className="flex flex-wrap gap-2 text-sm">
       {reached.map((step) => <li className="rounded-lg border border-border bg-muted px-2 py-1 text-foreground" key={step.label}>{step.label}</li>)}
     </ol>
   );
 }
 
 export function AssessmentDraftJob({
+  assessmentExists = false,
+  className,
   initialJob,
   questionnaireId,
+  questionnaireSubmitted,
   timing = defaultTiming,
 }: {
+  /**
+   * Whether the request already has an assessment. A request has at most one, and Strapi refuses a second
+   * draft (409), so with no job of this session the card offers nothing and renders nothing (W-1).
+   */
+  assessmentExists?: boolean;
+  className?: string;
   initialJob?: AssessmentDraftJobRecord;
   questionnaireId: string;
+  /** Whether the linked questionnaire is submitted; until it is, generation cannot begin. */
+  questionnaireSubmitted: boolean;
   timing?: AssessmentDraftJobTiming;
 }) {
   const [job, setJob] = useState<AssessmentDraftJobRecord | null>(initialJob ?? null);
@@ -115,7 +132,7 @@ export function AssessmentDraftJob({
     const remaining = timing.timeoutMs - elapsed;
     if (remaining <= 0) {
       setTimedOut(true);
-      setAnnouncement('Draft assistance polling timed out');
+      setAnnouncement('Draft generation polling timed out');
       return;
     }
 
@@ -123,7 +140,7 @@ export function AssessmentDraftJob({
       if (!mountedRef.current || requestInFlightRef.current) return;
       if (pollingStartedAtRef.current !== null && timing.now() - pollingStartedAtRef.current >= timing.timeoutMs) {
         setTimedOut(true);
-        setAnnouncement('Draft assistance polling timed out');
+        setAnnouncement('Draft generation polling timed out');
         return;
       }
       requestInFlightRef.current = true;
@@ -137,7 +154,7 @@ export function AssessmentDraftJob({
           setFormError(null);
         } else {
           setFormError(result.formError);
-          setAnnouncement('Draft assistance status could not be checked');
+          setAnnouncement('Draft generation status could not be checked');
         }
       }).finally(() => {
         requestInFlightRef.current = false;
@@ -159,7 +176,7 @@ export function AssessmentDraftJob({
     setPending(false);
     if (!result.ok) {
       setFormError(result.formError);
-      setAnnouncement('Draft assistance could not be started');
+      setAnnouncement('Draft generation could not be started');
       return;
     }
     activeJobIdRef.current = result.data.jobId;
@@ -180,7 +197,7 @@ export function AssessmentDraftJob({
     setPending(false);
     if (!result.ok) {
       setFormError(result.formError);
-      setAnnouncement('Draft assistance could not be retried');
+      setAnnouncement('Draft generation could not be retried');
       return;
     }
     pollingStartedAtRef.current = timing.now();
@@ -193,27 +210,35 @@ export function AssessmentDraftJob({
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
     setFormError(null);
-    setAnnouncement('Checking the current draft assistance status');
+    setAnnouncement('Checking the current draft generation status');
     setPollCycle((cycle) => cycle + 1);
   }
 
+  /*
+   * The card stays mounted while the page re-renders: starting a draft revalidates this page, and the new
+   * assessment can exist by then. The session that generated it keeps its job, its state and its link.
+   */
+  if (assessmentExists && !job) return null;
+
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-heading-sm">Deterministic draft assistance</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Draft initiated by the signed-in analyst and always subject to analyst review.</p>
+          <h2 className="text-heading-sm">Assessment draft generation</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Generate a draft Risk Assessment from the submitted questionnaire. The draft is advisory: it is recorded as initiated by you and is released only by a Security Analyst after review.</p>
         </div>
         {job ? <Badge variant="outline">Attempt {job.attempt}</Badge> : null}
       </CardHeader>
       <CardContent className="space-y-4">
         <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</div>
-        {!job ? <Button disabled={pending} onClick={() => void start()} type="button"><Sparkles aria-hidden="true" />{pending ? 'Starting draft assistance…' : 'Start deterministic draft assistance'}</Button> : <JobLifecycle job={job} />}
+        {job ? <JobLifecycle job={job} />
+          : questionnaireSubmitted ? <Button data-print="hidden" disabled={pending} onClick={() => void start()} type="button"><Sparkles aria-hidden="true" />{pending ? 'Starting draft generation…' : 'Generate assessment draft'}</Button>
+            : <p className="text-sm text-muted-foreground">{draftGenerationPrecondition}</p>}
         {job && !timedOut ? <JobState job={job} /> : null}
         {formError ? <Alert variant="destructive" role="alert"><AlertCircle aria-hidden="true" /><AlertTitle>Status unavailable</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
-        {timedOut ? <div className="grid gap-3 rounded-lg border border-border p-4"><div className="flex items-center gap-2"><Clock3 aria-hidden="true" /><p className="font-medium">Taking longer than expected</p></div><p className="text-sm text-muted-foreground">Automatic checks stopped after 30 seconds. The server-owned job remains authoritative.</p><Button className="w-fit" onClick={checkAgain} type="button" variant="outline">Check again</Button></div> : null}
-        {job?.status === 'failed' ? <Button disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying draft assistance…' : 'Retry draft assistance'}</Button> : null}
-        {job?.status === 'completed' ? <Link className={buttonVariants()} href={assessmentHref(job.assessmentId)}>Open completed assessment</Link> : null}
+        {timedOut ? <div className="grid gap-3 rounded-lg border border-border p-4"><div className="flex items-center gap-2"><Clock3 aria-hidden="true" /><p className="font-medium">Taking longer than expected</p></div><p className="text-sm text-muted-foreground">Automatic checks stopped after 30 seconds. The server-owned job remains authoritative.</p><Button className="w-fit" data-print="hidden" onClick={checkAgain} type="button" variant="outline">Check again</Button></div> : null}
+        {job?.status === 'failed' ? <Button data-print="hidden" disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying draft generation…' : 'Retry draft generation'}</Button> : null}
+        {job?.status === 'completed' ? <Link className={buttonVariants()} data-print="hidden" href={assessmentHref(job.assessmentId)}>Open assessment draft</Link> : null}
       </CardContent>
     </Card>
   );

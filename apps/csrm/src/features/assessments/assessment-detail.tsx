@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CsrmAssessmentRequest } from '@/features/requests/request-domain';
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
-import { AssessmentDraftJob } from './assessment-draft-job';
+import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
 import { QuestionnaireGenerationJob } from './questionnaire-generation-job';
 import { RequestLifecycleStepper } from '@/features/requests/request-lifecycle-stepper';
 import { RequestHub } from '@/features/requests/request-hub';
@@ -44,7 +44,7 @@ function SafeDetailState({ state }: { state: Exclude<AssessmentDetailState, 'pop
       <Alert variant={permission || state === 'error' ? 'destructive' : 'default'} role={permission || state === 'error' ? 'alert' : undefined}>
         <AlertCircle aria-hidden="true" />
         <AlertTitle>{permission ? 'You don’t have permission to review this request' : empty ? 'No submitted questionnaire is available' : 'We couldn’t load this assessment request'}</AlertTitle>
-        <AlertDescription>{permission ? 'Access is enforced by your effective CSRM capabilities.' : empty ? 'Draft assistance can begin only after the linked questionnaire is submitted.' : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
+        <AlertDescription>{permission ? 'Access is enforced by your effective CSRM capabilities.' : empty ? draftGenerationPrecondition : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
       </Alert>
       <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/requests">Back to assessment requests</Link>
     </>
@@ -63,10 +63,16 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, request, s
     ? { availability: 'available' as const, documentId: request.questionnaire.documentId, questionnaireNumber: null, title: request.questionnaire.title, state: null }
     : { availability: 'absent' as const });
   const resolvedQuestionnaireHref = questionnaireHref ?? (questionnaire.availability === 'available' ? `/app/review/questionnaires/${encodeURIComponent(questionnaire.documentId)}` : undefined);
+  /*
+   * A request has at most one assessment, and Strapi refuses a second draft (409). Once one exists, open to
+   * this actor or not, the draft card offers nothing to generate (W-1). It stays mounted, so the session
+   * that generated the draft keeps its card when revalidation re-renders the page.
+   */
+  const assessmentExists = request.relationships?.assessment.availability === 'available' || request.relationships?.assessment.availability === 'unavailable';
 
   return (
     <>
-      <PageHeader action={<StatusBadge status={request.requestStatus} />} description={request.requestNumber} title={request.title} />
+      <PageHeader description={request.requestNumber} status={<StatusBadge status={request.requestStatus} />} title={request.title} />
       <div className="mt-6"><RequestLifecycleStepper lifecycle={request.lifecycle} /></div>
       <div className="mt-6"><RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} /></div>
       {request.requestStatus === 'submitted' && request.relationships?.assessment.availability !== 'available' ? <div className="mb-4"><AnalystRequestRevert documentId={request.documentId} /></div> : null}
@@ -77,7 +83,7 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, request, s
         </DetailSection>
       </div>
       {request.requestStatus === 'submitted' ? <div className="mt-6"><QuestionnaireGenerationJob hasExistingQuestionnaire={questionnaire.availability === 'available'} requestId={request.documentId} /></div> : null}
-      {questionnaire.availability === 'available' ? <div className="mt-6"><AssessmentDraftJob questionnaireId={questionnaire.documentId} /></div> : null}
+      {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} className="mt-6" questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}
     </>
   );
 }

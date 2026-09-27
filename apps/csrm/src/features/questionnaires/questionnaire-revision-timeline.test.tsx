@@ -27,6 +27,23 @@ describe('QuestionnaireRevisionTimeline', () => {
     expect(screen.getByText('Question edited')).toBeInTheDocument();
   });
 
+  it('keeps the neutral actor wording when no display name is served and never shows a documentId', () => {
+    // Strapi serves a null name for an actor it cannot name (unknown or inactive).
+    const unnamed: QuestionnaireSummary = {
+      ...questionnaire,
+      events: [
+        ...(questionnaire.events ?? []).slice(0, 2),
+        { kind: 'question-edited', at: '2026-09-04T00:00:00.000Z', by: { documentId: 'analyst-2', displayName: null }, questionKey: 'hosting-region' },
+        { kind: 'question-deleted', at: '2026-09-05T00:00:00.000Z', by: null, questionKey: 'hosting-region' },
+      ],
+    };
+    render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={unnamed} />);
+    expect(screen.getAllByText(/by Morgan Analyst$/)).toHaveLength(2);
+    expect(screen.getAllByText(/by An analyst$/)).toHaveLength(2);
+    expect(document.querySelectorAll('time')).toHaveLength(4);
+    expect(screen.queryByText(/analyst-2/)).not.toBeInTheDocument();
+  });
+
   it('renders requestor summary without analyst-only detail and names required action', () => {
     render(<QuestionnaireRevisionTimeline depth="summary" questionnaire={questionnaire} />);
     expect(screen.getByText('Some answers need completing again before you re-submit.')).toBeInTheDocument();

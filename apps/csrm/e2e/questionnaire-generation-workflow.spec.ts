@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
+import { openFromNavigation, signInAs } from './helpers/navigation';
 
 /**
  * Scope is chosen by searching now, not by ticking an enumerated list.
@@ -19,14 +20,6 @@ async function chooseRelation(page: Page, label: string): Promise<void> {
   }).toPass({ timeout: 30_000 });
 }
 
-
-async function signIn(page: Page, role: 'Requestor' | 'Security Analyst'): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-  if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  await page.getByRole('button', { name: `Continue as ${role}` }).click();
-  await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole('main')).toBeVisible();
-}
 
 async function expectNoHorizontalOverflow(page: Page, message: string): Promise<void> {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), { message }).toBe(true);
@@ -61,18 +54,9 @@ async function attachReplacementDiagnostic(page: Page, testInfo: TestInfo, brows
 
 /*
  * The journey starts at 375px, where the sidebar is replaced by the navigation
- * drawer, so nav targets are not links on the page until the drawer is opened.
+ * sheet, so navigation targets are reached through the Menu sheet
+ * (`openFromNavigation` in e2e/helpers/navigation.ts).
  */
-async function openFromNavigation(page: Page, name: string, exact = false): Promise<void> {
-  const sidebarLink = page.getByRole('link', { name, exact });
-  if (await sidebarLink.count() > 0 && await sidebarLink.first().isVisible()) {
-    await sidebarLink.first().click();
-    return;
-  }
-  await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name, exact }).click();
-}
-
 test('Security Analyst generates, replaces, and reviews a contextual questionnaire safely', async ({ page, request }, testInfo) => {
   test.setTimeout(180_000);
   const health = await request.get(strapiHealthUrl);
@@ -81,7 +65,7 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
   const title = `Questionnaire generation journey ${Date.now()}`;
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   await openFromNavigation(page, 'My Requests');
   await openFromNavigation(page, 'New request');
   await page.getByRole('textbox', { name: 'Request title' }).fill(title);
@@ -102,7 +86,7 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
   await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_GENERATION_MOBILE_OVERFLOW');
 
   await page.context().clearCookies();
-  await signIn(page, 'Security Analyst');
+  await signInAs(page, 'Security Analyst');
   await openFromNavigation(page, 'Assessment Requests', true);
   await page.getByRole('link', { name: title }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
@@ -142,6 +126,9 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
      */
     await page.goto(requestUrl);
     await expect(page).toHaveURL(/\/app\/review\/requests\/[^/]+$/);
+    // WR-06: the generated questionnaire is still in analyst review, so the draft card offers no action yet.
+    await expect(page.getByText('Draft generation can begin only after the linked questionnaire is submitted.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Generate assessment draft' })).toHaveCount(0);
     await dismissToasts(page);
     await page.getByRole('button', { name: 'Generate questionnaire' }).click();
     await expect(page.getByRole('alertdialog', { name: 'Replace the unanswered questionnaire?' })).toBeVisible();

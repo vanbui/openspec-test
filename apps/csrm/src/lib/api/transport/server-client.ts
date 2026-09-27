@@ -1,5 +1,6 @@
 import 'server-only';
 import createClient, { type Client } from 'openapi-fetch';
+import { resolveSessionRuntimeMode } from '@/lib/auth/development-runtime';
 import {
   developmentFixtureIdentityForRole,
   getSessionAdapter,
@@ -48,7 +49,7 @@ function parseStrapiRestBase(value: string | undefined): string {
 }
 
 async function developmentIdentityHeader(): Promise<Record<string, string> | undefined> {
-  if (process.env.NODE_ENV !== 'development' || process.env.CSRM_DEV_IDENTITY !== 'true') {
+  if (!developmentIdentityBridgeEnabled()) {
     return undefined;
   }
 
@@ -60,8 +61,14 @@ async function developmentIdentityHeader(): Promise<Record<string, string> | und
   return identity ? { 'x-csrm-dev-identity': identity } : undefined;
 }
 
+/**
+ * The identity bridge exists only where the development session does (next dev,
+ * or a production build inside the attested E2E runtime) and only when the
+ * operator switched it on. The resolver already demands the flag under a
+ * production build; the explicit conjunct keeps next dev silent without it.
+ */
 function developmentIdentityBridgeEnabled(): boolean {
-  return process.env.NODE_ENV === 'development' && process.env.CSRM_DEV_IDENTITY === 'true';
+  return resolveSessionRuntimeMode(process.env) === 'development' && process.env.CSRM_DEV_IDENTITY === 'true';
 }
 
 function apiTokenHeader(required: boolean): Record<string, string> | undefined {

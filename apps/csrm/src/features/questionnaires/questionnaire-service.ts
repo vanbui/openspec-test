@@ -77,7 +77,38 @@ const reviewSummaryResponseSchema = z.object({
   }),
 });
 const questionnaireResponseSchema = z.object({ data: questionnaireSummarySchema });
-const questionnaireQuestionsResponseSchema = z.object({ data: z.unknown() });
+
+/*
+ * A questionnaire's question list, as every response that carries one is
+ * parsed. A deleted question is retained so its history survives, but it is no
+ * longer part of the questionnaire: it must not render, count towards progress,
+ * gate submission or reach the assessment (D-07). The server refuses to delete
+ * a question an active question depends on, so dropping it here cannot orphan
+ * a visibility condition.
+ */
+const questionnaireQuestionListSchema = z.array(z.object({
+  documentId: z.unknown().optional(),
+  questionText: z.unknown(),
+  answerType: z.unknown(),
+  options: z.unknown(),
+  answer: z.unknown().nullable().optional(),
+})).max(10_000)
+  // The projection is still unvalidated; the pipe validates every field of it.
+  .transform((questions) => questions
+    .filter((question) => !(
+      typeof question.options === 'object' && question.options !== null
+      && (question.options as { deleted?: unknown }).deleted !== undefined
+    ))
+    .map((question) => ({
+      ...(question.documentId !== undefined ? { documentId: question.documentId } : {}),
+      questionText: question.questionText,
+      answerType: question.answerType,
+      options: question.options,
+      answer: question.answer ?? null,
+    })) as z.input<typeof questionnaireDefinitionSchema>)
+  .pipe(questionnaireDefinitionSchema);
+
+const questionnaireQuestionsResponseSchema = z.object({ data: questionnaireQuestionListSchema });
 const governanceEventSchema = z.object({
   schemaVersion: z.literal(1), kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared']), at: timestampSchema, by: documentIdSchema,
   reason: z.string().max(500).optional(), questionKey: z.string().max(120).optional(), explanation: z.string().max(2_000).optional(),
@@ -157,33 +188,7 @@ async function read<T>(
 }
 
 function parseQuestionnaireDefinition(value: unknown): QuestionnaireDefinition {
-  const questions = z.array(z.object({
-    documentId: z.unknown().optional(),
-    questionText: z.unknown(),
-    answerType: z.unknown(),
-    options: z.unknown(),
-    answer: z.unknown().nullable().optional(),
-  })).max(10_000).parse(value);
-
-  /*
-   * A deleted question is retained so its history survives, but it is no longer
-   * part of the questionnaire: it must not render, count towards progress,
-   * gate submission or reach the assessment (D-07). The server refuses to
-   * delete a question an active question depends on, so dropping it here
-   * cannot orphan a visibility condition.
-   */
-  const active = questions.filter((question) => !(
-    typeof question.options === 'object' && question.options !== null
-    && (question.options as { deleted?: unknown }).deleted !== undefined
-  ));
-
-  return questionnaireDefinitionSchema.parse(active.map((question) => ({
-    ...(question.documentId !== undefined ? { documentId: question.documentId } : {}),
-    questionText: question.questionText,
-    answerType: question.answerType,
-    options: question.options,
-    answer: question.answer ?? null,
-  })));
+  return questionnaireQuestionListSchema.parse(value);
 }
 
 const questionnaireQuerySchema = z.object({
@@ -261,7 +266,7 @@ export async function getQuestionnaireQuestions(documentId: string): Promise<Tra
     (client) => client.GET('/v1/questionnaires/{questionnaireId}/questions', {
       params: { path: { questionnaireId: documentIdSchema.parse(documentId) } },
     }),
-    (payload) => parseQuestionnaireDefinition(questionnaireQuestionsResponseSchema.parse(payload).data),
+    (payload) => questionnaireQuestionsResponseSchema.parse(payload).data,
   );
 }
 
@@ -345,16 +350,42 @@ export async function deleteQuestionnaireQuestion(documentId: string, questionId
   return read((client) => client.DELETE('/v1/questionnaires/{questionnaireId}/questions/{questionId}', { params: { path: { questionnaireId: documentIdSchema.parse(documentId), questionId: documentIdSchema.parse(questionId) } } }), parseGovernance);
 }
 
+/*
+ * The draft-save, submit and revert responses are parsed in two steps: the
+ * envelope, then its answers through questionnaireQuestionListSchema. The guard
+ * reads the same two schemas composed, so it sees every question they carry.
+ */
+const mutationContractSchema = z.object({ data: mutationResponseSchema.shape.data.extend({ answers: questionnaireQuestionListSchema }) });
+const revertContractSchema = z.object({ data: revertResponseSchema.shape.data.extend({ answers: questionnaireQuestionListSchema }) }).strip();
+
+/*
+ * A question list's own rules, which JSON Schema cannot express: choices only on
+ * a select question, a visibility condition that references an earlier, other
+ * question without a cycle, and an answer envelope whose fields follow its
+ * state. The one question the guard is served (a Text question that carries
+ * choices, depends on itself and holds a draft answer with a submittedAt)
+ * breaks each of them.
+ */
+const questionListNarrowings = (listPath: string) => [
+  `${listPath}.0.options.choices`,
+  // The contract's one QuestionnaireAnswerEnvelope leaves submittedAt optional in
+  // either state; the server writes it only on a submitted answer, so a draft refuses it.
+  `${listPath}.0.answer.submittedAt`,
+  `${listPath}.0.options.visibility`,
+  `${listPath}.0.options.visibility.questionKey`,
+  `${listPath}.options.visibility`,
+];
+
 export const contractResponseParsers: readonly ContractResponseParser[] = [
   { label: 'listMyQuestionnaires', component: 'QuestionnaireListResponse', parser: questionnaireListResponseSchema },
   { label: 'getMyQuestionnaireSummary', component: 'QuestionnaireStatusSummaryResponse', parser: requestorSummaryResponseSchema },
   { label: 'listQuestionnairesForReview', component: 'QuestionnaireListResponse', parser: questionnaireListResponseSchema },
   { label: 'getQuestionnaireReviewSummary', component: 'QuestionnaireReviewSummaryResponse', parser: reviewSummaryResponseSchema },
   { label: 'getQuestionnaire', component: 'QuestionnaireHeaderResponse', parser: questionnaireResponseSchema },
-  { label: 'getQuestionnaireQuestions', component: 'QuestionnaireQuestionsResponse', parser: questionnaireQuestionsResponseSchema },
-  { label: 'saveQuestionnaireDraft', component: 'QuestionnaireMutationResponse', parser: mutationResponseSchema },
-  { label: 'submitQuestionnaire', component: 'QuestionnaireSubmitResponse', parser: mutationResponseSchema },
-  { label: 'revertQuestionnaireToDraft', component: 'QuestionnaireRevertResponse', parser: revertResponseSchema },
+  { label: 'getQuestionnaireQuestions', component: 'QuestionnaireQuestionsResponse', parser: questionnaireQuestionsResponseSchema, narrowedPaths: questionListNarrowings('data') },
+  { label: 'saveQuestionnaireDraft', component: 'QuestionnaireMutationResponse', parser: mutationContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
+  { label: 'submitQuestionnaire', component: 'QuestionnaireSubmitResponse', parser: mutationContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
+  { label: 'revertQuestionnaireToDraft', component: 'QuestionnaireRevertResponse', parser: revertContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
   { label: 'releaseQuestionnaire', component: 'QuestionnaireReleaseResponse', parser: releaseResponseSchema },
   { label: 'returnQuestionnaireToAnalystReview', component: 'QuestionnaireGovernanceResponse', parser: governanceResponseSchema },
   { label: 'addQuestionnaireQuestion', component: 'QuestionnaireGovernanceResponse', parser: governanceResponseSchema },

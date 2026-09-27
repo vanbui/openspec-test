@@ -143,6 +143,54 @@ describe('questionnaire service contract', () => {
     await expect(service.getQuestionnaireQuestions('questionnaire-1')).resolves.toEqual(unavailable);
   });
 
+  it('keeps a deleted question out of every question list it returns', async () => {
+    // A deleted question is retained for its history but is no longer part of
+    // the questionnaire (D-07), wherever the list arrives: the questions read,
+    // a draft save, a submission or a revert.
+    const deletedQuestion = {
+      documentId: 'question-2',
+      questionText: 'Which region hosts the service?',
+      answerType: 'Text',
+      options: {
+        schemaVersion: 2,
+        questionKey: 'hosting-region',
+        section: { key: 'service', title: 'Service context', order: 0 },
+        order: 1,
+        required: false,
+        deleted: { deletedAt: '2026-09-21T00:00:00.000Z', deletedBy: 'analyst-1' },
+      },
+      answer: null,
+    };
+    const answersFor = (result: unknown) => (result as { data: { answers?: { questionKey: string }[] } | { questionKey: string }[] }).data;
+    const mutation = {
+      questionnaireId: 'questionnaire-1',
+      state: 'draft',
+      progress: { answered: 1, total: 1, percent: 100 },
+      answers: [question, deletedQuestion],
+      updatedAt: '2026-08-29T10:00:00.000Z',
+    };
+    get.mockResolvedValueOnce({ data: { data: [question, deletedQuestion] }, response: { status: 200 } });
+    patch.mockResolvedValueOnce({ data: { data: mutation }, response: { status: 200 } });
+    post
+      .mockResolvedValueOnce({ data: { data: { ...mutation, state: 'submitted', submittedAt: '2026-08-29T10:01:00.000Z' } }, response: { status: 200 } })
+      .mockResolvedValueOnce({
+        data: { data: { ...mutation, revert: { reason: 'Correct the hosting answer.', revertedAt: '2026-08-29T10:02:00.000Z', revertedBy: { documentId: 'analyst-1' } } } },
+        response: { status: 200 },
+      });
+
+    const read = await service.getQuestionnaireQuestions('questionnaire-1');
+    expect((answersFor(read) as { questionKey: string }[]).map((entry) => entry.questionKey)).toEqual(['internet-facing']);
+    for (const result of [
+      await service.saveQuestionnaireDraft('questionnaire-1', [{ questionKey: 'internet-facing', value: true }]),
+      await service.submitQuestionnaire('questionnaire-1'),
+      await service.revertQuestionnaireToDraft('questionnaire-1', 'Correct the hosting answer.'),
+    ]) {
+      expect(result.error).toBeNull();
+      const { answers } = answersFor(result) as { answers: { questionKey: string }[] };
+      expect(answers.map((entry) => entry.questionKey)).toEqual(['internet-facing']);
+    }
+  });
+
   it('rejects an unavailable request relationship that carries a protected identifier', async () => {
     const malformed = { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', status: 503 } };
     normalizeTransportError.mockReturnValue(malformed);

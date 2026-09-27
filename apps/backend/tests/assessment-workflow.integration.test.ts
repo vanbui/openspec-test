@@ -130,16 +130,11 @@ test("mounted analyst review queue is exact, bounded, and follows existing detai
   const questionnaireFixtures = await harness.seedQuestionnaireWorkflowFixtures();
   const assessmentFixtures = await harness.seedAssessmentWorkflowFixtures();
 
-  const drafted = await request(
-    `/api/csrm-assessment-requests/${requestFixtures.requests.illegalTransition}`,
-    harness.identities.analyst,
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ data: { requestStatus: "risk-assessment-drafted" } }),
-    },
-  );
-  assert.equal(drafted.status, 200, "ASSESSMENT_QUEUE_FIXTURE_TRANSITION_FAILED");
+  // The request update route admits only the published submission intent (T-08-A2); the assessment
+  // draft workflow moves a request to risk-assessment-drafted, so the fixture is set there directly.
+  await harness.setRequestStatusFixture(requestFixtures.requests.illegalTransition, "risk-assessment-drafted");
+  assert.equal((await harness.getRequest(requestFixtures.requests.illegalTransition))?.requestStatus, "risk-assessment-drafted",
+    "ASSESSMENT_QUEUE_FIXTURE_TRANSITION_FAILED");
 
   const queueResponse = await request(
     "/api/v1/assessment_requests?pagination[page]=1&pagination[pageSize]=100&sort=requestNumber:asc",
@@ -239,11 +234,25 @@ test("mounted analyst review queue denies ungranted actors and rejects query exp
     assert.doesNotMatch(await denied.text(), /SQL|stack|database|requestor|questionnaire answer/i, "UNEXPECTED_ASSESSMENT_QUEUE_DENIAL_LEAK");
   }
 
+  /*
+   * `filters[requestStatus]=approved` (default queue) used to be listed here as
+   * malformed. GAP-1's contract decision (06.9-04) retired that: every request
+   * status is now accepted in every queue and intersected with it, so a known
+   * status the queue does not read answers an empty page. The intersection test
+   * below proves that, and that nothing outside the queue is ever returned.
+   * What stays malformed is anything that is not exactly one known status.
+   */
   for (const query of [
     "populate=*",
     "populate[requestor]=true",
     "filters[requestor][documentId][$ne]=missing",
-    "filters[requestStatus]=approved",
+    "filters[requestStatus]=bogus",
+    "filters[requestStatus]=Approved",
+    "filters[requestStatus]=",
+    "filters[requestStatus][$eq]=approved",
+    "filters[requestStatus][$in][0]=approved",
+    "filters[requestStatus]=submitted&filters[requestStatus]=approved",
+    "filters[queue]=released&filters[requestStatus]=bogus",
     "pagination[pageSize]=101",
     "sort=createdBy:desc",
     "unknown=value",
@@ -251,6 +260,80 @@ test("mounted analyst review queue denies ungranted actors and rejects query exp
     const rejected = await request(`/api/v1/assessment_requests?${query}`, harness.identities.analyst);
     assert.equal(rejected.status, 400, `UNEXPECTED_ASSESSMENT_QUEUE_QUERY_STATUS_${query}`);
     assert.doesNotMatch(await rejected.text(), /SQL|stack|database|requestor|questionnaire answer/i, "UNEXPECTED_ASSESSMENT_QUEUE_QUERY_LEAK");
+  }
+});
+
+const REQUEST_STATUSES = [
+  "draft", "submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review", "approved", "closed",
+] as const;
+const REVIEWABLE_REQUEST_STATUSES: readonly string[] = ["submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review"];
+/** What each queue reads. No queue reads a draft: it belongs to its Requestor until submitted. */
+const REVIEW_QUEUE_STATUSES: Readonly<Record<string, readonly string[]>> = {
+  "requires-attention": REVIEWABLE_REQUEST_STATUSES,
+  "awaiting-requestor": REVIEWABLE_REQUEST_STATUSES,
+  "generation-in-progress": REVIEWABLE_REQUEST_STATUSES,
+  released: ["approved", "closed"],
+};
+
+/*
+ * A dedicated fixture for the queue and status intersection: one owner request
+ * in each of the seven statuses, and a draft owned by the other Requestor. It is
+ * built here, not taken from a memoized seed, so no other test can change what
+ * it proves.
+ */
+async function buildReviewQueueStatusFixture() {
+  const harness = await harnessPromise;
+  const byStatus = new Map<string, string>();
+  for (const requestStatus of REQUEST_STATUSES) {
+    byStatus.set(requestStatus, await harness.createAssessmentRequestFixture({
+      requestNumber: `QUEUE-STATUS-${requestStatus.toUpperCase()}`,
+      title: `Queue status intersection ${requestStatus}`,
+      requestStatus,
+      requestor: "owner",
+    }));
+  }
+  const otherRequestorDraft = await harness.createAssessmentRequestFixture({
+    requestNumber: "QUEUE-STATUS-OTHER-DRAFT",
+    title: "Queue status intersection other Requestor draft",
+    requestStatus: "draft",
+    requestor: "otherRequestor",
+  });
+  return { byStatus, drafts: [byStatus.get("draft") as string, otherRequestorDraft] };
+}
+
+test("mounted analyst review queue intersects every request status with the selected queue and never returns a record outside it", async () => {
+  const harness = await harnessPromise;
+  const fixture = await buildReviewQueueStatusFixture();
+
+  for (const [queue, queueStatuses] of Object.entries(REVIEW_QUEUE_STATUSES)) {
+    for (const requestStatus of [undefined, ...REQUEST_STATUSES]) {
+      const label = `${queue}_${requestStatus ?? "all"}`;
+      const response = await request(
+        `/api/v1/assessment_requests?filters[queue]=${queue}${requestStatus ? `&filters[requestStatus]=${requestStatus}` : ""}&pagination[pageSize]=100`,
+        harness.identities.analyst,
+      );
+      assert.equal(response.status, 200, `QUEUE_STATUS_INTERSECTION_REJECTED_${label}`);
+      const body = await payload(response);
+      const found = rows(body);
+      const pagination = (body.meta as { pagination: Record<string, number> }).pagination;
+      // One page holds every match, so every record the queue returns is inspected.
+      assert.ok(pagination.total <= 100, `QUEUE_STATUS_INTERSECTION_PAGE_TOO_SMALL_${label}`);
+      assert.equal(found.length, pagination.total, `QUEUE_STATUS_INTERSECTION_TOTAL_${label}`);
+      for (const row of found) {
+        assert.ok(queueStatuses.includes(String(row.requestStatus)), `QUEUE_STATUS_OUTSIDE_QUEUE_RECORD_${label}_${String(row.requestNumber)}`);
+        if (requestStatus) assert.equal(row.requestStatus, requestStatus, `QUEUE_STATUS_FILTER_IGNORED_${label}`);
+        assert.equal(fixture.drafts.includes(String(row.documentId)), false, `QUEUE_STATUS_DRAFT_DISCLOSED_${label}`);
+      }
+
+      if (requestStatus && !queueStatuses.includes(requestStatus)) {
+        assert.deepEqual(body.meta, { pagination: { page: 1, pageSize: 100, pageCount: 0, total: 0 } }, `OUTSIDE_QUEUE_STATUS_NOT_EMPTY_${label}`);
+        assert.deepEqual(found, [], `OUTSIDE_QUEUE_STATUS_RETURNED_ROWS_${label}`);
+      }
+      // A status the queue reads still reads: the intersection is not a blanket empty answer.
+      if (requestStatus && queueStatuses.includes(requestStatus) && (queue === "requires-attention" || queue === "released")) {
+        assert.ok(found.some((row) => row.documentId === fixture.byStatus.get(requestStatus)), `IN_QUEUE_STATUS_RECORD_MISSING_${label}`);
+      }
+    }
   }
 });
 
@@ -1297,7 +1380,13 @@ test("mounted explicit release is readiness-gated, atomic, and concurrent-safe",
         { method: "POST" },
       );
       assert.equal(failed.status, 500, "RELEASE_SECOND_WRITE_FAILURE_NOT_OBSERVED");
-      assert.doesNotMatch(await failed.text(), /SQL|stack|database|questionnaire answer/i);
+      const failedText = await failed.text();
+      assert.doesNotMatch(failedText, /SQL|stack|database|questionnaire answer|infrastructure detail/i);
+      // D-20: an internal failure inside a production handler reaches the client as the bare envelope only.
+      assert.deepEqual(JSON.parse(failedText), {
+        data: null,
+        error: { status: 500, name: "InternalServerError", message: "Internal Server Error" },
+      }, "FAILED_RELEASE_ENVELOPE_NOT_BARE");
     },
   );
   const rolledBack = await harness.getAssessment(generatedAssessmentId);
@@ -1585,4 +1674,97 @@ test("mounted accepted edit withdraws a completed review, blocks release, and a 
   const releasedRecord = await harness.getAssessment(assessmentId);
   assert.equal(releasedRecord?.assessmentStatus, "approved", "RELEASE_AFTER_FRESH_REVIEW_WAS_NOT_PERSISTED");
   assert.equal((await harness.getRequest(requestId))?.requestStatus, "approved", "RELEASED_REQUEST_DID_NOT_FOLLOW");
+});
+
+/*
+ * Kept last on purpose. The closed assessment this seeds would otherwise change
+ * the totals the earlier status-summary assertion sums (draft, in review and
+ * approved), and it must not reach any earlier list read.
+ */
+async function buildClosedAssessmentFixture() {
+  const harness = await harnessPromise;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "ASSESSMENT-STATUS-CLOSED-001",
+    title: "Closed assessment status filter request",
+    requestStatus: "closed",
+    requestor: "owner",
+  });
+  const assessmentId = await harness.createAssessmentFixture({
+    assessmentNumber: "ASM-2026-CLOSED",
+    assessmentStatus: "closed",
+    assessmentRequest: requestId,
+    summary: "Closed assessment status filter fixture",
+  });
+  return { requestId, assessmentId };
+}
+
+test("mounted analyst assessment list accepts closed within its scope while the owner list stays released-only", async () => {
+  const harness = await harnessPromise;
+  const fixture = await buildClosedAssessmentFixture();
+
+  for (const status of ["draft", "in-review", "approved", "closed"]) {
+    const response = await request(`/api/v1/risk_assessments?status=${status}&pageSize=100`, harness.identities.analyst);
+    assert.equal(response.status, 200, `ANALYST_ASSESSMENT_STATUS_REJECTED_${status}`);
+    const body = await payload(response);
+    const found = rows(body);
+    const pagination = (body.meta as { pagination: Record<string, number> }).pagination;
+    // One page holds every match, so every returned assessment is inspected.
+    assert.ok(pagination.total <= 100, `ANALYST_ASSESSMENT_STATUS_PAGE_TOO_SMALL_${status}`);
+    assert.ok(found.every((row) => row.assessmentStatus === status), `ANALYST_ASSESSMENT_STATUS_FILTER_IGNORED_${status}`);
+    assert.equal(found.some((row) => row.documentId === fixture.assessmentId), status === "closed", `CLOSED_ASSESSMENT_PLACEMENT_${status}`);
+  }
+
+  for (const query of ["status=bogus", "status=Closed", "status=", "status[$eq]=closed", "status=closed&status=approved"]) {
+    const rejected = await request(`/api/v1/risk_assessments?${query}`, harness.identities.analyst);
+    assert.equal(rejected.status, 400, `MALFORMED_ASSESSMENT_STATUS_ACCEPTED_${query}`);
+    assert.doesNotMatch(await rejected.text(), /SQL|stack|database/i, `MALFORMED_ASSESSMENT_STATUS_LEAK_${query}`);
+  }
+
+  // The owner collection shares the status vocabulary but keeps its released-owner bound.
+  const ownerClosed = await request("/api/v1/my_risk_assessments?status=closed", harness.identities.owner);
+  assert.equal(ownerClosed.status, 200, "OWNER_CLOSED_STATUS_REJECTED");
+  const ownerClosedBody = await payload(ownerClosed);
+  assert.deepEqual(rows(ownerClosedBody), [], "OWNER_CLOSED_STATUS_WIDENED_THE_RELEASED_SCOPE");
+  assert.equal((ownerClosedBody.meta as { pagination: Record<string, number> }).pagination.total, 0, "OWNER_CLOSED_STATUS_TOTAL");
+  const ownerAll = rows(await payload(await request("/api/v1/my_risk_assessments?pageSize=100", harness.identities.owner)));
+  assert.equal(ownerAll.some((row) => row.documentId === fixture.assessmentId), false, "OWNER_LIST_DISCLOSED_A_CLOSED_ASSESSMENT");
+});
+
+/*
+ * The authorization matrix states these two successes of the service agent but does not issue them,
+ * because each would change the unreleased fixture its other rows read (SR-02). The test drafts its
+ * own assessment, and runs last so no earlier list or summary counts it.
+ */
+test("mounted assessment writes admit the service agent's exact grants", async () => {
+  const harness = await harnessPromise;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "ASSESSMENT-SERVICE-AGENT-WRITE-001",
+    title: "Service agent assessment write request",
+    requestStatus: "risk-assessment-drafted",
+    requestor: "owner",
+  });
+  const assessmentId = await harness.createAssessmentFixture({
+    assessmentNumber: "ASM-2026-AGENTW",
+    assessmentStatus: "draft",
+    assessmentRequest: requestId,
+    summary: "Service agent write fixture",
+  });
+
+  const edited = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`, harness.identities.serviceAnalystAgent, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ summary: "Service agent reviewed summary" }),
+  });
+  assert.equal(edited.status, 200, "SERVICE_AGENT_ASSESSMENT_EDIT_REFUSED");
+  const persisted = await harness.getAssessment(assessmentId);
+  assert.equal(persisted?.summary, "Service agent reviewed summary");
+  assert.equal(persisted?.assessmentStatus, "in-review", "SERVICE_AGENT_FIRST_EDIT_DID_NOT_TRANSITION");
+
+  const created = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/risks`, harness.identities.serviceAnalystAgent, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ riskStatement: "Service agent contextual risk" }),
+  });
+  assert.equal(created.status, 201, "SERVICE_AGENT_RISK_CREATE_REFUSED");
+  assert.equal(await harness.countRisksForAssessment(assessmentId), 1);
 });

@@ -151,6 +151,18 @@
   --ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9); /* CSRM extension */
   --ease-in: cubic-bezier(0.2, 0, 1, 0.9); /* CSRM extension */
 
+  /*
+   * Chart geometry (CSRM extension, direction §3.14). Marks are thin and
+   * square-ended; the direct label carries every exact value.
+   */
+  --chart-bar-thickness: 0.5rem;
+  --chart-plot-height: 10rem;
+  --chart-column-max-width: 2.5rem;
+  --chart-bar-min-length: 2px;
+
+  /* Table scroll cue (CSRM extension, direction §4 DataTable, X-1) */
+  --table-scroll-fade-width: 1.5rem;
+
   /* Shadows — the primary button pair and the one floating-layer shadow */
   --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-button-hover: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -268,6 +280,10 @@
   --spacing-header-h-sm: var(--header-h-sm);
   --spacing-header-h-md: var(--header-h-md);
   --spacing-control-h: var(--control-h);
+  --spacing-chart-bar-thickness: var(--chart-bar-thickness);
+  --spacing-chart-plot-height: var(--chart-plot-height);
+  --spacing-chart-column-max-width: var(--chart-column-max-width);
+  --spacing-chart-bar-min-length: var(--chart-bar-min-length);
 
   --ease-out-expo: var(--ease-out-expo);
   --ease-out-soft: var(--ease-out-soft);
@@ -339,6 +355,17 @@ html {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  /*
+   * Content scrolled into view (a focused control, an in-page anchor such as #mitigation-controls)
+   * stops below the sticky header rather than under it (WCAG 2.4.11). The padding matches the
+   * header height at each breakpoint.
+   */
+  scroll-padding-top: var(--header-h-sm);
+}
+@media (min-width: 48rem) {
+  html {
+    scroll-padding-top: var(--header-h-md);
+  }
 }
 ::selection {
   background: var(--selection);
@@ -409,6 +436,38 @@ textarea {
 .record-link:hover,
 .record-link:focus-visible {
   text-decoration-color: var(--text-link) !important;
+}
+
+/*
+ * Horizontal scroll regions (direction §4 DataTable, X-1 and X-2). A table scroller that measures
+ * its overflow (components/csrm/horizontal-scroll-region.tsx) carries data-overflow and is a
+ * one-cell grid: the table and the end-edge cue share the cell, so the cue can stick to the
+ * visible end edge while the table scrolls beneath it. An absolutely positioned cue would scroll
+ * away with the content instead.
+ */
+[data-overflow] > *,
+[data-overflow]::after {
+  grid-area: 1 / 1;
+}
+[data-overflow="true"] {
+  /* A focused cell scrolls clear of the sticky first column the hook measures (WCAG 2.4.11). */
+  scroll-padding-inline-start: var(--table-sticky-inline-start, 0px);
+}
+/*
+ * While columns are hidden beyond the end edge: a fade from transparent to the surface over the
+ * header and body. It is decorative and pointer-transparent, appears and disappears with the
+ * scroll position with no transition, and paints above the sticky table header (z-index 10) but
+ * below the application header (30).
+ */
+[data-overflow="true"][data-overflow-end="false"]::after {
+  content: "";
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 20;
+  justify-self: end;
+  width: var(--table-scroll-fade-width);
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface));
 }
 
 /* Caption treatment: 12px regular helper text. */
@@ -681,6 +740,10 @@ textarea {
   position: fixed;
   z-index: 40;
 }
+/*
+ * The sheet scrolls within itself when its items outgrow a short viewport, so every item and the
+ * role switcher stay reachable by touch and keyboard. The scroll never chains to the page behind.
+ */
 .sheet-content {
   background: var(--sidebar);
   color: var(--sidebar-foreground);
@@ -689,6 +752,8 @@ textarea {
   gap: 16px;
   height: 100%;
   inset: 0 auto 0 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px 12px;
   position: fixed;
   width: min(264px, 85vw);
@@ -767,7 +832,8 @@ textarea {
   .page-header {
     flex-direction: column;
   }
-  .page-header .button-primary {
+  /* Header actions stack full-width below 768px (direction section 4 Page header, W-13). */
+  .page-header-actions > * {
     width: 100%;
   }
   .mobile-nav {
@@ -841,4 +907,108 @@ textarea {
   font-size: 12px;
   line-height: 18px;
   color: var(--muted-foreground);
+}
+
+/*
+ * Print (direction section 4 Print, X-4; D-33). The shell and interaction-only controls do not
+ * print; page content prints at full width on the surface colour with the screen type scale and
+ * the browser's default page margins. Scroll regions expand, sticky cells become static, cells
+ * wrap so a table fits the paper, headers repeat, and rows, cards and tiles avoid breaking inside.
+ * Badges and chart marks keep their tints where the printer allows; icon and text carry the
+ * meaning regardless. Links keep their underline and print no URL. No value is added here.
+ */
+@media print {
+  .skip-link,
+  .sidebar,
+  .header,
+  .shell-footer,
+  .mobile-trigger,
+  .sheet-overlay,
+  .sheet-content,
+  [role="dialog"],
+  [role="alertdialog"],
+  [data-radix-popper-content-wrapper],
+  [data-sonner-toaster],
+  [data-print="hidden"],
+  form[role="search"] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: var(--surface);
+    overflow: visible;
+  }
+  .shell {
+    display: block;
+    min-height: 0;
+  }
+  .page {
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+
+  /* The table layout prints whatever the paper width; below md the screen shows cards instead. */
+  [data-slot="data-table-mobile"] {
+    display: none !important;
+  }
+  [data-slot="data-table-desktop"] {
+    display: grid;
+  }
+  [data-slot="data-table-desktop"],
+  [data-slot="report-table-scroll"],
+  [data-overflow] {
+    overflow: visible;
+  }
+  [data-overflow]::after {
+    content: none !important;
+  }
+  main .sticky,
+  main [class*="sticky"],
+  main thead {
+    position: static !important;
+  }
+  /* The start-edge cue (the sticky column's hairline) goes with the scroll, as the end-edge fade does. */
+  [data-overflow] [class*="sticky"] {
+    border-right-width: 0;
+  }
+  /* A blurred backdrop prints the header row blank in Chromium; the header is not floating on paper. */
+  main thead {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  main td,
+  main th {
+    white-space: normal;
+  }
+  /* Text a long-text column or card clamps on screen prints whole: paper never cuts a statement short (X-4, W-4). */
+  main [class*="line-clamp"] {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+    overflow: visible;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr,
+  li,
+  [data-slot="card"],
+  [data-slot="kpi-tile"] {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  [data-slot="badge"],
+  [data-slot="bar-chart-mark"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  a[href]::after {
+    content: none;
+  }
 }

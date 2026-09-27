@@ -1,5 +1,8 @@
 import { once } from 'node:events';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
@@ -10,7 +13,28 @@ const originalBaseUrl = process.env.CSRM_API_BASE_URL;
 const originalDevelopmentIdentity = process.env.CSRM_DEV_IDENTITY;
 const originalApiToken = process.env.CSRM_API_TOKEN;
 const originalNodeEnvironment = process.env.NODE_ENV;
+const runtimeVariables = ['CSRM_E2E_RUNTIME_ROOT', 'CSRM_E2E_RUNTIME_ATTESTATION_PATH', 'CSRM_E2E_RUNTIME_NONCE'] as const;
+const runtimeDirectories: string[] = [];
 let server: Server | undefined;
+
+/** Puts this process inside an attested E2E runtime: the D-11 production gates minus CSRM_DEV_IDENTITY. */
+function attestRuntime(environment = 'development'): void {
+  const parent = join(tmpdir(), 'csrm-playwright-e2e');
+  mkdirSync(parent, { recursive: true });
+  const root = mkdtempSync(join(parent, 'transport-'));
+  runtimeDirectories.push(root);
+  const path = join(root, 'attestation.json');
+  writeFileSync(path, JSON.stringify({ nonce: 'transport-nonce', createdAt: new Date().toISOString() }));
+  vi.stubEnv('CSRM_ENVIRONMENT', environment);
+  vi.stubEnv('CSRM_E2E_RUNTIME_ROOT', root);
+  vi.stubEnv('CSRM_E2E_RUNTIME_ATTESTATION_PATH', path);
+  vi.stubEnv('CSRM_E2E_RUNTIME_NONCE', 'transport-nonce');
+}
+
+function leaveAttestedRuntime(): void {
+  vi.stubEnv('CSRM_ENVIRONMENT', undefined);
+  for (const variable of runtimeVariables) vi.stubEnv(variable, undefined);
+}
 
 async function startServer(): Promise<{ baseUrl: string; requestedPaths: string[] }> {
   const requestedPaths: string[] = [];
@@ -51,6 +75,7 @@ afterEach(async () => {
   }
 
   vi.unstubAllEnvs();
+  for (const directory of runtimeDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
   if (originalDevelopmentIdentity === undefined) {
     delete process.env.CSRM_DEV_IDENTITY;
   } else {
@@ -84,13 +109,19 @@ describe('createStrapiClient', () => {
       identityFlag = 'true',
       developmentRole = 'Requestor',
       apiToken = 'configured-development-credential',
+      attested = false,
+      environment = 'development',
     }: {
       nodeEnvironment?: string;
       identityFlag?: string | null;
       developmentRole?: string | null;
       apiToken?: string | null;
+      attested?: boolean;
+      environment?: string;
     }) => {
       vi.stubEnv('NODE_ENV', nodeEnvironment);
+      if (attested) attestRuntime(environment);
+      else leaveAttestedRuntime();
       if (identityFlag === null) {
         delete process.env.CSRM_DEV_IDENTITY;
       } else {
@@ -133,6 +164,15 @@ describe('createStrapiClient', () => {
     expect(await createFor({ identityFlag: null, apiToken: null })).toBeUndefined();
     expect(await createFor({ identityFlag: 'false', apiToken: null })).toBeUndefined();
     expect(await createFor({ nodeEnvironment: 'production', apiToken: null })).toBeUndefined();
+    // A production build inside the attested E2E runtime bridges exactly as next dev does.
+    expect(await createFor({ nodeEnvironment: 'production', attested: true })).toEqual({
+      authorization: 'Bearer configured-development-credential',
+      'x-csrm-dev-identity': 'jane.doe@idambox.com',
+    });
+    // Each production gate alone fails closed: no identity and no token requirement.
+    expect(await createFor({ nodeEnvironment: 'production', attested: true, identityFlag: 'false', apiToken: null })).toBeUndefined();
+    expect(await createFor({ nodeEnvironment: 'production', attested: true, environment: 'production', apiToken: null })).toBeUndefined();
+    expect(await createFor({ nodeEnvironment: 'production', identityFlag: 'true', apiToken: null })).toBeUndefined();
     expect(await createFor({ developmentRole: null })).toEqual({ authorization: 'Bearer configured-development-credential' });
     expect(await createFor({ developmentRole: 'Administrator' })).toEqual({ authorization: 'Bearer configured-development-credential' });
   });
@@ -150,6 +190,10 @@ describe('createStrapiClient', () => {
 
     vi.stubEnv('NODE_ENV', 'production');
     await expect(createStrapiClient()).resolves.toBeDefined();
+
+    // The attested production build enables the bridge, so the token is required there too.
+    attestRuntime();
+    await expect(createStrapiClient()).rejects.toThrow('CSRM API configuration is invalid.');
   });
 
   it('sends the generated applications path to the canonical Strapi REST endpoint', async () => {

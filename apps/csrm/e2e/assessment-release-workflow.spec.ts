@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { strapiHealthUrl, webOrigin } from './harness-urls';
+import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
+import { signInAs } from './helpers/navigation';
 
 const submittedRequestTitle = 'Customer portal security assessment';
 const deterministicRiskStatement = 'Internet exposure may increase the likelihood of unauthorised access to the service.';
@@ -45,23 +47,6 @@ async function expectRelationshipLinkAtBothViewports(
   await expect(page, `${label} opens its authorised route`).toHaveURL(new URL(href, webOrigin).href);
 }
 
-async function signIn(page: Page, role: 'Requestor' | 'Security Analyst'): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-
-  if (!response?.ok()) {
-    throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  }
-
-  await page.getByRole('button', { name: `Continue as ${role}` }).click();
-  await expect(page, `BASELINE_${role === 'Requestor' ? 'REQUESTOR' : 'ANALYST'}_SHELL_URL`).toHaveURL(/\/app$/);
-  await expect(page.getByRole('main'), 'BASELINE_SHELL_MAIN').toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dashboard' }), 'BASELINE_DASHBOARD').toBeVisible();
-  await expect(
-    page.getByRole('banner').getByText(role, { exact: true }),
-    `BASELINE_${role === 'Requestor' ? 'REQUESTOR' : 'ANALYST'}_ROLE`,
-  ).toBeVisible();
-}
-
 async function selectOwner(ownerPicker: Locator): Promise<void> {
   await ownerPicker.fill('Jane');
   await ownerPicker.page().getByRole('option', { name: 'Jane Doe' }).click();
@@ -104,16 +89,18 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
     throw new Error(`SERVER_STRAPI_HEALTH_FAILED:${health.status()}`);
   }
 
+  // Every document this journey loads runs under the production CSP, and none may raise a violation (D-19).
+  await attachCspCollector(page);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
-  await signIn(page, 'Security Analyst');
+  await signInAs(page, 'Security Analyst');
   await expectNoHorizontalOverflow(page, 'ASSESS-01 analyst mobile shell has no horizontal overflow');
 
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to main content' }), 'ASSESS-01 keyboard skip link').toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Open navigation' }), 'ASSESS-01 keyboard navigation trigger').toBeFocused();
+  await expect(page.getByRole('button', { name: 'Menu', exact: true }), 'ASSESS-01 keyboard navigation trigger').toBeFocused();
   await page.keyboard.press('Enter');
 
   const navigation = page.getByRole('dialog', { name: 'Navigation' });
@@ -157,18 +144,18 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
 
   await page.goto(submittedRequestHref!);
 
-  const startDraft = page.getByRole('button', { name: 'Start deterministic draft assistance' });
+  const startDraft = page.getByRole('button', { name: 'Generate assessment draft' });
   await expect(startDraft, 'ASSESS-02 analyst owns the explicit draft action').toBeEnabled();
   await startDraft.click();
-  await expect(page.getByText('Draft assistance is queued', { exact: true }).last(), 'ASSESS-02 queued draft state is observable').toBeVisible();
-  await expect(page.getByText('Draft assistance is ready for analyst review', { exact: true }).last(), 'ASSESS-02 completed draft state is observable').toBeVisible();
-  const lifecycle = page.getByRole('list', { name: 'Draft assistance lifecycle' });
+  await expect(page.getByText('Draft generation is queued', { exact: true }).last(), 'ASSESS-02 queued draft state is observable').toBeVisible();
+  await expect(page.getByText('Draft generation is ready for Security Analyst review', { exact: true }).last(), 'ASSESS-02 completed draft state is observable').toBeVisible();
+  const lifecycle = page.getByRole('list', { name: 'Draft generation lifecycle' });
   await expect(lifecycle, 'ASSESS-02 persisted lifecycle records queued, running, and completed states').toContainText('Queued');
   await expect(lifecycle).toContainText('Running');
   await expect(lifecycle).toContainText('Completed');
 
-  const assessmentLink = page.getByRole('link', { name: 'Open completed assessment' });
-  await expect(assessmentLink, 'ASSESS-02 deterministic draft opens for human review').toBeVisible();
+  const assessmentLink = page.getByRole('link', { name: 'Open assessment draft' });
+  await expect(assessmentLink, 'ASSESS-02 the generated draft opens for human review').toBeVisible();
   const assessmentHref = expectEncodedRecordPath(
     await assessmentLink.getAttribute('href'),
     '/app/review/assessments/',
@@ -249,13 +236,30 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
     viewport: { width: 375, height: 812 },
   });
   const prereleasePage = await prereleaseContext.newPage();
-  await signIn(prereleasePage, 'Requestor');
+  await attachCspCollector(prereleasePage);
+  await signInAs(prereleasePage, 'Requestor');
   await prereleasePage.goto(prereleaseAssessmentUrl);
-  await expect(prereleasePage.getByRole('heading', { name: 'This page could not be found.' }), 'ASSESS-05 prerelease assessment is secret').toBeVisible();
+  await expect(prereleasePage.getByRole('main').getByRole('heading', { level: 1, name: 'Page not found', exact: true }), 'ASSESS-05 prerelease assessment is secret').toBeVisible();
   await expect(prereleasePage.getByText(deterministicRiskStatement, { exact: true })).toHaveCount(0);
   await prereleasePage.goto(crossOwnerHref!);
   await expect(prereleasePage.getByText('You don’t have permission to review this request'), 'ASSESS-05 cross-owner assessment is denied').toBeVisible();
+  await expectNoCspViolations(prereleasePage, 'the Requestor before release');
   await prereleaseContext.close();
+
+  /*
+   * The submitted request is one-shot: this pass releases it, so a second pass in another project
+   * would find nothing left to release. Both widths are therefore proved at each stage inside this
+   * pass (D-41). Here, the completed editor before release.
+   */
+  const identifiedRisks = page.getByRole('region', { name: 'Identified Risks' });
+  for (const width of [375, 1440] as const) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await expect(page.getByRole('button', { name: 'Save assessment' }), `ASSESS-03 the assessment form is shown at ${width}px`).toBeVisible();
+    await expect(identifiedRisks.locator('form').first().getByRole('button', { name: 'Save risk' }), `ASSESS-03 the first Risk form is shown at ${width}px`).toBeVisible();
+    await expect(page.getByText(deterministicRiskStatement, { exact: true }), `ASSESS-03 the drafted Risk is shown at ${width}px`).toBeVisible();
+    await expect(page.getByText('All release requirements are met'), `ASSESS-03 release readiness is shown at ${width}px`).toBeVisible();
+    await expectNoHorizontalOverflow(page, `ASSESS-03 analyst assessment editor has no overflow at ${width}px`);
+  }
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expectNoHorizontalOverflow(page, 'ASSESS-03 analyst assessment editor has no desktop overflow');
@@ -267,11 +271,14 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await releaseDialog.getByRole('button', { name: 'Confirm release' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('Assessment released', { exact: true })).toBeVisible();
-  await expect(page.getByText('Approved', { exact: true }).first(), 'ASSESS-04 analyst performs the release').toBeVisible();
+  // The header badge states the assessment status. Its stored value stays approved; it reads Released.
+  const releasedStatus = page.locator('.page-header [data-slot="badge"]');
+  await expect(releasedStatus, 'ASSESS-04 analyst performs the release').toHaveText('Released');
+  await expect(releasedStatus, 'ASSESS-04 the released status is the tinted success badge').toHaveAttribute('data-tone', 'success');
   await expect(page.getByRole('button', { name: /save|add|edit|remove|release/i })).toHaveCount(0);
 
   await page.context().clearCookies();
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   const releasedRegion = page.getByRole('region', { name: 'Recently released assessments' });
   await expect(releasedRegion.getByText('Deterministic assessment assistance identified 3 reviewable risk proposals.'), 'ASSESS-05 Jane dashboard item is authoritative').toBeVisible();
   const releasedAssessment = releasedRegion.getByRole('link', { name: /ASM-\d{4}-/ });
@@ -295,6 +302,14 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await releasedAssessment.click();
 
   await expect(page.getByRole('heading', { name: 'Released risk assessment' })).toBeVisible();
+  // The released view at both widths, in the same pass (D-41): the record, its Risk and its mitigation controls.
+  for (const width of [375, 1440] as const) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await expect(page.getByRole('article', { name: /Released risk assessment ASM-/ }), `ASSESS-05 the released assessment is shown at ${width}px`).toBeVisible();
+    await expect(page.getByText(deterministicRiskStatement, { exact: true }), `ASSESS-05 the released Risk is shown at ${width}px`).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Mitigation control implementations' }).first(), `ASSESS-05 the mitigation controls are shown at ${width}px`).toBeVisible();
+    await expectNoHorizontalOverflow(page, `ASSESS-05 released assessment has no overflow at ${width}px`);
+  }
   await expect(page.getByRole('article', { name: /Released risk assessment ASM-/ })).toBeVisible();
   await expect(page.getByText(deterministicRiskStatement, { exact: true }), 'ASSESS-05 Jane sees the released risk').toBeVisible();
   await expect(page.getByRole('region', { name: 'Mitigation control implementations' }).first().getByText(reusableControlValue!, { exact: true }), 'ASSESS-05 Jane sees the persisted reusable Control reference').toBeVisible();
@@ -305,4 +320,5 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(releasedMain.getByRole('button', { name: /save|add|edit|remove|release/i }), 'ASSESS-05 Requestor has no mutation controls').toHaveCount(0);
   await expectNoHorizontalOverflow(page, 'ASSESS-05 released assessment has no desktop overflow');
   await expectNoSeriousAxeViolations(page);
+  await expectNoCspViolations(page, 'the release journey');
 });

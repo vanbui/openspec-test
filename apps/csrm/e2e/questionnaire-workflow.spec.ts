@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
+import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
+import { signInAs } from './helpers/navigation';
 
 const seededQuestionnaireTitle = 'Customer portal questionnaire draft';
 const serviceNameQuestion = 'What is the name of the service being assessed?';
@@ -138,23 +140,6 @@ async function expectQuestionnaireReturnToDraftConfirmation(
   await expect(dialog).toHaveCount(0);
 }
 
-async function signIn(page: Page, role: 'Requestor' | 'Security Analyst'): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-
-  if (!response?.ok()) {
-    throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  }
-
-  await page.getByRole('button', { name: `Continue as ${role}` }).click();
-  await expect(page, `BASELINE_${role === 'Requestor' ? 'REQUESTOR' : 'ANALYST'}_SHELL_URL`).toHaveURL(/\/app$/);
-  await expect(page.getByRole('main'), 'BASELINE_SHELL_MAIN').toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dashboard' }), 'BASELINE_DASHBOARD').toBeVisible();
-  await expect(
-    page.getByRole('banner').getByText(role, { exact: true }),
-    `BASELINE_${role === 'Requestor' ? 'REQUESTOR' : 'ANALYST'}_ROLE`,
-  ).toBeVisible();
-}
-
 test('Requestor completes a questionnaire and Security Analyst reviews the submitted answers', async ({ page, request }) => {
   test.setTimeout(90_000);
 
@@ -163,16 +148,18 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
     throw new Error(`SERVER_STRAPI_HEALTH_FAILED:${health.status()}`);
   }
 
+  // Every document this journey loads runs under the production CSP, and none may raise a violation (D-19).
+  await attachCspCollector(page);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   await expectNoHorizontalOverflow(page, 'BASELINE_MOBILE_PAGE_OVERFLOW');
 
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to main content' }), 'BASELINE_KEYBOARD_SKIP_LINK').toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Open navigation' }), 'BASELINE_KEYBOARD_NAVIGATION').toBeFocused();
+  await expect(page.getByRole('button', { name: 'Menu', exact: true }), 'BASELINE_KEYBOARD_NAVIGATION').toBeFocused();
   await page.keyboard.press('Enter');
 
   const navigation = page.getByRole('dialog', { name: 'Navigation' });
@@ -226,6 +213,17 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await dependentGroup.getByRole('checkbox', { name: dependentAnswer }).check();
   await page.getByRole('group', { name: hostingQuestion }).getByRole('radio', { name: 'Cloud service' }).check();
   await page.getByLabel(goLiveQuestion).fill('2026-10-15');
+  /*
+   * The seeded questionnaire is one-shot: this pass submits it, so a second pass in another project
+   * would find it already answered. Both widths are therefore proved at each stage inside this pass
+   * (D-41). Here, the filled form at 1440 before it is saved at 375.
+   */
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole('textbox', { name: serviceNameQuestion }), 'QUESTIONNAIRE_FORM_DESKTOP_ANSWER').toHaveValue('Customer portal');
+  await expect(dependentGroup, 'QUESTIONNAIRE_FORM_DESKTOP_DEPENDENT_GROUP').toBeVisible();
+  await expect(dependentGroup.getByRole('checkbox', { name: dependentAnswer })).toBeChecked();
+  await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_FORM_DESKTOP_PAGE_OVERFLOW');
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(page.getByText('Draft saved.')).toBeVisible();
 
@@ -273,7 +271,7 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_DESKTOP_PAGE_OVERFLOW');
 
   await page.context().clearCookies();
-  await signIn(page, 'Security Analyst');
+  await signInAs(page, 'Security Analyst');
   await page.getByRole('link', { name: 'Questionnaires', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Questionnaire Review' })).toBeVisible();
   await page.getByRole('link', { name: seededQuestionnaireTitle }).click();
@@ -287,6 +285,13 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expect(page.getByLabel(controllerQuestion)).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 'ANALYST_REVIEW_DESKTOP_PAGE_OVERFLOW');
   await expectNoSeriousAxeViolations(page);
+
+  // The analyst review at 375 in the same pass (D-41): the submitted answer and the Submitted status.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.getByText(dependentAnswer), 'QUES-05 ANALYST_REVIEW_MOBILE_ANSWER').toBeVisible();
+  await expect(page.locator('.page-header [data-slot="badge"]'), 'ANALYST_REVIEW_MOBILE_SUBMITTED_BADGE').toHaveText('Submitted');
+  await expectNoHorizontalOverflow(page, 'ANALYST_REVIEW_MOBILE_PAGE_OVERFLOW');
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await dismissToasts(page);
   await expectQuestionnaireReturnToDraftConfirmation(page, 'desktop', page.getByText(dependentAnswer, { exact: true }));
@@ -305,7 +310,7 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expect(page.getByRole('button', { name: 'Return to draft' }), 'QUESTIONNAIRE_AWAITING_SUBMISSION_REVERSAL_OMITTED').toHaveCount(0);
 
   await page.context().clearCookies();
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   await page.getByRole('link', { name: 'My Questionnaires' }).click();
   await page.getByRole('link', { name: seededQuestionnaireTitle }).click();
   await expect(page.getByText(dependentAnswer), 'QUES-06 reverted answer value remains available to the owner').toBeVisible();
@@ -322,4 +327,5 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expect(page).toHaveURL(/\/sign-in\?returnTo=/);
   await expect(page.getByText(seededQuestionnaireTitle)).toHaveCount(0);
   await expect(page.getByText(dependentAnswer)).toHaveCount(0);
+  await expectNoCspViolations(page, 'the questionnaire journey');
 });

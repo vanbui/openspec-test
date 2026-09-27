@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/csrm/page-header';
 import { DataTable, type DataTableColumn, type DataTableFilter } from '@/components/csrm/data-table';
 import { RecordLink } from '@/components/csrm/record-link';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
+import { StatusBadge, statusLabel } from '@/components/csrm/status-badge';
 import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/states/states';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -82,14 +83,15 @@ export function ReleasedAssessmentList({ assessments, pagination, query = { q: '
   const resetPage = (changes: Partial<AssessmentCollectionQuery>) => navigate({ ...query, ...changes, page: 1 });
   const filters = useMemo<DataTableFilter[]>(() => [
     ...(query.q ? [{ id: 'q', label: 'Search', value: query.q }] : []),
-    ...(query.status ? [{ id: 'status', label: 'Status', value: query.status }] : []),
+    // The chip reads the shared mapping, as the option does: the stored approved reads Released.
+    ...(query.status ? [{ id: 'status', label: 'Status', value: statusLabel('assessment', query.status) }] : []),
   ], [query.q, query.status]);
   const resolvedState = state ?? (assessments.length ? 'populated' : 'empty');
   const search = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const value = new FormData(event.currentTarget).get('q'); resetPage({ q: typeof value === 'string' ? value.trim() : '' }); };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><form className="flex flex-1 gap-2" role="search" onSubmit={search}><label className="flex-1 text-sm font-medium text-foreground">Search risk assessments<Input aria-label="Search risk assessments" defaultValue={query.q} key={query.q} name="q" type="search" /></label><Button className="self-end" type="submit">Search</Button></form><label className="text-sm font-medium text-foreground">Status<select aria-label="Filter by status" className="block h-9 min-w-48 rounded-md border border-input bg-surface px-3 text-sm text-foreground" value={query.status ?? ''} onChange={(event) => resetPage({ status: event.target.value as AssessmentCollectionQuery['status'] || undefined })}><option value="">All statuses</option><option value="approved">Approved</option></select></label></div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end" data-print="hidden"><form className="flex flex-1 gap-2" role="search" onSubmit={search}><label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">Search risk assessments<Input aria-label="Search risk assessments" defaultValue={query.q} key={query.q} name="q" type="search" /></label><Button className="self-end" type="submit">Search</Button></form><label className="grid gap-1.5 text-sm font-medium text-foreground">Status<select aria-label="Filter by status" className="block h-9 min-w-48 rounded-md border border-input bg-surface px-3 text-sm text-foreground" value={query.status ?? ''} onChange={(event) => resetPage({ status: event.target.value as AssessmentCollectionQuery['status'] || undefined })}><option value="">All statuses</option><option value="approved">{statusLabel('assessment', 'approved')}</option></select></label></div>
       <DataTable ariaLabel="My released risk assessments" columns={releasedAssessmentColumns} data={[...assessments]} densityUserId="released-assessments" filters={filters} getRowId={(assessment) => assessment.documentId} loadingLabel="Loading released risk assessments" onClearFilter={(id) => resetPage(id === 'q' ? { q: '' } : { status: undefined })} onClearFilters={() => resetPage({ q: '', status: undefined })} onPageChange={(page) => navigate({ ...query, page })} onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as AssessmentCollectionQuery['pageSize'] })} onSortingChange={(sorting) => resetPage({ sort: sortFor(sorting) })} page={resolvedPagination.page} pageSize={resolvedPagination.pageSize} renderMobileCard={(assessment) => <article className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-3"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={releasedAssessmentHref(assessment.documentId)}>{assessment.assessmentNumber}</RecordLink>{assessment.overallRating ? <RiskRatingBadge rating={assessment.overallRating} /> : <Badge variant="outline">Rating not recorded</Badge>}</div><p className="text-sm text-foreground">{displayText(assessment.summary)}</p><p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" />Released {formatDate(assessment.approvalDate)}</p></article>} sorting={sortingFor(query.sort)} state={resolvedState} stateSlots={{ empty: <EmptyState description="Assessments appear here after an authorised Security Analyst releases them." filtered={Boolean(query.q || query.status)} noun="released risk assessments" onClearFilters={() => resetPage({ q: '', status: undefined })} />, error: <ErrorState noun="released risk assessments" retry={() => router.refresh()} />, permission: <PermissionDeniedState area="released risk assessments" /> }} totalCount={resolvedPagination.total} />
     </div>
   );
@@ -183,7 +185,7 @@ export function ReleasedAssessmentDetailView({
   return (
     <article aria-label={`Released risk assessment ${assessment.assessmentNumber}`} className="space-y-8">
       <PageHeader
-        action={<Badge className="border-success-border bg-success-subtle text-success" variant="outline"><CheckCircle2 aria-hidden="true" />Released</Badge>}
+        status={<StatusBadge family="assessment" value={assessment.assessmentStatus} />}
         description={assessment.assessmentNumber}
         title="Released risk assessment"
       />
@@ -193,7 +195,7 @@ export function ReleasedAssessmentDetailView({
         <h2 className="text-heading-md text-foreground" id="assessment-overview">Assessment overview</h2>
         <Card><CardContent className="pt-6"><dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-1 sm:col-span-2 lg:col-span-3"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Summary</dt><dd className="whitespace-pre-wrap text-sm text-foreground">{displayText(assessment.summary)}</dd></div>
-          <Definition label="Assessment status" value="Released" />
+          <Definition label="Assessment status" value={statusLabel('assessment', assessment.assessmentStatus)} />
           <Definition label="Overall rating" value={assessment.overallRating ? <RiskRatingBadge rating={assessment.overallRating} /> : 'Not recorded'} />
           <Definition label="Overall control effectiveness" value={assessment.overallControlEffectiveness ?? 'Not recorded'} />
           <Definition label="Assessment date" value={formatDate(assessment.assessmentDate)} />

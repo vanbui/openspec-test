@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CSRM Runtime Architecture",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Browser",
+      "sublabel": "Requestor / Analyst",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        130,
+        64
+      ]
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "Next.js Web",
+      "sublabel": "App Router, RSC",
+      "pos": [
+        250,
+        300
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "tag": "apps/web"
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Authz Policy",
+      "sublabel": "Role, Function, API",
+      "pos": [
+        460,
+        300
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "tag": "csrm-authorization"
+    },
+    {
+      "id": "services",
+      "type": "backend",
+      "label": "Workflow Services",
+      "sublabel": "Strapi domain APIs",
+      "pos": [
+        670,
+        300
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "tag": "apps/strapi"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Database",
+      "sublabel": "Postgres / MySQL / SQLite",
+      "pos": [
+        880,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "idp",
+      "type": "security",
+      "label": "Keycloak",
+      "sublabel": "OIDC, planned",
+      "pos": [
+        250,
+        120
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "tag": "not wired"
+    },
+    {
+      "id": "ai",
+      "type": "external",
+      "label": "AI Provider",
+      "sublabel": "OpenAI-compatible",
+      "pos": [
+        670,
+        470
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "tag": "advisory only"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "CSRM server side",
+      "wraps": [
+        "web",
+        "policy",
+        "services",
+        "db"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Strapi API boundary",
+      "wraps": [
+        "policy",
+        "services",
+        "db"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-web",
+      "from": "browser",
+      "to": "web",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "web-policy",
+      "from": "web",
+      "to": "policy",
+      "label": "REST + token",
+      "variant": "emphasis"
+    },
+    {
+      "id": "policy-services",
+      "from": "policy",
+      "to": "services",
+      "variant": "emphasis"
+    },
+    {
+      "id": "services-db",
+      "from": "services",
+      "to": "db",
+      "label": "SQL",
+      "variant": "emphasis"
+    },
+    {
+      "id": "idp-web",
+      "from": "idp",
+      "to": "web",
+      "label": "OIDC sign-in",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 50
+    },
+    {
+      "id": "services-ai",
+      "from": "services",
+      "to": "ai",
+      "label": "draft prompts",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 66
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Primary path",
+      "items": [
+        "Server Components call Strapi only through the typed API layer",
+        "API token and caller identity stay server-side, never in the browser",
+        "Strapi is the single production API boundary: no frontend facade"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Trust boundaries",
+      "items": [
+        "Policy enforces Role, Function, FunctionAPI plus record ownership",
+        "Release and questionnaire governance: human Security Analyst only",
+        "Navigation visibility is never authorisation"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "External dependencies",
+      "items": [
+        "Keycloak hook is commented out; dev identity header is used today",
+        "AI questionnaire and assessment drafts run in-process in Strapi",
+        "CSRM_AI_PROVIDER defaults to a deterministic offline provider"
+      ]
+    }
+  ]
+}

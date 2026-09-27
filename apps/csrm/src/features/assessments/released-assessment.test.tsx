@@ -93,6 +93,22 @@ describe('owner-released assessment inventory', () => {
     expect(container.querySelector('tr[tabindex], article[tabindex]')).toBeNull();
   });
 
+  it('labels the released status filter from the shared mapping while its value stays approved', () => {
+    render(<ReleasedAssessmentList assessments={[releasedSummary]} />);
+
+    const options = [...screen.getByRole('combobox', { name: 'Filter by status' }).querySelectorAll('option')];
+    expect(options.map((option) => [option.value, option.textContent])).toEqual([['', 'All statuses'], ['approved', 'Released']]);
+  });
+
+  it('labels the status filter chip from the shared mapping, never with the stored value', () => {
+    render(<ReleasedAssessmentList assessments={[releasedSummary]} query={{ q: '', status: 'approved', sort: 'generatedDate:desc', page: 1, pageSize: 25 }} />);
+
+    // The chip agrees with the option beside it: the stored approved reads Released (CONTEXT.md).
+    const chip = screen.getByRole('button', { name: 'Remove Status filter' }).parentElement;
+    expect(chip).toHaveTextContent('Status: Released');
+    expect(chip).not.toHaveTextContent(/approved/i);
+  });
+
   it('renders deliberate loading, empty, error, and permission states', () => {
     const { rerender } = render(<ReleasedAssessmentListSkeleton />);
     expect(screen.getByRole('status', { name: 'Loading released risk assessments' })).toBeInTheDocument();
@@ -175,6 +191,18 @@ describe('immutable released assessment detail', () => {
     expect(within(view).getByText('31 January 2027')).toBeInTheDocument();
     expect(within(view).getByRole('link', { name: 'RAR-2026-0042: Customer portal security assessment' })).toHaveAttribute('href', '/app/requests/request-42');
     expect(within(view).getByRole('heading', { name: 'Current lifecycle state: Released' })).toBeInTheDocument();
+  });
+
+  it('shows the header status as the shared Released assessment badge', () => {
+    const { container } = render(
+      <ReleasedAssessmentDetailView assessment={releasedDetail} controlsByRisk={{}} risks={[risk]} state="populated" />,
+    );
+
+    const badge = container.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
+    expect(badge).toHaveTextContent(/^Released$/);
+    expect(badge).toHaveAttribute('data-tone', 'success');
+    expect(badge).toHaveAttribute('data-variant', 'success');
+    expect(badge?.querySelectorAll('svg')).toHaveLength(1);
   });
 
   it('contains no editor, mutation, release, or disabled-control affordance', () => {

@@ -55,6 +55,17 @@ describe('RequestHub', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
+  it('labels the assessment tile status from the shared mapping, so a released assessment reads Released', () => {
+    const view = render(<RequestHub hrefs={hrefs} lifecycle={lifecycle} request={request()} />);
+    expect(screen.getByText('Status: In review.')).toBeInTheDocument();
+
+    const released = request();
+    const relationships = released.relationships!;
+    view.rerender(<RequestHub hrefs={hrefs} lifecycle={lifecycle} request={{ ...released, relationships: { ...relationships, assessment: { ...relationships.assessment, assessmentStatus: 'approved' } as typeof relationships.assessment } }} />);
+    expect(screen.getByText('Status: Released.')).toBeInTheDocument();
+    expect(screen.queryByText(/Approved/)).not.toBeInTheDocument();
+  });
+
   it('states absent records and entirely omits unavailable records', () => {
     const absent = request({ relationships: { questionnaire: { availability: 'absent' }, assessment: { availability: 'absent' } }, informationSystems: [], informationAssets: [] });
     const view = render(<RequestHub hrefs={{}} lifecycle={lifecycle} request={absent} />);

@@ -1,11 +1,11 @@
 import 'server-only';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { DevelopmentCapabilityAdapter } from '@/lib/capabilities/development-capabilities';
+import { resolveSessionRuntimeMode } from './development-runtime';
 import {
   parseDevelopmentRole,
-  parseSessionRuntimeMode,
   type DevelopmentRole,
   type Session,
   type SessionAdapter,
@@ -36,7 +36,21 @@ export function developmentFixtureIdentityForRole(
 }
 
 function isDevelopmentRuntime(): boolean {
-  return parseSessionRuntimeMode(process.env.NODE_ENV) === 'development';
+  return resolveSessionRuntimeMode(process.env) === 'development';
+}
+
+function signInPath(returnTo: string): string {
+  return `/sign-in?returnTo=${encodeURIComponent(validatedReturnTo(returnTo))}`;
+}
+
+/**
+ * The cookie is marked Secure exactly when the request arrived over TLS, which a
+ * proxy reports in the first `x-forwarded-proto` value. A plain HTTP origin (the
+ * E2E harness on 127.0.0.1) gets a cookie the browser will still send.
+ */
+async function requestUsesHttps(): Promise<boolean> {
+  const forwardedProtocol = (await headers()).get('x-forwarded-proto');
+  return forwardedProtocol?.split(',')[0]?.trim() === 'https';
 }
 
 function assertDevelopmentRuntime(): void {
@@ -62,9 +76,11 @@ export class DevelopmentSessionAdapter implements SessionAdapter {
   async setDevelopmentRole(role: DevelopmentRole): Promise<void> {
     assertDevelopmentRuntime();
 
+    const secure = await requestUsesHttps();
+
     (await cookies()).set(cookieName, role, {
       httpOnly: true,
-      secure: false,
+      secure,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 8,
@@ -77,13 +93,18 @@ export class DevelopmentSessionAdapter implements SessionAdapter {
 
   async signIn(returnTo: string): Promise<never> {
     assertDevelopmentRuntime();
-    redirect(`/sign-in?returnTo=${encodeURIComponent(validatedReturnTo(returnTo))}`);
+    redirect(signInPath(returnTo));
   }
 }
 
+/**
+ * The fail-closed branch: no session exists, a visitor to an application route is
+ * sent to the sign-in page (which renders the unavailable card), and nothing can
+ * mint a session or grant a capability.
+ */
 class UnavailableSessionAdapter implements SessionAdapter {
   async current(): Promise<null> {
-    throw new Error(unavailableSessionMessage);
+    return null;
   }
 
   async setDevelopmentRole(_role: DevelopmentRole): Promise<void> {
@@ -94,8 +115,8 @@ class UnavailableSessionAdapter implements SessionAdapter {
     throw new Error(unavailableSessionMessage);
   }
 
-  async signIn(_returnTo: string): Promise<never> {
-    throw new Error(unavailableSessionMessage);
+  async signIn(returnTo: string): Promise<never> {
+    redirect(signInPath(returnTo));
   }
 }
 
@@ -103,7 +124,5 @@ const developmentSession = new DevelopmentSessionAdapter();
 const unavailableSession = new UnavailableSessionAdapter();
 
 export function getSessionAdapter(): SessionAdapter {
-  return parseSessionRuntimeMode(process.env.NODE_ENV) === 'development'
-    ? developmentSession
-    : unavailableSession;
+  return isDevelopmentRuntime() ? developmentSession : unavailableSession;
 }

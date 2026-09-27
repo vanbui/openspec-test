@@ -12,6 +12,7 @@ import {
 } from "../src/api/csrm-questionnaire/services/questionnaire-governance-log";
 import {
   buildQuestionnaireCollectionQuery,
+  governanceActorIds,
   projectGovernanceEvents,
   questionnaireState,
   projectQuestionnaire,
@@ -174,8 +175,9 @@ test("projectGovernanceEvents preserves analyst detail and narrows requestor his
   const requestor = projectGovernanceEvents(source, "requestor");
   assert.deepEqual(analyst.map((entry) => entry.kind), ["released", "returned-to-review", "answer-cleared"]);
   assert.deepEqual(requestor.map((entry) => entry.kind), ["released", "returned-to-review", "answer-cleared"]);
-  // The log stores only the acting documentId, so the display name is genuinely
-  // unknown; reporting the identifier as one would read as a person's name.
+  // The log stores only the acting documentId, so without the caller's lookup the
+  // display name is unknown; reporting the identifier as one would read as a
+  // person's name.
   assert.deepEqual(analyst[1]?.by, { documentId: ACTOR, displayName: null }, "TIMELINE_ACTOR_NAME_WAS_FABRICATED");
   assert.equal(analyst[1]?.reason, "Clarify ownership.");
   assert.equal(analyst[2]?.questionKey, "service-name");
@@ -186,6 +188,50 @@ test("projectGovernanceEvents preserves analyst detail and narrows requestor his
   assert.deepEqual(projectGovernanceEvents(questionnaire({ governanceLog: [{ kind: "released" }] }), "analyst"), []);
   assert.equal(projectGovernanceEvents(questionnaire({ governanceLog: Array.from({ length: 1001 }, () => event()) }), "analyst").length, 0);
   assert.deepEqual(projectGovernanceEvents(questionnaire({ governanceLog: [event(), event({ kind: "future-event" })] }), "analyst").map((entry) => entry.kind), ["released"]);
+});
+
+/*
+ * D-31 (Phase 8): the projection stays pure. It names an analyst actor only
+ * through the resolver its caller built from one lookup, keeps a null name for
+ * an id the resolver cannot name, and never consults it for a Requestor.
+ */
+test("projectGovernanceEvents names analyst actors only through the caller's resolver", () => {
+  const source = questionnaire({ governanceLog: [
+    event({ kind: "released", at: "2026-09-01T00:00:00.000Z" }),
+    event({ kind: "returned-to-review", at: "2026-09-02T00:00:00.000Z", by: "retired-analyst", reason: "Clarify ownership." }),
+    event({ kind: "released", at: "2026-09-03T00:00:00.000Z" }),
+  ] });
+  const consulted: string[] = [];
+  const resolve = (documentId: string) => {
+    consulted.push(documentId);
+    return documentId === ACTOR ? "Morgan Analyst" : null;
+  };
+
+  assert.deepEqual(projectGovernanceEvents(source, "analyst", resolve).map((entry) => entry.by), [
+    { documentId: ACTOR, displayName: "Morgan Analyst" },
+    { documentId: "retired-analyst", displayName: null },
+    { documentId: ACTOR, displayName: "Morgan Analyst" },
+  ], "TIMELINE_ACTOR_NOT_NAMED_THROUGH_THE_RESOLVER");
+  assert.deepEqual(consulted, [ACTOR, "retired-analyst", ACTOR]);
+
+  consulted.length = 0;
+  const requestor = projectGovernanceEvents(source, "requestor", resolve);
+  assert.equal(requestor.length, 3);
+  assert.ok(requestor.every((entry) => !("by" in entry)), "REQUESTOR_RECEIVED_THE_ACTOR");
+  assert.deepEqual(consulted, [], "REQUESTOR_PROJECTION_CONSULTED_THE_RESOLVER");
+
+  // Without a resolver every analyst actor keeps the neutral null name.
+  assert.deepEqual(projectGovernanceEvents(source, "analyst").map((entry) => entry.by), [
+    { documentId: ACTOR, displayName: null },
+    { documentId: "retired-analyst", displayName: null },
+    { documentId: ACTOR, displayName: null },
+  ]);
+
+  // The ids to look up are exactly the distinct actors of the events the projection emits.
+  assert.deepEqual(governanceActorIds(source), [ACTOR, "retired-analyst"]);
+  assert.deepEqual(governanceActorIds(questionnaire({ governanceLog: [event(), event({ kind: "future-event", by: "future-actor" })] })), [ACTOR]);
+  assert.deepEqual(governanceActorIds(questionnaire({ governanceLog: [{ kind: "released" }] })), []);
+  assert.deepEqual(governanceActorIds(questionnaire()), []);
 });
 
 test("projectQuestionnaire emits a null release for a never-released record and a narrow identity for a released one", () => {

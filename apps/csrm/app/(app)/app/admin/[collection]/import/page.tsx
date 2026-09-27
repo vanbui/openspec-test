@@ -21,6 +21,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function AdministrationImportPage({ params }: Props) {
+  const collection = (await params).collection;
+  // Read before the capability check, so a denial still names the collection it refused.
+  const knownKind = administrationKinds.includes(collection as AdministrationKind) ? collection as AdministrationKind : undefined;
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session
@@ -28,14 +31,13 @@ export default async function AdministrationImportPage({ params }: Props) {
     : new Set<Capability>();
 
   if (!can('administration:manage', granted)) {
-    return <AdministrationAccessDenied />;
+    return <AdministrationAccessDenied kind={knownKind} />;
   }
 
-  const collection = (await params).collection;
-  if (!administrationKinds.includes(collection as AdministrationKind)) {
+  if (!knownKind) {
     notFound();
   }
-  const kind = collection as AdministrationKind;
+  const kind = knownKind;
 
   return (<><AdministrationBreadcrumbs kind={kind} current="Import" /><CsvImportFlow
       kind={kind}

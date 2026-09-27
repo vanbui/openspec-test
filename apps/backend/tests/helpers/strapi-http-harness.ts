@@ -25,13 +25,66 @@ export type HarnessRequest = {
 type InjectableAssessmentDraftProvider = {
   generate: (...args: unknown[]) => Promise<unknown>;
 };
+type InjectableQuestionnaireGenerationProvider = {
+  generate: (...args: unknown[]) => Promise<unknown>;
+};
+/** The CSRM content types a test may build fixtures of directly. */
+export type CsrmFixtureUid =
+  | "api::csrm-assessment-request.csrm-assessment-request"
+  | "api::csrm-questionnaire.csrm-questionnaire"
+  | "api::csrm-question.csrm-question"
+  | "api::csrm-assessment.csrm-assessment"
+  | "api::csrm-risk.csrm-risk"
+  | "api::csrm-control-implementation.csrm-control-implementation"
+  | "api::csrm-control.csrm-control"
+  | "api::csrm-information-system.csrm-information-system";
+export type QuestionnaireLifecycleAnswerState = "none" | "draft" | "submitted";
+export type ReviewQueueBucketFixture = "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "released";
 type StrapiDocumentService = {
   create: (input: { data: Record<string, unknown> }) => Promise<Document>;
   findMany: (input: Record<string, unknown>) => Promise<Document[]>;
   findOne?: (input: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
   update?: (input: { documentId: string; data: Record<string, unknown> }) => Promise<Document>;
 };
+/** A route as a router module declares it, after Strapi has registered it. */
+type RegisteredRoute = {
+  method: string;
+  path: string;
+  handler: unknown;
+  config?: Record<string, unknown>;
+};
+type RegisteredRouter = { type?: string; prefix?: string; routes: RegisteredRoute[] };
+/** One route an application router mounts on the content API, at its mounted path. */
+export type MountedApplicationRoute = {
+  apiName: string;
+  routerName: string;
+  method: string;
+  path: string;
+  handler: string;
+  config: Record<string, unknown>;
+};
+/** One route a plugin mounts on the content API, at its mounted path. */
+export type MountedPluginRoute = {
+  plugin: string;
+  routerName: string;
+  method: string;
+  path: string;
+  handler: string;
+  config: Record<string, unknown>;
+};
+export type MountedContentApiRoutes = {
+  applicationRoutes: MountedApplicationRoute[];
+  pluginRoutes: MountedPluginRoute[];
+  /** The content API router's koa layers, in registration order; a route layer names its methods. */
+  koaLayers: Array<{ path: string; methods: string[] }>;
+};
 type RunningStrapi = {
+  apis: Record<string, { routes: Record<string, RegisteredRouter> }>;
+  plugins: Record<string, { routes: RegisteredRoute[] | Record<string, RegisteredRouter> }>;
+  store: (params: { type: string; name: string }) => {
+    get: (params: { key: string }) => Promise<unknown>;
+    set: (params: { key: string; value: unknown }) => Promise<unknown>;
+  };
   db: { query: (uid: string) => {
     createMany: (input: { data: Array<Record<string, unknown>> }) => Promise<unknown>;
     findMany: (input: Record<string, unknown>) => Promise<Array<Record<string, unknown>>>;
@@ -46,11 +99,71 @@ type RunningStrapi = {
     delete: (input: { where: Record<string, unknown> }) => Promise<unknown>;
   };
   server: {
+    api: (name: "content-api" | "admin") => { listRoutes: () => Array<{ path: string; methods: string[] }> };
     app: { middleware: Array<(ctx: { get: (name: string) => string; state: Record<string, unknown> }, next: () => Promise<unknown>) => Promise<unknown>> };
     httpServer: { address: () => { port: number } | string | null };
     listen: (port: number, host: string) => Promise<void>;
   };
 };
+
+const CONTENT_API_PREFIX = "/api";
+
+/**
+ * The path a route is mounted at. Strapi registers a route that carries its own
+ * `config.prefix` straight on the content API router, where only the `/api`
+ * prefix applies; every other route joins a sub-router carrying the router's
+ * prefix (a plugin's defaults to its name) that is then mounted under `/api`.
+ * The koa router collapses a route path of `/` onto its prefix.
+ */
+function mountedRoutePath(route: RegisteredRoute, routerPrefix: string | undefined): string {
+  const prefix = route.config !== undefined && "prefix" in route.config ? "" : (routerPrefix ?? "");
+  const routePath = route.path === "/" ? "" : route.path;
+  return `${CONTENT_API_PREFIX}${prefix}${routePath}`;
+}
+
+function qualifiedHandler(namespace: string, handler: unknown): string {
+  if (typeof handler !== "string") return `${namespace}.<function>`;
+  return handler.startsWith(namespace) ? handler : `${namespace}.${handler}`;
+}
+
+function listMountedContentApiRoutes(strapi: RunningStrapi): MountedContentApiRoutes {
+  const applicationRoutes: MountedApplicationRoute[] = [];
+  for (const [apiName, api] of Object.entries(strapi.apis)) {
+    for (const [routerName, router] of Object.entries(api.routes)) {
+      if (router.type !== "content-api") continue;
+      for (const route of router.routes) {
+        applicationRoutes.push({
+          apiName,
+          routerName,
+          method: route.method.toUpperCase(),
+          path: mountedRoutePath(route, router.prefix),
+          handler: qualifiedHandler(`api::${apiName}`, route.handler),
+          config: route.config ?? {},
+        });
+      }
+    }
+  }
+  const pluginRoutes: MountedPluginRoute[] = [];
+  for (const [plugin, definition] of Object.entries(strapi.plugins)) {
+    // A plugin declaring a plain route array registers it on the admin API.
+    if (Array.isArray(definition.routes)) continue;
+    for (const [routerName, router] of Object.entries(definition.routes)) {
+      if (router.type !== "content-api") continue;
+      for (const route of router.routes) {
+        pluginRoutes.push({
+          plugin,
+          routerName,
+          method: route.method.toUpperCase(),
+          path: mountedRoutePath(route, router.prefix ?? `/${plugin}`),
+          handler: qualifiedHandler(`plugin::${plugin}`, route.handler),
+          config: route.config ?? {},
+        });
+      }
+    }
+  }
+  const koaLayers = strapi.server.api("content-api").listRoutes().map((layer) => ({ path: layer.path, methods: [...layer.methods] }));
+  return { applicationRoutes, pluginRoutes, koaLayers };
+}
 
 // This helper is emitted to `.tmp/tests-dist/tests/helpers`, so four parents
 // return to the Strapi application root in both local and CI runs.
@@ -88,6 +201,26 @@ function testIdentityMiddleware() {
   };
 }
 
+/** The sentinel header that makes the test-only internal-error middleware throw. */
+export const INTERNAL_ERROR_HEADER = "x-csrm-test-internal-error";
+
+/*
+ * Phase 8 D-38: a test-only middleware that throws a plain Error for a request
+ * carrying the sentinel header and is inert otherwise. It is pushed onto the
+ * Koa stack before `listen`, so it sits after every configured middleware
+ * (`strapi::errors` and `strapi::security` included) and before the router that
+ * `listen` mounts: the error is formatted by Strapi's own error middleware, not
+ * by Koa's default handler. Nothing of this exists in apps/strapi/src.
+ */
+function internalErrorMiddleware() {
+  return async (ctx: { get: (name: string) => string; state: Record<string, unknown> }, next: () => Promise<unknown>) => {
+    if (ctx.get(INTERNAL_ERROR_HEADER) === "1") {
+      throw new Error("injected internal failure with an internal detail no client may read");
+    }
+    await next();
+  };
+}
+
 async function createDocument(
   strapi: RunningStrapi,
   uid: string,
@@ -114,7 +247,7 @@ export type AuthorizationHttpHarness = {
   baseUrl: string;
   identities: { owner: string; otherRequestor: string; analyst: string; analystAgent: string; serviceAnalystAgent: string; inactiveAnalyst: string };
   developmentEmails: { jane: string; bob: string; inactive: string; unknown: string };
-  users: { owner: string; otherRequestor: string; analyst: string };
+  users: { owner: string; otherRequestor: string; analyst: string; serviceAnalystAgent: string };
   requests: { owner: string; otherRequestor: string };
   seedRequestWorkflowFixtures: () => Promise<{
     requests: { editable: string; submitted: string; transition: string; illegalTransition: string };
@@ -196,7 +329,55 @@ export type AuthorizationHttpHarness = {
   countRisksForAssessment: (assessmentDocumentId: string) => Promise<number>;
   countControlImplementationsForRisk: (riskDocumentId: string) => Promise<number>;
   createUserFixture: (data: { email: string; username: string; displayName: string; accountStatus: "active" | "inactive" }) => Promise<string>;
+  /** Creates one document of a CSRM content type through the Document Service and returns its documentId. */
+  createFixtureDocument: (uid: CsrmFixtureUid, data: Record<string, unknown>) => Promise<string>;
+  createAssessmentRequestFixture: (data: {
+    requestNumber: string;
+    title: string;
+    requestStatus: string;
+    requestor: "owner" | "otherRequestor";
+    dueDate?: string | null;
+    submittedDate?: string | null;
+  }) => Promise<string>;
+  /**
+   * Links a questionnaire to the request, released by the analyst when asked,
+   * with one question carrying a draft or submitted answer unless the state is
+   * "none", in which case the questionnaire has no questions.
+   */
+  createQuestionnaireLifecycleFixture: (input: {
+    requestDocumentId: string;
+    released: boolean;
+    answerState: QuestionnaireLifecycleAnswerState;
+  }) => Promise<{ questionnaire: string; question: string | null }>;
+  /** The request with every relation the lifecycle rule reads, fully populated. */
+  getRequestLifecycleDocument: (documentId: string) => Promise<Record<string, unknown> | null>;
+  /**
+   * Inserts submitted requests with no relations straight through the query
+   * layer, in index order, each with a later submittedDate than the last. Returns
+   * their request numbers in that order.
+   */
+  seedReviewableRequestsDirectly: (count: number, prefix: string) => Promise<{ requestNumbers: readonly string[] }>;
+  /**
+   * Queues questionnaire generation for the request as the analyst and holds the
+   * deterministic provider until `action` settles, so the job stays active for
+   * exactly that long. The job is then released and followed to completion.
+   */
+  withHeldQuestionnaireGeneration: <T>(requestDocumentId: string, action: () => Promise<T>) => Promise<T>;
+  /** Counts a review queue through the running application's own shared bucket counter. */
+  countReviewQueueBucketFixture: (bucket: ReviewQueueBucketFixture, activeIds: readonly string[]) => Promise<number>;
+  createAssessmentFixture: (data: {
+    assessmentNumber: string;
+    assessmentStatus: string;
+    assessmentRequest: string;
+    summary?: string;
+  }) => Promise<string>;
   setRiskOwnerFixture: (riskDocumentId: string, ownerDocumentId: string) => Promise<void>;
+  /**
+   * Moves a request fixture to a workflow status directly. The request routes never set a status past
+   * submission (T-08-A2): the questionnaire, draft and release workflows do, so a fixture set up at a
+   * later step is written here, through the Document Service.
+   */
+  setRequestStatusFixture: (requestDocumentId: string, requestStatus: string) => Promise<void>;
   setUserAccountStatusFixture: (userDocumentId: string, accountStatus: "active" | "inactive") => Promise<void>;
   createRiskRegisterFixture: (assessmentDocumentId: string, data: Record<string, unknown>) => Promise<string>;
   createRiskRegisterMitigationFixture: (riskDocumentId: string, controlDocumentId: string, controlStatus: string) => Promise<string>;
@@ -204,12 +385,35 @@ export type AuthorizationHttpHarness = {
   countAdministrationRecords: (kind: AdministrationFixtureKind) => Promise<number>;
   seedRiskTypesDirectly: (count: number, prefix: string) => Promise<{ targetName: string }>;
   createCsvMultipart: (input: { filename: string; bytes: Uint8Array; digest?: string; confirmed?: boolean }) => FormData;
+  /**
+   * The content API as the running instance mounts it: every application
+   * router's routes, every plugin's content-api routes and the koa layers that
+   * prove each path and method is mounted once, all at their mounted paths.
+   */
+  listMountedContentApiRoutes: () => MountedContentApiRoutes;
+  /** The users-permissions `advanced` plugin store, as its bootstrap and this application's leave it. */
+  readUsersPermissionsAdvancedSettings: () => Promise<Record<string, unknown> | null>;
+  /** How many users-permissions accounts exist; CSRM never creates one, so a registration probe must leave it unchanged. */
+  countUsersPermissionsUsers: () => Promise<number>;
+  /** Reads every getter at once: the before and after halves of a persistence comparison around a denied mutation. */
+  snapshot: (getters: ReadonlyArray<() => Promise<unknown>>) => Promise<unknown[]>;
   close: () => Promise<void>;
 };
 
-export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttpHarness> {
+export type AuthorizationHttpHarnessOptions = {
+  /** Install the D-38 internal-error middleware, which throws for a request carrying INTERNAL_ERROR_HEADER. */
+  internalErrorMiddleware?: boolean;
+  /**
+   * The CSRM_CORS_ALLOWED_ORIGINS value this instance boots with (R-08-11). Every harness pins it, so a
+   * value in the developer's .env never reaches a test; left out, it is empty, the configured default.
+   */
+  corsAllowedOrigins?: string;
+};
+
+export async function startAuthorizationHttpHarness(options: AuthorizationHttpHarnessOptions = {}): Promise<AuthorizationHttpHarness> {
   const originalEnvironment = new Map(
-    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER"].map((name) => [name, process.env[name]] as const),
+    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_CORS_ALLOWED_ORIGINS"]
+      .map((name) => [name, process.env[name]] as const),
   );
   await mkdir(databaseDir, { recursive: true });
   const databaseFilename = path.join(databaseDir, `authorization-${process.pid}.sqlite`);
@@ -230,6 +434,7 @@ export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttp
   delete process.env.CSRM_DEV_API_TOKEN;
   process.env.csrmAppIsEnabled = "true";
   process.env.CSRM_AI_PROVIDER = "deterministic";
+  process.env.CSRM_CORS_ALLOWED_ORIGINS = options.corsAllowedOrigins ?? "";
   process.env.STRAPI_DISABLE_UPDATE_NOTIFICATION = "true";
 
   // The public package exports are intentionally loaded dynamically because its
@@ -270,6 +475,12 @@ export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttp
   // Insert only in the harness' Koa pipeline before the mounted router. This
   // never changes application source or runtime configuration.
   strapi.server.app.middleware.unshift(testIdentityMiddleware());
+  // Koa composes app.middleware when the server starts listening, and `listen`
+  // mounts the router last, so a push here lands after every configured
+  // middleware and before the routes.
+  if (options.internalErrorMiddleware) {
+    strapi.server.app.middleware.push(internalErrorMiddleware());
+  }
 
   const publicRole = await strapi.query("plugin::users-permissions.role").findOne({
     where: { type: "public" },
@@ -360,13 +571,19 @@ export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttp
   let concurrentQuestionnaireFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedConcurrentQuestionnaireFixtures"]>> | null = null;
   let assessmentWorkflowFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedAssessmentWorkflowFixtures"]>> | null = null;
   let administrationFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedAdministrationFixtures"]>> | null = null;
+  let lifecycleQuestionnaireSequence = 0;
   const jobObservations: AssessmentJobObservation[] = [];
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
     identities: { owner: "owner", otherRequestor: "other", analyst: "analyst", analystAgent: "agent", serviceAnalystAgent: "service-agent", inactiveAnalyst: "inactive" },
     developmentEmails: { jane: "jane.doe@idambox.com", bob: "bob.doe@idambox.com", inactive: "inactive@idambox.com", unknown: "unknown@idambox.com" },
-    users: { owner: owner.documentId, otherRequestor: otherRequestor.documentId, analyst: analyst.documentId },
+    users: {
+      owner: owner.documentId,
+      otherRequestor: otherRequestor.documentId,
+      analyst: analyst.documentId,
+      serviceAnalystAgent: serviceAnalystAgent.documentId,
+    },
     requests: { owner: ownerRequest.documentId, otherRequestor: otherRequest.documentId },
     async seedRequestWorkflowFixtures() {
       if (workflowFixtures) return workflowFixtures;
@@ -911,6 +1128,58 @@ export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttp
         provider.generate = originalGenerate;
       }
     },
+    async withHeldQuestionnaireGeneration(requestDocumentId, action) {
+      const mountedProviderModule = require(path.join(
+        appDir,
+        "dist",
+        "src",
+        "api",
+        "csrm-questionnaire",
+        "services",
+        "deterministic-questionnaire-generation-provider.js",
+      )) as { deterministicQuestionnaireGenerationProvider: InjectableQuestionnaireGenerationProvider };
+      const provider = mountedProviderModule.deterministicQuestionnaireGenerationProvider;
+      const originalGenerate = provider.generate;
+      let releaseGate: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { releaseGate = resolve; });
+      provider.generate = async (...args: unknown[]) => {
+        await gate;
+        return originalGenerate.apply(provider, args);
+      };
+      const analystRequest = (requestPath: string, init: RequestInit = {}) => fetch(`http://127.0.0.1:${address.port}${requestPath}`, {
+        ...init,
+        headers: { ...authorizationHeader, "x-csrm-test-identity": "analyst", ...init.headers },
+      });
+      let jobId: string | undefined;
+      try {
+        const queued = await analystRequest(
+          `/api/v1/assessment_requests/${encodeURIComponent(requestDocumentId)}/generate_questionnaire`,
+          { method: "POST" },
+        );
+        assert.equal(queued.status, 202, "HELD_QUESTIONNAIRE_GENERATION_NOT_QUEUED");
+        const job = ((await queued.json()) as { data?: { jobId?: unknown } }).data;
+        assert.equal(typeof job?.jobId, "string", "HELD_QUESTIONNAIRE_GENERATION_JOB_ID_MISSING");
+        jobId = job?.jobId as string;
+        return await action();
+      } finally {
+        releaseGate();
+        try {
+          if (jobId !== undefined) {
+            let status: unknown;
+            for (let poll = 0; poll < 50; poll += 1) {
+              const response = await analystRequest(`/api/v1/questionnaire_generation_jobs/${encodeURIComponent(jobId)}`);
+              assert.equal(response.status, 200, "HELD_QUESTIONNAIRE_GENERATION_JOB_UNREADABLE");
+              status = ((await response.json()) as { data?: { status?: unknown } }).data?.status;
+              if (status === "completed" || status === "failed") break;
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+            assert.equal(status, "completed", "HELD_QUESTIONNAIRE_GENERATION_DID_NOT_COMPLETE");
+          }
+        } finally {
+          provider.generate = originalGenerate;
+        }
+      }
+    },
     async withProviderFailureCode(code, safeMessage, action) {
       const mountedProviderModule = require(path.join(
         appDir,
@@ -1118,10 +1387,105 @@ export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttp
       const user = await createDocument(strapi, "api::idambox-user.idambox-user", data);
       return user.documentId;
     },
+    async createFixtureDocument(uid, data) {
+      const document = await createDocument(strapi, uid, data);
+      return document.documentId;
+    },
+    async createAssessmentRequestFixture({ requestor, ...data }) {
+      const request = await createDocument(strapi, "api::csrm-assessment-request.csrm-assessment-request", {
+        ...data,
+        requestor: requestor === "owner" ? owner.documentId : otherRequestor.documentId,
+      });
+      return request.documentId;
+    },
+    async createQuestionnaireLifecycleFixture({ requestDocumentId, released, answerState }) {
+      const sequence = String(++lifecycleQuestionnaireSequence).padStart(3, "0");
+      const questionnaire = await createDocument(strapi, "api::csrm-questionnaire.csrm-questionnaire", {
+        questionnaireNumber: `QUES-LIFECYCLE-${sequence}`,
+        title: `Lifecycle questionnaire ${sequence}`,
+        assessmentRequest: requestDocumentId,
+        ...(released ? releaseFacts(analyst.documentId) : {}),
+      });
+      if (answerState === "none") return { questionnaire: questionnaire.documentId, question: null };
+      // The same answer envelope and question options as the questionnaire workflow fixtures.
+      const answer = answerState === "submitted"
+        ? { schemaVersion: 1, value: `Submitted lifecycle answer ${sequence}`, state: "submitted", updatedAt: "2026-08-02T00:00:00.000Z", submittedAt: "2026-08-02T00:00:00.000Z" }
+        : { schemaVersion: 1, value: `Draft lifecycle answer ${sequence}`, state: "draft", updatedAt: "2026-08-01T00:00:00.000Z" };
+      const question = await createDocument(strapi, "api::csrm-question.csrm-question", {
+        questionText: `Describe the lifecycle context ${sequence}`,
+        answerType: "Text",
+        options: {
+          schemaVersion: 1,
+          questionKey: `lifecycle-${sequence}`,
+          section: { key: "context", title: "Context", order: 1 },
+          order: 1,
+          required: true,
+        },
+        answer,
+        questionnaire: questionnaire.documentId,
+      });
+      return { questionnaire: questionnaire.documentId, question: question.documentId };
+    },
+    async getRequestLifecycleDocument(documentId) {
+      return (await strapi.documents("api::csrm-assessment-request.csrm-assessment-request").findOne?.({
+        documentId,
+        populate: {
+          questionnaire: { populate: { questions: true } },
+          assessment: { populate: { approvedBy: true, reviewedBy: true, risks: true } },
+        },
+      })) ?? null;
+    },
+    async seedReviewableRequestsDirectly(count, prefix) {
+      assert.ok(Number.isInteger(count) && count > 0 && count <= 2_000, "direct review queue fixture count must be bounded");
+      assert.match(prefix, /^[A-Za-z0-9-]{1,40}$/);
+      // Every direct row is submitted later than any hand-built fixture, one
+      // minute apart, so its position in the default queue order is known.
+      const firstSubmitted = Date.UTC(2030, 0, 1);
+      const records = Array.from({ length: count }, (_, index) => {
+        const suffix = String(index).padStart(5, "0");
+        return {
+          documentId: `${prefix}-${suffix}`,
+          requestNumber: `${prefix}-${suffix}`,
+          title: `${prefix} direct review queue fixture ${suffix}`,
+          requestStatus: "submitted",
+          submittedDate: new Date(firstSubmitted + index * 60_000).toISOString(),
+        };
+      });
+      const repository = strapi.db.query("api::csrm-assessment-request.csrm-assessment-request");
+      for (let offset = 0; offset < records.length; offset += 200) {
+        await repository.createMany({ data: records.slice(offset, offset + 200) });
+      }
+      return { requestNumbers: records.map((record) => record.requestNumber) };
+    },
+    async countReviewQueueBucketFixture(bucket, activeIds) {
+      // The compiled module the running application loaded, so this is the same
+      // counter the analyst dashboard uses.
+      const repositoryModule = require(path.join(
+        appDir,
+        "dist",
+        "src",
+        "api",
+        "csrm-assessment-request",
+        "services",
+        "review-queue-repository.js",
+      )) as {
+        countReviewQueueBucket: (instance: unknown, queue: ReviewQueueBucketFixture, ids: readonly string[]) => Promise<number>;
+      };
+      return repositoryModule.countReviewQueueBucket(strapi, bucket, activeIds);
+    },
+    async createAssessmentFixture(data) {
+      const assessment = await createDocument(strapi, "api::csrm-assessment.csrm-assessment", data);
+      return assessment.documentId;
+    },
     async setRiskOwnerFixture(riskDocumentId, ownerDocumentId) {
       await (strapi.documents("api::csrm-risk.csrm-risk") as StrapiDocumentService & {
         update: (input: { documentId: string; data: Record<string, unknown> }) => Promise<Document>;
       }).update({ documentId: riskDocumentId, data: { riskOwner: ownerDocumentId } });
+    },
+    async setRequestStatusFixture(requestDocumentId, requestStatus) {
+      await (strapi.documents("api::csrm-assessment-request.csrm-assessment-request") as StrapiDocumentService & {
+        update: (input: { documentId: string; data: Record<string, unknown> }) => Promise<Document>;
+      }).update({ documentId: requestDocumentId, data: { requestStatus } });
     },
     async setUserAccountStatusFixture(userDocumentId, accountStatus) {
       await userService.update({ documentId: userDocumentId, data: { accountStatus } });
@@ -1180,6 +1544,19 @@ export async function startAuthorizationHttpHarness(): Promise<AuthorizationHttp
       if (digest !== undefined) form.set("previewDigest", digest);
       if (confirmed !== undefined) form.set("confirmed", String(confirmed));
       return form;
+    },
+    listMountedContentApiRoutes() {
+      return listMountedContentApiRoutes(strapi);
+    },
+    async readUsersPermissionsAdvancedSettings() {
+      const settings = await strapi.store({ type: "plugin", name: "users-permissions" }).get({ key: "advanced" });
+      return (settings ?? null) as Record<string, unknown> | null;
+    },
+    async countUsersPermissionsUsers() {
+      return (await strapi.query("plugin::users-permissions.user").findMany({ where: {} })).length;
+    },
+    async snapshot(getters) {
+      return Promise.all(getters.map((getter) => getter()));
     },
     async close() {
       testIdentities.clear();

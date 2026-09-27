@@ -64,3 +64,6 @@ export function getAdministrationConfig(kind: unknown): AdministrationFeatureCon
   if (typeof kind !== 'string' || !administrationKinds.includes(kind as AdministrationKind)) throw new Error('Unsupported CSRM Administration collection.');
   return administrationConfig[kind as AdministrationKind];
 }
+
+/** How long a list search or a Control search waits after the last keystroke before it runs. */
+export const administrationSearchDelayMs = 700;

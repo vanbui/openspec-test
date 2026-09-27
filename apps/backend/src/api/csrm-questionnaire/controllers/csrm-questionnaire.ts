@@ -2,6 +2,8 @@ import { factories } from "@strapi/strapi";
 
 import {
   buildQuestionnaireCollectionQuery,
+  governanceActorIds,
+  governanceActorNames,
   isRecord,
   loadCompleteQuestionnaireScope,
   projectQuestionnaireCollection,
@@ -11,6 +13,7 @@ import {
   questionnaireActor,
   questionnaireState,
   QuestionnaireQueryError,
+  type QuestionnaireActor,
 } from "../services/questionnaire-scope";
 import {
   saveAnswers,
@@ -35,6 +38,7 @@ import { generateQuestionnaire, getQuestionnaireGenerationJob, QuestionnaireGene
 
 const UID = "api::csrm-questionnaire.csrm-questionnaire" as const;
 const QUESTION_UID = "api::csrm-question.csrm-question" as const;
+const USER_UID = "api::idambox-user.idambox-user" as const;
 type RecordValue = Record<string, unknown>;
 type Documents = {
   count: (query: RecordValue) => Promise<number>;
@@ -126,6 +130,25 @@ type ControllerStrapi = { documents: (uid: string) => unknown };
 export function questionnaireControllerExtension({ strapi }: { strapi: ControllerStrapi }) {
   const questionnaires = () => strapi.documents(UID) as unknown as Documents;
   const questions = () => strapi.documents(QUESTION_UID) as unknown as Documents;
+  const users = () => strapi.documents(USER_UID) as unknown as Documents;
+
+  /*
+   * Phase 8 D-31: the analyst revision timeline names each acting analyst. The
+   * distinct actor ids are resolved in one bounded lookup that reads only the
+   * documentId and display name of active IdamBox users. It runs only for an
+   * analyst reader: a Requestor's timeline never carries the actor, so their
+   * read looks no one up.
+   */
+  async function timelineActorNames(document: RecordValue, actor: QuestionnaireActor) {
+    if (actor !== "analyst") return undefined;
+    const ids = governanceActorIds(document);
+    if (ids.length === 0) return undefined;
+    return governanceActorNames(await users().findMany({
+      filters: { documentId: { $in: ids }, accountStatus: { $eq: "active" } },
+      fields: ["documentId", "displayName"],
+      limit: ids.length,
+    }));
+  }
 
   async function collection(ctx: RecordValue) {
     try {
@@ -343,7 +366,8 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
       });
       if (!document) return safeError(ctx, 404, "CSRM questionnaire was not found.");
       const actor = questionnaireActor(ctx.state);
-      return { data: { ...projectQuestionnaire(document), events: projectGovernanceEvents(document, actor) } };
+      const resolveDisplayName = await timelineActorNames(document, actor);
+      return { data: { ...projectQuestionnaire(document), events: projectGovernanceEvents(document, actor, resolveDisplayName) } };
     },
     async listQuestions(ctx: RecordValue) {
       try {

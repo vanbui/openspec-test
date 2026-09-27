@@ -96,6 +96,8 @@ beforeEach(() => {
 describe('RiskDetails', () => {
   it('renders one complete contextual Risk in the five exact ordered sections', () => {
     const { container } = renderDetails();
+    // A mutable Risk carries no status badge: only a locked Risk states that its assessment is released.
+    expect(container.querySelector('[data-slot="badge"][data-tone]')).toBeNull();
 
     expect(screen.getByRole('heading', { level: 1, name: 'RSK-2026-001' })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -130,6 +132,50 @@ describe('RiskDetails', () => {
     expect(screen.getByRole('link', { name: /RA-2026-001/ })).toHaveAttribute('href', '/app/review/assessments/assessment-alpha');
     expect(screen.getByRole('link', { name: /RA-2026-001/ })).toHaveClass('record-link');
     expect(container.querySelector('dl')).toHaveClass('md:grid-cols-2');
+  });
+
+  it('anchors the Mitigation controls section so Control Implementation alerts can deep-link to it', () => {
+    renderDetails();
+
+    const heading = screen.getByRole('heading', { level: 2, name: 'Mitigation controls' });
+    expect(heading).toHaveAttribute('id', 'mitigation-controls');
+    expect(document.querySelectorAll('#mitigation-controls')).toHaveLength(1);
+    // The section is still one labelled region named by that heading.
+    expect(screen.getByRole('region', { name: 'Mitigation controls' })).toHaveAttribute('aria-labelledby', 'mitigation-controls');
+    expect(screen.getByRole('region', { name: 'Mitigation controls' })).toHaveAccessibleDescription('Contextual Control implementations linked to reusable Controls.');
+  });
+
+  it('brings the linked section into view once the streamed Risk renders', () => {
+    /*
+     * The detail streams behind its loading boundary, so the router's own hash scroll runs against
+     * the skeleton. Once the Risk renders, the section the URL names is scrolled into view.
+     */
+    const scrolled: Element[] = [];
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element) { scrolled.push(this); };
+    try {
+      window.history.replaceState(null, '', '/app/risks/risk-alpha#mitigation-controls');
+      const view = renderDetails();
+      expect(scrolled).toEqual([screen.getByRole('heading', { level: 2, name: 'Mitigation controls' })]);
+      view.unmount();
+
+      scrolled.length = 0;
+      window.history.replaceState(null, '', '/app/risks/risk-alpha');
+      renderDetails().unmount();
+      window.history.replaceState(null, '', '/app/risks/risk-alpha#no-such-section');
+      renderDetails().unmount();
+      window.history.replaceState(null, '', '/app/risks/risk-alpha#%E0%A4%A');
+      renderDetails().unmount();
+      expect(scrolled).toEqual([]);
+
+      // A safe state has no section to scroll to.
+      window.history.replaceState(null, '', '/app/risks/risk-alpha#mitigation-controls');
+      render(<RiskDetails state="permission" />);
+      expect(scrolled).toEqual([]);
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it('edits in a single column, submits only changed fields, announces outcomes, and confirms dirty discard', async () => {
@@ -207,7 +253,20 @@ describe('RiskDetails', () => {
 
   it('renders released detail semantically with no mutation or prefetch affordance', () => {
     const { container } = renderDetails({ detail: { ...detail, parentLock: 'released' }, options: undefined, searchOwners: undefined });
-    expect(screen.getByText('Released assessment — read only')).toBeInTheDocument();
+    // The header states the status with the shared assessment badge; the read-only consequence is the Alert's.
+    const status = container.querySelector<HTMLElement>('.page-header [data-slot="badge"][data-tone]');
+    expect(status).toHaveTextContent(/^Released$/);
+    expect(status).toHaveAttribute('data-tone', 'success');
+    expect(status).toHaveAttribute('data-variant', 'success');
+    expect(status?.querySelectorAll('svg')).toHaveLength(1);
+    expect(screen.queryByText('Released — read only')).not.toBeInTheDocument();
+    expect(screen.getByText('Released assessment - read only')).toBeInTheDocument();
+    expect(screen.queryByText('Released assessment — read only')).not.toBeInTheDocument();
+    // W-12: the notice keeps the section rhythm, one gap-8 step above the first section, instead of touching it.
+    const notice = screen.getByRole('alert');
+    expect(notice).toHaveTextContent('Released assessment - read only');
+    expect(notice.parentElement).toHaveClass('grid', 'gap-8');
+    expect(notice.nextElementSibling).toHaveTextContent('Risk statement and classification');
     expect(screen.getByText('This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.')).toBeInTheDocument();
     expect(screen.getByText('Customer identity data may be disclosed through a compromised service account.')).toBeInTheDocument();
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
@@ -246,7 +305,7 @@ describe('RiskDetails', () => {
     await user.click(screen.getByRole('button', { name: 'Edit risk' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Risk statement' }), { target: { value: 'Stale edit' } });
     await user.click(screen.getByRole('button', { name: 'Save risk' }));
-    expect(await screen.findByText('Released assessment — read only')).toBeInTheDocument();
+    expect(await screen.findByText('Released assessment - read only')).toBeInTheDocument();
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
 
     view.unmount();

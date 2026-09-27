@@ -17,4 +17,13 @@ describe('RiskRatingBadge', () => {
     expect(badge.className).not.toContain('info');
     expect(badge.className).not.toContain('destructive/');
   });
+
+  it('leaves the naming to an enclosing link that already names the rating, so the link’s text is the rating’s word', () => {
+    const { container } = render(<RiskRatingBadge labelled={false} rating="Critical" />);
+    const badge = container.querySelector('[data-slot="badge"]');
+
+    expect(badge).toHaveTextContent('Critical');
+    expect(badge).not.toHaveAttribute('aria-label');
+    expect(badge?.className).toContain('text-risk-critical');
+  });
 });

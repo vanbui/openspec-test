@@ -3,18 +3,17 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { type FormEvent } from 'react';
 
-import { DataTable, type DataTableColumn } from '@/components/csrm/data-table';
+import { DataTable, type DataTableColumn, type DataTableFilter } from '@/components/csrm/data-table';
 import { PageHeader } from '@/components/csrm/page-header';
 import { RecordLink } from '@/components/csrm/record-link';
-import { StatusBadge } from '@/components/csrm/status-badge';
+import { StatusBadge, statusLabel } from '@/components/csrm/status-badge';
 import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/states/states';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { nativeSelectClassName } from '@/components/csrm/native-select';
 import { requestStatusPresentation, requestStatuses } from '@/features/requests/request-domain';
-import { assessmentStatusPresentation } from './assessment-domain';
-import { assessmentStatuses, type AssessmentRequestQueueItem, type AssessmentSummary, type AssessmentStatus } from './assessment-schema';
+import { assessmentStatuses } from './assessment-domain';
+import type { AssessmentRequestQueueItem, AssessmentSummary } from './assessment-schema';
 import type { AssessmentCollectionQuery, AssessmentRequestReviewQuery, CollectionPagination } from './assessment-service';
 
 export type AssessmentCollectionState = 'populated' | 'empty' | 'error' | 'permission';
@@ -33,18 +32,6 @@ function formatDate(value: string | null): string {
   return value
     ? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value))
     : 'Not recorded';
-}
-
-function AssessmentStatusBadge({ status }: { status: AssessmentStatus }) {
-  const presentation = assessmentStatusPresentation[status];
-  const Icon = presentation.icon;
-
-  return (
-    <Badge variant="outline">
-      <Icon aria-hidden="true" />
-      {presentation.label}
-    </Badge>
-  );
 }
 
 function navigateFor(pathname: string, router: ReturnType<typeof useRouter>, next: Query) {
@@ -73,15 +60,15 @@ function Controls({ label, onNavigate, query, statuses }: {
   };
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end" data-print="hidden">
       <form className="flex flex-1 gap-2" role="search" onSubmit={search}>
-        <label className="flex-1 text-sm font-medium text-foreground">
+        <label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">
           {label}
           <Input aria-label={label} defaultValue={query.q} key={query.q} name="q" type="search" />
         </label>
         <Button className="self-end" type="submit">Search</Button>
       </form>
-      <label className="text-sm font-medium text-foreground">
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
         Status
         <select
           aria-label="Filter by status"
@@ -94,7 +81,7 @@ function Controls({ label, onNavigate, query, statuses }: {
         </select>
       </label>
       {'queue' in query ? (
-        <label className="text-sm font-medium text-foreground">
+        <label className="grid gap-1.5 text-sm font-medium text-foreground">
           Queue
           <select
             aria-label="Filter by queue"
@@ -158,7 +145,7 @@ const assessmentColumns: DataTableColumn<AssessmentSummary>[] = [
   {
     accessorKey: 'assessmentStatus',
     header: 'Status',
-    cell: (_value, assessment) => <AssessmentStatusBadge status={assessment.assessmentStatus} />,
+    cell: (_value, assessment) => <StatusBadge family="assessment" value={assessment.assessmentStatus} />,
   },
   {
     accessorKey: 'generatedBy',
@@ -182,6 +169,7 @@ function ListFrame<T extends { documentId: string }>({
   query,
   renderMobileCard,
   state,
+  statusLabelFor,
   totalCount,
 }: {
   ariaLabel: string;
@@ -198,6 +186,8 @@ function ListFrame<T extends { documentId: string }>({
   query: Query;
   renderMobileCard: (row: T) => React.ReactNode;
   state: AssessmentCollectionState | 'loading';
+  /** The label a status filter shows as its chip: the shared mapping's, so approved reads Released. */
+  statusLabelFor?: (status: string) => string;
   totalCount: number;
 }) {
   const pathname = usePathname();
@@ -205,6 +195,16 @@ function ListFrame<T extends { documentId: string }>({
   const clearFilters = () => {
     navigateFor(pathname, router, { ...query, q: '', status: undefined, ...('queue' in query ? { queue: 'requires-attention' as const } : {}), page: 1 });
   };
+  /*
+   * The direction's filter chips (section 4 DataTable) for the search and status filters, so a filtered
+   * list never looks, or prints, like an unfiltered one (verdict 4a). The queue has its own line above.
+   */
+  const filters: DataTableFilter[] = [
+    ...(query.q ? [{ id: 'q', label: 'Search', value: query.q }] : []),
+    ...(query.status && statusLabelFor ? [{ id: 'status', label: 'Status', value: statusLabelFor(query.status) }] : []),
+  ];
+  const clearFilter = (id: string) => navigateFor(pathname, router, { ...query, ...(id === 'q' ? { q: '' } : { status: undefined }), page: 1 } as Query);
+  const clearChips = () => navigateFor(pathname, router, { ...query, q: '', status: undefined, page: 1 } as Query);
 
   return (
     <DataTable
@@ -212,8 +212,11 @@ function ListFrame<T extends { documentId: string }>({
       columns={columns}
       data={[...data]}
       densityUserId={densityUserId}
+      filters={filters}
       getRowId={(row) => row.documentId}
       loadingLabel={loadingLabel}
+      onClearFilter={clearFilter}
+      onClearFilters={clearChips}
       onPageChange={onNavigate}
       page={page}
       pageSize={pageSize}
@@ -244,6 +247,8 @@ export function AssessmentRequestList({
   const router = useRouter();
   const navigate = (next: Query) => navigateFor(pathname, router, next);
   const resolvedState = state ?? (requests.length ? 'populated' : 'empty');
+  // A refusal is the page header and the permission state alone, as the Risk Register's is (W-3).
+  if (resolvedState === 'permission') return <PermissionDeniedState area="assessment requests" />;
   const queueLabels = { 'requires-attention': 'Requires my attention', 'awaiting-requestor': 'Awaiting Requestor', 'generation-in-progress': 'Generation in progress', released: 'Released' } as const;
   const statuses = requestStatuses.map((status) => ({ value: status, label: requestStatusPresentation[status].label }));
 
@@ -251,7 +256,7 @@ export function AssessmentRequestList({
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">Queue: <span className="font-medium text-foreground">{queueLabels[query.queue]}</span></p>
       <Controls
-        label="Search collection"
+        label="Search assessment requests"
         onNavigate={navigate}
         query={query}
         statuses={statuses}
@@ -281,6 +286,7 @@ export function AssessmentRequestList({
           </article>
         )}
         state={resolvedState}
+        statusLabelFor={(status) => requestStatusPresentation[status as keyof typeof requestStatusPresentation]?.label ?? status}
         totalCount={pagination?.total ?? requests.length}
       />
     </div>
@@ -302,14 +308,16 @@ export function AssessmentList({
   const router = useRouter();
   const navigate = (next: Query) => navigateFor(pathname, router, next);
   const resolvedState = state ?? (assessments.length ? 'populated' : 'empty');
+  // A refusal is the page header and the permission state alone, as the Risk Register's is (W-3).
+  if (resolvedState === 'permission') return <PermissionDeniedState area="risk assessments" />;
 
   return (
     <div className="space-y-3">
       <Controls
-        label="Search collection"
+        label="Search risk assessments"
         onNavigate={navigate}
         query={query}
-        statuses={assessmentStatuses.map((status) => ({ value: status, label: assessmentStatusPresentation[status].label }))}
+        statuses={assessmentStatuses.map((status) => ({ value: status, label: statusLabel('assessment', status) }))}
       />
       <ListFrame
         ariaLabel="Risk assessments for review"
@@ -329,13 +337,14 @@ export function AssessmentList({
               {assessment.assessmentNumber}
             </RecordLink>
             <p>{assessment.summary ?? 'Assessment draft'}</p>
-            <AssessmentStatusBadge status={assessment.assessmentStatus} />
+            <StatusBadge family="assessment" value={assessment.assessmentStatus} />
             <span className="text-sm text-muted-foreground">
               Draft initiated by {assessment.generatedBy?.displayName ?? 'Not recorded'}
             </span>
           </article>
         )}
         state={resolvedState}
+        statusLabelFor={(status) => (assessmentStatuses as readonly string[]).includes(status) ? statusLabel('assessment', status as (typeof assessmentStatuses)[number]) : status}
         totalCount={pagination?.total ?? assessments.length}
       />
     </div>

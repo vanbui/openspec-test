@@ -1,7 +1,7 @@
 import { CsrmAiProviderError, readCsrmAiOperationConfig, requestJsonCompletion } from "../../../csrm/openai-compatible-client";
 import { promptDataTag } from "../../../csrm/prompt-data";
 import { AssessmentDraftJobFailure } from "./assessment-draft-registry";
-import { parseAssessmentDraftProposal, type AssessmentDraftContext, type AssessmentDraftProposal, type AssessmentDraftProvider } from "./assessment-draft-provider";
+import { compareRiskTypeNames, parseAssessmentDraftProposal, type AssessmentDraftContext, type AssessmentDraftProposal, type AssessmentDraftProvider } from "./assessment-draft-provider";
 
 const ratings = ["Low", "Moderate", "High", "Critical"];
 const proposalKeys = ["schemaVersion", "summary", "overallRating", "overallRiskRationale", "recommendationsSummary", "risks"];
@@ -38,11 +38,7 @@ function buildSchema(context: AssessmentDraftContext): Record<string, unknown> {
   };
 }
 
-// The parser checks ordering with plain string comparison, so sort the same way.
-function compareCodeUnits(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
+// The parser checks Risk Type order with the shared rule, so sort by that rule.
 function sortProposal(value: unknown): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
   const proposal = value as Record<string, unknown>;
@@ -53,7 +49,7 @@ function sortProposal(value: unknown): unknown {
       if (typeof risk !== "object" || risk === null || Array.isArray(risk)) return risk;
       const item = risk as Record<string, unknown>;
       return { ...item, ...(Array.isArray(item.suggestedControlNumbers) ? { suggestedControlNumbers: [...item.suggestedControlNumbers].sort() } : {}) };
-    }).sort((left, right) => compareCodeUnits(String((left as Record<string, unknown>).riskTypeName), String((right as Record<string, unknown>).riskTypeName))),
+    }).sort((left, right) => compareRiskTypeNames(String((left as Record<string, unknown>).riskTypeName), String((right as Record<string, unknown>).riskTypeName))),
   };
 }
 

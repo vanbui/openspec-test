@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   parseRiskRegisterQuery,
+  RISK_REGISTER_STATES,
   RiskRegisterQueryError,
 } from "../src/api/csrm-risk/services/risk-register-query";
 import {
@@ -10,9 +11,13 @@ import {
   getRiskRegisterDetail,
   listRiskRegister,
   projectRiskRegisterItem,
+  RiskRegisterError,
   type RiskRegisterDetailRepository,
   type RiskRegisterRepository,
 } from "../src/api/csrm-risk/services/risk-register";
+
+/* The UTC calendar date every register read below is evaluated on. */
+const today = "2026-09-24";
 
 const ratings = ["Low", "Moderate", "High", "Critical"] as const;
 const treatmentStatuses = ["Not Started", "In Progress", "Overdue", "Complete"] as const;
@@ -95,6 +100,19 @@ test("the Risk Register parser accepts the complete flat UI contract", () => {
   }
 });
 
+test("the Risk Register parser accepts exactly the open and closed Risk states (D-36)", () => {
+  assert.deepEqual([...RISK_REGISTER_STATES], ["open", "closed"]);
+  assert.equal(parseRiskRegisterQuery({ state: "open" }).filters.state, "open");
+  assert.equal(parseRiskRegisterQuery({ state: "closed" }).filters.state, "closed");
+  // Absent means both, so no state predicate is recorded at all.
+  assert.equal("state" in parseRiskRegisterQuery({}).filters, false);
+  assert.deepEqual(parseRiskRegisterQuery({ state: "open", residualRating: "High" }).filters, { state: "open", residualRating: "High" });
+
+  for (const invalid of ["Open", "CLOSED", "", " open", "all", "none", ["open", "closed"], ["open"], { $eq: "open" }, { $ne: "closed" }, null, true, 1]) {
+    assert.throws(() => parseRiskRegisterQuery({ state: invalid }), RiskRegisterQueryError, JSON.stringify(invalid));
+  }
+});
+
 test("the Risk Register parser accepts inclusive one-sided, closed, and equal date ranges", () => {
   assert.deepEqual(parseRiskRegisterQuery({ targetDateFrom: "2026-01-01" }).filters, {
     targetDateFrom: "2026-01-01",
@@ -162,10 +180,74 @@ test("scope is asserted before repository count or page selection", async () => 
 
   assert.throws(() => assertRiskRegisterScope({}), /denied/i);
   await assert.rejects(
-    listRiskRegister({ repository, state: {}, query: {} }),
+    listRiskRegister({ repository, state: {}, query: {}, today }),
+    (error: unknown) => error instanceof Error && "status" in error && error.status === 403,
+  );
+  // Scope is still decided first when the date is malformed as well.
+  await assert.rejects(
+    listRiskRegister({ repository, state: {}, query: {}, today: "not-a-date" }),
     (error: unknown) => error instanceof Error && "status" in error && error.status === 403,
   );
   assert.equal(calls, 0, "DENIED_RISK_REGISTER_TOUCHED_REPOSITORY");
+});
+
+test("the register list requires a UTC calendar today before any repository read", async () => {
+  let calls = 0;
+  const repository: RiskRegisterRepository = {
+    async count() { calls += 1; return 0; },
+    async selectPage() { calls += 1; return []; },
+    async hydrate() { calls += 1; return []; },
+  };
+
+  for (const invalid of ["", "2026-9-24", "2026-02-30", "2026-09-24T00:00:00.000Z", "24/09/2026", undefined, null, 20260924]) {
+    await assert.rejects(
+      listRiskRegister({ repository, state, query: {}, today: invalid as unknown as string }),
+      (error: unknown) => error instanceof RiskRegisterError && error.status === 400,
+      `INVALID_TODAY_ACCEPTED_${String(invalid)}`,
+    );
+  }
+  assert.equal(calls, 0, "INVALID_TODAY_TOUCHED_REPOSITORY");
+});
+
+test("the register list evaluates every row's due state on the today it is given", async () => {
+  const repository: RiskRegisterRepository = {
+    async count() { return 1; },
+    async selectPage() { return ["risk-a"]; },
+    // Target date 2027-01-31, In Progress, no closure date.
+    async hydrate() { return [riskDocument("risk-a", "RSK-001")]; },
+  };
+  for (const [evaluatedOn, expected] of [
+    ["2026-09-24", "later"],
+    ["2027-01-17", "due-soon"],
+    ["2027-01-31", "due-soon"],
+    ["2027-02-01", "overdue"],
+  ] as const) {
+    const result = await listRiskRegister({ repository, state, query: {}, today: evaluatedOn });
+    assert.equal(result.data[0]?.treatmentDueState, expected, `DUE_STATE_NOT_EVALUATED_ON_${evaluatedOn}`);
+  }
+});
+
+test("the register projection derives the D-04 treatment due state from explicit facts", () => {
+  const cases: ReadonlyArray<{ facts: Record<string, unknown>; expected: string; name: string }> = [
+    { name: "past target, in progress", facts: { targetDate: "2026-09-23", treatmentStatus: "In Progress", closureDate: null }, expected: "overdue" },
+    { name: "due today", facts: { targetDate: "2026-09-24", treatmentStatus: "In Progress" }, expected: "due-soon" },
+    { name: "last day of the 14-day window", facts: { targetDate: "2026-10-08", treatmentStatus: "In Progress" }, expected: "due-soon" },
+    { name: "first day after the window", facts: { targetDate: "2026-10-09", treatmentStatus: "In Progress" }, expected: "later" },
+    { name: "no target date", facts: { targetDate: null, treatmentStatus: "In Progress" }, expected: "no-target-date" },
+    { name: "complete with a past target", facts: { targetDate: "2026-09-23", treatmentStatus: "Complete" }, expected: "complete-or-closed" },
+    { name: "closed with a past target", facts: { targetDate: "2026-09-23", treatmentStatus: "In Progress", closureDate: "2026-09-20" }, expected: "complete-or-closed" },
+    { name: "no recorded status with a past target", facts: { targetDate: "2026-09-23", treatmentStatus: null }, expected: "overdue" },
+    // The stored "Overdue" status is never read as a due state (D-04): only the dates decide.
+    { name: "stored Overdue status with a later target", facts: { targetDate: "2026-12-01", treatmentStatus: "Overdue" }, expected: "later" },
+    // A field that is not a string counts as absent.
+    { name: "non-string target date", facts: { targetDate: 20260923, treatmentStatus: "In Progress" }, expected: "no-target-date" },
+    { name: "non-string closure date", facts: { targetDate: "2026-09-23", treatmentStatus: "In Progress", closureDate: { date: "2026-09-20" } }, expected: "overdue" },
+    { name: "non-string treatment status", facts: { targetDate: "2026-09-23", treatmentStatus: { value: "Complete" } }, expected: "overdue" },
+  ];
+  for (const scenario of cases) {
+    const projected = projectRiskRegisterItem({ ...riskDocument("risk-1", "RSK-001"), ...scenario.facts }, today);
+    assert.equal(projected.treatmentDueState, scenario.expected, scenario.name);
+  }
 });
 
 test("list uses one parsed filter model, bounded page IDs, and restores database order", async () => {
@@ -192,6 +274,7 @@ test("list uses one parsed filter model, bounded page IDs, and restores database
     repository,
     state,
     query: { q: "exposure", treatmentStatus: "Complete", sort: "inherentRating:desc", page: 2, pageSize: 10 },
+    today,
   });
 
   assert.deepEqual(observed[0], { operation: "count", value: { q: "exposure", treatmentStatus: "Complete" } });
@@ -227,6 +310,7 @@ test("honest pagination covers empty, exact, overflow, partial, and out-of-range
       repository,
       state,
       query: { page: scenario.page, pageSize: scenario.pageSize },
+      today,
     });
     assert.equal(result.meta.pagination.total, scenario.total);
     assert.equal(result.meta.pagination.pageCount, Math.ceil(scenario.total / scenario.pageSize));
@@ -243,8 +327,11 @@ test("register projection is a closed positive allowlist", () => {
     createdBy: { email: "secret@example.test" },
     riskOwner: { id: 99, documentId: "owner", displayName: "Risk owner", email: "secret@example.test" },
     controlImplementations: [{ id: 12, evidence: "private" }],
-  });
+    closureDate: null,
+  }, today);
 
+  // The nine Phase 5 keys plus the server-derived treatment due state (D-26); closureDate
+  // is read to derive it but never disclosed.
   assert.deepEqual(Object.keys(projected).sort(), [
     "assessment",
     "documentId",
@@ -253,12 +340,14 @@ test("register projection is a closed positive allowlist", () => {
     "riskNumber",
     "riskStatement",
     "targetDate",
+    "treatmentDueState",
     "treatmentOwner",
     "treatmentStatus",
   ]);
+  assert.equal(projected.treatmentDueState, "later");
   assert.deepEqual(projected.treatmentOwner, { documentId: "treatment-owner", displayName: "Treatment Owner" });
   assert.deepEqual(projected.assessment, { documentId: "assessment-1", assessmentNumber: "ASM-001", title: "Assessment title" });
-  assert.doesNotMatch(JSON.stringify(projected), /secret|email|createdAt|updatedAt|\"id\":|controlImplementations/i);
+  assert.doesNotMatch(JSON.stringify(projected), /secret|email|createdAt|updatedAt|\"id\":|controlImplementations|closureDate/i);
 });
 
 test("detail scope is asserted before the caller-selected Risk identifier is looked up", async () => {

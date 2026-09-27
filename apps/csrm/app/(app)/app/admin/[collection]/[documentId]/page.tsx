@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { administrationKinds, getAdministrationConfig, type AdministrationKind } from '@/features/administration/administration-config';
 import { administrationDocumentIdSchema } from '@/features/administration/administration-schema';
 import { getAdministrationControl, getInformationAsset, getInformationSystem, getRiskType } from '@/features/administration/administration-service';
-import { AdministrationAccessDenied, AdministrationBreadcrumbs, AdministrationForm, AdministrationUnavailableState } from '@/features/administration/administration-workspace';
+import { AdministrationForm } from '@/features/administration/administration-form';
+import { AdministrationAccessDenied, AdministrationBreadcrumbs, AdministrationUnavailableState } from '@/features/administration/administration-workspace';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 import { listControls } from '@/features/assessments/assessment-service';
@@ -19,40 +20,42 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function AdministrationRecordPage({ params }: Props) {
+  const values = await params;
+  // Read before the capability check, so a denial still names the collection it refused.
+  const knownKind = administrationKinds.includes(values.collection as AdministrationKind) ? values.collection as AdministrationKind : undefined;
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
-  if (!can('administration:manage', granted)) return <AdministrationAccessDenied />;
+  if (!can('administration:manage', granted)) return <AdministrationAccessDenied kind={knownKind} />;
 
-  const values = await params;
-  if (!administrationKinds.includes(values.collection as AdministrationKind)) notFound();
-  const kind = values.collection as 'risk-types' | 'controls' | 'information-systems' | 'information-assets';
+  if (!knownKind) notFound();
+  const kind = knownKind;
   getAdministrationConfig(kind);
   const documentId = administrationDocumentIdSchema.safeParse(values.documentId);
   if (!documentId.success) return <AdministrationUnavailableState kind={kind} />;
   if (kind === 'controls') {
     const result = await getAdministrationControl(documentId.data);
-    if (result.error?.status === 403) return <AdministrationAccessDenied />;
+    if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
     if (result.error?.status === 404) return <AdministrationUnavailableState kind="controls" />;
     if (result.error || !result.data) return <AdministrationUnavailableState error kind="controls" />;
     return <><AdministrationBreadcrumbs kind={kind} current={result.data.name} /><AdministrationForm documentId={documentId.data} initialValues={result.data} kind="controls" mode="edit" updateAction={updateControlAction} /></>;
   }
   if (kind === 'information-systems') {
     const result = await getInformationSystem(documentId.data);
-    if (result.error?.status === 403) return <AdministrationAccessDenied />;
+    if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
     if (result.error?.status === 404) return <AdministrationUnavailableState kind={kind} />;
     if (result.error || !result.data) return <AdministrationUnavailableState error kind={kind} />;
     return <><AdministrationBreadcrumbs kind={kind} current={result.data.name} /><AdministrationForm documentId={documentId.data} initialValues={result.data} kind={kind} mode="edit" searchOwners={searchActiveUsersAction} updateAction={updateInformationSystemAction} /></>;
   }
   if (kind === 'information-assets') {
     const result = await getInformationAsset(documentId.data);
-    if (result.error?.status === 403) return <AdministrationAccessDenied />;
+    if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
     if (result.error?.status === 404) return <AdministrationUnavailableState kind={kind} />;
     if (result.error || !result.data) return <AdministrationUnavailableState error kind={kind} />;
     return <><AdministrationBreadcrumbs kind={kind} current={result.data.name} /><AdministrationForm documentId={documentId.data} initialValues={result.data} kind={kind} mode="edit" updateAction={updateInformationAssetAction} /></>;
   }
   const [result, controls] = await Promise.all([getRiskType(documentId.data), listControls()]);
-  if (result.error?.status === 403) return <AdministrationAccessDenied />;
+  if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
   if (result.error?.status === 404) return <AdministrationUnavailableState />;
   if (result.error || !result.data) return <AdministrationUnavailableState error />;
   const controlData = [...(controls.data ?? [])];

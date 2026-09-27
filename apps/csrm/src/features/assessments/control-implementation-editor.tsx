@@ -14,10 +14,10 @@ import {
   deleteControlImplementationAction,
   updateControlImplementationAction,
 } from './assessment-actions';
-import {
-  controlImplementationWritableFields,
-  type ControlImplementation,
-  type ControlImplementationUpdateInput,
+import { controlImplementationWritableFields } from './assessment-domain';
+import type {
+  ControlImplementation,
+  ControlImplementationUpdateInput,
 } from './assessment-schema';
 import type { RiskEditorOptions } from './risk-editor';
 

@@ -254,6 +254,74 @@ test("collection controller derives native state after owner scope and keeps row
   assert.equal(result.meta.pagination.total, 1);
 });
 
+/*
+ * D-31 (Phase 8): the questionnaire read names each acting analyst through one
+ * bounded lookup of the distinct actor ids, fields limited to the documentId and
+ * the display name, and only for an analyst reader. A Requestor's projection
+ * omits the actor, so their read never looks anyone up.
+ */
+test("questionnaire read names timeline actors with one lookup, and none for a Requestor", async () => {
+  const at = (day: number) => `2026-09-0${day}T00:00:00.000Z`;
+  const governanceLog = [
+    { schemaVersion: 1, kind: "released", at: at(1), by: "analyst-a" },
+    { schemaVersion: 1, kind: "returned-to-review", at: at(2), by: "analyst-b", reason: "Clarify the scope." },
+    { schemaVersion: 1, kind: "released", at: at(3), by: "analyst-a" },
+    { schemaVersion: 1, kind: "returned-to-review", at: at(4), by: "analyst-c", reason: "Recheck the hosting answer." },
+    { schemaVersion: 1, kind: "released", at: at(5), by: "analyst-d" },
+    { schemaVersion: 1, kind: "returned-to-review", at: at(6), by: "analyst-e", reason: "Confirm the provider." },
+  ];
+  const document = { documentId: "questionnaire-1", questionnaireNumber: "QUES-UNIT-001", title: "Unit questionnaire", questions: [], governanceLog };
+  const userQueries: RecordValue[] = [];
+  const read = (source: RecordValue, questionnaireActor: "analyst" | "requestor") => questionnaireControllerExtension({
+    strapi: {
+      documents: (uid: string) => ({
+        count: async () => 0,
+        findOne: async () => (uid === "api::csrm-questionnaire.csrm-questionnaire" ? source : null),
+        findMany: async (query: RecordValue) => {
+          assert.equal(uid, "api::idambox-user.idambox-user", "UNEXPECTED_COLLECTION_READ");
+          userQueries.push(query);
+          // analyst-b is unknown or inactive, so the directory does not return it;
+          // the other three returned names are not usable as a person's name.
+          return [
+            { documentId: "analyst-a", displayName: "Morgan Analyst" },
+            { documentId: "analyst-c", displayName: "   " },
+            { documentId: "analyst-d", displayName: null },
+            { documentId: "analyst-e", displayName: "x".repeat(256) },
+          ];
+        },
+      }),
+    },
+  }).findWorkflowOne({
+    params: { questionnaireId: "questionnaire-1" },
+    request: { method: "GET" },
+    state: { csrmAuthorization: { questionnaireActor } },
+  }) as Promise<{ data: { events: RecordValue[] } }>;
+
+  const analyst = await read(document, "analyst");
+  assert.deepEqual(userQueries, [{
+    filters: { documentId: { $in: ["analyst-a", "analyst-b", "analyst-c", "analyst-d", "analyst-e"] }, accountStatus: { $eq: "active" } },
+    fields: ["documentId", "displayName"],
+    limit: 5,
+  }], "ACTOR_LOOKUP_IS_NOT_ONE_BOUNDED_QUERY");
+  assert.deepEqual(analyst.data.events.map((event) => event.by), [
+    { documentId: "analyst-a", displayName: "Morgan Analyst" },
+    { documentId: "analyst-b", displayName: null },
+    { documentId: "analyst-a", displayName: "Morgan Analyst" },
+    { documentId: "analyst-c", displayName: null },
+    { documentId: "analyst-d", displayName: null },
+    { documentId: "analyst-e", displayName: null },
+  ], "ACTOR_NAMES_NOT_RESOLVED");
+
+  userQueries.length = 0;
+  const requestor = await read(document, "requestor");
+  assert.deepEqual(userQueries, [], "REQUESTOR_READ_LOOKED_UP_AN_ACTOR");
+  assert.equal(requestor.data.events.length, governanceLog.length);
+  assert.ok(requestor.data.events.every((event) => !("by" in event)), "REQUESTOR_RECEIVED_THE_ACTOR");
+
+  await read({ ...document, governanceLog: [] }, "analyst");
+  assert.deepEqual(userQueries, [], "EMPTY_TIMELINE_LOOKED_UP_AN_ACTOR");
+});
+
 test("empty and malformed definitions project as safe empty reads", () => {
   const malformed = [{ ...question("bad", "Text", 0, false), options: { schemaVersion: 2 } }];
   for (const questions of [[], malformed]) {

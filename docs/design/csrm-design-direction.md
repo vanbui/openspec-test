@@ -281,6 +281,21 @@ Light only, `color-scheme: light`. BProton defines no dark theme; the empty `.da
 
 More than two series are separated by dash or pattern plus direct labels, never by a new hue. A metric that *is* a severity uses the §3.6 risk tokens. `--chart-3` to `--chart-5` are retired.
 
+**Chart geometry and marks (CSRM extension, 2026-09-24).** Decided for the Phase 7 dashboard and reports, which ship the first charts.
+
+| Token | Value | Use |
+|---|---|---|
+| `--chart-bar-thickness` | `0.5rem` | Horizontal bar thickness. A thin mark reads as data, not as a control or a field. |
+| `--chart-plot-height` | `10rem` | Plot height of a column chart. |
+| `--chart-column-max-width` | `2.5rem` | Widest column, so a few columns in a wide section never become slabs. |
+| `--chart-bar-min-length` | `2px` | Shortest drawn mark for a non-zero value; the direct label carries the exact value. |
+
+- Data marks are square-ended. A rounded thin bar reads as a pill, and pills mean action (§3.8).
+- A severity mark fills with the rating's §3.6 `fg` token, never its `bg` tint: the tints sit near 1.05:1 on white and fail WCAG 1.4.11.
+- Non-severity categories are always ink (`--chart-1`, `--chart-2`). Status hues never fill a data mark.
+- A partial period, such as the current month to date, is an unfilled mark with a 1px dashed `--chart-1` outline, marked "(to date)" in the chart's table and explained by a one-item legend.
+- Every chart carries a text equivalent: direct labels on the marks, and a table that assistive technology can read. Charts render at their final size, with no entrance motion.
+
 ---
 
 ## 4. Component-level guidance
@@ -288,7 +303,7 @@ More than two series are separated by dash or pattern plus direct labels, never 
 ### Logo lockup
 
 - Show the mark only as `bproton-logo.png` (served from `public/`); never redraw, recolour or recreate it.
-- Lockup: a square `--color-text-primary` (`foreground`) tile, `--radius-md`, 6px padding around a 20px mark (32px tile), followed by "BProton" in `--text-wordmark`, 10px gap. The mark image is decorative (`alt=""`); the link's accessible name is "IdamBox CSRM home".
+- Lockup: a square `--color-text-primary` (`foreground`) tile, `--radius-md`, 6px padding around a 20px mark (32px tile), followed by "BProton" in `--text-wordmark`, 10px gap. The mark image is decorative (`alt=""`); the link's accessible name is "BProton, IdamBox CSRM home". It begins with the visible word, so a person who speaks the word they see reaches the link (WCAG 2.5.3 Label in Name; corrected 2026-09-26, when the name "IdamBox CSRM home" failed axe `label-content-name-mismatch`).
 - Used at the top of the sidebar and mobile navigation sheet, with the wordmark in `--color-text-inverse`, and on the sign-in card, with the wordmark in `--color-text-primary`. The same file is the favicon (`app/icon.png`).
 
 ### AppShell / sidebar
@@ -327,7 +342,9 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Body `--text-table` (13px/18); **header** `--text-micro` (11px mono uppercase) in `--color-text-muted`, height 40px, `--color-bg-surface`, sticky, hairline bottom border; gains the backdrop-blur treatment when stuck.
 - Identifier cells (record IDs, CVE IDs, hashes) may use `--font-mono` at 13px.
 - Row separation: 1px `--color-border-default` horizontal hairlines only. **No zebra, no vertical rules.**
-- When horizontal scrolling is needed, the identifier header and first body cell stay sticky on the left, retain their row-state background, and use a 1px `--color-border-default` right hairline with no shadow. The scroll container is a labelled, keyboard-scrollable region.
+- When horizontal scrolling is needed, the identifier header and first body cell stay sticky on the left, retain their row-state background, and use a 1px `--color-border-default` right hairline with no shadow. Whenever the table is wider than its container, and only then, the scroll container is a keyboard-focusable region (`role="region"`, `tabindex="0"`) named `{table name}, scrolls horizontally`; a table that fits exposes no region. Arrow keys scroll it, the focus ring draws on its frame, and `scroll-padding` keeps a focused cell clear of the sticky column and header. Every DataTable applies the sticky identifier column while it overflows.
+- **Scroll cues (CSRM extension, 2026-09-25):** token `--table-scroll-fade-width: 1.5rem`. While columns are hidden beyond the end edge of a horizontally scrolling table, a fade of `--table-scroll-fade-width` from transparent to `--color-bg-surface` covers that edge of the header and body. It is decorative and pointer-transparent, disappears at the end of the scroll, has no transition and is never a shadow. The start edge is cued by the sticky first column's 1px `--color-border-default` end hairline, which appears only while the table overflows.
+- **Long-text columns (CSRM extension, 2026-09-25):** A long-text column (a statement, a title, a condition) wraps, clamps to two lines, keeps the full text in the DOM and is bounded between `14rem` and `28rem` wide. Rows grow to fit; cells stay vertically centred. Mobile cards clamp to three lines.
 - Numbers/currency/percent: right-aligned, `tabular-nums`; identity numerics (dates, IDs) left-aligned; header alignment matches column.
 - **Hover**: `--color-bg-hover` tint, 80ms `--ease-standard`. No translateY on rows: lift is for buttons and link cards only.
 - **Selection**: checkbox column appears on hover/focus (never hover-only: always keyboard reachable); selected row = `--color-bg-selected` + 2px `--color-text-primary` left edge; bulk-action bar slides up as a sticky footer only after ≥1 selection (220ms expo).
@@ -340,9 +357,12 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Anatomy: 12px leading icon (the shape system from §3.6) + label. **Icon + label always; never a coloured dot alone, never colour alone.**
 - Two emphasis tiers: **subtle** (tinted bg/fg/border: the default everywhere) and **solid** (critical severity and danger-solid only: the "needs action now" tier).
 - Every status badge uses the tinted recipe, whatever the record type; neutral outline chips are not a status treatment.
+- **Tone vocabulary (CSRM extension, 2026-09-25):** Tones mean one thing across every record type: neutral for not yet started or terminal, info for work in progress with or waiting on the Requestor, warning for work waiting on a Security Analyst, success for submitted, approved or released, danger for a recorded overdue state. One shared mapping owns every status value's label, tone and icon; feature code never chooses them.
+- **CSV import rows (CSRM extension, 2026-09-26):** the five states a CSV import gives each row, in its review and its results, are status values in that mapping. A row that is or will be written, `Create` or `Update`, is success; an `Unchanged` row is neutral; a `Rejected` or `Ambiguous` row waits on the Security Analyst to correct the file, so it is warning, never danger. Icons: `Check`, `RefreshCw`, `FileCheck2`, `CircleX` and `CircleQuestionMark`; `Ambiguous` never uses the High severity triangle.
 - In ultra-dense table cells, the Linear alternative is allowed: severity icon + plain text in `fg` colour, no tinted chip. Same tokens, less ink.
 - Counts inside badges: `tabular-nums`. Icon-only renderings (avoid) require `aria-label`; live status changes announce via `aria-live="polite"`.
 - Max ~5 distinct statuses visible per view; roll-ups show the highest severity.
+- **Urgency (CSRM extension, 2026-09-24):** time-bound work carries an urgency, which is a status and never a severity. `Overdue` uses the danger status recipe with `CalendarX2`, `Due soon` the warning recipe with `CalendarClock`, and `Needs attention` the info recipe with `Flag`. None reuses a severity or status icon. The badge carries a visually hidden `Urgency:` prefix, so a card or row without a column header still announces what the label means. Where the source is a Risk, the Risk's own rating badge sits beside the urgency; the two are never merged.
 
 ### Forms
 
@@ -352,6 +372,7 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Checkbox and radio: `--color-border-strong` boundary; checked = `--color-primary` fill with `--color-on-primary` glyph. Switch: off = `--color-border-strong` outline track, on = `--color-primary` track.
 - Validation: **on blur**, not per keystroke. Error = danger-fg `--text-caption` + 14px icon directly below the field, input border → `--color-danger-fg`; the message says what's wrong *and* how to fix it. Red is never the only signal.
 - Prefer radios/segmented controls over selects for ≤4 options. Segmented controls are pills. Multi-step flows: 2–3 steps with a step indicator.
+- **Segmented control (CSRM extension, 2026-09-24):** a radio group (`role="radiogroup"`, named by a visible label) drawn as a pill group on `--color-bg-surface` with a `--color-border-strong` boundary, because a radio boundary carries meaning. Segments are pills. Checked: `--color-primary` fill with `--color-on-primary` text. Unchecked: transparent, `--color-text-primary`, hover `--color-bg-hover`. Arrow keys move and check; Tab enters and leaves the group once. Labels use `--text-button`; height follows the small button height, and the touch-target height below 768px.
 
 ### Cards / KPI tiles
 
@@ -362,6 +383,7 @@ More than two series are separated by dash or pattern plus direct labels, never 
   3. Delta: `--text-caption`, icon (▲/▼) + signed value + period; icon and sign carry direction, colour (success/danger fg) is reinforcement only
   4. Optional 32px sparkline in `--chart-2`, severity hue only when the metric itself is a severity.
 - 3-second rule: a tile must be readable at a glance; no mixed messages per tile.
+- **CSRM extension (2026-09-24):** an optional supporting line after the value, in `--text-caption` / `--color-text-secondary`, names what is counted ("Overdue" what?). A tile that opens a list is one link with a trailing `ChevronRight` in `--color-text-muted` as its at-rest cue; a plain tile has no chevron, hover or lift, so the two are distinguishable at rest. A value the server cannot supply renders `Not available` in `--text-body`, never a dash or a zero. The delta keeps its reserved position even when absent.
 
 ### Page header
 
@@ -394,12 +416,14 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Differentiate the four types: first-use ("Import your asset inventory"), filtered-empty (**CTA = "Clear filters"**, never a dead end), cleared/complete (positive tone), error (recovery action + what happened).
 - Multi-widget dashboards: consistent, quiet empty states; don't render a wall of competing CTAs.
 - Shared state primitives own their structure, icon, typography, and locked copy: first-use is "No {noun} yet"; filtered-empty is "No {noun} match these filters" with a "Clear filters" action; errors are "We couldn't load {noun}" with "Try again"; permission denial identifies the unavailable area. Optional descriptions are reserved for domain facts.
+- **Cleared (CSRM extension, 2026-09-24):** the cleared/complete type is "No {noun}", without "yet", an optional domain-fact description, and no action. "No overdue treatments yet" would misstate a queue that is clear.
 
 ### Record links
 
 - A record identifier or title that opens that record uses `RecordLink`; feature surfaces do not style record navigation themselves.
 - Record links use `--color-text-link` (ink), 500 weight, and a visible 1px underline at rest in `--text-link-decoration` with a 3px offset. Link and body text share a colour, so the at-rest underline is the non-colour cue and is never removed. On hover and `:focus-visible`, the underline becomes `--color-text-link`.
 - Only text-decoration colour transitions, using `--duration-micro` and `--ease-standard`. Context determines text size; the record-link contract does not.
+- **Block links (CSRM extension, 2026-09-24):** a link that is a whole tile, row or card is not underlined, so it carries a trailing `ChevronRight` in `--color-text-muted` as its non-colour cue on touch devices. A block link that contains a record identifier still opens through one keyboard target only.
 
 ### Iconography
 
@@ -410,6 +434,12 @@ More than two series are separated by dash or pattern plus direct labels, never 
 ### Sign-in
 
 - A single `--color-bg-surface` card, `--radius-lg`, on `--color-bg-page`. The logo lockup sits at the top; the heading uses `--text-heading-lg`. Actions are primary pills at `--spacing-control-h`.
+
+### Print
+
+**Print (CSRM extension, 2026-09-25).** The shell (sidebar, header, skip link, footer, sheets, overlays) and interaction-only controls (search and filter inputs, density and pagination controls, header actions) do not print; page content prints at full width on `--color-bg-surface` with the screen type scale and the browser's default page margins. Scroll regions expand and sticky cells become static; table cells wrap so a table fits the paper; table headers repeat; rows, cards and tiles avoid breaking inside. Badges and chart marks keep their tints with `print-color-adjust: exact`; if a printer drops them, icon and text still carry the meaning. Links keep their underline and print no URL.
+
+**Print refinements (CSRM extension, 2026-09-26, Phase 8 UI review).** In-page workflow actions, such as a questionnaire's release, add, edit and delete controls or an assessment draft's generate action, are interaction-only controls too and do not print. Text that a long-text column or card clamps on screen prints whole, so paper never cuts a statement short. A table header prints the sorted column's direction cue, which states the printed order, and never the unsorted columns' cue.
 
 ---
 

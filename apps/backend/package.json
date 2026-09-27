@@ -11,7 +11,9 @@
     "develop": "strapi develop",
     "start": "strapi start",
     "strapi": "strapi",
-    "test": "tsc --pretty false && tsc -p tests/tsconfig.json --pretty false && node --test --test-concurrency=1 --test-timeout=600000 dist/tests/authorization.policy.test.js .tmp/tests-dist/tests/*.test.js",
+    "test": "node scripts/refuse-maintenance-switches.mjs && tsc --pretty false && tsc -p tests/tsconfig.json --pretty false && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/*.test.js",
+    "served-operations:write": "tsc -p tests/tsconfig.json --pretty false && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/served-operations.integration.test.js",
+    "authorization-matrix:observe": "tsc -p tests/tsconfig.json --pretty false && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/authorization-matrix.integration.test.js",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
   },

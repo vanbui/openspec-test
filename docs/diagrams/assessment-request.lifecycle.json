@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "CsrmAssessmentRequest Lifecycle",
+    "quality_profile": "showcase",
+    "viewBox": [
+      980,
+      566
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "requestStatus rail"
+    },
+    {
+      "id": "outcome",
+      "label": "Released + terminal"
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "type": "start",
+      "label": "Draft",
+      "sublabel": "requestor edits",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "draft"
+    },
+    {
+      "id": "submitted",
+      "type": "waiting",
+      "label": "Submitted",
+      "sublabel": "analyst prepares",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "submitted"
+    },
+    {
+      "id": "questionnaire",
+      "type": "active",
+      "label": "Answering",
+      "sublabel": "questionnaire",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "q-in-progress"
+    },
+    {
+      "id": "drafted",
+      "type": "active",
+      "label": "Risk Drafted",
+      "sublabel": "AI draft, advisory",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "risk-drafted"
+    },
+    {
+      "id": "review",
+      "type": "decision",
+      "label": "Under Review",
+      "sublabel": "readiness gate",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "tag": "under-review"
+    },
+    {
+      "id": "approved",
+      "type": "success",
+      "label": "Approved",
+      "sublabel": "assessment released",
+      "lane": "outcome",
+      "col": 2,
+      "tag": "approved"
+    },
+    {
+      "id": "closed",
+      "type": "neutral",
+      "label": "Closed",
+      "sublabel": "no writer yet",
+      "lane": "outcome",
+      "col": 0,
+      "tag": "closed"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "draft",
+      "to": "submitted",
+      "label": "submit",
+      "labelDy": -25
+    },
+    {
+      "from": "submitted",
+      "to": "draft",
+      "label": "revert to draft",
+      "variant": "dashed",
+      "route": "bottom-channel",
+      "fromSide": "bottom",
+      "toSide": "bottom"
+    },
+    {
+      "from": "submitted",
+      "to": "questionnaire",
+      "label": "answers saved",
+      "labelDy": 55
+    },
+    {
+      "from": "questionnaire",
+      "to": "drafted",
+      "label": "draft assessment",
+      "labelDy": 55
+    },
+    {
+      "from": "drafted",
+      "to": "review",
+      "label": "analyst edit",
+      "labelDy": 55
+    },
+    {
+      "from": "review",
+      "to": "approved",
+      "label": "release",
+      "variant": "security",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "from": "approved",
+      "to": "closed",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Who moves it",
+      "items": [
+        "Requestor submits, or reverts SUBMITTED only before a questionnaire exists",
+        "Saving the first answers to a released questionnaire starts QUESTIONNAIRE_IN_PROGRESS",
+        "Analyst drafts, reviews and releases the assessment"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Guarded gates",
+      "items": [
+        "Every transition is checked server-side in Strapi, with 409 on a wrong status",
+        "Release needs UNDER_REVIEW plus validateReleaseReadiness",
+        "AI drafts stay advisory: only an analyst release sets APPROVED"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Model gap",
+      "items": [
+        "CLOSED is in the JDL and schema enum, but no service writes it",
+        "Editing a reviewed assessment regresses only the assessment, never the request",
+        "Enum: draft, submitted, questionnaire-in-progress, risk-assessment-drafted, under-review, approved, closed"
+      ]
+    }
+  ]
+}

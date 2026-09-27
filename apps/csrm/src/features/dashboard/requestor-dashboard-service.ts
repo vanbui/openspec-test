@@ -6,7 +6,7 @@ import type { QuestionnaireSummary } from '../questionnaires/questionnaire-servi
 import { getMyQuestionnaireSummary, listMyQuestionnaires,} from '../questionnaires/questionnaire-service';
 import { availableAssessmentRequest, type QuestionnaireRequestRelationship } from '../questionnaires/questionnaire-domain';
 import { formatRequestDate, requestStatuses, requestStatusPresentation, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
-import { listDashboardRequests } from '../requests/request-service';
+import { getMyRequestStatusSummary, listDashboardRequests } from '../requests/request-service';
 import type { ContractResponseParser } from '../assessments/assessment-service';
 
 /** A questionnaire whose request is absent or protected shows no request context. */
@@ -159,16 +159,15 @@ export async function getRequestorDashboard(): Promise<RequestorDashboardState> 
       questionnaireSummaryResult,
       releasedAssessmentResult,
       ratingSummaryResult,
-      ...lifecycleResults
+      lifecycleSummaryResult,
     ] = await Promise.all([
       listDashboardRequests({ q: '', status: 'draft', sort: 'updatedAt:desc', page: 1, pageSize: 50 }),
       listMyQuestionnaires(),
       getMyQuestionnaireSummary(),
       listMyReleasedAssessments(),
       getMyAssessmentRatingSummary(),
-      // Only the authoritative total is read, so each count asks for one record
-      // rather than a page of ten it would discard.
-      ...requestStatuses.map((status) => listDashboardRequests({ q: '', status, sort: 'updatedAt:desc', page: 1, pageSize: 10 })),
+      // One owner-scoped summary read answers every lifecycle count (D-22).
+      getMyRequestStatusSummary(),
     ]);
 
     if (
@@ -177,7 +176,7 @@ export async function getRequestorDashboard(): Promise<RequestorDashboardState> 
       || questionnaireSummaryResult.error?.status === 403
       || releasedAssessmentResult.error?.status === 403
       || ratingSummaryResult.error?.status === 403
-      || lifecycleResults.some((result) => result.error?.status === 403)
+      || lifecycleSummaryResult.error?.status === 403
     ) return { kind: 'permission-denied' };
     if (
       draftResult.error
@@ -193,14 +192,14 @@ export async function getRequestorDashboard(): Promise<RequestorDashboardState> 
     ) return { kind: 'error' };
 
     /*
-     * The lifecycle counts summarise records the dashboard already shows, so
-     * one failed count must not take the whole workspace down with it. When
-     * any is unavailable the section says so and every other widget still
-     * renders.
+     * The lifecycle counts summarise records the dashboard already shows, so a
+     * failed summary read must not take the whole workspace down with it. When
+     * the counts are unavailable the section says so and every other widget
+     * still renders.
      */
-    const lifecycleCounts = lifecycleResults.some((result) => result.error || !result.data)
+    const lifecycleCounts = lifecycleSummaryResult.error || !lifecycleSummaryResult.data
       ? null
-      : requestStatuses.map((status, index) => ({ status, count: lifecycleResults[index]?.data?.pagination.total ?? 0 }));
+      : lifecycleSummaryResult.data;
 
     return {
       kind: 'ready',

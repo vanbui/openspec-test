@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 import {
@@ -37,7 +39,7 @@ import {
   AssessmentDraftRegistryError,
   createAssessmentDraftRegistry,
 } from "../src/api/csrm-assessment/services/assessment-draft-registry";
-import { buildAssessmentCollectionQuery } from "../src/api/csrm-assessment/services/assessment-scope";
+import { buildAssessmentCollectionQuery, releasedAssessmentQuery } from "../src/api/csrm-assessment/services/assessment-scope";
 
 const CROCKFORD_PATTERN = "[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}";
 
@@ -63,6 +65,37 @@ test("assessment collection queries compose scope before matching count and page
   const owned = buildAssessmentCollectionQuery({}, owner, "owner");
   assert.match(JSON.stringify(owned.countQuery.filters), /owner-1/);
   assert.throws(() => buildAssessmentCollectionQuery({}, analyst, "owner"));
+});
+
+/*
+ * GAP-1 (06.9-04): the assessment status filter accepts the complete datamodel
+ * vocabulary. Every status, closed included, is inside the analyst assessment
+ * scope. The owner collection keeps its released-owner predicate beside any
+ * status, so a status can narrow that scope but never widen it.
+ */
+test("assessment collection status filters accept every assessment status without widening either scope", () => {
+  const assessmentStatuses = (JSON.parse(readFileSync(
+    path.resolve(__dirname, "..", "..", "..", "src", "api", "csrm-assessment", "content-types", "csrm-assessment", "schema.json"),
+    "utf8",
+  )) as { attributes: { assessmentStatus: { enum: string[] } } }).attributes.assessmentStatus.enum;
+  assert.deepEqual(assessmentStatuses, ["draft", "in-review", "approved", "closed"], "ASSESSMENT_STATUS_VOCABULARY_CHANGED");
+
+  const analyst = { csrmAuthorization: { assessmentRequestActor: "analyst" as const } };
+  const owner = { csrmAuthorization: { assessmentRequestActor: "requestor" as const, assessmentOwnerCollectionScope: "own" as const, assessmentOwnerDocumentId: "owner-1" } };
+  for (const status of assessmentStatuses) {
+    const analystQuery = buildAssessmentCollectionQuery({ status }, analyst, "analyst");
+    assert.deepEqual(analystQuery.countQuery.filters, { assessmentStatus: { $eq: status } }, `ANALYST_STATUS_FILTER_${status}`);
+    assert.deepEqual(analystQuery.dataQuery.filters, analystQuery.countQuery.filters, `ANALYST_STATUS_PAGE_FILTER_${status}`);
+
+    const ownerQuery = buildAssessmentCollectionQuery({ status }, owner, "owner");
+    assert.deepEqual(ownerQuery.countQuery.filters, {
+      $and: [{ assessmentStatus: { $eq: status } }, releasedAssessmentQuery("owner-1").filters],
+    }, `OWNER_STATUS_FILTER_WIDENED_${status}`);
+  }
+
+  for (const status of ["Closed", "", "submitted", ["closed"], ["closed", "approved"], { $eq: "closed" }]) {
+    assert.throws(() => buildAssessmentCollectionQuery({ status }, analyst, "analyst"), `MALFORMED_ASSESSMENT_STATUS_ACCEPTED_${JSON.stringify(status)}`);
+  }
 });
 
 const draftRiskTypes: AssessmentDraftContext["riskTypes"] = [

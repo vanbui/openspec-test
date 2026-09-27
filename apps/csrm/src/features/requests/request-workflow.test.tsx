@@ -57,8 +57,8 @@ describe('request route workflow', () => {
   });
 
   it('does not expose Requestor mutation controls for a submitted detail payload', async () => {
-    const formModule = './request-' + 'form';
-    const module = await import(/* @vite-ignore */ formModule) as {
+    const actionsModule = './request-' + 'workflow-actions';
+    const module = await import(/* @vite-ignore */ actionsModule) as {
       RequestWorkflowActions?: ComponentType<{ request: CsrmAssessmentRequest }>;
     };
     if (!module.RequestWorkflowActions) throw new Error('PHASE2_RED_W0_03B_FORM_WORKFLOW_UI_ABSENT');

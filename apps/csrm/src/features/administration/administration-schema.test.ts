@@ -1,15 +1,33 @@
 import { describe, expect, it } from 'vitest';
 
+type InputSchema = {
+  parse: (value: unknown) => Record<string, unknown>;
+  safeParse: (value: unknown) => { success: boolean; error?: { issues: ReadonlyArray<{ path: readonly PropertyKey[]; message: string }> } };
+};
+
 type AdministrationSchemaModule = {
   administrationPageSizes: readonly number[];
   parseAdministrationQuery: (kind: string, input: Record<string, string | string[] | undefined>) => Record<string, unknown>;
   serializeAdministrationQuery: (input: Record<string, unknown>) => Record<string, string | number>;
   parseAdministrationListPayload: (kind: string, payload: unknown) => unknown;
   parseAdministrationDetailPayload: (kind: string, payload: unknown) => unknown;
-  controlCreateInputSchema: { parse: (value: unknown) => Record<string, unknown> };
-  controlAdministrationRecordSchema: { parse: (value: unknown) => Record<string, unknown> };
-  riskTypeCreateInputSchema: { parse: (value: unknown) => Record<string, unknown> };
+  controlCreateInputSchema: InputSchema;
+  controlAdministrationRecordSchema: InputSchema;
+  informationAssetCreateInputSchema: InputSchema;
+  informationSystemCreateInputSchema: InputSchema;
+  riskTypeCreateInputSchema: InputSchema;
 };
+
+/** The messages an input schema raises for a value, by field: exactly what a form shows under each field. */
+function messagesFor(schema: InputSchema, value: unknown): Record<string, string[]> {
+  const result = schema.safeParse(value);
+  const messages: Record<string, string[]> = {};
+  for (const issue of result.error?.issues ?? []) {
+    const field = issue.path.map(String).join('.');
+    messages[field] = [...(messages[field] ?? []), issue.message];
+  }
+  return messages;
+}
 
 type CsvClientParserModule = {
   CSV_MAX_BYTES: number;
@@ -97,6 +115,76 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 Administration canonical schemas', () => {
         documentId: 'boundary-control', description: null, controlType: null, ...exact, [field]: value,
       })).toThrow();
     }
+  });
+});
+
+/*
+ * WR-04: every message an Administration create or edit form can show is the product's own copy (direction
+ * section 4 Forms: what is wrong and how to fix it). The client form and the Server Action validate with these
+ * schemas, so a message reads the same from either.
+ */
+describe('Administration validation copy', () => {
+  const control = { controlNumber: 'AC-3', name: 'Access Enforcement', framework: 'NIST SP 800-53' };
+
+  it('asks for each required field by its label when it is blank or holds only spaces', async () => {
+    const schema = await loadSchema();
+    expect(messagesFor(schema.riskTypeCreateInputSchema, { name: '' })).toEqual({ name: ['Enter a name.'] });
+    expect(messagesFor(schema.riskTypeCreateInputSchema, { name: '   ' })).toEqual({ name: ['Enter a name.'] });
+    expect(messagesFor(schema.controlCreateInputSchema, { controlNumber: ' ', name: '', framework: '  ' })).toEqual({
+      controlNumber: ['Enter a control number.'],
+      name: ['Enter a name.'],
+      framework: ['Enter a framework.'],
+    });
+    expect(messagesFor(schema.informationSystemCreateInputSchema, { name: '' })).toEqual({ name: ['Enter a name.'] });
+    expect(messagesFor(schema.informationAssetCreateInputSchema, { name: '  ' })).toEqual({ name: ['Enter a name.'] });
+  });
+
+  it('states each length limit as the way to meet it', async () => {
+    const schema = await loadSchema();
+    expect(messagesFor(schema.riskTypeCreateInputSchema, { name: 'n'.repeat(256), description: 'd'.repeat(10_001) })).toEqual({
+      name: ['Use 255 characters or fewer.'],
+      description: ['Use 10,000 characters or fewer.'],
+    });
+    expect(messagesFor(schema.controlCreateInputSchema, {
+      ...control,
+      controlNumber: 'c'.repeat(256),
+      description: 'd'.repeat(10_001),
+      controlReference: 'r'.repeat(501),
+      frameworkVersion: 'v'.repeat(256),
+      frameworkSource: 's'.repeat(2_001),
+    })).toEqual({
+      controlNumber: ['Use 255 characters or fewer.'],
+      description: ['Use 10,000 characters or fewer.'],
+      controlReference: ['Use 500 characters or fewer.'],
+      frameworkVersion: ['Use 255 characters or fewer.'],
+      frameworkSource: ['Use 2,000 characters or fewer.'],
+    });
+    expect(messagesFor(schema.informationSystemCreateInputSchema, {
+      name: 'Customer portal', systemType: 't'.repeat(256), businessCriticality: 'b'.repeat(256), hostingLocation: 'h'.repeat(501),
+    })).toEqual({
+      systemType: ['Use 255 characters or fewer.'],
+      businessCriticality: ['Use 255 characters or fewer.'],
+      hostingLocation: ['Use 500 characters or fewer.'],
+    });
+    expect(messagesFor(schema.informationAssetCreateInputSchema, {
+      name: 'Customer records', type: 't'.repeat(256), location: 'l'.repeat(501), integrityRating: 'i'.repeat(256), comments: 'c'.repeat(10_001),
+    })).toEqual({
+      type: ['Use 255 characters or fewer.'],
+      location: ['Use 500 characters or fewer.'],
+      integrityRating: ['Use 255 characters or fewer.'],
+      comments: ['Use 10,000 characters or fewer.'],
+    });
+  });
+
+  it('names how to fix an optional Control field that holds only spaces, which the form submits as empty', async () => {
+    const schema = await loadSchema();
+    expect(messagesFor(schema.controlCreateInputSchema, { ...control, controlReference: '   ', frameworkVersion: ' ', frameworkSource: '  ' })).toEqual({
+      controlReference: ['Enter a control reference, or leave it empty.'],
+      frameworkVersion: ['Enter a framework version, or leave it empty.'],
+      frameworkSource: ['Enter a framework source, or leave it empty.'],
+    });
+    expect(schema.controlCreateInputSchema.parse({ ...control, controlReference: null, frameworkVersion: null, frameworkSource: null }))
+      .toEqual({ ...control, controlReference: null, frameworkVersion: null, frameworkSource: null });
   });
 });
 

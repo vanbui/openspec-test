@@ -1,10 +1,8 @@
 import {
-  CheckCircle2Icon,
   CircleDashedIcon,
   ClipboardListIcon,
   FilePenLineIcon,
   ShieldCheckIcon,
-  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { RecordLink } from '@/components/csrm/record-link';
@@ -23,40 +21,13 @@ import type {
   RequestorDashboardState,
 } from './requestor-dashboard-service';
 
-type QuestionnaireStatePresentation = {
-  className: string;
-  icon: LucideIcon;
-  label: string;
-};
-
-const questionnaireStatePresentations = {
-  'not-started': {
-    className: 'border-border bg-surface-muted text-foreground-secondary',
-    icon: CircleDashedIcon,
-    label: 'Not started',
-  },
-  draft: {
-    className: 'border-info-border bg-info-subtle text-info',
-    icon: FilePenLineIcon,
-    label: 'Draft',
-  },
-  submitted: {
-    className: 'border-success-border bg-success-subtle text-success',
-    icon: CheckCircle2Icon,
-    label: 'Submitted',
-  },
-} satisfies Record<'not-started' | 'draft' | 'submitted', QuestionnaireStatePresentation>;
-
+/*
+ * A dashboard questionnaire item carries no release field: the Requestor sees only released
+ * questionnaires, so its served state passes straight to the shared badge and never reads as
+ * analyst review.
+ */
 function QuestionnaireStateBadge({ item }: { item: Extract<DashboardActionItem, { kind: 'questionnaire' }> }) {
-  const presentation = questionnaireStatePresentations[item.state];
-  const Icon = presentation.icon;
-
-  return (
-    <Badge className={presentation.className} variant="outline">
-      <Icon aria-hidden="true" />
-      {presentation.label}
-    </Badge>
-  );
+  return <StatusBadge family="questionnaire" value={item.state} />;
 }
 
 function DashboardItem({ item }: { item: DashboardActionItem }) {

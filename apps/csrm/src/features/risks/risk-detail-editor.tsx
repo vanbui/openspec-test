@@ -9,10 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  riskWritableFields,
-  type ActiveUser,
-  type RiskUpdateInput,
+import { riskWritableFields } from '@/features/assessments/assessment-domain';
+import type {
+  ActiveUser,
+  RiskUpdateInput,
 } from '@/features/assessments/assessment-schema';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from '@/features/assessments/owner-combobox';
 import { updateRiskDetailAction, type RiskDetailServerActionResult } from './risk-actions';

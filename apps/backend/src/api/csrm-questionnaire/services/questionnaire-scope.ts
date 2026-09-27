@@ -10,6 +10,7 @@ import {
   parseGovernanceEvent,
   parseGovernanceLog,
   summariseGovernanceLog,
+  type GovernanceEvent,
 } from "./questionnaire-governance-log";
 
 export type QuestionnaireActor = "requestor" | "analyst";
@@ -252,17 +253,15 @@ function projectRevertedBy(value: unknown): RecordValue | null {
 }
 
 /*
- * The revision history is a narrative projection, never an authorization
- * input. It is read only after the questionnaire route has resolved the
- * caller's existing ownership or collection-scope grant.
+ * The events a timeline projection emits, parsed from the stored log. A future
+ * event kind is harmless narrative data: it is omitted while recognised events
+ * are kept. Any other malformed envelope still fails closed to no events.
  */
-export function projectGovernanceEvents(document: RecordValue, actor: QuestionnaireActor): RecordValue[] {
+function projectableGovernanceEvents(document: RecordValue): GovernanceEvent[] {
   let events;
   try {
     events = parseGovernanceLog(document.governanceLog);
   } catch {
-    /* A future event kind is harmless narrative data: omit it while preserving
-       recognised events. Any other malformed envelope still fails closed. */
     if (!Array.isArray(document.governanceLog) || document.governanceLog.length > GOVERNANCE_LOG_MAX_ENTRIES) return [];
     const known = document.governanceLog.filter((value) => isRecord(value) && (GOVERNANCE_EVENT_KINDS as readonly string[]).includes(String(value.kind)));
     try {
@@ -271,22 +270,70 @@ export function projectGovernanceEvents(document: RecordValue, actor: Questionna
       return [];
     }
   }
-
   return events
     .filter((event) => (GOVERNANCE_EVENT_KINDS as readonly string[]).includes(event.kind))
-    .slice(0, GOVERNANCE_LOG_MAX_ENTRIES)
+    .slice(0, GOVERNANCE_LOG_MAX_ENTRIES);
+}
+
+/**
+ * The distinct acting identities of the events the timeline projection emits,
+ * in first-seen order: exactly the ids an analyst read looks up, once, to name
+ * them (Phase 8 D-31).
+ */
+export function governanceActorIds(document: RecordValue): string[] {
+  return [...new Set(projectableGovernanceEvents(document).map((event) => event.by))];
+}
+
+/* A Strapi string column's width, and the bound the web boundary parses an actor's display name against. */
+const ACTOR_DISPLAY_NAME_MAX_LENGTH = 255;
+
+/**
+ * Builds the display-name resolver from the IdamBox users that one lookup of
+ * `governanceActorIds` returned. Only a non-blank name within the column width
+ * counts as a name. Any other value resolves to null, exactly like an id the
+ * lookup did not return because the user is unknown or inactive, so the
+ * timeline falls back to its neutral wording instead of failing the read.
+ */
+export function governanceActorNames(users: readonly unknown[]): (documentId: string) => string | null {
+  const names = new Map<string, string>();
+  for (const user of users) {
+    if (!isRecord(user) || typeof user.documentId !== "string") continue;
+    const { displayName } = user;
+    if (typeof displayName === "string" && displayName.trim().length > 0 && displayName.length <= ACTOR_DISPLAY_NAME_MAX_LENGTH) {
+      names.set(user.documentId, displayName);
+    }
+  }
+  return (documentId) => names.get(documentId) ?? null;
+}
+
+/*
+ * The revision history is a narrative projection, never an authorization
+ * input. It is read only after the questionnaire route has resolved the
+ * caller's existing ownership or collection-scope grant.
+ *
+ * `resolveDisplayName` names an analyst actor. The caller builds it from its
+ * one lookup (`governanceActorIds`, `governanceActorNames`); the projection
+ * itself stays pure and consults it only for an analyst reader, because a
+ * Requestor's timeline never carries the actor.
+ */
+export function projectGovernanceEvents(
+  document: RecordValue,
+  actor: QuestionnaireActor,
+  resolveDisplayName?: (documentId: string) => string | null,
+): RecordValue[] {
+  return projectableGovernanceEvents(document)
     .map((event) => actor === "analyst"
       ? {
         kind: event.kind,
         at: event.at,
         /*
-         * The log stores the acting identity as a documentId and nothing more,
-         * so the name is genuinely unknown here. Reporting the identifier as a
-         * display name would put an opaque string where a person's name belongs
-         * and read as though it were one; resolving the name needs a lookup
-         * this projection does not perform.
+         * The log stores the acting identity as a documentId and nothing more.
+         * The name comes from the caller's lookup; an id it could not name
+         * (unknown, inactive, or no lookup made) keeps a null name. Reporting
+         * the identifier as a display name would put an opaque string where a
+         * person's name belongs and read as though it were one.
          */
-        by: projectRevertedBy({ documentId: event.by, displayName: null }),
+        by: projectRevertedBy({ documentId: event.by, displayName: resolveDisplayName?.(event.by) ?? null }),
         ...(event.reason === undefined ? {} : { reason: event.reason }),
         ...(event.questionKey === undefined ? {} : { questionKey: event.questionKey }),
         ...(event.explanation === undefined ? {} : { explanation: event.explanation }),

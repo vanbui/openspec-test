@@ -9,10 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  controlImplementationWritableFields,
-  type ControlImplementationCreateInput,
-  type ControlImplementationUpdateInput,
+import { controlImplementationWritableFields } from '@/features/assessments/assessment-domain';
+import type {
+  ControlImplementationCreateInput,
+  ControlImplementationUpdateInput,
 } from '@/features/assessments/assessment-schema';
 import {
   createMitigationControlAction,

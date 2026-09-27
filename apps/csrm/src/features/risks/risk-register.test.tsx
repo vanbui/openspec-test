@@ -44,6 +44,7 @@ const overdueRisk: RiskRegisterItem = {
   treatmentStatus: 'In Progress',
   treatmentOwner: { documentId: 'user-bob', displayName: 'Bob Doe' },
   targetDate: '2025-09-12',
+  treatmentDueState: 'overdue',
   assessment: { documentId: 'assessment-alpha', assessmentNumber: 'RA-2026-001', title: 'Customer portal' },
 };
 
@@ -57,6 +58,7 @@ const undatedRisk: RiskRegisterItem = {
   treatmentStatus: null,
   treatmentOwner: null,
   targetDate: null,
+  treatmentDueState: 'no-target-date',
   assessment: { documentId: 'assessment-beta', assessmentNumber: 'RA-2026-002', title: 'Payments review' },
 };
 
@@ -133,6 +135,182 @@ describe('RiskRegisterTable', () => {
     expect(within(mobile).getByRole('link', { name: 'RSK-2026-001' }).closest('article')).not.toHaveAttribute('href');
   });
 
+  it('lays the desktop filters out in two rows up to 1279px and one row of four tracks from 1280px, labels on one line (D-28)', () => {
+    renderRegister();
+
+    const search = screen.getByRole('searchbox', { name: 'Search Risks' });
+    expect(search).toHaveAttribute('name', 'q');
+    const form = search.closest('form') as HTMLElement;
+    const grid = form.parentElement as HTMLElement;
+
+    // md to lg: the search form alone on the first row, the three selects on the next; xl: one row.
+    expect(grid).toHaveClass('hidden', 'gap-3', 'md:grid', 'md:grid-cols-3', 'xl:grid-cols-[2fr_1fr_1fr_1fr]');
+    expect(grid.className).not.toMatch(/\blg:grid-cols-/);
+    expect(form).toHaveClass('md:col-span-3', 'xl:col-span-1');
+    expect(form.className).not.toMatch(/\blg:col-span-/);
+
+    const labels = [
+      search.closest('label'),
+      ...['Treatment status', 'Inherent rating', 'Residual rating'].map((name) => screen.getByRole('combobox', { name }).closest('label')),
+    ];
+    expect(labels.map((label) => label?.firstChild?.textContent?.trim())).toEqual(['Search Risks', 'Treatment status', 'Inherent rating', 'Residual rating']);
+    for (const label of labels) expect(label).toHaveClass('whitespace-nowrap');
+  });
+
+  it('wraps the statement within its bounds and clamps it to two lines in the table and three on cards (D-28, X-3)', () => {
+    renderRegister();
+
+    const statement = overdueRisk.riskStatement as string;
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    const link = within(table).getByRole('link', { name: statement });
+    // The clamp is visual: the whole statement stays in the DOM and the link opens the record.
+    expect(link).toHaveTextContent(statement);
+    expect(link).toHaveClass('line-clamp-2');
+    expect(link).toHaveAttribute('href', '/app/risks/risk-alpha');
+    expect(link.closest('td')).toHaveClass('whitespace-normal', 'min-w-56', 'max-w-md');
+    expect(screen.getByRole('columnheader', { name: 'Statement' })).not.toHaveClass('whitespace-normal');
+    expect(within(table).getByRole('link', { name: 'RSK-2026-001' }).closest('td')).not.toHaveClass('whitespace-normal');
+
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]') as HTMLElement;
+    expect(within(mobile).getByText(statement)).toHaveClass('line-clamp-3');
+
+    // The register no longer opts into a permanent region: in jsdom the table fits, so there is none.
+    expect(screen.queryByRole('region', { name: 'Risk Register results, scrolls horizontally' })).not.toBeInTheDocument();
+  });
+
+  it('shows the Overdue marker exactly when the server says the treatment is overdue', () => {
+    /*
+     * The register renders the server's treatmentDueState and never compares
+     * dates itself (D-04, D-26): a Complete or closed Risk with a past target
+     * date is not overdue, a due-soon Risk carries no marker, and an overdue
+     * state is shown whatever the browser's own clock says.
+     */
+    const completeRisk: RiskRegisterItem = {
+      ...overdueRisk, documentId: 'risk-complete', riskNumber: 'RSK-2026-010',
+      treatmentStatus: 'Complete', targetDate: '2025-09-12', treatmentDueState: 'complete-or-closed',
+    };
+    const closedRisk: RiskRegisterItem = {
+      ...overdueRisk, documentId: 'risk-closed', riskNumber: 'RSK-2026-011',
+      treatmentStatus: 'In Progress', targetDate: '2025-09-12', treatmentDueState: 'complete-or-closed',
+    };
+    const dueSoonRisk: RiskRegisterItem = {
+      ...overdueRisk, documentId: 'risk-due-soon', riskNumber: 'RSK-2026-012',
+      targetDate: '2099-01-10', treatmentDueState: 'due-soon',
+    };
+    const laterRisk: RiskRegisterItem = {
+      ...overdueRisk, documentId: 'risk-later', riskNumber: 'RSK-2026-013',
+      targetDate: '2099-06-30', treatmentDueState: 'later',
+    };
+    const serverOverdueRisk: RiskRegisterItem = {
+      ...overdueRisk, documentId: 'risk-server-overdue', riskNumber: 'RSK-2026-014',
+      targetDate: '2099-03-01', treatmentDueState: 'overdue',
+    };
+    renderRegister({ risks: [overdueRisk, completeRisk, closedRisk, dueSoonRisk, laterRisk, serverOverdueRisk, undatedRisk] });
+
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]');
+    if (!mobile) throw new Error('Mobile Risk Register surface is missing.');
+    const desktopRow = (riskNumber: string) => within(table).getByRole('row', { name: new RegExp(riskNumber) });
+    const mobileCard = (riskNumber: string) => {
+      const card = within(mobile).getByRole('link', { name: riskNumber }).closest('article');
+      if (!card) throw new Error(`Mobile card for ${riskNumber} is missing.`);
+      return card as HTMLElement;
+    };
+    for (const [riskNumber, marked] of [
+      ['RSK-2026-001', true],
+      ['RSK-2026-010', false],
+      ['RSK-2026-011', false],
+      ['RSK-2026-012', false],
+      ['RSK-2026-013', false],
+      ['RSK-2026-014', true],
+      ['RSK-2026-002', false],
+    ] as const) {
+      for (const [surface, container] of [['desktop', desktopRow(riskNumber)], ['mobile', mobileCard(riskNumber)]] as const) {
+        const markers = within(container).queryAllByText('Overdue', { exact: true });
+        expect(markers, `${riskNumber} ${surface} marker`).toHaveLength(marked ? 1 : 0);
+        // The marker is never colour alone: it carries its icon beside the word.
+        if (marked) expect(markers[0]?.querySelector('svg'), `${riskNumber} ${surface} marker icon`).not.toBeNull();
+      }
+    }
+  });
+
+  it('draws the overdue marker in the urgency presentation, never the High severity triangle (UI-D13)', () => {
+    renderRegister({ risks: [overdueRisk, undatedRisk] });
+
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]');
+    if (!mobile) throw new Error('Mobile Risk Register surface is missing.');
+    const surfaces = [
+      ['desktop', within(table).getByRole('row', { name: /RSK-2026-001/ })],
+      ['mobile', within(mobile).getByRole('link', { name: 'RSK-2026-001' }).closest('article') as HTMLElement],
+    ] as const;
+    for (const [surface, container] of surfaces) {
+      const marker = within(container).getByText('Overdue', { exact: true });
+      // The dense urgency form: the danger fg colour, the CalendarX2 icon and a hidden prefix.
+      expect(marker, `${surface} marker colour`).toHaveClass('text-destructive');
+      expect(marker.querySelectorAll('svg'), `${surface} marker icon count`).toHaveLength(1);
+      expect(marker.querySelector('svg'), `${surface} marker icon`).toHaveClass('lucide-calendar-x-2');
+      expect(marker.parentElement, `${surface} marker prefix`).toHaveTextContent('Urgency: Overdue');
+      expect(marker.closest('[data-slot="alert-urgency"]'), `${surface} marker slot`).toHaveAttribute('data-urgency', 'overdue');
+      // No severity triangle beside the target date: urgency is a status, not a severity.
+      const targetDate = within(container).getByText('12 Sept 2025').parentElement as HTMLElement;
+      expect(targetDate.querySelector('.lucide-triangle-alert'), `${surface} severity triangle`).toBeNull();
+      expect(targetDate.querySelector('.text-warning'), `${surface} warning tone`).toBeNull();
+    }
+  });
+
+  it('shows every treatment status through the shared tinted badge, Overdue as a clock and never a triangle', () => {
+    const treatmentRisk = (riskNumber: string, treatmentStatus: RiskRegisterItem['treatmentStatus'], treatmentDueState: RiskRegisterItem['treatmentDueState']): RiskRegisterItem => ({
+      ...overdueRisk, documentId: `risk-${riskNumber}`, riskNumber, treatmentStatus, treatmentDueState,
+    });
+    renderRegister({
+      risks: [
+        treatmentRisk('RSK-2026-020', 'Not Started', 'later'),
+        treatmentRisk('RSK-2026-021', 'In Progress', 'later'),
+        treatmentRisk('RSK-2026-022', 'Overdue', 'overdue'),
+        treatmentRisk('RSK-2026-023', 'Complete', 'complete-or-closed'),
+        undatedRisk,
+      ],
+    });
+
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]');
+    if (!mobile) throw new Error('Mobile Risk Register surface is missing.');
+    for (const [riskNumber, label, tone] of [
+      ['RSK-2026-020', 'Not Started', 'neutral'],
+      ['RSK-2026-021', 'In Progress', 'info'],
+      ['RSK-2026-022', 'Overdue', 'danger'],
+      ['RSK-2026-023', 'Complete', 'success'],
+    ] as const) {
+      const surfaces = [
+        ['desktop', within(table).getByRole('row', { name: new RegExp(riskNumber) })],
+        ['mobile', within(mobile).getByRole('link', { name: riskNumber }).closest('article') as HTMLElement],
+      ] as const;
+      for (const [surface, container] of surfaces) {
+        // Rating badges carry no tone; the one toned badge in a row or card is its treatment status.
+        const badges = container.querySelectorAll<HTMLElement>('[data-slot="badge"][data-tone]');
+        expect(badges, `${riskNumber} ${surface} status badge`).toHaveLength(1);
+        const badge = badges[0];
+        expect(badge, `${riskNumber} ${surface}`).toHaveTextContent(new RegExp(`^${label}$`));
+        expect(badge, `${riskNumber} ${surface} tone`).toHaveAttribute('data-tone', tone);
+        expect(badge, `${riskNumber} ${surface} variant`).toHaveAttribute('data-variant', tone === 'neutral' ? 'outline' : tone);
+        if (tone === 'neutral') expect(badge, `${riskNumber} ${surface} neutral tint`).toHaveClass('bg-surface-muted', 'text-foreground-secondary');
+        expect(badge.querySelectorAll('svg'), `${riskNumber} ${surface} icon`).toHaveLength(1);
+        expect(badge.querySelector('.lucide-triangle-alert'), `${riskNumber} ${surface} severity triangle`).toBeNull();
+      }
+    }
+    // Overdue is a clock; its target-date urgency marker beside it stays a separate fact.
+    const overdueRow = within(table).getByRole('row', { name: /RSK-2026-022/ });
+    expect(overdueRow.querySelector('[data-slot="badge"][data-tone="danger"] svg')).toHaveClass('lucide-clock-alert');
+    expect(overdueRow.querySelector('[data-slot="alert-urgency"]')).toHaveAttribute('data-urgency', 'overdue');
+
+    // A Risk with no recorded treatment status says so in plain text, with no badge.
+    for (const container of [within(table).getByRole('row', { name: /RSK-2026-002/ }), within(mobile).getByRole('link', { name: 'RSK-2026-002' }).closest('article') as HTMLElement]) {
+      expect(container.querySelector('[data-slot="badge"][data-tone]')).toBeNull();
+      expect(within(container).getAllByText('Not provided').length).toBeGreaterThan(0);
+    }
+  });
+
   it('writes canonical search, filter, sort, page-size and paging state with replace', async () => {
     const user = userEvent.setup();
     search = 'q=portal&treatmentStatus=In%20Progress&sort=targetDate%3Aasc&page=3&pageSize=25';
@@ -182,7 +360,7 @@ describe('RiskRegisterTable', () => {
     expect(tableRows[2]).toHaveTextContent('RSK-2026-002');
   });
 
-  it('preserves selected labels, exposes target-date controls, and clears all twelve filters', async () => {
+  it('preserves selected labels, exposes target-date controls, and clears all thirteen filters', async () => {
     const user = userEvent.setup();
     const allFilters: RiskRegisterQuery = {
       ...query,
@@ -196,18 +374,20 @@ describe('RiskRegisterTable', () => {
       system: 'system-portal',
       asset: 'asset-identity',
       mitigationStatus: 'none',
+      state: 'open',
       targetDateFrom: '2025-01-01',
       targetDateTo: '2025-12-31',
       sort: 'assessment:desc',
       page: 7,
       pageSize: 50,
     };
-    search = 'q=portal&treatmentStatus=In%20Progress&inherentRating=Critical&residualRating=High&riskOwner=user-alice&treatmentOwner=user-bob&assessment=assessment-alpha&system=system-portal&asset=asset-identity&mitigationStatus=none&sort=assessment%3Adesc&page=7&pageSize=50&targetDateFrom=2025-01-01&targetDateTo=2025-12-31';
+    search = 'q=portal&treatmentStatus=In%20Progress&inherentRating=Critical&residualRating=High&riskOwner=user-alice&treatmentOwner=user-bob&assessment=assessment-alpha&system=system-portal&asset=asset-identity&mitigationStatus=none&state=open&sort=assessment%3Adesc&page=7&pageSize=50&targetDateFrom=2025-01-01&targetDateTo=2025-12-31';
     renderRegister({ query: allFilters, selectedLabels, pagination: { page: 7, pageSize: 50, pageCount: 8, total: 382 } });
 
-    expect(screen.getByRole('button', { name: 'Filters (12)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters (13)' })).toBeInTheDocument();
     expect(screen.getByText('Risk owner: Alice Analyst')).toBeInTheDocument();
     expect(screen.getByText('Related assessment: RA-2026-001')).toBeInTheDocument();
+    expect(screen.getByText('Risk state: Open')).toBeInTheDocument();
     expect(screen.getByText('Target date from: 2025-01-01')).toBeInTheDocument();
     expect(screen.getByText('Target date to: 2025-12-31')).toBeInTheDocument();
 
@@ -248,6 +428,39 @@ describe('RiskRegisterTable', () => {
 
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=assessment%3Adesc&pageSize=50', { scroll: false });
+  });
+
+  it('offers the closed Risk state filter in More filters, as a chip and in the mobile Sheet (D-36)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const stateSelect = screen.getByRole('combobox', { name: 'Risk state' });
+    expect(stateSelect).toHaveValue('');
+    expect(within(stateSelect).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
+      ['', 'All'],
+      ['open', 'Open'],
+      ['closed', 'Closed'],
+    ]);
+    await user.selectOptions(stateSelect, 'Closed');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?state=closed&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+
+    replace.mockReset();
+    view.unmount();
+    const openQuery: RiskRegisterQuery = { ...query, state: 'open', page: 3 };
+    renderRegister({ query: openQuery, pagination: { page: 3, pageSize: 25, pageCount: 4, total: 82 } });
+    expect(screen.getByText('Risk state: Open')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
+
+    // The mobile Sheet reuses the same labelled control with the active value.
+    await user.click(screen.getByRole('button', { name: 'Filters (1)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Risk Register filters' });
+    expect(within(sheet).getByRole('combobox', { name: 'Risk state' })).toHaveValue('open');
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Remove Risk state filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
   });
 
   it('reuses labelled date controls in the mobile Sheet and preserves values while loading', async () => {

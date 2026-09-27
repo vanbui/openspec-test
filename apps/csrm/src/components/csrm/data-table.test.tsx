@@ -1,10 +1,14 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType, ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { renderToString } from 'react-dom/server';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { installTestResizeObserver, stubHorizontalGeometry, TestResizeObserver } from '@/test/layout-stubs';
+import type { DataTableProps } from './data-table';
 
 type RequestRow = {
   id: string;
@@ -20,6 +24,7 @@ type TestColumn = {
   cell?: (value: unknown, row: RequestRow) => ReactNode;
   enableSorting?: boolean;
   numeric?: 'magnitude' | 'identity';
+  wrap?: boolean;
 };
 
 type TestDataTableProps = {
@@ -38,7 +43,6 @@ type TestDataTableProps = {
   pageSize: number;
   renderMobileCard: (row: RequestRow) => ReactNode;
   sorting?: Array<{ id: string; desc: boolean }>;
-  stickyFirstColumn?: boolean;
   state: 'populated' | 'loading' | 'empty' | 'error' | 'permission';
   loadingLabel: string;
   stateSlots: {
@@ -84,6 +88,18 @@ async function loadDataTable(): Promise<ComponentType<TestDataTableProps>> {
 
   return module.DataTable;
 }
+
+function resize() {
+  act(() => TestResizeObserver.notifyAll());
+}
+
+beforeEach(() => {
+  installTestResizeObserver();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('DataTable', () => {
   it('provides the accessible DataTable interaction contract', async () => {
@@ -140,10 +156,19 @@ describe('DataTable', () => {
     expect(onClearFilters).toHaveBeenCalledOnce();
 
     const tableHeader = screen.getByRole('rowgroup', { name: 'Table header' });
-    expect(tableHeader).toHaveClass('sticky', 'top-0', 'z-10', 'bg-surface/95', 'backdrop-blur-sm', 'border-b', 'border-border');
+    expect(tableHeader).toHaveClass('sticky', 'top-0', 'z-10', 'bg-surface/95', 'backdrop-blur-sm');
     expect(within(tableHeader).getAllByRole('columnheader')[0]).toHaveClass('h-10');
 
+    /*
+     * Separated borders (W-2): every rule is drawn by its own cell, so the pinned identifier column's end
+     * hairline moves with the column. A collapsed border belongs to the table's grid line instead, and it
+     * slid under the pinned column as soon as the table scrolled.
+     */
+    expect(screen.getByRole('table', { name: 'Assessment requests' })).toHaveClass('border-separate', 'border-spacing-0');
+    for (const header of within(tableHeader).getAllByRole('columnheader')) expect(header).toHaveClass('border-b', 'border-border');
+
     const bodyRows = within(screen.getByRole('rowgroup', { name: 'Table body' })).getAllByRole('row');
+    for (const cell of within(bodyRows[0]).getAllByRole('cell')) expect(cell).toHaveClass('border-b', 'border-border', 'group-last:border-b-0');
     expect(bodyRows[0]).toHaveClass('h-11', 'scroll-mt-10');
     expect(bodyRows[0]).toHaveClass('[&_button]:min-h-6', '[&_button]:min-w-6');
     expect(screen.getByRole('button', { name: 'Open REQ-101' })).toBeInTheDocument();
@@ -175,7 +200,8 @@ describe('DataTable', () => {
     expect(onPageSizeChange).toHaveBeenCalledWith(25);
 
     expect(screen.getByText('Mobile Customer portal').closest('[data-slot="data-table-mobile"]')).toHaveClass('md:hidden');
-    expect(screen.getByRole('table', { name: 'Assessment requests' }).closest('[data-slot="data-table-desktop"]')).toHaveClass('hidden', 'md:block', 'scroll-pt-10');
+    // A one-cell grid, so the end-edge scroll cue can share the table's cell and stick to the edge.
+    expect(screen.getByRole('table', { name: 'Assessment requests' }).closest('[data-slot="data-table-desktop"]')).toHaveClass('hidden', 'md:grid', 'scroll-pt-10');
 
     expect(localStorage.getItem('csrm:data-table-density:requestor-1')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Use compact density' }));
@@ -206,6 +232,33 @@ describe('DataTable', () => {
     }
   });
 
+  it('prints the sorted column\'s direction cue and never an unsorted column\'s (X-4, verdict 4c)', async () => {
+    const DataTable = await loadDataTable();
+    render(
+      <DataTable
+        ariaLabel="Assessment requests"
+        columns={columns}
+        data={rows}
+        densityUserId="requestor-print"
+        getRowId={(row) => row.id}
+        loadingLabel="Loading assessment requests"
+        onPageChange={vi.fn()}
+        onSortingChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        renderMobileCard={(row) => <article>{row.title}</article>}
+        sorting={[{ id: 'title', desc: false }]}
+        state="populated"
+        stateSlots={{ empty: <p>None</p>, error: <p>Failed</p>, permission: <p>Refused</p> }}
+        totalCount={rows.length}
+      />,
+    );
+
+    // The sorted column's cue states the printed order, so it prints; the unsorted cue is interaction-only.
+    expect(screen.getByRole('button', { name: 'Sort by Title' }).querySelector('svg')).not.toHaveAttribute('data-print');
+    expect(screen.getByRole('button', { name: 'Sort by Risk score' }).querySelector('svg')).toHaveAttribute('data-print', 'hidden');
+  });
+
   it('enables sorting when a sorting handler is supplied after the first render', async () => {
     const DataTable = await loadDataTable();
     const baseProps: TestDataTableProps = {
@@ -232,36 +285,129 @@ describe('DataTable', () => {
     expect(screen.getByRole('button', { name: 'Sort by Title' })).toBeInTheDocument();
   });
 
-  it('omits unsupported controls and provides an opt-in labelled sticky scroll region', async () => {
+  function registerProps(overrides: Partial<TestDataTableProps> = {}): TestDataTableProps {
+    return {
+      ariaLabel: 'Risk Register',
+      columns,
+      data: rows,
+      densityUserId: 'risk-register-1',
+      getRowId: (row) => row.id,
+      onPageChange: vi.fn(),
+      page: 1,
+      pageSize: 10,
+      renderMobileCard: (row) => <article>{row.title}</article>,
+      state: 'populated',
+      loadingLabel: 'Loading risks',
+      stateSlots: { empty: null, error: null, permission: null },
+      totalCount: 23,
+      ...overrides,
+    };
+  }
+
+  it('omits unsupported controls', async () => {
     const DataTable = await loadDataTable();
     const onPageChange = vi.fn();
 
-    render(
-      <DataTable
-        ariaLabel="Risk Register"
-        columns={columns}
-        data={rows}
-        densityUserId="risk-register-1"
-        getRowId={(row) => row.id}
-        onPageChange={onPageChange}
-        page={1}
-        pageSize={10}
-        renderMobileCard={(row) => <article>{row.title}</article>}
-        state="populated"
-        loadingLabel="Loading risks"
-        stateSlots={{ empty: null, error: null, permission: null }}
-        stickyFirstColumn
-        totalCount={23}
-      />,
-    );
+    render(<DataTable {...registerProps({ onPageChange })} />);
 
     expect(screen.queryByText('Clear filters')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Rows per page' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sort by Title' })).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Risk Register, scrolls horizontally' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('columnheader', { name: 'Request ID' })).toHaveClass('sticky', 'left-0', 'border-r', 'bg-surface');
-    expect(screen.getByRole('cell', { name: 'REQ-101' })).toHaveClass('sticky', 'left-0', 'border-r', 'bg-surface', 'group-hover:bg-[image:linear-gradient(var(--surface-hover),var(--surface-hover))]');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Next page' }));
     expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it('makes the scroller a labelled, focusable region with a sticky identifier column only while the table overflows', async () => {
+    const DataTable = await loadDataTable();
+    render(<DataTable {...registerProps()} />);
+
+    const scroller = document.querySelector<HTMLElement>('[data-slot="data-table-desktop"]')!;
+    const identifierHeader = screen.getByRole('columnheader', { name: 'Request ID' });
+    const identifierCell = screen.getByRole('cell', { name: 'REQ-101' });
+    const regionAttributes = ['role', 'aria-label', 'tabindex'];
+
+    // jsdom lays nothing out, so the table fits: no region, no tab stop, no sticky column, no hairline.
+    expect(scroller).toHaveAttribute('data-overflow', 'false');
+    for (const attribute of regionAttributes) expect(scroller).not.toHaveAttribute(attribute);
+    expect(screen.queryByRole('region', { name: /scrolls horizontally/ })).not.toBeInTheDocument();
+    for (const cell of [identifierHeader, identifierCell]) {
+      expect(cell).not.toHaveClass('sticky');
+      expect(cell).not.toHaveClass('border-r');
+    }
+
+    stubHorizontalGeometry(scroller, { scrollWidth: 1400, clientWidth: 688 });
+    resize();
+
+    const region = screen.getByRole('region', { name: 'Risk Register, scrolls horizontally' });
+    expect(region).toBe(scroller);
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toHaveAttribute('data-overflow', 'true');
+    expect(region).toHaveAttribute('data-overflow-end', 'false');
+    expect(region).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-ring');
+    expect(identifierHeader).toHaveClass('sticky', 'left-0', 'border-r', 'border-border', 'bg-surface');
+    expect(identifierCell).toHaveClass(
+      'sticky',
+      'left-0',
+      'border-r',
+      'border-border',
+      'bg-surface',
+      'group-hover:bg-[image:linear-gradient(var(--surface-hover),var(--surface-hover))]',
+    );
+    // Only the identifier column sticks.
+    expect(screen.getByRole('cell', { name: 'Customer portal' })).not.toHaveClass('sticky');
+
+    // At the end of the scroll no column is hidden, so the end-edge cue goes.
+    region.scrollLeft = 712;
+    fireEvent.scroll(region);
+    expect(region).toHaveAttribute('data-overflow-end', 'true');
+
+    stubHorizontalGeometry(scroller, { scrollWidth: 688, clientWidth: 688 });
+    resize();
+    expect(scroller).toHaveAttribute('data-overflow', 'false');
+    for (const attribute of regionAttributes) expect(scroller).not.toHaveAttribute(attribute);
+    expect(identifierHeader).not.toHaveClass('sticky');
+  });
+
+  it('never makes the loading skeleton a region or a tab stop', async () => {
+    const DataTable = await loadDataTable();
+    render(<DataTable {...registerProps({ state: 'loading', data: [] })} />);
+
+    expect(document.querySelector('[data-slot="data-table-desktop"]')).toBeNull();
+    const skeleton = document.querySelector('[data-slot="data-table-loading-desktop"]')!;
+    stubHorizontalGeometry(skeleton, { scrollWidth: 1400, clientWidth: 688 });
+    resize();
+
+    expect(screen.queryByRole('region', { name: /scrolls horizontally/ })).not.toBeInTheDocument();
+    expect(skeleton).not.toHaveAttribute('data-overflow');
+    expect(document.querySelectorAll('[tabindex]')).toHaveLength(0);
+  });
+
+  it('wraps a long-text column within its bounds and leaves its header and the other columns on one line', async () => {
+    const DataTable = await loadDataTable();
+    const wrappingColumns = columns.map((column) => (column.header === 'Title' ? { ...column, wrap: true } : column));
+    render(<DataTable {...registerProps({ columns: wrappingColumns })} />);
+
+    expect(screen.getByRole('cell', { name: 'Customer portal' })).toHaveClass('whitespace-normal', 'min-w-56', 'max-w-md');
+    expect(screen.getByRole('columnheader', { name: 'Title' })).not.toHaveClass('whitespace-normal');
+    expect(screen.getByRole('cell', { name: 'REQ-101' })).not.toHaveClass('whitespace-normal');
+  });
+
+  it('renders on the server without the region, which appears only once overflow is measured', async () => {
+    const DataTable = await loadDataTable();
+    const host = document.createElement('div');
+    host.innerHTML = renderToString(<DataTable {...registerProps()} />);
+    const scroller = host.querySelector('[data-slot="data-table-desktop"]');
+
+    expect(scroller).toHaveAttribute('data-overflow', 'false');
+    for (const attribute of ['role', 'aria-label', 'tabindex']) expect(scroller).not.toHaveAttribute(attribute);
+    expect(host.querySelector('[role="region"]')).toBeNull();
+  });
+
+  it('no longer accepts stickyFirstColumn: every DataTable sticks its identifier column while it overflows', () => {
+    const retired: Partial<DataTableProps<RequestRow>> = {
+      // @ts-expect-error stickyFirstColumn is retired (UI-SPEC section 5.2).
+      stickyFirstColumn: true,
+    };
+    expect(retired).not.toHaveProperty('ariaLabel');
   });
 });

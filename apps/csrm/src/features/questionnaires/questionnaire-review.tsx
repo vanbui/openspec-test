@@ -1,14 +1,14 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, ClipboardPenLine, Clock3 } from 'lucide-react';
+import { AlertCircle, Clock3 } from 'lucide-react';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { RecordLink } from '@/components/csrm/record-link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { PageHeader } from '@/components/csrm/page-header';
+import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
@@ -43,7 +43,7 @@ function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire
   return <Alert><AlertCircle aria-hidden="true" /><AlertTitle>No submitted answers are available</AlertTitle><AlertDescription>This questionnaire does not contain a complete submitted response.</AlertDescription></Alert>;
   })();
   /*
-   * Awaiting submission is an authorised read of a questionnaire that simply
+   * The awaiting-submission state is an authorised read of a questionnaire that simply
    * has no submitted answers yet, so name it: the number and its request are
    * metadata the review list already shows, and an analyst who has just
    * generated a questionnaire needs to see which one this is. Every other safe
@@ -60,13 +60,18 @@ function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire
   const heading = identify
     ? { title: questionnaire.title, description: `${questionnaire.questionnaireNumber} · ${availableAssessmentRequest(questionnaire.assessmentRequest)?.requestNumber ?? ''}` }
     : { title: 'Questionnaire review', description: 'Review an authorised questionnaire submission.' };
-  return <><PageHeader title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}<Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link></>;
+  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}<Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link></>;
 }
 
 export function QuestionnaireReview({ assessmentRequestHref, definition = [], questionnaire, state }: QuestionnaireReviewProps) {
   if (state === 'analyst-review' && questionnaire) {
     if (definition.length === 0) return <SafeReviewState assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} state="empty" />;
-    return <><PageHeader action={<Badge className="border-info-border bg-info-subtle text-info" variant="outline"><ClipboardPenLine aria-hidden="true" />Analyst review</Badge>} description={questionnaire.questionnaireNumber} title={questionnaire.title} /><QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} /><QuestionnaireGovernance definition={definition} questionnaire={questionnaire} /><QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /><QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode="read-only" /></>;
+    /*
+     * The governance question editor is the single list of questions here (D-32): an unreleased
+     * questionnaire has no answers to show, and the read-only renderer would repeat every question
+     * under a Submitted notice that is untrue before release.
+     */
+    return <><PageHeader status={<StatusBadge family="questionnaire" value="analyst-review" />} description={questionnaire.questionnaireNumber} title={questionnaire.title} /><QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} /><QuestionnaireGovernance definition={definition} questionnaire={questionnaire} /><QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /></>;
   }
   if (state !== 'submitted' || !questionnaire || questionnaire.state !== 'submitted') {
     return <SafeReviewState assessmentRequestHref={assessmentRequestHref} definition={definition} questionnaire={questionnaire} state={state === 'submitted' || state === 'analyst-review' ? 'empty' : state} />;
@@ -76,7 +81,7 @@ export function QuestionnaireReview({ assessmentRequestHref, definition = [], qu
   return (
     <>
       <PageHeader
-        action={<Badge className="border-success-border bg-success-subtle text-success" variant="outline"><CheckCircle2 aria-hidden="true" />Submitted</Badge>}
+        status={<StatusBadge family="questionnaire" value="submitted" />}
         description={questionnaire.questionnaireNumber}
         title={questionnaire.title}
       />

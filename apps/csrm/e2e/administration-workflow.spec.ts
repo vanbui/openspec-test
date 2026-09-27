@@ -2,9 +2,20 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 import { strapiHealthUrl } from './harness-urls';
+import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
+import { expectFocusVisible } from './helpers/focus';
+import { primaryViewport, signInAs } from './helpers/navigation';
 
-const suffix = `dylan-test-${process.pid}`;
 const viewports = [375, 768, 1280, 1440] as const;
+
+/*
+ * Record names unique to this run and this project. The CSV journey runs in both projects against one
+ * database, so each pass creates its own records and its preview reads Create 1, Update 1 and
+ * Unchanged 1 every time (D-14).
+ */
+function recordSuffix(): string {
+  return `dylan-test-${process.pid}-${test.info().project.name}`;
+}
 
 async function expectNoHorizontalOverflow(page: Page, label: string): Promise<void> {
   const geometry = await page.evaluate(() => ({
@@ -14,6 +25,32 @@ async function expectNoHorizontalOverflow(page: Page, label: string): Promise<vo
   expect(geometry.scrollWidth, label).toBeLessThanOrEqual(geometry.viewportWidth);
 }
 
+/**
+ * D-29: a table's scroller is a named, focusable region exactly while the table is wider than it.
+ * `data-overflow` has to follow the measured width (it flips once the page hydrates), so neither
+ * branch can pass vacuously. Returns the attribute's value.
+ */
+async function expectRegionFollowsOverflow(page: Page, tableName: string, message: string): Promise<'true' | 'false'> {
+  const table = page.getByRole('table', { name: tableName, exact: true });
+  await expect(table, `${message}: ${tableName} is shown`).toBeVisible();
+  const scroller = page.locator('[data-overflow]').filter({ has: table });
+  await expect(scroller, `${message}: one scroller holds ${tableName}`).toHaveCount(1);
+  const overflows = await scroller.evaluate((element) => element.scrollWidth > element.clientWidth);
+  await expect(scroller, `${message}: data-overflow follows the measured width`).toHaveAttribute('data-overflow', String(overflows));
+  const region = page.getByRole('region', { name: `${tableName}, scrolls horizontally`, exact: true });
+  if (overflows) {
+    await expect(region, `${message}: the overflowing scroller is the named region`).toHaveAttribute('tabindex', '0');
+    await region.focus();
+    await expect(region, `${message}: the region takes keyboard focus`).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => region.evaluate((element) => element.scrollLeft), { message: `${message}: ArrowRight scrolls the region` }).toBeGreaterThan(0);
+  } else {
+    await expect(region, `${message}: a table that fits exposes no region`).toHaveCount(0);
+    await expect(scroller, `${message}: a table that fits is no tab stop`).not.toHaveAttribute('tabindex');
+  }
+  return overflows ? 'true' : 'false';
+}
+
 async function expectNoSeriousAxeViolations(page: Page): Promise<void> {
   const scan = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -21,37 +58,34 @@ async function expectNoSeriousAxeViolations(page: Page): Promise<void> {
   expect(scan.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
 }
 
-async function signIn(page: Page, role: 'Requestor' | 'Security Analyst'): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-  if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  await page.getByRole('button', { name: `Continue as ${role}` }).click();
-  await expect(page, `BASELINE_${role === 'Requestor' ? 'REQUESTOR' : 'ANALYST'}_SHELL_URL`).toHaveURL(/\/app$/);
-  await expect(page.getByRole('main'), 'BASELINE_SHELL_MAIN').toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dashboard' }), 'BASELINE_DASHBOARD').toBeVisible();
-  await expect(page.getByRole('banner').getByText(role, { exact: true }), 'BASELINE_ACTOR_ROLE').toBeVisible();
+/*
+ * Opens the navigation where this width shows it: the sidebar from 1024px is already on screen, and
+ * below 1024px the Menu sheet holds it. Returns whether the sheet was opened.
+ */
+async function showNavigation(page: Page): Promise<boolean> {
+  const menu = page.getByRole('button', { name: 'Menu', exact: true });
+  if (!(await menu.isVisible())) return false;
+  await menu.click();
+  await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible();
+  return true;
 }
 
-async function establishAnalystBaseline(page: Page, request: APIRequestContext): Promise<void> {
+async function establishAnalystBaseline(
+  page: Page,
+  request: APIRequestContext,
+  viewport: { width: number; height: number } = { width: 375, height: 812 },
+): Promise<void> {
   const health = await request.get(strapiHealthUrl);
   if (!health.ok()) throw new Error(`SERVER_STRAPI_HEALTH_FAILED:${health.status()}`);
-  await page.setViewportSize({ width: 375, height: 812 });
+  await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
-  await signIn(page, 'Security Analyst');
-  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await signInAs(page, 'Security Analyst');
+  await showNavigation(page);
   await expect(
     page.getByRole('navigation').getByText('Administration', { exact: true }),
     'Expected Administration navigation group to be visible',
   ).toBeVisible();
-}
-
-async function expectKeyboardFocus(locator: Locator): Promise<void> {
-  await locator.focus();
-  await expect(locator).toBeFocused();
-  expect(await locator.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return style.outlineStyle !== 'none' || style.boxShadow !== 'none';
-  })).toBe(true);
 }
 
 async function expectDeniedWithoutDisclosure(page: Page, routes: string[], forbidden: RegExp): Promise<void> {
@@ -69,13 +103,22 @@ async function expectDeniedWithoutDisclosure(page: Page, routes: string[], forbi
 
 async function signOutAndEstablishRequestorBaseline(page: Page): Promise<void> {
   await page.context().clearCookies();
-  await signIn(page, 'Requestor');
-  await expect(page.getByRole('navigation').getByText('Administration', { exact: true })).toHaveCount(0);
+  await signInAs(page, 'Requestor');
+  // Read the navigation on screen (the sheet below 1024px), so the absent group is proved at every width.
+  const sheetOpened = await showNavigation(page);
+  const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+  await expect(navigation.getByRole('link', { name: 'My Requests' }), 'the Requestor navigation is on screen').toBeVisible();
+  await expect(navigation.getByText('Administration', { exact: true })).toHaveCount(0);
+  if (sheetOpened) {
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Navigation' })).toHaveCount(0);
+  }
 }
 
 test.describe.serial('@administration-risk-types Risk Type administration', () => {
   test('Bob creates and edits a reusable Risk Type while Jane learns no record facts', async ({ page, request }) => {
     test.setTimeout(180_000);
+    const suffix = recordSuffix();
     await establishAnalystBaseline(page, request);
 
     await page.getByRole('link', { name: 'Risk Types', exact: true }).click();
@@ -111,6 +154,7 @@ test.describe.serial('@administration-risk-types Risk Type administration', () =
 test.describe.serial('@administration-controls Control administration', () => {
   test('Bob searches the authoritative Control library and persists an edit', async ({ page, request }) => {
     test.setTimeout(600_000);
+    const suffix = recordSuffix();
     await establishAnalystBaseline(page, request);
     await page.getByRole('link', { name: 'Controls', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Controls' })).toBeVisible();
@@ -131,8 +175,12 @@ test.describe.serial('@administration-controls Control administration', () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/app/admin/controls');
       await expectNoHorizontalOverflow(page, `Controls has no page overflow at ${width}px`);
+      if (width >= 768) {
+        const overflow = await expectRegionFollowsOverflow(page, 'Controls results', `Controls at ${width}px`);
+        test.info().annotations.push({ type: 'Controls results data-overflow', description: `${width}px: ${overflow}` });
+      }
     }
-    await expectKeyboardFocus(page.getByRole('link', { name: 'Create Control' }));
+    await expectFocusVisible(page.getByRole('link', { name: 'Create Control' }));
     await expectNoSeriousAxeViolations(page);
 
     const controlNumber = `ZZ-${suffix}`;
@@ -161,6 +209,7 @@ test.describe.serial('@administration-controls Control administration', () => {
 test.describe.serial('@administration-systems-assets Information System and Asset administration', () => {
   test('Bob maintains both inventories with responsive and accessible presentation', async ({ page, request }) => {
     test.setTimeout(600_000);
+    const suffix = recordSuffix();
     await establishAnalystBaseline(page, request);
 
     for (const record of [
@@ -185,8 +234,12 @@ test.describe.serial('@administration-systems-assets Information System and Asse
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/app/admin/information-systems');
       await expectNoHorizontalOverflow(page, `Information Systems has no page overflow at ${width}px`);
+      if (width >= 768) {
+        const overflow = await expectRegionFollowsOverflow(page, 'Information Systems results', `Information Systems at ${width}px`);
+        test.info().annotations.push({ type: 'Information Systems results data-overflow', description: `${width}px: ${overflow}` });
+      }
     }
-    await expectKeyboardFocus(page.getByRole('link', { name: 'Create Information System' }));
+    await expectFocusVisible(page.getByRole('link', { name: 'Create Information System' }));
     await expectNoSeriousAxeViolations(page);
 
     await signOutAndEstablishRequestorBaseline(page);
@@ -200,9 +253,18 @@ test.describe.serial('@administration-systems-assets Information System and Asse
 });
 
 test.describe.serial('@administration-imports CSV administration imports', () => {
-  test('Bob confirms a five-way preview and receives safe persisted results', async ({ page, request }) => {
+  test('Bob confirms a five-way preview and receives safe persisted results @journey', async ({ page, request }, testInfo) => {
     test.setTimeout(180_000);
-    await establishAnalystBaseline(page, request);
+    const suffix = recordSuffix();
+    // The import runs at the project's width: its preview is a table at 1440 and cards at 375.
+    const primary = primaryViewport(testInfo);
+    const mobile = primary.width < 768;
+    const previewRecord = (naturalKey: string): Locator => (mobile
+      ? page.locator('[data-slot="csv-import-mobile"]').getByRole('article').filter({ hasText: naturalKey })
+      : page.getByRole('row').filter({ hasText: naturalKey }));
+    // Every document the journey loads, for both actors, runs under the production CSP with no violation (D-19).
+    await attachCspCollector(page);
+    await establishAnalystBaseline(page, request, primary);
     const updateName = `CSV Update ${suffix}`;
     const unchangedName = `CSV Unchanged ${suffix}`;
     for (const [name, description] of [[updateName, 'original row'], [unchangedName, 'existing value']] as const) {
@@ -219,8 +281,38 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 });
       await expectNoHorizontalOverflow(page, `Risk Type import has no page overflow at ${width}px`);
+      // The Guidance table renders at every width, so its region follows its overflow from 375px.
+      await expectRegionFollowsOverflow(page, 'Risk Type CSV columns', `Risk Type import Guidance at ${width}px`);
     }
-    await expectKeyboardFocus(page.getByRole('button', { name: 'Choose CSV file' }));
+
+    // Every import page fits 375px: the template pill names no collection (UI-SPEC section 11
+    // addendum) and the column guidance scrolls only inside its own labelled region.
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const collection of [
+      { route: 'risk-types', plural: 'Risk Types', label: 'Risk Type' },
+      { route: 'controls', plural: 'Controls', label: 'Control' },
+      { route: 'information-systems', plural: 'Information Systems', label: 'Information System' },
+      { route: 'information-assets', plural: 'Information Assets', label: 'Information Asset' },
+    ] as const) {
+      await page.goto(`/app/admin/${collection.route}/import`);
+      await expect(page.getByRole('heading', { level: 1, name: `Import ${collection.plural} from CSV` })).toBeVisible();
+      await expectNoHorizontalOverflow(page, `${collection.plural} import has no page overflow at 375px`);
+      const template = page.getByRole('button', { name: 'Download CSV template', exact: true });
+      await expect(template, `${collection.plural} import offers the CSV template`).toBeVisible();
+      const templateBox = await template.boundingBox();
+      expect((templateBox?.x ?? 0) + (templateBox?.width ?? Number.POSITIVE_INFINITY), `${collection.plural} template button stays inside 375px`).toBeLessThanOrEqual(375);
+      const overflow = await expectRegionFollowsOverflow(page, `${collection.label} CSV columns`, `${collection.plural} import Guidance at 375px`);
+      if (overflow === 'true') {
+        await expect(page.getByRole('region', { name: `${collection.label} CSV columns, scrolls horizontally`, exact: true }), `${collection.plural} Guidance region keeps focus while it scrolls`).toBeFocused();
+      }
+      // The 2026-09-24 baseline found axe scrollable-region-focusable on three of these pages at 375.
+      await expectNoSeriousAxeViolations(page);
+      test.info().annotations.push({ type: 'CSV columns data-overflow at 375', description: `${collection.route}: ${overflow}` });
+    }
+    await page.setViewportSize(primary);
+    await page.goto('/app/admin/risk-types/import');
+    await expect(page.getByRole('heading', { name: 'Import Risk Types from CSV' })).toBeVisible();
+    await expectFocusVisible(page.getByRole('button', { name: 'Choose CSV file' }));
     await expectNoSeriousAxeViolations(page);
 
     const csv = [
@@ -238,8 +330,12 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
     for (const [state, count] of [['Create', 1], ['Update', 1], ['Unchanged', 1], ['Rejected', 1], ['Ambiguous', 2]] as const) {
       await expect(page.getByRole('button', { name: `${state} (${count})` })).toBeVisible();
     }
-    await expect(page.getByRole('row').filter({ hasText: `CSV Create ${suffix}` }).filter({ hasText: 'Create' })).toBeVisible();
-    await expect(page.getByRole('row').filter({ hasText: unchangedName }).filter({ hasText: 'Unchanged' })).toBeVisible();
+    const createRecord = previewRecord(`CSV Create ${suffix}`).filter({ hasText: 'Create' });
+    await expect(createRecord, `the create row is previewed at ${primary.width}px`).toBeVisible();
+    await expect(createRecord.locator('[data-slot="badge"]')).toHaveText('Create');
+    const unchangedRecord = previewRecord(unchangedName).filter({ hasText: 'Unchanged' });
+    await expect(unchangedRecord, `the unchanged row is previewed at ${primary.width}px`).toBeVisible();
+    await expect(unchangedRecord.locator('[data-slot="badge"]')).toHaveText('Unchanged');
     const errorDownload = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download error report CSV' }).click();
     expect((await errorDownload).suggestedFilename()).toBe('risk-types-errors.csv');
@@ -275,5 +371,6 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
       '/app/admin/risk-types/import', '/app/admin/controls/import',
       '/app/admin/information-systems/import', '/app/admin/information-assets/import',
     ], new RegExp(`CSV Create ${suffix}|Zero write ${suffix}`, 'i'));
+    await expectNoCspViolations(page, 'the CSV import journey');
   });
 });

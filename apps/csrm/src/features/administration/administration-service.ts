@@ -7,7 +7,9 @@ import {
   type TransportResult,
 } from '../../lib/api/transport/server-client';
 import {
+  administrationDetailPayloadSchema,
   administrationDocumentIdSchema,
+  administrationListPayloadSchema,
   controlCreateInputSchema,
   controlUpdateInputSchema,
   informationAssetCreateInputSchema,
@@ -41,32 +43,62 @@ import {
   type CsvImportResultData,
 } from './csv-import-schema';
 import type { AdministrationKind } from './administration-config';
-import { z } from 'zod';
 import type { ContractResponseParser } from '../assessments/assessment-service';
 
 type ClientResponse = { data?: unknown; error?: unknown; response: { status: number } };
 
 const multipartBodySerializer = (body: unknown) => body as FormData;
 
-/** Wrap the existing closed administration parsers for the contract registry. */
-function responseParser(parse: (payload: unknown) => unknown) {
-  return z.unknown().superRefine((payload, context) => {
-    try { parse(payload); } catch { context.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid administration response.' }); }
-  });
+/*
+ * Where each closed administration parser is narrower than its contract
+ * component. The guard reads the same schemas the parse functions below use,
+ * so each narrowing is named at the field it concerns (G1).
+ *
+ * - Always served: Strapi's administration projection (projectAdministrationRecord)
+ *   serves every one of these fields on every record, and the client requires
+ *   them. The contract leaves them optional because each list route also answers
+ *   a narrower picker or selector shape, and the detail, create and update
+ *   responses share the record component with the list.
+ * - Refused: the contract declares a required updatedAt on Risk Type and Control
+ *   records, but no Strapi projection serves one on either, so the closed client
+ *   refuses it (a contract gap, residual R-08-18).
+ * - meta: the administration list always sends the canonical paged query and is
+ *   always answered with pagination meta, which the client pages by; the contract
+ *   leaves meta optional, and the Risk Type and Control routes answer the
+ *   assessment picker without it.
+ */
+const alwaysServedFields = {
+  'risk-types': ['description'],
+  controls: ['description', 'controlType', 'controlReference', 'frameworkVersion', 'frameworkSource'],
+  'information-systems': ['description', 'systemType', 'owner', 'environment', 'deploymentModel', 'businessCriticality', 'internetFacing', 'externalAccessRequired', 'hostingLocation', 'lifecycleState'],
+  'information-assets': ['description', 'location', 'type', 'dataClassification', 'confidentialityRating', 'integrityRating', 'availabilityRating', 'containsPersonalData', 'containsLegalData', 'containsCreditCardData', 'comments'],
+} as const satisfies Record<AdministrationKind, readonly string[]>;
+const refusedContractFields = {
+  'risk-types': ['updatedAt'],
+  controls: ['updatedAt'],
+  'information-systems': [],
+  'information-assets': [],
+} as const satisfies Record<AdministrationKind, readonly string[]>;
+
+function recordNarrowings(kind: AdministrationKind, recordPath: string): string[] {
+  return [...alwaysServedFields[kind], ...refusedContractFields[kind]].map((field) => `${recordPath}.${field}`);
 }
+
+const listNarrowings = (kind: AdministrationKind) => ['meta', ...recordNarrowings(kind, 'data.0')];
+const detailNarrowings = (kind: AdministrationKind) => recordNarrowings(kind, 'data');
 
 export const responseParserModule = {
   modulePath: 'features/administration/administration-service.ts',
   mode: 'parsers' as const,
   parsers: [
-    { label: 'administration.listRiskTypes', component: 'RiskTypesAdministrationListResponse', parser: responseParser((p) => parseAdministrationListPayload('risk-types', p)), narrowedPaths: ['data'] },
-    { label: 'administration.getRiskType', component: 'RiskTypesAdministrationResponse', parser: responseParser((p) => parseAdministrationDetailPayload('risk-types', p)), narrowedPaths: ['data'] },
-    { label: 'administration.listControls', component: 'ControlsAdministrationListResponse', parser: responseParser((p) => parseAdministrationListPayload('controls', p)), narrowedPaths: ['data'] },
-    { label: 'administration.getControl', component: 'ControlsAdministrationResponse', parser: responseParser((p) => parseAdministrationDetailPayload('controls', p)), narrowedPaths: ['data'] },
-    { label: 'administration.listInformationSystems', component: 'InformationSystemsAdministrationListResponse', parser: responseParser((p) => parseAdministrationListPayload('information-systems', p)), narrowedPaths: ['data'] },
-    { label: 'administration.getInformationSystem', component: 'InformationSystemsAdministrationResponse', parser: responseParser((p) => parseAdministrationDetailPayload('information-systems', p)), narrowedPaths: ['data'] },
-    { label: 'administration.listInformationAssets', component: 'InformationAssetsAdministrationListResponse', parser: responseParser((p) => parseAdministrationListPayload('information-assets', p)), narrowedPaths: ['data'] },
-    { label: 'administration.getInformationAsset', component: 'InformationAssetsAdministrationResponse', parser: responseParser((p) => parseAdministrationDetailPayload('information-assets', p)), narrowedPaths: ['data'] },
+    { label: 'administration.listRiskTypes', component: 'RiskTypesAdministrationListResponse', parser: administrationListPayloadSchema('risk-types'), narrowedPaths: listNarrowings('risk-types') },
+    { label: 'administration.getRiskType', component: 'RiskTypesAdministrationResponse', parser: administrationDetailPayloadSchema('risk-types'), narrowedPaths: detailNarrowings('risk-types') },
+    { label: 'administration.listControls', component: 'ControlsAdministrationListResponse', parser: administrationListPayloadSchema('controls'), narrowedPaths: listNarrowings('controls') },
+    { label: 'administration.getControl', component: 'ControlsAdministrationResponse', parser: administrationDetailPayloadSchema('controls'), narrowedPaths: detailNarrowings('controls') },
+    { label: 'administration.listInformationSystems', component: 'InformationSystemsAdministrationListResponse', parser: administrationListPayloadSchema('information-systems'), narrowedPaths: listNarrowings('information-systems') },
+    { label: 'administration.getInformationSystem', component: 'InformationSystemsAdministrationResponse', parser: administrationDetailPayloadSchema('information-systems'), narrowedPaths: detailNarrowings('information-systems') },
+    { label: 'administration.listInformationAssets', component: 'InformationAssetsAdministrationListResponse', parser: administrationListPayloadSchema('information-assets'), narrowedPaths: listNarrowings('information-assets') },
+    { label: 'administration.getInformationAsset', component: 'InformationAssetsAdministrationResponse', parser: administrationDetailPayloadSchema('information-assets'), narrowedPaths: detailNarrowings('information-assets') },
   ] as const satisfies readonly ContractResponseParser[],
 };
 

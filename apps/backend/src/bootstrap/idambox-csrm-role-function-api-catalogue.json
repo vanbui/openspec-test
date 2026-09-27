@@ -19,7 +19,9 @@
     "API paths are proposed application APIs inferred from the UI functions and JDL model; they are not existing endpoints declared by the JDL.",
     "The JDL does not currently contain an explicit assessment release flag or release date. The proposed release endpoint requires either a new field/state or a separate publication record to enforce Requestor read-only visibility after release.",
     "The JDL does not contain persisted Alert, ReportDefinition, Attachment, Comment, or Activity/Audit entities. The proposed report and alert endpoints may initially be computed services; persisted workflow collaboration, file uploads, alerts, and audit history require model extensions.",
-    "Phase 3 serves only the eight questionnaire workflow operations represented in the authoritative OpenAPI contract. Review-comment, complete-review, and assessment-generation FunctionApi entries remain future catalogue intents and are not Phase 3 served routes."
+    "Phase 3 serves only the eight questionnaire workflow operations represented in the authoritative OpenAPI contract. Review-comment, complete-review, and assessment-generation FunctionApi entries remain future catalogue intents and are not Phase 3 served routes.",
+    "Phase 7 serves GET /api/v1/dashboard/summary, GET /api/v1/alerts, GET /api/v1/alerts/summary, GET /api/v1/reports and GET /api/v1/reports/{reportKey} through five human Security Analyst-only API Functions, computed on read from existing records; their reserved FunctionApi entries moved from the Dashboard, Reports and Alerts menu Functions with their names, URLs and descriptions unchanged. GET /api/v1/dashboard/reports and GET /api/v1/dashboard/alerts stay unserved because the dedicated report and alert operations serve them. GET /api/v1/alerts/{alertId} stays unserved because a derived alert links straight to its source record. PATCH /api/v1/alerts/{alertId}/acknowledge stays unserved because acknowledgement needs persisted per-analyst state, a datamodel change deferred beyond this milestone. POST /api/v1/reports/{reportKey}/export stays unserved because report export is deferred beyond this milestone. GET /api/v1/my_requests/status_summary is served as reserved, under the Requestor's My Requests Function.",
+    "Phase 8 records every catalogued FunctionApi no router serves in docs/references/served-operations.json with its reason, regenerated from the mounted Strapi by the served-operations test and read by the web chain guard: the five Phase 7 D-06 entries of note 8; the review-comment and complete-review intents of note 7 and the Phase 4 approve, submit_for_approval, regenerate_draft and due_for_review intents, superseded by the served release triple, the draft jobs and the analyst review list; the /api/v1 request aliases (my_requests, assessment_requests create, get, patch and submit, form_metadata, overdue, status_summary and the per-request information_systems and information_assets reads and writes), served through the core /api/csrm-assessment-requests routes, the /api/v1/information_* selectors and GET /api/v1/my_requests/status_summary; the control_implementations collection, detail, overdue and status_summary intents, served under their Risk; and the Risk export and close intents, deferred beyond this milestone, with the Risk overdue and status_summary intents superseded by the Phase 7 alerts and dashboard. The IAM content types (application, function, function-api, idambox-user and role) and the generic GET /api/csrm-information-systems and GET /api/csrm-information-assets reads are administered by IdamBox and unmounted from this API surface (D-36, D-44); their grants and OpenAPI entries stay for traceability, the served /api/v1/information_* selectors are the only reference-data read surface, and GET /api/applications is an intentionally unserved OpenAPI operation with no caller. Users & Permissions registration is disabled at bootstrap, while POST /api/auth/local and GET /api/users/me remain plugin routes recorded as an accepted residual until INT-02 (D-37)."
   ],
   "roles": [
     {
@@ -60,7 +62,12 @@
         "function.questionnaire_governance.return_to_review_api",
         "function.questionnaire_governance.add_question_api",
         "function.questionnaire_governance.edit_question_api",
-        "function.questionnaire_governance.delete_question_api"
+        "function.questionnaire_governance.delete_question_api",
+        "function.dashboard.summary_api",
+        "function.alerts.list_api",
+        "function.alerts.summary_api",
+        "function.reports.list_api",
+        "function.reports.run_api"
       ]
     },
     {
@@ -231,6 +238,95 @@
       ]
     },
     {
+      "id": "function.dashboard.summary_api",
+      "name": "Dashboard Summary API",
+      "description": "Human analyst-only dashboard summary grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.dashboard.summary_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.alerts.list_api",
+      "name": "Alert List API",
+      "description": "Human analyst-only alert list grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.alerts.list_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.alerts.summary_api",
+      "name": "Alert Summary API",
+      "description": "Human analyst-only alert summary grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.alerts.summary_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.reports.list_api",
+      "name": "Report Catalogue API",
+      "description": "Human analyst-only report catalogue grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.reports.list_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.reports.run_api",
+      "name": "Run Report API",
+      "description": "Human analyst-only report run grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.reports.run_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation",
+        "IdamBoxUser"
+      ]
+    },
+    {
       "id": "function.dashboard.dashboard",
       "name": "Dashboard",
       "description": "Shows role-aware workload summaries, risk and control metrics, report tiles, and current alerts.",
@@ -241,7 +337,6 @@
         "role.requestor"
       ],
       "functionApiIds": [
-        "function.dashboard.dashboard.api.01",
         "function.dashboard.dashboard.api.02",
         "function.dashboard.dashboard.api.03"
       ]
@@ -831,8 +926,6 @@
         "role.security_analyst_agent"
       ],
       "functionApiIds": [
-        "function.reports.reports.api.01",
-        "function.reports.reports.api.02",
         "function.reports.reports.api.03"
       ],
       "sourceEntities": [
@@ -854,8 +947,6 @@
         "role.security_analyst_agent"
       ],
       "functionApiIds": [
-        "function.reports.alerts.api.01",
-        "function.reports.alerts.api.02",
         "function.reports.alerts.api.03",
         "function.reports.alerts.api.04"
       ],
@@ -950,11 +1041,11 @@
       ]
     },
     {
-      "id": "function.dashboard.dashboard.api.01",
+      "id": "function.dashboard.summary_api.api.01",
       "name": "Get Dashboard Summary",
       "description": "Returns role-aware summary counts and key performance indicators for the current user.",
       "url": "GET:/api/v1/dashboard/summary",
-      "functionId": "function.dashboard.dashboard",
+      "functionId": "function.dashboard.summary_api",
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire",
@@ -2013,11 +2104,11 @@
       ]
     },
     {
-      "id": "function.reports.reports.api.01",
+      "id": "function.reports.list_api.api.01",
       "name": "List Available Reports",
       "description": "Returns report definitions that the Security Analyst is authorized to run.",
       "url": "GET:/api/v1/reports",
-      "functionId": "function.reports.reports",
+      "functionId": "function.reports.list_api",
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire",
@@ -2027,11 +2118,11 @@
       ]
     },
     {
-      "id": "function.reports.reports.api.02",
+      "id": "function.reports.run_api.api.01",
       "name": "Run Report",
       "description": "Returns data for a selected report using supplied filters and grouping parameters.",
       "url": "GET:/api/v1/reports/{reportKey}",
-      "functionId": "function.reports.reports",
+      "functionId": "function.reports.run_api",
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire",
@@ -2056,11 +2147,11 @@
       ]
     },
     {
-      "id": "function.reports.alerts.api.01",
+      "id": "function.alerts.list_api.api.01",
       "name": "List Alerts",
       "description": "Returns generated or persisted alerts visible to the Security Analyst.",
       "url": "GET:/api/v1/alerts",
-      "functionId": "function.reports.alerts",
+      "functionId": "function.alerts.list_api",
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmAssessment",
@@ -2069,11 +2160,11 @@
       ]
     },
     {
-      "id": "function.reports.alerts.api.02",
+      "id": "function.alerts.summary_api.api.01",
       "name": "Get Alert Summary",
       "description": "Returns alert counts grouped by severity, source, status, and due-date state.",
       "url": "GET:/api/v1/alerts/summary",
-      "functionId": "function.reports.alerts",
+      "functionId": "function.alerts.summary_api",
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmAssessment",

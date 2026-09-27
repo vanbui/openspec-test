@@ -4,6 +4,10 @@ phase: 02-requestor-risk-assessment-request-workflow
 source: [02-VERIFICATION.md]
 started: 2026-08-29T15:00:14Z
 updated: 2026-08-30T02:20:00+10:00
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-27
+  gap_snapshot: "passed::scenarios=0"
 ---
 
 ## Current Test

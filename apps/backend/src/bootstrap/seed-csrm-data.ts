@@ -442,9 +442,13 @@ export async function seedCsrmData(strapi: Core.Strapi) {
             $eq: application.documentId,
           },
         },
-        menuPath: {
-          $eq: functionSeed.menuPath,
-        },
+        // An API-only Function stores no menuPath. `$eq: undefined` is cast to an
+        // empty string that never matches the stored NULL, which re-created every
+        // API-only Function on each seed, so it is matched as NULL instead.
+        menuPath:
+          functionSeed.menuPath === undefined
+            ? { $null: true }
+            : { $eq: functionSeed.menuPath },
       },
       populate: {
         functionApis: true,

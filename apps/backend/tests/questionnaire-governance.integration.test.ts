@@ -431,11 +431,25 @@ test("mounted analyst edit with an explicit null visibility clears the prior con
   assert.equal(record(clearedQuestion.options, "CLEARED_OPTIONS").visibility ?? null, null, "STALE_VISIBILITY_SURVIVED_AN_EXPLICIT_NULL_EDIT");
 });
 
+/*
+ * The analyst's display name as their own IdamBox user record holds it, read
+ * through the release relation straight from the harness database, so a proof
+ * never depends on a name the seed might change.
+ */
+async function releasingAnalystDisplayName(questionnaireId: string): Promise<string> {
+  const harness = await harnessPromise;
+  const released = record(await harness.getQuestionnaire(questionnaireId), "RELEASED_QUESTIONNAIRE");
+  const displayName = record(released.releasedBy, "RELEASING_ANALYST").displayName;
+  assert.ok(typeof displayName === "string" && displayName.trim().length > 0, "RELEASING_ANALYST_HAS_NO_DISPLAY_NAME");
+  return displayName;
+}
+
 test("mounted authorised questionnaire read projects its owned revision timeline", async () => {
   const harness = await harnessPromise;
   const fixtures = await harness.seedQuestionnaireGovernanceFixtures();
   const questionnaireId = fixtures.questionnaires.timeline;
   assert.equal((await request(releasePath(questionnaireId), harness.identities.analyst, post())).status, 200, "TIMELINE_RELEASE_FAILED");
+  const analystDisplayName = await releasingAnalystDisplayName(questionnaireId);
   assert.equal((await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/answers`, harness.identities.owner, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: [{ questionKey: "governance-timeline", value: "Portal" }] }) })).status, 200, "TIMELINE_ANSWER_SAVE_FAILED");
   assert.equal((await request(returnPath(questionnaireId), harness.identities.analyst, post({ reason: "Clarify the service scope." }))).status, 200, "TIMELINE_RETURN_FAILED");
   const questionId = fixtures.questions.timeline;
@@ -447,8 +461,75 @@ test("mounted authorised questionnaire read projects its owned revision timeline
   assert.equal(events[1]?.reason, "Clarify the service scope.");
   // identities.analyst is the request header; the event records the user document.
   assert.equal(record(events[1]?.by, "TIMELINE_ACTOR").documentId, harness.users.analyst, "TIMELINE_ACTOR_IS_NOT_THE_ANALYST");
+  /*
+   * D-31 (Phase 8): the log stores the acting analyst's documentId, and the read
+   * resolves it to their display name. Exactly the documentId and the name cross
+   * the boundary, never the rest of the IdamBox user record.
+   */
+  for (const [index, event] of events.entries()) {
+    assert.deepEqual(event.by, { documentId: harness.users.analyst, displayName: analystDisplayName }, `TIMELINE_ACTOR_NOT_NAMED_${index}`);
+  }
   assert.equal(events[3]?.questionKey, "governance-timeline");
   assert.equal(typeof events[3]?.explanation, "string");
+
+  // Released again, the owning Requestor reads the same timeline with no acting identity on any event.
+  assert.equal((await request(releasePath(questionnaireId), harness.identities.analyst, post())).status, 200, "TIMELINE_RERELEASE_FAILED");
+  const ownerResponse = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`, harness.identities.owner);
+  assert.equal(ownerResponse.status, 200, "TIMELINE_OWNER_READ_FAILED");
+  const ownerEvents = record((await payload(ownerResponse)).data, "TIMELINE_OWNER_RESPONSE").events as Array<Record<string, unknown>>;
+  assert.deepEqual(ownerEvents.map((event) => event.kind), ["released", "returned-to-review", "question-edited", "answer-cleared", "released"], "TIMELINE_OWNER_EVENTS_NOT_IN_STORED_ORDER");
+  for (const [index, event] of ownerEvents.entries()) {
+    assert.equal("by" in event, false, `TIMELINE_REQUESTOR_RECEIVED_THE_ACTOR_${index}`);
+    assert.deepEqual(Object.keys(event).filter((key) => !["kind", "at", "explanation"].includes(key)), [], `TIMELINE_REQUESTOR_RECEIVED_ANALYST_DETAIL_${index}`);
+  }
+  const ownerTimeline = JSON.stringify(ownerEvents);
+  assert.equal(ownerTimeline.includes(analystDisplayName), false, "TIMELINE_REQUESTOR_RECEIVED_THE_ANALYST_NAME");
+  assert.equal(ownerTimeline.includes(harness.users.analyst), false, "TIMELINE_REQUESTOR_RECEIVED_THE_ANALYST_ID");
+});
+
+/*
+ * D-31 (Phase 8): the log keeps an actor's documentId for good, but the person
+ * behind it may have left the directory or been deactivated. Such an id keeps a
+ * null display name, so the timeline falls back to its neutral wording rather
+ * than naming someone the directory no longer vouches for.
+ */
+test("mounted revision timeline keeps a null name for an actor id that is unknown or inactive", async () => {
+  const harness = await harnessPromise;
+  const unknownActor = "retiredanalystdocument01";
+  const inactiveActor = await harness.createUserFixture({
+    email: "former.analyst@example.test", username: "former-analyst", displayName: "Former Analyst", accountStatus: "inactive",
+  });
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "QUESTIONNAIRE-GOVERNANCE-ACTORS", title: "Governance actor names request", requestStatus: "questionnaire-in-progress", requestor: "owner",
+  });
+  const questionnaireId = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: "QUES-GOVERNANCE-ACTORS",
+    title: "Governance actor names questionnaire",
+    assessmentRequest: requestId,
+    releasedAt: "2026-08-19T00:00:00.000Z",
+    releasedBy: harness.users.analyst,
+    governanceLog: [
+      { schemaVersion: 1, kind: "released", at: "2026-08-15T00:00:00.000Z", by: harness.users.analyst },
+      { schemaVersion: 1, kind: "returned-to-review", at: "2026-08-16T00:00:00.000Z", by: unknownActor, reason: "Recorded by an account the directory no longer holds." },
+      { schemaVersion: 1, kind: "released", at: "2026-08-17T00:00:00.000Z", by: inactiveActor },
+      { schemaVersion: 1, kind: "returned-to-review", at: "2026-08-18T00:00:00.000Z", by: harness.users.analyst, reason: "Recorded by the active analyst." },
+      { schemaVersion: 1, kind: "released", at: "2026-08-19T00:00:00.000Z", by: harness.users.analyst },
+    ],
+  });
+  const analystDisplayName = await releasingAnalystDisplayName(questionnaireId);
+
+  const response = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`, harness.identities.analyst);
+  assert.equal(response.status, 200, "ACTORS_READ_FAILED");
+  const body = await response.text();
+  const events = record((JSON.parse(body) as { data?: unknown }).data, "ACTORS_RESPONSE").events as Array<Record<string, unknown>>;
+  assert.deepEqual(events.map((event) => event.by), [
+    { documentId: harness.users.analyst, displayName: analystDisplayName },
+    { documentId: unknownActor, displayName: null },
+    { documentId: inactiveActor, displayName: null },
+    { documentId: harness.users.analyst, displayName: analystDisplayName },
+    { documentId: harness.users.analyst, displayName: analystDisplayName },
+  ], "ACTORS_NOT_RESOLVED_TO_ACTIVE_NAMES_ONLY");
+  assert.equal(body.includes("Former Analyst"), false, "INACTIVE_ACTOR_NAME_DISCLOSED");
 });
 
 /*

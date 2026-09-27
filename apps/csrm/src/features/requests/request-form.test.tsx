@@ -86,7 +86,7 @@ async function loadRequestForm(): Promise<ComponentType<RequestFormProps>> {
 }
 
 async function loadRequestWorkflowActions(): Promise<ComponentType<{ request: CsrmAssessmentRequest }> > {
-  const moduleName = './request-' + 'form';
+  const moduleName = './request-' + 'workflow-actions';
   const module = await import(/* @vite-ignore */ moduleName) as RequestFormModule;
   if (!module.RequestWorkflowActions) throw new Error(sentinel);
   return module.RequestWorkflowActions;

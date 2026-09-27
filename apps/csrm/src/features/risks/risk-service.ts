@@ -11,6 +11,8 @@ import {
   parseRiskDetailPayload,
   parseRiskPickerPayload,
   parseRiskRegisterPayload,
+  riskDetailPayloadSchema,
+  riskRegisterPayloadSchema,
   serializeRiskRegisterQuery,
   type RiskPickerKind,
   type RiskPickerOption,
@@ -18,7 +20,6 @@ import {
   type RiskRegisterPayload,
   type RiskRegisterQuery,
 } from './risk-schema';
-import { z } from 'zod';
 import type { ContractResponseParser } from '../assessments/assessment-service';
 
 type ClientResponse = {
@@ -27,18 +28,17 @@ type ClientResponse = {
   response: { status: number };
 };
 
-function responseParser(parse: (payload: unknown) => unknown) {
-  return z.unknown().superRefine((payload, context) => {
-    try { parse(payload); } catch { context.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid Risk response.' }); }
-  });
-}
-
+/*
+ * The guard reads the closed schemas parseRiskRegisterPayload and
+ * parseRiskDetailPayload use, so every rejection keeps the path of the field
+ * that caused it (G1).
+ */
 export const responseParserModule = {
   modulePath: 'features/risks/risk-service.ts',
   mode: 'parsers' as const,
   parsers: [
-    { label: 'risks.listRiskRegister', component: 'RiskRegisterResponse', parser: responseParser(parseRiskRegisterPayload), narrowedPaths: ['data'] },
-    { label: 'risks.getRiskDetail', component: 'RiskDetailResponse', parser: responseParser(parseRiskDetailPayload) },
+    { label: 'risks.listRiskRegister', component: 'RiskRegisterResponse', parser: riskRegisterPayloadSchema },
+    { label: 'risks.getRiskDetail', component: 'RiskDetailResponse', parser: riskDetailPayloadSchema },
   ] as const satisfies readonly ContractResponseParser[],
 };
 

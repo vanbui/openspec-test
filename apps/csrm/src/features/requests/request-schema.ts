@@ -9,6 +9,7 @@ import {
   type RequestRelationSummary,
   type RequestList,
   type RequestListQuery,
+  type RequestStatus,
 } from './request-domain';
 
 const firstValue = (value: unknown): unknown => Array.isArray(value) ? value[0] : value;
@@ -172,6 +173,51 @@ export const requestListPayloadSchema = z.object({
 export const requestDetailPayloadSchema = z.object({ data: transportRequestSchema }).strip();
 
 export const requestMutationPayloadSchema = z.object({ data: transportRequestSchema }).strip();
+const statusCountSchema = z.number().int().nonnegative();
+
+/**
+ * GET /v1/my_requests/status_summary: the signed-in actor's own requests
+ * counted by status, closed at both levels. There is deliberately no check that
+ * the counts sum to the total: the server owns the total, and the contract
+ * parity guard synthesises every count independently.
+ */
+export const myRequestStatusSummaryResponseSchema = z.object({
+  data: z.object({
+    draft: statusCountSchema,
+    submitted: statusCountSchema,
+    questionnaireInProgress: statusCountSchema,
+    riskAssessmentDrafted: statusCountSchema,
+    underReview: statusCountSchema,
+    approved: statusCountSchema,
+    closed: statusCountSchema,
+    total: statusCountSchema,
+  }).strict(),
+}).strict();
+
+type MyRequestStatusSummaryCounts = z.infer<typeof myRequestStatusSummaryResponseSchema>['data'];
+
+/** The published key that carries each request status's count; total over the status vocabulary. */
+const statusSummaryKeys = {
+  draft: 'draft',
+  submitted: 'submitted',
+  'questionnaire-in-progress': 'questionnaireInProgress',
+  'risk-assessment-drafted': 'riskAssessmentDrafted',
+  'under-review': 'underReview',
+  approved: 'approved',
+  closed: 'closed',
+} as const satisfies Record<RequestStatus, Exclude<keyof MyRequestStatusSummaryCounts, 'total'>>;
+
+export interface RequestStatusCount {
+  status: RequestStatus;
+  count: number;
+}
+
+/** Parses the status summary into one count per request status, in lifecycle order. */
+export function parseMyRequestStatusSummaryPayload(payload: unknown): readonly RequestStatusCount[] {
+  const counts = myRequestStatusSummaryResponseSchema.parse(payload).data;
+  return requestStatuses.map((status) => ({ status, count: counts[statusSummaryKeys[status]] }));
+}
+
 export const requestInventoryPayloadSchema = z.object({
   data: z.array(relationSchema),
   // The bounded selector endpoint's published response guarantees the rows;

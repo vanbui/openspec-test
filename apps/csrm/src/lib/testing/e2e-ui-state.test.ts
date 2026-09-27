@@ -94,7 +94,42 @@ describe('resolveE2eUiState', () => {
     attestRuntime();
     expect(resolveE2eDashboardPartial({ __e2ePartial: 'draft-requests-error' })).toBe(true);
     expect(resolveE2eDashboardPartial({ __e2ePartial: 'anything-else' })).toBe(false);
+    // Each dashboard owns its own selector: the analyst one never fails a Requestor widget.
+    expect(resolveE2eDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(false);
     delete process.env.CSRM_E2E_UI_STATE_HARNESS;
     expect(resolveE2eDashboardPartial({ __e2ePartial: 'draft-requests-error' })).toBe(false);
+  });
+});
+
+describe('resolveE2eAnalystDashboardPartial', () => {
+  it('fails the Top alerts widget only for its closed value in the attested runtime', async () => {
+    const { resolveE2eAnalystDashboardPartial } = await import('./e2e-ui-state');
+    process.env.CSRM_E2E_UI_STATE_HARNESS = '1';
+    attestRuntime();
+
+    expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(true);
+    for (const value of ['draft-requests-error', 'analyst-top-alerts', 'ANALYST-TOP-ALERTS-ERROR', '', undefined]) {
+      expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: value }), String(value)).toBe(false);
+    }
+    expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: ['analyst-top-alerts-error'] })).toBe(false);
+    expect(resolveE2eAnalystDashboardPartial({})).toBe(false);
+  });
+
+  it('is never accepted without the attested runtime', async () => {
+    const { resolveE2eAnalystDashboardPartial } = await import('./e2e-ui-state');
+
+    delete process.env.CSRM_E2E_UI_STATE_HARNESS;
+    expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(false);
+
+    // The harness switch alone is not an attestation.
+    process.env.CSRM_E2E_UI_STATE_HARNESS = '1';
+    expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(false);
+
+    attestRuntime({ createdAt: new Date(Date.now() - 61 * 60 * 1000).toISOString() });
+    expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(false);
+
+    attestRuntime({ nonce: 'attested' });
+    process.env.CSRM_E2E_RUNTIME_NONCE = 'different';
+    expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(false);
   });
 });

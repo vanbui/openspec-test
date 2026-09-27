@@ -1,7 +1,10 @@
-import { assessmentStatusPresentation } from '@/features/assessments/assessment-domain';
+// The status vocabulary comes from the zod-free domain module, so the request pages download no zod (WR-07).
+import { assessmentStatuses } from '@/features/assessments/assessment-domain';
+import type { AssessmentStatus } from '@/features/assessments/assessment-schema';
 import { DetailSection } from '@/components/csrm/detail-section';
 import { RecordLink } from '@/components/csrm/record-link';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
+import { statusLabel } from '@/components/csrm/status-badge';
 import { formatRequestDate, type CsrmAssessmentRequest, type RequestLifecycle } from './request-domain';
 
 /*
@@ -42,9 +45,14 @@ function RecordIdentifier({ href, children }: { href?: string; children: React.R
   return href ? <RelationLink href={href}>{children}</RelationLink> : <>{children}</>;
 }
 
+function isAssessmentStatus(status: string): status is AssessmentStatus {
+  return (assessmentStatuses as readonly string[]).includes(status);
+}
+
+/* The shared status mapping labels the tile, so a released assessment reads Released here as everywhere. */
 function assessmentStatusLabel(status: string | null): string {
   if (!status) return 'Status not recorded';
-  return assessmentStatusPresentation[status as keyof typeof assessmentStatusPresentation]?.label ?? status;
+  return isAssessmentStatus(status) ? statusLabel('assessment', status) : status;
 }
 
 function questionnaireState(state: string | null, governanceDetail: boolean): string {

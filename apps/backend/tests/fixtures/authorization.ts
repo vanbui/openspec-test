@@ -101,10 +101,15 @@ export const restrictedAssessmentRequest = {
   },
 };
 
+export type FakeAssessmentRequest = {
+  documentId: string;
+  requestor: { documentId: string };
+};
+
 export function createAuthorizationStrapi(options?: {
-  assessmentRequests?: Array<typeof restrictedAssessmentRequest>;
+  assessmentRequests?: FakeAssessmentRequest[];
 }) {
-  const assessmentRequests = [
+  const assessmentRequests: FakeAssessmentRequest[] = [
     restrictedAssessmentRequest,
     ...(options?.assessmentRequests ?? []),
   ];

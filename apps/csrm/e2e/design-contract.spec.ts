@@ -8,7 +8,8 @@ type Surface = { name: string; route: string; actor: Actor };
 
 // My lists are owner-scoped for every actor, so each surface is visited as the seeded identity
 // that owns records there: the Requestor owns the questionnaire fixtures, and the Security
-// Analyst owns the Risk, released-assessment and cross-owner request fixtures.
+// Analyst owns the Risk, released-assessment and cross-owner request fixtures. Alerts are the
+// analyst's derived list, raised by the Phase 7 fixture.
 const collectionSurfaces: readonly Surface[] = [
   { name: 'requests', route: '/app/requests', actor: 'Security Analyst' },
   { name: 'questionnaires', route: '/app/questionnaires', actor: 'Requestor' },
@@ -17,6 +18,7 @@ const collectionSurfaces: readonly Surface[] = [
   { name: 'assessment review', route: '/app/review/assessments', actor: 'Security Analyst' },
   { name: 'questionnaire review', route: '/app/review/questionnaires', actor: 'Security Analyst' },
   { name: 'risk register', route: '/app/risks', actor: 'Security Analyst' },
+  { name: 'alerts', route: '/app/alerts', actor: 'Security Analyst' },
   { name: 'risk types administration', route: '/app/admin/risk-types', actor: 'Security Analyst' },
   { name: 'controls administration', route: '/app/admin/controls', actor: 'Security Analyst' },
   { name: 'information systems administration', route: '/app/admin/information-systems', actor: 'Security Analyst' },
@@ -41,7 +43,8 @@ async function signIn(page: Page, actor: Actor) {
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
   await page.getByRole('button', { name: `Continue as ${actor}` }).click();
   // The sign-in URL itself ends in returnTo=/app, so a URL match alone returns before the
-  // session exists. Wait for the banner to show the signed-in role.
+  // session exists. Assert the shell instead: the Dashboard heading and the signed-in role.
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
   await expect(page.getByRole('banner').getByText(actor, { exact: true })).toBeVisible();
 }
 

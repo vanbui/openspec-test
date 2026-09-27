@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -14,7 +13,7 @@ import { RecordLink } from '@/components/csrm/record-link';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -22,10 +21,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { createRequestAction, revertRequestToDraftAction, searchInformationAssetsAction, searchInformationSystemsAction, submitRequestAction, updateRequestAction, type RequestActionResult } from './request-actions';
+import { createRequestAction, searchInformationAssetsAction, searchInformationSystemsAction, submitRequestAction, updateRequestAction, type RequestActionResult } from './request-actions';
 import { RelationMultiSelect, type RelationSearchInput, type RelationSearchResult, type RelationSelection } from '../assessments/owner-combobox';
-import { canRequestorEdit, formatRequestDate, type CsrmAssessmentRequest, type RequestAssessmentRelation, type RequestQuestionnaireRelation, type RequestRelationSummary } from './request-domain';
-import { toRequestFormValues } from './request-form-values';
+import { formatRequestDate, type RequestAssessmentRelation, type RequestQuestionnaireRelation, type RequestRelationSummary } from './request-domain';
 import { requestDraftSchema, type RequestDraftInput, type RequestMutationResult } from './request-schema';
 
 export type RequestFormProps = {
@@ -258,47 +256,6 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
         ) : null}
       </form>
     </Form>
-  );
-}
-
-export function RequestWorkflowActions({ request }: { request: CsrmAssessmentRequest }) {
-  const [submitted, setSubmitted] = useState<RequestMutationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const status = submitted?.requestStatus ?? request.requestStatus;
-  const router = useRouter();
-
-  async function revert(reason?: string) {
-    const result = await revertRequestToDraftAction({ documentId: request.documentId, reason });
-    if (!result.ok) { setError(result.formError ?? 'The request could not be reverted.'); throw new Error('Request revert failed'); }
-    toast.success('Request returned to draft.');
-    router.refresh();
-  }
-
-  if (!canRequestorEdit(status)) {
-    const canRevert = status === 'submitted' && !request.questionnaire && !request.assessment;
-    return <div className="grid gap-3">{canRevert ? <div className="mb-1"><ConfirmDialog confirmLabel="Return request to draft" confirmVariant="destructive" description="This returns the request to draft and clears its submitted date." errorMessage={error} onConfirm={revert} pendingLabel="Returning request to draft…" reasonRequired title="Return this request to draft?" trigger={<Button type="button">Return to draft</Button>} /></div> : null}<StatusBadge live={Boolean(submitted)} status={status} />{(submitted?.submittedDate ?? request.submittedDate) ? <p className="text-sm text-muted-foreground">Submitted {formatRequestDate(submitted?.submittedDate ?? request.submittedDate)}</p> : null}</div>;
-  }
-
-  async function submit() {
-    setError(null);
-    const result = await submitRequestAction({ documentId: request.documentId, ...toRequestFormValues(request) });
-    if (!result.ok) {
-      setError(result.formError ?? 'Check the request and try again.');
-      toast.error(result.formError ?? 'Request submission failed.');
-      throw new Error('Submission failed');
-    }
-    setSubmitted(result.data);
-    toast.success('Request submitted.');
-  }
-
-  return (
-    <div className="grid gap-3">
-      {error ? <Alert variant="destructive"><AlertTitle>Request not submitted</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
-      <div className="flex flex-wrap gap-3">
-        <Link className={buttonVariants({ variant: 'outline' })} href={`/app/requests/${request.documentId}/edit`}>Edit request</Link>
-        <ConfirmDialog confirmLabel="Submit request" confirmVariant="default" description="Submission is irreversible. This request cannot be edited after submission." errorMessage={error} onConfirm={submit} pendingLabel="Submitting request…" title="Submit this assessment request?" trigger={<Button type="button">Submit request</Button>} />
-      </div>
-    </div>
   );
 }
 

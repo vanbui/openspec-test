@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
+import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
+import { openFromNavigation, primaryViewport, signInAs } from './helpers/navigation';
 
 /**
  * Scope is chosen by searching now, not by ticking an enumerated list.
@@ -33,33 +35,23 @@ async function dismissToasts(page: Page): Promise<void> {
   await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 15_000 });
 }
 
-async function signInAsRequestor(page: Page): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-
-  if (!response?.ok()) {
-    throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  }
-
-  await page.getByRole('button', { name: 'Continue as Requestor' }).click();
-  await expect(page, 'BASELINE_REQUESTOR_SHELL_URL').toHaveURL(/\/app$/);
-  await expect(page.getByRole('main'), 'BASELINE_REQUESTOR_SHELL_MAIN').toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dashboard' }), 'BASELINE_REQUESTOR_DASHBOARD').toBeVisible();
-  await expect(
-    page.getByRole('banner').getByText('Requestor', { exact: true }),
-    'BASELINE_REQUESTOR_ROLE',
-  ).toBeVisible();
-}
-
-async function signInAsSecurityAnalyst(page: Page): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-
-  if (!response?.ok()) {
-    throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  }
-
-  await page.getByRole('button', { name: 'Continue as Security Analyst' }).click();
-  await expect(page, 'BASELINE_ANALYST_SHELL_URL').toHaveURL(/\/app$/);
-  await expect(page.getByRole('main'), 'BASELINE_ANALYST_SHELL_MAIN').toBeVisible();
+/*
+ * My Requests renders its records as cards below md (768px) and as a table from md, and the other
+ * rendering is hidden. Read the list through the one this width shows, so the proof is of populated
+ * content where a person looks, never of markup CSS hides.
+ */
+async function expectMyRequestRecords(page: Page, width: number, message: string): Promise<Locator> {
+  const cards = page.locator('[data-slot="data-table-mobile"][aria-label="My assessment requests"]');
+  const table = page.locator('table[aria-label="My assessment requests"]');
+  const [shown, other] = width < 768 ? [cards, table] : [table, cards];
+  await expect(shown, `${message}: the ${width < 768 ? 'card list' : 'table'} renders at ${width}px`).toBeVisible();
+  await expect(other, `${message}: the other rendering is in the page but hidden at ${width}px`).toHaveCount(1);
+  await expect(other).toBeHidden();
+  const records = width < 768
+    ? page.getByRole('list', { name: 'My assessment requests' }).getByRole('listitem')
+    : page.getByRole('table', { name: 'My assessment requests' }).locator('tbody').getByRole('row');
+  await expect(records.first(), `${message}: at least one request is listed at ${width}px`).toBeVisible();
+  return records;
 }
 
 async function expectReturnToDraftConfirmation(
@@ -120,20 +112,24 @@ async function expectReturnToDraftConfirmation(
   await expect(dialog).toHaveCount(0);
 }
 
-test('Requestor completes an authorised assessment request journey', async ({ page, request }) => {
+test('Requestor completes an authorised assessment request journey @journey', async ({ page, request }, testInfo) => {
   test.setTimeout(180_000);
   const health = await request.get(strapiHealthUrl);
   if (!health.ok()) {
     throw new Error(`SERVER_STRAPI_HEALTH_FAILED:${health.status()}`);
   }
 
-  await page.setViewportSize({ width: 375, height: 812 });
-  await signInAsRequestor(page);
+  // The journey runs at its project's width (1440 in desktop, 375 in mobile) and returns there after each sweep.
+  const primary = primaryViewport(testInfo);
+  // Every document it loads, the create, edit and submit routes included, runs under the production CSP (D-19).
+  await attachCspCollector(page);
+  await page.setViewportSize(primary);
+  await signInAs(page, 'Requestor');
 
   await expect
     .poll(
       () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-      { message: 'BASELINE_MOBILE_PAGE_OVERFLOW' },
+      { message: `BASELINE_PAGE_OVERFLOW_${primary.width}` },
     )
     .toBe(true);
 
@@ -141,16 +137,24 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
   await expect(page.getByRole('link', { name: 'Skip to main content' }), 'BASELINE_KEYBOARD_SKIP_LINK').toBeFocused();
 
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused();
-  await page.keyboard.press('Enter');
-  const myRequests = page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name: 'My Requests' });
-  if (!(await myRequests.isVisible())) {
-    throw new Error('PHASE2_RED_E2E_MISSING_MY_REQUESTS');
+  if (primary.width < 1024) {
+    // Below 1024px the navigation lives in the Menu sheet, the next stop after the skip link.
+    await expect(page.getByRole('button', { name: 'Menu', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    const myRequests = page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name: 'My Requests' });
+    if (!(await myRequests.isVisible())) {
+      throw new Error('PHASE2_RED_E2E_MISSING_MY_REQUESTS');
+    }
+    await myRequests.click();
+  } else {
+    // From 1024px the sidebar is the next stop: its home link, then the navigation.
+    await expect(page.getByRole('link', { name: 'BProton, IdamBox CSRM home', exact: true }), 'BASELINE_KEYBOARD_SIDEBAR').toBeFocused();
+    await openFromNavigation(page, 'My Requests');
   }
 
-  await myRequests.click();
   await expect(page).toHaveURL(/\/app\/requests$/);
   await expect(page.getByRole('heading', { name: 'My Requests' })).toBeVisible();
+  await expectMyRequestRecords(page, primary.width, 'MY_REQUESTS_POPULATED');
 
   const uniqueTitle = `E2E request ${requestorEmail} ${Date.now()}`;
   const originalDescription = 'Customer portal expansion requiring cyber risk review.';
@@ -197,9 +201,20 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
   }
   await page.getByRole('textbox', { name: 'Description' }).fill(editedDescription);
   await page.getByRole('button', { name: 'Save draft' }).click();
+  /*
+   * Saving the edit form navigates back to the request detail. The edited
+   * description is also the edit form's own textarea text, and the edit form
+   * carries a `Submit request` trigger of its own, so neither proves the
+   * navigation finished: on a production build the click landed on the edit
+   * form's trigger an instant before the detail page replaced it. Wait for the
+   * detail route and its actions region, and act only inside that region.
+   */
+  await expect(page).toHaveURL(/\/app\/requests\/(?!new$)[^/]+$/);
+  const requestActions = page.getByRole('region', { name: 'Request actions' });
+  await expect(requestActions).toBeVisible();
   await expect(page.getByText(editedDescription)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Submit request' }).click();
+  await requestActions.getByRole('button', { name: 'Submit request' }).click();
   const confirmation = page.getByRole('alertdialog', { name: 'Submit this assessment request?' });
   await expect(confirmation).toContainText(/cannot be undone|irreversible/i);
   await confirmation.getByRole('button', { name: 'Submit request' }).focus();
@@ -213,15 +228,15 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
   // Reversal uses the same production detail surface and leaves the Requestor
   // with an editable draft that can re-enter the established submission flow.
   await dismissToasts(page);
-  const requestActions = page.getByRole('region', { name: 'Request actions' });
   for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
     await expectReturnToDraftConfirmation(page, requestActions, viewport);
   }
 
   const requestDocumentId = decodeURIComponent(new URL(detailUrl).pathname.split('/').at(-1)!);
+  await page.setViewportSize(primary);
   await page.context().clearCookies();
-  await signInAsSecurityAnalyst(page);
+  await signInAs(page, 'Security Analyst');
   // Switching identity mid-test clears the session and establishes a new one, so
   // the first navigation can race the new session cookie and land back on the
   // sign-in screen. Retry the navigation rather than assuming the first lands.
@@ -234,10 +249,10 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
     await expectReturnToDraftConfirmation(page, page.getByRole('main'), viewport);
   }
 
+  await page.setViewportSize(primary);
   await page.context().clearCookies();
-  await signInAsRequestor(page);
+  await signInAs(page, 'Requestor');
   await page.goto(detailUrl);
-  await page.setViewportSize({ width: 375, height: 812 });
   await expect(page.getByRole('heading', { name: uniqueTitle })).toBeVisible();
   const requestTrigger = requestActions.getByRole('button', { name: 'Return to draft' });
   await requestTrigger.click();
@@ -271,8 +286,14 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
   await expect(page.getByText('Request submitted.')).toBeVisible();
   await expect(page.getByText('Submitted', { exact: true }).first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name: 'My Requests' }).click();
+  await openFromNavigation(page, 'My Requests');
+  await expect(page).toHaveURL(/\/app\/requests$/);
+  // The list is newest-updated first, so the resubmitted request is on its first page, as Submitted.
+  const listedRequests = await expectMyRequestRecords(page, primary.width, 'MY_REQUESTS_AFTER_RESUBMIT');
+  const listedRequest = listedRequests.filter({ has: page.getByRole('link', { name: uniqueTitle, exact: true }) });
+  await expect(listedRequest, `MY_REQUESTS_LISTS_THE_RESUBMITTED_REQUEST_${primary.width}`).toHaveCount(1);
+  await expect(listedRequest.getByText('Submitted', { exact: true })).toBeVisible();
+
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole('searchbox', { name: 'Search requests' }).fill(uniqueTitle);
   await page.getByRole('button', { name: 'Search' }).click();
@@ -291,6 +312,7 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
     await expect(lifecycleCards.getByRole('list', { name: 'My Assessment Requests by lifecycle state' }).getByRole('listitem')).toHaveCount(7);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
+  await page.setViewportSize(primary);
   await page.getByRole('region', { name: 'My Assessment Requests' }).getByRole('link', { name: /Submitted/ }).click();
   await expect(page).toHaveURL(/\/app\/requests\?status=submitted/);
   await expect(page.getByRole('combobox', { name: 'Filter by status' })).toHaveValue('submitted');
@@ -310,4 +332,5 @@ test('Requestor completes an authorised assessment request journey', async ({ pa
   await expect(page).toHaveURL(/\/sign-in\?returnTo=/);
   await expect(page.getByText(uniqueTitle)).toHaveCount(0);
   await expect(page.getByText(editedDescription)).toHaveCount(0);
+  await expectNoCspViolations(page, 'the request journey');
 });

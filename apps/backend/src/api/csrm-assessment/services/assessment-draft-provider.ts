@@ -77,6 +77,22 @@ function invalid(): never {
   throw new Error("CSRM assessment draft proposal is invalid.");
 }
 
+/*
+ * The one Risk Type ordering rule (Phase 8 D-09). Names compare by UTF-16 code
+ * unit, so every uppercase letter sorts before every lowercase one: "Beta risk"
+ * comes before "alpha risk". The parser checks a proposal's risks in this order
+ * and every provider sorts with it, so no provider can emit an order its own
+ * parser refuses. A locale-aware comparison would put "alpha risk" first.
+ */
+export function compareRiskTypeNames(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Returns a copy of the risks in the shared Risk Type order; the input is left as it was. */
+export function sortRiskProposals<T extends { riskTypeName: string }>(risks: readonly T[]): T[] {
+  return [...risks].sort((left, right) => compareRiskTypeNames(left.riskTypeName, right.riskTypeName));
+}
+
 function parseRiskProposal(value: unknown): AssessmentRiskDraftProposal {
   if (!isRecord(value) || !hasExactKeys(value, RISK_KEYS)) invalid();
   for (const key of RISK_STRING_KEYS) if (!boundedString(value[key])) invalid();
@@ -97,6 +113,6 @@ export function parseAssessmentDraftProposal(value: unknown): AssessmentDraftPro
   if (!Array.isArray(value.risks) || value.risks.length > 50) invalid();
   const risks = value.risks.map(parseRiskProposal);
   if (new Set(risks.map(({ riskTypeName }) => riskTypeName)).size !== risks.length
-    || risks.some((risk, index) => index > 0 && risks[index - 1].riskTypeName > risk.riskTypeName)) invalid();
+    || risks.some((risk, index) => index > 0 && compareRiskTypeNames(risks[index - 1].riskTypeName, risk.riskTypeName) > 0)) invalid();
   return { ...value, risks } as AssessmentDraftProposal;
 }

@@ -1,14 +1,23 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 
 import { QuestionnaireReview } from '@/features/questionnaires/questionnaire-review';
 import { availableAssessmentRequest } from '@/features/questionnaires/questionnaire-domain';
 import { getQuestionnaire, getQuestionnaireQuestions } from '@/features/questionnaires/questionnaire-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
+import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
 type QuestionnaireReviewPageProps = { params: Promise<{ documentId: string }> };
 
-export const metadata = { title: 'Questionnaire Review | IdamBox CSRM' };
+// One read per request, shared by the document title and the page.
+const readQuestionnaire = cache(getQuestionnaire);
+
+// A questionnaire id that does not exist takes the not-found's title; any other outcome keeps the route's.
+export async function generateMetadata({ params }: QuestionnaireReviewPageProps): Promise<Metadata> {
+  return recordRouteMetadata(readQuestionnaire((await params).documentId), 'Questionnaire Review | IdamBox CSRM');
+}
 
 async function analystRequestHref(questionnaire: Awaited<ReturnType<typeof getQuestionnaire>>['data']): Promise<string | undefined> {
   if (!questionnaire) return undefined;
@@ -27,7 +36,7 @@ async function analystRequestHref(questionnaire: Awaited<ReturnType<typeof getQu
 
 export default async function QuestionnaireReviewPage({ params }: QuestionnaireReviewPageProps) {
   const { documentId } = await params;
-  const questionnaireResult = await getQuestionnaire(documentId);
+  const questionnaireResult = await readQuestionnaire(documentId);
   if (questionnaireResult.error?.status === 404) notFound();
   if (questionnaireResult.error) return <QuestionnaireReview state={questionnaireResult.error.status === 403 ? 'permission' : 'error'} />;
   if (!questionnaireResult.data) notFound();

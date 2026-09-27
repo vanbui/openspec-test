@@ -7,9 +7,9 @@ import { useEffect, useRef, useState } from 'react';
 import { DetailSection } from '@/components/csrm/detail-section';
 import { RecordLink } from '@/components/csrm/record-link';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
+import { StatusBadge } from '@/components/csrm/status-badge';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { RiskDetailServerActionResult } from './risk-actions';
@@ -30,6 +30,19 @@ type Conflict = Extract<RiskDetailServerActionResult<never>, { conflict: true }>
 
 const safeHeader = <PageHeader title="Risk details" description="View a contextual Risk and its mitigation-control information." />;
 
+/** Scrolls the element the URL's hash names into view, if it is on the page. */
+function scrollToLocationHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+  let id: string;
+  try {
+    id = decodeURIComponent(hash);
+  } catch {
+    return;
+  }
+  document.getElementById(id)?.scrollIntoView();
+}
+
 export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: RiskDetailsProps) {
   const [current, setCurrent] = useState(detail);
   const [currentState, setCurrentState] = useState(state);
@@ -37,6 +50,17 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
   const [message, setMessage] = useState('');
   const editRef = useRef<HTMLButtonElement>(null);
   const detailIdentityRef = useRef(detail ? `${detail.documentId}:${detail.parentLock}` : undefined);
+  const detailShown = currentState === 'ready' && current !== undefined;
+
+  /*
+   * A Control Implementation alert opens this page at #mitigation-controls (UI-SPEC §9 item 5). The
+   * detail streams in behind the route's loading boundary, so the router's own hash scroll runs
+   * against the skeleton, before the section exists. Once the Risk is on screen, bring the linked
+   * section into view; html scroll-padding-top keeps it clear of the sticky header.
+   */
+  useEffect(() => {
+    if (detailShown) scrollToLocationHash();
+  }, [detailShown]);
 
   useEffect(() => {
     const nextIdentity = detail ? `${detail.documentId}:${detail.parentLock}` : undefined;
@@ -75,16 +99,18 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
     <div className="flex flex-wrap items-center gap-2" aria-label="Risk ratings and status">
       <span className="text-sm font-medium">Inherent</span>{current.inherentRating ? <RiskRatingBadge rating={current.inherentRating} /> : <span className="text-sm">Not provided</span>}
       <span className="text-sm font-medium">Residual</span>{current.residualRating ? <RiskRatingBadge rating={current.residualRating} /> : <span className="text-sm">Not provided</span>}
-      {!mutable ? <Badge variant="outline"><LockKeyholeIcon aria-hidden="true" />Released — read only</Badge> : null}
+      {/* A locked Risk belongs to a released assessment; the read-only consequence is the Alert's to state. */}
+      {!mutable ? <StatusBadge family="assessment" value="approved" /> : null}
     </div>
   );
 
   return (
     <>
-      <PageHeader title={current.riskNumber} description={description} action={status} />
+      <PageHeader title={current.riskNumber} description={description} status={status} />
       <p aria-atomic="true" aria-live="polite" role="status" className="sr-only">{message}</p>
-      {!mutable ? <Alert><LockKeyholeIcon aria-hidden="true" /><AlertTitle>Released assessment — read only</AlertTitle><AlertDescription>This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.</AlertDescription></Alert> : null}
       <div className="grid gap-8">
+        {/* Inside the section grid, the notice keeps the page's section rhythm above the first section (W-12). */}
+        {!mutable ? <Alert><LockKeyholeIcon aria-hidden="true" /><AlertTitle>Released assessment - read only</AlertTitle><AlertDescription>This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.</AlertDescription></Alert> : null}
         {editing && canEdit ? (
           <DetailSection title="Risk statement and classification" description="Edit the Risk using the server-authorised field set.">
             <RiskDetailEditor detail={current} options={options} searchOwners={searchOwners} onCancel={() => { setEditing(false); setMessage(''); focusEdit(); }} onConflict={handleConflict} onNoChange={() => setMessage('No changes to save.')} onSaved={(updated) => { setCurrent(updated); setEditing(false); setMessage('Risk changes saved.'); focusEdit(); }} />
@@ -99,7 +125,8 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
             </DetailSection>
           </>
         )}
-        <DetailSection title="Mitigation controls" description="Contextual Control implementations linked to reusable Controls.">
+        {/* The anchor Control Implementation alerts open at (UI-SPEC §9 item 5). */}
+        <DetailSection title="Mitigation controls" description="Contextual Control implementations linked to reusable Controls." headingId="mitigation-controls">
           <MitigationControlList implementations={current.controlImplementations} mutable={mutable} options={mutable ? options : undefined} riskId={current.documentId} onConflict={handleConflict} onChanged={(implementations, nextMessage) => { setCurrent({ ...current, controlImplementations: [...implementations] }); setMessage(nextMessage); }} />
         </DetailSection>
         <DetailSection title="Related records"><DefinitionList rows={relatedRows(current)} /></DetailSection>

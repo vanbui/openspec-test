@@ -192,8 +192,10 @@ test("stale generic Administration detail, mutation, and delete routes are absen
     }
   }
 
+  // D-44: the generic reference-data reads are unmounted as well; the served
+  // /v1/information_* selectors are the only read surface for every actor.
   for (const base of ["/api/csrm-information-systems", "/api/csrm-information-assets"]) {
-    assert.equal((await request(base, harness.identities.owner)).status, 200, `REQUESTOR_REFERENCE_READ_REMOVED_${base}`);
+    assert.equal((await request(base, harness.identities.owner)).status, 404, `GENERIC_REFERENCE_READ_STILL_MOUNTED_${base}`);
   }
 });
 
@@ -468,5 +470,285 @@ test("Requestor selector routes return bounded summaries and reject invalid inve
       const invalid = await harness.request({ path: `/api/v1/${path}/selected`, identity: harness.identities.owner, init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ selectedIds }) } });
       assert.equal(invalid.status, 400);
     }
+  }
+});
+
+/*
+ * The authorization matrix states these successes but does not issue them, because each would spend a
+ * fixture it depends on (SR-02). Kept last, so the requests it creates reach no earlier list or count.
+ */
+test("mounted request writes admit every granted actor, the service agent included", async () => {
+  const harness = await harnessPromise;
+  const json = (method: string, body: unknown): RequestInit => ({ method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+  // Create is granted to every identity. The other Requestor's request is her own whatever the body names.
+  const forged = await request("/api/csrm-assessment-requests", harness.identities.otherRequestor, json("POST", {
+    data: { requestNumber: "AUTH-WRITE-OTHER", title: "Write proof other Requestor", requestStatus: "draft", requestor: harness.users.owner },
+  }));
+  assert.equal(forged.status, 200, "REQUEST_CREATE_REFUSED_OTHER_REQUESTOR");
+  const forgedId = (await forged.json() as { data: { documentId: string } }).data.documentId;
+  assert.equal(
+    ((await harness.getRequest(forgedId))?.requestor as { documentId?: string } | undefined)?.documentId,
+    harness.users.otherRequestor,
+    "REQUEST_OWNER_NOT_DERIVED_OTHER_REQUESTOR",
+  );
+
+  // The analyst and the service agent create through the explicit analyst grant.
+  for (const [actor, identity] of [
+    ["ANALYST", harness.identities.analyst],
+    ["SERVICE_AGENT", harness.identities.serviceAnalystAgent],
+  ] as const) {
+    const created = await request("/api/csrm-assessment-requests", identity, json("POST", {
+      data: { requestNumber: `AUTH-WRITE-${actor}`, title: `Write proof ${actor}`, requestStatus: "draft" },
+    }));
+    assert.equal(created.status, 200, `REQUEST_CREATE_REFUSED_${actor}`);
+    const createdId = (await created.json() as { data: { documentId: string } }).data.documentId;
+    assert.equal((await harness.getRequest(createdId))?.title, `Write proof ${actor}`, `REQUEST_CREATE_NOT_PERSISTED_${actor}`);
+  }
+
+  // The service agent holds the exact update and delete grants, on a request it does not own.
+  const target = await harness.createAssessmentRequestFixture({
+    requestNumber: "AUTH-SERVICE-AGENT-WRITE-001",
+    title: "Service agent write target",
+    requestStatus: "draft",
+    requestor: "owner",
+  });
+  const updated = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.serviceAnalystAgent, json("PUT", { data: { title: "Service agent updated" } }));
+  assert.equal(updated.status, 200, "SERVICE_AGENT_UPDATE_REFUSED");
+  assert.equal((await harness.getRequest(target))?.title, "Service agent updated");
+
+  const removed = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.serviceAnalystAgent, { method: "DELETE" });
+  assert.equal(removed.status, 204, "SERVICE_AGENT_DELETE_REFUSED");
+  assert.equal(await harness.getRequest(target), null);
+});
+
+/*
+ * T-08-A1 and T-08-A2 (Phase 8 security audit). Requestor is every identity's birthright, so a request
+ * belongs to the identity that creates it, whichever role it also holds. No actor creates a request for
+ * someone else or moves one to another owner, and no server-owned fact is taken from a request body.
+ * These tests follow the request-writes proof above and create their own records, so nothing they add
+ * reaches an earlier list or count.
+ */
+const REQUEST_NUMBER_FORMAT = /^RAR-\d{4}-[0-9A-HJKMNP-TV-Z]{6}$/;
+const FORGED_DATE = "2001-01-01T00:00:00.000Z";
+
+function jsonBody(method: "POST" | "PUT", data: Record<string, unknown>): RequestInit {
+  return { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ data }) };
+}
+
+function relationDocumentId(value: unknown): string | undefined {
+  return typeof value === "object" && value !== null ? (value as { documentId?: string }).documentId : undefined;
+}
+
+async function createdDocumentId(response: Response, tag: string): Promise<string> {
+  assert.equal(response.status, 200, `${tag}_STATUS: ${await response.clone().text()}`);
+  const documentId = (await response.json() as { data?: { documentId?: unknown } }).data?.documentId;
+  assert.equal(typeof documentId, "string", `${tag}_DOCUMENT_ID`);
+  return documentId as string;
+}
+
+/** The caller's own My Requests, one page wide enough for every request this file creates. */
+async function myRequestIds(identity: string): Promise<string[]> {
+  const response = await request("/api/csrm-assessment-requests?pagination[page]=1&pagination[pageSize]=100", identity);
+  assert.equal(response.status, 200, `MY_REQUESTS_UNREADABLE_${identity}`);
+  return documentIds(await response.json());
+}
+
+/*
+ * The two identities that reach the create and update routes through the explicit analyst grant are named
+ * in each test body, because the authorization matrix cites these tests as the proofs of their successes.
+ */
+
+test("T-08-A1 mounted create binds an analyst's or the service agent's request to its creator whatever the body names", async () => {
+  const harness = await harnessPromise;
+  const forgedQuestionnaire = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", { title: "T-08-A1 forged questionnaire" });
+  const forgedAssessment = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", { assessmentNumber: "T08A1-FORGED-ASSESSMENT", assessmentStatus: "draft" });
+
+  for (const { actor, identity, documentId } of [
+    { actor: "ANALYST", identity: harness.identities.analyst, documentId: harness.users.analyst },
+    { actor: "SERVICE_AGENT", identity: harness.identities.serviceAnalystAgent, documentId: harness.users.serviceAnalystAgent },
+  ] as const) {
+    const title = `T-08-A1 forged create ${actor}`;
+    const createdId = await createdDocumentId(await request("/api/csrm-assessment-requests", identity, jsonBody("POST", {
+      title,
+      requestor: harness.users.owner,
+      requestNumber: `FORGED-CREATE-${actor}`,
+      requestStatus: "submitted",
+      submittedDate: FORGED_DATE,
+      sponsor: harness.users.otherRequestor,
+      revertReason: "Forged reversal",
+      revertedAt: FORGED_DATE,
+      revertedBy: harness.users.otherRequestor,
+      questionnaire: forgedQuestionnaire,
+      assessment: forgedAssessment,
+    })), `T08A1_FORGED_CREATE_${actor}`);
+
+    const persisted = await harness.getRequest(createdId);
+    assert.ok(persisted, `T08A1_CREATED_ROW_ABSENT_${actor}`);
+    assert.equal(relationDocumentId(persisted.requestor), documentId, `T08A1_OWNER_IS_NOT_THE_CREATOR_${actor}`);
+    assert.equal(persisted.title, title, `T08A1_TITLE_NOT_WRITTEN_${actor}`);
+    assert.match(String(persisted.requestNumber), REQUEST_NUMBER_FORMAT, `T08A1_REQUEST_NUMBER_NOT_SERVER_OWNED_${actor}`);
+    assert.equal(persisted.requestStatus, "draft", `T08A1_STATUS_NOT_SERVER_OWNED_${actor}`);
+    assert.equal(persisted.submittedDate, null, `T08A1_SUBMITTED_DATE_NOT_SERVER_OWNED_${actor}`);
+    assert.equal(persisted.sponsor, null, `T08A1_SPONSOR_WRITTEN_${actor}`);
+    assert.equal(persisted.revertReason, null, `T08A1_REVERT_REASON_WRITTEN_${actor}`);
+    assert.equal(persisted.revertedAt, null, `T08A1_REVERTED_AT_WRITTEN_${actor}`);
+    assert.equal(persisted.revertedBy, null, `T08A1_REVERTED_BY_WRITTEN_${actor}`);
+    assert.equal(persisted.questionnaire, null, `T08A1_QUESTIONNAIRE_WRITTEN_${actor}`);
+    assert.equal(persisted.assessment, null, `T08A1_ASSESSMENT_WRITTEN_${actor}`);
+
+    // The Requestor the body named neither lists the request nor reads it.
+    assert.equal((await myRequestIds(harness.identities.owner)).includes(createdId), false, `T08A1_LISTED_FOR_THE_NAMED_REQUESTOR_${actor}`);
+    const namedRead = await request(`/api/csrm-assessment-requests/${createdId}`, harness.identities.owner);
+    assert.equal(namedRead.status, 403, `T08A1_READABLE_BY_THE_NAMED_REQUESTOR_${actor}`);
+  }
+});
+
+test("T-08-A1 an analyst's or the service agent's own new request appears in their own My Requests", async () => {
+  const harness = await harnessPromise;
+  for (const [actor, identity] of [
+    ["ANALYST", harness.identities.analyst],
+    ["SERVICE_AGENT", harness.identities.serviceAnalystAgent],
+  ] as const) {
+    // The body the web sends from New Request: the published create fields and nothing else.
+    const createdId = await createdDocumentId(
+      await request("/api/csrm-assessment-requests", identity, jsonBody("POST", { title: `T-08-A1 own request ${actor}` })),
+      `T08A1_OWN_CREATE_${actor}`,
+    );
+    assert.ok((await myRequestIds(identity)).includes(createdId), `T08A1_OWN_REQUEST_NOT_IN_MY_REQUESTS_${actor}`);
+    const summary = await request("/api/v1/my_requests/status_summary", identity);
+    assert.equal(summary.status, 200, `T08A1_OWN_SUMMARY_UNREADABLE_${actor}`);
+    const drafts = (await summary.json() as { data?: { draft?: unknown } }).data?.draft;
+    assert.ok(typeof drafts === "number" && drafts >= 1, `T08A1_OWN_DRAFT_NOT_COUNTED_${actor}`);
+    for (const requestor of [harness.identities.owner, harness.identities.otherRequestor]) {
+      assert.equal((await myRequestIds(requestor)).includes(createdId), false, `T08A1_OWN_REQUEST_LISTED_FOR_${requestor}_${actor}`);
+    }
+  }
+});
+
+test("T-08-A2 mounted update keeps a request's owner when an analyst or the service agent names another Requestor", async () => {
+  const harness = await harnessPromise;
+  for (const [actor, identity, suffix] of [
+    ["ANALYST", harness.identities.analyst, "AN"],
+    ["SERVICE_AGENT", harness.identities.serviceAnalystAgent, "AG"],
+  ] as const) {
+    // The owner's released work: an approved request, its released questionnaire and its released assessment.
+    const requestId = await harness.createAssessmentRequestFixture({
+      requestNumber: `T08A2-RELEASED-${suffix}`,
+      title: `T-08-A2 released request ${actor}`,
+      requestStatus: "approved",
+      requestor: "owner",
+    });
+    const { questionnaire } = await harness.createQuestionnaireLifecycleFixture({ requestDocumentId: requestId, released: true, answerState: "submitted" });
+    const assessment = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+      assessmentNumber: `ASM-2026-T8A2${suffix}`,
+      assessmentStatus: "approved",
+      summary: `T-08-A2 released assessment ${actor}`,
+      overallRating: "Moderate",
+      assessmentRequest: requestId,
+      approvedBy: harness.users.analyst,
+      approvalDate: "2026-08-30T00:00:00.000Z",
+      assessmentDate: "2026-08-30T00:00:00.000Z",
+    });
+    // The matrix conventions: another Requestor is refused a request or a questionnaire (403) and never learns an assessment exists (404).
+    const reads = [
+      [`/api/csrm-assessment-requests/${requestId}`, 403],
+      [`/api/v1/questionnaires/${questionnaire}`, 403],
+      [`/api/v1/risk_assessments/${assessment}`, 404],
+    ] as const;
+    for (const [path, otherStatus] of reads) {
+      assert.equal((await request(path, harness.identities.owner)).status, 200, `T08A2_PRECONDITION_OWNER_READ_${actor}_${path}`);
+      assert.equal((await request(path, harness.identities.otherRequestor)).status, otherStatus, `T08A2_PRECONDITION_OTHER_READ_${actor}_${path}`);
+    }
+
+    const title = `T-08-A2 amended ${actor}`;
+    const moved = await request(`/api/csrm-assessment-requests/${requestId}`, identity, jsonBody("PUT", { title, requestor: harness.users.otherRequestor }));
+    assert.equal(moved.status, 200, `T08A2_MOVE_STATUS_${actor}: ${await moved.clone().text()}`);
+    const persisted = await harness.getRequest(requestId);
+    assert.equal(relationDocumentId(persisted?.requestor), harness.users.owner, `T08A2_OWNER_MOVED_${actor}`);
+    // The published field in the same body is written: the analyst's reach over a request is unchanged.
+    assert.equal(persisted?.title, title, `T08A2_PUBLISHED_FIELD_NOT_WRITTEN_${actor}`);
+
+    for (const [path, otherStatus] of reads) {
+      assert.equal((await request(path, harness.identities.otherRequestor)).status, otherStatus, `T08A2_OTHER_REQUESTOR_REACHED_${actor}_${path}`);
+      assert.equal((await request(path, harness.identities.owner)).status, 200, `T08A2_OWNER_LOST_${actor}_${path}`);
+    }
+    assert.equal((await myRequestIds(harness.identities.otherRequestor)).includes(requestId), false, `T08A2_LISTED_FOR_OTHER_REQUESTOR_${actor}`);
+    assert.ok((await myRequestIds(harness.identities.owner)).includes(requestId), `T08A2_NOT_LISTED_FOR_OWNER_${actor}`);
+  }
+});
+
+/*
+ * The published update body is closed: the thirteen Requestor fields and the submission intent
+ * (`requestStatus: "submitted"`; omitted, the request stays a draft). A server-owned fact is not
+ * part of it, so it is ignored, as the Requestor branch has ignored it since Phase 2. A status the
+ * contract does not allow is refused (400) with nothing written, and submission is a transition
+ * from draft only, dated by the server.
+ */
+test("T-08-A2 mounted update ignores server-owned facts and honours only the published submission intent from an analyst or the service agent", async () => {
+  const harness = await harnessPromise;
+  const forgedQuestionnaire = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", { title: "T-08-A2 forged questionnaire" });
+  const forgedAssessment = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", { assessmentNumber: "T08A2-FORGED-ASSESSMENT", assessmentStatus: "draft" });
+
+  for (const [actor, identity, suffix] of [
+    ["ANALYST", harness.identities.analyst, "AN"],
+    ["SERVICE_AGENT", harness.identities.serviceAnalystAgent, "AG"],
+  ] as const) {
+    const requestNumber = `T08A2-DRAFT-${suffix}`;
+    const target = await harness.createAssessmentRequestFixture({ requestNumber, title: `T-08-A2 draft ${actor}`, requestStatus: "draft", requestor: "owner" });
+    const description = `Amended by ${actor}`;
+    const forged = await request(`/api/csrm-assessment-requests/${target}`, identity, jsonBody("PUT", {
+      description,
+      requestor: harness.users.otherRequestor,
+      requestNumber: `FORGED-UPDATE-${suffix}`,
+      submittedDate: FORGED_DATE,
+      sponsor: harness.users.otherRequestor,
+      revertReason: "Forged reversal",
+      revertedAt: FORGED_DATE,
+      revertedBy: harness.users.otherRequestor,
+      questionnaire: forgedQuestionnaire,
+      assessment: forgedAssessment,
+    }));
+    assert.equal(forged.status, 200, `T08A2_FORGED_UPDATE_STATUS_${actor}: ${await forged.clone().text()}`);
+    const persisted = await harness.getRequest(target);
+    assert.ok(persisted, `T08A2_TARGET_ABSENT_${actor}`);
+    assert.equal(persisted.description, description, `T08A2_PUBLISHED_FIELD_NOT_WRITTEN_${actor}`);
+    assert.equal(relationDocumentId(persisted.requestor), harness.users.owner, `T08A2_REQUESTOR_WRITTEN_${actor}`);
+    assert.equal(persisted.requestNumber, requestNumber, `T08A2_REQUEST_NUMBER_WRITTEN_${actor}`);
+    assert.equal(persisted.requestStatus, "draft", `T08A2_STATUS_WRITTEN_${actor}`);
+    assert.equal(persisted.submittedDate, null, `T08A2_SUBMITTED_DATE_WRITTEN_${actor}`);
+    assert.equal(persisted.sponsor, null, `T08A2_SPONSOR_WRITTEN_${actor}`);
+    assert.equal(persisted.revertReason, null, `T08A2_REVERT_REASON_WRITTEN_${actor}`);
+    assert.equal(persisted.revertedAt, null, `T08A2_REVERTED_AT_WRITTEN_${actor}`);
+    assert.equal(persisted.revertedBy, null, `T08A2_REVERTED_BY_WRITTEN_${actor}`);
+    assert.equal(persisted.questionnaire, null, `T08A2_QUESTIONNAIRE_WRITTEN_${actor}`);
+    assert.equal(persisted.assessment, null, `T08A2_ASSESSMENT_WRITTEN_${actor}`);
+
+    for (const requestStatus of ["approved", "risk-assessment-drafted"]) {
+      const before = await harness.getRequest(target);
+      const refused = await request(`/api/csrm-assessment-requests/${target}`, identity, jsonBody("PUT", { title: "Refused status change", requestStatus }));
+      assert.equal(refused.status, 400, `T08A2_UNPUBLISHED_STATUS_ADMITTED_${actor}_${requestStatus}`);
+      assert.deepEqual(await harness.getRequest(target), before, `T08A2_UNPUBLISHED_STATUS_WROTE_${actor}_${requestStatus}`);
+    }
+
+    // The caller's own New Request, submitted through the same route: the server dates the submission.
+    const ownId = await createdDocumentId(
+      await request("/api/csrm-assessment-requests", identity, jsonBody("POST", { title: `T-08-A2 own submission ${actor}` })),
+      `T08A2_OWN_CREATE_${actor}`,
+    );
+    const submitStarted = Date.now();
+    const submitted = await request(`/api/csrm-assessment-requests/${ownId}`, identity, jsonBody("PUT", { requestStatus: "submitted", submittedDate: FORGED_DATE }));
+    const submitFinished = Date.now();
+    assert.equal(submitted.status, 200, `T08A2_OWN_SUBMIT_STATUS_${actor}: ${await submitted.clone().text()}`);
+    const own = await harness.getRequest(ownId);
+    assert.equal(own?.requestStatus, "submitted", `T08A2_OWN_SUBMIT_NOT_APPLIED_${actor}`);
+    const submittedAt = Date.parse(String(own?.submittedDate));
+    assert.ok(Number.isFinite(submittedAt) && submittedAt >= submitStarted && submittedAt <= submitFinished + 1000, `T08A2_OWN_SUBMIT_NOT_SERVER_DATED_${actor}`);
+
+    // Submission is a transition from draft: a second one is refused and writes nothing.
+    const before = await harness.getRequest(ownId);
+    const repeated = await request(`/api/csrm-assessment-requests/${ownId}`, identity, jsonBody("PUT", { requestStatus: "submitted" }));
+    assert.equal(repeated.status, 400, `T08A2_REPEATED_SUBMIT_ADMITTED_${actor}`);
+    assert.deepEqual(await harness.getRequest(ownId), before, `T08A2_REPEATED_SUBMIT_WROTE_${actor}`);
   }
 });

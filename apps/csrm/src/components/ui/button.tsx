@@ -13,8 +13,10 @@ const buttonVariants = cva(
           "bg-primary !text-primary-foreground shadow-button hover:-translate-y-px hover:shadow-button-hover",
         destructive:
           "bg-destructive-solid text-destructive-foreground shadow-button hover:-translate-y-px hover:shadow-button-hover focus-visible:ring-destructive/40",
+        // Ink text of its own: inherited text could be the sidebar's light text on this white fill.
+        // Important, as the primary variant's ink is, so tailwind-merge keeps text-button beside it.
         outline:
-          "border border-border bg-surface hover:-translate-y-px hover:bg-surface-muted",
+          "border border-border bg-surface !text-foreground hover:-translate-y-px hover:bg-surface-muted",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:

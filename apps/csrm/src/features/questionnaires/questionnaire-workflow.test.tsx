@@ -145,6 +145,22 @@ describe('My Questionnaires discovery', () => {
     );
   });
 
+  it('shows the Requestor detail status from the served state through the shared badge', () => {
+    const headerBadge = (root: HTMLElement) => root.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
+    const view = render(<QuestionnaireDetail definition={submittedDefinition} questionnaire={questionnaire} state="ready" />);
+    expect(headerBadge(view.container)).toHaveTextContent(/^Draft$/);
+    expect(headerBadge(view.container)).toHaveAttribute('data-tone', 'info');
+
+    view.rerender(<QuestionnaireDetail definition={submittedDefinition} questionnaire={{ ...questionnaire, state: 'not-started', progress: { answered: 0, total: 5, percent: 0 } }} state="ready" />);
+    expect(headerBadge(view.container)).toHaveTextContent(/^Not started$/);
+    expect(headerBadge(view.container)).toHaveAttribute('data-tone', 'neutral');
+
+    view.rerender(<QuestionnaireDetail definition={submittedDefinition} questionnaire={submittedQuestionnaire} state="submitted" />);
+    expect(headerBadge(view.container)).toHaveTextContent(/^Submitted$/);
+    expect(headerBadge(view.container)).toHaveAttribute('data-tone', 'success');
+    expect(screen.queryByText('In progress')).not.toBeInTheDocument();
+  });
+
   it('keeps a heading and recovery action in every safe requestor detail state', () => {
     const view = render(<QuestionnaireDetail state="permission" />);
     for (const state of ['permission', 'error', 'empty'] as const) {
@@ -213,7 +229,13 @@ describe('My Questionnaires discovery', () => {
     );
     expect(screen.getAllByText('Customer portal review')).toHaveLength(2);
     expect(screen.getAllByText('RAR-2026-X7K4Q2')).toHaveLength(2);
-    expect(screen.getAllByText('Draft')).toHaveLength(2);
+    // The shared questionnaire badge, in the table and the card: Draft is work waiting on the Requestor.
+    const draftBadges = screen.getAllByText('Draft');
+    expect(draftBadges).toHaveLength(2);
+    for (const badge of draftBadges) {
+      expect(badge).toHaveAttribute('data-tone', 'info');
+      expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    }
     expect(screen.getAllByText('3 of 5 answered')).toHaveLength(2);
     expect(screen.getByText('2 unanswered')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Service security questionnaire progress' })).toHaveAttribute('aria-valuenow', '60');
@@ -291,6 +313,9 @@ describe('Security Analyst questionnaire review', () => {
       '/app/review/requests/request-one',
     );
     expect(screen.getByRole('link', { name: 'Assessment request RAR-2026-X7K4Q2' })).toHaveClass('record-link');
+    const badge = document.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
+    expect(badge).toHaveTextContent(/^Submitted$/);
+    expect(badge).toHaveAttribute('data-tone', 'success');
   });
 
   it('retains the safe analyst backlink while a questionnaire awaits submission', () => {
@@ -307,6 +332,52 @@ describe('Security Analyst questionnaire review', () => {
       '/app/review/requests/request-one',
     );
     expect(screen.getByRole('link', { name: 'Assessment request RAR-2026-X7K4Q2' })).toHaveClass('record-link');
+    // The heading names the questionnaire's served state; its draft answers stay private.
+    const badge = document.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
+    expect(badge).toHaveTextContent(/^Draft$/);
+    expect(badge).toHaveAttribute('data-tone', 'info');
+  });
+
+  it('lists each question once, grouped by section, with no renderer and no Submitted alert in analyst review', () => {
+    const questionDefaults = {
+      schemaVersion: 1 as const,
+      support: { status: 'supported' as const },
+      answer: null,
+      required: true,
+    };
+    const definition: QuestionnaireDefinition = [
+      { ...questionDefaults, documentId: 'question-hosting', questionKey: 'hosting', questionText: 'Where is the service hosted?', answerType: 'Single select', choices: [{ value: 'cloud', label: 'Cloud' }, { value: 'on-premises', label: 'On premises' }], section: { key: 'hosting', title: 'Hosting', order: 2 }, order: 1, required: false },
+      { ...questionDefaults, documentId: 'question-name', questionKey: 'service_name', questionText: 'What is the service name?', answerType: 'Text', section: { key: 'overview', title: 'Overview', order: 1 }, order: 1 },
+      { ...questionDefaults, documentId: 'question-data', questionKey: 'stores_data', questionText: 'Does the service store customer data?', answerType: 'Boolean', section: { key: 'overview', title: 'Overview', order: 1 }, order: 2 },
+    ];
+    const unreleased: QuestionnaireSummary = { ...questionnaire, state: 'not-started', progress: { answered: 0, total: 3, percent: 0 }, release: null };
+    // If the read-only renderer were mounted it would list every question a second time.
+    const original = questionnaireRenderer.getMockImplementation();
+    questionnaireRenderer.mockClear();
+    questionnaireRenderer.mockImplementation(({ definition: rendered }) => <div>{rendered.map((question) => <p key={question.questionKey}>{question.questionText}</p>)}</div>);
+    try {
+      const { container } = render(
+        <QuestionnaireReview assessmentRequestHref="/app/review/requests/request-one" definition={definition} questionnaire={unreleased} state="analyst-review" />,
+      );
+
+      const badge = container.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
+      expect(badge).toHaveTextContent(/^Analyst review$/);
+      expect(badge).toHaveAttribute('data-tone', 'warning');
+
+      for (const question of definition) expect(screen.getAllByText(question.questionText), question.questionText).toHaveLength(1);
+      const governance = screen.getByRole('region', { name: 'Questionnaire governance' });
+      expect([...governance.querySelectorAll('h4.micro-label')].map((heading) => heading.textContent)).toEqual(['Overview', 'Hosting']);
+      expect(screen.getByText('Text · Required')).toBeInTheDocument();
+      expect(screen.getByText('Boolean · Required')).toBeInTheDocument();
+      expect(screen.getByText('Single select · Optional')).toBeInTheDocument();
+      expect(screen.getByText('Choices: Cloud, On premises')).toBeInTheDocument();
+
+      expect(questionnaireRenderer).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Questionnaire submitted\. This questionnaire is read-only/)).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Assessment request RAR-2026-X7K4Q2' })).toHaveAttribute('href', '/app/review/requests/request-one');
+    } finally {
+      if (original) questionnaireRenderer.mockImplementation(original);
+    }
   });
   it('preserves questionnaire-native status filters on the review route and clears them from page one', () => {
     replace.mockClear();
@@ -321,10 +392,10 @@ describe('Security Analyst questionnaire review', () => {
 
     const status = screen.getByRole('combobox', { name: 'Filter by status' });
     expect(status).toBeInTheDocument();
-    expect(status).toHaveTextContent('All statuses');
-    expect(status).toHaveTextContent('Not started');
-    expect(status).toHaveTextContent('Draft');
-    expect(status).toHaveTextContent('Submitted');
+    // The filter keeps the three served states; Analyst review is a derived label, not a filter value.
+    expect([...status.querySelectorAll('option')].map((option) => [option.value, option.textContent])).toEqual([
+      ['', 'All statuses'], ['not-started', 'Not started'], ['draft', 'Draft'], ['submitted', 'Submitted'],
+    ]);
 
     fireEvent.change(status, { target: { value: 'submitted' } });
     expect(replace).toHaveBeenLastCalledWith(
@@ -347,14 +418,30 @@ describe('Security Analyst questionnaire review', () => {
     );
   });
 
-  it('lists questionnaire review work with safe direct links and explicit submission state', () => {
-    const { container } = render(<QuestionnaireReviewList questionnaires={[submittedQuestionnaire, draftQuestionnaire]} />);
+  it('lists questionnaire review work with safe direct links and one derived status per questionnaire', () => {
+    const release = { releasedAt: '2026-08-29T09:00:00.000Z', releasedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' } };
+    const unreleased: QuestionnaireSummary = {
+      ...draftQuestionnaire,
+      documentId: 'questionnaire-three',
+      questionnaireNumber: 'QUES-DEV-003',
+      title: 'Unreleased questionnaire',
+      state: 'not-started',
+      progress: { answered: 0, total: 5, percent: 0 },
+      release: null,
+    };
+    const { container } = render(<QuestionnaireReviewList questionnaires={[{ ...submittedQuestionnaire, release }, { ...draftQuestionnaire, release }, unreleased]} />);
 
     expect(screen.getByRole('table', { name: 'Questionnaires for review' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Service security questionnaire' }).at(0)).toHaveAttribute('href', '/app/review/questionnaires/questionnaire%2Fone');
-    expect(screen.getAllByText('Ready for review')).toHaveLength(2);
-    expect(screen.getAllByText('Awaiting submission')).toHaveLength(2);
-    expect(screen.getAllByText('Customer portal review')).toHaveLength(4);
+    // An unreleased questionnaire is in analyst review; a released one shows its served state.
+    for (const [label, tone] of [['Submitted', 'success'], ['Draft', 'info'], ['Analyst review', 'warning']] as const) {
+      const badges = screen.getAllByText(label, { exact: true });
+      expect(badges, label).toHaveLength(2);
+      for (const badge of badges) expect(badge, label).toHaveAttribute('data-tone', tone);
+    }
+    expect(screen.queryByText('Ready for review')).not.toBeInTheDocument();
+    expect(screen.queryByText('Awaiting submission')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Customer portal review')).toHaveLength(6);
     expect(container.querySelector('[data-slot="data-table-mobile"]')).toBeInTheDocument();
     expect(container.innerHTML).not.toContain('Atlas');
     expect(container.querySelector('[data-slot="data-table-desktop"]')).toBeInTheDocument();
@@ -376,6 +463,12 @@ describe('Security Analyst questionnaire review', () => {
     view.rerender(<QuestionnaireReviewList questionnaires={[submittedQuestionnaire]} state="permission" />);
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to questionnaire reviews');
     expect(screen.queryByText(submittedQuestionnaire.title)).not.toBeInTheDocument();
+    // W-3: the refusal alone, as the Risk Register's is: no search, filter, total or pager around it.
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ results?$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Page \d+ of \d+$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(Previous page|Next page|Use (compact|default) density)$/ })).not.toBeInTheDocument();
     expect(screen.queryByText(availableAssessmentRequest(submittedQuestionnaire.assessmentRequest)?.title ?? '')).not.toBeInTheDocument();
   });
 

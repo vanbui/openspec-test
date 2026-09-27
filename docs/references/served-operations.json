@@ -1,0 +1,2896 @@
+{
+  "generatedAt": "2026-09-25T13:49:08.292Z",
+  "served": [
+    {
+      "method": "DELETE",
+      "path": "/api/csrm-assessment-requests/:id",
+      "catalogueUrl": "DELETE:/api/csrm-assessment-requests/{id}",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.delete",
+      "authStrategies": null,
+      "policyOperation": "DELETE:/api/csrm-assessment-requests/{id}",
+      "policyConfig": {
+        "operation": "DELETE:/api/csrm-assessment-requests/{id}",
+        "requireRequestOwnership": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.delete_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "csrm-assessment-request/delete/csrm_assessment_requests_by_id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/control_implementations/:implementationId",
+      "catalogueUrl": "DELETE:/api/v1/control_implementations/{implementationId}",
+      "apiName": "csrm-control-implementation",
+      "routerFile": "csrm-control-implementation/routes/csrm-control-implementation.ts",
+      "handler": "api::csrm-control-implementation.csrm-control-implementation.deleteControlImplementation",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "DELETE:/api/v1/control_implementations/{implementationId}",
+      "policyConfig": {
+        "operation": "DELETE:/api/v1/control_implementations/{implementationId}"
+      },
+      "functionApiIds": [
+        "function.risk_register.mitigation_control_details.api.03"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/delete-control-implementation",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/questionnaires/:questionnaireId/questions/:questionId",
+      "catalogueUrl": "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.deleteQuestion",
+      "authStrategies": null,
+      "policyOperation": "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+      "policyConfig": {
+        "operation": "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_governance.delete_question_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/delete-questionnaire-question",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-assessment-requests",
+      "catalogueUrl": "GET:/api/csrm-assessment-requests",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.find",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/csrm-assessment-requests",
+      "policyConfig": {
+        "operation": "GET:/api/csrm-assessment-requests",
+        "requireRequestCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.core_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "csrm-assessment-request/get/csrm_assessment_requests",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-assessment-requests/:id",
+      "catalogueUrl": "GET:/api/csrm-assessment-requests/{id}",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.findOne",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/csrm-assessment-requests/{id}",
+      "policyConfig": {
+        "operation": "GET:/api/csrm-assessment-requests/{id}",
+        "requireRequestOwnership": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.core_api.api.03"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "csrm-assessment-request/get/csrm_assessment_requests_by_id",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alerts",
+      "catalogueUrl": "GET:/api/v1/alerts",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/alerts.ts",
+      "handler": "api::csrm-analyst-insight.alerts.list",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/alerts",
+      "policyConfig": {
+        "operation": "GET:/api/v1/alerts",
+        "requireAnalystInsightScope": true
+      },
+      "functionApiIds": [
+        "function.alerts.list_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/get-alerts",
+      "webCallers": [
+        "src/features/alerts/alert-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alerts/summary",
+      "catalogueUrl": "GET:/api/v1/alerts/summary",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/alerts.ts",
+      "handler": "api::csrm-analyst-insight.alerts.summary",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/alerts/summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/alerts/summary",
+        "requireAnalystInsightScope": true
+      },
+      "functionApiIds": [
+        "function.alerts.summary_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/get-alert-summary",
+      "webCallers": [
+        "src/features/alerts/alert-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_draft_jobs/:jobId",
+      "catalogueUrl": "GET:/api/v1/assessment_draft_jobs/{jobId}",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.getDraftJob",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_draft_jobs/{jobId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_draft_jobs/{jobId}"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.09"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-assessment-draft-job",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests",
+      "catalogueUrl": "GET:/api/v1/assessment_requests",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.find",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/assessment_requests",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests",
+        "requireAnalystRequestCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.requests.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-assessment-request-queue",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/controls",
+      "catalogueUrl": "GET:/api/v1/controls",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.listControls",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/controls?picker=assessment",
+      "policyConfig": {
+        "operation": "GET:/api/v1/controls?picker=assessment",
+        "administrationListOperation": "GET:/api/v1/controls"
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.01",
+        "function.risk_register.mitigation_control_details.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-controls",
+      "webCallers": [
+        "src/features/administration/administration-service.ts",
+        "src/features/assessments/assessment-service.ts",
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/controls/:controlId",
+      "catalogueUrl": "GET:/api/v1/controls/{controlId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.getControl",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/controls/{controlId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/controls/{controlId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.control_details.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/get-controls",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/summary",
+      "catalogueUrl": "GET:/api/v1/dashboard/summary",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/dashboard.ts",
+      "handler": "api::csrm-analyst-insight.dashboard.summary",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/dashboard/summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/dashboard/summary",
+        "requireAnalystInsightScope": true
+      },
+      "functionApiIds": [
+        "function.dashboard.summary_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/get-dashboard-summary",
+      "webCallers": [
+        "src/features/analyst-dashboard/analyst-dashboard-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_assets",
+      "catalogueUrl": "GET:/api/v1/information_assets",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.listInformationAssets",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_assets?q={q}&page={page}&pageSize={pageSize}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_assets?q={q}&page={page}&pageSize={pageSize}",
+        "administrationListOperation": "GET:/api/v1/information_assets"
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.01",
+        "function.risk_assessment_requests.new_request.api.03"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/list-information-assets",
+      "webCallers": [
+        "src/features/administration/administration-service.ts",
+        "src/features/requests/request-service.ts",
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_assets/:informationAssetId",
+      "catalogueUrl": "GET:/api/v1/information_assets/{informationAssetId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.getInformationAsset",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_assets/{informationAssetId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_assets/{informationAssetId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_asset_details.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/get-information-assets",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_systems",
+      "catalogueUrl": "GET:/api/v1/information_systems",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.listInformationSystems",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_systems?q={q}&page={page}&pageSize={pageSize}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_systems?q={q}&page={page}&pageSize={pageSize}",
+        "administrationListOperation": "GET:/api/v1/information_systems"
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.01",
+        "function.risk_assessment_requests.new_request.api.02"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/list-information-systems",
+      "webCallers": [
+        "src/features/administration/administration-service.ts",
+        "src/features/requests/request-service.ts",
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_systems/:informationSystemId",
+      "catalogueUrl": "GET:/api/v1/information_systems/{informationSystemId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.getInformationSystem",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_systems/{informationSystemId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_systems/{informationSystemId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_system_details.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/get-information-systems",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_questionnaires",
+      "catalogueUrl": "GET:/api/v1/my_questionnaires",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.listMine",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/my_questionnaires",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_questionnaires",
+        "requireQuestionnaireCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.my_questionnaires.api.01"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "questionnaire-workflow/get-my-questionnaires",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_questionnaires/status_summary",
+      "catalogueUrl": "GET:/api/v1/my_questionnaires/status_summary",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.statusSummary",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/my_questionnaires/status_summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_questionnaires/status_summary",
+        "requireQuestionnaireCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.my_questionnaires.api.02"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "questionnaire-workflow/get-my-questionnaire-status-summary",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_requests/status_summary",
+      "catalogueUrl": "GET:/api/v1/my_requests/status_summary",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/my-request-status-summary.ts",
+      "handler": "api::csrm-assessment-request.my-request-status-summary.statusSummary",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_requests/status_summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_requests/status_summary",
+        "requireRequestCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.my_requests.api.02"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-workflow/get-my-request-status-summary",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_risk_assessments",
+      "catalogueUrl": "GET:/api/v1/my_risk_assessments",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.listMyReleasedAssessments",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_risk_assessments",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_risk_assessments",
+        "requireAssessmentOwnerCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.risk_assessments.my_risk_assessments.api.01"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-workflow/get-my-released-risk-assessments",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_risk_assessments/rating_summary",
+      "catalogueUrl": "GET:/api/v1/my_risk_assessments/rating_summary",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.myRatingSummary",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_risk_assessments/rating_summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_risk_assessments/rating_summary",
+        "requireAssessmentOwnerCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.risk_assessments.my_risk_assessments.api.02"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-workflow/get-my-risk-assessment-rating-summary",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaire_generation_jobs/:jobId",
+      "catalogueUrl": "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.getGenerationJob",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaire_generation_jobs/{jobId}"
+      },
+      "functionApiIds": [
+        "function.questionnaire_generation.job_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-generation/get-questionnaire-generation-job",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaires",
+      "catalogueUrl": "GET:/api/v1/questionnaires",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.listAll",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaires",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaires",
+        "requireQuestionnaireCollectionScope": true,
+        "allowAnalystQuestionnaireReviewScope": true
+      },
+      "functionApiIds": [
+        "function.questionnaires.questionnaires.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "questionnaire-workflow/get-questionnaires-for-review",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaires/review_summary",
+      "catalogueUrl": "GET:/api/v1/questionnaires/review_summary",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.reviewSummary",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaires/review_summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaires/review_summary",
+        "requireQuestionnaireCollectionScope": true,
+        "allowAnalystQuestionnaireReviewScope": true
+      },
+      "functionApiIds": [
+        "function.questionnaires.questionnaires.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "questionnaire-workflow/get-questionnaire-review-summary",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaires/:questionnaireId",
+      "catalogueUrl": "GET:/api/v1/questionnaires/{questionnaireId}",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.findWorkflowOne",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaires/{questionnaireId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaires/{questionnaireId}",
+        "requireQuestionnaireOwnership": true,
+        "requireQuestionnaireReleasedForRequestor": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.questionnaire_details.api.01",
+        "function.questionnaires.questionnaire_details.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "questionnaire-workflow/get-questionnaire",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaires/:questionnaireId/questions",
+      "catalogueUrl": "GET:/api/v1/questionnaires/{questionnaireId}/questions",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.listQuestions",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaires/{questionnaireId}/questions",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaires/{questionnaireId}/questions",
+        "requireQuestionnaireOwnership": true,
+        "requireQuestionnaireReleasedForRequestor": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.questionnaire_details.api.02",
+        "function.questionnaires.questionnaire_details.api.02"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "questionnaire-workflow/get-questionnaire-questions",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "catalogueUrl": "GET:/api/v1/reports",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/reports.ts",
+      "handler": "api::csrm-analyst-insight.reports.list",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/reports",
+      "policyConfig": {
+        "operation": "GET:/api/v1/reports",
+        "requireAnalystInsightScope": true
+      },
+      "functionApiIds": [
+        "function.reports.list_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/get-reports",
+      "webCallers": [
+        "src/features/reports/report-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/:reportKey",
+      "catalogueUrl": "GET:/api/v1/reports/{reportKey}",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/reports.ts",
+      "handler": "api::csrm-analyst-insight.reports.get",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/reports/{reportKey}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/reports/{reportKey}",
+        "requireAnalystInsightScope": true
+      },
+      "functionApiIds": [
+        "function.reports.run_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/get-report",
+      "webCallers": [
+        "src/features/reports/report-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_assessments",
+      "catalogueUrl": "GET:/api/v1/risk_assessments",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.listAssessments",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessments.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-risk-assessments",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts",
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_assessments/status_summary",
+      "catalogueUrl": "GET:/api/v1/risk_assessments/status_summary",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.statusSummary",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments/status_summary",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments/status_summary"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessments.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-risk-assessment-status-summary",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_assessments/:assessmentId",
+      "catalogueUrl": "GET:/api/v1/risk_assessments/{assessmentId}",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.getAssessment",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments/{assessmentId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments/{assessmentId}"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.01",
+        "function.risk_assessments.risk_assessment_details_read_only.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-risk-assessment",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_assessments/:assessmentId/risks",
+      "catalogueUrl": "GET:/api/v1/risk_assessments/{assessmentId}/risks",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.listAssessmentRisks",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments/{assessmentId}/risks",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments/{assessmentId}/risks"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.03",
+        "function.risk_assessments.risk_assessment_details_read_only.api.02"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-assessment-risks",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_types",
+      "catalogueUrl": "GET:/api/v1/risk_types",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.listRiskTypes",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_types?picker=assessment",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_types?picker=assessment",
+        "administrationListOperation": "GET:/api/v1/risk_types"
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.01",
+        "function.risk_assessments.risk_assessment_details.api.12"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-risk-types",
+      "webCallers": [
+        "src/features/administration/administration-service.ts",
+        "src/features/assessments/assessment-service.ts",
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_types/:riskTypeId",
+      "catalogueUrl": "GET:/api/v1/risk_types/{riskTypeId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.getRiskType",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_types/{riskTypeId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_types/{riskTypeId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_type_details.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/get-risk-types",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risks",
+      "catalogueUrl": "GET:/api/v1/risks",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.listRiskRegister",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risks",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risks",
+        "requireAnalystRiskRegisterScope": true
+      },
+      "functionApiIds": [
+        "function.risk_register.risk_register.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "risk-register/get-risks",
+      "webCallers": [
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risks/:riskId",
+      "catalogueUrl": "GET:/api/v1/risks/{riskId}",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.getRiskRegisterDetail",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risks/{riskId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risks/{riskId}",
+        "requireAnalystRiskRegisterScope": true
+      },
+      "functionApiIds": [
+        "function.risk_register.risk_details.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "risk-register/get-risk",
+      "webCallers": [
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risks/:riskId/control_implementations",
+      "catalogueUrl": "GET:/api/v1/risks/{riskId}/control_implementations",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.listRiskControlImplementations",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risks/{riskId}/control_implementations",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risks/{riskId}/control_implementations"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details_read_only.api.03",
+        "function.risk_register.risk_details.api.03"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/get-risk-control-implementations",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users",
+      "catalogueUrl": "GET:/api/v1/users",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.searchActiveUsers",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/users?search={query}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/users?search={query}"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.04",
+        "function.risk_assessments.risk_assessment_details.api.11"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/search-active-users",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts",
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/control_implementations/:implementationId",
+      "catalogueUrl": "PATCH:/api/v1/control_implementations/{implementationId}",
+      "apiName": "csrm-control-implementation",
+      "routerFile": "csrm-control-implementation/routes/csrm-control-implementation.ts",
+      "handler": "api::csrm-control-implementation.csrm-control-implementation.updateControlImplementation",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/control_implementations/{implementationId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/control_implementations/{implementationId}"
+      },
+      "functionApiIds": [
+        "function.risk_register.mitigation_control_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/update-control-implementation",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/controls/:controlId",
+      "catalogueUrl": "PATCH:/api/v1/controls/{controlId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.updateControl",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/controls/{controlId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/controls/{controlId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.control_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/update-controls",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/information_assets/:informationAssetId",
+      "catalogueUrl": "PATCH:/api/v1/information_assets/{informationAssetId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.updateInformationAsset",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/information_assets/{informationAssetId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/information_assets/{informationAssetId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_asset_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/update-information-assets",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/information_systems/:informationSystemId",
+      "catalogueUrl": "PATCH:/api/v1/information_systems/{informationSystemId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.updateInformationSystem",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/information_systems/{informationSystemId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/information_systems/{informationSystemId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_system_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/update-information-systems",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/questionnaires/:questionnaireId/answers",
+      "catalogueUrl": "PATCH:/api/v1/questionnaires/{questionnaireId}/answers",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.findWorkflowOne",
+      "authStrategies": null,
+      "policyOperation": "PATCH:/api/v1/questionnaires/{questionnaireId}/answers",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/questionnaires/{questionnaireId}/answers",
+        "requireQuestionnaireOwnership": true,
+        "requireQuestionnaireReleasedForRequestor": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.questionnaire_details.api.03"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "questionnaire-workflow/save-questionnaire-answers",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/questionnaires/:questionnaireId/questions/:questionId",
+      "catalogueUrl": "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.editQuestion",
+      "authStrategies": null,
+      "policyOperation": "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_governance.edit_question_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/edit-questionnaire-question",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/risk_assessments/:assessmentId",
+      "catalogueUrl": "PATCH:/api/v1/risk_assessments/{assessmentId}",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.updateAssessment",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/risk_assessments/{assessmentId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/risk_assessments/{assessmentId}"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/update-risk-assessment",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/risk_types/:riskTypeId",
+      "catalogueUrl": "PATCH:/api/v1/risk_types/{riskTypeId}",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.updateRiskType",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/risk_types/{riskTypeId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/risk_types/{riskTypeId}",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_type_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/update-risk-types",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/risks/:riskId",
+      "catalogueUrl": "PATCH:/api/v1/risks/{riskId}",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.updateRisk",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PATCH:/api/v1/risks/{riskId}",
+      "policyConfig": {
+        "operation": "PATCH:/api/v1/risks/{riskId}"
+      },
+      "functionApiIds": [
+        "function.risk_register.risk_details.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/update-risk",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/csrm-assessment-requests",
+      "catalogueUrl": "POST:/api/csrm-assessment-requests",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.create",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/csrm-assessment-requests",
+      "policyConfig": {
+        "operation": "POST:/api/csrm-assessment-requests"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.core_api.api.02"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "csrm-assessment-request/post/csrm_assessment_requests",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment_draft_jobs/:jobId/retry",
+      "catalogueUrl": "POST:/api/v1/assessment_draft_jobs/{jobId}/retry",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.retryDraftJob",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/assessment_draft_jobs/{jobId}/retry",
+      "policyConfig": {
+        "operation": "POST:/api/v1/assessment_draft_jobs/{jobId}/retry"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.10"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/retry-assessment-draft-job",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment_requests/:requestId/generate_questionnaire",
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.generateQuestionnaire",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
+      "policyConfig": {
+        "operation": "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
+        "requireRequestOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_generation.generate_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-generation/generate-questionnaire",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment_requests/:requestId/revert_to_draft",
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/revert_to_draft",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.revertToDraft",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/assessment_requests/{requestId}/revert_to_draft",
+      "policyConfig": {
+        "operation": "POST:/api/v1/assessment_requests/{requestId}/revert_to_draft",
+        "requireRequestOwnership": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.revert_to_draft_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/revert-assessment-request-to-draft",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/controls",
+      "catalogueUrl": "POST:/api/v1/controls",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.createControl",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/controls",
+      "policyConfig": {
+        "operation": "POST:/api/v1/controls",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/create-controls",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/controls/import",
+      "catalogueUrl": "POST:/api/v1/controls/import",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.importControls",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/controls/import",
+      "policyConfig": {
+        "operation": "POST:/api/v1/controls/import",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.03"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/commit-controls-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/controls/import/preview",
+      "catalogueUrl": "POST:/api/v1/controls/import/preview",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.previewControlsImport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/controls/import/preview",
+      "policyConfig": {
+        "operation": "POST:/api/v1/controls/import/preview",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/preview-controls-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_assets",
+      "catalogueUrl": "POST:/api/v1/information_assets",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.createInformationAsset",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_assets",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_assets",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/create-information-assets",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_assets/import",
+      "catalogueUrl": "POST:/api/v1/information_assets/import",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.importInformationAssets",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_assets/import",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_assets/import",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.03"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/commit-information-assets-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_assets/import/preview",
+      "catalogueUrl": "POST:/api/v1/information_assets/import/preview",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.previewInformationAssetsImport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_assets/import/preview",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_assets/import/preview",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/preview-information-assets-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_assets/selected",
+      "catalogueUrl": "POST:/api/v1/information_assets/selected",
+      "apiName": "csrm-information-asset",
+      "routerFile": "csrm-information-asset/routes/selected.ts",
+      "handler": "api::csrm-information-asset.csrm-information-asset.selected",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_assets/selected",
+      "policyConfig": {
+        "requireReferenceDataScope": true,
+        "operation": "POST:/api/v1/information_assets/selected"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.11"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-requests/hydrate-information-asset-selections",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_systems",
+      "catalogueUrl": "POST:/api/v1/information_systems",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.createInformationSystem",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_systems",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_systems",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/create-information-systems",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_systems/import",
+      "catalogueUrl": "POST:/api/v1/information_systems/import",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.importInformationSystems",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_systems/import",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_systems/import",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.03"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/commit-information-systems-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_systems/import/preview",
+      "catalogueUrl": "POST:/api/v1/information_systems/import/preview",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.previewInformationSystemsImport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_systems/import/preview",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_systems/import/preview",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/preview-information-systems-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_systems/selected",
+      "catalogueUrl": "POST:/api/v1/information_systems/selected",
+      "apiName": "csrm-information-system",
+      "routerFile": "csrm-information-system/routes/selected.ts",
+      "handler": "api::csrm-information-system.csrm-information-system.selected",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_systems/selected",
+      "policyConfig": {
+        "requireReferenceDataScope": true,
+        "operation": "POST:/api/v1/information_systems/selected"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.10"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-requests/hydrate-information-system-selections",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaire_generation_jobs/:jobId/retry",
+      "catalogueUrl": "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.retryGenerationJob",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry"
+      },
+      "functionApiIds": [
+        "function.questionnaire_generation.retry_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-generation/retry-questionnaire-generation-job",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/generate_assessment",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.generateAssessment",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaires.questionnaire_details.api.05"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/generate-assessment-draft",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/questions",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/questions",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.addQuestion",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/questions",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/questions",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_governance.add_question_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/add-questionnaire-question",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/release",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/release",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.release",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/release",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/release",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_governance.release_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/release-questionnaire",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/return_to_review",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/return_to_review",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.returnToReview",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/return_to_review",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/return_to_review",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_governance.return_to_review_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/return-questionnaire-to-review",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/revert_to_draft",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/revert_to_draft",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.revertToDraft",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/revert_to_draft",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/revert_to_draft",
+        "requireQuestionnaireOwnership": true,
+        "requireQuestionnaireReleasedForRequestor": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.revert_to_draft_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/revert-questionnaire-to-draft",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/submit",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/submit",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.findWorkflowOne",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/submit",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/submit",
+        "requireQuestionnaireOwnership": true,
+        "requireQuestionnaireReleasedForRequestor": true
+      },
+      "functionApiIds": [
+        "function.questionnaire.questionnaire_details.api.04"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "questionnaire-workflow/submit-questionnaire",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_assessments/:assessmentId/release",
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/release",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.releaseAssessment",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_assessments/{assessmentId}/release",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_assessments/{assessmentId}/release"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.08"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/release-risk-assessment",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_assessments/:assessmentId/risks",
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/risks",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.createAssessmentRisk",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_assessments/{assessmentId}/risks",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_assessments/{assessmentId}/risks"
+      },
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/create-assessment-risk",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_types",
+      "catalogueUrl": "POST:/api/v1/risk_types",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.createRiskType",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_types",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_types",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/create-risk-types",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_types/import",
+      "catalogueUrl": "POST:/api/v1/risk_types/import",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.importRiskTypes",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_types/import",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_types/import",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.03"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/commit-risk-types-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_types/import/preview",
+      "catalogueUrl": "POST:/api/v1/risk_types/import/preview",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.previewRiskTypesImport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_types/import/preview",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_types/import/preview",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/preview-risk-types-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risks/:riskId/control_implementations",
+      "catalogueUrl": "POST:/api/v1/risks/{riskId}/control_implementations",
+      "apiName": "csrm-control-implementation",
+      "routerFile": "csrm-control-implementation/routes/csrm-control-implementation.ts",
+      "handler": "api::csrm-control-implementation.csrm-control-implementation.createRiskControlImplementation",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risks/{riskId}/control_implementations",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risks/{riskId}/control_implementations"
+      },
+      "functionApiIds": [
+        "function.risk_register.risk_details.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "assessment-workflow/create-risk-control-implementation",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/csrm-assessment-requests/:id",
+      "catalogueUrl": "PUT:/api/csrm-assessment-requests/{id}",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.update",
+      "authStrategies": null,
+      "policyOperation": "PUT:/api/csrm-assessment-requests/{id}",
+      "policyConfig": {
+        "operation": "PUT:/api/csrm-assessment-requests/{id}",
+        "requireRequestOwnership": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.core_api.api.04"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "csrm-assessment-request/put/csrm_assessment_requests_by_id",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    }
+  ],
+  "unserved": [
+    {
+      "catalogueUrl": "GET:/api/csrm-information-assets",
+      "functionApiIds": [
+        "function.risk_assessment_requests.reference_data_api.api.02"
+      ],
+      "reason": "unmounted in Phase 8 (D-44): the served `/v1/information_{systems,assets}` selectors are the only read surface"
+    },
+    {
+      "catalogueUrl": "GET:/api/csrm-information-systems",
+      "functionApiIds": [
+        "function.risk_assessment_requests.reference_data_api.api.01"
+      ],
+      "reason": "unmounted in Phase 8 (D-44): the served `/v1/information_{systems,assets}` selectors are the only read surface"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/alerts/{alertId}",
+      "functionApiIds": [
+        "function.reports.alerts.api.03"
+      ],
+      "reason": "unserved by Phase 7 D-06 (catalogue design note 8): a derived alert links straight to its source record"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/assessment_requests/form_metadata",
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.01"
+      ],
+      "reason": "reserved request alias: the request form's reference data is served by the /api/v1/information_{systems,assets} selectors and their /selected hydration"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/assessment_requests/overdue",
+      "functionApiIds": [
+        "function.risk_assessment_requests.requests.api.03"
+      ],
+      "reason": "reserved request alias: superseded by the Phase 7 analyst dashboard and alerts"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/assessment_requests/status_summary",
+      "functionApiIds": [
+        "function.risk_assessment_requests.requests.api.02"
+      ],
+      "reason": "reserved request alias: superseded by the Phase 7 analyst dashboard; the Requestor summary is the served GET /api/v1/my_requests/status_summary"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}",
+      "functionApiIds": [
+        "function.risk_assessment_requests.request_details.api.01"
+      ],
+      "reason": "reserved request alias: served by the core route GET /api/csrm-assessment-requests/{id}"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/information_assets",
+      "functionApiIds": [
+        "function.risk_assessment_requests.request_details.api.04"
+      ],
+      "reason": "reserved request alias: the request's information systems and assets are relations of the core request document (GET /api/csrm-assessment-requests/{id})"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/information_systems",
+      "functionApiIds": [
+        "function.risk_assessment_requests.request_details.api.03"
+      ],
+      "reason": "reserved request alias: the request's information systems and assets are relations of the core request document (GET /api/csrm-assessment-requests/{id})"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/control_implementations",
+      "functionApiIds": [
+        "function.risk_register.mitigation_controls.api.01"
+      ],
+      "reason": "reserved collection intent: control implementations are served under their Risk (GET /api/v1/risks/{riskId}/control_implementations)"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/control_implementations/overdue",
+      "functionApiIds": [
+        "function.risk_register.mitigation_controls.api.03"
+      ],
+      "reason": "reserved intent: superseded by the Phase 7 alerts and the Risk Register treatment due state"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/control_implementations/status_summary",
+      "functionApiIds": [
+        "function.risk_register.mitigation_controls.api.02"
+      ],
+      "reason": "reserved intent: superseded by the Phase 7 analyst dashboard"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/control_implementations/{implementationId}",
+      "functionApiIds": [
+        "function.risk_register.mitigation_control_details.api.01"
+      ],
+      "reason": "reserved detail intent: a control implementation is read through its Risk (GET /api/v1/risks/{riskId}/control_implementations) and mutated through the served PATCH and DELETE /api/v1/control_implementations/{implementationId}"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/dashboard/alerts",
+      "functionApiIds": [
+        "function.dashboard.dashboard.api.03"
+      ],
+      "reason": "unserved by Phase 7 D-06 (catalogue design note 8): the dedicated GET /api/v1/alerts operation serves the dashboard"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/dashboard/reports",
+      "functionApiIds": [
+        "function.dashboard.dashboard.api.02"
+      ],
+      "reason": "unserved by Phase 7 D-06 (catalogue design note 8): the dedicated GET /api/v1/reports operation serves the dashboard"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/my_requests",
+      "functionApiIds": [
+        "function.risk_assessment_requests.my_requests.api.01"
+      ],
+      "reason": "reserved request alias: served by the owner-scoped core route GET /api/csrm-assessment-requests"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/risk_assessments/due_for_review",
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessments.api.03"
+      ],
+      "reason": "reserved Phase 4 intent: superseded by the served analyst review list (GET /api/v1/risk_assessments) and the Phase 7 dashboard and alerts"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/risks/export",
+      "functionApiIds": [
+        "function.risk_register.risk_register.api.04"
+      ],
+      "reason": "deferred beyond this milestone: Risk export is not served"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/risks/overdue",
+      "functionApiIds": [
+        "function.risk_register.risk_register.api.03"
+      ],
+      "reason": "reserved intent: superseded by the Phase 7 alerts and the Risk Register state and treatment due filters"
+    },
+    {
+      "catalogueUrl": "GET:/api/v1/risks/status_summary",
+      "functionApiIds": [
+        "function.risk_register.risk_register.api.02"
+      ],
+      "reason": "reserved intent: superseded by the Phase 7 analyst dashboard summary"
+    },
+    {
+      "catalogueUrl": "PATCH:/api/v1/alerts/{alertId}/acknowledge",
+      "functionApiIds": [
+        "function.reports.alerts.api.04"
+      ],
+      "reason": "unserved by Phase 7 D-06 (catalogue design note 8): acknowledgement needs persisted per-analyst state, a datamodel change deferred beyond this milestone"
+    },
+    {
+      "catalogueUrl": "PATCH:/api/v1/assessment_requests/{requestId}",
+      "functionApiIds": [
+        "function.risk_assessment_requests.request_details.api.02"
+      ],
+      "reason": "reserved request alias: served by the core route PUT /api/csrm-assessment-requests/{id}"
+    },
+    {
+      "catalogueUrl": "PATCH:/api/v1/questionnaires/{questionnaireId}/review_comments",
+      "functionApiIds": [
+        "function.questionnaires.questionnaire_details.api.03"
+      ],
+      "reason": "reserved Phase 3 review intent (catalogue design note 7): superseded by the served questionnaire release, return-to-review and revert operations"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/assessment_requests",
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.05"
+      ],
+      "reason": "reserved request alias: served by the core route POST /api/csrm-assessment-requests"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/information_assets",
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.08"
+      ],
+      "reason": "reserved request alias: the request's information systems and assets are written as relations through PUT /api/csrm-assessment-requests/{id}, chosen through the served /api/v1/information_{systems,assets} selectors"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/information_systems",
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.07"
+      ],
+      "reason": "reserved request alias: the request's information systems and assets are written as relations through PUT /api/csrm-assessment-requests/{id}, chosen through the served /api/v1/information_{systems,assets} selectors"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/submit",
+      "functionApiIds": [
+        "function.risk_assessment_requests.new_request.api.09",
+        "function.risk_assessment_requests.request_details.api.05"
+      ],
+      "reason": "reserved request alias (two FunctionAPI entries): submission is the served PUT /api/csrm-assessment-requests/{id} with the submitted requestStatus intent"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/control_implementations",
+      "functionApiIds": [
+        "function.risk_register.mitigation_controls.api.04"
+      ],
+      "reason": "reserved collection intent: control implementations are created under their Risk (POST /api/v1/risks/{riskId}/control_implementations)"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/complete_review",
+      "functionApiIds": [
+        "function.questionnaires.questionnaire_details.api.04"
+      ],
+      "reason": "reserved Phase 3 review intent (catalogue design note 7): superseded by the served questionnaire release, return-to-review and revert operations"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/reports/{reportKey}/export",
+      "functionApiIds": [
+        "function.reports.reports.api.03"
+      ],
+      "reason": "unserved by Phase 7 D-06 (catalogue design note 8): report export is deferred beyond this milestone"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/approve",
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.07"
+      ],
+      "reason": "reserved Phase 4 review intent: superseded by the served release triple (PATCH /api/v1/risk_assessments/{assessmentId} and POST /api/v1/risk_assessments/{assessmentId}/release)"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/regenerate_draft",
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.05"
+      ],
+      "reason": "reserved Phase 4 intent: superseded by the served assessment draft jobs (POST /api/v1/questionnaires/{questionnaireId}/generate_assessment and the /api/v1/assessment_draft_jobs routes)"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/submit_for_approval",
+      "functionApiIds": [
+        "function.risk_assessments.risk_assessment_details.api.06"
+      ],
+      "reason": "reserved Phase 4 review intent: superseded by the served release triple (PATCH /api/v1/risk_assessments/{assessmentId} and POST /api/v1/risk_assessments/{assessmentId}/release)"
+    },
+    {
+      "catalogueUrl": "POST:/api/v1/risks/{riskId}/close",
+      "functionApiIds": [
+        "function.risk_register.risk_details.api.05"
+      ],
+      "reason": "deferred beyond this milestone: nothing closes a Risk yet"
+    }
+  ],
+  "uncatalogued": [],
+  "pluginRoutes": [
+    {
+      "method": "GET",
+      "path": "/api/content-type-builder/components",
+      "plugin": "content-type-builder"
+    },
+    {
+      "method": "GET",
+      "path": "/api/content-type-builder/components/:uid",
+      "plugin": "content-type-builder"
+    },
+    {
+      "method": "GET",
+      "path": "/api/content-type-builder/content-types",
+      "plugin": "content-type-builder"
+    },
+    {
+      "method": "GET",
+      "path": "/api/content-type-builder/content-types/:uid",
+      "plugin": "content-type-builder"
+    },
+    {
+      "method": "POST",
+      "path": "/api/email",
+      "plugin": "email"
+    },
+    {
+      "method": "GET",
+      "path": "/api/i18n/locales",
+      "plugin": "i18n"
+    },
+    {
+      "method": "POST",
+      "path": "/api/upload",
+      "plugin": "upload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/upload/files",
+      "plugin": "upload"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/upload/files/:id",
+      "plugin": "upload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/upload/files/:id",
+      "plugin": "upload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/upload/files/page",
+      "plugin": "upload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/:provider/callback",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/change-password",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/email-confirmation",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/forgot-password",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/local",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/local/register",
+      "plugin": "users-permissions",
+      "observedNoIdentityStatus": 400
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/reset-password",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/send-email-confirmation",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/sessions",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/auth/sessions/:sessionId",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/connect/(.*)",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users-permissions/permissions",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users-permissions/roles",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users-permissions/roles",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users-permissions/roles/:id",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users-permissions/roles/:role",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users-permissions/roles/:role",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/:id",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/:id",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/:id",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/count",
+      "plugin": "users-permissions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me",
+      "plugin": "users-permissions"
+    }
+  ],
+  "specOnly": [
+    {
+      "method": "POST",
+      "path": "/api/",
+      "operationId": "upload/post",
+      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/applications",
+      "operationId": "application/get/applications",
+      "reason": "intentionally unserved (D-36): the application core router mounts nothing and its only caller, the web shell service, is removed; IAM records are administered by IdamBox, not through this API surface"
+    },
+    {
+      "method": "POST",
+      "path": "/api/applications",
+      "operationId": "application/post/applications",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/applications/{id}",
+      "operationId": "application/delete/applications_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/applications/{id}",
+      "operationId": "application/get/applications_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/applications/{id}",
+      "operationId": "application/put/applications_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/change-password",
+      "operationId": "users-permissions/post/auth_change_password",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/email-confirmation",
+      "operationId": "users-permissions/get/auth_email_confirmation",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/forgot-password",
+      "operationId": "users-permissions/post/auth_forgot_password",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/local",
+      "operationId": "users-permissions/post/auth_local",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/local/register",
+      "operationId": "users-permissions/post/auth_local_register",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/reset-password",
+      "operationId": "users-permissions/post/auth_reset_password",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/send-email-confirmation",
+      "operationId": "users-permissions/post/auth_send_email_confirmation",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/{provider}/callback",
+      "operationId": "users-permissions/get/auth_by_provider_callback",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/components",
+      "operationId": "content-type-builder/get/components",
+      "reason": "documented content-type-builder plugin operation; this Strapi mounts the plugin's routes under /api/content-type-builder (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/components/{uid}",
+      "operationId": "content-type-builder/get/components_by_uid",
+      "reason": "documented content-type-builder plugin operation; this Strapi mounts the plugin's routes under /api/content-type-builder (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/connect/(.*)",
+      "operationId": "users-permissions/get/connect_____",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/content-types",
+      "operationId": "content-type-builder/get/content_types",
+      "reason": "documented content-type-builder plugin operation; this Strapi mounts the plugin's routes under /api/content-type-builder (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/content-types/{uid}",
+      "operationId": "content-type-builder/get/content_types_by_uid",
+      "reason": "documented content-type-builder plugin operation; this Strapi mounts the plugin's routes under /api/content-type-builder (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-assessments",
+      "operationId": "csrm-assessment/get/csrm_assessments",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/csrm-assessments",
+      "operationId": "csrm-assessment/post/csrm_assessments",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/csrm-assessments/{id}",
+      "operationId": "csrm-assessment/delete/csrm_assessments_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-assessments/{id}",
+      "operationId": "csrm-assessment/get/csrm_assessments_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/csrm-assessments/{id}",
+      "operationId": "csrm-assessment/put/csrm_assessments_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-control-implementations",
+      "operationId": "csrm-control-implementation/get/csrm_control_implementations",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/csrm-control-implementations",
+      "operationId": "csrm-control-implementation/post/csrm_control_implementations",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/csrm-control-implementations/{id}",
+      "operationId": "csrm-control-implementation/delete/csrm_control_implementations_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-control-implementations/{id}",
+      "operationId": "csrm-control-implementation/get/csrm_control_implementations_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/csrm-control-implementations/{id}",
+      "operationId": "csrm-control-implementation/put/csrm_control_implementations_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-questionnaires",
+      "operationId": "csrm-questionnaire/get/csrm_questionnaires",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/csrm-questionnaires",
+      "operationId": "csrm-questionnaire/post/csrm_questionnaires",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/csrm-questionnaires/{id}",
+      "operationId": "csrm-questionnaire/delete/csrm_questionnaires_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-questionnaires/{id}",
+      "operationId": "csrm-questionnaire/get/csrm_questionnaires_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/csrm-questionnaires/{id}",
+      "operationId": "csrm-questionnaire/put/csrm_questionnaires_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-questions",
+      "operationId": "csrm-question/get/csrm_questions",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/csrm-questions",
+      "operationId": "csrm-question/post/csrm_questions",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/csrm-questions/{id}",
+      "operationId": "csrm-question/delete/csrm_questions_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-questions/{id}",
+      "operationId": "csrm-question/get/csrm_questions_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/csrm-questions/{id}",
+      "operationId": "csrm-question/put/csrm_questions_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-risks",
+      "operationId": "csrm-risk/get/csrm_risks",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/csrm-risks",
+      "operationId": "csrm-risk/post/csrm_risks",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/csrm-risks/{id}",
+      "operationId": "csrm-risk/delete/csrm_risks_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/csrm-risks/{id}",
+      "operationId": "csrm-risk/get/csrm_risks_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/csrm-risks/{id}",
+      "operationId": "csrm-risk/put/csrm_risks_by_id",
+      "reason": "generic core CRUD route of a content type whose router mounts nothing (only: []) since Phases 3 and 4; its workflow operations are served under /api/v1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/files",
+      "operationId": "upload/get/files",
+      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/files/{id}",
+      "operationId": "upload/delete/files_by_id",
+      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/files/{id}",
+      "operationId": "upload/get/files_by_id",
+      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/function-apis",
+      "operationId": "function-api/get/function_apis",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/function-apis",
+      "operationId": "function-api/post/function_apis",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/function-apis/{id}",
+      "operationId": "function-api/delete/function_apis_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/function-apis/{id}",
+      "operationId": "function-api/get/function_apis_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/function-apis/{id}",
+      "operationId": "function-api/put/function_apis_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/functions",
+      "operationId": "function/get/functions",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/functions",
+      "operationId": "function/post/functions",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/functions/{id}",
+      "operationId": "function/delete/functions_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/functions/{id}",
+      "operationId": "function/get/functions_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/functions/{id}",
+      "operationId": "function/put/functions_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/idambox-users",
+      "operationId": "idambox-user/get/idambox_users",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/idambox-users",
+      "operationId": "idambox-user/post/idambox_users",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/idambox-users/{id}",
+      "operationId": "idambox-user/delete/idambox_users_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/idambox-users/{id}",
+      "operationId": "idambox-user/get/idambox_users_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/idambox-users/{id}",
+      "operationId": "idambox-user/put/idambox_users_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability"
+    },
+    {
+      "method": "GET",
+      "path": "/api/locales",
+      "operationId": "i18n/get/locales",
+      "reason": "documented i18n plugin operation; this Strapi mounts the plugin's routes under /api/i18n (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/permissions",
+      "operationId": "users-permissions/get/permissions",
+      "reason": "documented users-permissions plugin operation; this Strapi mounts the plugin's routes under /api/users-permissions (see pluginRoutes), not at the documented path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/roles",
+      "operationId": "users-permissions/get/roles",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/roles",
+      "operationId": "users-permissions/post/roles",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/roles/{id}",
+      "operationId": "role/delete/roles_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/roles/{id}",
+      "operationId": "users-permissions/get/roles_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/roles/{id}",
+      "operationId": "role/put/roles_by_id",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/roles/{role}",
+      "operationId": "users-permissions/delete/roles_by_role",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/roles/{role}",
+      "operationId": "users-permissions/put/roles_by_role",
+      "reason": "IAM content type administered by IdamBox, not through this API surface: its core router mounts nothing (D-36); the operation stays documented for traceability (the users-permissions role routes mount under /api/users-permissions)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "operationId": "users-permissions/get/users",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "operationId": "users-permissions/post/users",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/count",
+      "operationId": "users-permissions/get/users_count",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me",
+      "operationId": "users-permissions/get/users_me",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/{id}",
+      "operationId": "users-permissions/delete/users_by_id",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{id}",
+      "operationId": "users-permissions/get/users_by_id",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/{id}",
+      "operationId": "users-permissions/put/users_by_id",
+      "reason": "mounted by the users-permissions plugin outside the application routers, at the documented path (see pluginRoutes)"
+    }
+  ],
+  "collisions": [],
+  "probes": [
+    {
+      "method": "GET",
+      "path": "/api/roles",
+      "layers": [],
+      "observedResponder": {
+        "status": 404,
+        "handler": null,
+        "bodyShape": "data:null,error:object"
+      }
+    }
+  ]
+}

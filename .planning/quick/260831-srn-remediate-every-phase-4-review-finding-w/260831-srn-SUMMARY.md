@@ -11,6 +11,7 @@ provides:
   - Accessible assessment editing, status, readiness, severity, and owner selection
   - Recoverable review routes and reachable assessment inventories
   - Zero-mapping deterministic drafts with preserved advisory control suggestions
+
 affects: [assessment-review, assessment-release, requestor-assessments, authorization]
 tech-stack:
   added: []
@@ -26,15 +27,22 @@ key-files:
     - apps/strapi/tests/assessment-workflow.integration.test.ts
     - apps/web/src/features/assessments/assessment-editor.tsx
     - apps/web/src/features/assessments/owner-combobox.tsx
+
 key-decisions:
   - "Require the explicit human Security Analyst role only for release while preserving catalogue-backed agent grants for other operations."
   - "Persist deterministic control suggestions as bounded advisory treatment-plan text without adding a competing entity or schema field."
   - "Allow zero-risk draft proposals so valid zero-mapping questionnaires reach human review but remain server-unreleasable."
+
 patterns-established:
   - "Routine asynchronous states update one pre-mounted polite region; only genuine failures are assertive."
+
 requirements-completed: [ASSESS-01, ASSESS-02, ASSESS-03, ASSESS-04, ASSESS-05, INT-03]
 duration: 48min
 completed: 2026-08-31
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-27
+  status: unknown
 ---
 
 # Quick Task 260831-srn: Phase 4 Review Remediation Summary

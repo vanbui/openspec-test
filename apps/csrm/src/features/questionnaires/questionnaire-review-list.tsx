@@ -1,13 +1,12 @@
 'use client';
 
-import { CheckCircle2, Clock3, type LucideIcon } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useEffect, useMemo } from 'react';
 
 import { DataTable, type DataTableColumn, type DataTableFilter } from '@/components/csrm/data-table';
 import { RecordLink } from '@/components/csrm/record-link';
+import { deriveQuestionnaireStatus, StatusBadge, statusLabel } from '@/components/csrm/status-badge';
 import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/states/states';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { availableAssessmentRequest } from './questionnaire-domain';
@@ -22,16 +21,17 @@ export interface QuestionnaireReviewListProps {
   state?: QuestionnaireReviewListState;
 }
 
-type ReviewStatePresentation = {
-  className: string;
-  icon: LucideIcon;
-  label: string;
-};
+/*
+ * The filter offers the three served states (a fourth would be a contract change), so the four status labels
+ * map onto three options: an unreleased questionnaire's served state is not started, and the Not started
+ * option returns rows labelled Analyst review as well as Not started.
+ */
+const filterStates = ['not-started', 'draft', 'submitted'] as const satisfies readonly QuestionnaireSummary['state'][];
 
-const reviewStatePresentations = {
-  awaiting: { className: 'border-warning-border bg-warning-subtle text-warning', icon: Clock3, label: 'Awaiting submission' },
-  submitted: { className: 'border-success-border bg-success-subtle text-success', icon: CheckCircle2, label: 'Ready for review' },
-} satisfies Record<'awaiting' | 'submitted', ReviewStatePresentation>;
+/* One derived questionnaire status for every surface: an explicitly unreleased questionnaire is in analyst review. */
+function QuestionnaireStatusBadge({ questionnaire }: { questionnaire: QuestionnaireSummary }) {
+  return <StatusBadge family="questionnaire" value={deriveQuestionnaireStatus(questionnaire.state, questionnaire.release)} />;
+}
 
 function reviewHref(documentId: string): string {
   return `/app/review/questionnaires/${encodeURIComponent(documentId)}`;
@@ -74,11 +74,7 @@ const columns: DataTableColumn<QuestionnaireSummary>[] = [
   {
     accessorKey: 'state',
     header: 'Status',
-    cell: (_value, questionnaire) => {
-      const presentation = reviewStatePresentations[questionnaire.state === 'submitted' ? 'submitted' : 'awaiting'];
-      const Icon = presentation.icon;
-      return <Badge className={presentation.className} variant="outline"><Icon aria-hidden="true" />{presentation.label}</Badge>;
-    },
+    cell: (_value, questionnaire) => <QuestionnaireStatusBadge questionnaire={questionnaire} />,
   },
 ];
 
@@ -107,9 +103,11 @@ export function QuestionnaireReviewList({ pagination, questionnaires, query, sta
   const clearFilters = () => resetPage({ q: '', status: undefined });
   const filters = useMemo<DataTableFilter[]>(() => [
     ...(resolvedQuery.q ? [{ id: 'q', label: 'Search', value: resolvedQuery.q }] : []),
-    ...(resolvedQuery.status ? [{ id: 'status', label: 'Status', value: resolvedQuery.status }] : []),
+    ...(resolvedQuery.status ? [{ id: 'status', label: 'Status', value: statusLabel('questionnaire', resolvedQuery.status) }] : []),
   ], [resolvedQuery.q, resolvedQuery.status]);
   const resolvedState = outOfRange ? 'loading' : state ?? (questionnaires.length ? 'populated' : 'empty');
+  // A refusal is the page header and the permission state alone, as the Risk Register's is (W-3).
+  if (resolvedState === 'permission') return <PermissionDeniedState area="questionnaire reviews" />;
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const q = new FormData(event.currentTarget).get('q');
@@ -119,21 +117,19 @@ export function QuestionnaireReviewList({ pagination, questionnaires, query, sta
   return (
     <div className="space-y-4">
       {query ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end" data-print="hidden">
           <form className="flex flex-1 gap-2" role="search" onSubmit={submitSearch}>
-            <label className="flex-1 space-y-1 text-sm font-medium text-foreground">
+            <label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">
               Search questionnaires
               <Input aria-label="Search questionnaires" defaultValue={resolvedQuery.q} disabled={resolvedState === 'loading'} key={resolvedQuery.q} name="q" type="search" />
             </label>
             <Button className="self-end" disabled={resolvedState === 'loading'} type="submit">Search</Button>
           </form>
-          <label className="space-y-1 text-sm font-medium text-foreground">
+          <label className="grid gap-1.5 text-sm font-medium text-foreground">
             Status
             <select aria-label="Filter by status" className="block h-9 min-w-52 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={resolvedState === 'loading'} value={resolvedQuery.status ?? ''} onChange={(event) => resetPage({ status: event.target.value ? event.target.value as QuestionnaireListQuery['status'] : undefined })}>
               <option value="">All statuses</option>
-              <option value="not-started">Not started</option>
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
+              {filterStates.map((status) => <option key={status} value={status}>{statusLabel('questionnaire', status)}</option>)}
             </select>
           </label>
         </div>
@@ -154,10 +150,8 @@ export function QuestionnaireReviewList({ pagination, questionnaires, query, sta
         page={resolvedPagination.page}
         pageSize={resolvedPagination.pageSize}
         renderMobileCard={(questionnaire) => {
-          const presentation = reviewStatePresentations[questionnaire.state === 'submitted' ? 'submitted' : 'awaiting'];
-          const Icon = presentation.icon;
           const request = availableAssessmentRequest(questionnaire.assessmentRequest);
-          return <article className="space-y-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0 space-y-1"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={reviewHref(questionnaire.documentId)}>{questionnaire.questionnaireNumber}</RecordLink><RecordLink className="block break-words" href={reviewHref(questionnaire.documentId)}>{questionnaire.title}</RecordLink></div><Badge className={presentation.className} variant="outline"><Icon aria-hidden="true" />{presentation.label}</Badge></div><div><p className="text-sm font-medium text-foreground">{request?.title ?? 'No linked assessment request'}</p>{request ? <p className="text-xs tabular-nums text-muted-foreground">{request.requestNumber}</p> : null}</div></article>;
+          return <article className="space-y-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0 space-y-1"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={reviewHref(questionnaire.documentId)}>{questionnaire.questionnaireNumber}</RecordLink><RecordLink className="block break-words" href={reviewHref(questionnaire.documentId)}>{questionnaire.title}</RecordLink></div><QuestionnaireStatusBadge questionnaire={questionnaire} /></div><div><p className="text-sm font-medium text-foreground">{request?.title ?? 'No linked assessment request'}</p>{request ? <p className="text-xs tabular-nums text-muted-foreground">{request.requestNumber}</p> : null}</div></article>;
         }}
         sorting={sortingFor(resolvedQuery.sort)}
         state={resolvedState}

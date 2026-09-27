@@ -29,6 +29,7 @@ import {
   listRiskRegister,
   RiskRegisterError,
 } from "../services/risk-register";
+import { utcToday } from "../../../csrm/insights/utc-date";
 
 const UID = "api::csrm-risk.csrm-risk" as const;
 type RecordValue = Record<string, unknown>;
@@ -115,6 +116,8 @@ export function riskControllerExtension({ strapi }: { strapi: unknown }) {
           repository: createStrapiRiskRegisterRepository(strapi),
           state: ctx.state,
           query: ctx.query,
+          // The one clock read: every row's treatment due state is evaluated on this UTC day.
+          today: utcToday(new Date()),
         });
       } catch (error) {
         return handleError(ctx, error);

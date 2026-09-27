@@ -23,7 +23,8 @@ const registerPayload = {
   data: [{
     documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: 'A risk.', inherentRating: 'High',
     residualRating: 'Moderate', treatmentStatus: 'In Progress', treatmentOwner: null,
-    targetDate: '2026-09-30', assessment: { documentId: 'assessment-1', assessmentNumber: 'ASM-0001', title: 'Portal' },
+    targetDate: '2026-09-30', treatmentDueState: 'later',
+    assessment: { documentId: 'assessment-1', assessmentNumber: 'ASM-0001', title: 'Portal' },
   }],
   meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 }, selectedLabels: {} },
 };
@@ -85,16 +86,22 @@ describe('Risk Register generated-client boundary', () => {
     const query = parseRiskRegisterQuery({
       q: 'access', treatmentStatus: 'In Progress', inherentRating: 'High', residualRating: 'Moderate',
       riskOwner: 'user-1', treatmentOwner: 'user-2', assessment: 'assessment-1', system: 'system-1',
-      asset: 'asset-1', mitigationStatus: 'Planned', sort: 'riskNumber:desc', page: '2', pageSize: '50',
+      asset: 'asset-1', mitigationStatus: 'Planned', state: 'open', sort: 'riskNumber:desc', page: '2', pageSize: '50',
       targetDateFrom: '2026-01-01', targetDateTo: '2026-12-31', forged: 'hidden',
     });
     await expect(service.listRiskRegister(query)).resolves.toEqual({ data: registerPayload, error: null });
     expect(get).toHaveBeenCalledWith('/v1/risks', { params: { query } });
     expect(get.mock.calls[0]?.[1]?.params.query).toMatchObject({
+      state: 'open',
       targetDateFrom: '2026-01-01',
       targetDateTo: '2026-12-31',
     });
     expect(JSON.stringify(get.mock.calls)).not.toMatch(/forged/);
+
+    // Absent means all Risks: no state reaches the server.
+    get.mockResolvedValueOnce(response(registerPayload));
+    await service.listRiskRegister(parseRiskRegisterQuery({ state: 'Open' }));
+    expect(get.mock.calls[1]?.[1]?.params.query).not.toHaveProperty('state');
   });
 
   it('uses existing generated inventory paths and fails closed on cap overflow', async () => {

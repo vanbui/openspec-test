@@ -1,4 +1,6 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 
 import {
   ReleasedAssessmentDetailView,
@@ -10,10 +12,20 @@ import {
   listReleasedControlImplementations,
 } from '@/features/assessments/assessment-service';
 import type { ControlImplementation, Risk } from '@/features/assessments/assessment-schema';
+import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
 type ReleasedAssessmentPageProps = { params: Promise<{ documentId: string }> };
 
-export const metadata = { title: 'Released Risk Assessment | IdamBox CSRM' };
+// One read per request, shared by the document title and the page.
+const readReleasedAssessment = cache(getReleasedAssessment);
+
+/*
+ * Strapi answers another Requestor's assessment with 404, so the page renders the in-shell not-found.
+ * The title follows it (Page not found | IdamBox CSRM) only because this metadata makes the same read.
+ */
+export async function generateMetadata({ params }: ReleasedAssessmentPageProps): Promise<Metadata> {
+  return recordRouteMetadata(readReleasedAssessment((await params).documentId), 'Released Risk Assessment | IdamBox CSRM');
+}
 
 function stateForStatus(status: number): Extract<ReleasedAssessmentDetailState, 'error' | 'permission'> {
   return status === 403 ? 'permission' : 'error';
@@ -44,7 +56,7 @@ async function loadReleasedDescendants(risks: readonly Risk[]) {
 
 export default async function ReleasedAssessmentPage({ params }: ReleasedAssessmentPageProps) {
   const { documentId } = await params;
-  const assessmentResult = await getReleasedAssessment(documentId);
+  const assessmentResult = await readReleasedAssessment(documentId);
   if (assessmentResult.error?.status === 404) notFound();
   if (assessmentResult.error) return <ReleasedAssessmentDetailView diagnosticOperation={assessmentResult.error.operation} state={assessmentResult.error.kind === 'response-contract-mismatch' ? 'contract-mismatch' : stateForStatus(assessmentResult.error.status ?? 500)} />;
   if (!assessmentResult.data) notFound();

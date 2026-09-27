@@ -8,8 +8,8 @@ import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { DetailSection } from '@/components/csrm/detail-section';
 import { PageHeader } from '@/components/csrm/page-header';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
+import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ import {
 import { ControlImplementationEditor } from './control-implementation-editor';
 import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
-import { assessmentStatusPresentation, releaseReadinessPresentation } from './assessment-domain';
+import { releaseReadinessPresentation } from './assessment-domain';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
 
@@ -139,8 +139,6 @@ export function AssessmentEditor({
   const readiness = currentAssessment.releaseReadiness;
   const canOfferRelease = mutable && currentAssessment.assessmentStatus === 'in-review';
   const assessmentId = currentAssessment.documentId;
-  const status = assessmentStatusPresentation[currentAssessment.assessmentStatus];
-  const StatusIcon = status.icon;
 
   async function refreshAssessment(): Promise<void> {
     const result = await refreshAnalystAssessmentAction({ assessmentId });
@@ -164,7 +162,7 @@ export function AssessmentEditor({
   return (
     <div className="grid min-w-0 gap-6">
       <PageHeader
-        action={<Badge aria-live="polite" className="border-border bg-surface-muted text-foreground-secondary" variant="outline"><StatusIcon aria-hidden="true" />{status.label}</Badge>}
+        status={<StatusBadge family="assessment" live value={currentAssessment.assessmentStatus} />}
         description={currentAssessment.assessmentNumber}
         title="Risk assessment review"
       />

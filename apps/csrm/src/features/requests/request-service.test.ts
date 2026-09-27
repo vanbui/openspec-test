@@ -191,6 +191,73 @@ describe('request service contract', () => {
     await expect(service.listRequests(service.parseRequestListQuery({}))).resolves.toEqual(unavailable);
   });
 
+  it('reads the owner-scoped status summary once and maps each count to its request status', async () => {
+    const service = await loadService();
+    get.mockResolvedValueOnce({
+      data: {
+        data: {
+          draft: 4,
+          submitted: 3,
+          questionnaireInProgress: 2,
+          riskAssessmentDrafted: 1,
+          underReview: 5,
+          approved: 6,
+          closed: 7,
+          total: 28,
+        },
+      },
+      error: undefined,
+      response: { status: 200 },
+    });
+
+    // The counts arrive in the lifecycle order the dashboard lists, one per status.
+    await expect(service.getMyRequestStatusSummary()).resolves.toEqual({
+      data: [
+        { status: 'draft', count: 4 },
+        { status: 'submitted', count: 3 },
+        { status: 'questionnaire-in-progress', count: 2 },
+        { status: 'risk-assessment-drafted', count: 1 },
+        { status: 'under-review', count: 5 },
+        { status: 'approved', count: 6 },
+        { status: 'closed', count: 7 },
+      ],
+      error: null,
+    });
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith('/v1/my_requests/status_summary');
+  });
+
+  it('turns a refused, failed or malformed status summary into an error result', async () => {
+    const service = await loadService();
+    const forbidden = { data: null, error: { message: 'You do not have permission to view these requests.', status: 403 } };
+    const unavailable = { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', status: 503 } };
+    const counts = {
+      draft: 0, submitted: 0, questionnaireInProgress: 0, riskAssessmentDrafted: 0, underReview: 0, approved: 0, closed: 0, total: 0,
+    };
+    const missingClosed = {
+      draft: 0, submitted: 0, questionnaireInProgress: 0, riskAssessmentDrafted: 0, underReview: 0, approved: 0, total: 0,
+    };
+    normalizeTransportError.mockImplementation((_error: unknown, status?: number) => status === 403 ? forbidden : unavailable);
+    const malformed = [
+      { data: { ...counts, archived: 1 } },
+      { data: { ...counts, closed: -1 } },
+      { data: { ...counts, draft: 1.5 } },
+      { data: { ...counts, total: '0' } },
+      { data: missingClosed },
+      { data: counts, meta: {} },
+      { data: [counts] },
+    ];
+    for (const payload of malformed) {
+      get.mockResolvedValueOnce({ data: payload, error: undefined, response: { status: 200 } });
+      await expect(service.getMyRequestStatusSummary(), JSON.stringify(payload)).resolves.toEqual(unavailable);
+    }
+
+    get.mockResolvedValueOnce({ data: undefined, error: { name: 'Forbidden' }, response: { status: 403 } });
+    await expect(service.getMyRequestStatusSummary()).resolves.toEqual(forbidden);
+    get.mockRejectedValueOnce(new Error('internal connection detail'));
+    await expect(service.getMyRequestStatusSummary()).resolves.toEqual(unavailable);
+  });
+
   it('uses one bounded server selector page and does not enumerate inventory', async () => {
     const service = await loadService();
     const firstPage = Array.from({ length: 25 }, (_, index) => ({

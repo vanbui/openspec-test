@@ -1,17 +1,26 @@
-import { Suspense } from 'react';
+import type { Metadata } from 'next';
+import { cache, Suspense } from 'react';
 import { notFound } from 'next/navigation';
 
 import { AssessmentDetail, AssessmentDetailSkeleton } from '@/features/assessments/assessment-detail';
 import { getRequest } from '@/features/requests/request-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
+import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
-export const metadata = { title: 'Assessment Request Review | IdamBox CSRM' };
 export type AssessmentRequestDetailPageProps = { params: Promise<{ documentId: string }> };
+
+// One read per request, shared by the document title and the page.
+const readRequest = cache(getRequest);
+
+// A request id that does not exist takes the not-found's title; any other outcome keeps the route's.
+export async function generateMetadata({ params }: AssessmentRequestDetailPageProps): Promise<Metadata> {
+  return recordRouteMetadata(readRequest((await params).documentId), 'Assessment Request Review | IdamBox CSRM');
+}
 
 export async function AssessmentRequestDetailContent({ params }: AssessmentRequestDetailPageProps) {
   const { documentId } = await params;
-  const result = await getRequest(documentId);
+  const result = await readRequest(documentId);
   if (result.error?.status === 404) notFound();
   if (result.error) return <AssessmentDetail state={result.error.status === 403 ? 'permission' : 'error'} />;
   if (!result.data) notFound();

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Suspense, use, type ReactNode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AssessmentRequestQueueItem, AssessmentSummary } from './assessment-schema';
@@ -237,6 +237,111 @@ describe('analyst review presentations', () => {
   });
 });
 
+/*
+ * WR-06: draft generation needs the linked questionnaire's submitted answers, so the draft card offers no
+ * action until the questionnaire is submitted and says so in the draft generation vocabulary (D-08). Strapi
+ * still refuses an early start with 409; this is what the card shows.
+ */
+describe('draft generation before the questionnaire is submitted', () => {
+  const precondition = 'Draft generation can begin only after the linked questionnaire is submitted.';
+
+  function requestWithQuestionnaire(state: string) {
+    return {
+      documentId: 'request-4',
+      requestNumber: 'RAR-0045',
+      title: 'Payments platform review',
+      description: 'Submitted request with a linked questionnaire.',
+      requestStatus: 'questionnaire-in-progress' as const,
+      submittedDate: '2026-08-30T01:00:00.000Z',
+      dueDate: null,
+      updatedAt: null,
+      dueDateLabel: null,
+      updatedDateLabel: null,
+      informationSystems: [],
+      informationAssets: [],
+      questionnaire: { documentId: 'questionnaire/id', title: 'Payments questionnaire' },
+      assessment: null,
+      relationships: {
+        questionnaire: { availability: 'available' as const, documentId: 'questionnaire/id', questionnaireNumber: 'QNR-2026-000001', title: 'Payments questionnaire', state },
+        assessment: { availability: 'absent' as const },
+      },
+    };
+  }
+
+  function draftCard() {
+    const card = screen.getByRole('heading', { level: 2, name: 'Assessment draft generation' }).closest<HTMLElement>('[data-slot="card"]');
+    expect(card).not.toBeNull();
+    return card!;
+  }
+
+  it.each(['analyst-review', 'released'])('withholds the action while the linked questionnaire is %s, and says why', (state) => {
+    render(<AssessmentDetail request={requestWithQuestionnaire(state)} state="populated" />);
+
+    expect(within(draftCard()).getByText(precondition)).toBeInTheDocument();
+    expect(within(draftCard()).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate assessment draft' })).not.toBeInTheDocument();
+  });
+
+  it('offers the action once the linked questionnaire is submitted', () => {
+    render(<AssessmentDetail request={requestWithQuestionnaire('submitted')} state="populated" />);
+
+    expect(within(draftCard()).getByRole('button', { name: 'Generate assessment draft' })).toBeEnabled();
+    expect(screen.queryByText(precondition)).not.toBeInTheDocument();
+  });
+
+  it('keeps the draft generation action off paper while its advisory copy prints (X-4, W-14)', () => {
+    render(<AssessmentDetail request={requestWithQuestionnaire('submitted')} state="populated" />);
+
+    expect(within(draftCard()).getByRole('button', { name: 'Generate assessment draft' })).toHaveAttribute('data-print', 'hidden');
+    expect(within(draftCard()).getByText(/The draft is advisory/).closest('[data-print="hidden"]')).toBeNull();
+  });
+
+  /*
+   * W-1: a request has at most one assessment, and Strapi refuses a second draft (409). Once one exists,
+   * released or not, and whether or not this actor may open it, the card offers nothing to generate.
+   */
+  it.each([
+    ['released', { availability: 'available' as const, documentId: 'assessment-1', assessmentNumber: 'ASM-2026-33SAEN', assessmentStatus: 'approved', residualRiskCounts: { Low: 0, Moderate: 1, High: 0, Critical: 0, total: 1 } }],
+    ['in draft', { availability: 'available' as const, documentId: 'assessment-2', assessmentNumber: 'ASM-2026-MWQA7E', assessmentStatus: 'draft', residualRiskCounts: { Low: 0, Moderate: 0, High: 0, Critical: 0, total: 0 } }],
+    ['not openable', { availability: 'unavailable' as const }],
+  ])('offers no draft generation once the request has an assessment %s', (_label, assessment) => {
+    const request = requestWithQuestionnaire('submitted');
+    render(<AssessmentDetail request={{ ...request, requestStatus: 'approved', relationships: { ...request.relationships, assessment } }} state="populated" />);
+
+    expect(screen.queryByRole('heading', { name: 'Assessment draft generation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate assessment draft' })).not.toBeInTheDocument();
+  });
+
+  /*
+   * Starting a draft revalidates the review pages, so the server re-renders this page while the card is
+   * on screen, and with an in-process provider the new assessment already exists by then. The card of
+   * the session that generated the draft must survive that re-render with its state and its link.
+   */
+  it('keeps the generating session\'s card and its link when the page re-renders with the new assessment', async () => {
+    actionMocks.startAssessmentDraftAction.mockResolvedValueOnce({ ok: true, data: completedJob });
+    const request = requestWithQuestionnaire('submitted');
+    const view = render(<AssessmentDetail request={request} state="populated" />);
+
+    fireEvent.click(within(draftCard()).getByRole('button', { name: 'Generate assessment draft' }));
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Open assessment draft' })).toBeInTheDocument());
+
+    const assessment = { availability: 'available' as const, documentId: 'assessment/id with spaces', assessmentNumber: 'ASM-2026-MWQA7E', assessmentStatus: 'draft', residualRiskCounts: { Low: 0, Moderate: 0, High: 0, Critical: 0, total: 0 } };
+    view.rerender(<AssessmentDetail request={{ ...request, requestStatus: 'risk-assessment-drafted', relationships: { ...request.relationships, assessment } }} state="populated" />);
+
+    expect(screen.getByRole('link', { name: 'Open assessment draft' })).toBeInTheDocument();
+    // The state line and its live announcement both carry the ready text.
+    expect(within(draftCard()).getAllByText('Draft generation is ready for Security Analyst review').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Generate assessment draft' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the review empty state in the draft generation vocabulary', () => {
+    render(<AssessmentDetail state="populated" />);
+
+    expect(screen.getByText(precondition)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/assistance/i);
+  });
+});
+
 const queuedJob = {
   jobId: 'job/id',
   questionnaireId: 'questionnaire/id',
@@ -263,7 +368,18 @@ const failedJob = {
   failureMessage: 'Draft assistance could not be prepared.',
 };
 
-describe('bounded deterministic draft job', () => {
+/**
+ * The card's own copy names neither a provider nor the old "assistance" framing (D-08). Text a server
+ * supplies, such as a failure message, is data and passes through verbatim, so it is excluded.
+ */
+function expectProviderNeutralCopy(container: HTMLElement, serverText: readonly string[] = []) {
+  const labels = [...container.querySelectorAll('[aria-label]')].map((element) => element.getAttribute('aria-label') ?? '');
+  let copy = [container.textContent ?? '', ...labels].join('\n');
+  for (const fragment of serverText) copy = copy.split(fragment).join('');
+  expect(copy).not.toMatch(/deterministic|assistance/i);
+}
+
+describe('bounded assessment draft generation job', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
@@ -273,20 +389,78 @@ describe('bounded deterministic draft job', () => {
   it('prevents duplicate generation while the start request is in flight', () => {
     const pending = deferred<never>();
     actionMocks.startAssessmentDraftAction.mockReturnValue(pending.promise);
-    render(<AssessmentDraftJob questionnaireId="questionnaire/id" />);
+    render(<AssessmentDraftJob questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
-    const start = screen.getByRole('button', { name: 'Start deterministic draft assistance' });
+    const start = screen.getByRole('button', { name: 'Generate assessment draft' });
     fireEvent.click(start);
     fireEvent.click(start);
 
     expect(actionMocks.startAssessmentDraftAction).toHaveBeenCalledTimes(1);
     expect(start).toBeDisabled();
+    expect(start).toHaveTextContent('Starting draft generation…');
+  });
+
+  it('describes the action, the reviewing Security Analyst and the advisory draft before generation', () => {
+    const { container } = render(<AssessmentDraftJob questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Assessment draft generation' })).toBeInTheDocument();
+    expect(screen.getByText('Generate a draft Risk Assessment from the submitted questionnaire. The draft is advisory: it is recorded as initiated by you and is released only by a Security Analyst after review.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate assessment draft' })).toBeEnabled();
+    expectProviderNeutralCopy(container);
+  });
+
+  it.each([
+    ['queued', queuedJob, 'Draft generation is queued', 'The job is waiting to begin. This page will remain available while its status is checked.'],
+    ['running', runningJob, 'Draft generation is running', 'A reviewable draft is being prepared from the questionnaire answers.'],
+    ['completed', completedJob, 'Draft generation is ready for Security Analyst review', 'The generated draft is advisory and has not been released.'],
+  ] as const)('keeps the %s state advisory and provider-neutral', (_status, job, title, body) => {
+    const { container } = render(<AssessmentDraftJob initialJob={job} questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    expect(screen.getByRole('status')).toHaveTextContent(title);
+    expect(screen.getByText(title, { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText(body)).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Draft generation lifecycle' })).toBeInTheDocument();
+    expectProviderNeutralCopy(container);
+  });
+
+  it('names a failed generation without claiming a provider, passing the server message through', () => {
+    const { container } = render(<AssessmentDraftJob initialJob={failedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation failed');
+    expect(screen.getByText('Draft generation failed', { selector: '[data-slot="alert-title"]' })).toBeInTheDocument();
+    expect(screen.getByText(failedJob.failureMessage)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry draft generation' })).toBeEnabled();
+    expectProviderNeutralCopy(container, [failedJob.failureMessage]);
+  });
+
+  it('announces start, status and retry failures in the draft generation vocabulary', async () => {
+    actionMocks.startAssessmentDraftAction.mockResolvedValueOnce({ ok: false, formError: 'The assessment service is unavailable.' });
+    const idle = render(<AssessmentDraftJob questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    fireEvent.click(screen.getByRole('button', { name: 'Generate assessment draft' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation could not be started');
+    idle.unmount();
+
+    actionMocks.getAssessmentDraftJobAction.mockResolvedValueOnce({ ok: false, formError: 'The assessment service is unavailable.' });
+    const polling = render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation status could not be checked');
+    polling.unmount();
+
+    const pendingRetry = deferred<{ ok: false; formError: string }>();
+    actionMocks.retryAssessmentDraftJobAction.mockReturnValueOnce(pendingRetry.promise);
+    const { container } = render(<AssessmentDraftJob initialJob={failedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry draft generation' }));
+    expect(screen.getByRole('button', { name: 'Retrying draft generation…' })).toBeDisabled();
+    await act(async () => { pendingRetry.resolve({ ok: false, formError: 'The assessment service is unavailable.' }); await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation could not be retried');
+    expectProviderNeutralCopy(container, [failedJob.failureMessage]);
   });
 
   it('keeps one poll in flight and cleans up on unmount', async () => {
     const pending = deferred<never>();
     actionMocks.getAssessmentDraftJobAction.mockReturnValue(pending.promise);
-    const { unmount } = render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" />);
+    const { unmount } = render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
@@ -301,15 +475,17 @@ describe('bounded deterministic draft job', () => {
     actionMocks.getAssessmentDraftJobAction
       .mockResolvedValueOnce({ ok: true, data: runningJob })
       .mockResolvedValueOnce({ ok: true, data: completedJob });
-    render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" />);
+    render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
-    expect(screen.getByRole('status')).toHaveTextContent('Draft assistance is running');
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation is running');
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
-    expect(screen.getByRole('status')).toHaveTextContent('Draft assistance is ready for analyst review');
-    expect(screen.getByRole('list', { name: 'Draft assistance lifecycle' })).toHaveTextContent('QueuedRunningCompleted');
-    expect(screen.getByRole('link', { name: 'Open completed assessment' })).toHaveAttribute(
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation is ready for Security Analyst review');
+    expect(screen.getByRole('list', { name: 'Draft generation lifecycle' })).toHaveTextContent('QueuedRunningCompleted');
+    // A completed draft is still a draft: the link opens it for review and never calls it complete.
+    expect(screen.queryByRole('link', { name: 'Open completed assessment' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open assessment draft' })).toHaveAttribute(
       'href',
       '/app/review/assessments/assessment%2Fid%20with%20spaces',
     );
@@ -319,24 +495,28 @@ describe('bounded deterministic draft job', () => {
 
   it('offers retry only for failed jobs and resumes the same bounded lifecycle', async () => {
     actionMocks.retryAssessmentDraftJobAction.mockResolvedValue({ ok: true, data: queuedJob });
-    const { rerender } = render(<AssessmentDraftJob initialJob={runningJob} questionnaireId="questionnaire/id" />);
-    expect(screen.queryByRole('button', { name: 'Retry draft assistance' })).not.toBeInTheDocument();
+    const { rerender } = render(<AssessmentDraftJob initialJob={runningJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    expect(screen.queryByRole('button', { name: 'Retry draft generation' })).not.toBeInTheDocument();
 
-    rerender(<AssessmentDraftJob initialJob={failedJob} questionnaireId="questionnaire/id" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry draft assistance' }));
+    rerender(<AssessmentDraftJob initialJob={failedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry draft generation' }));
     await vi.runAllTicks();
     expect(actionMocks.retryAssessmentDraftJobAction).toHaveBeenCalledWith({ jobId: 'job/id' });
   });
 
   it('stops after the 30-second budget with recoverable timeout guidance', async () => {
     actionMocks.getAssessmentDraftJobAction.mockResolvedValue({ ok: true, data: queuedJob });
-    render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" />);
+    render(<AssessmentDraftJob initialJob={queuedJob} questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(screen.getByText('Taking longer than expected')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Draft generation polling timed out');
     expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
     const pollCount = actionMocks.getAssessmentDraftJobAction.mock.calls.length;
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
     expect(actionMocks.getAssessmentDraftJobAction).toHaveBeenCalledTimes(pollCount);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Checking the current draft generation status');
   });
 });

@@ -1,20 +1,23 @@
 'use client';
-import { useTransition } from 'react';
+import { useId, useTransition } from 'react';
 import { setDevelopmentRole } from '../../../app/actions/session';
 import type { DevelopmentRole } from '@/lib/auth/session-adapter';
 
 export function RoleSwitcher({ role }: { role: DevelopmentRole }) {
   const [pending, startTransition] = useTransition();
+  // The shell renders this twice (sidebar and navigation sheet), so each copy needs its own id for
+  // its label to name its own select.
+  const selectId = useId();
   return (
     <form
       className="role-switcher"
       action={(formData) => startTransition(() => setDevelopmentRole(formData))}
     >
-      <label className="micro-label" htmlFor="development-role">
+      <label className="micro-label" htmlFor={selectId}>
         Development role
       </label>
       <select
-        id="development-role"
+        id={selectId}
         name="role"
         defaultValue={role}
         disabled={pending}

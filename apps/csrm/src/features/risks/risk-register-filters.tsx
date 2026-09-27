@@ -2,17 +2,21 @@
 
 import { SlidersHorizontal } from 'lucide-react';
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
+import { statusLabel } from '@/components/csrm/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 import {
   riskRegisterMitigationStatuses,
   riskRegisterRatings,
+  riskRegisterStateLabels,
+  riskRegisterStates,
   riskRegisterTreatmentStatuses,
   type RiskPickerOption,
-  type RiskRegisterQuery,
-} from './risk-schema';
+} from './risk-domain';
+import type { RiskRegisterQuery } from './risk-schema';
 import type { RiskRelationSearchResult } from './risk-actions';
 
 export type RiskRegisterPickerOptions = {
@@ -71,7 +75,7 @@ function RelationCombobox({ kind, label, value, options, disabled, onChange, sea
 
   const choose = (option: RiskPickerOption) => { onChange(option.documentId); setQuery(''); setOpen(false); setActive(-1); };
   return (
-    <div className="grid gap-1 text-sm font-medium text-foreground">
+    <div className="grid gap-1.5 text-sm font-medium text-foreground">
       <label htmlFor={`${listboxId}-input`}>{label}</label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverAnchor asChild><input id={`${listboxId}-input`} className={selectClassName} disabled={disabled} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-activedescendant={active >= 0 ? `${listboxId}-${active}` : undefined} placeholder={selected?.label ?? 'Search…'} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
@@ -99,20 +103,27 @@ function MoreFilterFields({ disabled, onChange, pickerOptions, query, searchRela
       <RelationCombobox kind="assessments" label="Related assessment" value={query.assessment} options={pickerOptions.assessments} disabled={disabled} searchRelations={searchRelations} onChange={(assessment) => onChange({ assessment })} />
       <RelationCombobox kind="systems" label="Impacted system" value={query.system} options={pickerOptions.systems} disabled={disabled} searchRelations={searchRelations} onChange={(system) => onChange({ system })} />
       <RelationCombobox kind="assets" label="Impacted asset" value={query.asset} options={pickerOptions.assets} disabled={disabled} searchRelations={searchRelations} onChange={(asset) => onChange({ asset })} />
-      <label className="space-y-1 text-sm font-medium text-foreground">
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
         Mitigation-control status
         <select aria-label="Mitigation-control status" className={selectClassName} disabled={disabled} value={query.mitigationStatus ?? ''} onChange={(event) => onChange({ mitigationStatus: event.target.value ? event.target.value as RiskRegisterQuery['mitigationStatus'] : undefined })}>
           <option value="">All</option>
           {riskRegisterMitigationStatuses.map((status) => <option key={status} value={status}>{status === 'none' ? 'No mitigation controls' : status}</option>)}
         </select>
       </label>
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
+        Risk state
+        <select aria-label="Risk state" className={selectClassName} disabled={disabled} value={query.state ?? ''} onChange={(event) => onChange({ state: event.target.value ? event.target.value as RiskRegisterQuery['state'] : undefined })}>
+          <option value="">All</option>
+          {riskRegisterStates.map((state) => <option key={state} value={state}>{riskRegisterStateLabels[state]}</option>)}
+        </select>
+      </label>
       <fieldset className="grid gap-2 border-0 p-0">
         <legend className="text-sm font-medium text-foreground">Target date range</legend>
-        <label className="space-y-1 text-sm font-medium text-foreground">
+        <label className="grid gap-1.5 text-sm font-medium text-foreground">
           Target date from
           <Input className="h-11 tabular-nums" disabled={disabled} type="date" value={query.targetDateFrom ?? ''} onChange={(event) => onChange({ targetDateFrom: event.target.value || undefined })} />
         </label>
-        <label className="space-y-1 text-sm font-medium text-foreground">
+        <label className="grid gap-1.5 text-sm font-medium text-foreground">
           Target date to
           <Input className="h-11 tabular-nums" disabled={disabled} type="date" value={query.targetDateTo ?? ''} onChange={(event) => onChange({ targetDateTo: event.target.value || undefined })} />
         </label>
@@ -124,24 +135,28 @@ function MoreFilterFields({ disabled, onChange, pickerOptions, query, searchRela
   );
 }
 
-function CoreFilterFields({ disabled, onChange, query }: Pick<RiskRegisterFiltersProps, 'disabled' | 'onChange' | 'query'>) {
+function CoreFilterFields({ disabled, labelClassName, onChange, query }: Pick<RiskRegisterFiltersProps, 'disabled' | 'onChange' | 'query'> & {
+  /** Extra label classes: the desktop row keeps each label on one line. */
+  labelClassName?: string;
+}) {
+  const labelClass = cn('grid gap-1.5 text-sm font-medium text-foreground', labelClassName);
   return (
     <>
-      <label className="space-y-1 text-sm font-medium text-foreground">
+      <label className={labelClass}>
         Treatment status
         <select aria-label="Treatment status" className={selectClassName} disabled={disabled} value={query.treatmentStatus ?? ''} onChange={(event) => onChange({ treatmentStatus: event.target.value ? event.target.value as RiskRegisterQuery['treatmentStatus'] : undefined })}>
           <option value="">All</option>
-          {riskRegisterTreatmentStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+          {riskRegisterTreatmentStatuses.map((status) => <option key={status} value={status}>{statusLabel('treatment', status)}</option>)}
         </select>
       </label>
-      <label className="space-y-1 text-sm font-medium text-foreground">
+      <label className={labelClass}>
         Inherent rating
         <select aria-label="Inherent rating" className={selectClassName} disabled={disabled} value={query.inherentRating ?? ''} onChange={(event) => onChange({ inherentRating: event.target.value ? event.target.value as RiskRegisterQuery['inherentRating'] : undefined })}>
           <option value="">All</option>
           {riskRegisterRatings.map((rating) => <option key={rating} value={rating}>{rating}</option>)}
         </select>
       </label>
-      <label className="space-y-1 text-sm font-medium text-foreground">
+      <label className={labelClass}>
         Residual rating
         <select aria-label="Residual rating" className={selectClassName} disabled={disabled} value={query.residualRating ?? ''} onChange={(event) => onChange({ residualRating: event.target.value ? event.target.value as RiskRegisterQuery['residualRating'] : undefined })}>
           <option value="">All</option>
@@ -160,16 +175,23 @@ export function RiskRegisterFilters({ activeCount, disabled, onChange, pickerOpt
   };
 
   return (
-    <div className="space-y-3">
-      <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-4">
-        <form className="flex gap-2 md:col-span-2 lg:col-span-1" role="search" onSubmit={submitSearch}>
-          <label className="flex-1 space-y-1 text-sm font-medium text-foreground">
+    // The filter controls do not print; the table's chips and result count carry the active filters (X-4).
+    <div className="space-y-3" data-print="hidden">
+      {/*
+        The sidebar makes the content narrower at lg than at md, so from md to lg the search form
+        takes the whole first row and the three selects share the next; from xl the four sit in one
+        row with the search in the widest track (UI-SPEC section 4.1). Labels never wrap.
+      */}
+      <div className="hidden gap-3 md:grid md:grid-cols-3 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+        <form className="flex gap-2 md:col-span-3 xl:col-span-1" role="search" onSubmit={submitSearch}>
+          <label className="grid flex-1 gap-1.5 whitespace-nowrap text-sm font-medium text-foreground">
             Search Risks
-            <Input aria-label="Search Risks" className="h-9" defaultValue={query.q} disabled={disabled} key={query.q} name="q" type="search" />
+            {/* Block, so the nowrap label text cannot pull the input onto its line and under the button. */}
+            <Input aria-label="Search Risks" className="block h-9" defaultValue={query.q} disabled={disabled} key={query.q} name="q" type="search" />
           </label>
           <Button className="self-end" disabled={disabled} type="submit">Search Risks</Button>
         </form>
-        <CoreFilterFields disabled={disabled} onChange={onChange} query={query} />
+        <CoreFilterFields disabled={disabled} labelClassName="whitespace-nowrap" onChange={onChange} query={query} />
       </div>
 
       <div className="flex items-center gap-2">
@@ -185,8 +207,8 @@ export function RiskRegisterFilters({ activeCount, disabled, onChange, pickerOpt
           <SheetContent className="w-full overflow-y-auto sm:max-w-md" side="right">
             <SheetHeader><SheetTitle>Risk Register filters</SheetTitle><SheetDescription>Search and filter authorised contextual Risks.</SheetDescription></SheetHeader>
             <div className="space-y-4 px-4 pb-6">
-              <form className="space-y-2" role="search" onSubmit={submitSearch}>
-                <label className="space-y-1 text-sm font-medium text-foreground">Search Risks<Input aria-label="Search Risks" defaultValue={query.q} disabled={disabled} key={query.q} name="q" type="search" /></label>
+              <form className="grid gap-2" role="search" onSubmit={submitSearch}>
+                <label className="grid gap-1.5 text-sm font-medium text-foreground">Search Risks<Input aria-label="Search Risks" defaultValue={query.q} disabled={disabled} key={query.q} name="q" type="search" /></label>
                 <Button className="w-full" disabled={disabled} type="submit">Search Risks</Button>
               </form>
               <CoreFilterFields disabled={disabled} onChange={onChange} query={query} />

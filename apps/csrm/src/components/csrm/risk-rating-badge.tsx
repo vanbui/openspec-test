@@ -43,12 +43,17 @@ const riskRatingPresentations = {
   },
 } satisfies Record<AssessmentRating, RiskRatingPresentation>;
 
-export function RiskRatingBadge({ rating }: { rating: AssessmentRating }) {
+/*
+ * `labelled` (default true) gives the badge its own name, `Severity: {rating} ({n} of 4)`. Inside a link
+ * or button whose own name already carries the rating (a bar chart row), set it false: the control
+ * names the row, and the badge's visible word stays the control's visible text (WCAG 2.5.3).
+ */
+export function RiskRatingBadge({ labelled = true, rating }: { labelled?: boolean; rating: AssessmentRating }) {
   const presentation = riskRatingPresentations[rating];
   const Icon = presentation.icon;
 
   return (
-    <Badge aria-label={`Severity: ${presentation.label.toLowerCase()} (${presentation.position} of 4)`} className={presentation.className} variant="outline">
+    <Badge aria-label={labelled ? `Severity: ${presentation.label.toLowerCase()} (${presentation.position} of 4)` : undefined} className={presentation.className} variant="outline">
       <Icon aria-hidden="true" />
       {presentation.label}
     </Badge>

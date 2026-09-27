@@ -1,5 +1,3 @@
-import { CheckCircle2Icon, CircleDashedIcon, CircleDotIcon, LockKeyholeIcon, type LucideIcon } from 'lucide-react';
-
 import type { AssessmentRating, AssessmentStatus, ReleaseReadinessRequirement } from './assessment-schema';
 
 export const assessmentLifecycleStepKeys = ['draft', 'in-review', 'approved', 'closed'] as const;
@@ -16,13 +14,11 @@ export type AssessmentLifecycle = {
   steps: readonly AssessmentLifecycleStep[];
 };
 
-export const assessmentStatusPresentation = {
-  draft: { label: 'Draft', icon: CircleDashedIcon },
-  'in-review': { label: 'In review', icon: CircleDotIcon },
-  approved: { label: 'Approved', icon: CheckCircle2Icon },
-  closed: { label: 'Closed', icon: LockKeyholeIcon },
-} satisfies Record<AssessmentStatus, { label: string; icon: LucideIcon }>;
-
+/*
+ * An assessment status badge, filter option or label reads the shared status mapping
+ * (`statusPresentation.assessment` in components/csrm/status-badge.tsx), which labels
+ * the stored value approved as Released.
+ */
 const assessmentLifecycleLabels: Record<AssessmentLifecycleStepKey, string> = {
   draft: 'Drafted',
   'in-review': 'In review',
@@ -65,3 +61,60 @@ export const assessmentRatingPresentation = {
   High: { label: 'High', order: 2 },
   Critical: { label: 'Critical', order: 3 },
 } satisfies Record<AssessmentRating, { label: string; order: number }>;
+
+/*
+ * The stored assessment statuses, and the fields an analyst writes on a Risk and on a Control
+ * Implementation in the order of their input schemas. They live here, free of zod, because the review
+ * list and the editors that read them run in the browser, where nothing validates with zod (plan 08-13,
+ * D-24). assessment-schema.ts builds on them and re-exports all three; assessment-service.test.ts
+ * holds each writable-field list to its input schema's keys.
+ */
+export const assessmentStatuses = ['draft', 'in-review', 'approved', 'closed'] as const;
+
+export const riskWritableFields = [
+  'issueStatement',
+  'riskStatement',
+  'riskCategory',
+  'riskSubCategory',
+  'riskCause',
+  'potentialImpact',
+  'riskType',
+  'riskOwner',
+  'informationSystemImpacted',
+  'informationAssetImpacted',
+  'dataClassification',
+  'inherentLikelihood',
+  'highestInherentConsequence',
+  'inherentRating',
+  'inherentRatingRationale',
+  'residualLikelihood',
+  'highestResidualConsequence',
+  'residualRating',
+  'residualRatingRationale',
+  'controlEffectiveness',
+  'riskVelocity',
+  'identifiedDate',
+  'targetDate',
+  'closureDate',
+  'isExempted',
+  'exemptionReviewDate',
+  'escalationDetails',
+  'comments',
+  'riskCommunicationDate',
+  'treatmentAction',
+  'treatmentPlan',
+  'treatmentOwner',
+  'treatmentResolveDate',
+  'treatmentStatus',
+] as const;
+
+export const controlImplementationWritableFields = [
+  'control',
+  'controlOwner',
+  'controlStatus',
+  'effectivenessRating',
+  'evidence',
+  'implementationDueDate',
+  'implementedDate',
+  'reviewDate',
+] as const;

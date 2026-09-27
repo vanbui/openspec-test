@@ -1,12 +1,11 @@
 'use client';
 
-import { CheckCircle2, CircleDashed, FilePenLine, type LucideIcon } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useEffect, useMemo } from 'react';
 import { DataTable, type DataTableColumn, type DataTableFilter } from '@/components/csrm/data-table';
 import { RecordLink } from '@/components/csrm/record-link';
+import { deriveQuestionnaireStatus, StatusBadge, statusLabel } from '@/components/csrm/status-badge';
 import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/states/states';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -22,13 +21,13 @@ export interface QuestionnaireListProps {
   state?: QuestionnaireListState;
 }
 
-type QuestionnaireStatePresentation = { className: string; icon: LucideIcon; label: string };
+/** The served states the status filter offers, labelled by the shared status mapping. */
+const filterStates = ['not-started', 'draft', 'submitted'] as const satisfies readonly QuestionnaireSummary['state'][];
 
-const statePresentations = {
-  'not-started': { className: 'border-border bg-surface-muted text-foreground-secondary', icon: CircleDashed, label: 'Not started' },
-  draft: { className: 'border-info-border bg-info-subtle text-info', icon: FilePenLine, label: 'Draft' },
-  submitted: { className: 'border-success-border bg-success-subtle text-success', icon: CheckCircle2, label: 'Submitted' },
-} satisfies Record<QuestionnaireSummary['state'], QuestionnaireStatePresentation>;
+/* One derived questionnaire status for every surface: an explicitly unreleased questionnaire is in analyst review. */
+function QuestionnaireStatusBadge({ questionnaire }: { questionnaire: QuestionnaireSummary }) {
+  return <StatusBadge family="questionnaire" value={deriveQuestionnaireStatus(questionnaire.state, questionnaire.release)} />;
+}
 
 function questionnaireHref(documentId: string): string {
   return `/app/questionnaires/${encodeURIComponent(documentId)}`;
@@ -58,11 +57,7 @@ const columns: DataTableColumn<QuestionnaireSummary>[] = [
     return request ? <><span>{request.title}</span><span className="block text-xs tabular-nums text-muted-foreground">{request.requestNumber}</span></> : 'No linked assessment request';
   } },
   { accessorKey: 'progress', header: 'Progress', cell: (_value, questionnaire) => `${questionnaire.progress.answered} of ${questionnaire.progress.total} answered` },
-  { accessorKey: 'state', header: 'Status', cell: (_value, questionnaire) => {
-    const presentation = statePresentations[questionnaire.state];
-    const Icon = presentation.icon;
-    return <Badge className={presentation.className} variant="outline"><Icon aria-hidden="true" />{presentation.label}</Badge>;
-  } },
+  { accessorKey: 'state', header: 'Status', cell: (_value, questionnaire) => <QuestionnaireStatusBadge questionnaire={questionnaire} /> },
 ];
 
 export function QuestionnaireList({ pagination, questionnaires, query, state }: QuestionnaireListProps) {
@@ -90,7 +85,7 @@ export function QuestionnaireList({ pagination, questionnaires, query, state }: 
   const clearFilters = () => resetPage({ q: '', status: undefined });
   const filters = useMemo<DataTableFilter[]>(() => [
     ...(resolvedQuery.q ? [{ id: 'q', label: 'Search', value: resolvedQuery.q }] : []),
-    ...(resolvedQuery.status ? [{ id: 'status', label: 'Status', value: statePresentations[resolvedQuery.status].label }] : []),
+    ...(resolvedQuery.status ? [{ id: 'status', label: 'Status', value: statusLabel('questionnaire', resolvedQuery.status) }] : []),
   ], [resolvedQuery.q, resolvedQuery.status]);
   const resolvedState = outOfRange ? 'loading' : state ?? (questionnaires.length > 0 ? 'populated' : 'empty');
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -100,7 +95,7 @@ export function QuestionnaireList({ pagination, questionnaires, query, state }: 
   };
 
   return <div className="space-y-4">
-    {query ? <div className="flex flex-col gap-3 sm:flex-row sm:items-end"><form className="flex flex-1 gap-2" role="search" onSubmit={submitSearch}><label className="flex-1 space-y-1 text-sm font-medium text-foreground">Search questionnaires<Input aria-label="Search questionnaires" defaultValue={resolvedQuery.q} disabled={resolvedState === 'loading'} key={resolvedQuery.q} name="q" type="search" /></label><Button className="self-end" disabled={resolvedState === 'loading'} type="submit">Search</Button></form><label className="space-y-1 text-sm font-medium text-foreground">Status<select aria-label="Filter by status" className="block h-9 min-w-52 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={resolvedState === 'loading'} value={resolvedQuery.status ?? ''} onChange={(event) => resetPage({ status: event.target.value ? event.target.value as QuestionnaireListQuery['status'] : undefined })}><option value="">All statuses</option><option value="not-started">Not started</option><option value="draft">Draft</option><option value="submitted">Submitted</option></select></label></div> : null}
-    <DataTable ariaLabel="My questionnaires" columns={columns} data={[...questionnaires]} densityUserId="questionnaires" filters={filters} getRowId={(questionnaire) => questionnaire.documentId} loadingLabel="Loading questionnaires" onClearFilter={(id) => resetPage(id === 'q' ? { q: '' } : { status: undefined })} onClearFilters={clearFilters} onPageChange={(page) => navigate({ ...resolvedQuery, page })} onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as QuestionnaireListQuery['pageSize'] })} onSortingChange={(sorting) => resetPage({ sort: sortFor(sorting) })} page={resolvedPagination.page} pageSize={resolvedPagination.pageSize} renderMobileCard={(questionnaire) => { const presentation = statePresentations[questionnaire.state]; const Icon = presentation.icon; const request = availableAssessmentRequest(questionnaire.assessmentRequest); return <article className="space-y-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0 space-y-1"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={questionnaireHref(questionnaire.documentId)}>{questionnaire.questionnaireNumber}</RecordLink><RecordLink className="block break-words" href={questionnaireHref(questionnaire.documentId)}>{questionnaire.title}</RecordLink></div><Badge className={presentation.className} variant="outline"><Icon aria-hidden="true" />{presentation.label}</Badge></div><div><p className="text-sm font-medium text-foreground">{request?.title ?? 'No linked assessment request'}</p>{request ? <p className="text-xs tabular-nums text-muted-foreground">{request.requestNumber}</p> : null}</div><div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm"><span className="font-medium text-foreground">{questionnaire.progress.answered} of {questionnaire.progress.total} answered</span><span className="text-muted-foreground">{unansweredCount(questionnaire)} unanswered</span></div><Progress aria-label={`${questionnaire.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={questionnaire.progress.percent} value={questionnaire.progress.percent} /></div></article>; }} sorting={sortingFor(resolvedQuery.sort)} state={resolvedState} stateSlots={{ empty: <EmptyState action={{ label: 'View my requests', href: '/app/requests' }} description="Questionnaires appear here after they are ready." filtered={Boolean(resolvedQuery.q || resolvedQuery.status)} noun="questionnaires" onClearFilters={clearFilters} />, error: <ErrorState noun="questionnaires" retry={() => router.refresh()} />, permission: <PermissionDeniedState area="questionnaires" /> }} totalCount={resolvedPagination.total} />
+    {query ? <div className="flex flex-col gap-3 sm:flex-row sm:items-end" data-print="hidden"><form className="flex flex-1 gap-2" role="search" onSubmit={submitSearch}><label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">Search questionnaires<Input aria-label="Search questionnaires" defaultValue={resolvedQuery.q} disabled={resolvedState === 'loading'} key={resolvedQuery.q} name="q" type="search" /></label><Button className="self-end" disabled={resolvedState === 'loading'} type="submit">Search</Button></form><label className="grid gap-1.5 text-sm font-medium text-foreground">Status<select aria-label="Filter by status" className="block h-9 min-w-52 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={resolvedState === 'loading'} value={resolvedQuery.status ?? ''} onChange={(event) => resetPage({ status: event.target.value ? event.target.value as QuestionnaireListQuery['status'] : undefined })}><option value="">All statuses</option>{filterStates.map((status) => <option key={status} value={status}>{statusLabel('questionnaire', status)}</option>)}</select></label></div> : null}
+    <DataTable ariaLabel="My questionnaires" columns={columns} data={[...questionnaires]} densityUserId="questionnaires" filters={filters} getRowId={(questionnaire) => questionnaire.documentId} loadingLabel="Loading questionnaires" onClearFilter={(id) => resetPage(id === 'q' ? { q: '' } : { status: undefined })} onClearFilters={clearFilters} onPageChange={(page) => navigate({ ...resolvedQuery, page })} onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as QuestionnaireListQuery['pageSize'] })} onSortingChange={(sorting) => resetPage({ sort: sortFor(sorting) })} page={resolvedPagination.page} pageSize={resolvedPagination.pageSize} renderMobileCard={(questionnaire) => { const request = availableAssessmentRequest(questionnaire.assessmentRequest); return <article className="space-y-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0 space-y-1"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={questionnaireHref(questionnaire.documentId)}>{questionnaire.questionnaireNumber}</RecordLink><RecordLink className="block break-words" href={questionnaireHref(questionnaire.documentId)}>{questionnaire.title}</RecordLink></div><QuestionnaireStatusBadge questionnaire={questionnaire} /></div><div><p className="text-sm font-medium text-foreground">{request?.title ?? 'No linked assessment request'}</p>{request ? <p className="text-xs tabular-nums text-muted-foreground">{request.requestNumber}</p> : null}</div><div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm"><span className="font-medium text-foreground">{questionnaire.progress.answered} of {questionnaire.progress.total} answered</span><span className="text-muted-foreground">{unansweredCount(questionnaire)} unanswered</span></div><Progress aria-label={`${questionnaire.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={questionnaire.progress.percent} value={questionnaire.progress.percent} /></div></article>; }} sorting={sortingFor(resolvedQuery.sort)} state={resolvedState} stateSlots={{ empty: <EmptyState action={{ label: 'View my requests', href: '/app/requests' }} description="Questionnaires appear here after they are ready." filtered={Boolean(resolvedQuery.q || resolvedQuery.status)} noun="questionnaires" onClearFilters={clearFilters} />, error: <ErrorState noun="questionnaires" retry={() => router.refresh()} />, permission: <PermissionDeniedState area="questionnaires" /> }} totalCount={resolvedPagination.total} />
   </div>;
 }

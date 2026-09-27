@@ -68,7 +68,26 @@ export async function generateQuestionnaire(input: { strapi: Strapi; requestId: 
 async function job(input: { strapi: Strapi; jobId: string; analystDocumentId: string; retry?: boolean }): Promise<RecordValue> { const result = input.retry ? registry(input.strapi).retry(input.jobId, actor(input.analystDocumentId)) : registry(input.strapi).get(input.jobId, actor(input.analystDocumentId)); const questionnaire = result.questionnaireId ? await input.strapi.documents("api::csrm-questionnaire.csrm-questionnaire").findOne({ documentId: result.questionnaireId, populate: { generatedBy: true, assessmentRequest: true, questions: true } }) : null; if (result.status === "completed" && !questionnaire) throw new QuestionnaireGenerationWorkflowError(409, "Generated questionnaire could not be loaded."); return projectQuestionnaireGenerationJob(result, questionnaire); }
 export const getQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: string; analystDocumentId: string }) => job(input);
 export const retryQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: string; analystDocumentId: string }) => job({ ...input, retry: true });
-export function hasActiveQuestionnaireGeneration(strapi: Strapi, requestId: string): boolean {
-  return registry(strapi).hasActiveJob(requestId);
+/*
+ * The review queues bind the active request ids into an IN / NOT IN predicate,
+ * so the snapshot is bounded. One job runs per request and generation is an
+ * analyst action, so the cap is unreachable in practice; exceeding it means
+ * something is wrong, and the read fails closed rather than binding an
+ * unbounded parameter list.
+ */
+export const MAX_ACTIVE_GENERATION_REQUEST_IDS = 1_000;
+export class QuestionnaireGenerationCapacityError extends Error {
+  constructor() {
+    super("Active questionnaire generation exceeds the review queue bound.");
+    this.name = "QuestionnaireGenerationCapacityError";
+  }
+}
+export function assertActiveGenerationCapacity(ids: readonly string[]): readonly string[] {
+  if (ids.length > MAX_ACTIVE_GENERATION_REQUEST_IDS) throw new QuestionnaireGenerationCapacityError();
+  return ids;
+}
+/** A sorted, bounded snapshot of the request ids with a queued or running generation job in this process. */
+export function activeQuestionnaireGenerationRequestIds(strapi: Strapi): readonly string[] {
+  return assertActiveGenerationCapacity(registry(strapi).activeRequestIds());
 }
 export { QuestionnaireGenerationRegistryError };

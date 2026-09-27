@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 import { strapiHealthUrl } from './harness-urls';
+import { signInAs } from './helpers/navigation';
 
 const unreleasedTitle = 'Customer portal questionnaire awaiting release';
 const unreleasedRequestTitle = 'Customer portal questionnaire awaiting release request';
@@ -11,14 +12,6 @@ const personalDataTypesQuestion = 'Which categories of personal information will
 const hostingQuestion = 'Where will the service be hosted?';
 const deletedQuestion = 'What production URL or network location will users access?';
 const addedQuestion = 'Who owns this service?';
-
-async function signIn(page: Page, role: 'Requestor' | 'Security Analyst'): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-  if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  await page.getByRole('button', { name: `Continue as ${role}` }).click();
-  await expect(page, `GOVERNANCE_${role}_SHELL`).toHaveURL(/\/app$/);
-  await expect(page.getByRole('banner').getByText(role, { exact: true }), `GOVERNANCE_${role}_IDENTITY`).toBeVisible();
-}
 
 async function expectNoHorizontalOverflow(page: Page, criterion: string): Promise<void> {
   await page.mouse.move(0, 0);
@@ -50,12 +43,12 @@ async function expectRequestorDirectDenial(browser: Browser, questionnaireUrl: s
   const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
   try {
     const page = await context.newPage();
-    await signIn(page, 'Requestor');
+    await signInAs(page, 'Requestor');
     await page.goto(questionnaireUrl);
     // The refusal states itself in both the page copy and the alert title, so the
     // assertion is that a refusal is shown, not that exactly one element says so.
     await expect(
-      page.getByText(/cannot be displayed|could not be found|don’t have permission/i).first(),
+      page.getByText(/cannot be displayed|Page not found|don’t have permission/i).first(),
       `${criterion}_DIRECT_URL_IS_REFUSED_BY_SERVER`,
     ).toBeVisible();
     await expect(page.getByText(serviceNameQuestion, { exact: true }), `${criterion}_NO_QUESTION_TEXT_LEAKS`).toHaveCount(0);
@@ -80,7 +73,7 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   expect((await request.get(strapiHealthUrl)).ok(), 'GOVERNANCE_STRAPI_HEALTH').toBe(true);
 
   // Capture the analyst-only URL from the authorised list; fixture document ids are random per harness database.
-  await signIn(page, 'Security Analyst');
+  await signInAs(page, 'Security Analyst');
   await page.goto('/app/review/questionnaires');
   const analystQuestionnaireLink = page.getByRole('link', { name: unreleasedTitle }).first();
   await expect(analystQuestionnaireLink, 'CRITERION_3_ANALYST_CAN_READ_UNRELEASED_FIXTURE').toBeVisible();
@@ -88,7 +81,7 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   expect(analystQuestionnaireHref, 'CRITERION_3_UNRELEASED_URL_EXISTS_FOR_DIRECT_DENIAL').toMatch(/^\/app\/review\/questionnaires\/[^/]+$/);
   const requestorQuestionnaireHref = analystQuestionnaireHref!.replace('/app/review/questionnaires/', '/app/questionnaires/');
 
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   await page.goto('/app/questionnaires');
   await expect(page.getByText(unreleasedTitle, { exact: true }), 'CRITERION_3_UNRELEASED_ABSENT_FROM_MY_QUESTIONNAIRES').toHaveCount(0);
   await page.goto('/app');
@@ -101,13 +94,14 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await expect(page.getByText(unreleasedTitle, { exact: true }), 'CRITERION_3_UNRELEASED_HUB_DOES_NOT_DISCLOSE_QUESTIONNAIRE').toHaveCount(0);
   await expectRequestorDirectDenial(browser, requestorQuestionnaireHref, 'CRITERION_3_UNRELEASED');
 
-  await signIn(page, 'Security Analyst');
+  await signInAs(page, 'Security Analyst');
   await page.goto(analystQuestionnaireHref!);
   await expectAtBothWidths(page, 'CRITERION_1_ANALYST_REVIEW', async () => {
     await expect(page.getByRole('region', { name: 'Questionnaire governance' })).toBeVisible();
-    // The question text appears twice on the analyst screen: once as a row in
-    // the question editor and once in the read-only questionnaire beneath it.
-    await expect(page.getByText(serviceNameQuestion, { exact: true }).first()).toBeVisible();
+    // The question editor is the single list of questions in analyst review (D-32): no read-only
+    // questionnaire repeats it beneath.
+    await expect(page.getByText(serviceNameQuestion, { exact: true })).toBeVisible();
+    await expect(page.getByText(serviceNameQuestion, { exact: true }), 'CRITERION_1_EACH_QUESTION_LISTED_ONCE').toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Release questionnaire' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Return to analyst review' })).toHaveCount(0);
     await expect(page.getByText('No revisions have been recorded.')).toBeVisible();
@@ -147,7 +141,7 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await page.goto(analystRequestUrl!);
   await expect(page.getByRole('heading', { name: /Current lifecycle state: Questionnaire released/ }), 'CRITERION_1_RELEASED_STEPPER_STATE').toBeVisible();
 
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   await page.goto(requestorQuestionnaireHref);
   await expectAtBothWidths(page, 'CRITERION_2_REQUESTOR_ANSWERING', async () => {
     await expect(page.getByText(deletedQuestion, { exact: true })).toHaveCount(0);
@@ -162,7 +156,7 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await expect(page.getByRole('heading', { name: /Current lifecycle state: Questionnaire submitted/ }), 'CRITERION_2_SUBMITTED_STEPPER_STATE').toBeVisible();
   await expect(page.getByText(/^Next action:/), 'CRITERION_2_NEXT_ACTION_REMAINS_IN_HUB').toBeVisible();
 
-  await signIn(page, 'Security Analyst');
+  await signInAs(page, 'Security Analyst');
   await page.goto(analystQuestionnaireHref!);
   await page.getByRole('button', { name: 'Return to analyst review' }).click();
   const returnDialog = page.getByRole('alertdialog', { name: 'Return questionnaire to analyst review?' });
@@ -187,7 +181,7 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await returnedGovernance.getByRole('button', { name: 'Release questionnaire' }).click();
   await page.getByRole('alertdialog', { name: 'Release this questionnaire?' }).getByRole('button', { name: 'Release questionnaire' }).click();
 
-  await signIn(page, 'Requestor');
+  await signInAs(page, 'Requestor');
   await page.goto(requestorQuestionnaireHref);
   await expectAtBothWidths(page, 'CRITERION_5_REQUESTOR_REANSWER', async () => {
     await expect(page.getByText('Some answers need completing again before you re-submit.')).toBeVisible();

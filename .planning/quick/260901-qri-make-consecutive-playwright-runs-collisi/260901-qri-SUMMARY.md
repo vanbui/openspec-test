@@ -11,6 +11,7 @@ provides:
   - PID-derived disjoint high-port ranges for Playwright-managed Strapi and Next servers
   - Runner-authoritative validated E2E origins shared with every worker and harness consumer
   - Bounded graceful managed-server shutdown with Playwright force-kill fallback
+
 affects: [testing, e2e, playwright, phase-05-verification]
 
 tech-stack:
@@ -39,6 +40,10 @@ requirements-completed: [FOUND-05]
 
 duration: 12min
 completed: 2026-09-01
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-27
+  status: unknown
 ---
 
 # Quick Task 260901-qri: Collision-Free Consecutive Playwright Runs Summary

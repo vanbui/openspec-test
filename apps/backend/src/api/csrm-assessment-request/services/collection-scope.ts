@@ -28,15 +28,28 @@ export class AssessmentRequestQueryError extends Error {
   }
 }
 
-const REVIEWABLE_STATUSES = [
+/** The complete request-status vocabulary of the CSRM datamodel. */
+const REQUEST_STATUSES = [
+  "draft",
   "submitted",
   "questionnaire-in-progress",
   "risk-assessment-drafted",
   "under-review",
+  "approved",
+  "closed",
 ] as const;
-const RELEASED_STATUSES = ["approved", "closed"] as const;
-const REVIEWABLE_STATUS_SET = new Set<string>(REVIEWABLE_STATUSES);
-const RELEASED_STATUS_SET = new Set<string>(RELEASED_STATUSES);
+export type RequestStatus = typeof REQUEST_STATUSES[number];
+const REQUEST_STATUS_SET = new Set<string>(REQUEST_STATUSES);
+
+/** The request statuses of submitted work that is still with the analyst or the Requestor. */
+export const REVIEWABLE_REQUEST_STATUSES = Object.freeze([
+  "submitted",
+  "questionnaire-in-progress",
+  "risk-assessment-drafted",
+  "under-review",
+] as const);
+/** The request statuses of released work. */
+export const RELEASED_REQUEST_STATUSES = Object.freeze(["approved", "closed"] as const);
 
 export const REVIEW_QUEUE_BUCKETS = Object.freeze([
   "requires-attention",
@@ -46,6 +59,28 @@ export const REVIEW_QUEUE_BUCKETS = Object.freeze([
 ] as const);
 export type ReviewQueueBucket = typeof REVIEW_QUEUE_BUCKETS[number];
 const REVIEW_QUEUE_BUCKET_SET = new Set<string>(REVIEW_QUEUE_BUCKETS);
+
+/** The fields a review queue may be ordered by. */
+export const REVIEW_QUEUE_SORT_FIELDS = Object.freeze([
+  "dueDate",
+  "submittedDate",
+  "requestNumber",
+  "title",
+  "requestStatus",
+  "updatedAt",
+] as const);
+export type ReviewQueueSortField = typeof REVIEW_QUEUE_SORT_FIELDS[number];
+export type ReviewQueueSort = { field: ReviewQueueSortField; direction: "asc" | "desc" };
+const REVIEW_QUEUE_SORT_FIELD_SET = new Set<string>(REVIEW_QUEUE_SORT_FIELDS);
+
+/*
+ * The request statuses each queue reads. The three action queues read only
+ * reviewable work and the Released queue only released work. No queue reads a
+ * draft: it belongs to its Requestor until it is submitted.
+ */
+export function reviewQueueStatuses(bucket: ReviewQueueBucket): readonly RequestStatus[] {
+  return bucket === "released" ? RELEASED_REQUEST_STATUSES : REVIEWABLE_REQUEST_STATUSES;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -142,14 +177,18 @@ function analystAuthorization(state: unknown): void {
 }
 
 /*
- * A status filter may only name a status the selected queue actually contains.
- * Widening one shared set instead would let the action queue be asked for
- * released work, which is the query expansion the mounted denial test forbids.
+ * The status filter accepts the complete request-status vocabulary in every
+ * queue, so the queue and status filters stay independent. It intersects with
+ * the queue rather than widening it: a status the selected queue does not read
+ * selects nothing (see parseAnalystReviewQuery), so the action queue can never
+ * be asked for released work and no queue can be asked for a draft. Anything
+ * that is not exactly one request status is still malformed: an unknown value,
+ * a repeated parameter or an operator object.
  */
-function safeReviewStatus(value: unknown, permitted: Set<string>): string | undefined {
+function safeReviewStatus(value: unknown): RequestStatus | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !permitted.has(value)) throw new AssessmentRequestQueryError();
-  return value;
+  if (typeof value !== "string" || !REQUEST_STATUS_SET.has(value)) throw new AssessmentRequestQueryError();
+  return value as RequestStatus;
 }
 
 function safeReviewQueue(value: unknown): ReviewQueueBucket {
@@ -175,42 +214,66 @@ function safeReviewDate(value: unknown): string | undefined {
   return value;
 }
 
-function safeReviewFilters(value: unknown): { filters: StrapiQuery; bucket: ReviewQueueBucket } {
-  if (value === undefined) return { filters: {}, bucket: "requires-attention" };
+type ReviewFilters = {
+  bucket: ReviewQueueBucket;
+  requestStatus?: RequestStatus;
+  title?: string;
+  requestNumber?: string;
+  dueDate?: string;
+};
+
+function safeReviewFilters(value: unknown): ReviewFilters {
+  if (value === undefined) return { bucket: "requires-attention" };
   if (!isRecord(value)) throw new AssessmentRequestQueryError();
   assertOnlyKeys(value, ["requestStatus", "title", "requestNumber", "dueDate", "queue"]);
   const bucket = safeReviewQueue(value.queue);
-  const requestStatus = safeReviewStatus(value.requestStatus, bucket === "released" ? RELEASED_STATUS_SET : REVIEWABLE_STATUS_SET);
+  const requestStatus = safeReviewStatus(value.requestStatus);
   const title = safeReviewText(value.title);
   const requestNumber = safeReviewText(value.requestNumber);
   const dueDate = safeReviewDate(value.dueDate);
-  return { bucket, filters: {
-    ...(requestStatus ? { requestStatus: { $eq: requestStatus } } : {}),
-    ...(title ? { title: { $containsi: title } } : {}),
-    ...(requestNumber ? { requestNumber: { $containsi: requestNumber } } : {}),
-    ...(dueDate ? { dueDate: { $eq: dueDate } } : {}),
-  } };
+  return { bucket, requestStatus, title, requestNumber, dueDate };
 }
 
-function safeReviewSort(value: unknown): string[] {
-  if (value === undefined) return ["submittedDate:asc", "requestNumber:asc"];
+function safeReviewSort(value: unknown): ReviewQueueSort[] {
+  if (value === undefined) return [{ field: "submittedDate", direction: "asc" }, { field: "requestNumber", direction: "asc" }];
   const entries = Array.isArray(value) ? value : [value];
   if (entries.length < 1 || entries.length > 2) throw new AssessmentRequestQueryError();
-  const allowed = new Set(["dueDate", "submittedDate", "requestNumber", "title", "requestStatus", "updatedAt"]);
   return entries.map((entry) => {
     if (typeof entry !== "string") throw new AssessmentRequestQueryError();
     const [field, direction = "asc", extra] = entry.split(":");
-    if (!field || extra !== undefined || !allowed.has(field) || (direction !== "asc" && direction !== "desc")) {
+    if (!field || extra !== undefined || !REVIEW_QUEUE_SORT_FIELD_SET.has(field) || (direction !== "asc" && direction !== "desc")) {
       throw new AssessmentRequestQueryError();
     }
-    return `${field}:${direction}`;
+    return { field: field as ReviewQueueSortField, direction };
   });
 }
 
-export function buildAnalystReviewCollectionQuery(
-  query: unknown,
-  state: unknown,
-): { dataQuery: StrapiQuery; countQuery: StrapiQuery; pagination: AssessmentRequestPagination; bucket: ReviewQueueBucket } {
+/**
+ * A validated read of the selected queue. `statuses` is the queue's own status
+ * set intersected with the requested status, so it is never empty and never
+ * holds a status the queue does not read.
+ */
+export type AnalystReviewRead = {
+  kind: "read";
+  pagination: AssessmentRequestPagination;
+  bucket: ReviewQueueBucket;
+  statuses: readonly RequestStatus[];
+  title?: string;
+  requestNumber?: string;
+  dueDate?: string;
+  sort: readonly ReviewQueueSort[];
+};
+
+/** A request status the selected queue does not read: nothing can match, so there is nothing to query. */
+export type AnalystReviewOutsideQueue = {
+  kind: "outside-queue";
+  pagination: AssessmentRequestPagination;
+  bucket: ReviewQueueBucket;
+};
+
+export type AnalystReviewQuery = AnalystReviewRead | AnalystReviewOutsideQueue;
+
+export function parseAnalystReviewQuery(query: unknown, state: unknown): AnalystReviewQuery {
   if (!isRecord(query)) throw new AssessmentRequestQueryError();
   analystAuthorization(state);
   assertOnlyKeys(query, ["pagination", "filters", "sort"]);
@@ -219,27 +282,33 @@ export function buildAnalystReviewCollectionQuery(
   if (paginationInput) assertOnlyKeys(paginationInput, ["page", "pageSize"]);
   const page = positiveInteger(paginationInput?.page, 1, 1_000_000);
   const pageSize = positiveInteger(paginationInput?.pageSize, 25, 100);
-  const { filters: requestedFilters, bucket } = safeReviewFilters(query.filters);
-  const statuses = bucket === "released" ? RELEASED_STATUSES : REVIEWABLE_STATUSES;
-  const filters: StrapiQuery = {
-    $and: [
-      { requestStatus: { $in: [...statuses] } },
-      requestedFilters,
-    ],
-  };
+  const { bucket, requestStatus, title, requestNumber, dueDate } = safeReviewFilters(query.filters);
+  const sort = safeReviewSort(query.sort);
+  const pagination = { page, pageSize };
+  const queue = reviewQueueStatuses(bucket);
+  // Every part of the query has been validated first, so a malformed request is
+  // still refused even when its status alone would select nothing.
+  if (requestStatus !== undefined && !queue.includes(requestStatus)) {
+    return { kind: "outside-queue", pagination, bucket };
+  }
   return {
-    countQuery: { filters },
-    dataQuery: {
-      filters,
-      sort: safeReviewSort(query.sort),
-      start: (page - 1) * pageSize,
-      limit: pageSize,
-    },
-    pagination: { page, pageSize },
+    kind: "read",
+    pagination,
     bucket,
+    statuses: requestStatus !== undefined ? [requestStatus] : [...queue],
+    ...(title !== undefined ? { title } : {}),
+    ...(requestNumber !== undefined ? { requestNumber } : {}),
+    ...(dueDate !== undefined ? { dueDate } : {}),
+    sort,
   };
 }
 
+/*
+ * The semantic bucket rule, over a fully populated request document. It is the
+ * oracle the D-30 equivalence test checks the database bucket predicates
+ * against, one fixture per lifecycle step, so the rule and the SQL cannot
+ * drift apart unnoticed.
+ */
 export function selectReviewQueueBucket(
   bucket: ReviewQueueBucket,
   request: StrapiQuery,

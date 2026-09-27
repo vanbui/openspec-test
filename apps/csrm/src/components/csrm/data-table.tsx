@@ -11,7 +11,13 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, Rows3, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  horizontalOverflowAttributes,
+  horizontalScrollRegionFocusClassName,
+  horizontalScrollRegionProps,
+  useHorizontalOverflow,
+} from '@/components/csrm/horizontal-scroll-region';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -39,7 +45,15 @@ export type DataTableColumn<TData extends object> = {
   cell?: (value: unknown, row: TData) => ReactNode;
   enableSorting?: boolean;
   numeric?: DataTableNumericKind;
+  /**
+   * A long-text column (direction §4 DataTable, X-3): its cells wrap within 14rem to 28rem instead
+   * of forcing the table wide; the cell content clamps itself to two lines. The header is unchanged.
+   */
+  wrap?: boolean;
 };
+
+/** X-3 bounds as mapped utilities: `min-w-56` is 14rem and `max-w-md` is 28rem. */
+const wrapColumnClassName = 'whitespace-normal min-w-56 max-w-md';
 
 export type DataTableFilter = {
   id: string;
@@ -64,7 +78,6 @@ export type DataTableProps<TData extends object> = {
   pageSizeOptions?: readonly number[];
   renderMobileCard: (row: TData) => ReactNode;
   sorting?: SortingState;
-  stickyFirstColumn?: boolean;
   state: DataTableState;
   loadingLabel: string;
   stateSlots: {
@@ -93,7 +106,8 @@ function columnClasses(numeric: DataTableNumericKind | undefined) {
 function SortIndicator({ direction }: { direction: false | 'asc' | 'desc' }) {
   if (direction === 'asc') return <ChevronUp aria-hidden="true" />;
   if (direction === 'desc') return <ChevronDown aria-hidden="true" />;
-  return <ChevronsUpDown aria-hidden="true" className="text-muted-foreground" />;
+  // The unsorted cue is interaction-only, so it does not print; a direction cue states the printed order (X-4).
+  return <ChevronsUpDown aria-hidden="true" className="text-muted-foreground" data-print="hidden" />;
 }
 
 function TableLoading<TData extends object>({ columns, density, label, pageSize }: {
@@ -160,13 +174,17 @@ export function DataTable<TData extends object>({
   pageSizeOptions = [10, 25, 50, 100],
   renderMobileCard,
   sorting = [],
-  stickyFirstColumn = false,
   state,
   loadingLabel,
   stateSlots,
   totalCount,
 }: DataTableProps<TData>) {
   const [density, setDensity] = useState<DataTableDensity>('default');
+  // The desktop scroller mounts only in the populated state; the observer on its table follows
+  // every change of rows, columns or density from there.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const overflow = useHorizontalOverflow(scrollerRef, [state]);
+  const sticky = overflow.overflowing;
 
   useEffect(() => {
     setDensity(readDensity(densityUserId));
@@ -250,6 +268,7 @@ export function DataTable<TData extends object>({
                   variant="ghost"
                   size="icon-xs"
                   aria-label={`Remove ${filter.label} filter`}
+                  data-print="hidden"
                   onClick={() => onClearFilter(filter.id)}
                 >
                   <X aria-hidden="true" />
@@ -258,14 +277,15 @@ export function DataTable<TData extends object>({
             </span>
           ))}
           {filters.length > 0 && onClearFilters ? (
-            <Button type="button" variant="link" size="sm" onClick={onClearFilters}>
+            <Button type="button" variant="link" size="sm" data-print="hidden" onClick={onClearFilters}>
               Clear filters
             </Button>
           ) : null}
         </div>
+        {/* The chip labels and the counts print; the controls around them do not (X-4). */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           {state === 'loading' ? null : <output className="tabular-nums">{new Intl.NumberFormat('en-AU').format(totalCount)} {totalCount === 1 ? 'result' : 'results'}</output>}
-          <Button type="button" variant="outline" size="sm" onClick={toggleDensity}>
+          <Button type="button" variant="outline" size="sm" data-print="hidden" onClick={toggleDensity}>
             <Rows3 aria-hidden="true" />
             {density === 'default' ? 'Use compact density' : 'Use default density'}
           </Button>
@@ -287,23 +307,29 @@ export function DataTable<TData extends object>({
           </div>
 
           <div
+            ref={scrollerRef}
             data-slot="data-table-desktop"
-            role={stickyFirstColumn ? 'region' : undefined}
-            aria-label={stickyFirstColumn ? `${ariaLabel}, scrolls horizontally` : undefined}
-            tabIndex={stickyFirstColumn ? 0 : undefined}
+            {...horizontalScrollRegionProps(ariaLabel, overflow.overflowing)}
+            {...horizontalOverflowAttributes(overflow)}
             className={cn(
               // The table primitive wraps every table in its own overflow container. Inside
-              // DataTable that inner box must not scroll: this labelled region is the
-              // scroller, so it is the one keyboard users focus and the one sticky cells
-              // anchor to.
-              'hidden scroll-pt-10 overflow-auto rounded-lg border border-border bg-surface md:block [&>[data-slot=table-container]]:overflow-visible',
-              stickyFirstColumn && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              // DataTable that inner box must not scroll: this scroller is the region while the
+              // table overflows, so it is the one keyboard users focus and the one sticky cells
+              // anchor to. It is a one-cell grid so the end-edge scroll cue can share the table's
+              // cell (globals.css).
+              'hidden scroll-pt-10 overflow-auto rounded-lg border border-border bg-surface md:grid [&>[data-slot=table-container]]:overflow-visible',
+              overflow.overflowing && horizontalScrollRegionFocusClassName,
             )}
           >
-            <Table aria-label={ariaLabel} className="text-[length:var(--text-table-size)]">
+            {/*
+              * Separated borders: each cell draws its own rules, as the report cross-tab's do. The pinned
+              * identifier column's end hairline then moves with the column while the table scrolls; a
+              * collapsed border belongs to the table's grid line and slid under the pinned column (W-2).
+              */}
+            <Table aria-label={ariaLabel} className="border-separate border-spacing-0 text-[length:var(--text-table-size)]">
               <TableHeader
                 aria-label="Table header"
-                className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur-sm"
+                className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm"
               >
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -315,10 +341,11 @@ export function DataTable<TData extends object>({
                           key={header.id}
                           aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
                           className={cn(
-                            'h-10 scroll-mt-10 px-4',
+                            'h-10 scroll-mt-10 border-b border-border px-4',
                             tableHeaderMicroClassName,
                             columnClasses(sourceColumn?.numeric),
-                            stickyFirstColumn && index === 0 && 'sticky left-0 z-20 border-r border-border bg-surface',
+                            // The identifier column and its hairline exist only while the table scrolls.
+                            sticky && index === 0 && 'sticky left-0 z-20 border-r border-border bg-surface',
                           )}
                         >
                           {header.isPlaceholder ? null : header.column.getCanSort() ? (
@@ -358,9 +385,10 @@ export function DataTable<TData extends object>({
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          'px-4 py-0 text-[length:var(--text-table-size)]',
+                          'border-b border-border px-4 py-0 text-[length:var(--text-table-size)] group-last:border-b-0',
                           columnClasses(columns[index]?.numeric),
-                          stickyFirstColumn
+                          columns[index]?.wrap && wrapColumnClassName,
+                          sticky
                             && index === 0
                             && // The hover tint is an alpha colour, so it is layered over the opaque
                             // surface rather than replacing it; otherwise scrolled cells show through.
@@ -380,7 +408,7 @@ export function DataTable<TData extends object>({
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
         {onPageSizeChange ? (
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2" data-print="hidden">
             Rows per page
             <select
               aria-label="Rows per page"
@@ -401,6 +429,7 @@ export function DataTable<TData extends object>({
             variant="outline"
             size="icon-xs"
             aria-label="Previous page"
+            data-print="hidden"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
           >
@@ -411,6 +440,7 @@ export function DataTable<TData extends object>({
             variant="outline"
             size="icon-xs"
             aria-label="Next page"
+            data-print="hidden"
             disabled={page >= pageCount}
             onClick={() => onPageChange(page + 1)}
           >

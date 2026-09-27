@@ -1,19 +1,37 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 
 import { DetailSection } from '@/components/csrm/detail-section';
 import { PageHeader } from '@/components/csrm/page-header';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { ErrorState, PermissionDeniedState } from '@/components/states/states';
-import { RequestWorkflowActions } from '@/features/requests/request-form';
+import { RequestWorkflowActions } from '@/features/requests/request-workflow-actions';
 import { formatRequestDate } from '@/features/requests/request-domain';
 import { getRequest } from '@/features/requests/request-service';
 import { RequestLifecycleStepper } from '@/features/requests/request-lifecycle-stepper';
 import { RequestHub } from '@/features/requests/request-hub';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
+import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
 type RequestDetailPageProps = { params: Promise<{ documentId: string }> };
+
+// One read per request, shared by the document title and the page.
+const readRequest = cache(getRequest);
+
+export async function generateMetadata({ params }: RequestDetailPageProps): Promise<Metadata> {
+  return recordRouteMetadata(readRequest((await params).documentId), 'Assessment Request | IdamBox CSRM');
+}
+
+/*
+ * A request that cannot be shown keeps the page's one level-one heading. It names the page, never the
+ * record: Strapi refuses another Requestor's request, and its title is theirs.
+ */
+function UnavailableRequestHeader() {
+  return <PageHeader description="Track the lifecycle and linked records of an assessment request." title="Assessment request" />;
+}
 
 function DetailItem({ label, value }: { label: string; value: string | null | undefined }) {
   return <div className="grid gap-1"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="text-sm text-foreground">{value || 'Not provided'}</dd></div>;
@@ -21,9 +39,9 @@ function DetailItem({ label, value }: { label: string; value: string | null | un
 
 export default async function RequestDetailPage({ params }: RequestDetailPageProps) {
   const { documentId } = await params;
-  const result = await getRequest(documentId);
+  const result = await readRequest(documentId);
   if (result.error?.status === 404) notFound();
-  if (result.error) return result.error.status === 403 ? <PermissionDeniedState /> : <ErrorState />;
+  if (result.error) return <><UnavailableRequestHeader />{result.error.status === 403 ? <PermissionDeniedState /> : <ErrorState />}</>;
   if (!result.data) notFound();
   const request = result.data;
   const sessionAdapter = getSessionAdapter();
@@ -37,7 +55,7 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
 
   return (
     <>
-      <PageHeader description={request.requestNumber} title={request.title} action={<StatusBadge status={request.requestStatus} />} />
+      <PageHeader description={request.requestNumber} status={<StatusBadge status={request.requestStatus} />} title={request.title} />
       <div className="grid gap-6">
         <RequestLifecycleStepper lifecycle={request.lifecycle} />
         <RequestHub hrefs={{ questionnaire: questionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} />

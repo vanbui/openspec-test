@@ -147,11 +147,13 @@ const questionnaireQuestionTransportSchema = z.object({
   if (question.answer !== null && question.answer !== undefined) {
     const parsedAnswer = answerEnvelopeSchema(question.answerType).safeParse(question.answer);
     if (!parsedAnswer.success) {
-      context.addIssue({
-        code: 'custom',
-        path: ['answer'],
-        message: 'Answer envelope does not match the persisted answer type.',
-      });
+      // Each rejection keeps its own path inside the envelope, and a refused key
+      // its name, so the contract parity guard can tell a narrowing of one
+      // envelope field from drift in another (G2). The answer is refused in
+      // exactly the same cases as before.
+      for (const issue of parsedAnswer.error.issues) {
+        context.addIssue({ ...issue, path: ['answer', ...issue.path] });
+      }
     } else if (choices && parsedAnswer.data.value !== null) {
       const allowedValues = new Set(choices.map(({ value }) => value));
       const values = Array.isArray(parsedAnswer.data.value)

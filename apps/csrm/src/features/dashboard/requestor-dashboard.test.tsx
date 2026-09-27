@@ -2,10 +2,11 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReleasedAssessmentSummary } from '../assessments/assessment-schema';
-import { requestStatusPresentation, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
+import { requestStatusPresentation, requestStatuses, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
 import type { QuestionnaireSummary } from '../questionnaires/questionnaire-service';
 
 const listDashboardRequests = vi.hoisted(() => vi.fn());
+const getMyRequestStatusSummary = vi.hoisted(() => vi.fn());
 const listMyQuestionnaires = vi.hoisted(() => vi.fn());
 const getMyQuestionnaireSummary = vi.hoisted(() => vi.fn());
 const listMyReleasedAssessments = vi.hoisted(() => vi.fn());
@@ -16,7 +17,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/app' }));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
 }));
-vi.mock('../requests/request-service', () => ({ listDashboardRequests }));
+vi.mock('../requests/request-service', () => ({ getMyRequestStatusSummary, listDashboardRequests }));
 vi.mock('../assessments/assessment-service', () => ({
   getMyAssessmentRatingSummary,
   listMyReleasedAssessments,
@@ -94,6 +95,10 @@ function setDashboardRequestDefault() {
     data: { requests: [], pagination: { page: 1, pageSize: 10, pageCount: 0, total: 0 } },
     error: null,
   });
+  getMyRequestStatusSummary.mockResolvedValue({
+    data: requestStatuses.map((status) => ({ status, count: 0 })),
+    error: null,
+  });
 }
 
 beforeEach(() => setDashboardRequestDefault());
@@ -101,6 +106,7 @@ beforeEach(() => setDashboardRequestDefault());
 afterEach(() => {
   cleanup();
   listDashboardRequests.mockReset();
+  getMyRequestStatusSummary.mockReset();
   listMyQuestionnaires.mockReset();
   getMyQuestionnaireSummary.mockReset();
   listMyReleasedAssessments.mockReset();
@@ -202,7 +208,18 @@ describe('Requestor dashboard contract', () => {
     });
     listMyReleasedAssessments.mockResolvedValueOnce({ data: [releasedAssessment], error: null });
     getMyAssessmentRatingSummary.mockResolvedValueOnce({ data: ratingSummary, error: null });
-    await expect(getRequestorDashboard()).resolves.toEqual({
+    const lifecycleSummary = [
+      { status: 'draft', count: 81 },
+      { status: 'submitted', count: 3 },
+      { status: 'questionnaire-in-progress', count: 5 },
+      { status: 'risk-assessment-drafted', count: 0 },
+      { status: 'under-review', count: 2 },
+      { status: 'approved', count: 7 },
+      { status: 'closed', count: 1 },
+    ] as const;
+    getMyRequestStatusSummary.mockResolvedValueOnce({ data: lifecycleSummary, error: null });
+    const ready = await getRequestorDashboard();
+    expect(ready).toEqual({
       kind: 'ready',
       dashboard: deriveRequestorDashboard(
         [authorisedRequests[0]],
@@ -210,17 +227,31 @@ describe('Requestor dashboard contract', () => {
         { drafts: 81, questionnaires: 63 },
         [releasedAssessment],
         ratingSummary,
-      [],
+        lifecycleSummary,
       ),
     });
-    expect(listDashboardRequests).toHaveBeenNthCalledWith(1, {
+    // The lifecycle counts are the summary's own figures, labelled, in lifecycle order.
+    expect(ready.dashboard.requestLifecycleCounts).toEqual([
+      { status: 'draft', label: 'Draft', count: 81 },
+      { status: 'submitted', label: 'Submitted', count: 3 },
+      { status: 'questionnaire-in-progress', label: 'Questionnaire in progress', count: 5 },
+      { status: 'risk-assessment-drafted', label: 'Risk assessment drafted', count: 0 },
+      { status: 'under-review', label: 'Under review', count: 2 },
+      { status: 'approved', label: 'Approved', count: 7 },
+      { status: 'closed', label: 'Closed', count: 1 },
+    ]);
+    // D-22: one list read for the draft widget and one summary read for the
+    // lifecycle counts, where there used to be seven more list reads.
+    expect(listDashboardRequests).toHaveBeenCalledTimes(1);
+    expect(listDashboardRequests).toHaveBeenCalledWith({
       q: '',
       status: 'draft',
       sort: 'updatedAt:desc',
       page: 1,
       pageSize: 50,
     });
-    expect(listDashboardRequests).toHaveBeenCalledTimes(8);
+    expect(getMyRequestStatusSummary).toHaveBeenCalledTimes(1);
+    expect(getMyRequestStatusSummary).toHaveBeenCalledWith();
     expect(listMyQuestionnaires).toHaveBeenCalledTimes(1);
     expect(getMyQuestionnaireSummary).toHaveBeenCalledTimes(1);
     expect(listMyReleasedAssessments).toHaveBeenCalledTimes(1);
@@ -265,6 +296,15 @@ describe('Requestor dashboard contract', () => {
     const draftBadges = screen.getAllByText('Draft', { exact: true }).filter((label) => !lifecycleRegion.contains(label));
     expect(draftBadges).toHaveLength(2);
     expect(draftBadges.every((label) => label.querySelector('svg'))).toBe(true);
+    // The Draft requests card and the Questionnaires in progress card say Draft alike: work with the Requestor, info.
+    expect(draftBadges.map((label) => label.getAttribute('data-tone'))).toEqual(['info', 'info']);
+    // A dashboard item carries no release field and is released by construction: it shows its served
+    // state through the shared questionnaire badge and never reads as analyst review.
+    const questionnaireWidget = screen.getByRole('region', { name: 'Questionnaires in progress' });
+    const questionnaireBadge = within(questionnaireWidget).getByText('Draft', { exact: true });
+    expect(questionnaireBadge).toHaveAttribute('data-slot', 'badge');
+    expect(questionnaireBadge).toHaveAttribute('data-tone', 'info');
+    expect(within(questionnaireWidget).queryByText('Analyst review')).not.toBeInTheDocument();
     expect(screen.getByText('3 of 5 answered')).toBeInTheDocument();
     expect(screen.getByText('2 unanswered')).toBeInTheDocument();
     expect(screen.getByText(/Payments questionnaire request/)).toBeInTheDocument();
@@ -348,14 +388,48 @@ describe('Requestor dashboard contract', () => {
     getMyAssessmentRatingSummary.mockResolvedValueOnce(emptyRatingResult);
     await expect(getRequestorDashboard()).resolves.toEqual({ kind: 'error' });
 
-    listDashboardRequests.mockResolvedValueOnce(emptyRequestResult)
-      .mockResolvedValueOnce(emptyRequestResult)
-      .mockResolvedValueOnce({ data: null, error: { message: 'Forbidden lifecycle count', status: 403 } });
+    // A 403 on the status summary is still the dashboard permission state.
+    listDashboardRequests.mockResolvedValueOnce(emptyRequestResult);
+    getMyRequestStatusSummary.mockResolvedValueOnce({ data: null, error: { message: 'Forbidden lifecycle count', status: 403 } });
     listMyQuestionnaires.mockResolvedValueOnce(emptyQuestionnaireResult);
     getMyQuestionnaireSummary.mockResolvedValueOnce(emptySummaryResult);
     listMyReleasedAssessments.mockResolvedValueOnce(emptyReleasedResult);
     getMyAssessmentRatingSummary.mockResolvedValueOnce(emptyRatingResult);
     await expect(getRequestorDashboard()).resolves.toEqual({ kind: 'permission-denied' });
+
+    /*
+     * Any other summary failure leaves the lifecycle counts unavailable, which is
+     * a different fact from zero counts, and every other widget still renders.
+     */
+    for (const failure of [
+      { data: null, error: { message: 'Unavailable lifecycle count', status: 503 } },
+      { data: null, error: { message: 'Malformed lifecycle count', status: 502 } },
+    ]) {
+      listDashboardRequests.mockResolvedValueOnce(emptyRequestResult);
+      getMyRequestStatusSummary.mockResolvedValueOnce(failure);
+      listMyQuestionnaires.mockResolvedValueOnce(emptyQuestionnaireResult);
+      getMyQuestionnaireSummary.mockResolvedValueOnce(emptySummaryResult);
+      listMyReleasedAssessments.mockResolvedValueOnce(emptyReleasedResult);
+      getMyAssessmentRatingSummary.mockResolvedValueOnce(emptyRatingResult);
+      await expect(getRequestorDashboard()).resolves.toEqual({
+        kind: 'ready',
+        dashboard: deriveRequestorDashboard([], [], { drafts: 0, questionnaires: 0 }, [], emptyRatingResult.data, null),
+      });
+    }
+    cleanup();
+    render(<RequestorDashboard state={{ kind: 'ready', dashboard: deriveRequestorDashboard([], [], undefined, [], undefined, null) }} />);
+    const unavailableRegion = screen.getByRole('region', { name: 'My Assessment Requests' });
+    expect(within(unavailableRegion).getByText(
+      'These counts are unavailable right now. Your requests are still listed in My Requests.',
+      { exact: true },
+    )).toBeInTheDocument();
+    expect(within(unavailableRegion).queryByRole('list')).not.toBeInTheDocument();
+    expect(within(unavailableRegion).queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Draft requests' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Questionnaires in progress' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recently released assessments' })).toBeInTheDocument();
+    expect(document.querySelectorAll('section[aria-labelledby]')).toHaveLength(4);
+    cleanup();
 
     listDashboardRequests.mockResolvedValueOnce(emptyRequestResult);
     listMyQuestionnaires.mockRejectedValueOnce(new Error('transport failed'));

@@ -117,15 +117,15 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end" data-print="hidden">
         <form className="flex flex-1 gap-2" role="search" onSubmit={submitSearch}>
-          <label className="flex-1 space-y-1 text-sm font-medium text-foreground">
+          <label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">
             Search requests
             <Input aria-label="Search requests" defaultValue={query.q} disabled={resolvedState === 'loading'} key={query.q} name="q" type="search" />
           </label>
           <Button className="self-end" disabled={resolvedState === 'loading'} type="submit">Search</Button>
         </form>
-        <label className="space-y-1 text-sm font-medium text-foreground">
+        <label className="grid gap-1.5 text-sm font-medium text-foreground">
           Status
           <select
             aria-label="Filter by status"

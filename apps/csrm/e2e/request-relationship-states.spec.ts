@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './helpers/navigation';
 
 /*
  * The related-record states on a request detail, proved in the browser.
@@ -22,21 +23,6 @@ const releasedAssessmentNumber = 'ASM-2026-33SAEN';
 const relationshipSection = 'Request relationships';
 const tileLabel = 'Contextual Risks by residual rating';
 
-async function signIn(page: Page, role: 'Requestor' | 'Security Analyst'): Promise<void> {
-  const response = await page.goto('/sign-in?returnTo=/app');
-  if (!response?.ok()) {
-    throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
-  }
-
-  await page.getByRole('button', { name: `Continue as ${role}` }).click();
-  await expect(page, 'RELATIONSHIP_STATES_SHELL_URL').toHaveURL(/\/app$/);
-  await expect(page.getByRole('main'), 'RELATIONSHIP_STATES_SHELL_MAIN').toBeVisible();
-  await expect(
-    page.getByRole('banner').getByText(role, { exact: true }),
-    'RELATIONSHIP_STATES_SHELL_ROLE',
-  ).toBeVisible();
-}
-
 /** Opens a request from the list by its title, which is how a record opens. */
 async function openRequest(page: Page, listPath: string, title: string): Promise<void> {
   await page.goto(listPath);
@@ -56,7 +42,7 @@ for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
 
   test(`a Requestor never sees an assessment identifier they cannot open at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
-    await signIn(page, 'Requestor');
+    await signInAs(page, 'Requestor');
 
     /*
      * Asserted as an invariant over every request this actor owns rather than
@@ -104,7 +90,7 @@ for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
 
   test(`a request with no assessment shows no tally at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
-    await signIn(page, 'Requestor');
+    await signInAs(page, 'Requestor');
     await openRequest(page, '/app/requests', requestWithNoAssessment);
 
     await expect(page.getByRole('heading', { name: relationshipSection }), `RELATIONSHIP_${label}_ABSENT_SECTION`).toBeVisible();
@@ -114,7 +100,7 @@ for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
 
   test(`an absent questionnaire is named and a released assessment is counted at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
-    await signIn(page, 'Security Analyst');
+    await signInAs(page, 'Security Analyst');
     await openRequest(page, '/app/requests', releasedRequest);
 
     // Absence is stated, never left as blank space.
@@ -158,7 +144,7 @@ for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
      * open, so both the six summaries and the actor-scoped questionnaire wording
      * are exercised.
      */
-    await signIn(page, 'Requestor');
+    await signInAs(page, 'Requestor');
     await openRequest(page, '/app/requests', requestWithNoAssessment);
     const requestorUrl = page.url();
 
@@ -179,7 +165,7 @@ for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
      * would make this test depend on which bucket the fixture falls in, which
      * is a different property proved by its own test.
      */
-    await signIn(page, 'Security Analyst');
+    await signInAs(page, 'Security Analyst');
     await page.goto(requestorUrl.replace('/app/requests/', '/app/review/requests/'));
     await expect(page.getByRole('heading', { name: 'Request summary' }), `HUB_${label}_ANALYST_SUMMARY`).toBeVisible();
     const analystHeadings = (await page.locator('main h3').allTextContents()).map((value) => value.trim());

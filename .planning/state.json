@@ -1,12 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.0",
+  "milestone": "v2.0 — Assessment Lifecycle and Oversight",
   "phases": [],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step (discuss phase 06.10)",
-    "reason": "Phase 06.9 of 19 complete — Phase 06.10 needs discussion and a plan"
+    "command": "/gsd:discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "Project initialized — plan your first phase"
   },
-  "updated_at": "2026-09-23T12:24:09.790Z"
+  "updated_at": "2026-09-27T14:07:18.605Z"
 }

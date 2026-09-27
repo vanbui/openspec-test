@@ -130,11 +130,21 @@ export function requestorWritableData(data: unknown): WorkflowData {
   return writable;
 }
 
+/**
+ * The data of every new assessment request, whoever creates it (T-08-A1). Requestor is every
+ * identity's birthright, so the Security Analyst and the analyst service agent create as Requestors
+ * too: the request belongs to the trusted identity that creates it, and the published create body
+ * is the only writable surface. The number, the status, the submitted date and every other fact
+ * are the server's own. Without a trusted identity nothing is created.
+ */
 export function prepareRequestorCreate(
   data: unknown,
-  requestorDocumentId: string,
+  requestorDocumentId: unknown,
   requestNumber: string,
 ): WorkflowData {
+  if (typeof requestorDocumentId !== "string" || requestorDocumentId.length === 0) {
+    throw new AssessmentRequestWorkflowError("CSRM assessment request data is invalid.");
+  }
   return {
     ...requestorWritableData(data),
     requestor: requestorDocumentId,
@@ -162,4 +172,27 @@ export function prepareRequestorUpdate(
     return { ...writable, requestStatus: "submitted", submittedDate: submittedAt.toISOString() };
   }
   return writable;
+}
+
+/**
+ * The data an analyst actor (the Security Analyst or the analyst service agent) may write to a
+ * request (T-08-A2). It is the published update body, exactly as for a Requestor: the
+ * Requestor-writable fields and the submission intent. The owner, the request number, the sponsor,
+ * the submitted date, the reversal facts and the questionnaire and assessment links are never
+ * taken from a body, so no analyst write can move a request to another Requestor.
+ *
+ * The one difference from a Requestor is reach, which the policy grants: an analyst may amend the
+ * writable fields of any request, past draft included. A status change is still only the
+ * Requestor's transition, the submission of a draft dated by the server; any other status is
+ * refused.
+ */
+export function prepareAnalystUpdate(
+  persisted: PersistedRequest,
+  data: unknown,
+  submittedAt: Date = new Date(),
+): WorkflowData {
+  if (!isRecord(data)) throw new AssessmentRequestWorkflowError("CSRM assessment request data is invalid.");
+  return data.requestStatus === undefined
+    ? requestorWritableData(data)
+    : prepareRequestorUpdate(persisted, data, submittedAt);
 }

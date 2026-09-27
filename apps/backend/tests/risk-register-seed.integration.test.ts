@@ -14,6 +14,8 @@ import {
   getRiskRegisterDetail,
   listRiskRegister,
 } from "../src/api/csrm-risk/services/risk-register";
+import { TREATMENT_DUE_STATES } from "../src/csrm/insights/treatment-due-state";
+import { utcToday } from "../src/csrm/insights/utc-date";
 
 type Document = { documentId: string; [key: string]: unknown };
 type DocumentService = {
@@ -228,9 +230,14 @@ test("Risk Register workflow seed creates one stable Bob-owned mutable aggregate
     repository,
     state,
     query: { q: "mutable", sort: "riskNumber:asc", page: "1", pageSize: "25" },
+    today: utcToday(new Date()),
   });
   assert.equal(register.meta.pagination.total, 1);
   assert.equal(register.data[0]?.riskNumber, RISK_REGISTER_FIXTURE_KEYS.riskNumber);
+  assert.ok(
+    (TREATMENT_DUE_STATES as readonly string[]).includes(String(register.data[0]?.treatmentDueState)),
+    "SEEDED_RISK_WITHOUT_DUE_STATE",
+  );
   const detail = await getRiskRegisterDetail({ repository, state, riskDocumentId: risk.documentId });
   assert.equal(detail.riskNumber, RISK_REGISTER_FIXTURE_KEYS.riskNumber);
   assert.equal(detail.parentLock, "mutable");

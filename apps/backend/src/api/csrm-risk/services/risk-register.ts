@@ -1,3 +1,5 @@
+import { deriveTreatmentDueState, type TreatmentDueState } from "../../../csrm/insights/treatment-due-state";
+import { isUtcDate } from "../../../csrm/insights/utc-date";
 import { isReleased } from "../../csrm-assessment/services/assessment-workflow";
 import {
   parseRiskRegisterQuery,
@@ -40,6 +42,8 @@ export type RiskRegisterItem = {
   treatmentStatus: string | null;
   treatmentOwner: { documentId: string; displayName: string } | null;
   targetDate: string | null;
+  /** Derived on read by the single D-04 rule (D-26); the stored "Overdue" status is never read. */
+  treatmentDueState: TreatmentDueState;
   assessment: { documentId: string; assessmentNumber: string; title: string };
 };
 
@@ -115,9 +119,23 @@ function parentLock(value: unknown): "mutable" | "released" {
   return detailUnavailable();
 }
 
-/** Keep list disclosure identical to the fail-closed detail parent gate. */
-function applyDisclosableParent(query: QueryBuilder): QueryBuilder {
-  return query.whereExists((parent) => {
+/**
+ * The one method applyDisclosableParent calls on the outer query. Both this
+ * module's QueryBuilder and knex's own builder satisfy it, so the alert and
+ * report repositories reuse the rule rather than copy it.
+ */
+export type DisclosableParentQuery = {
+  whereExists(callback: (parent: QueryBuilder) => void): unknown;
+};
+
+/**
+ * Keep list disclosure identical to the fail-closed detail parent gate. A Risk
+ * is disclosable when its parent assessment is mutable (draft or in review,
+ * with no approval facts) or completely released (approved, an approval date
+ * and an approver). The outer query must alias csrm_risks as `r`.
+ */
+export function applyDisclosableParent<T extends DisclosableParentQuery>(query: T): T {
+  query.whereExists((parent) => {
     parent.from("csrm_risks_assessment_lnk as risk_assessment")
       .leftJoin("csrm_assessments as assessment_parent", "risk_assessment.csrm_assessment_id", "assessment_parent.id")
       .whereRaw("risk_assessment.csrm_risk_id = r.id")
@@ -142,6 +160,7 @@ function applyDisclosableParent(query: QueryBuilder): QueryBuilder {
       })
       .select("risk_assessment.id");
   });
+  return query;
 }
 
 function projectControlImplementation(document: RecordValue): RecordValue {
@@ -231,19 +250,34 @@ function projectAssessment(value: unknown): RiskRegisterItem["assessment"] {
   return { documentId: value.documentId, assessmentNumber: value.assessmentNumber, title: request.title };
 }
 
-export function projectRiskRegisterItem(document: RecordValue): RiskRegisterItem {
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+/**
+ * One register row. `today` is the caller's UTC calendar date: the treatment
+ * due state is evaluated on it and never on a clock read here (D-02). The
+ * closure date is read to derive that state but is not disclosed on the row.
+ */
+export function projectRiskRegisterItem(document: RecordValue, today: string): RiskRegisterItem {
   if (typeof document.documentId !== "string" || typeof document.riskNumber !== "string") {
     throw new RiskRegisterError(400, "CSRM Risk Register data is invalid.");
   }
+  const treatmentStatus = stringOrNull(document.treatmentStatus);
+  const targetDate = stringOrNull(document.targetDate);
   return {
     documentId: document.documentId,
     riskNumber: document.riskNumber,
-    riskStatement: typeof document.riskStatement === "string" ? document.riskStatement : null,
-    inherentRating: typeof document.inherentRating === "string" ? document.inherentRating : null,
-    residualRating: typeof document.residualRating === "string" ? document.residualRating : null,
-    treatmentStatus: typeof document.treatmentStatus === "string" ? document.treatmentStatus : null,
+    riskStatement: stringOrNull(document.riskStatement),
+    inherentRating: stringOrNull(document.inherentRating),
+    residualRating: stringOrNull(document.residualRating),
+    treatmentStatus,
     treatmentOwner: projectUser(document.treatmentOwner),
-    targetDate: typeof document.targetDate === "string" ? document.targetDate : null,
+    targetDate,
+    treatmentDueState: deriveTreatmentDueState(
+      { targetDate, treatmentStatus, closureDate: stringOrNull(document.closureDate) },
+      today,
+    ),
     assessment: projectAssessment(document.assessment),
   };
 }
@@ -252,6 +286,8 @@ export async function listRiskRegister(input: {
   repository: RiskRegisterRepository;
   state: unknown;
   query: unknown;
+  /** The UTC calendar date (YYYY-MM-DD) every row's treatment due state is evaluated on. */
+  today: string;
 }): Promise<{
   data: RiskRegisterItem[];
   meta: {
@@ -260,6 +296,8 @@ export async function listRiskRegister(input: {
   };
 }> {
   assertRiskRegisterScope(input.state);
+  const { today } = input;
+  if (!isUtcDate(today)) throw new RiskRegisterError(400, "CSRM Risk Register date is invalid.");
   const parsed = parseRiskRegisterQuery(input.query);
   const [total, ids, selectedLabels] = await Promise.all([
     input.repository.count(parsed.filters),
@@ -276,7 +314,7 @@ export async function listRiskRegister(input: {
   const ordered = ids.map((id) => byId.get(id)).filter((document): document is RecordValue => document !== undefined);
   if (ordered.length !== ids.length) throw new RiskRegisterError(400, "CSRM Risk Register data is invalid.");
   return {
-    data: ordered.map(projectRiskRegisterItem),
+    data: ordered.map((document) => projectRiskRegisterItem(document, today)),
     meta: {
       pagination: { page: parsed.page, pageSize: parsed.pageSize, pageCount: Math.ceil(total / parsed.pageSize), total },
       selectedLabels,
@@ -306,6 +344,10 @@ function applyFilters(query: QueryBuilder, filters: RiskRegisterFilters): QueryB
   if (filters.residualRating) query.where("r.residual_rating", filters.residualRating);
   if (filters.targetDateFrom) query.where("r.target_date", ">=", filters.targetDateFrom);
   if (filters.targetDateTo) query.where("r.target_date", "<=", filters.targetDateTo);
+  // D-36: a Risk is closed exactly when a closure date is recorded. Both fragments
+  // are constants chosen from the parsed closed enum; no request value reaches the SQL.
+  if (filters.state === "open") query.whereRaw("r.closure_date IS NULL");
+  else if (filters.state === "closed") query.whereRaw("r.closure_date IS NOT NULL");
   const relations = [
     [filters.riskOwner, "csrm_risks_risk_owner_lnk", "idambox_users", "idambox_user_id"],
     [filters.treatmentOwner, "csrm_risks_treatment_owner_lnk", "idambox_users", "idambox_user_id"],
@@ -348,7 +390,14 @@ function orderedQuery(connection: Connection, filters: RiskRegisterFilters, sort
       .orderBy("assessment.assessment_number", direction);
   } else if (sort.field === "inherentRating" || sort.field === "residualRating") {
     const column = sort.field === "inherentRating" ? "r.inherent_rating" : "r.residual_rating";
-    query.orderByRaw(`CASE ${column} WHEN 'Low' THEN 1 WHEN 'Moderate' THEN 2 WHEN 'High' THEN 3 WHEN 'Critical' THEN 4 ELSE 5 END ${direction}`);
+    /*
+     * The severity ladder, Low to Critical, in the sort's direction. A Risk with no rating, or one
+     * off the ladder, follows every rated Risk in both directions, as an undated Risk does in the
+     * target-date sort, so a descending sort leads with Critical. The column comes from the closed
+     * sort field and the direction from its parsed enum; both fragments are otherwise constant.
+     */
+    query.orderByRaw(`CASE WHEN ${column} IN ('Low', 'Moderate', 'High', 'Critical') THEN 0 ELSE 1 END ASC`)
+      .orderByRaw(`CASE ${column} WHEN 'Low' THEN 1 WHEN 'Moderate' THEN 2 WHEN 'High' THEN 3 WHEN 'Critical' THEN 4 ELSE 5 END ${direction}`);
   } else if (sort.field === "targetDate") {
     query.orderByRaw("CASE WHEN r.target_date IS NULL THEN 1 ELSE 0 END ASC")
       .orderBy("r.target_date", direction);

@@ -1,17 +1,19 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Instrument_Serif, Plus_Jakarta_Sans } from 'next/font/google';
 
 import { Toaster } from '@/components/ui/sonner';
-
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-jakarta', display: 'swap' });
-const instrument = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--font-instrument', display: 'swap' });
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-plex-mono', display: 'swap' });
+import { fontVariableClassName } from './fonts';
 
 export const metadata: Metadata = { title: 'IdamBox CSRM', description: 'IdamBox Cyber Risk Manager' };
+/*
+ * Every page renders per request. proxy.ts issues a fresh Content-Security-Policy nonce for each
+ * request and Next applies it while rendering, so a page prerendered at build time would ship its
+ * scripts without the nonce and the policy would block them (docs/security/web-headers.md).
+ */
+export const dynamic = 'force-dynamic';
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${instrument.variable} ${plexMono.variable}`}>
+    <html lang="en" className={fontVariableClassName}>
       <body>
         {children}
         <Toaster />

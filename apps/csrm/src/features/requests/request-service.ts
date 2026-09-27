@@ -13,6 +13,8 @@ import {
   type RequestListQuery,
 } from './request-domain';
 import {
+  myRequestStatusSummaryResponseSchema,
+  parseMyRequestStatusSummaryPayload,
   parseRequestDetailPayload,
   parseRequestDashboardListPayload,
   parseRequestInventoryPayload,
@@ -25,6 +27,7 @@ import {
   requestMutationPayloadSchema,
   type RequestDraftInput,
   type RequestMutationResult,
+  type RequestStatusCount,
   requestRevertSchema,
 } from './request-schema';
 import type { ContractResponseParser } from '../assessments/assessment-service';
@@ -97,6 +100,19 @@ export async function listDashboardRequests(query: RequestListQuery): Promise<Tr
 
     if (error || !data) return normalizeFailure(error, response.status);
     return { data: parseRequestDashboardListPayload(data), error: null };
+  } catch (error) {
+    return normalizeFailure(error);
+  }
+}
+
+/** The signed-in actor's own requests counted by status, from one owner-scoped server read. */
+export async function getMyRequestStatusSummary(): Promise<TransportResult<readonly RequestStatusCount[]>> {
+  try {
+    const client = await createStrapiClient();
+    const { data, error, response } = await client.GET('/v1/my_requests/status_summary');
+
+    if (error || !data) return normalizeFailure(error, response.status);
+    return { data: parseMyRequestStatusSummaryPayload(data), error: null };
   } catch (error) {
     return normalizeFailure(error);
   }
@@ -249,6 +265,7 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
   { label: 'request.searchInformationSystems', component: 'InformationSystemsAdministrationListResponse', parser: requestInventoryPayloadSchema },
   { label: 'request.searchInformationAssets', component: 'InformationAssetsAdministrationListResponse', parser: requestInventoryPayloadSchema },
   { label: 'request.revertRequestToDraft', component: 'AssessmentRequestRevertResponse', parser: requestRevertResponseSchema },
+  { label: 'request.getMyRequestStatusSummary', component: 'MyRequestStatusSummaryResponse', parser: myRequestStatusSummaryResponseSchema },
 ];
 
 export const responseParserModule = {

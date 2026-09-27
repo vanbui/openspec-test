@@ -981,6 +981,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/my_requests/status_summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the signed-in actor's own assessment request counts by status
+         * @description Counts only the assessment requests whose requestor is the signed-in actor, for every actor, a Security Analyst included. The operation takes no query parameters: any query key is rejected with 400.
+         */
+        get: operations["assessment-workflow/get-my-request-status-summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assessment_draft_jobs/{jobId}": {
         parameters: {
             query?: never;
@@ -1589,6 +1609,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Summarise the analyst's workload for the analyst dashboard
+         * @description Every figure is computed on read inside the Security Analyst's review and Risk Register scopes, with the predicate of the list it opens: each review queue count equals that queue's total, the Questionnaire and Risk Assessment counts equal their review lists filtered by status, each exposure count equals the Risk Register filtered by that residual rating and state=open, and each treatment count equals the total of the matching treatment alert list. Recent activity lists the most recent workflow events, newest first. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.
+         */
+        get: operations["analyst-insights/get-dashboard-summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the derived analyst alerts, most urgent first
+         * @description Alerts are conditions derived on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored. The list is ordered by urgency (overdue, due soon, attention), then dated before undated, then governing date ascending, source identifier, kind and source documentId. Human Security Analyst only.
+         */
+        get: operations["analyst-insights/get-alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/alerts/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count the derived analyst alerts by kind and by urgency
+         * @description Counts exactly the alerts GET /v1/alerts lists, over the same predicate, so each count equals the total of the list filtered to that kind or urgency. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.
+         */
+        get: operations["analyst-insights/get-alert-summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the analyst reports
+         * @description The closed set of read-only analyst reports in display order, each with its key, title and description, so the Reports index is data-driven. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.
+         */
+        get: operations["analyst-insights/get-reports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/{reportKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compute one analyst report from current records
+         * @description Each report is computed on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored and no report widens that scope. Risk and Control Implementation figures count open contextual Risks, those with no closure date. Only assessment-throughput takes a query parameter, period; a period on any other report, or any other query key, is rejected with 400. A key that names no report answers 404. Human Security Analyst only.
+         */
+        get: operations["analyst-insights/get-report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1750,8 +1870,11 @@ export interface components {
             documentId: string;
             requestNumber: string;
             title: string;
-            /** @enum {string} */
-            requestStatus: "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review";
+            /**
+             * @description Every status a review queue reads: the action queues return submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests, the released queue returns approved and closed requests, and no queue returns a draft.
+             * @enum {string}
+             */
+            requestStatus: "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
             /** Format: date-time */
             submittedDate: string | null;
         };
@@ -1848,6 +1971,349 @@ export interface components {
                 approved: number;
                 total: number;
             };
+        };
+        MyRequestStatusSummaryResponse: {
+            data: components["schemas"]["MyRequestStatusSummary"];
+        };
+        /** @description The signed-in actor's own assessment requests counted by requestStatus, one key per status. total is the sum of the seven status counts. */
+        MyRequestStatusSummary: {
+            draft: number;
+            submitted: number;
+            questionnaireInProgress: number;
+            riskAssessmentDrafted: number;
+            underReview: number;
+            approved: number;
+            closed: number;
+            total: number;
+        };
+        DashboardSummaryResponse: {
+            data: components["schemas"]["DashboardSummary"];
+        };
+        /** @description The analyst dashboard's figures on the server's UTC calendar date, today. dueSoonWindowDays is the due-soon window every treatment due state and treatment count uses. */
+        DashboardSummary: {
+            /** Format: date */
+            today: string;
+            dueSoonWindowDays: number;
+            reviewQueue: components["schemas"]["DashboardReviewQueue"];
+            riskExposure: components["schemas"]["RatingCounts"];
+            highCriticalRisks: components["schemas"]["DashboardHighCriticalRisks"];
+            treatmentsDue: components["schemas"]["DashboardTreatmentsDue"];
+            recentActivity: components["schemas"]["DashboardRecentActivity"];
+        };
+        /** @description Work waiting in each analyst review list, each count equal to that list's total. requiresAttention, awaitingRequestor and generationInProgress are the Assessment Request queues. questionnairesReadyForReview counts the questionnaires whose answers are submitted. assessmentsDraft and assessmentsInReview count Risk Assessments by status. */
+        DashboardReviewQueue: {
+            requiresAttention: number;
+            awaitingRequestor: number;
+            generationInProgress: number;
+            questionnairesReadyForReview: number;
+            assessmentsDraft: number;
+            assessmentsInReview: number;
+        };
+        /** @description Open contextual Risks rated High or Critical after treatment: Critical first, then target date ascending with undated Risks last, then Risk number. total counts every such Risk and truncated says rows is capped. */
+        DashboardHighCriticalRisks: {
+            rows: components["schemas"]["DashboardRiskRow"][];
+            total: number;
+            truncated: boolean;
+        };
+        /** @description One open High or Critical residual Risk. treatmentDueState is derived by the server on its UTC calendar date. */
+        DashboardRiskRow: {
+            documentId: string;
+            riskNumber: string;
+            riskStatement: string | null;
+            /** @enum {string} */
+            residualRating: "Critical" | "High";
+            /** Format: date */
+            targetDate: string | null;
+            treatmentDueState: components["schemas"]["TreatmentDueState"];
+        };
+        /** @description Open Risk treatments past their target date or due within the window, over the risk-treatment-overdue and risk-treatment-due-soon alert predicates: overdue and dueSoon each equal the total of that kind's alert list, and total equals the list of both kinds. */
+        DashboardTreatmentsDue: {
+            overdue: number;
+            dueSoon: number;
+            total: number;
+        };
+        /** @description The most recent workflow events in the analyst review scope, newest first. truncated says there are more events than rows shows. */
+        DashboardRecentActivity: {
+            rows: components["schemas"]["ActivityItem"][];
+            truncated: boolean;
+        };
+        /**
+         * @description The closed set of workflow events. A generated draft is advisory and names no one; a release names the Security Analyst who released it.
+         * @enum {string}
+         */
+        ActivityKind: "request-submitted" | "request-returned-to-draft" | "questionnaire-generated" | "questionnaire-released" | "questionnaire-returned-to-draft" | "assessment-draft-generated" | "assessment-released";
+        /** @description One workflow event. recordType names the kind of record the event is about and documentId identifies it. identifier is its request, questionnaire or assessment number, and is null for a questionnaire that has no number. title is the request title, the questionnaire title, or the owning request's title for an assessment. actorDisplayName is the display name of the identity the event names, and is null when the event names no one or none is recorded. occurredAt is the instant the event was recorded. */
+        ActivityItem: {
+            kind: components["schemas"]["ActivityKind"];
+            /** @enum {string} */
+            recordType: "assessment-request" | "questionnaire" | "assessment";
+            documentId: string;
+            identifier: string | null;
+            title: string | null;
+            actorDisplayName: string | null;
+            /** Format: date-time */
+            occurredAt: string;
+        };
+        /**
+         * @description The closed set of derived alert conditions.
+         * @enum {string}
+         */
+        AlertKind: "risk-treatment-overdue" | "risk-treatment-due-soon" | "request-overdue" | "request-due-soon" | "control-implementation-overdue" | "assessment-review-due" | "critical-residual-risk-untreated" | "ineffective-control";
+        /**
+         * @description How soon an alert needs action. It is never a Risk rating.
+         * @enum {string}
+         */
+        AlertUrgency: "overdue" | "due-soon" | "attention";
+        /** @enum {string} */
+        AlertSourceType: "risk" | "assessment-request" | "assessment" | "control-implementation";
+        /**
+         * @description The record an alert links to. A Control Implementation alert links to its parent Risk.
+         * @enum {string}
+         */
+        AlertLinkType: "risk" | "assessment-request" | "assessment";
+        /** @description The record whose facts raise the alert. identifier is the Risk number for Risk and Control Implementation sources, the request number for requests and the assessment number for assessments. released is true when that work's assessment is released and read-only. */
+        AlertSource: {
+            type: components["schemas"]["AlertSourceType"];
+            documentId: string;
+            identifier: string;
+            title: string | null;
+            released: boolean;
+        };
+        AlertLink: {
+            type: components["schemas"]["AlertLinkType"];
+            documentId: string;
+        };
+        /** @description One derived alert. id is the kind and the source documentId joined by a colon. dayOffset counts whole UTC days from the server's today to the governing date, negative once it has passed, and is null without a date. residualRating is the (parent) Risk's residual rating, null for requests and assessments. */
+        AlertItem: {
+            id: string;
+            kind: components["schemas"]["AlertKind"];
+            urgency: components["schemas"]["AlertUrgency"];
+            /** Format: date */
+            governingDate: string | null;
+            dayOffset: number | null;
+            source: components["schemas"]["AlertSource"];
+            link: components["schemas"]["AlertLink"];
+            residualRating: components["schemas"]["AssessmentRating"] | null;
+        };
+        AlertPagination: {
+            page: number;
+            /** @enum {integer} */
+            pageSize: 5 | 10 | 25 | 50;
+            pageCount: number;
+            total: number;
+        };
+        /** @description today is the UTC calendar date the alerts were derived on. dueSoonWindowDays is the window, in days from today inclusive, that counts as due soon. */
+        AlertListMeta: {
+            pagination: components["schemas"]["AlertPagination"];
+            /** Format: date */
+            today: string;
+            dueSoonWindowDays: number;
+        };
+        AlertListResponse: {
+            data: components["schemas"]["AlertItem"][];
+            meta: components["schemas"]["AlertListMeta"];
+        };
+        AlertCountsByKind: {
+            "risk-treatment-overdue": number;
+            "risk-treatment-due-soon": number;
+            "request-overdue": number;
+            "request-due-soon": number;
+            "control-implementation-overdue": number;
+            "assessment-review-due": number;
+            "critical-residual-risk-untreated": number;
+            "ineffective-control": number;
+        };
+        AlertCountsByUrgency: {
+            overdue: number;
+            "due-soon": number;
+            attention: number;
+        };
+        /** @description Every current alert counted by kind and by urgency over the same predicate as GET /v1/alerts. total is the number of alerts. */
+        AlertSummary: {
+            byKind: components["schemas"]["AlertCountsByKind"];
+            byUrgency: components["schemas"]["AlertCountsByUrgency"];
+            total: number;
+            /** Format: date */
+            today: string;
+            dueSoonWindowDays: number;
+        };
+        AlertSummaryResponse: {
+            data: components["schemas"]["AlertSummary"];
+        };
+        /**
+         * @description The closed set of analyst reports.
+         * @enum {string}
+         */
+        ReportKey: "risk-exposure" | "treatment-performance" | "assessment-throughput" | "control-effectiveness";
+        /** @description One analyst report as the Reports index lists it. */
+        ReportDefinition: {
+            key: components["schemas"]["ReportKey"];
+            title: string;
+            description: string;
+        };
+        ReportDefinitionListResponse: {
+            data: components["schemas"]["ReportDefinition"][];
+        };
+        /** @description Risks by rating on the closed ladder. notRated counts a Risk with no rating, or one outside the ladder. The parts add up to total. */
+        RatingCounts: {
+            Critical: number;
+            High: number;
+            Moderate: number;
+            Low: number;
+            notRated: number;
+            total: number;
+        };
+        /** @description Risks by the treatment status recorded on each Risk. notProvided counts a Risk with no recorded status. The parts add up to total. */
+        TreatmentStatusCounts: {
+            notStarted: number;
+            inProgress: number;
+            overdue: number;
+            complete: number;
+            notProvided: number;
+            total: number;
+        };
+        /** @description Control Implementations by implementation status. notProvided counts one with no recorded status. The parts add up to total. */
+        ControlStatusCounts: {
+            existing: number;
+            planned: number;
+            implemented: number;
+            retired: number;
+            notProvided: number;
+            total: number;
+        };
+        /** @description Control Implementations by effectiveness rating. notProvided counts one with no recorded rating. The parts add up to total. */
+        EffectivenessCounts: {
+            effective: number;
+            partiallyEffective: number;
+            ineffective: number;
+            notAssessed: number;
+            notProvided: number;
+            total: number;
+        };
+        /** @description Assessment Requests in the Security Analyst's review scope by status. A draft is outside that scope and is never counted. The parts add up to total. */
+        RequestStatusCounts: {
+            submitted: number;
+            questionnaireInProgress: number;
+            riskAssessmentDrafted: number;
+            underReview: number;
+            approved: number;
+            closed: number;
+            total: number;
+        };
+        /** @description Open contextual Risks by residual rating, each split by recorded treatment status. notRated holds the Risks with no rating on the ladder. */
+        ResidualByTreatmentStatus: {
+            Critical: components["schemas"]["TreatmentStatusCounts"];
+            High: components["schemas"]["TreatmentStatusCounts"];
+            Moderate: components["schemas"]["TreatmentStatusCounts"];
+            Low: components["schemas"]["TreatmentStatusCounts"];
+            notRated: components["schemas"]["TreatmentStatusCounts"];
+        };
+        /** @description One Information System with the open High and Critical residual Risks that impact it. */
+        ExposedSystem: {
+            documentId: string;
+            name: string;
+            critical: number;
+            high: number;
+            total: number;
+        };
+        /** @description The Information Systems carrying the most open High and Critical residual Risks: most Critical first, then most in total, then by name. total counts every such system and truncated says rows is capped. risksWithoutSystem counts the open High and Critical residual Risks that impact no Information System. */
+        ExposedSystems: {
+            rows: components["schemas"]["ExposedSystem"][];
+            total: number;
+            truncated: boolean;
+            risksWithoutSystem: number;
+        };
+        /** @description Open treatments that are not Complete, by due state on the server's today: overdue has a target date before today, dueWithinWindow one from today to today plus dueWindowDays inclusive, later one after that, and noTargetDate none. The parts add up to total. */
+        TreatmentDueStateCounts: {
+            overdue: number;
+            dueWithinWindow: number;
+            later: number;
+            noTargetDate: number;
+            total: number;
+        };
+        /** @description The risk-treatment-overdue alerts with the oldest target dates, oldest first. total counts every such alert and truncated says rows is capped. */
+        MostOverdueTreatments: {
+            rows: components["schemas"]["AlertItem"][];
+            total: number;
+            truncated: boolean;
+        };
+        /** @description One UTC calendar month. monthStart is its first day, count the Risk Assessments released in it, and partial marks the current month, which is still in progress. */
+        ThroughputMonth: {
+            /** Format: date */
+            monthStart: string;
+            count: number;
+            partial: boolean;
+        };
+        /** @description Released Risk Assessments per month over the period, oldest month first. total is the sum of the months. */
+        ThroughputReleased: {
+            months: components["schemas"]["ThroughputMonth"][];
+            total: number;
+        };
+        /** @description The median days from request submission to release, rounded to one decimal, over the releases in the period whose request records a submission. value is null when there is none. The sample is capped, newest first, and truncated says so. */
+        MedianDaysToRelease: {
+            value: number | null;
+            sampleSize: number;
+            truncated: boolean;
+        };
+        /** @description Open contextual Risks by residual and by inherent rating, residual rating by treatment status, and the most exposed Information Systems. today is the UTC calendar date the report was computed on. */
+        RiskExposureReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "risk-exposure";
+            /** Format: date */
+            today: string;
+            byResidualRating: components["schemas"]["RatingCounts"];
+            byInherentRating: components["schemas"]["RatingCounts"];
+            residualByTreatmentStatus: components["schemas"]["ResidualByTreatmentStatus"];
+            exposedSystems: components["schemas"]["ExposedSystems"];
+        };
+        /** @description Open treatments by due state over a window of dueWindowDays, open contextual Risks by recorded treatment status, and the most overdue treatments. today is the UTC calendar date the report was computed on. */
+        TreatmentPerformanceReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "treatment-performance";
+            /** Format: date */
+            today: string;
+            dueWindowDays: number;
+            dueState: components["schemas"]["TreatmentDueStateCounts"];
+            treatmentStatus: components["schemas"]["TreatmentStatusCounts"];
+            mostOverdue: components["schemas"]["MostOverdueTreatments"];
+        };
+        /** @description Risk Assessments released per UTC calendar month over the period months ending with the current month, which begins on periodStart, the median days from submission to release over the same period, and Assessment Requests by status as a current snapshot. today is the UTC calendar date the report was computed on. */
+        AssessmentThroughputReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "assessment-throughput";
+            /** Format: date */
+            today: string;
+            /** @enum {integer} */
+            period: 6 | 12;
+            /** Format: date */
+            periodStart: string;
+            released: components["schemas"]["ThroughputReleased"];
+            medianDaysToRelease: components["schemas"]["MedianDaysToRelease"];
+            requestsByStatus: components["schemas"]["RequestStatusCounts"];
+        };
+        /** @description Control Implementations on open contextual Risks by implementation status and by effectiveness rating. today is the UTC calendar date the report was computed on. */
+        ControlEffectivenessReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "control-effectiveness";
+            /** Format: date */
+            today: string;
+            implementationStatus: components["schemas"]["ControlStatusCounts"];
+            effectivenessRating: components["schemas"]["EffectivenessCounts"];
+        };
+        ReportResponse: {
+            data: components["schemas"]["RiskExposureReport"] | components["schemas"]["TreatmentPerformanceReport"] | components["schemas"]["AssessmentThroughputReport"] | components["schemas"]["ControlEffectivenessReport"];
         };
         AssessmentRequestSummary: {
             documentId: string;
@@ -2106,8 +2572,14 @@ export interface components {
             treatmentOwner: components["schemas"]["RiskRegisterUser"] | null;
             /** Format: date */
             targetDate: string | null;
+            treatmentDueState: components["schemas"]["TreatmentDueState"];
             assessment: components["schemas"]["RiskRegisterAssessment"];
         };
+        /**
+         * @description The server-derived treatment due state on the server's UTC calendar date. complete-or-closed: the treatment is Complete or the Risk has a closure date. no-target-date: an open treatment with no target date. overdue: the target date is before today. due-soon: the target date is today or within the next 14 days. later: the target date is further out. The stored Overdue treatment status is never read.
+         * @enum {string}
+         */
+        TreatmentDueState: "overdue" | "due-soon" | "later" | "no-target-date" | "complete-or-closed";
         RiskRegisterSelectedLabel: {
             documentId: string;
             label: string;
@@ -3648,6 +4120,33 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["QuestionnaireWorkflowErrorResponse"];
+            };
+        };
+        /** @description The analyst insight query is invalid */
+        AnalystInsightBadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+            };
+        };
+        /** @description The signed-in identity is not a human Security Analyst holding the analyst insight grants */
+        AnalystInsightForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+            };
+        };
+        /** @description The report key names no analyst report */
+        ReportNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
             };
         };
     };
@@ -13592,7 +14091,8 @@ export interface operations {
         parameters: {
             query?: {
                 "filters[queue]"?: "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "released";
-                "filters[requestStatus]"?: "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review";
+                /** @description Request status to filter by. Every request status is accepted in every queue, and the filter intersects the selected queue rather than widening it. The requires-attention, awaiting-requestor and generation-in-progress queues read only submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests; the released queue reads only approved and closed requests; no queue reads a draft. A status outside the selected queue returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                "filters[requestStatus]"?: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
                 "filters[title]"?: string;
                 "filters[requestNumber]"?: string;
                 "filters[dueDate]"?: string;
@@ -13613,6 +14113,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssessmentRequestQueueResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+        };
+    };
+    "assessment-workflow/get-my-request-status-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owner-scoped assessment request counts by status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyRequestStatusSummaryResponse"];
                 };
             };
             400: components["responses"]["AssessmentBadRequest"];
@@ -13759,7 +14281,8 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
-                status?: "draft" | "in-review" | "approved";
+                /** @description Assessment status to filter by. Every assessment status, closed included, is within the analyst assessment scope. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                status?: "draft" | "in-review" | "approved" | "closed";
                 sort?: "generatedDate:asc" | "generatedDate:desc" | "approvalDate:asc" | "approvalDate:desc" | "assessmentNumber:asc" | "assessmentNumber:desc" | "assessmentStatus:asc" | "assessmentStatus:desc";
                 page?: number;
                 pageSize?: number;
@@ -13932,6 +14455,8 @@ export interface operations {
                 system?: string;
                 asset?: string;
                 mitigationStatus?: "Existing" | "Planned" | "Implemented" | "Retired" | "none";
+                /** @description open: no closure date recorded. closed: a closure date is recorded. Absent returns both. */
+                state?: "open" | "closed";
                 targetDateFrom?: string;
                 targetDateTo?: string;
                 sort?: "riskNumber:asc" | "riskNumber:desc" | "riskStatement:asc" | "riskStatement:desc" | "inherentRating:asc" | "inherentRating:desc" | "residualRating:asc" | "residualRating:desc" | "treatmentStatus:asc" | "treatmentStatus:desc" | "treatmentOwner:asc" | "treatmentOwner:desc" | "targetDate:asc" | "targetDate:desc" | "assessment:asc" | "assessment:desc";
@@ -14340,7 +14865,8 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
-                status?: "draft" | "in-review" | "approved";
+                /** @description Assessment status to filter by. This collection holds only the Requestor's completely released assessments, so the filter intersects that scope: any status other than approved returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                status?: "draft" | "in-review" | "approved" | "closed";
                 sort?: "generatedDate:asc" | "generatedDate:desc" | "approvalDate:asc" | "approvalDate:desc" | "assessmentNumber:asc" | "assessmentNumber:desc" | "assessmentStatus:asc" | "assessmentStatus:desc";
                 page?: number;
                 pageSize?: number;
@@ -15624,6 +16150,128 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
+        };
+    };
+    "analyst-insights/get-dashboard-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The analyst dashboard summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummaryResponse"];
+                };
+            };
+            400: components["responses"]["AnalystInsightBadRequest"];
+            403: components["responses"]["AnalystInsightForbidden"];
+        };
+    };
+    "analyst-insights/get-alerts": {
+        parameters: {
+            query?: {
+                /** @description One or more alert kinds, each at most once. Absent lists every kind. */
+                kind?: components["schemas"]["AlertKind"][];
+                urgency?: components["schemas"]["AlertUrgency"];
+                page?: number;
+                pageSize?: 5 | 10 | 25 | 50;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of derived alerts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertListResponse"];
+                };
+            };
+            400: components["responses"]["AnalystInsightBadRequest"];
+            403: components["responses"]["AnalystInsightForbidden"];
+        };
+    };
+    "analyst-insights/get-alert-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Derived alert counts by kind and by urgency */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertSummaryResponse"];
+                };
+            };
+            400: components["responses"]["AnalystInsightBadRequest"];
+            403: components["responses"]["AnalystInsightForbidden"];
+        };
+    };
+    "analyst-insights/get-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The analyst report definitions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDefinitionListResponse"];
+                };
+            };
+            400: components["responses"]["AnalystInsightBadRequest"];
+            403: components["responses"]["AnalystInsightForbidden"];
+        };
+    };
+    "analyst-insights/get-report": {
+        parameters: {
+            query?: {
+                /** @description assessment-throughput only: the calendar months, ending with the current UTC month, that the release figures cover. Absent means 6. */
+                period?: 6 | 12;
+            };
+            header?: never;
+            path: {
+                reportKey: components["schemas"]["ReportKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One computed report, discriminated by its key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResponse"];
+                };
+            };
+            400: components["responses"]["AnalystInsightBadRequest"];
+            403: components["responses"]["AnalystInsightForbidden"];
+            404: components["responses"]["ReportNotFound"];
         };
     };
 }
