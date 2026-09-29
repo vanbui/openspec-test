@@ -1,5 +1,6 @@
 import type { Core } from "@strapi/strapi";
 
+import { isKeycloakTokenVerificationEnabled } from "../keycloak/token-verification-config";
 import { developmentIdentityEnabled } from "../utils/development-identity-enabled";
 
 type DevelopmentIdentity = {
@@ -19,6 +20,11 @@ type DevelopmentIdentityService = {
   }) => Promise<DevelopmentIdentity[]>;
 };
 
+/*
+ * The development header and Keycloak token verification never both resolve an
+ * identity (docs/adr/0004): with IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true the
+ * header is ignored, whatever CSRM_DEV_IDENTITY says.
+ */
 export default function csrmDevelopmentIdentity(
   _config: unknown,
   { strapi }: { strapi: Core.Strapi },
@@ -27,7 +33,7 @@ export default function csrmDevelopmentIdentity(
     context: DevelopmentIdentityContext,
     next: () => Promise<unknown>,
   ): Promise<void> => {
-    if (developmentIdentityEnabled()) {
+    if (developmentIdentityEnabled() && !isKeycloakTokenVerificationEnabled()) {
       const email = context.get("x-csrm-dev-identity");
 
       if (email) {

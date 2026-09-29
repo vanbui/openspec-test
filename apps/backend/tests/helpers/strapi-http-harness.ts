@@ -408,11 +408,24 @@ export type AuthorizationHttpHarnessOptions = {
    * value in the developer's .env never reaches a test; left out, it is empty, the configured default.
    */
   corsAllowedOrigins?: string;
+  /**
+   * Boot with Keycloak access-token verification on (docs/adr/0004) against this issuer, whose
+   * JWKS the test serves, and link the seeded people to `keycloakSubjects`. Left out, it is off.
+   */
+  keycloakTokenVerification?: { issuer: string; clientId: string };
 };
+
+/** The Keycloak subjects a token-verification harness links to the seeded IdamBox Users. */
+export const keycloakSubjects = Object.freeze({
+  owner: "kc-subject-jane",
+  analyst: "kc-subject-bob",
+  inactiveAnalyst: "kc-subject-inactive",
+  serviceAnalystAgent: "kc-subject-service-agent",
+});
 
 export async function startAuthorizationHttpHarness(options: AuthorizationHttpHarnessOptions = {}): Promise<AuthorizationHttpHarness> {
   const originalEnvironment = new Map(
-    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_CORS_ALLOWED_ORIGINS", "IDAMBOX_KEYCLOAK_PROVISIONING"]
+    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_CORS_ALLOWED_ORIGINS", "IDAMBOX_KEYCLOAK_PROVISIONING", "IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION", "KEYCLOAK_ISSUER", "KEYCLOAK_TOKEN_CLIENT_ID"]
       .map((name) => [name, process.env[name]] as const),
   );
   await mkdir(databaseDir, { recursive: true });
@@ -438,6 +451,11 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   process.env.STRAPI_DISABLE_UPDATE_NOTIFICATION = "true";
   // Tests never reach Keycloak, whatever the developer .env enables.
   process.env.IDAMBOX_KEYCLOAK_PROVISIONING = "false";
+  process.env.IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION = options.keycloakTokenVerification ? "true" : "false";
+  if (options.keycloakTokenVerification) {
+    process.env.KEYCLOAK_ISSUER = options.keycloakTokenVerification.issuer;
+    process.env.KEYCLOAK_TOKEN_CLIENT_ID = options.keycloakTokenVerification.clientId;
+  }
 
   // The public package exports are intentionally loaded dynamically because its
   // declaration surface re-exports Core but does not declare these runtime helpers.
@@ -548,6 +566,15 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     requestStatus: "draft",
     requestor: otherRequestor.documentId,
   });
+  if (options.keycloakTokenVerification) {
+    const links: Array<[string, string]> = [
+      [owner.documentId, keycloakSubjects.owner],
+      [analyst.documentId, keycloakSubjects.analyst],
+      [inactiveAnalyst.documentId, keycloakSubjects.inactiveAnalyst],
+      [serviceAnalystAgent.documentId, keycloakSubjects.serviceAnalystAgent],
+    ];
+    for (const [documentId, externalSubject] of links) await userService.update({ documentId, data: { externalSubject } });
+  }
   testIdentities.set("owner", { documentId: owner.documentId });
   testIdentities.set("other", { documentId: otherRequestor.documentId });
   testIdentities.set("analyst", { documentId: analyst.documentId });

@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-import { oidcAuthOptions } from './oidc-auth-options';
+const refreshKeycloakTokensMock = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/api/transport/keycloak-token-client', () => ({ refreshKeycloakTokens: refreshKeycloakTokensMock }));
+
+import { ACCESS_TOKEN_REFRESH_MARGIN_SECONDS, oidcAuthOptions } from './oidc-auth-options';
 import type { OidcConfiguration } from './oidc-configuration';
 
 const config: OidcConfiguration = {
@@ -50,21 +53,107 @@ describe('oidcAuthOptions', () => {
     expect(options.secret).toBe(config.authSecret);
   });
 
-  it('jwt callback copies the id_token on sign-in and adds nothing else', async () => {
+  it('jwt callback keeps the id, access and refresh tokens and the expiry on sign-in', async () => {
     const options = oidcAuthOptions(config);
     const baseToken = { name: 'Jane Doe' };
 
     const withAccount = await options.callbacks!.jwt!({
       token: { ...baseToken },
       user: {},
-      account: { id_token: 'sentinel-id-token', access_token: 'sentinel-access-token', refresh_token: 'sentinel-refresh-token' } as never,
+      account: {
+        id_token: 'sentinel-id-token',
+        access_token: 'sentinel-access-token',
+        refresh_token: 'sentinel-refresh-token',
+        expires_at: 1_900_000_000,
+      } as never,
     } as never);
-    expect(withAccount).toEqual({ ...baseToken, idToken: 'sentinel-id-token' });
-    expect(withAccount).not.toHaveProperty('accessToken');
-    expect(withAccount).not.toHaveProperty('refreshToken');
+    expect(withAccount).toEqual({
+      ...baseToken,
+      idToken: 'sentinel-id-token',
+      accessToken: 'sentinel-access-token',
+      refreshToken: 'sentinel-refresh-token',
+      accessTokenExpiresAt: 1_900_000_000,
+    });
+    expect(refreshKeycloakTokensMock).not.toHaveBeenCalled();
+  });
 
-    const withoutAccount = await options.callbacks!.jwt!({ token: { ...baseToken }, user: {}, account: null } as never);
-    expect(withoutAccount).toEqual(baseToken);
+  describe('jwt callback refresh', () => {
+    const nowSeconds = 1_800_000_000;
+    const now = () => nowSeconds * 1000;
+    const signedIn = {
+      name: 'Jane Doe',
+      idToken: 'sentinel-id-token',
+      accessToken: 'sentinel-access-token',
+      refreshToken: 'sentinel-refresh-token',
+    };
+
+    beforeEach(() => {
+      refreshKeycloakTokensMock.mockReset();
+    });
+
+    it('leaves a token that is not about to expire untouched', async () => {
+      const token = { ...signedIn, accessTokenExpiresAt: nowSeconds + ACCESS_TOKEN_REFRESH_MARGIN_SECONDS + 1 };
+      const result = await oidcAuthOptions(config, now).callbacks!.jwt!({ token, account: null } as never);
+
+      expect(result).toEqual(token);
+      expect(refreshKeycloakTokensMock).not.toHaveBeenCalled();
+    });
+
+    it('refreshes a token inside the margin and keeps the refresh token Keycloak did not rotate', async () => {
+      refreshKeycloakTokensMock.mockResolvedValue({ accessToken: 'sentinel-new-access', accessTokenExpiresAt: nowSeconds + 300 });
+      const token = { ...signedIn, accessTokenExpiresAt: nowSeconds + ACCESS_TOKEN_REFRESH_MARGIN_SECONDS };
+
+      const result = await oidcAuthOptions(config, now).callbacks!.jwt!({ token, account: null } as never);
+
+      expect(refreshKeycloakTokensMock).toHaveBeenCalledWith({
+        issuer: config.issuer,
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        refreshToken: 'sentinel-refresh-token',
+      }, now);
+      expect(result).toEqual({ ...signedIn, accessToken: 'sentinel-new-access', accessTokenExpiresAt: nowSeconds + 300 });
+    });
+
+    it('takes a rotated refresh token and a new id token', async () => {
+      refreshKeycloakTokensMock.mockResolvedValue({
+        accessToken: 'sentinel-new-access',
+        accessTokenExpiresAt: nowSeconds + 300,
+        refreshToken: 'sentinel-new-refresh',
+        idToken: 'sentinel-new-id',
+      });
+      const token = { ...signedIn, accessTokenExpiresAt: nowSeconds - 10 };
+
+      const result = await oidcAuthOptions(config, now).callbacks!.jwt!({ token, account: null } as never);
+
+      expect(result).toMatchObject({ refreshToken: 'sentinel-new-refresh', idToken: 'sentinel-new-id' });
+    });
+
+    it('drops every Keycloak token and flags the session when the refresh fails', async () => {
+      refreshKeycloakTokensMock.mockRejectedValue(Object.assign(new Error('sentinel-reason'), { name: 'KeycloakRefreshError' }));
+      const token = { ...signedIn, accessTokenExpiresAt: nowSeconds - 10 };
+
+      const result = await oidcAuthOptions(config, now).callbacks!.jwt!({ token, account: null } as never);
+
+      expect(result).toEqual({ name: 'Jane Doe', idToken: 'sentinel-id-token', error: 'RefreshTokenError' });
+      expect(warnSpy).toHaveBeenCalledWith('[csrm-auth] KeycloakRefreshError');
+      expect(JSON.stringify(warnSpy.mock.calls)).not.toContain('sentinel');
+    });
+
+    it('flags the session without calling Keycloak when there is no refresh token', async () => {
+      const token = { name: 'Jane Doe', accessToken: 'sentinel-access-token', accessTokenExpiresAt: nowSeconds - 10 };
+
+      const result = await oidcAuthOptions(config, now).callbacks!.jwt!({ token, account: null } as never);
+
+      expect(result).toEqual({ name: 'Jane Doe', error: 'RefreshTokenError' });
+      expect(refreshKeycloakTokensMock).not.toHaveBeenCalled();
+    });
+
+    it('never retries a session whose refresh already failed', async () => {
+      const token = { name: 'Jane Doe', error: 'RefreshTokenError' };
+
+      expect(await oidcAuthOptions(config, now).callbacks!.jwt!({ token, account: null } as never)).toEqual(token);
+      expect(refreshKeycloakTokensMock).not.toHaveBeenCalled();
+    });
   });
 
   it('session callback returns only expires and the display fields', async () => {
@@ -72,7 +161,7 @@ describe('oidcAuthOptions', () => {
 
     const result = await options.callbacks!.session!({
       session: { expires: '2026-09-30T00:00:00.000Z', user: { name: 'Jane Doe', email: 'jane.doe@idambox.com' } },
-      token: { idToken: 'sentinel-id-token', sub: 'sentinel-subject' } as never,
+      token: { idToken: 'sentinel-id-token', accessToken: 'sentinel-access-token', refreshToken: 'sentinel-refresh-token', sub: 'sentinel-subject' } as never,
     } as never);
 
     expect(result).toEqual({
@@ -83,6 +172,23 @@ describe('oidcAuthOptions', () => {
     expect(JSON.stringify(result)).not.toContain('sentinel-id-token');
     expect(JSON.stringify(result)).not.toContain('sub');
     expect(JSON.stringify(result)).not.toContain('sentinel-subject');
+    expect(JSON.stringify(result)).not.toContain('sentinel-access-token');
+    expect(JSON.stringify(result)).not.toContain('sentinel-refresh-token');
+  });
+
+  it('session callback adds only the refresh-failure code when a refresh failed', async () => {
+    const options = oidcAuthOptions(config);
+
+    const result = await options.callbacks!.session!({
+      session: { expires: '2026-09-30T00:00:00.000Z', user: { name: 'Jane Doe', email: 'jane.doe@idambox.com' } },
+      token: { error: 'RefreshTokenError', sub: 'sentinel-subject' } as never,
+    } as never);
+
+    expect(result).toEqual({
+      expires: '2026-09-30T00:00:00.000Z',
+      user: { name: 'Jane Doe', email: 'jane.doe@idambox.com' },
+      error: 'RefreshTokenError',
+    });
   });
 
   it('logger.error writes only the error name and Auth.js type, never the message or cause', () => {

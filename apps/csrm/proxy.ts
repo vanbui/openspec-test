@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest, type ProxyConfig } from 'next/server';
 
+import { resolveSessionRuntimeMode } from '@/lib/auth/development-runtime';
 import { buildContentSecurityPolicy } from '@/lib/security/content-security-policy';
 
 /*
@@ -16,7 +17,34 @@ import { buildContentSecurityPolicy } from '@/lib/security/content-security-poli
  * come from next.config.ts for every path, before this runs, so the requests the matcher skips keep
  * them.
  */
-export function proxy(request: NextRequest): NextResponse {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
+  if (resolveSessionRuntimeMode(process.env) === 'oidc') return oidcProxy(request);
+  return withContentSecurityPolicy(request, new Headers(request.headers));
+}
+
+/*
+ * OIDC mode only (docs/adr/0004): a Keycloak access token inside its refresh window is
+ * refreshed here, where cookies can be written, and the new session cookie is also
+ * forwarded on this request so the render reads it. Auth.js loads only through the
+ * dynamic import, never on the development path (ADR 0003).
+ */
+async function oidcProxy(request: NextRequest): Promise<NextResponse> {
+  const { applySetCookies, refreshedSessionCookies } = await import('@/lib/auth/oidc-session-refresh');
+  const setCookies = await refreshedSessionCookies(request);
+  const requestHeaders = new Headers(request.headers);
+
+  if (setCookies.length > 0) {
+    const cookie = applySetCookies(request.headers.get('cookie'), setCookies);
+    if (cookie === null) requestHeaders.delete('cookie');
+    else requestHeaders.set('cookie', cookie);
+  }
+
+  const response = withContentSecurityPolicy(request, requestHeaders);
+  for (const setCookie of setCookies) response.headers.append('set-cookie', setCookie);
+  return response;
+}
+
+function withContentSecurityPolicy(request: NextRequest, requestHeaders: Headers): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const policy = buildContentSecurityPolicy({
     nonce,
@@ -25,7 +53,6 @@ export function proxy(request: NextRequest): NextResponse {
     https: request.nextUrl.protocol === 'https:',
   });
 
-  const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', policy);
 

@@ -24807,6 +24807,19 @@
         }
       }
     },
+    "/v1/me/access": {
+      "get": {
+        "operationId": "current-user/get-access",
+        "summary": "Read the signed-in IdamBox User's own effective access",
+        "description": "Resolves the caller's IdamBox User (the Keycloak access token in x-csrm-identity-token, or the development identity header where that bridge is on) and returns its display name, the menu Functions it holds and the FunctionApi operations it is granted through Role -> Function -> FunctionApi, including the Requestor birthright. A human-analyst-only operation is listed only when the human Security Analyst Role grants it. Route-level scope checks still apply on every call, so the list is never wider than the authorization policy. Every Role holds this operation. The operation takes no query parameters: any query key is rejected with 400.",
+        "tags": ["current-user"],
+        "responses": {
+          "200": { "description": "The caller's effective access", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CurrentUserAccessResponse" } } } },
+          "400": { "$ref": "#/components/responses/CurrentUserAccessBadRequest" },
+          "403": { "$ref": "#/components/responses/CurrentUserAccessForbidden" }
+        }
+      }
+    },
     "/v1/dashboard/summary": {
       "get": {
         "operationId": "analyst-insights/get-dashboard-summary",
@@ -25062,6 +25075,32 @@
           "total": { "type": "integer", "minimum": 0 }
         },
         "required": ["draft", "submitted", "questionnaireInProgress", "riskAssessmentDrafted", "underReview", "approved", "closed", "total"],
+        "additionalProperties": false
+      },
+      "CurrentUserAccessResponse": {
+        "type": "object",
+        "properties": { "data": { "$ref": "#/components/schemas/CurrentUserAccess" } },
+        "required": ["data"],
+        "additionalProperties": false
+      },
+      "CurrentUserAccess": {
+        "type": "object",
+        "description": "The signed-in IdamBox User's effective access. functions are the menu Functions (those with a menuPath) held through any effective Role, sorted by menuPath; operations are the granted FunctionApi urls (METHOD:/api/v1/...), sorted.",
+        "properties": {
+          "displayName": { "type": "string" },
+          "functions": { "type": "array", "items": { "$ref": "#/components/schemas/CurrentUserMenuFunction" }, "maxItems": 500 },
+          "operations": { "type": "array", "items": { "type": "string", "minLength": 1 }, "maxItems": 1000, "uniqueItems": true }
+        },
+        "required": ["displayName", "functions", "operations"],
+        "additionalProperties": false
+      },
+      "CurrentUserMenuFunction": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "menuPath": { "type": "string", "minLength": 1 }
+        },
+        "required": ["name", "menuPath"],
         "additionalProperties": false
       },
       "DashboardSummaryResponse": {
@@ -29263,6 +29302,14 @@
       },
       "ReportNotFound": {
         "description": "The report key names no analyst report",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentWorkflowErrorResponse" } } }
+      },
+      "CurrentUserAccessBadRequest": {
+        "description": "The request carried a query parameter",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentWorkflowErrorResponse" } } }
+      },
+      "CurrentUserAccessForbidden": {
+        "description": "No active IdamBox User was resolved for the caller",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentWorkflowErrorResponse" } } }
       }
     }

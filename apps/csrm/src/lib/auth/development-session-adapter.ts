@@ -96,6 +96,10 @@ export class DevelopmentSessionAdapter implements SessionAdapter {
     return new DevelopmentCapabilityAdapter(session.developmentRole);
   }
 
+  async identityToken(): Promise<null> {
+    return null;
+  }
+
   async signIn(returnTo: string): Promise<never> {
     assertDevelopmentRuntime();
     redirect(signInPath(returnTo));
@@ -122,6 +126,10 @@ class UnavailableSessionAdapter implements SessionAdapter {
 
   capabilitiesFor(_session: Session): never {
     throw new Error(unavailableSessionMessage);
+  }
+
+  async identityToken(): Promise<null> {
+    return null;
   }
 
   async signIn(returnTo: string): Promise<never> {

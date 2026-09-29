@@ -90,6 +90,23 @@ Operational notes:
 
 To exercise it locally against the seeded Keycloak, start `idp/` with `docker compose up -d` (see `idp/README.md`), copy the `KEYCLOAK_*` block from `.env.example` into `.env`, set `IDAMBOX_KEYCLOAK_PROVISIONING=true`, and restart Strapi.
 
+## Keycloak access-token verification
+
+When the web signs people in through Keycloak (`CSRM_AUTH_OIDC_ENABLED=true` in `apps/csrm`), it forwards the caller's own access token in `x-csrm-identity-token`. With `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true`, `global::csrm-keycloak-identity` verifies it against the realm JWKS (RS256, issuer, expiry, the CSRM client as audience and authorized party, `typ: Bearer`) and resolves the **active** IdamBox User whose `externalSubject` equals its `sub`. The CSRM authorization policy then enforces Role -> Function -> FunctionApi for that person exactly as for any other identity. Any unusable token is the ordinary 403, with the reason logged by error name only. Design: [ADR 0004](../../docs/adr/0004-strapi-verifies-keycloak-access-tokens.md).
+
+It is **off by default**. While it is on, the development `x-csrm-dev-identity` header is ignored, whatever `CSRM_DEV_IDENTITY` says; development seeding still runs. Automated test runs force it off unless a test turns it on deliberately.
+
+```env
+IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true
+KEYCLOAK_ISSUER=https://sso.example.com/realms/idambox   # exactly the token's iss; https in production
+KEYCLOAK_TOKEN_CLIENT_ID=idambox-csrm                     # the web's OIDC client
+# KEYCLOAK_REQUEST_TIMEOUT_MS=5000                        # optional, JWKS fetch timeout
+```
+
+The realm must give the client the `basic` default scope (so the access token carries `sub`) and an audience mapper adding the client id to the access token; `idp/keycloak/import/idambox-realm.json` has both. Every person who signs in needs `externalSubject` set, which Keycloak user provisioning (above) writes. Locally, the development seed links the fixture people Jane and Bob to the fixed ids the local realm gives them, as long as provisioning is off.
+
+`GET /api/v1/me/access` returns the caller's own display name, menu Functions and granted FunctionApi operations. Every Role holds it, and the web derives its navigation from it.
+
 Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.
 
 ```

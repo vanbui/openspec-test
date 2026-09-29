@@ -38,7 +38,7 @@ const ANALYST_INSIGHT_OPERATIONS: ReadonlySet<string> = new Set(Object.values(CS
  * are human analyst work only, and the guard is in place before any insight
  * handler is mounted.
  */
-const HUMAN_ANALYST_ONLY_OPERATIONS: ReadonlySet<string> = new Set([
+export const HUMAN_ANALYST_ONLY_OPERATIONS: ReadonlySet<string> = new Set([
   RELEASE_ASSESSMENT_OPERATION,
   "POST:/api/v1/questionnaires/{questionnaireId}/release",
   "POST:/api/v1/questionnaires/{questionnaireId}/return_to_review",
@@ -91,11 +91,11 @@ type AuthorizationConfig = {
   allowAnalystQuestionnaireReviewScope?: boolean;
 };
 
-type IdamBoxIdentity = { documentId: string; id?: number };
+export type IdamBoxIdentity = { documentId: string; id?: number };
 type FunctionApi = { url?: string };
-type FunctionGrant = { functionApis?: FunctionApi[] };
-type RoleGrant = { name?: string; functions?: FunctionGrant[] };
-type IdamBoxUser = IdamBoxIdentity & { accountStatus?: string; roles?: RoleGrant[] };
+type FunctionGrant = { name?: string; menuPath?: string | null; functionApis?: FunctionApi[] };
+export type RoleGrant = { name?: string; functions?: FunctionGrant[] };
+type IdamBoxUser = IdamBoxIdentity & { accountStatus?: string; displayName?: string; roles?: RoleGrant[] };
 type AssessmentRequest = { requestor?: IdamBoxIdentity | null };
 type Questionnaire = { assessmentRequest?: AssessmentRequest | null; releasedAt?: unknown };
 type CollectionScope = "own" | "all";
@@ -130,8 +130,9 @@ type DocumentService = {
   findMany: (params: unknown) => Promise<RoleGrant[]>;
   findOne: (params: unknown) => Promise<IdamBoxUser | AssessmentRequest | null>;
 };
-type AuthorizationStrapi = { documents: (uid: string) => DocumentService };
-type EffectiveGrants = {
+export type AuthorizationStrapi = { documents: (uid: string) => DocumentService };
+export type EffectiveGrants = {
+  displayName: string;
   explicitRoles: RoleGrant[];
   requestorRoles: RoleGrant[];
   requestorId: number;
@@ -146,7 +147,7 @@ function isIdamBoxIdentity(value: unknown): value is IdamBoxIdentity {
   return typeof value === "object" && value !== null && typeof (value as { documentId?: unknown }).documentId === "string";
 }
 
-function hasOperation(roles: RoleGrant[], operation: string): boolean {
+export function hasOperation(roles: RoleGrant[], operation: string): boolean {
   return roles.some((role) => role.functions?.some((functionGrant) =>
     functionGrant.functionApis?.some((functionApi) => functionApi.url === operation),
   ));
@@ -158,7 +159,7 @@ function hasExplicitAnalystOperation(roles: RoleGrant[], operation: string): boo
   );
 }
 
-async function loadEffectiveGrants(
+export async function loadEffectiveGrants(
   strapi: AuthorizationStrapi,
   identity: IdamBoxIdentity,
 ): Promise<EffectiveGrants | null> {
@@ -180,7 +181,7 @@ async function loadEffectiveGrants(
   });
 
   if (typeof user.id !== "number") return null;
-  return { explicitRoles: user.roles ?? [], requestorRoles, requestorId: user.id };
+  return { displayName: user.displayName ?? "", explicitRoles: user.roles ?? [], requestorRoles, requestorId: user.id };
 }
 
 function setCollectionScope(context: AuthorizationContext, scope: CollectionScope, requestorId?: number): void {
@@ -208,7 +209,7 @@ function isReleased(questionnaire: Questionnaire): boolean {
   return typeof questionnaire.releasedAt === "string" && questionnaire.releasedAt.length > 0;
 }
 
-function hasHumanAnalystOperation(roles: RoleGrant[], operation: string): boolean {
+export function hasHumanAnalystOperation(roles: RoleGrant[], operation: string): boolean {
   return roles.some((role) =>
     role.name === HUMAN_SECURITY_ANALYST_ROLE_NAME && hasOperation([role], operation),
   );

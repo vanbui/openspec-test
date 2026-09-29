@@ -37,6 +37,7 @@ export type MatrixFamily =
   | "administration"
   | "reference-data"
   | "analyst-insights"
+  | "current-user"
   | "plugin";
 
 /**
@@ -1170,6 +1171,17 @@ export const matrixRows: readonly MatrixRow[] = [
     expect: everyIdentity(200),
     exercisesAllowed: true,
     seeAlso: [SELECTOR_PROOF],
+  },
+  // ---------------------------------------------------------------- current user (every identity, own access only)
+  {
+    operation: "GET:/api/v1/me/access",
+    family: "current-user",
+    request: () => ({ path: "/api/v1/me/access" }),
+    expect: everyIdentity(200),
+    exercisesAllowed: true,
+    // Each caller reads only its own access, never another person's name (docs/adr/0004).
+    mustNotDisclose: (_f, actor) => (actor === "analyst" ? ["Jane Doe"] : actor === "owner" || actor === "other" ? ["Bob Doe"] : []),
+    seeAlso: ["keycloak-identity.integration.test.ts › a verified Security Analyst token resolves Bob with the analyst grants, human-only operations included"],
   },
   // ---------------------------------------------------------------- analyst insights (human analyst only)
   {

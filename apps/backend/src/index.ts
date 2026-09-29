@@ -11,12 +11,18 @@ import { seedAnalystInsights } from './bootstrap/seed-analyst-insights';
 import { seedDevelopmentApiToken } from './bootstrap/seed-development-api-token';
 import { assertCsrmAiConfiguration } from './csrm/ai-config-validation';
 import { registerIdamboxUserProvisioning } from './keycloak/register-idambox-user-provisioning';
+import { readKeycloakTokenVerificationConfig } from './keycloak/token-verification-config';
 
 export default {
   register({ strapi }: { strapi: Core.Strapi }) {
     assertCsrmAiConfiguration(strapi);
     // Inert unless IDAMBOX_KEYCLOAK_PROVISIONING=true; incomplete Keycloak config stops the boot.
     registerIdamboxUserProvisioning(strapi);
+    // Inert unless IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true; incomplete config stops the boot (docs/adr/0004).
+    const tokenVerification = readKeycloakTokenVerificationConfig();
+    if (tokenVerification) {
+      strapi.log.info(`Keycloak access-token verification is enabled for issuer ${tokenVerification.issuer}; the development identity header is ignored.`);
+    }
   },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {

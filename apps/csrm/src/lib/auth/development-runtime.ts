@@ -12,9 +12,10 @@ import type { SessionRuntimeMode } from './session-adapter';
  * cannot tell a production build from `next dev` (SR-01).
  *
  * - With `CSRM_AUTH_OIDC_ENABLED=true`, the OIDC session replaces the development one
- *   and never runs beside it: it exists only under a `next dev` compilation, and is
- *   `'unavailable'` in every production build, including the attested E2E runtime,
- *   until Strapi verifies Keycloak identity server-side (D-02, the follow-up issue).
+ *   and never runs beside it: under `next dev` (NODE_ENV=development) and in a
+ *   production build started as production (NODE_ENV=production). Strapi verifies the
+ *   forwarded Keycloak access token itself (docs/adr/0004), which lifted ADR 0003's
+ *   production refusal. A mismatched compilation and runtime is `'unavailable'`.
  * - Otherwise, a `next dev` compilation has the development session while it runs as
  *   next dev (NODE_ENV=development).
  * - A production build has it only inside the attested E2E runtime: the server
@@ -39,7 +40,8 @@ export function resolveSessionRuntimeMode(
   compiledFor: string | undefined = process.env.NODE_ENV,
 ): SessionRuntimeMode {
   if (parseOidcEnabledFlag(env.CSRM_AUTH_OIDC_ENABLED)) {
-    return compiledFor === 'development' && env.NODE_ENV === 'development' ? 'oidc' : 'unavailable';
+    if (compiledFor === 'development') return env.NODE_ENV === 'development' ? 'oidc' : 'unavailable';
+    return compiledFor === 'production' && env.NODE_ENV === 'production' ? 'oidc' : 'unavailable';
   }
   if (compiledFor === 'development') return env.NODE_ENV === 'development' ? 'development' : 'unavailable';
   if (compiledFor !== 'production' || env.NODE_ENV !== 'production') return 'unavailable';

@@ -67,7 +67,8 @@
         "function.alerts.list_api",
         "function.alerts.summary_api",
         "function.reports.list_api",
-        "function.reports.run_api"
+        "function.reports.run_api",
+        "function.current_user.access_api"
       ]
     },
     {
@@ -90,7 +91,8 @@
         "function.reports.alerts",
         "function.risk_assessment_requests.core_api",
         "function.risk_assessment_requests.delete_api",
-        "function.risk_assessment_requests.reference_data_api"
+        "function.risk_assessment_requests.reference_data_api",
+        "function.current_user.access_api"
       ]
     },
     {
@@ -109,7 +111,8 @@
         "function.risk_assessment_requests.core_api",
         "function.risk_assessment_requests.revert_to_draft_api",
         "function.risk_assessment_requests.reference_data_api",
-        "function.questionnaire.revert_to_draft_api"
+        "function.questionnaire.revert_to_draft_api",
+        "function.current_user.access_api"
       ]
     }
   ],
@@ -955,6 +958,25 @@
         "CsrmAssessment",
         "CsrmRisk",
         "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.current_user.access_api",
+      "name": "Current User Access API",
+      "description": "Server-side read grant for the signed-in IdamBox User's own effective access: display name, the menu Functions and the FunctionApi operations Strapi grants through Role -> Function -> FunctionApi. The web derives its navigation and capability checks from it; it never widens what the authorization policy allows. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.security_analyst_agent",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.current_user.access_api.api.01"
+      ],
+      "sourceEntities": [
+        "IdamBoxUser",
+        "Role",
+        "Function",
+        "FunctionApi"
       ]
     }
   ],
@@ -2301,6 +2323,19 @@
         "CsrmQuestion",
         "CsrmAssessmentRequest",
         "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.current_user.access_api.api.01",
+      "name": "Read Current User Access",
+      "description": "Returns the signed-in IdamBox User's display name, effective menu Functions and effective FunctionApi operations, including the Requestor birthright.",
+      "url": "GET:/api/v1/me/access",
+      "functionId": "function.current_user.access_api",
+      "sourceEntities": [
+        "IdamBoxUser",
+        "Role",
+        "Function",
+        "FunctionApi"
       ]
     }
   ]

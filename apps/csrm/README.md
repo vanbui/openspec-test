@@ -21,12 +21,17 @@ Local walkthrough:
 1. `docker compose up -d` in `idp/`.
 2. Copy the `AUTH_*` lines from `.env.local.example` into `apps/csrm/.env.local`, and generate `AUTH_SECRET` with `openssl rand -base64 32`.
 3. `pnpm --filter @csrm/web dev` (port 3000).
-4. Sign in as `jane.doe` / `jane`. The shell shows "Signed in as Jane Doe" and the permission-denied state, because Strapi does not yet authorise Keycloak identities (the tracked follow-up).
-5. Click "Sign out", which ends the Keycloak session and returns to `http://localhost:3000`.
+4. Run Strapi with `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true` (see `apps/backend/README.md`, "Keycloak access-token verification") and `IDAMBOX_SEED_CSRM=true`, so the seeded Jane and Bob are linked to their fixed Keycloak ids.
+5. Sign in as `jane.doe` / `jane` for the Requestor screens, or `bob.doe` / `bob` for the Security Analyst ones. Strapi verifies the forwarded access token and decides what each person may reach (`docs/adr/0004-strapi-verifies-keycloak-access-tokens.md`).
+6. Click "Sign out", which ends the Keycloak session and returns to `http://localhost:3000`.
+
+If you started `idp/` before the realm gained the `basic` scope, audience mapper and fixed user ids, run `docker compose down -v` there once so the realm is re-imported; otherwise the permission-denied state persists.
 
 `AUTH_KEYCLOAK_SECRET=idambox-csrm-local-secret` is a local-only value from `idp/README.md`. Never reuse it outside local development.
 
-Startup errors to expect: an invalid `CSRM_AUTH_OIDC_ENABLED` value, or any missing or malformed `AUTH_*` value under `next dev`, stops the server naming the variable and never its value. The flag set to `true` in a production build stops the server naming that Strapi does not yet verify Keycloak identity.
+Startup errors to expect: an invalid `CSRM_AUTH_OIDC_ENABLED` value, or any missing or malformed `AUTH_*` value, stops the server naming the variable and never its value. In production, `AUTH_URL` and `AUTH_KEYCLOAK_ISSUER` must be `https://`.
+
+In OIDC mode the web sends Strapi the caller's own Keycloak access token in `x-csrm-identity-token`, beside the `CSRM_API_TOKEN` it always sends, refreshes that token shortly before it expires (`proxy.ts` persists the refreshed cookie), and takes its navigation capabilities from Strapi's `GET /api/v1/me/access`.
 
 Sign-in and sign-out both rely on the hydrated client: the CSP's `form-action 'self'` blocks a no-JS redirect to Keycloak's authorization or end-session endpoint.
 
@@ -34,7 +39,7 @@ Sign-in and sign-out both rely on the hydrated client: the CSP's `form-action 's
 
 1. Register a confidential OpenID Connect client with the Standard flow and PKCE S256.
 2. Callback URL `https://<host>/api/auth/callback/keycloak`, post-logout redirect `https://<host>`.
-3. Supply `AUTH_URL`, `AUTH_SECRET`, `AUTH_KEYCLOAK_ID`, `AUTH_KEYCLOAK_SECRET` and `AUTH_KEYCLOAK_ISSUER` from the deployment's secret store, never committed.
-4. Serve over TLS.
-
-Production builds currently refuse `CSRM_AUTH_OIDC_ENABLED=true` outright until the Strapi-side Keycloak token verification follow-up lands: see `docs/adr/0003-production-only-keycloak-oidc-sign-in.md`.
+3. Give the client the `basic` default client scope and an audience mapper adding the client id to the access token (the local realm in `idp/keycloak/import/idambox-realm.json` is the reference shape).
+4. Supply `AUTH_URL`, `AUTH_SECRET`, `AUTH_KEYCLOAK_ID`, `AUTH_KEYCLOAK_SECRET` and `AUTH_KEYCLOAK_ISSUER` from the deployment's secret store, never committed, plus `CSRM_API_TOKEN`.
+5. Serve over TLS.
+6. Turn on `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION` in Strapi against the same issuer and client, and link every IdamBox User to Keycloak through `externalSubject` (Keycloak user provisioning does this). See `docs/adr/0004-strapi-verifies-keycloak-access-tokens.md`.

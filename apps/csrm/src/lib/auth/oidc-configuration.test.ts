@@ -136,12 +136,13 @@ describe('readOidcConfiguration', () => {
     expect(() => readOidcConfiguration(env)).toThrow('AUTH_SECRET');
   });
 
-  it('reads only the five AUTH_* names, in order', () => {
+  it('reads only the five AUTH_* names, in order, then NODE_ENV', () => {
     const { proxy, reads } = trackedEnvReads(completeEnv);
 
     readOidcConfiguration(proxy);
 
-    expect(reads).toEqual(['AUTH_URL', 'AUTH_SECRET', 'AUTH_KEYCLOAK_ID', 'AUTH_KEYCLOAK_SECRET', 'AUTH_KEYCLOAK_ISSUER']);
+    // NODE_ENV decides whether https is required (docs/adr/0004); it is read, never echoed.
+    expect(reads).toEqual(['AUTH_URL', 'AUTH_SECRET', 'AUTH_KEYCLOAK_ID', 'AUTH_KEYCLOAK_SECRET', 'AUTH_KEYCLOAK_ISSUER', 'NODE_ENV']);
   });
 });
 
@@ -149,24 +150,40 @@ describe('assertSessionRuntimeConfiguration', () => {
   it('returns having read only the flag when it is unset', () => {
     const { proxy, reads } = trackedEnvReads({ NODE_ENV: 'test' });
 
-    expect(() => assertSessionRuntimeConfiguration(proxy, 'development')).not.toThrow();
+    expect(() => assertSessionRuntimeConfiguration(proxy)).not.toThrow();
     expect(reads).toEqual(['CSRM_AUTH_OIDC_ENABLED']);
   });
 
   it('throws naming the flag when it is invalid', () => {
     const env = { ...completeEnv, CSRM_AUTH_OIDC_ENABLED: 'yes' };
-    expect(() => assertSessionRuntimeConfiguration(env, 'development')).toThrow('CSRM_AUTH_OIDC_ENABLED');
+    expect(() => assertSessionRuntimeConfiguration(env)).toThrow('CSRM_AUTH_OIDC_ENABLED');
   });
 
-  it('refuses a production build naming Strapi, even with every AUTH_* value present', () => {
-    const env = { ...completeEnv, CSRM_AUTH_OIDC_ENABLED: 'true' };
-    expect(() => assertSessionRuntimeConfiguration(env, 'production')).toThrow('Strapi does not yet verify Keycloak identity');
+  it('passes in production once every AUTH_* URL is https (docs/adr/0004 lifted the production refusal)', () => {
+    const env = {
+      ...completeEnv,
+      CSRM_AUTH_OIDC_ENABLED: 'true',
+      NODE_ENV: 'production' as const,
+      AUTH_URL: 'https://csrm.example.test',
+      AUTH_KEYCLOAK_ISSUER: 'https://sso.example.test/realms/idambox',
+    };
+    expect(() => assertSessionRuntimeConfiguration(env)).not.toThrow();
+  });
+
+  it('refuses a plain-http AUTH_URL or issuer in production, naming the variable only', () => {
+    const https = { AUTH_URL: 'https://csrm.example.test', AUTH_KEYCLOAK_ISSUER: 'https://sso.example.test/realms/idambox' };
+    const production = { ...completeEnv, ...https, CSRM_AUTH_OIDC_ENABLED: 'true', NODE_ENV: 'production' as const };
+
+    expect(() => assertSessionRuntimeConfiguration({ ...production, AUTH_URL: 'http://csrm.example.test' }))
+      .toThrow('AUTH_URL must use https:// in production.');
+    expect(() => assertSessionRuntimeConfiguration({ ...production, AUTH_KEYCLOAK_ISSUER: 'http://sso.example.test/realms/idambox' }))
+      .toThrow('AUTH_KEYCLOAK_ISSUER must use https:// in production.');
   });
 
   it('fails fast under next dev when a value is missing, naming it without any provided value', () => {
     const env = { ...completeEnv, CSRM_AUTH_OIDC_ENABLED: 'true', AUTH_KEYCLOAK_SECRET: undefined };
     try {
-      assertSessionRuntimeConfiguration(env, 'development');
+      assertSessionRuntimeConfiguration(env);
       throw new Error('expected assertSessionRuntimeConfiguration to throw');
     } catch (error) {
       const message = (error as Error).message;
@@ -177,7 +194,7 @@ describe('assertSessionRuntimeConfiguration', () => {
 
   it('passes under next dev with the flag true and a complete configuration', () => {
     const env = { ...completeEnv, CSRM_AUTH_OIDC_ENABLED: 'true' };
-    expect(() => assertSessionRuntimeConfiguration(env, 'development')).not.toThrow();
+    expect(() => assertSessionRuntimeConfiguration(env)).not.toThrow();
   });
 });
 
@@ -188,10 +205,12 @@ describe('register() from apps/csrm/instrumentation.ts', () => {
   });
 
   // Next only logs a register() rejection and keeps serving, so register() exits itself.
-  it('logs the refusal and exits on the nodejs runtime, in a production build, with the flag true', async () => {
+  it('logs and exits on the nodejs runtime when production OIDC configuration uses plain http', async () => {
     vi.stubEnv('NEXT_RUNTIME', 'nodejs');
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('CSRM_AUTH_OIDC_ENABLED', 'true');
+    for (const [name, value] of Object.entries(completeEnv)) if (name.startsWith('AUTH_') && value) vi.stubEnv(name, value);
+    vi.stubEnv('AUTH_URL', 'http://csrm.example.test');
     vi.resetModules();
     const exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -200,7 +219,7 @@ describe('register() from apps/csrm/instrumentation.ts', () => {
     await register();
 
     expect(exit).toHaveBeenCalledWith(1);
-    expect(error).toHaveBeenCalledWith(expect.stringContaining('Strapi does not yet verify Keycloak identity'));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('AUTH_URL must use https:// in production.'));
   });
 
   it('logs the variable name, never its value, and exits when OIDC configuration is incomplete', async () => {

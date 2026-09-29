@@ -18,6 +18,7 @@ import { responseParserModule as alertResponseParserModule } from './alerts/aler
 import { responseParserModule as analystDashboardResponseParserModule } from './analyst-dashboard/analyst-dashboard-service';
 import { responseParserModule as reportResponseParserModule } from './reports/report-service';
 import { responseParserModule as dashboardResponseParserModule } from './dashboard/requestor-dashboard-service';
+import { responseParserModule as accessResponseParserModule } from './access/access-service';
 
 type ResponseParserModule = {
   readonly modulePath: string;
@@ -35,6 +36,7 @@ const responseParserModuleInventory: readonly ResponseParserModule[] = [
   analystDashboardResponseParserModule,
   reportResponseParserModule,
   dashboardResponseParserModule,
+  accessResponseParserModule,
   riskServiceResponseParserModule,
   riskSchemaResponseParserModule,
   ...parserFreeModules,
@@ -467,6 +469,7 @@ describe('contract-to-client-schema parity', () => {
     // pinning it made the assertion fail when the parser-free declarations moved
     // into their own registry without any boundary changing.
     expect([...responseParserModuleInventory.map((module) => module.modulePath)].sort()).toEqual([
+      'features/access/access-service.ts',
       'features/administration/administration-actions.ts',
       'features/administration/administration-service.ts',
       'features/alerts/alert-service.ts',

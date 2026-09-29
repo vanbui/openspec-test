@@ -62,8 +62,10 @@ function stripTrailingSlash(value: string): string {
 /**
  * Reads exactly the five `AUTH_*` names idp/README.md documents, in this order, and
  * validates them. Missing or blank values are collected and reported together; a
- * malformed URL or a short secret is reported on its own. No message ever includes a
- * provided value, only the name of the variable that is wrong.
+ * malformed URL or a short secret is reported on its own. A production runtime
+ * (NODE_ENV=production) accepts only https:// for `AUTH_URL` and the issuer, since the
+ * session cookie and every token exchange ride on them (docs/adr/0004). No message
+ * ever includes a provided value, only the name of the variable that is wrong.
  */
 export function readOidcConfiguration(env: NodeJS.ProcessEnv): OidcConfiguration {
   const raw: Record<RequiredVariableName, string | undefined> = {
@@ -100,6 +102,11 @@ export function readOidcConfiguration(env: NodeJS.ProcessEnv): OidcConfiguration
     throw new Error('AUTH_KEYCLOAK_ISSUER must be an absolute http(s) URL with no credentials, query or fragment.');
   }
 
+  if (env.NODE_ENV === 'production') {
+    if (authUrl.protocol !== 'https:') throw new Error('AUTH_URL must use https:// in production.');
+    if (issuer.protocol !== 'https:') throw new Error('AUTH_KEYCLOAK_ISSUER must use https:// in production.');
+  }
+
   if (trimmed.AUTH_SECRET!.length < MINIMUM_SECRET_LENGTH) {
     throw new Error(`AUTH_SECRET must be at least ${MINIMUM_SECRET_LENGTH} characters. Generate one with \`openssl rand -base64 32\`.`);
   }
@@ -114,33 +121,14 @@ export function readOidcConfiguration(env: NodeJS.ProcessEnv): OidcConfiguration
 }
 
 /**
- * The production fail-closed refusal (D-02, OIDC-07). Strapi does not yet verify
- * Keycloak identity server-side, so a production build must not offer a sign-in it
- * cannot authorise. `resolveSessionRuntimeMode` uses the same rule at request time;
- * this is the startup-time half, run once from `instrumentation.ts`.
+ * Fails startup fast on bad configuration (OIDC-04): an invalid flag, or, with the
+ * flag on, an incomplete or malformed `AUTH_*` value, including a non-https URL in
+ * production. ADR 0003 also refused the flag outright in a production build; that
+ * refusal was lifted once Strapi verified Keycloak access tokens (docs/adr/0004).
  */
-export const OIDC_PRODUCTION_REFUSAL =
-  'CSRM_AUTH_OIDC_ENABLED=true is refused in a production build: Strapi does not yet verify ' +
-  'Keycloak identity, so a Keycloak sign-in would not be authorised server-side. Unset ' +
-  'CSRM_AUTH_OIDC_ENABLED or set it to false until the Strapi follow-up lands ' +
-  '(docs/adr/0003-production-only-keycloak-oidc-sign-in.md).';
-
-/**
- * Fails startup fast on bad configuration (OIDC-04) and refuses the flag outright in a
- * production build (OIDC-07, D-02). The default of `compiledFor` must stay the literal
- * `process.env.NODE_ENV`, for the same reason as `resolveSessionRuntimeMode`
- * (development-runtime.ts): Next replaces that expression at compile time.
- */
-export function assertSessionRuntimeConfiguration(
-  env: NodeJS.ProcessEnv,
-  compiledFor: string | undefined = process.env.NODE_ENV,
-): void {
+export function assertSessionRuntimeConfiguration(env: NodeJS.ProcessEnv): void {
   if (!parseOidcEnabledFlag(env.CSRM_AUTH_OIDC_ENABLED)) {
     return;
-  }
-
-  if (compiledFor !== 'development') {
-    throw new Error(OIDC_PRODUCTION_REFUSAL);
   }
 
   readOidcConfiguration(env);

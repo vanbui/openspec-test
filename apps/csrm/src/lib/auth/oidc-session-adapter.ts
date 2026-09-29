@@ -3,7 +3,8 @@ import 'server-only';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
-import type { CapabilityAdapter } from '@/lib/capabilities/capability-adapter';
+import type { Capability, CapabilityAdapter } from '@/lib/capabilities/capability-adapter';
+import { REFRESH_TOKEN_ERROR } from './oidc-session-error';
 import { resolveSessionRuntimeMode } from './development-runtime';
 import { keycloakLogoutUrl, readOidcConfiguration } from './oidc-configuration';
 import { validatedReturnTo } from './return-to';
@@ -39,6 +40,22 @@ function signInPath(returnTo: string): string {
 }
 
 /**
+ * Decodes the encrypted Auth.js JWT cookie of this request. next-auth marks
+ * `getToken` as not the preferred server-side API, but the session callback must not
+ * expose any token, so this is the only place tokens can be read back. The proxy has
+ * already refreshed the cookie and forwarded it on this request (docs/adr/0004).
+ */
+async function readSessionToken() {
+  const config = readOidcConfiguration(process.env);
+  const { getToken } = await import('next-auth/jwt');
+  return getToken({
+    req: { headers: new Headers(await headers()) },
+    secret: config.authSecret,
+    secureCookie: new URL(config.authUrl).protocol === 'https:',
+  });
+}
+
+/**
  * The OIDC session adapter (ADR 0003), behind the same `SessionAdapter` seam as the
  * development bridge. It never runs alongside that bridge: `resolveSessionRuntimeMode`
  * is the single predicate that decides which adapter `getSessionAdapter()` returns.
@@ -53,7 +70,8 @@ export class OidcSessionAdapter implements SessionAdapter {
     const session = await auth();
     const user = session?.user;
 
-    if (!user) {
+    // A failed refresh ends the session: the layout sends the visitor back through sign-in.
+    if (!user || (session as { error?: unknown }).error === REFRESH_TOKEN_ERROR) {
       return null;
     }
 
@@ -67,16 +85,33 @@ export class OidcSessionAdapter implements SessionAdapter {
   }
 
   /**
-   * Fail-closed optimistic UX (D-02): no capability is granted until Strapi resolves
-   * the Keycloak identity server-side (the follow-up issue). The layout renders the
-   * existing `PermissionDeniedState` for every OIDC session in the meantime.
+   * Capabilities come from Strapi's own resolution of the Keycloak identity
+   * (`GET /v1/me/access`, docs/adr/0004). Any failure grants nothing, so the layout
+   * renders `PermissionDeniedState` rather than pages whose calls would be refused.
+   * The import is dynamic because the access service reaches the transport, which
+   * imports `development-session-adapter.ts`, which imports this module.
    */
   capabilitiesFor(_session: Session): CapabilityAdapter {
     return {
-      async granted() {
-        return new Set();
+      async granted(): Promise<ReadonlySet<Capability>> {
+        const { strapiGrantedCapabilities } = await import('@/lib/capabilities/strapi-capabilities');
+        return strapiGrantedCapabilities();
       },
     };
+  }
+
+  async identityToken(): Promise<string | null> {
+    if (!isOidcRuntime()) {
+      return null;
+    }
+
+    const token = await readSessionToken();
+    if (!token || token.error === REFRESH_TOKEN_ERROR) return null;
+
+    const expiresAt = token.accessTokenExpiresAt;
+    if (typeof token.accessToken !== 'string' || typeof expiresAt !== 'number') return null;
+    // Never forward a token Strapi would reject as expired; the next request refreshes it.
+    return Date.now() / 1000 < expiresAt ? token.accessToken : null;
   }
 
   async signIn(returnTo: string): Promise<never> {
@@ -96,12 +131,7 @@ export class OidcSessionAdapter implements SessionAdapter {
     assertOidcRuntime();
 
     const config = readOidcConfiguration(process.env);
-    const { getToken } = await import('next-auth/jwt');
-    const token = await getToken({
-      req: { headers: new Headers(await headers()) },
-      secret: config.authSecret,
-      secureCookie: new URL(config.authUrl).protocol === 'https:',
-    });
+    const token = await readSessionToken();
     const idTokenHint = typeof token?.idToken === 'string' ? token.idToken : undefined;
 
     await (await loadAuth()).signOut({ redirect: false });

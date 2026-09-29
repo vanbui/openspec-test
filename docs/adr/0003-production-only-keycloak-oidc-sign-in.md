@@ -1,6 +1,6 @@
 # ADR 0003: Production-only Keycloak OIDC sign-in, behind a flag, fail-closed until Strapi verifies identity
 
-- **Status:** Accepted
+- **Status:** Accepted; the production refusal and the empty capability grant are superseded by [ADR 0004](0004-strapi-verifies-keycloak-access-tokens.md)
 - **Date:** 2026-09-29
 - **Code:** `apps/csrm/src/lib/auth/`, `apps/csrm/app/api/auth/[...nextauth]/route.ts`, `apps/csrm/instrumentation.ts`
 

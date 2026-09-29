@@ -21,6 +21,11 @@ export interface SessionAdapter {
   current(): Promise<Session | null>;
   setDevelopmentRole(role: DevelopmentRole): Promise<void>;
   capabilitiesFor(session: Session): CapabilityAdapter;
+  /**
+   * The caller's own Keycloak access token for Strapi (docs/adr/0004), read
+   * server-side only. Null outside OIDC mode or when no usable token exists.
+   */
+  identityToken(): Promise<string | null>;
   signIn(returnTo: string): Promise<never>;
   signOut(): Promise<never>;
 }

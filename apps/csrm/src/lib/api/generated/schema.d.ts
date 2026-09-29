@@ -1609,6 +1609,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the signed-in IdamBox User's own effective access
+         * @description Resolves the caller's IdamBox User (the Keycloak access token in x-csrm-identity-token, or the development identity header where that bridge is on) and returns its display name, the menu Functions it holds and the FunctionApi operations it is granted through Role -> Function -> FunctionApi, including the Requestor birthright. A human-analyst-only operation is listed only when the human Security Analyst Role grants it. Route-level scope checks still apply on every call, so the list is never wider than the authorization policy. Every Role holds this operation. The operation takes no query parameters: any query key is rejected with 400.
+         */
+        get: operations["current-user/get-access"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/dashboard/summary": {
         parameters: {
             query?: never;
@@ -1985,6 +2005,19 @@ export interface components {
             approved: number;
             closed: number;
             total: number;
+        };
+        CurrentUserAccessResponse: {
+            data: components["schemas"]["CurrentUserAccess"];
+        };
+        /** @description The signed-in IdamBox User's effective access. functions are the menu Functions (those with a menuPath) held through any effective Role, sorted by menuPath; operations are the granted FunctionApi urls (METHOD:/api/v1/...), sorted. */
+        CurrentUserAccess: {
+            displayName: string;
+            functions: components["schemas"]["CurrentUserMenuFunction"][];
+            operations: string[];
+        };
+        CurrentUserMenuFunction: {
+            name: string;
+            menuPath: string;
         };
         DashboardSummaryResponse: {
             data: components["schemas"]["DashboardSummary"];
@@ -4142,6 +4175,24 @@ export interface components {
         };
         /** @description The report key names no analyst report */
         ReportNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+            };
+        };
+        /** @description The request carried a query parameter */
+        CurrentUserAccessBadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+            };
+        };
+        /** @description No active IdamBox User was resolved for the caller */
+        CurrentUserAccessForbidden: {
             headers: {
                 [name: string]: unknown;
             };
@@ -16150,6 +16201,28 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
+        };
+    };
+    "current-user/get-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's effective access */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUserAccessResponse"];
+                };
+            };
+            400: components["responses"]["CurrentUserAccessBadRequest"];
+            403: components["responses"]["CurrentUserAccessForbidden"];
         };
     };
     "analyst-insights/get-dashboard-summary": {

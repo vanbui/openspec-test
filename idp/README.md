@@ -70,6 +70,11 @@ The import file is `keycloak/import/idambox-realm.json`. Docker Compose mounts i
 | Post-logout/home URL    | `http://localhost:3000`                            |
 | Web origin              | `http://localhost:3000`                            |
 | Strapi admin API client | `idambox-strapi-admin`                             |
+| `idambox-csrm` scopes   | default scopes include `basic`, so the access token carries `sub` |
+| `idambox-csrm` audience | an audience mapper adds `idambox-csrm` to the access token's `aud` |
+| Fixed user ids          | `jane.doe` `5d0f1c3a-6b1e-4c2a-9f0e-1a2b3c4d5e01`, `bob.doe` `5d0f1c3a-6b1e-4c2a-9f0e-1a2b3c4d5e02` |
+
+The scope, audience and fixed ids let Strapi verify the web's forwarded access token and map its `sub` to the seeded IdamBox User's `externalSubject` (`docs/adr/0004-strapi-verifies-keycloak-access-tokens.md`). The ids must stay in step with `apps/backend/src/keycloak/development-fixture-subjects.ts`.
 
 Keycloak startup import skips a realm that already exists in the persisted `keycloak_data` Docker volume. Normal restarts keep admin changes. To apply changes from `keycloak/import/idambox-realm.json` as a clean import, run `docker compose down -v` from this directory before starting again.
 

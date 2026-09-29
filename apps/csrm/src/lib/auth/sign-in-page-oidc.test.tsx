@@ -65,14 +65,15 @@ describe('the sign-in page in OIDC mode', () => {
   });
 });
 
-describe('the sign-in page falls back to the unavailable card in a production build with the flag true', () => {
+describe('the sign-in page in a production build with the flag true (docs/adr/0004)', () => {
   beforeEach(() => {
     vi.stubEnv('NODE_ENV', 'production');
   });
 
-  it('renders the unavailable card', async () => {
+  it('offers Keycloak sign-in now that Strapi verifies the forwarded identity', async () => {
     await renderSignIn();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Sign-in unavailable' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('button')).toHaveTextContent('Continue to IdamBox sign-in');
   });
 });

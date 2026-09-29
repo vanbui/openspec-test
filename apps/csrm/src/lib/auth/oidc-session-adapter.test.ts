@@ -12,12 +12,14 @@ const mocks = vi.hoisted(() => ({
   handlers: { GET: vi.fn(), POST: vi.fn() },
   headers: vi.fn(),
   getToken: vi.fn(),
+  strapiGrantedCapabilities: vi.fn(),
 }));
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next-auth/jwt', () => ({ getToken: mocks.getToken }));
+vi.mock('@/lib/capabilities/strapi-capabilities', () => ({ strapiGrantedCapabilities: mocks.strapiGrantedCapabilities }));
 vi.mock('./oidc-auth', () => {
   mocks.authFactoryCalls.count += 1;
   return {
@@ -79,6 +81,7 @@ beforeEach(() => {
   mocks.handlers.POST.mockReset().mockResolvedValue(new Response('post-ok'));
   mocks.headers.mockReset().mockResolvedValue(new Headers());
   mocks.getToken.mockReset();
+  mocks.strapiGrantedCapabilities.mockReset();
 });
 
 afterEach(() => {
@@ -97,7 +100,7 @@ describe('resolveSessionRuntimeMode with the OIDC flag', () => {
     expect(resolveSessionRuntimeMode(process.env, 'development')).toBe('oidc');
   });
 
-  it('resolves unavailable in a production build, including the attested E2E runtime', async () => {
+  it('resolves oidc in a production build run as production, never the development session, even in the attested E2E runtime', async () => {
     vi.resetModules();
     vi.stubEnv('CSRM_AUTH_OIDC_ENABLED', 'true');
     vi.stubEnv('NODE_ENV', 'production');
@@ -106,7 +109,19 @@ describe('resolveSessionRuntimeMode with the OIDC flag', () => {
     attestRuntime();
     const { resolveSessionRuntimeMode } = await import('./development-runtime');
 
+    expect(resolveSessionRuntimeMode(process.env, 'production')).toBe('oidc');
+  });
+
+  it('resolves unavailable when the compilation and the runtime disagree', async () => {
+    vi.resetModules();
+    vi.stubEnv('CSRM_AUTH_OIDC_ENABLED', 'true');
+    const { resolveSessionRuntimeMode } = await import('./development-runtime');
+
+    vi.stubEnv('NODE_ENV', 'development');
     expect(resolveSessionRuntimeMode(process.env, 'production')).toBe('unavailable');
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(resolveSessionRuntimeMode(process.env, 'development')).toBe('unavailable');
+    expect(resolveSessionRuntimeMode(process.env, 'test')).toBe('unavailable');
   });
 
   it('resolves development under next dev with the flag unset, unchanged', async () => {
@@ -191,16 +206,74 @@ describe('OidcSessionAdapter.current', () => {
     await expect(adapter.current()).resolves.toBeNull();
     expect(mocks.authFactoryCalls.count).toBe(0);
   });
-});
 
-describe('OidcSessionAdapter capabilities and role', () => {
-  it('grants no capability, fail-closed until Strapi resolves the identity', async () => {
+  it('resolves null once a token refresh has failed, so the layout signs the visitor in again', async () => {
     vi.resetModules();
     stubOidcMode();
     const { OidcSessionAdapter } = await import('./oidc-session-adapter');
     const adapter = new OidcSessionAdapter();
+    mocks.auth.mockResolvedValueOnce({ user: { name: 'Jane Doe' }, expires: '2026-09-30T00:00:00.000Z', error: 'RefreshTokenError' });
 
-    await expect(adapter.capabilitiesFor({ displayName: 'Jane Doe' }).granted()).resolves.toEqual(new Set());
+    await expect(adapter.current()).resolves.toBeNull();
+  });
+});
+
+describe('OidcSessionAdapter.identityToken', () => {
+  const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+  async function adapterInOidcMode() {
+    vi.resetModules();
+    stubOidcMode();
+    stubLocalAuthEnv();
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+    return new OidcSessionAdapter();
+  }
+
+  it('returns the unexpired access token read server-side from the Auth.js cookie', async () => {
+    const adapter = await adapterInOidcMode();
+    mocks.getToken.mockResolvedValueOnce({ accessToken: 'sentinel-access-token', accessTokenExpiresAt: nowSeconds() + 120 });
+
+    await expect(adapter.identityToken()).resolves.toBe('sentinel-access-token');
+    expect(mocks.getToken).toHaveBeenCalledWith(expect.objectContaining({ secret: localAuthEnv.AUTH_SECRET, secureCookie: false }));
+  });
+
+  it('returns null for an expired token, a failed refresh or no token at all', async () => {
+    const adapter = await adapterInOidcMode();
+
+    mocks.getToken.mockResolvedValueOnce({ accessToken: 'sentinel-access-token', accessTokenExpiresAt: nowSeconds() - 1 });
+    await expect(adapter.identityToken()).resolves.toBeNull();
+
+    mocks.getToken.mockResolvedValueOnce({ error: 'RefreshTokenError' });
+    await expect(adapter.identityToken()).resolves.toBeNull();
+
+    mocks.getToken.mockResolvedValueOnce({ accessToken: 'sentinel-access-token' });
+    await expect(adapter.identityToken()).resolves.toBeNull();
+
+    mocks.getToken.mockResolvedValueOnce(null);
+    await expect(adapter.identityToken()).resolves.toBeNull();
+  });
+
+  it('returns null outside OIDC mode without reading the cookie', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'development');
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+
+    await expect(new OidcSessionAdapter().identityToken()).resolves.toBeNull();
+    expect(mocks.getToken).not.toHaveBeenCalled();
+  });
+});
+
+describe('OidcSessionAdapter capabilities and role', () => {
+  it("grants exactly the capabilities Strapi derives for the caller's identity", async () => {
+    vi.resetModules();
+    stubOidcMode();
+    const granted = new Set(['assessment-request:read', 'assessment:review']);
+    mocks.strapiGrantedCapabilities.mockResolvedValueOnce(granted);
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+    const adapter = new OidcSessionAdapter();
+
+    await expect(adapter.capabilitiesFor({ displayName: 'Bob Doe' }).granted()).resolves.toBe(granted);
+    expect(mocks.strapiGrantedCapabilities).toHaveBeenCalledTimes(1);
   });
 
   it('rejects setDevelopmentRole with the unavailable message', async () => {

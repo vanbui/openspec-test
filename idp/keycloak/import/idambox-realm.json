@@ -10,6 +10,7 @@
   "verifyEmail": false,
   "users": [
     {
+      "id": "5d0f1c3a-6b1e-4c2a-9f0e-1a2b3c4d5e01",
       "username": "jane.doe",
       "email": "jane.doe@idambox.com",
       "emailVerified": true,
@@ -26,6 +27,7 @@
       ]
     },
     {
+      "id": "5d0f1c3a-6b1e-4c2a-9f0e-1a2b3c4d5e02",
       "username": "bob.doe",
       "email": "bob.doe@idambox.com",
       "emailVerified": true,
@@ -82,6 +84,7 @@
       "defaultClientScopes": [
         "web-origins",
         "acr",
+        "basic",
         "profile",
         "roles",
         "email"
@@ -91,6 +94,20 @@
         "phone",
         "offline_access",
         "microprofile-jwt"
+      ],
+      "protocolMappers": [
+        {
+          "name": "idambox-csrm-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "idambox-csrm",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
       ]
     },
     {

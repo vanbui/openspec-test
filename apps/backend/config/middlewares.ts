@@ -6,6 +6,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Middlewar
   'strapi::logger',
   'strapi::errors',
   'global::csrm-development-identity',
+  'global::csrm-keycloak-identity',
   'strapi::security',
   {
     name: 'strapi::cors',

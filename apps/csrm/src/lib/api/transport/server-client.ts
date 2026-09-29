@@ -71,10 +71,30 @@ function developmentIdentityBridgeEnabled(): boolean {
   return resolveSessionRuntimeMode(process.env) === 'development' && process.env.CSRM_DEV_IDENTITY === 'true';
 }
 
+/**
+ * In OIDC mode the caller's own Keycloak access token goes to Strapi in its own
+ * header, which Strapi verifies against the realm JWKS and maps to an IdamBox User
+ * (docs/adr/0004). `Authorization` stays with the API token below. No session, no
+ * token: the call carries no identity and Strapi refuses it.
+ */
+async function oidcIdentityHeader(): Promise<Record<string, string> | undefined> {
+  if (!oidcIdentityEnabled()) {
+    return undefined;
+  }
+
+  const token = await getSessionAdapter().identityToken();
+  return token ? { 'x-csrm-identity-token': token } : undefined;
+}
+
+function oidcIdentityEnabled(): boolean {
+  return resolveSessionRuntimeMode(process.env) === 'oidc';
+}
+
 function apiTokenHeader(required: boolean): Record<string, string> | undefined {
   // Optional Strapi API token (admin panel > Settings > API Tokens). When
   // configured it hardens the outer users-permissions gate; the identity
   // header and the IdamBox authorization policy remain the per-user authority.
+  // Either identity path requires it, because every CSRM route sits behind it.
   const token = process.env.CSRM_API_TOKEN?.trim();
   if (required && !token) {
     throw new Error(configurationErrorMessage);
@@ -84,8 +104,8 @@ function apiTokenHeader(required: boolean): Record<string, string> | undefined {
 
 export async function createStrapiClient(): Promise<StrapiClient> {
   const baseUrl = parseStrapiRestBase(process.env.CSRM_API_BASE_URL);
-  const token = apiTokenHeader(developmentIdentityBridgeEnabled());
-  const identity = await developmentIdentityHeader();
+  const token = apiTokenHeader(developmentIdentityBridgeEnabled() || oidcIdentityEnabled());
+  const identity = (await developmentIdentityHeader()) ?? (await oidcIdentityHeader());
   const headers = identity || token ? { ...token, ...identity } : undefined;
 
   return createClient<paths>({ baseUrl, ...(headers ? { headers } : {}) });

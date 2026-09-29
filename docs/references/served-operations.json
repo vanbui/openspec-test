@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-25T13:49:08.292Z",
+  "generatedAt": "2026-09-29T22:34:34.901Z",
   "served": [
     {
       "method": "DELETE",
@@ -420,6 +420,33 @@
       "specOperationId": "administration/get-information-systems",
       "webCallers": [
         "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/access",
+      "catalogueUrl": "GET:/api/v1/me/access",
+      "apiName": "csrm-current-user",
+      "routerFile": "csrm-current-user/routes/access.ts",
+      "handler": "api::csrm-current-user.access.get",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/me/access",
+      "policyConfig": {
+        "operation": "GET:/api/v1/me/access"
+      },
+      "functionApiIds": [
+        "function.current_user.access_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst",
+        "role.security_analyst_agent"
+      ],
+      "specOperationId": "current-user/get-access",
+      "webCallers": [
+        "src/features/access/access-service.ts"
       ]
     },
     {

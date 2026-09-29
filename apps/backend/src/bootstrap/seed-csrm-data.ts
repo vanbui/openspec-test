@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Core } from "@strapi/strapi";
 
 import catalogue from "./idambox-csrm-role-function-api-catalogue.json";
+import { developmentFixtureSubject } from "../keycloak/development-fixture-subjects";
 
 const CSRM_APPLICATION_SLUG = "idambox-csrm";
 const CSRM_SECURITY_ANALYST_ROLE_NAME = "Security Analyst";
@@ -594,6 +595,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     await userService.create({
       data: {
         ...CSRM_USERS.jane,
+        ...developmentFixtureSubject(CSRM_USERS.jane.email),
         roles: [],
       },
     });
@@ -602,6 +604,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
       documentId: existingJaneUsers[0].documentId,
       data: {
         ...CSRM_USERS.jane,
+        ...developmentFixtureSubject(CSRM_USERS.jane.email),
         roles: [],
       },
     });
@@ -620,6 +623,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     await userService.create({
       data: {
         ...CSRM_USERS.bob,
+        ...developmentFixtureSubject(CSRM_USERS.bob.email),
         roles: [securityAnalystRole.documentId],
       },
     });
@@ -629,6 +633,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
       data: {
         roles: [securityAnalystRole.documentId],
         ...CSRM_USERS.bob,
+        ...developmentFixtureSubject(CSRM_USERS.bob.email),
       },
     });
   }
