@@ -12,6 +12,14 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { assertSessionRuntimeConfiguration } = await import('@/lib/auth/oidc-configuration');
-    assertSessionRuntimeConfiguration(process.env);
+    try {
+      assertSessionRuntimeConfiguration(process.env);
+    } catch (error) {
+      // Next only logs an error thrown from register() and keeps serving, so exit
+      // explicitly. The messages name a variable, never its value.
+      // eslint-disable-next-line no-console -- the startup failure must reach the operator.
+      console.error(`[csrm-auth] ${error instanceof Error ? error.message : 'Invalid session configuration.'}`);
+      process.exit(1);
+    }
   }
 }

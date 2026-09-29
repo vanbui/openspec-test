@@ -184,16 +184,39 @@ describe('assertSessionRuntimeConfiguration', () => {
 describe('register() from apps/csrm/instrumentation.ts', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
-  it('rejects with the refusal message on the nodejs runtime, in a production build, with the flag true', async () => {
+  // Next only logs a register() rejection and keeps serving, so register() exits itself.
+  it('logs the refusal and exits on the nodejs runtime, in a production build, with the flag true', async () => {
     vi.stubEnv('NEXT_RUNTIME', 'nodejs');
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('CSRM_AUTH_OIDC_ENABLED', 'true');
     vi.resetModules();
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { register } = await import('../../../instrumentation');
 
-    await expect(register()).rejects.toThrow('Strapi does not yet verify Keycloak identity');
+    await register();
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('Strapi does not yet verify Keycloak identity'));
+  });
+
+  it('logs the variable name, never its value, and exits when OIDC configuration is incomplete', async () => {
+    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('CSRM_AUTH_OIDC_ENABLED', 'true');
+    vi.stubEnv('AUTH_KEYCLOAK_SECRET', '');
+    vi.resetModules();
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { register } = await import('../../../instrumentation');
+
+    await register();
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('AUTH_KEYCLOAK_SECRET'));
   });
 
   it('resolves on the edge runtime regardless of configuration', async () => {
