@@ -30,7 +30,7 @@ const originalEnvironment = new Map(
   [
     "APP_KEYS", "ADMIN_JWT_SECRET", "API_TOKEN_SALT", "TRANSFER_TOKEN_SALT", "ENCRYPTION_KEY", "JWT_SECRET",
     "DATABASE_CLIENT", "DATABASE_FILENAME", "IDAMBOX_SEED_CSRM", "IDAMBOX_SEED_CORE",
-    "STRAPI_DISABLE_UPDATE_NOTIFICATION", "STRAPI_ADMIN_AUTO_OPEN",
+    "STRAPI_DISABLE_UPDATE_NOTIFICATION", "STRAPI_ADMIN_AUTO_OPEN", "IDAMBOX_KEYCLOAK_PROVISIONING",
   ].map((name) => [name, process.env[name]] as const),
 );
 
@@ -78,6 +78,8 @@ before(async () => {
   process.env.IDAMBOX_SEED_CSRM = "false";
   process.env.IDAMBOX_SEED_CORE = "false";
   process.env.STRAPI_DISABLE_UPDATE_NOTIFICATION = "true";
+  // Tests never reach Keycloak, whatever the developer .env enables.
+  process.env.IDAMBOX_KEYCLOAK_PROVISIONING = "false";
   process.env.STRAPI_ADMIN_AUTO_OPEN = "false";
 
   const strapiPackage = require("@strapi/strapi") as {

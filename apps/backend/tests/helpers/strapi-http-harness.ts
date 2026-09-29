@@ -412,7 +412,7 @@ export type AuthorizationHttpHarnessOptions = {
 
 export async function startAuthorizationHttpHarness(options: AuthorizationHttpHarnessOptions = {}): Promise<AuthorizationHttpHarness> {
   const originalEnvironment = new Map(
-    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_CORS_ALLOWED_ORIGINS"]
+    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_CORS_ALLOWED_ORIGINS", "IDAMBOX_KEYCLOAK_PROVISIONING"]
       .map((name) => [name, process.env[name]] as const),
   );
   await mkdir(databaseDir, { recursive: true });
@@ -436,6 +436,8 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   process.env.CSRM_AI_PROVIDER = "deterministic";
   process.env.CSRM_CORS_ALLOWED_ORIGINS = options.corsAllowedOrigins ?? "";
   process.env.STRAPI_DISABLE_UPDATE_NOTIFICATION = "true";
+  // Tests never reach Keycloak, whatever the developer .env enables.
+  process.env.IDAMBOX_KEYCLOAK_PROVISIONING = "false";
 
   // The public package exports are intentionally loaded dynamically because its
   // declaration surface re-exports Core but does not declare these runtime helpers.

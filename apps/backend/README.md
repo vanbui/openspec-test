@@ -53,6 +53,43 @@ Structured output is enabled by default. Disable `CSRM_AI_STRUCTURED_OUTPUT` onl
 
 Context-window sizing is an operator responsibility. The application never trims, samples, or clips questionnaire answers, Risk Types, or Control reference data to fit a smaller window. Configure a model that can hold the complete context; otherwise the job fails loudly rather than silently dropping risk-relevant data. Automated test runs force the deterministic provider regardless of `.env` contents.
 
+## Keycloak user provisioning
+
+When enabled, every `IdamBox User` create, and every update that changes `email`, `username`, `firstName`, `lastName`, `displayName`, `accountStatus` or `password`, is mirrored into Keycloak through the Admin API (`src/keycloak/`). Strapi stores the Keycloak user id in `externalSubject` and clears the `password` input. The password is only a write-once provisioning input and is never kept, not even as a hash. `accountStatus: inactive` disables the Keycloak account. Design and trade-offs: [ADR 0002](../../docs/adr/0002-keycloak-provisioning-blocks-the-user-write.md).
+
+It is **off by default** (`IDAMBOX_KEYCLOAK_PROVISIONING=false`). When it is off, Strapi reads no other `KEYCLOAK_*` value, creates no admin client, registers no hook and makes no Keycloak call, so local development and the test suite need no Keycloak. Automated test runs force it off regardless of `.env` contents.
+
+A Keycloak failure **blocks the Strapi user save**. The Strapi write and the Keycloak call share one database transaction, so an unreachable, slow or rejecting Keycloak rolls the save back and the request fails. Retry once Keycloak is available. Provisioning is idempotent: it looks up the account by `externalSubject`, then by email, and adopts an existing account instead of duplicating it.
+
+### Enabling it in production
+
+1. **Create a dedicated client** in the realm that holds IdamBox users. Do not use the `master` realm or the bootstrap admin account. Make it a confidential OpenID Connect client with *Client authentication* and *Service accounts roles* on, and *Standard flow*, *Direct access grants* and *Implicit flow* off. The local seed's `idambox-strapi-admin` client in `idp/keycloak/import/idambox-realm.json` is the reference shape.
+2. **Grant least privilege.** Give the client's service account the `realm-management` client role `manage-users` and nothing else. `manage-users` already includes viewing and querying users, so `view-users` and `query-users`, which the local seed also grants, are redundant. Never grant `realm-admin`, `manage-realm` or `manage-clients`. `manage-users` can still reset any password in that realm, so keep Keycloak's own administrators out of the IdamBox realm.
+3. **Declare the `displayName` attribute** in the realm's *User profile* (Realm settings → User profile), or enable unmanaged attributes. Keycloak 24+ otherwise drops attributes it does not know.
+4. **Set the environment** from your secret store, never from a committed file:
+
+   ```env
+   IDAMBOX_KEYCLOAK_PROVISIONING=true
+   KEYCLOAK_BASE_URL=https://sso.example.com        # no trailing /realms, no credentials
+   KEYCLOAK_REALM=idambox
+   KEYCLOAK_ADMIN_CLIENT_ID=<client id from step 1>
+   KEYCLOAK_ADMIN_CLIENT_SECRET=<client secret from step 1>
+   # KEYCLOAK_REQUEST_TIMEOUT_MS=5000                # optional, per request
+   ```
+
+   The committed `idambox-strapi-admin-local-secret` is a local-only value for `idp/docker-compose.yml`. It must never be used outside local development. A missing or malformed value stops Strapi at startup with an error that names the variable but never its value.
+5. **Use PostgreSQL or MySQL.** The user write holds a database transaction open during the Keycloak calls, each bounded by `KEYCLOAK_REQUEST_TIMEOUT_MS`. SQLite would lock all writes for that time.
+6. **Verify.** On boot Strapi logs `Keycloak user provisioning is enabled for realm "…" at …`. Create a test IdamBox User and confirm that the Keycloak account exists and that `externalSubject` holds its id. A failure is logged as `Keycloak provisioning failed for IdamBox user <documentId>; the <action> is rolled back. …` with the HTTP status and Keycloak's error code only.
+
+Operational notes:
+
+- **Existing users** are linked the next time they are updated. Any update of a user without `externalSubject` provisions it.
+- **Deletes are not propagated.** Set `accountStatus` to `inactive`, which disables the Keycloak account, before deleting an IdamBox User.
+- **Usernames** are immutable in Keycloak by default, so a changed Strapi `username` is not propagated. Change it in both places deliberately.
+- **Rotating the client secret** needs a Strapi restart. The admin token is cached in memory until shortly before it expires, and a rejected token is refreshed once automatically.
+
+To exercise it locally against the seeded Keycloak, start `idp/` with `docker compose up -d` (see `idp/README.md`), copy the `KEYCLOAK_*` block from `.env.example` into `.env`, set `IDAMBOX_KEYCLOAK_PROVISIONING=true`, and restart Strapi.
+
 Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.
 
 ```

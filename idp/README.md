@@ -86,6 +86,8 @@ KEYCLOAK_ADMIN_CLIENT_SECRET=idambox-strapi-admin-local-secret
 
 Strapi uses this dedicated client for Keycloak Admin API calls. Do not use the bootstrap `admin` / `admin` account for application provisioning. The client manages users in the existing `idambox` realm and does not add CSRM authorization roles or groups.
 
+Provisioning is off unless Strapi runs with `IDAMBOX_KEYCLOAK_PROVISIONING=true`. For production setup, including a least-privilege service account with `manage-users` only, see `apps/backend/README.md` ("Keycloak user provisioning") and `docs/adr/0002-keycloak-provisioning-blocks-the-user-write.md`.
+
 For runtime provisioning verification, start Keycloak from this directory with `docker compose up -d`, run Strapi with `IDAMBOX_KEYCLOAK_PROVISIONING=true`, create or update an `IdamBox User`, and inspect the matching user in the `idambox` realm. If Keycloak has already imported the realm before client changes, run `docker compose down -v` and start it again so the checked-in realm JSON is re-imported.
 
 ## OIDC Values
