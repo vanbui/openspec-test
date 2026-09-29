@@ -4,6 +4,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { DevelopmentCapabilityAdapter } from '@/lib/capabilities/development-capabilities';
 import { resolveSessionRuntimeMode } from './development-runtime';
+import { OidcSessionAdapter } from './oidc-session-adapter';
 import {
   parseDevelopmentRole,
   type DevelopmentRole,
@@ -88,6 +89,10 @@ export class DevelopmentSessionAdapter implements SessionAdapter {
   }
 
   capabilitiesFor(session: Session): DevelopmentCapabilityAdapter {
+    if (!session.developmentRole) {
+      throw new Error(unavailableSessionMessage);
+    }
+
     return new DevelopmentCapabilityAdapter(session.developmentRole);
   }
 
@@ -122,7 +127,21 @@ class UnavailableSessionAdapter implements SessionAdapter {
 
 const developmentSession = new DevelopmentSessionAdapter();
 const unavailableSession = new UnavailableSessionAdapter();
+let oidcSession: OidcSessionAdapter | undefined;
 
+/**
+ * Switches on the single `resolveSessionRuntimeMode` predicate (ADR 0003): `'oidc'`
+ * returns the OIDC adapter singleton, `'development'` the development adapter, and
+ * anything else the fail-closed unavailable adapter. The two session modes are
+ * mutually exclusive, so this never returns more than one adapter for a given mode.
+ */
 export function getSessionAdapter(): SessionAdapter {
-  return isDevelopmentRuntime() ? developmentSession : unavailableSession;
+  const mode = resolveSessionRuntimeMode(process.env);
+
+  if (mode === 'oidc') {
+    oidcSession ??= new OidcSessionAdapter();
+    return oidcSession;
+  }
+
+  return mode === 'development' ? developmentSession : unavailableSession;
 }

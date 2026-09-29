@@ -1,0 +1,141 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('server-only', () => ({}));
+
+import { parseOidcEnabledFlag, readOidcConfiguration } from './oidc-configuration';
+
+const sentinelClientSecret = 'sentinel-client-secret-0123456789';
+const sentinelAuthSecret = 'sentinel-auth-secret-0123456789-0123456789';
+
+const completeEnv: NodeJS.ProcessEnv = {
+  NODE_ENV: 'test',
+  AUTH_URL: 'http://localhost:3000',
+  AUTH_SECRET: sentinelAuthSecret,
+  AUTH_KEYCLOAK_ID: 'idambox-csrm',
+  AUTH_KEYCLOAK_SECRET: sentinelClientSecret,
+  AUTH_KEYCLOAK_ISSUER: 'http://localhost:8080/realms/idambox',
+};
+
+/** Records which keys were read from the given env object, without changing its values. */
+function trackedEnvReads(env: NodeJS.ProcessEnv): { proxy: NodeJS.ProcessEnv; reads: string[] } {
+  const reads: string[] = [];
+  const proxy = new Proxy(env, {
+    get(target, property, receiver) {
+      if (typeof property === 'string') reads.push(property);
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  return { proxy, reads };
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('parseOidcEnabledFlag', () => {
+  it.each([
+    [undefined, false],
+    ['', false],
+    ['false', false],
+    ['true', true],
+  ])('%s -> %s', (value, expected) => {
+    expect(parseOidcEnabledFlag(value)).toBe(expected);
+  });
+
+  it.each(['TRUE', 'yes', '1', ' true '])('rejects %s naming the flag, never the value', (value) => {
+    expect(() => parseOidcEnabledFlag(value)).toThrow('CSRM_AUTH_OIDC_ENABLED');
+    expect(() => parseOidcEnabledFlag(value)).not.toThrow(value);
+  });
+});
+
+describe('readOidcConfiguration', () => {
+  it('returns the normalised configuration for a complete local environment', () => {
+    const config = readOidcConfiguration({
+      ...completeEnv,
+      AUTH_KEYCLOAK_ISSUER: 'http://localhost:8080/realms/idambox/',
+    });
+
+    expect(config).toEqual({
+      authUrl: 'http://localhost:3000',
+      authSecret: sentinelAuthSecret,
+      clientId: 'idambox-csrm',
+      clientSecret: sentinelClientSecret,
+      issuer: 'http://localhost:8080/realms/idambox',
+    });
+  });
+
+  it.each(['AUTH_URL', 'AUTH_SECRET', 'AUTH_KEYCLOAK_ID', 'AUTH_KEYCLOAK_SECRET', 'AUTH_KEYCLOAK_ISSUER'] as const)(
+    'throws naming %s when it is missing',
+    (missingName) => {
+      const env = { ...completeEnv, [missingName]: undefined };
+      expect(() => readOidcConfiguration(env)).toThrow(missingName);
+    },
+  );
+
+  it('names every missing variable when two are absent', () => {
+    const env = { ...completeEnv, AUTH_SECRET: undefined, AUTH_KEYCLOAK_SECRET: undefined };
+    try {
+      readOidcConfiguration(env);
+      throw new Error('expected readOidcConfiguration to throw');
+    } catch (error) {
+      expect((error as Error).message).toContain('AUTH_SECRET');
+      expect((error as Error).message).toContain('AUTH_KEYCLOAK_SECRET');
+    }
+  });
+
+  it('never includes a provided value in any thrown message', () => {
+    const scenarios: Array<Partial<NodeJS.ProcessEnv>> = [
+      { AUTH_URL: undefined },
+      { AUTH_URL: 'not a url' },
+      { AUTH_URL: 'https://operator:secret@localhost:3000' },
+      { AUTH_KEYCLOAK_ISSUER: 'not a url' },
+      { AUTH_KEYCLOAK_ISSUER: 'https://localhost:8080/realms/idambox?token=x' },
+      { AUTH_SECRET: 'too-short' },
+    ];
+
+    for (const overrides of scenarios) {
+      const env = { ...completeEnv, ...overrides };
+      try {
+        readOidcConfiguration(env);
+        throw new Error('expected readOidcConfiguration to throw');
+      } catch (error) {
+        const message = (error as Error).message;
+        expect(message).not.toContain(sentinelClientSecret);
+        expect(message).not.toContain(sentinelAuthSecret);
+      }
+    }
+  });
+
+  it.each([
+    ['not a URL', 'AUTH_URL'],
+    ['https://user:pass@localhost:3000', 'AUTH_URL'],
+    ['https://localhost:3000?x=1', 'AUTH_URL'],
+    ['https://localhost:3000#frag', 'AUTH_URL'],
+  ])('rejects a malformed AUTH_URL (%s) naming the variable', (value, variableName) => {
+    const env = { ...completeEnv, AUTH_URL: value };
+    expect(() => readOidcConfiguration(env)).toThrow(variableName);
+  });
+
+  it.each([
+    ['not a URL', 'AUTH_KEYCLOAK_ISSUER'],
+    ['https://user:pass@localhost:8080/realms/idambox', 'AUTH_KEYCLOAK_ISSUER'],
+    ['https://localhost:8080/realms/idambox?x=1', 'AUTH_KEYCLOAK_ISSUER'],
+    ['https://localhost:8080/realms/idambox#frag', 'AUTH_KEYCLOAK_ISSUER'],
+  ])('rejects a malformed AUTH_KEYCLOAK_ISSUER (%s) naming the variable', (value, variableName) => {
+    const env = { ...completeEnv, AUTH_KEYCLOAK_ISSUER: value };
+    expect(() => readOidcConfiguration(env)).toThrow(variableName);
+  });
+
+  it('rejects an AUTH_SECRET shorter than 32 characters, naming AUTH_SECRET', () => {
+    const env = { ...completeEnv, AUTH_SECRET: 'short-secret' };
+    expect(() => readOidcConfiguration(env)).toThrow('AUTH_SECRET');
+  });
+
+  it('reads only the five AUTH_* names, in order', () => {
+    const { proxy, reads } = trackedEnvReads(completeEnv);
+
+    readOidcConfiguration(proxy);
+
+    expect(reads).toEqual(['AUTH_URL', 'AUTH_SECRET', 'AUTH_KEYCLOAK_ID', 'AUTH_KEYCLOAK_SECRET', 'AUTH_KEYCLOAK_ISSUER']);
+  });
+});

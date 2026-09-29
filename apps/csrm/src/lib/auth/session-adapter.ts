@@ -5,11 +5,16 @@ import type { CapabilityAdapter } from '@/lib/capabilities/capability-adapter';
 export const developmentRoles = ['Requestor', 'Secondary Requestor', 'Security Analyst'] as const;
 
 export type DevelopmentRole = (typeof developmentRoles)[number];
-export type SessionRuntimeMode = 'development' | 'unavailable';
+export type SessionRuntimeMode = 'development' | 'oidc' | 'unavailable';
 
 export interface Session {
   displayName: string;
-  developmentRole: DevelopmentRole;
+  /**
+   * Only a development-bridge session carries a fixture role; an OIDC session
+   * (ADR 0003) never does. The two runtime modes are mutually exclusive through the
+   * single `resolveSessionRuntimeMode` predicate, so a session never needs both.
+   */
+  developmentRole?: DevelopmentRole;
 }
 
 export interface SessionAdapter {

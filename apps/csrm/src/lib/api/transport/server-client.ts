@@ -54,7 +54,7 @@ async function developmentIdentityHeader(): Promise<Record<string, string> | und
   }
 
   const session = await getSessionAdapter().current();
-  const identity = session
+  const identity = session?.developmentRole
     ? developmentFixtureIdentityForRole(session.developmentRole)
     : null;
 

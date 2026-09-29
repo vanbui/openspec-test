@@ -5,18 +5,17 @@ import { BrandLockup } from '@/components/shell/wordmark';
 import { Button } from '@/components/ui/button';
 import { resolveSessionRuntimeMode } from '@/lib/auth/development-runtime';
 import { validatedReturnTo } from '@/lib/auth/return-to';
-import { completeDevelopmentSignIn } from './server-actions';
+import { beginOidcSignIn, completeDevelopmentSignIn } from './server-actions';
 
 interface SignInPageProps {
-  searchParams: Promise<{ returnTo?: string }>;
-}
-
-function developmentSessionAvailable(): boolean {
-  return resolveSessionRuntimeMode(process.env) === 'development';
+  searchParams: Promise<{ returnTo?: string; error?: string }>;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return developmentSessionAvailable()
+  const mode = resolveSessionRuntimeMode(process.env);
+
+  if (mode === 'oidc') return { title: 'Sign in | IdamBox CSRM' };
+  return mode === 'development'
     ? { title: 'Development sign-in | IdamBox CSRM' }
     : { title: 'Sign-in unavailable | IdamBox CSRM' };
 }
@@ -47,13 +46,54 @@ function SignInUnavailable() {
   );
 }
 
+/*
+ * The production-only Keycloak OIDC sign-in card (ADR 0003). It never names
+ * "development", "Strapi" or a fixture identity: the copy is the same whether this
+ * runs in a customer's Keycloak or the local `idp/` realm.
+ */
+function OidcSignIn({ returnTo, error }: { returnTo: string; error?: string }) {
+  return (
+    <main className="sign-in">
+      <section className="sign-in-card">
+        <p className="wordmark"><BrandLockup /></p>
+        <p className="micro-label sign-in-eyebrow">
+          <ShieldCheckIcon aria-hidden="true" />
+          IdamBox CSRM
+        </p>
+        <h1>Sign in</h1>
+        <p className="sign-in-lead">
+          Continue with your organisation’s IdamBox account.
+        </p>
+        {error ? (
+          <p className="sign-in-error" role="alert">
+            Sign-in did not complete. Try again or contact your administrator.
+          </p>
+        ) : null}
+        <form action={beginOidcSignIn} className="sign-in-actions">
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <Button className="h-control-h" type="submit">Continue to IdamBox sign-in</Button>
+        </form>
+        <p className="sign-in-note">
+          Access is granted by your organisation’s authorization service, never by navigation alone.
+        </p>
+      </section>
+    </main>
+  );
+}
+
 export default async function SignIn({ searchParams }: SignInPageProps) {
-  if (!developmentSessionAvailable()) {
+  const mode = resolveSessionRuntimeMode(process.env);
+
+  if (mode === 'unavailable') {
     return <SignInUnavailable />;
   }
 
-  const { returnTo } = await searchParams;
+  const { returnTo, error } = await searchParams;
   const safeReturnTo = validatedReturnTo(returnTo);
+
+  if (mode === 'oidc') {
+    return <OidcSignIn returnTo={safeReturnTo} error={error} />;
+  }
 
   return (
     <main className="sign-in">
