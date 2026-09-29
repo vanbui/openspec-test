@@ -24,5 +24,13 @@ export default defineConfig({
      */
     testTimeout: 20_000,
     hookTimeout: 20_000,
+    /*
+     * Unit tests exercise the development bridge unless a test stubs the flag itself
+     * (ADR 0003): a developer's local `CSRM_AUTH_OIDC_ENABLED=true` must not switch
+     * every unstubbed test from `next-auth` unmounted to reaching for Keycloak.
+     */
+    env: {
+      CSRM_AUTH_OIDC_ENABLED: 'false',
+    },
   },
 });

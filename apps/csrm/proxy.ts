@@ -36,8 +36,10 @@ export function proxy(request: NextRequest): NextResponse {
 
 /*
  * Static files and optimised images carry no document, and a router prefetch renders none either,
- * so they skip the proxy (the matcher the Next CSP guide recommends). The app has no /api routes.
- * Each exclusion names one real path and nothing that merely starts like it: the static directory
+ * so they skip the proxy (the matcher the Next CSP guide recommends). The only /api route is
+ * Auth.js's `/api/auth/*` (OIDC mode only, ADR 0003; 404 otherwise); it renders no document and
+ * still receives the policy like any other response. Each exclusion names one real path and
+ * nothing that merely starts like it: the static directory
  * with its slash, the image optimiser and the favicon exactly (the matcher tests the path without
  * its query). Any other URL renders a document, the not-found page at least, and needs the policy
  * (SR-05).

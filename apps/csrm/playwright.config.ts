@@ -13,6 +13,15 @@ import {
 } from './src/lib/testing/e2e-run-artifacts';
 
 /*
+ * This harness exercises the development identity bridge (ADR 0003). Next never
+ * overrides an already-set variable from `.env.local`, and both the webServer
+ * entries below and the specs' own spawned servers inherit this process's
+ * environment, so a developer's local `CSRM_AUTH_OIDC_ENABLED=true` cannot switch
+ * the servers this run starts into OIDC mode.
+ */
+process.env.CSRM_AUTH_OIDC_ENABLED = 'false';
+
+/*
  * Stop any Strapi dev server before running this suite.
  *
  * The run gets its own ports, its own SQLite file, and its own Next build
