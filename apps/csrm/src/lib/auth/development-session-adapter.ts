@@ -100,6 +100,10 @@ export class DevelopmentSessionAdapter implements SessionAdapter {
     assertDevelopmentRuntime();
     redirect(signInPath(returnTo));
   }
+
+  async signOut(): Promise<never> {
+    throw new Error(unavailableSessionMessage);
+  }
 }
 
 /**
@@ -122,6 +126,10 @@ class UnavailableSessionAdapter implements SessionAdapter {
 
   async signIn(returnTo: string): Promise<never> {
     redirect(signInPath(returnTo));
+  }
+
+  async signOut(): Promise<never> {
+    throw new Error(unavailableSessionMessage);
   }
 }
 

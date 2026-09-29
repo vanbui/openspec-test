@@ -506,6 +506,18 @@ textarea {
   color: var(--sidebar-muted);
 }
 
+/* The OIDC-mode shell footer (ADR 0003): same box model as .role-switcher, the slot it replaces. */
+.sign-out-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sign-out-form .micro-label {
+  color: var(--sidebar-muted);
+}
+
 .skip-link {
   left: 16px;
   position: fixed;

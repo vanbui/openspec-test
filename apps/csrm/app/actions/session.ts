@@ -10,3 +10,7 @@ export async function setDevelopmentRole(formData: FormData): Promise<void> {
   await getSessionAdapter().setDevelopmentRole(role);
   revalidatePath('/app', 'layout');
 }
+
+export async function signOutOfSession(): Promise<never> {
+  return getSessionAdapter().signOut();
+}

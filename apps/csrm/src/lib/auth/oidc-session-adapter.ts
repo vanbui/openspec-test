@@ -1,9 +1,11 @@
 import 'server-only';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
 import type { CapabilityAdapter } from '@/lib/capabilities/capability-adapter';
 import { resolveSessionRuntimeMode } from './development-runtime';
+import { keycloakLogoutUrl, readOidcConfiguration } from './oidc-configuration';
 import { validatedReturnTo } from './return-to';
 import type { DevelopmentRole, Session, SessionAdapter } from './session-adapter';
 
@@ -79,6 +81,37 @@ export class OidcSessionAdapter implements SessionAdapter {
 
   async signIn(returnTo: string): Promise<never> {
     redirect(signInPath(returnTo));
+  }
+
+  /**
+   * RP-initiated logout (OIDC-06). The id_token never leaves this server: it exists
+   * only in the encrypted Auth.js JWT cookie, and is read back here through
+   * `getToken` (next-auth marks it as not the preferred server-side API, but the
+   * session callback must not expose the token, so this is the only place it can be
+   * read). The Auth.js cookie is cleared before the browser is sent to Keycloak's
+   * end-session endpoint, whose origin must equal the realm's registered
+   * post-logout URI.
+   */
+  async signOut(): Promise<never> {
+    assertOidcRuntime();
+
+    const config = readOidcConfiguration(process.env);
+    const { getToken } = await import('next-auth/jwt');
+    const token = await getToken({
+      req: { headers: new Headers(await headers()) },
+      secret: config.authSecret,
+      secureCookie: new URL(config.authUrl).protocol === 'https:',
+    });
+    const idTokenHint = typeof token?.idToken === 'string' ? token.idToken : undefined;
+
+    await (await loadAuth()).signOut({ redirect: false });
+
+    redirect(keycloakLogoutUrl({
+      issuer: config.issuer,
+      clientId: config.clientId,
+      postLogoutRedirectUri: new URL(config.authUrl).origin,
+      idTokenHint,
+    }));
   }
 }
 

@@ -22,6 +22,7 @@ export interface SessionAdapter {
   setDevelopmentRole(role: DevelopmentRole): Promise<void>;
   capabilitiesFor(session: Session): CapabilityAdapter;
   signIn(returnTo: string): Promise<never>;
+  signOut(): Promise<never>;
 }
 
 export function parseDevelopmentRole(value: unknown): DevelopmentRole | null {

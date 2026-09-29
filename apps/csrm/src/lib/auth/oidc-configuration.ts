@@ -112,3 +112,58 @@ export function readOidcConfiguration(env: NodeJS.ProcessEnv): OidcConfiguration
     issuer: stripTrailingSlash(issuer.toString()),
   };
 }
+
+/**
+ * The production fail-closed refusal (D-02, OIDC-07). Strapi does not yet verify
+ * Keycloak identity server-side, so a production build must not offer a sign-in it
+ * cannot authorise. `resolveSessionRuntimeMode` uses the same rule at request time;
+ * this is the startup-time half, run once from `instrumentation.ts`.
+ */
+export const OIDC_PRODUCTION_REFUSAL =
+  'CSRM_AUTH_OIDC_ENABLED=true is refused in a production build: Strapi does not yet verify ' +
+  'Keycloak identity, so a Keycloak sign-in would not be authorised server-side. Unset ' +
+  'CSRM_AUTH_OIDC_ENABLED or set it to false until the Strapi follow-up lands ' +
+  '(docs/adr/0003-production-only-keycloak-oidc-sign-in.md).';
+
+/**
+ * Fails startup fast on bad configuration (OIDC-04) and refuses the flag outright in a
+ * production build (OIDC-07, D-02). The default of `compiledFor` must stay the literal
+ * `process.env.NODE_ENV`, for the same reason as `resolveSessionRuntimeMode`
+ * (development-runtime.ts): Next replaces that expression at compile time.
+ */
+export function assertSessionRuntimeConfiguration(
+  env: NodeJS.ProcessEnv,
+  compiledFor: string | undefined = process.env.NODE_ENV,
+): void {
+  if (!parseOidcEnabledFlag(env.CSRM_AUTH_OIDC_ENABLED)) {
+    return;
+  }
+
+  if (compiledFor !== 'development') {
+    throw new Error(OIDC_PRODUCTION_REFUSAL);
+  }
+
+  readOidcConfiguration(env);
+}
+
+export interface KeycloakLogoutUrlParams {
+  issuer: string;
+  clientId: string;
+  postLogoutRedirectUri: string;
+  idTokenHint?: string;
+}
+
+/**
+ * Builds the RP-Initiated Logout URL (OIDC-06) against the realm's discovery-reported
+ * `end_session_endpoint`: `${issuer}/protocol/openid-connect/logout`. Without a hint,
+ * Keycloak asks the user to confirm and still ends the session.
+ */
+export function keycloakLogoutUrl({ issuer, clientId, postLogoutRedirectUri, idTokenHint }: KeycloakLogoutUrlParams): string {
+  const url = new URL(`${issuer}/protocol/openid-connect/logout`);
+  url.searchParams.set('client_id', clientId);
+  url.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri);
+  if (idTokenHint) {
+    url.searchParams.set('id_token_hint', idTokenHint);
+  }
+  return url.toString();
+}

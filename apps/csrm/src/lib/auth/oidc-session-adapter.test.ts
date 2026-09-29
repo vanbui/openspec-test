@@ -8,17 +8,22 @@ const mocks = vi.hoisted(() => ({
   authFactoryCalls: { count: 0 },
   auth: vi.fn(),
   signIn: vi.fn(),
+  signOut: vi.fn(),
   handlers: { GET: vi.fn(), POST: vi.fn() },
+  headers: vi.fn(),
+  getToken: vi.fn(),
 }));
 
 vi.mock('server-only', () => ({}));
+vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
+vi.mock('next-auth/jwt', () => ({ getToken: mocks.getToken }));
 vi.mock('./oidc-auth', () => {
   mocks.authFactoryCalls.count += 1;
   return {
     auth: mocks.auth,
     signIn: mocks.signIn,
-    signOut: vi.fn(),
+    signOut: mocks.signOut,
     handlers: mocks.handlers,
   };
 });
@@ -50,6 +55,18 @@ function stubOidcMode(): void {
   vi.stubEnv('NODE_ENV', 'development');
 }
 
+const localAuthEnv = {
+  AUTH_URL: 'http://localhost:3000',
+  AUTH_SECRET: 'sentinel-auth-secret-0123456789-0123456789',
+  AUTH_KEYCLOAK_ID: 'idambox-csrm',
+  AUTH_KEYCLOAK_SECRET: 'sentinel-client-secret-0123456789',
+  AUTH_KEYCLOAK_ISSUER: 'http://localhost:8080/realms/idambox',
+} as const;
+
+function stubLocalAuthEnv(): void {
+  for (const [name, value] of Object.entries(localAuthEnv)) vi.stubEnv(name, value);
+}
+
 beforeEach(() => {
   mocks.authFactoryCalls.count = 0;
   mocks.redirect.mockReset().mockImplementation((location: string) => {
@@ -57,8 +74,11 @@ beforeEach(() => {
   });
   mocks.auth.mockReset();
   mocks.signIn.mockReset();
+  mocks.signOut.mockReset().mockResolvedValue(undefined);
   mocks.handlers.GET.mockReset().mockResolvedValue(new Response('get-ok'));
   mocks.handlers.POST.mockReset().mockResolvedValue(new Response('post-ok'));
+  mocks.headers.mockReset().mockResolvedValue(new Headers());
+  mocks.getToken.mockReset();
 });
 
 afterEach(() => {
@@ -243,6 +263,76 @@ describe('startOidcSignIn', () => {
     });
 
     await expect(startOidcSignIn('/app')).rejects.toThrow('NEXT_REDIRECT /api/auth/signin/keycloak');
+  });
+});
+
+describe('OidcSessionAdapter.signOut', () => {
+  it('clears the Auth.js session then redirects to the Keycloak logout URL carrying the id_token_hint', async () => {
+    vi.resetModules();
+    stubOidcMode();
+    stubLocalAuthEnv();
+    mocks.getToken.mockResolvedValueOnce({ idToken: 'id-token-sentinel' });
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+    const adapter = new OidcSessionAdapter();
+
+    await expect(adapter.signOut()).rejects.toThrow('NEXT_REDIRECT');
+
+    expect(mocks.signOut).toHaveBeenCalledWith({ redirect: false });
+    const signOutOrder = mocks.signOut.mock.invocationCallOrder[0]!;
+    const redirectOrder = mocks.redirect.mock.invocationCallOrder[0]!;
+    expect(signOutOrder).toBeLessThan(redirectOrder);
+
+    const [location] = mocks.redirect.mock.calls[0] as [string];
+    const url = new URL(location);
+    expect(`${url.origin}${url.pathname}`).toBe('http://localhost:8080/realms/idambox/protocol/openid-connect/logout');
+    expect(url.searchParams.get('client_id')).toBe('idambox-csrm');
+    expect(url.searchParams.get('post_logout_redirect_uri')).toBe('http://localhost:3000');
+    expect(url.searchParams.get('id_token_hint')).toBe('id-token-sentinel');
+  });
+
+  it('omits id_token_hint when getToken returns null', async () => {
+    vi.resetModules();
+    stubOidcMode();
+    stubLocalAuthEnv();
+    mocks.getToken.mockResolvedValueOnce(null);
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+    const adapter = new OidcSessionAdapter();
+
+    await expect(adapter.signOut()).rejects.toThrow('NEXT_REDIRECT');
+
+    const [location] = mocks.redirect.mock.calls[0] as [string];
+    const url = new URL(location);
+    expect(url.searchParams.get('client_id')).toBe('idambox-csrm');
+    expect(url.searchParams.get('post_logout_redirect_uri')).toBe('http://localhost:3000');
+    expect(url.searchParams.has('id_token_hint')).toBe(false);
+  });
+
+  it('rejects outside OIDC mode without loading Auth.js', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'development');
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+    const adapter = new OidcSessionAdapter();
+
+    await expect(adapter.signOut()).rejects.toThrow(unavailableMessage);
+    expect(mocks.authFactoryCalls.count).toBe(0);
+  });
+});
+
+describe('the development and unavailable adapters reject signOut', () => {
+  it('DevelopmentSessionAdapter.signOut rejects with the unavailable message', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'development');
+    const { getSessionAdapter } = await import('./development-session-adapter');
+
+    await expect(getSessionAdapter().signOut()).rejects.toThrow(unavailableMessage);
+  });
+
+  it('the unavailable adapter signOut rejects with the unavailable message', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'production');
+    const { getSessionAdapter } = await import('./development-session-adapter');
+
+    await expect(getSessionAdapter().signOut()).rejects.toThrow(unavailableMessage);
   });
 });
 

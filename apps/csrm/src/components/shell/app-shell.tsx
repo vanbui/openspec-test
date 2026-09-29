@@ -3,16 +3,20 @@ import type { Capability } from '@/lib/capabilities/capability-adapter';
 export { PageHeader, type PageHeaderProps } from '@/components/csrm/page-header';
 import { CapabilityNavigation, MobileNavigation } from './capability-navigation';
 import { RoleSwitcher } from './role-switcher';
+import { SignOutForm } from './sign-out-form';
 import { Wordmark } from './wordmark';
 
 interface AppShellProps {
   children: React.ReactNode;
   granted: ReadonlySet<Capability>;
   role?: DevelopmentRole;
+  /** An OIDC-mode session (ADR 0003). Mutually exclusive with `role`: never both. */
+  account?: { displayName: string };
 }
 
-export function AppShell({ children, granted, role }: AppShellProps) {
+export function AppShell({ children, granted, role, account }: AppShellProps) {
   const roleSwitcher = role ? <RoleSwitcher role={role} /> : undefined;
+  const footer = roleSwitcher ?? (account ? <SignOutForm displayName={account.displayName} /> : undefined);
 
   return (
     <>
@@ -21,11 +25,11 @@ export function AppShell({ children, granted, role }: AppShellProps) {
         <aside className="sidebar">
           <Wordmark />
           <CapabilityNavigation granted={granted} />
-          {roleSwitcher ? <div className="shell-footer">{roleSwitcher}</div> : null}
+          {footer ? <div className="shell-footer">{footer}</div> : null}
         </aside>
         <div className="shell-content">
           <header className="header">
-            <MobileNavigation footer={roleSwitcher} granted={granted} />
+            <MobileNavigation footer={footer} granted={granted} />
             <span className="header-title">Cyber Risk Manager</span>
             {role ? <span className="header-role micro-label">{role}</span> : null}
           </header>
