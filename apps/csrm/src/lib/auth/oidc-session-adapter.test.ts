@@ -172,11 +172,19 @@ describe('OidcSessionAdapter.current', () => {
     const { OidcSessionAdapter } = await import('./oidc-session-adapter');
     const adapter = new OidcSessionAdapter();
 
+    mocks.auth.mockResolvedValueOnce({
+      user: { name: ' Jane Doe ', email: ' jane.doe@idambox.com ' },
+      expires: '2026-09-30T00:00:00.000Z',
+    });
+    await expect(adapter.current()).resolves.toEqual({ displayName: 'Jane Doe', email: 'jane.doe@idambox.com' });
+
     mocks.auth.mockResolvedValueOnce({ user: { name: ' Jane Doe ' }, expires: '2026-09-30T00:00:00.000Z' });
-    await expect(adapter.current()).resolves.toEqual({ displayName: 'Jane Doe' });
+    const withoutEmail = await adapter.current();
+    expect(withoutEmail).toEqual({ displayName: 'Jane Doe' });
+    expect(withoutEmail).not.toHaveProperty('email');
 
     mocks.auth.mockResolvedValueOnce({ user: { name: '', email: 'jane.doe@idambox.com' }, expires: '2026-09-30T00:00:00.000Z' });
-    await expect(adapter.current()).resolves.toEqual({ displayName: 'jane.doe@idambox.com' });
+    await expect(adapter.current()).resolves.toEqual({ displayName: 'jane.doe@idambox.com', email: 'jane.doe@idambox.com' });
 
     mocks.auth.mockResolvedValueOnce({ user: {}, expires: '2026-09-30T00:00:00.000Z' });
     await expect(adapter.current()).resolves.toEqual({ displayName: 'Signed-in user' });

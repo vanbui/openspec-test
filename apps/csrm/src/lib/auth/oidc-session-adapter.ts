@@ -75,9 +75,10 @@ export class OidcSessionAdapter implements SessionAdapter {
       return null;
     }
 
-    const displayName = user.name?.trim() || user.email?.trim() || 'Signed-in user';
+    const email = user.email?.trim();
+    const displayName = user.name?.trim() || email || 'Signed-in user';
 
-    return { displayName };
+    return { displayName, ...(email ? { email } : {}) };
   }
 
   async setDevelopmentRole(_role: DevelopmentRole): Promise<void> {

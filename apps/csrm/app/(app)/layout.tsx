@@ -15,7 +15,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
   }
 
   const account = resolveSessionRuntimeMode(process.env) === 'oidc'
-    ? { displayName: session.displayName }
+    ? { displayName: session.displayName, ...(session.email ? { email: session.email } : {}) }
     : undefined;
   const granted = await sessionAdapter.capabilitiesFor(session).granted();
 
