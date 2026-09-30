@@ -6,10 +6,10 @@ current_phase: 10
 current_phase_name: UI-SPEC approved, with 7 of 7 checker dimensions passing; plans next
 status: planning
 stopped_at: "paused at the weekly usage ceiling: 94% of the weekly limit against the brief's 95% ceiling, with the limit resetting at 2026-09-28 00:00 UTC (10:00 AEST). The operator restarts the session by hand. The last commit adds Phase 11's UI-SPEC and this state. The tree is clean, and `v2.0` is pushed to `origin`."
-last_updated: "2026-09-29T12:41:39.810Z"
+last_updated: "2026-09-30T03:29:51.071Z"
 last_activity: 2026-09-29
 last_activity_desc: "Completed quick task 260929-u0w: Add production-only OIDC sign-in to the CSRM web app against Keycloak"
-state_head: 0f2766150f00331a0f45d6482846870fac938e41
+state_head: e76aa5ff0f454f08c0d01b2aea7227dcdaeb196f
 progress:
   total_phases: 14
   completed_phases: 0
@@ -33,7 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 Phase: 11 (UI-SPEC approved, with 7 of 7 checker dimensions passing; plans next). Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22 and 17.1 are not yet planned.
 Plan: —
 Status: Planning v2.0 on branch `v2.0` (mode: plan-all-first); paused at the weekly usage ceiling
-Last activity: 2026-09-29 - Completed quick task 260929-u0w: Add production-only OIDC sign-in to the CSRM web app against Keycloak
+Last activity: 2026-09-30 - Completed quick task 260930-iei: When CSRM_AUTH_OIDC_ENABLED=true, move the Signed in as / Sign out block to a top-right initials avatar menu with name, email and Sign out
 
 ## Milestone
 
@@ -96,6 +96,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260929-u0w | Add production-only OIDC sign-in to the CSRM web app against Keycloak | 2026-09-29 | 0f27661 | [260929-u0w-add-production-only-oidc-sign-in-to-the-](./quick/260929-u0w-add-production-only-oidc-sign-in-to-the-/) |
+| 260930-iei | When CSRM_AUTH_OIDC_ENABLED=true, move the Signed in as / Sign out block to a top-right initials avatar menu with name, email and Sign out | 2026-09-30 | e76aa5f | [260930-iei-when-csrm-auth-oidc-enabled-true-move-th](./quick/260930-iei-when-csrm-auth-oidc-enabled-true-move-th/) |
 
 ## Deferred Items
 
