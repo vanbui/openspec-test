@@ -23,7 +23,7 @@ Run these steps from the repository root.
    cp apps/backend/.env.example apps/backend/.env
    ```
 
-### AI generation with Ollama
+### AI generation with Ollama (optional)
 
 CSRM defaults to deterministic AI assistance. To generate questionnaires and
 assessment drafts with a locally hosted model, install Ollama using the
@@ -41,7 +41,7 @@ file. The configuration applies `qwen3.5:9b` to questionnaire generation and
 assessment-draft generation. Generated content remains advisory and reviewable;
 it cannot release an assessment.
 
-### SaaS OpenAI-compatible AI providers
+### SaaS OpenAI-compatible AI providers (optional)
 
 To use an approved SaaS OpenAI-compatible provider instead, edit only your
 local `apps/backend/.env` file. Set `CSRM_AI_PROVIDER=openai-compatible`, replace
@@ -60,23 +60,13 @@ release an assessment.
    cp apps/csrm/.env.local.example apps/csrm/.env.local
    ```
 
-4. Update the apps/backend/.env and apps/csrm/.env.local file with the Strapi Full Access token
-
-   ```sh
-   vi apps/backend/.env
-   [set CSRM_DEV_API_TOKEN]
-
-   vi apps/csrm/.env.local
-   [set CSRM_API_TOKEN]
-   ```
-
-5. Start both development servers through Turborepo.
+4. Start both development servers through Turborepo.
 
    ```sh
    pnpm dev
    ```
 
-6. Create a Strapi admin user:
+5. Create a Strapi admin user - important for doing agent coding:
 
    ```sh
    cd apps/backend
@@ -84,9 +74,24 @@ release an assessment.
    pnpm run strapi admin:create-user --firstname=John --lastname=Doe --email=dev@bproton.com --password='Strapi123!'
    ```
 
-Open the web client at http://localhost:3000 and Strapi admin at http://localhost:1337/admin.
+   If you are using a Windows Command Prompt then use double quotes like so:
 
-The secrets in `apps/backend/.env.example` are local-development placeholders only. Use real secrets in your local environment and never commit them.
+   ```dos
+   cd apps\backend
+
+   pnpm run strapi admin:create-user --firstname=John --lastname=Doe --email=dev@bproton.com --password="Strapi123!"
+   ```
+
+6. Update the apps/csrm/.env.local file with the Strapi Full Access API token from http://localhost:1337/admin
+
+   ```sh
+   vi apps/csrm/.env.local
+   [set CSRM_API_TOKEN]
+   ```
+
+Now you can logon to the CSRM app at http://localhost:3000.
+
+Note that the secrets in `apps/backend/.env.example` are local-development placeholders only. Use real secrets in your local environment and never commit them.
 
 ## Run the backend and CSRM with Keycloak sign-in
 
