@@ -23,7 +23,7 @@ Local walkthrough:
 3. `pnpm --filter @csrm/web dev` (port 3000).
 4. Run Strapi with `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true` (see `apps/backend/README.md`, "Keycloak access-token verification") and `IDAMBOX_SEED_CSRM=true`, so the seeded Jane and Bob are linked to their fixed Keycloak ids.
 5. Sign in as `jane.doe` / `jane` for the Requestor screens, or `bob.doe` / `bob` for the Security Analyst ones. Strapi verifies the forwarded access token and decides what each person may reach (`docs/adr/0004-strapi-verifies-keycloak-access-tokens.md`).
-6. Click "Sign out", which ends the Keycloak session and returns to `http://localhost:3000`.
+6. Open the account menu (your initials, top right of the screen) and choose "Sign out", which ends the Keycloak session and returns to `http://localhost:3000`.
 
 If you started `idp/` before the realm gained the `basic` scope, audience mapper and fixed user ids, run `docker compose down -v` there once so the realm is re-imported; otherwise the permission-denied state persists.
 
