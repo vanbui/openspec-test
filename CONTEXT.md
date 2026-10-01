@@ -30,6 +30,10 @@ _Avoid_: Submit for approval (the catalogue's unserved `submit_for_approval` int
 The two decisions a risk owner makes on a risk, stored in `treatmentAction` (`CsrmTreatmentAction`: `ACCEPT`, `TREAT`). Accept retains the risk, with a rationale; Treat commits to a treatment plan with a treatment owner and a resolve date (G-14). A value set before the owner decides is the analyst's recommendation, not a decision.
 _Avoid_: Approve, Sign off, Decline (there is no per-risk decline: a disagreement is a contest point)
 
+**Withdrawn (Risk)**:
+A persisted, unreleased `CsrmRisk` that a Security Analyst has taken out of its assessment, recording who, when and why (decision 6, Phase 16). It keeps its number, fields and history, is read-only until a Security Analyst reinstates it with a reason, and counts nowhere: not in release readiness, figures, registers, or any Requestor or participant read. Only Security Analysts see it. No persisted risk is ever deleted.
+_Avoid_: Deleted, Removed, Rejected (a rejected AI proposal is a different fact), Closed (a risk's closure after release is Phase 20's)
+
 **Contest point**:
 A participant's recorded challenge to one piece of an assessment under acceptance (an assessment field, a risk or one of its fields, or a control implementation), with a required reason, a reply thread and a status: open, answered, then resolved or withdrawn (G-15). Sending the assessment back with contest points reopens all of it for the Security Analyst. The JDL has no name for it.
 _Avoid_: Comment, Note (a note belongs to a request, COLLAB-01), Dispute, Objection

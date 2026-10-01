@@ -289,11 +289,11 @@ Plans:
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** ASSESS-09, ASSESS-10
-**Depends on:** Phase 12
+**Depends on:** Phase 12; it also reads Phase 13's notes marked "changes the AI inputs" and reuses Phase 15's analyst instruction slot (16-CONTEXT D-27, D-28)
 **Closes:** UAT-027, UAT-028
 **Intent:** F7, A2 (Phase 9 workflow)
 **Decisions:** no persisted risk is ever hard-deleted: an unsaved row is discarded, a persisted unreleased risk is withdrawn with a reason and kept in history, and a rejected AI proposal is recorded as rejected (#6); targeted re-runs reverse the Phase 04 decision "a linked draft never invokes the provider again".
-**Contract and datamodel:** API (risk withdraw and delete, AI risk proposal operations, exact grants); risk history and withdrawal facts: contract-gap record first, then an approval checkpoint.
+**Contract and datamodel:** API (risk withdrawal and reinstatement in batches, with no delete operation (decision 6); AI risk proposal operations; exact grants); the withdrawal facts and an append-only risk history that later phases extend: `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md` first, then an approval checkpoint.
 **Size:** M
 
 **Success Criteria:**
@@ -410,7 +410,7 @@ Plans:
 **Closes:** UAT-008, UAT-039, UAT-050, UAT-055, UAT-056, UAT-057, UAT-063
 **Intent:** Q4, Q3, F7
 **Decisions:** the grid follows a research spike with pass-or-fail criteria (ARIA grid conformance at WCAG 2.2 AA, a permissive licence only, the route JavaScript budget, semantic tokens), leaning to the DataTable on TanStack Table (#7); the 5 × 5 scales with the product-banded rating and an override with a reason (#8); saved views personal by default and shareable with analysts; no persisted risk is hard-deleted from the table (#6).
-**Contract and datamodel:** API (bulk update, create and withdraw with exact grants; closed vocabularies for likelihood and consequence on the existing string fields); risk change history and server-side saved views: contract-gap records first, then an approval checkpoint; possibly a grid dependency, justified by the spike. The review lists adopt this phase's column chooser (deferred here from Phase 11, D-33).
+**Contract and datamodel:** API (bulk update and create with exact grants, and bulk withdrawal through Phase 16's batch withdrawal operation; closed vocabularies for likelihood and consequence on the existing string fields); the risk change history is Phase 16's append-only risk history, extended by a record that amends `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md` rather than a second history; server-side saved views: contract-gap records first, then an approval checkpoint; possibly a grid dependency, justified by the spike. The review lists adopt this phase's column chooser (deferred here from Phase 11, D-33).
 **Size:** L
 
 **Success Criteria:**
