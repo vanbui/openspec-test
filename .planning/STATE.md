@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
-current_phase_name: post-demo Stage 2, planning every remaining phase in execution order from Phase 11
+current_phase_name: "post-demo Stage 2 complete (every phase planned); Stage 3 builds from Phase 10"
 status: planning
-stopped_at: "post-demo Stage 2: Phases 10 to 17.1, 18, 19 and 19.1 planned; 20 under check; 17.2, 21 and 22 being planned."
-last_updated: "2026-10-01T14:46:51.714Z"
-last_activity: 2026-10-01
-last_activity_desc: "Phases 17.1 and 18 planned: 18 and 19 plans, plan checks passed on iteration 1 (warnings settled by recorded notes)"
-state_head: e10a1a1e4579ae643da71a6212c9d9c686fd3e3e
+stopped_at: "post-demo Stage 2 complete: every phase planned (290 plans) with a passing plan check; the planning gate is the pilot's."
+last_updated: "2026-10-01T15:56:52.119Z"
+last_activity: 2026-10-02
+last_activity_desc: "Stage 2 complete: Phases 11 to 22 planned (Phase 10 was already planned), every plan check passed"
+state_head: 1811f2335830dbaaee6c0c1f31aaba62573eb2c7
 progress:
   total_phases: 16
   completed_phases: 0
-  total_plans: 209
+  total_plans: 290
   completed_plans: 0
   percent: 0
 current_plan: 0
@@ -30,15 +30,15 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 ## Current Position
 
-Stage 2 of the post-demo brief: planning every remaining phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22). Phase 19.1, the in-app notification centre, was inserted on 2026-10-01 (G-19), taking NOTIFY-01 from Phase 17.
+Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22). Phase 19.1, the in-app notification centre, was inserted on 2026-10-01 (G-19), taking NOTIFY-01 from Phase 17.
 
-- **Planned, with a passing plan check:** Phases 10 (23 plans; a fresh plan check runs before it is built), 11 (21), 12 (19), 13 (19), 14 (17), 15 (14), 16 (15), 19 (15), 19.1 (10), 17 (19), 17.1 (18) and 18 (19).
-- **In planning:** Phase 20 is planned (23 plans) and under check; Phases 17.2, 21 and 22 are being planned. Every phase has its CONTEXT, an approved UI-SPEC (X-1 to X-80), its research and its pattern map.
-- **Not started:** nothing outside the four phases above.
+- **Planned, with a passing plan check:** 290 plans. Phase 10 has 23 (its 2026-09-27 check is resolved, and it gets a fresh check before it is built). Then 11 (21), 12 (19), 13 (19), 14 (17), 15 (14), 16 (15), 19 (15), 19.1 (10), 17 (19), 17.1 (18), 17.2 (15), 18 (19), 20 (23, kept whole by the pilot, with a named seam), 21 (18) and 22 (25). Each phase's verdict is in its `NN-PLAN-CHECK.md`.
+- **UI-SPECs:** approved for Phases 10 to 22, with milestone-wide extensions X-1 to X-80, each recorded in the design direction by a plan task before it is used.
+- **Next:** the pilot's planning gate, then Stage 3 (the G-10 fonts quick task, then Phase 10, opening with a fresh plan check). Nothing is built yet.
 
 Plan: —
-Status: Planning v2.0 on branch `post-demo` (mode: plan-all-first; the pilot drives every transition, and auto-advance is off)
-Last activity: 2026-10-02 - Phases 17.1 and 18 planned: 18 and 19 plans, plan checks passed on iteration 1 (warnings settled by recorded notes)
+Status: Planned; Stage 3 not started (the pilot drives every transition, and auto-advance is off)
+Last activity: 2026-10-02 - Stage 2 complete: Phases 11 to 22 planned (Phase 10 was already planned), every plan check passed
 
 ## Milestone
 
@@ -149,20 +149,18 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 ## Session Continuity
 
 **Last session:** 2026-10-01
-**Stopped At:** post-demo Stage 2: Phases 10 to 17.1, 18, 19 and 19.1 planned; 20 under check; 17.2, 21 and 22 being planned.
+**Stopped At:** post-demo Stage 2 complete: every phase planned (290 plans) with a passing plan check; the planning gate is the pilot's.
 **Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
 **Exact next step to resume:**
-1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage. Economy rules from the pilot: at most about three heavy units at once; CONTEXT of about 30 decisions or fewer; research answers only the open questions; warnings are handled with recorded notes.
-2. Continue Stage 2 in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) from the first phase without a passing plan check (now Phase 17.2). For each phase, look in its directory for CONTEXT, UI-SPEC, RESEARCH and VALIDATION, PATTERNS, PLANs and PLAN-CHECK, and run the next missing unit with GSD's agents: discussion in auto mode, then the UI-SPEC (serial in execution order, numbering extensions after the highest X-n in the committed UI-SPECs, now X-73), then research, patterns, plans, and the plan check with up to three revisions. Then write the phase's `Plans:` list into ROADMAP.md, commit by explicit path, and update this section.
-   - Next units when this was written: the Phase 20 check (running); the Phase 17.2, 21 and 22 planners (running), each then checked; then the planning gate.
-3. Phase directories may hold uncommitted agent output from an interrupted session: keep complete files, and re-run any unit whose output is missing or partial.
-4. Once every phase has passing plans, run the planning gate: plans and a passing check for each phase; each ask PD-1 to PD-5 traced to a requirement, a phase, a success criterion and plans; no pre-rename app paths; `/gsd-health` clean.
-5. Stage 3: the G-10 fonts quick task, then build from Phase 10, opening each phase with a fresh plan check.
+1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
+2. Stage 2 is complete: every phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) has its CONTEXT, an approved UI-SPEC, research, a pattern map, plans and a passing plan check. Its planning gate is the pilot's.
+3. Stage 3 (the pilot's call): the G-10 self-hosted fonts quick task, then build each phase in execution order. Each phase opens with a fresh plan check, then `/gsd-execute-phase`, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
+4. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
 
 ## Next Action
 
-**Post-demo Stage 2 on branch `post-demo`**, following Session Continuity above. Nothing is built yet. No dev server was running at the start of the post-demo session.
+**The pilot's planning gate for post-demo Stage 2, then Stage 3 on branch `post-demo`,** following Session Continuity above. Nothing is built yet. No dev server was running during Stage 2.
 
 ## Accumulated Context
 
