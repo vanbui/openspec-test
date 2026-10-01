@@ -1025,10 +1025,75 @@ Plans:
 6. An unrelated user gets the refusal a missing record gets for another person's treatment, by any route; a treatment owner cannot change a risk field, the plan or the due date; completing without evidence is refused.
 7. Playwright, final slice: the whole post-demo journey passes end to end, from a Requestor raising a request through release for response, responses from the Requestor and a different risk owner, submission, two contest points and a resubmission, an accepted risk and a treated risk, and release and closure, to the treatment tracked to Complete; an unrelated Requestor is refused at every step, in the UI and the API, and the analyst cannot accept.
 
-**Plans:** 0 plans
+**Plans:** 23 plans (wave 1 pairs the contract records with the pure modules; then one per wave, serialised by the contract files, the Strapi build and Playwright; kept whole by the pilot's decision, with a named seam in its PLAN-CHECK)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 20 to break down)
+**Wave 1**
+- [ ] 20-01-PLAN.md — Record the 20-UI-SPEC's extensions X-62 to X-67 in the design direction and the six glossary entries (D-29; orchestrator constraint), both before any implementing task. Write `docs/contract-gaps/phase
+- [ ] 20-02-PLAN.md — Build the pure modules D-30 puts in wave 1 beside the records, each RED-first with its unit test: `treatment-facts.ts` (D-07, D-08, D-09's applicability and governing date; G-16), `risk-people.ts` (D-
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 20-03-PLAN.md — Create the schema record 1 and record 2 approve (D-01): the CsrmRisk facts, CsrmTreatmentEvidence (D-18) and CsrmReminderDelivery (D-27), each with no route; prove on a fresh boot that the columns, li
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 20-04-PLAN.md — Switch Phase 11's one rule (plans 11-15 and 11-17) in `treatment-due-state.ts` per D-09: applicability, the governing date `COALESCE(treatmentResolveDate, targetDate)` (G-16), the order with `not-trac
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 20-05-PLAN.md — Build `withReleasedRiskMutation`, the release baseline and its overlay (D-05, D-06): the lock order of research §R3, one `release-baseline` history row before a risk's first post-release change, and t
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 20-06-PLAN.md — Serve the treatment acts (D-03 item 2): set progress, add a note, complete with evidence, reopen (with the completer's Undo), and change the resolve date, plan or treatment owner with a reason, per D-
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 20-07-PLAN.md — Serve evidence files on a released risk's treatment (D-03 item 3) in Phase 14 D-04's family shape, as Phase 14's pipeline's second holder (D-18): list, upload (with an optional progress note link), do
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 20-08-PLAN.md — Serve the analyst's post-release acts (D-03 item 4): close and reopen (the catalogued close, D-15), the residual review (D-14), and control implementation delivery (D-16), human-only with G-1 and G-11
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 20-09-PLAN.md — Serve the owner reads (D-03 item 1): "My risks and treatments" with its summary and export, the owner risk read, and the owner history read (D-19, D-20), scoped by Strapi through 20-05's repository an
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 20-10-PLAN.md — Add type, division and business unit through the request to the Risk register's rows, filters and sort, and the control, Risk Type, progress, decision review and treatment action filters the views and
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 20-11-PLAN.md — Add the type breakdowns and filters to the risk-exposure and assessment-throughput reports and the analyst Home's exposure figures (D-22), keep their accepted counts consistent with a not-confirmed re
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 20-12-PLAN.md — Serve the four "Used in" reads and the usage counts on the four reference lists (D-24), counted with the register's and queue's own predicates so every figure equals its list (X-10), in the records' A
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 20-13-PLAN.md — Extend Phase 19.1's notification service by the approved amendment (D-25; Orchestrator Confirmation: the plan that adds reminders extends it, with tests): a system actor, explicit recipients, the risk
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 20-14-PLAN.md — Build the reminder run (D-26): the server-written status first (D-08), then every kind's candidates from 20-02's rules, claimed exactly once in `CsrmReminderDelivery` (D-27) and written through 20-13'
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 20-15-PLAN.md — Add the email channel (D-28): install the official nodemailer provider after the pilot's verification, configure the plugin always with it, swap in the capture provider under the double development ke
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 20-16-PLAN.md — Build the owner risk page (D-20, D-29; 20-UI-SPEC §3) and its tracking panel (X-62): progress with optimistic Undo (D-08), completion on evidence with Undo and reopen (D-10), the refusal and stale sta
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 20-17-PLAN.md — Complete the owner page (D-29; 20-UI-SPEC §3.3 to §5, §12): the change sheets (D-12), progress notes (D-11), evidence on Phase 14's components (D-18), the decision review (D-17; X-64) and the post-rel
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 20-18-PLAN.md — Build "My risks and treatments" (D-20; 20-UI-SPEC §2): the Server Component page, the list with filters, sort, pagination, cards and states, the export through Phase 19's dialog (CSV-01), the `my-risk
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 20-19-PLAN.md — Add "My risks and treatments" to the sidebar with its count (D-20; UI-D10), the treatment and review items to the Requestor Home (D-20), and the analyst Home's tracked "Treatments due", exposure by ty
+
+**Wave 19** *(blocked on Wave 18 completion)*
+- [ ] 20-20-PLAN.md — Build the suggestion field (X-67) on the scoped suggestions read and use it in the request form (D-22); add the reports' filter row, the two type sections with phone card lists, and the copy the switc
+
+**Wave 20** *(blocked on Wave 19 completion)*
+- [ ] 20-21-PLAN.md — Build the register's views, columns and new filters (D-22, D-23; X-59, X-61), the queue's and assessment list's type filters and column (D-22), and the "Used in" panels and list counts (D-24; X-65), w
+
+**Wave 21** *(blocked on Wave 20 completion)*
+- [ ] 20-22-PLAN.md — Build the register risk detail's post-release panel (D-13 to D-16; 20-UI-SPEC §7): the shared treatment sections for analysts, the residual review sheet, close and reopen confirmations, control delive
+
+**Wave 22** *(blocked on Wave 21 completion)*
+- [ ] 20-23-PLAN.md — Append the post-demo journey's final slice, `sliceTrackTreatment`, to `apps/csrm/e2e/risk-owner-journey.spec.ts` with its negatives at every step (D-30; SC7; orchestrator constraint), write `post-rele
 
 ### Phase 21: Management dashboards and metrics
 
