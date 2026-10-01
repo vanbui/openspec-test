@@ -432,6 +432,16 @@ No other record is needed: the API changes without a content-type change follow 
 - **Local model evaluation for these operations:** backlog 999.1; the portable schema subset keeps it open.
 </deferred>
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+The research raised six questions. Five are settled as follows and bind the plans. The sixth, the first free extension number, is given to the UI-SPEC unit.
+
+- **Visible copy:** "Confirm" and "Confirm all" replace the visible "Accept" and "Accept all" of D-36, D-47 and D-49. "Reject" stays, because it is decision 6's recorded fact. The API vocabulary is unchanged. Visible "Accept" is reserved for the risk owner's decision (G-14, as in Phase 12's confirmations).
+- **One reason code:** a decision on a proposal that is no longer open, whether decided or lapsed (D-40), uses the one closed reason code that Phase 12's plans define. Phase 16 adds no parallel `AI_PROPOSAL_NOT_OPEN`. Where Phase 12's code names only the decided case, Phase 16 extends that code's meaning to lapsed proposals, in the contract and the copy.
+- **Job retry (D-26):** Phase 13 D-18 settles it. Any human Security Analyst who may read the request reads and retries a failed job. A retry is the retrying analyst's attempt and names them as the run's initiator.
+- **D-38 extended (G-14):** an AI-proposed "Accept" treatment action is refused at confirmation, with a closed reason, while the risk has a planned control implementation. The AI's output validation does not propose Accept for such a risk. This keeps the analyst's recommendation within what the risk owner may decide ("Accept only where no planned control exists"). Phase 12's proposals follow the same rule (12-CONTEXT, 2026-10-01 confirmations).
+- **Request deletion (decision 6):** Strapi refuses to delete an Assessment Request once it has a Risk Assessment, with a closed reason, so no assessment or risk is lost through its request. A request without an assessment keeps today's delete rule. Phase 16 plans this guard with its Strapi integration test and its UI state (the delete action is not offered).
+
 ---
 
 *Phase: 16-risk-curation-and-targeted-ai-re-runs*

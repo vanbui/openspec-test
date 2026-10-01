@@ -448,12 +448,13 @@ The research asked for three confirmations. Each follows least privilege, AI hum
 
 ## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
 
-The UI-SPEC and Phase 16's discussion raised four points. Each is settled as follows and binds the plans:
+The UI-SPEC and Phase 16's discussion raised four points, and Phase 16's research a fifth. Each is settled as follows and binds the plans:
 
 - **Visible "Confirm" (12-UI-SPEC UI-D1):** the analyst's review of an AI proposal reads "Confirm" and "Confirmed" in visible copy, replacing D-35's quoted "Accept" and "Accepted". The API keeps `accept` and the `accepted` state. Across the product, visible "Accept" is reserved for the risk owner's decision (G-14, root `CONTEXT.md`).
 - **Undo after "Add as planned control" (UI-D12):** D-24's `restore` also covers an added suggested control. It removes the Planned implementation that the suggestion created, but only while that implementation is unchanged and the assessment is still editable. Otherwise `restore` is refused with a closed reason, and the copy names the next step: remove the mitigation control in the editor. The suggestion's history keeps both steps.
 - **D-24 aligned with Phase 16 D-22 and D-23 (planned):** the decision operation passes the one exported guard that decides whether this actor may change this assessment now. That guard is today's `assertMutableAssessment` behind `withMutableAssessmentMutation`, which Phases 16, 17 and 17.1 extend. The accepted-edit transition applies only to content changes: accepting fields or a suggested control, and restoring an accepted unit. Dismissing a suggestion and restoring a dismissed one change no content. They take the assessment's serialisation and the guard, but not the edit transition, so they never record or withdraw a review.
 - **No non-AI path:** a manual start when the data policy refuses generation (an empty questionnaire or assessment draft) is outside this phase. It goes to Phase 22, which owns the AI data policy setting and so the configuration that makes a refusal reachable. Development has no ceiling by default (D-27). The refusal copy names the request's classification, the ceiling and who can act (UI-D24).
+- **No AI "Accept" where a planned control exists (G-14; Phase 16's confirmations):** the decision operation refuses to confirm an AI-proposed "Accept" treatment action, with a closed reason, while the risk has a planned control implementation, including one just added from a suggested control. The draft's output validation does not propose Accept for such a risk. The analyst's recommendation stays within what the risk owner may decide.
 
 ---
 
