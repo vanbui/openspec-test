@@ -719,10 +719,60 @@ API for mark reviewed, peer approval, executive approver nomination, submit, rec
 6. The assigned analyst, another analyst and the service identity cannot decide a risk: the API refuses, and the UI shows them no decision control. Only the assigned analyst can submit, recall, and release and close. An unrelated Requestor gets the refusal a missing record gets at every route, in the API and the UI.
 7. Playwright, second slice: continuing Phase 17's journey, the analyst submits the final assessment; the different risk owner accepts one of their risks and treats the other with a plan, a treatment owner and a due date, and every other risk is decided by its owner; the analyst releases and closes, and the request reads "Closed"; the analyst cannot accept, and an unrelated Requestor is refused at each step, in the UI and the API.
 
-**Plans:** 0 plans
+**Plans:** 18 plans (wave 1 pairs the contract records with the pure modules; then one per wave, serialised by the contract files, the Strapi build and Playwright)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 17.1 to break down)
+**Wave 1**
+- [ ] 17.1-01-PLAN.md — Record the 17.1-UI-SPEC's extensions X-42 to X-47 in the design direction (orchestrator constraint; D-64) and the glossary entries Acceptance round, Recall, Mark reviewed and Peer approval (D-66), bot
+- [ ] 17.1-02-PLAN.md — Scope note (orchestrator, 2026-10-02): 16 files, because one behaviour's contract chain or its interface and their tests change together. The pilot's pacing rule (planner-context) accepts this. Build 
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 17.1-03-PLAN.md — After the pilot's approval, apply the schema changes of the three records (D-01) and prove them on a fresh boot with legacy rows unchanged; give the harness the `executive-approver` identity and the r
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 17.1-04-PLAN.md — Replace the accepted-edit transition in place (06.8 D-13, reversed per D-04 and D-06): no reviewer stamp, no regression, and the review's withdrawal by the first content edit with its edit descriptor 
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 17.1-05-PLAN.md — Scope note (orchestrator, 2026-10-02): 16 files, because one behaviour's contract chain or its interface and their tests change together. The pilot's pacing rule (planner-context) accepts this. Serve 
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 17.1-06-PLAN.md — Scope note (orchestrator, 2026-10-02): 16 files, because one behaviour's contract chain or its interface and their tests change together. The pilot's pacing rule (planner-context) accepts this. Serve 
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 17.1-07-PLAN.md — Serve "Submit final assessment" (D-19 to D-22, D-38, D-54) and "Recall round {n}" (D-25) to the assigned analyst only, and the acceptance read for analysts and participants (D-22, D-47 as amended). Pu
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 17.1-08-PLAN.md — Serve the decision operation (D-03 item 5) to the named people only (D-31), with Accept and Treat (D-27, D-28), the High and Critical sequences (D-29, D-30), immutable rows with fingerprints and snaps
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 17.1-09-PLAN.md — Extend the analyst assessment detail (D-48) and the participant projection (D-47 as amended) with the review, peer, round, decision and readiness facts, through one projector shared with the acceptanc
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 17.1-10-PLAN.md — Turn the existing release operation into release and close in place (D-42, D-46): its readiness (D-41), the compare-and-set body `{ roundNumber, lastDecisionId }` (Orchestrator Confirmation), the one 
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 17.1-11-PLAN.md — Extend the published lifecycle with the review, acceptance and closed steps, the next actions and the holder (D-49); move the review queue and My requests' holder in the SQL and the oracle together (D
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 17.1-12-PLAN.md — Widen Phase 19's one released predicate to `closed` in both forms and prove it on every released route (D-45). Show the decisions in the released record, the A4 report, the export's Risks sheet and th
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 17.1-13-PLAN.md — Scope note (orchestrator, 2026-10-02): 16 files, because one behaviour's contract chain or its interface and their tests change together. The pilot's pacing rule (planner-context) accepts this. Build 
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 17.1-14-PLAN.md — Build the analyst's acceptance surfaces (D-62, D-63; 17.1-UI-SPEC §2.6, §4, §5, §9 analyst overview): the typed web layer for executive approver naming, recall and the acceptance read; the Participant
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 17.1-15-PLAN.md — Build the decider's surfaces on the participant page and the analyst-participant panel (D-26 to D-38, D-47, D-62, D-63; 17.1-UI-SPEC §6, §7, §5.4): the decision area (X-44) with the authority line, th
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 17.1-16-PLAN.md — Scope note (orchestrator, 2026-10-02): 16 files, because one behaviour's contract chain or its interface and their tests change together. The pilot's pacing rule (planner-context) accepts this. Build 
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 17.1-17-PLAN.md — Add the executive approver persona (D-61) in 17-02's shape: the development seed, the fixed Keycloak fixture subject and the matching realm user changed together, the README rows, and the web's develo
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 17.1-18-PLAN.md — Extend `apps/csrm/e2e/risk-owner-journey.spec.ts` with its second slice (orchestrator constraint; D-69; SC7) and its negatives; move every spec that released through v1 onto the acceptance flow throug
 
 ### Phase 17.2: Contest points and rework rounds (INSERTED)
 
