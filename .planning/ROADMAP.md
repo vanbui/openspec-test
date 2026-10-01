@@ -494,10 +494,50 @@ Plans:
 3. Every AI proposal shows its instruction, time and initiating analyst in the revision timeline.
 4. Nothing reaches the Requestor until the analyst releases.
 
-**Plans:** 0 plans
+**Plans:** 14 plans (one per wave: every Strapi test run compiles into one shared build folder)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 15 to break down)
+**Wave 1**
+- [ ] 15-01-PLAN.md — Record the 15-UI-SPEC's extensions X-24 to X-26 in the design direction (orchestrator constraint: before any implementing task). Write the dated Phase 15 amendments to `docs/contract-gaps/phase-12-ai-
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 15-02-PLAN.md — Scope note (orchestrator, 2026-10-01): four tasks, one of them a small tracer, at the scope limit; most listed files are tests. They stay together because each task extends the previous one in the sam
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 15-03-PLAN.md — Apply the approved 06.8 amendment to the governance log (D-26): the `ai-proposal` and `question-restored` kinds, the closed AI source keys, the instruction on `regenerated`, the Requestor projection r
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 15-04-PLAN.md — Extend Phase 12's run record and context builder for the two operations (D-14, D-17, D-19, D-20): the run operations, per-operation envelope parsing and the append of decision events v2; the context s
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 15-05-PLAN.md — Build the two model-facing wire schemas, the one adapter with every drop rule, the deterministic providers that exercise each rule, the hosted OpenAI-compatible providers with their system instruction
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 15-06-PLAN.md — Build the generic in-process proposal job registry and the questionnaire proposals workflow (D-10, D-11, D-16, D-24, D-26, D-29): start and rewrite with their D-06 state rules, G-1, the instruction va
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 15-07-PLAN.md — Build the questionnaire decision operation's service (D-21 to D-25), the questionnaire counterpart of Phase 12 D-24: the closed batch, the leak-safe check order inside the governance lock, applying co
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 15-08-PLAN.md — Scope note (orchestrator, 2026-10-01): four tasks, one of them a small tracer, at the scope limit; most listed files are tests. They stay together because each task extends the previous one in the sam
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 15-09-PLAN.md — Serve the six operations (D-03 items 1 to 5) through routes, controller handlers and the closed specification; grant them through five new API-only Functions held by `role.security_analyst` only, in b
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 15-10-PLAN.md — Build the web's typed API layer for the six operations (closed zod parsers, a server-only service, strict Server Actions with one batch decision action), keep a 400's closed reason in the transport, w
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 15-11-PLAN.md — Scope note (orchestrator, 2026-10-01): four tasks, one of them a small tracer, at the scope limit; most listed files are tests. They stay together because each task extends the previous one in the sam
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 15-12-PLAN.md — Add the question-row parts and the provenance surfaces (UI-SPEC §4.7, §6, §7.1, §8.1, §9): the Rewrite in plain language control with its form and row states, the X-26 Answered note, the open-proposal
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 15-13-PLAN.md — Scope note (orchestrator, 2026-10-01): four tasks, one of them a small tracer, at the scope limit; most listed files are tests. They stay together because each task extends the previous one in the sam
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 15-14-PLAN.md — Write the Phase 15 journey (D-36; UI-SPEC §16 E1) on its own UAT-A-like records at 1440 and 375 with axe, covering success criteria 1 to 4 and the UI negative cases; extend the glossary if 12-19's "AI
 
 ### Phase 16: Risk curation and targeted AI re-runs
 
