@@ -30,21 +30,21 @@ created: "2026-09-28"
 
 | Property | Value |
 |----------|-------|
-| **Framework** | **Web:** vitest 4.1.11 (jsdom) with @testing-library/react 16.3.0 and user-event 14.6.1.<br>**Strapi:** `node:test`, compiled by `tsc -p tests/tsconfig.json` to `.tmp/tests-dist`, one process and one SQLite database per test file. Provider adapters are tested through `apps/strapi/tests/helpers/fake-openai-compatible-server.ts` with model-facing wire bodies.<br>**E2E:** Playwright 1.58.2 with @axe-core/playwright 4.11.0, Chromium, on the production build. |
-| **Config file** | `apps/web/vitest.config.ts`; `apps/strapi/tests/tsconfig.json`; `apps/web/playwright.config.ts` (`desktop` 1440×900; `mobile` 375×812, `@journey` tests only; `workers: 1`) |
+| **Framework** | **Web:** vitest 4.1.11 (jsdom) with @testing-library/react 16.3.0 and user-event 14.6.1.<br>**Strapi:** `node:test`, compiled by `tsc -p tests/tsconfig.json` to `.tmp/tests-dist`, one process and one SQLite database per test file. Provider adapters are tested through `apps/backend/tests/helpers/fake-openai-compatible-server.ts` with model-facing wire bodies.<br>**E2E:** Playwright 1.58.2 with @axe-core/playwright 4.11.0, Chromium, on the production build. |
+| **Config file** | `apps/csrm/vitest.config.ts`; `apps/backend/tests/tsconfig.json`; `apps/csrm/playwright.config.ts` (`desktop` 1440×900; `mobile` 375×812, `@journey` tests only; `workers: 1`) |
 | **Node** | Prefix every command in Git Bash with `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" &&` (Node 24.19.0, pnpm 11.24.0). |
-| **Quick run command** | **Web:** `pnpm --filter @csrm/web exec vitest run <path> [<path> …]`, with paths under `apps/web`. Never put a pattern after `--`.<br>**Strapi file** (dev servers stopped): `pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/strapi && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`.<br>**E2E** (dev servers stopped): `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts [--project desktop\|mobile]`. |
-| **Contract commands** | `pnpm --prefix apps/web api:generate`, then `pnpm --prefix apps/web api:check`. After a new or changed route or grant: `SERVED_OPERATIONS_WRITE=1 pnpm --filter @csrm/strapi served-operations:write` (dev servers stopped). |
-| **Full suite command** | `pnpm --filter @csrm/web test`; `pnpm --filter @csrm/web typecheck`; `pnpm --prefix apps/web api:check`; `pnpm --filter @csrm/strapi test` |
-| **Phase gate** | The four full-suite commands, then `pnpm --filter @csrm/web test:e2e` (both projects, production build).<br>**Before:** ports 1337 and 3000 are free; in Git Bash, `netstat -ano \| grep -E ':(1337\|3000) .*LISTENING'` prints nothing.<br>**Afterwards:**<br>- `git status --porcelain` is empty (Phase 8 D-12; a dirty tree is a harness defect);<br>- the content-type freeze check `git diff --name-only <phase-12-context-commit>..HEAD -- 'apps/strapi/src/api/*/content-types/*'` lists exactly `csrm-ai-run/content-types/csrm-ai-run/schema.json`, `csrm-assessment/content-types/csrm-assessment/schema.json` and `csrm-risk/content-types/csrm-risk/schema.json` (D-01);<br>- `cmp docs/references/idambox-csrm-role-function-api-catalogue.json apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` is silent;<br>- `git diff --name-only <phase-12-context-commit>..HEAD \| grep -i keycloak` prints nothing. |
+| **Quick run command** | **Web:** `pnpm --filter @csrm/web exec vitest run <path> [<path> …]`, with paths under `apps/csrm`. Never put a pattern after `--`.<br>**Strapi file** (dev servers stopped): `pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/backend && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`.<br>**E2E** (dev servers stopped): `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts [--project desktop\|mobile]`. |
+| **Contract commands** | `pnpm --prefix apps/csrm api:generate`, then `pnpm --prefix apps/csrm api:check`. After a new or changed route or grant: `SERVED_OPERATIONS_WRITE=1 pnpm --filter @csrm/strapi served-operations:write` (dev servers stopped). |
+| **Full suite command** | `pnpm --filter @csrm/web test`; `pnpm --filter @csrm/web typecheck`; `pnpm --prefix apps/csrm api:check`; `pnpm --filter @csrm/strapi test` |
+| **Phase gate** | The four full-suite commands, then `pnpm --filter @csrm/web test:e2e` (both projects, production build).<br>**Before:** ports 1337 and 3000 are free; in Git Bash, `netstat -ano \| grep -E ':(1337\|3000) .*LISTENING'` prints nothing.<br>**Afterwards:**<br>- `git status --porcelain` is empty (Phase 8 D-12; a dirty tree is a harness defect);<br>- the content-type freeze check `git diff --name-only <phase-12-context-commit>..HEAD -- 'apps/backend/src/api/*/content-types/*'` lists exactly `csrm-ai-run/content-types/csrm-ai-run/schema.json`, `csrm-assessment/content-types/csrm-assessment/schema.json` and `csrm-risk/content-types/csrm-risk/schema.json` (D-01);<br>- `cmp docs/references/idambox-csrm-role-function-api-catalogue.json apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` is silent;<br>- `git diff --name-only <phase-12-context-commit>..HEAD \| grep -i keycloak` prints nothing. |
 | **Estimated runtime** | A web file takes under 20 s; a Strapi file 10–90 s, and the authorization matrix 2–4 min. The full web suite takes about 20 s, the full Strapi suite about 10–15 min, and the full Playwright suite about 13–17 min (Phase 12 adds one journey). |
 
 **Known infrastructure facts.**
-1. **Shared `dist`.** The orchestrator's dev Strapi (1337) and Next (3000) run during planning. Everything that compiles Strapi shares `apps/strapi/dist`: the Strapi suite, a single Strapi file, `served-operations:write` and Playwright. All of these wait until the servers are stopped. A task executed while they run records those proofs as pending for the plan's end.
-2. **No live AI.** Every suite pins `CSRM_AI_PROVIDER=deterministic`. From plan 12-05, both harnesses (`apps/strapi/tests/helpers/strapi-http-harness.ts` and Playwright's Strapi `webServer` env) also pin `CSRM_AI_DATA_CLASSIFICATION_CEILING=''` (D-31). No proof calls a model. The hosted provider is exercised only by the operator's manual check.
+1. **Shared `dist`.** The orchestrator's dev Strapi (1337) and Next (3000) run during planning. Everything that compiles Strapi shares `apps/backend/dist`: the Strapi suite, a single Strapi file, `served-operations:write` and Playwright. All of these wait until the servers are stopped. A task executed while they run records those proofs as pending for the plan's end.
+2. **No live AI.** Every suite pins `CSRM_AI_PROVIDER=deterministic`. From plan 12-05, both harnesses (`apps/backend/tests/helpers/strapi-http-harness.ts` and Playwright's Strapi `webServer` env) also pin `CSRM_AI_DATA_CLASSIFICATION_CEILING=''` (D-31). No proof calls a model. The hosted provider is exercised only by the operator's manual check.
 3. **Environment for the policy.** Both harnesses run Strapi with `NODE_ENV=development` and `CSRM_ENVIRONMENT=development`, so an unset ceiling means no ceiling. Refusal proofs set the ceiling in their own harness boot, or test the pure policy module with injected configuration.
 4. **Jobs are process-local** (R-08-36). No E2E relies on a job outliving a restart. Interrupted-run reconciliation is proved in Strapi integration by booting with a `running` run seeded in the database.
-5. **Generated files.** `apps/web/next-env.d.ts` is untracked and ignored.
+5. **Generated files.** `apps/csrm/next-env.d.ts` is untracked and ignored.
 6. **Windows vitest** can fail with `EPERM: rename`. Rerun that file alone before treating it as a real failure.
 7. **Fixtures (the 06.9 lesson).** The new journey creates its own UAT-A-like request, systems and assets through the UI or its own seed. The one-shot release fixture ("Customer portal security assessment") keeps serving the existing release journey.
 8. **The base changes first.** Phase 10 (plans 10-05 to 10-23) and Phase 11 execute before Phase 12 and change the files this phase edits. Re-run the plan check before executing.
@@ -68,7 +68,7 @@ created: "2026-09-28"
 
 ## Requirement, Finding and Decision Map
 
-Each row names the proof, whether its file exists, and its state. Strapi files are named by their compiled `.js` form for the quick run; web paths are under `apps/web`.
+Each row names the proof, whether its file exists, and its state. Strapi files are named by their compiled `.js` form for the quick run; web paths are under `apps/csrm`.
 
 | Req / Finding / Decision | Behaviour to verify | Test type | Automated command / proof | File exists? | Status |
 |--------------------------|--------------------|-----------|---------------------------|--------------|--------|
@@ -97,7 +97,7 @@ Each row names the proof, whether its file exists, and its state. Strapi files a
 | D-35 · D-36 · D-37 | Markers are an icon plus text with accessible names, never colour alone; Accept and Dismiss are optimistic with rollback and an Undo toast; the disclosure has five states; phone layouts stack; axe passes; the editor route stays within its JavaScript budget | web unit + E2E | `pnpm --filter @csrm/web exec vitest run src/features/ai-assistance`; `accessibility.spec.ts`, `performance.spec.ts` and `ai-context-provenance.spec.ts` at 375 and 1440 | ❌ W0 / ✅ | ⬜ pending |
 | D-38 (UAT-A-like journey) | Request with systems, assets and regulatory requirements; the generated questionnaire shows help text and "Not sure"; the Requestor answers; the draft shows pre-fill, citations and suggestions; add a suggestion; accept the remaining proposals; release; the Requestor sees the disclosure. Both widths | E2E | `pnpm --filter @csrm/web test:e2e e2e/ai-context-provenance.spec.ts` | ❌ W0 | ⬜ pending |
 | D-38 (release journey) | After the deterministic draft, the analyst accepts the AI proposals before readiness is met; the released overview shows the disclosure and no "Generated by" | E2E | the changed `assessment-release-workflow.spec.ts` | ✅ | ⬜ pending |
-| Non-negotiables | Keycloak stays disabled; AI output never releases; suites stay deterministic; no new dependency | static + suites | the keycloak grep above; `git diff <phase-12-context-commit>..HEAD -- apps/strapi/package.json apps/web/package.json pnpm-lock.yaml` shows no dependency change; the existing release proofs stay green | ✅ | ⬜ pending |
+| Non-negotiables | Keycloak stays disabled; AI output never releases; suites stay deterministic; no new dependency | static + suites | the keycloak grep above; `git diff <phase-12-context-commit>..HEAD -- apps/backend/package.json apps/csrm/package.json pnpm-lock.yaml` shows no dependency change; the existing release proofs stay green | ✅ | ⬜ pending |
 
 ---
 
@@ -132,15 +132,15 @@ Seed rows, one per proposed plan. The planner replaces them with one row per tas
 
 Each file is created by the owning plan's first RED task (the project convention).
 
-- [ ] `apps/strapi/tests/risk-scale.unit.test.ts`: the 25 cells, the bands, the overall roll-up and the Accept rule (12-02)
-- [ ] `apps/strapi/tests/ai-data-policy.unit.test.ts`: environment by ceiling by classification by default; invalid ceiling; transcript gate (12-02)
-- [ ] `apps/strapi/tests/assessment-context.unit.test.ts`: inclusion, exclusion, escaping, bounds, digest stability, `CONTEXT_TOO_LARGE` (12-03)
-- [ ] `apps/strapi/tests/library-ranking.unit.test.ts`: determinism, ties, the shortlist size (12-03)
-- [ ] `apps/strapi/tests/fixtures/ai-wire/`: model-facing UAT-A-like draft bodies (two risks of one type, an Accept on High, an unknown source, an out-of-set control, an unknown system key) and questionnaire bodies (missing "Not sure", Boolean, 5 and 21 questions, blank help text) (12-05, 12-06)
-- [ ] `apps/strapi/tests/ai-run.integration.test.ts`: the run lifecycle, bootstrap reconciliation, the run read, legacy null provenance (12-04, 12-10)
-- [ ] `apps/strapi/tests/ai-proposal-decisions.integration.test.ts`: accept, dismiss, restore, idempotence, refusals, readiness and edit transition (12-10)
-- [ ] `apps/web/src/features/ai-assistance/*.test.ts(x)`: domain, parsers, header, markers, citations, suggestions, disclosure states, Requestor notice, actions (12-10, 12-13)
-- [ ] `apps/web/e2e/ai-context-provenance.spec.ts`: the UAT-A-like journey at 375 and 1440 (12-16)
+- [ ] `apps/backend/tests/risk-scale.unit.test.ts`: the 25 cells, the bands, the overall roll-up and the Accept rule (12-02)
+- [ ] `apps/backend/tests/ai-data-policy.unit.test.ts`: environment by ceiling by classification by default; invalid ceiling; transcript gate (12-02)
+- [ ] `apps/backend/tests/assessment-context.unit.test.ts`: inclusion, exclusion, escaping, bounds, digest stability, `CONTEXT_TOO_LARGE` (12-03)
+- [ ] `apps/backend/tests/library-ranking.unit.test.ts`: determinism, ties, the shortlist size (12-03)
+- [ ] `apps/backend/tests/fixtures/ai-wire/`: model-facing UAT-A-like draft bodies (two risks of one type, an Accept on High, an unknown source, an out-of-set control, an unknown system key) and questionnaire bodies (missing "Not sure", Boolean, 5 and 21 questions, blank help text) (12-05, 12-06)
+- [ ] `apps/backend/tests/ai-run.integration.test.ts`: the run lifecycle, bootstrap reconciliation, the run read, legacy null provenance (12-04, 12-10)
+- [ ] `apps/backend/tests/ai-proposal-decisions.integration.test.ts`: accept, dismiss, restore, idempotence, refusals, readiness and edit transition (12-10)
+- [ ] `apps/csrm/src/features/ai-assistance/*.test.ts(x)`: domain, parsers, header, markers, citations, suggestions, disclosure states, Requestor notice, actions (12-10, 12-13)
+- [ ] `apps/csrm/e2e/ai-context-provenance.spec.ts`: the UAT-A-like journey at 375 and 1440 (12-16)
 
 No framework install is needed: vitest, `node:test`, Playwright and the fake OpenAI-compatible server already exist.
 

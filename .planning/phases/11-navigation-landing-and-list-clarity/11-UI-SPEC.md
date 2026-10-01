@@ -24,7 +24,7 @@ reviewed_at: "2026-09-28"
 - **Delegated decisions.** #11 (exposure counts released Risks, under assessment apart, accepted marked), #16 ("Released" for display), G-1 (the analyst's own requests sit apart), G-4 (the premium bar, §13), G-5 (quick find), G-6 (a Playwright run leaves the tree clean).
 - **Domain vocabulary** is the JDL's: Assessment Request, Questionnaire, Risk Assessment, Risk, Risk Type, Control, Control Implementation (shown as "mitigation control"), Information System, Information Asset, Security Analyst, Requestor. `CsrmTreatmentAction` values display verbatim (`Accept`, `Treat`). No competing entity is introduced; "holder", "stage" and "accepted" are presentations of existing facts (D-01, D-20, D-40, D-41).
 - **Builds on Phase 10** (D-04). Phase 10 writes permission and recovery copy that names pages by today's headings (`Go to My Requests`, `Your workspace shows the work you can open.`, `Return to workspace`). This contract supersedes those strings in §2.3 and §2.4, so no Phase 10 plan changes; the Phase 11 plan that renames a heading changes them.
-- **Carried items** (the orchestrator's phase seeds): the zod client boundary extended to every route, with the incidental zod imports moved out of client modules (§ Notes carried); the sidebar's prefetch cost (§1.7); the E2E sign-in helpers asserting the level-one `Home` heading after plan 11-02 (§14.1 E1); the Phase 10 UI-SPEC §17.2 file correction, whose right file (`apps/web/app/(app)/app/risks/page.tsx:13`) this contract uses in §11.1.
+- **Carried items** (the orchestrator's phase seeds): the zod client boundary extended to every route, with the incidental zod imports moved out of client modules (§ Notes carried); the sidebar's prefetch cost (§1.7); the E2E sign-in helpers asserting the level-one `Home` heading after plan 11-02 (§14.1 E1); the Phase 10 UI-SPEC §17.2 file correction, whose right file (`apps/csrm/app/(app)/app/risks/page.tsx:13`) this contract uses in §11.1.
 
 ### Decision coverage
 
@@ -64,12 +64,12 @@ reviewed_at: "2026-09-28"
 
 | Property | Value |
 |----------|-------|
-| Tool | shadcn/ui, source-owned local components (`apps/web/components.json`: style `new-york`, RSC, CSS variables, neutral base, `iconLibrary: lucide`) |
+| Tool | shadcn/ui, source-owned local components (`apps/csrm/components.json`: style `new-york`, RSC, CSS variables, neutral base, `iconLibrary: lucide`) |
 | Preset | new-york; neutral base; CSS variables; RSC; Lucide icons |
 | Component library | Radix primitives through the installed `radix-ui` package (1.6.7), composed by the local shadcn/ui components; `cmdk` 1.1.1 under the source-owned `Command` |
 | Icon library | `lucide-react` 1.30.0, per §4 Iconography |
 | Font | Plus Jakarta Sans for UI text, data and numbers; Instrument Serif for page titles only; IBM Plex Mono for micro-labels and machine identifiers (§3.10, ADR 0001 gap 8) |
-| Tokens | Semantic tokens in `apps/web/app/globals.css`, whose values are the direction's; feature code consumes the mapped utilities only |
+| Tokens | Semantic tokens in `apps/csrm/app/globals.css`, whose values are the direction's; feature code consumes the mapped utilities only |
 | New dependencies | None. Quick find composes the installed `Dialog` and `Command` (cmdk 1.1.1, MIT); the sidebar and Homes compose existing primitives |
 
 ---
@@ -78,7 +78,7 @@ reviewed_at: "2026-09-28"
 
 ### Source-owned shadcn/ui components
 
-Enumerated by `ls apps/web/src/components/ui/*.tsx | grep -v '\.test\.tsx$' | wc -l` — 30 components — radix-ui@1.6.7 (shadcn/ui new-york, source-owned; version from `node -p "require('radix-ui/package.json').version"` in `apps/web`) — 2026-09-28.
+Enumerated by `ls apps/csrm/src/components/ui/*.tsx | grep -v '\.test\.tsx$' | wc -l` — 30 components — radix-ui@1.6.7 (shadcn/ui new-york, source-owned; version from `node -p "require('radix-ui/package.json').version"` in `apps/csrm`) — 2026-09-28.
 
 A non-exhaustive list of the known-good components this phase uses, never a closed allowlist. The full set is `alert-dialog`, `alert`, `avatar`, `badge`, `breadcrumb`, `button`, `calendar`, `card`, `checkbox`, `command`, `dialog`, `dropdown-menu`, `form`, `input`, `label`, `pagination`, `popover`, `progress`, `radio-group`, `scroll-area`, `select`, `separator`, `sheet`, `skeleton`, `sonner`, `switch`, `table`, `tabs`, `textarea` and `tooltip`.
 
@@ -91,7 +91,7 @@ A non-exhaustive list of the known-good components this phase uses, never a clos
 
 ### CSRM shared primitives
 
-Enumerated by `ls apps/web/src/components/csrm/*.tsx apps/web/src/components/csrm/*.ts | grep -v '\.test\.' | wc -l` — 15 modules — @csrm/web@0.1.0 (source-owned) — 2026-09-28.
+Enumerated by `ls apps/csrm/src/components/csrm/*.tsx apps/csrm/src/components/csrm/*.ts | grep -v '\.test\.' | wc -l` — 15 modules — @csrm/web@0.1.0 (source-owned) — 2026-09-28.
 
 A non-exhaustive list; the executor may use any exported primitive.
 

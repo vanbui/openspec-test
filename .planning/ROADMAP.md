@@ -468,7 +468,7 @@ Plans:
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** ADMIN-07, ADMIN-08
-**Depends on:** Phases 12, 17.1, 18 and 20 (the configuration they introduce); real identities wait for INT-02
+**Depends on:** Phases 12, 17.1, 18 and 20 (the configuration they introduce); Keycloak identities exist behind flags (INT-02, off in development), so the Admin role uses a development fixture here
 **Closes:** UAT-061
 **Carried from Phase 10:** the Information Asset owner (the rest of UAT-053, ADMIN-05 criterion 1), which needs a contract-gap record.
 **Intent:** R1, O2
@@ -490,7 +490,7 @@ Plans:
 
 ### Next-wave coverage
 
-All 46 Next-wave requirements (`REQUIREMENTS.md`) map to exactly one of Phases 10–22 and 17.1, and all 65 product gap UAT findings close in exactly one phase (the `Closes` lines above). UAT-040 closes in Phase 17.1: it moved from Phase 17 on 2026-09-27, after the UAT register's `Proposed phase` column was written. COLLAB-01 and NOTIFY-01 move from v2 Requirements into this wave. INT-02 (Keycloak) stays deferred by operator decision; Phase 22 uses a development fixture for the Admin role until then. Phase 06.10 stays deferred.
+All 46 Next-wave requirements (`REQUIREMENTS.md`) map to exactly one of Phases 10–22 and 17.1, and all 65 product gap UAT findings close in exactly one phase (the `Closes` lines above). UAT-040 closes in Phase 17.1: it moved from Phase 17 on 2026-09-27, after the UAT register's `Proposed phase` column was written. COLLAB-01 and NOTIFY-01 move from v2 Requirements into this wave. INT-02 (Keycloak) is implemented behind flags and off in development (2026-10-01: ADRs 0003 and 0004); Phase 22 uses a development fixture for the Admin role. Phase 06.10 stays deferred.
 
 
 ## Backlog

@@ -4,7 +4,7 @@
 
 CSRM is a production-quality, agentic-AI-assisted cyber security risk-management application in the BProton / IdamBox product family. It guides Requestors through risk assessment requests and questionnaires while giving Security Analysts controlled review, editing, risk and mitigation management, and final release responsibility.
 
-The repository will be a Turborepo monorepo with the existing Strapi backend at `apps/strapi` and a strict TypeScript Next.js App Router application at `apps/web`.
+The repository is a Turborepo monorepo with the Strapi backend at `apps/backend` and a strict TypeScript Next.js App Router application at `apps/csrm` (the folders took these names in d161fce).
 
 ## Core Value
 
@@ -90,7 +90,7 @@ It also fixes every defect the product gap UAT found in v1.0 flows.
 
 ## Constraints
 
-- **Monorepo**: Turborepo with `apps/strapi` and `apps/web` — backend and frontend must remain independently maintainable while sharing orchestration.
+- **Monorepo**: Turborepo with `apps/backend` (Strapi) and `apps/csrm` (Next.js) — backend and frontend must remain independently maintainable while sharing orchestration.
 - **Frontend stack**: Next.js App Router, React, strict TypeScript, Tailwind CSS, and shadcn/ui — required by the project brief.
 - **API contract**: Strapi OpenAPI specification — prevents invented or mock-only production contracts.
 - **Identity and authorization**: Keycloak authentication plus server-side IdamBox Role → Function → FunctionAPI authorization — required to protect sensitive risk data and prevent IDOR.
@@ -103,8 +103,8 @@ It also fixes every defect the product gap UAT found in v1.0 flows.
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Use a Turborepo monorepo | Coordinate frontend and Strapi backend while retaining clear workspace boundaries | ✓ Validated in Phase 1 |
-| Place Strapi at `apps/strapi` | Turborepo workspaces must live inside the repository; the existing sibling project will be moved in | ✓ Validated in Phase 1 |
-| Place the Next.js application at `apps/web` | Provides an obvious, conventional web workspace alongside the backend | ✓ Validated in Phase 1 |
+| Place Strapi at `apps/backend` | Turborepo workspaces must live inside the repository; the existing sibling project was moved in | ✓ Validated in Phase 1; folder renamed to `apps/backend` in d161fce |
+| Place the Next.js application at `apps/csrm` | Provides an obvious, conventional web workspace alongside the backend | ✓ Validated in Phase 1; folder renamed to `apps/csrm` in d161fce |
 | Follow the brief's eight vertical phases | It preserves demonstrable user journeys and avoids a collection of disconnected screens | ✓ v1.0 shipped (19 phases with the inserted 06.x work) |
 | Keep AI advisory and reviewable | Analysts must retain responsibility for assessment approval and release | ✓ Validated in v1.0 (INT-03); extended in v2.0 by provenance and risk-owner acceptance |
 | Revert-to-draft only from the earliest submitted state | Reverting a Request only from `submitted`, and a Questionnaire only before an assessment draft exists, avoids orphaned or stale downstream records | ✓ Validated in Phase 06.1 |

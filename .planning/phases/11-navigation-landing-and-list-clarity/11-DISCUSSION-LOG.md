@@ -140,7 +140,7 @@
 
 **Choice:** [auto] Q: "How is quick find built?" → Selected: "Command over cmdk, Server Action, lazy-loaded" (recommended).
 **Notes:**
-- `cmdk` 1.1.1 is already a dependency (`apps/web/package.json`, MIT) and `components/ui/command.tsx` exists unused, so no dependency is added.
+- `cmdk` 1.1.1 is already a dependency (`apps/csrm/package.json`, MIT) and `components/ui/command.tsx` exists unused, so no dependency is added.
 - **cmdk settings:** its default client filter and its Ctrl+J/K/N/P bindings are turned off.
 - **The shipped `CommandDialog`** renders its title outside the dialog content, so the dialog is composed with its title inside.
 - **Server Actions** run one at a time per client, so the search coalesces to the latest term.

@@ -244,4 +244,5 @@ On 2026-09-28 the operator delegated the remaining items as well ("Use your own 
 ## What stays open
 
 - **INT-02:** the Keycloak environment is still needed. Keycloak stays disabled until it exists.
+  - Updated 2026-10-01: the code is no longer the gap. OIDC sign-in (ADR 0003) and Strapi access-token verification (ADR 0004) are implemented behind flags and off in development. What stays open is the deployment: a Keycloak environment, the ADR 0004 realm changes, and `externalSubject` links for every user.
 - **Phase 8 residual decisions:** the residual register still lists the deployment-time decisions not settled above (the proxy topology, log retention and CSP reporting). They do not block the next wave.

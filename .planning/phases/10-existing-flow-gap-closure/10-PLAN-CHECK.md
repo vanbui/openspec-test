@@ -137,7 +137,7 @@ Execution should wait for one orchestrator decision (Blocker 1). The warnings ca
 - **Shared test harness:**
   - `.planning/config.json` sets `parallelization: true` and `use_worktrees: false`.
   - Every plan in these two waves runs Playwright; 10-01 and 10-03 run the full suite.
-  - The E2E harness uses one port pair, one SQLite file, one isolated Next build and the shared `apps/strapi/dist` (`playwright.config.ts:14-38`). Two concurrent runs would collide.
+  - The E2E harness uses one port pair, one SQLite file, one isolated Next build and the shared `apps/backend/dist` (`playwright.config.ts:14-38`). Two concurrent runs would collide.
 - **Wave 1 file coupling:**
   - 10-01 Task 1 runs `server-only-boundary.test.ts` while 10-02 Task 1 edits its gate list.
   - 10-02's copy guard reads `revert-audit-summary.tsx` and `questionnaire-revision-timeline.tsx`, which 10-01 edits.
@@ -146,7 +146,7 @@ Execution should wait for one orchestrator decision (Blocker 1). The warnings ca
 **2. [verification] `api:check` is run where it can pass**
 - **Plans:** 10-06, 10-10, 10-11, 10-13, 10-15, 10-16 and 10-18.
 - **Evidence:**
-  - `api:check` runs `api:generate && git diff --exit-code -- src/lib/api/generated/schema.d.ts` (`apps/web/package.json:13`). That compares the regenerated file against the git index.
+  - `api:check` runs `api:generate && git diff --exit-code -- src/lib/api/generated/schema.d.ts` (`apps/csrm/package.json:13`). That compares the regenerated file against the git index.
   - Each contract task runs it before the task's commit, so it fails until the regenerated file is staged.
 - **Example fix (non-binding):** stage the spec and the regenerated `schema.d.ts` before running the verify.
 
@@ -238,7 +238,7 @@ issues:
     dimension: dependency_correctness
     severity: info
     required_property: "Ordering between same-wave plans is declared, not implied"
-    description: "config.json has parallelization: true and use_worktrees: false. Both plans in waves 1 and 2 run Playwright against one E2E port pair, SQLite file, Next build and apps/strapi/dist. 10-01 T1 runs server-only-boundary.test.ts while 10-02 T1 edits it."
+    description: "config.json has parallelization: true and use_worktrees: false. Both plans in waves 1 and 2 run Playwright against one E2E port pair, SQLite file, Next build and apps/backend/dist. 10-01 T1 runs server-only-boundary.test.ts while 10-02 T1 edits it."
     fix_hint: "Run waves 1 and 2 one plan at a time, or declare the edges."
   - plans: ["10-06", "10-10", "10-11", "10-13", "10-15", "10-16", "10-18"]
     dimension: verify_command_format
@@ -374,7 +374,7 @@ The dependency graph is acyclic and each wave is the maximum of its dependencies
 | 7c Architectural tier | Pass: presentation gates in the web, rules and facts in Strapi, placement validated by the Strapi definition parser |
 | 8 Nyquist | 8a pass (60/60 automated); 8b Warning 6; 8c pass; 8d pass (no `MISSING` placeholders; every new test file is created by the step that first runs it); 8e pass (VALIDATION.md has 60 per-task rows whose waves match the plans); 8f pass (probe: 60/60 failing directions stated, none vacuous) |
 | 9 Cross-plan data contracts | Pass: every change to a shared shape is serialised (the governance log, `TransportError.reason`, `controlSummary`, `applicableControls`, the risk list items, `SaveStatus`, `LocalInstant`) |
-| 10 Project instructions | Pass. `AGENTS.md` and `apps/web/AGENTS.md` were applied: typed layer only, server-side authorization, semantic tokens, zod kept out of client modules, no new dependency, tests with every workflow |
+| 10 Project instructions | Pass. `AGENTS.md` and `apps/csrm/AGENTS.md` were applied: typed layer only, server-side authorization, semantic tokens, zod kept out of client modules, no new dependency, tests with every workflow |
 | 11 Research resolution | Fails on the marker; Warning 7 |
 | 12 Pattern compliance | Pass: plans cite the PATTERNS.md analogs; the rejected sign-in sync is justified in 10-01 |
 | Verify command format | Pass, except the 10-22 static check (Warning 3) |
@@ -387,7 +387,7 @@ The dependency graph is acyclic and each wave is the maximum of its dependencies
 
 ### Project rules checked
 
-- **No content-type change (D-01):** no plan lists a file under `apps/strapi/src/api/*/content-types`. 10-22 re-checks against `98fe99c`.
+- **No content-type change (D-01):** no plan lists a file under `apps/backend/src/api/*/content-types`. 10-22 re-checks against `98fe99c`.
 - **Full endpoint chain (D-02):**
   - **The one new route (10-13)** gets every link in the chain:
     - the exact Function and FunctionAPI in both catalogue copies, checked with `cmp`, granted to `role.security_analyst` only;
@@ -408,7 +408,7 @@ The dependency graph is acyclic and each wave is the maximum of its dependencies
 - **UI-SPEC §19 rows:** all 16 end-to-end rows (E1 to E16) and all 15 unit rows are claimed by the plan that changes the copy (research-to-final numbering as listed in VALIDATION.md). I checked every cited line against the tests.
 - **Test commands:**
   - Web runs use `pnpm --filter @csrm/web exec vitest run <paths>`.
-  - The Strapi suite is `pnpm --filter @csrm/strapi test`. Single Strapi files use the VALIDATION.md quick run: `tsc -p tests/tsconfig.json`, then `node --test` in `apps/strapi`.
+  - The Strapi suite is `pnpm --filter @csrm/strapi test`. Single Strapi files use the VALIDATION.md quick run: `tsc -p tests/tsconfig.json`, then `node --test` in `apps/backend`.
   - Playwright runs only after confirming ports 1337 and 3000 are free; `test:e2e` is `playwright test`.
 - **AI and Keycloak:** no plan touches Keycloak or `CSRM_AI_*`, and the suites pin the deterministic provider. 10-22's browser walk forbids Generate, Replace, Retry, Submit, Release and Confirm import.
 

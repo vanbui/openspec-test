@@ -3,9 +3,9 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
-current_phase_name: UI-SPEC approved, with 7 of 7 checker dimensions passing; plans next
+current_phase_name: post-demo Stage 1, reconciling the demo asks into Phases 17, 17.1 and 20; Phase 11 plans next in Stage 2
 status: planning
-stopped_at: "paused at the weekly usage ceiling: 94% of the weekly limit against the brief's 95% ceiling, with the limit resetting at 2026-09-28 00:00 UTC (10:00 AEST). The operator restarts the session by hand. The last commit adds Phase 11's UI-SPEC and this state. The tree is clean, and `v2.0` is pushed to `origin`."
+stopped_at: "Post-demo Stage 0 done on branch `post-demo` (from `csrm-20260928` at `ece1a25`): baseline gates recorded in `.planning/POST-DEMO-BRIEF.md`, stale app paths and INT-02 corrected, config set to `inherit` with auto-advance off. Stage 1 (reconcile the asks) is next."
 last_updated: "2026-10-01T05:33:24.123Z"
 last_activity: 2026-10-01
 last_activity_desc: "Completed quick task 260929-u0w: Add production-only OIDC sign-in to the CSRM web app against Keycloak"
@@ -26,13 +26,13 @@ current_plan: 0
 See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 **Core value:** Make a complex cyber-risk workflow simple and auditable while keeping Security Analysts—not AI—in control of assessment review and release.
-**Current focus:** v2.0 Assessment Lifecycle and Oversight, on branch `v2.0`: planning Phases 10–22 and 17.1 in execution order. Phase 10 is planned, Phase 11 has its UI-SPEC, and Phase 11's plans are next.
+**Current focus:** v2.0 Assessment Lifecycle and Oversight on branch `post-demo`, under `.planning/POST-DEMO-BRIEF.md`: reconcile the product demo's risk-owner asks into the roadmap (Stage 1), plan every remaining phase (Stage 2), then build in execution order (Stage 3).
 
 ## Current Position
 
-Phase: 11 (UI-SPEC approved, with 7 of 7 checker dimensions passing; plans next). Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22 and 17.1 are not yet planned.
+Stage 1 of the post-demo brief: reconciling the asks into Phases 17, 17.1 and 20, with a decimal phase only for work that does not fit. Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 11 has its UI-SPEC, and its plans are next. Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22 and 17.1 are not yet planned.
 Plan: —
-Status: Planning v2.0 on branch `v2.0` (mode: plan-all-first); paused at the weekly usage ceiling
+Status: Planning v2.0 on branch `post-demo` (mode: plan-all-first; the pilot drives every transition, and auto-advance is off)
 Last activity: 2026-10-01 - Completed quick task 261001-le4: Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view
 
 ## Milestone
@@ -65,7 +65,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 
   Three requirements were added: ASSESS-20, NOTIFY-02 and UX-10, making 46. Phase 17.1, "Review, peer approval and risk acceptance", was inserted. Contract-gap records are approved by the orchestrator after review (G-6).
 - [Next wave planning method, 2026-09-27]: Each phase is planned in roadmap order with GSD: discussion in auto mode (CONTEXT.md), the UI design contract for UI phases (UI-SPEC.md, deferring every value to `docs/design/csrm-design-direction.md`), research, plans and the plan check. Planning stops before execution: auto-advance is not used for this wave's planning. Plans for Phases 11–22 are written against today's code plus the planned outputs of earlier phases, so re-run the plan check for a phase just before executing it.
-- Turborepo will contain `apps/strapi` and `apps/web`; the existing sibling Strapi project will be migrated into the repository during Phase 1.
+- The Turborepo contains `apps/backend` (Strapi) and `apps/csrm` (Next.js); the sibling Strapi project was migrated in during Phase 1, and the folders took these names in d161fce.
 - The provided CSRM project brief governs scope; the Strapi OpenAPI contract governs production API communication.
 - Keycloak authenticates identities; IdamBox/Strapi remains the source of application authorization.
 - AI assists with drafts and suggestions but cannot release assessments.
@@ -80,10 +80,11 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
   - Work moved to branch `v2.0`, created from `uat-trial` at `e3d393d`. `uat-trial` stays as the UAT and planning snapshot.
   - Recorded UI extensions form one milestone-wide sequence in `docs/design/csrm-design-direction.md`: Phase 10's X-1 to X-5 (recorded by plan 10-01), then Phase 11's X-6 to X-10 (recorded by Phase 11's first plan). Each later UI-SPEC numbers after the highest number in the committed UI-SPECs, so Phase 12 starts at X-11. Phase 7's X-1 to X-13 were local to its own contract; they are in the direction as dated CSRM extension notes and are cited by those.
   - Phase 11's UI-D33 is approved: "mitigation control" is the display term for a Control Implementation in the copy that phase rewrites, as in Phase 7's contract, Phase 10's D-28 and D-33, and the Risk Register's save messages. The JDL name stays in the data model and API.
+- [Post-demo start, 2026-10-01]: The product demo's risk-owner asks are reconciled, planned and built on branch `post-demo` under `.planning/POST-DEMO-BRIEF.md`. That brief overrides three stale facts: the `v2.0` branch and the git-excluded brief above; the app paths, now `apps/backend` and `apps/csrm` (`d161fce`); and INT-02, now implemented, flag-gated and off in development. GSD agents inherit the session model, and auto-advance is off, so the pilot drives every transition.
 
 ## Risks and Open Decisions
 
-- **INT-02 (Keycloak):** deferred by operator decision. Keycloak stays disabled, and Phase 22 uses a development fixture for the Admin role until then.
+- **INT-02 (Keycloak):** implemented, flag-gated, and off in development (updated 2026-10-01). OIDC sign-in (ADR 0003, quick tasks 260929-u0w and 260930-iei) and Strapi access-token verification (ADR 0004, `b6000d0`) ship behind `CSRM_AUTH_OIDC_ENABLED` and `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION`, with provisioning behind `IDAMBOX_KEYCLOAK_PROVISIONING` (ADR 0002). Development and every suite keep them off and use the development identity bridge; nobody starts Keycloak or flips them during v2.0 work. New authorisation rules are enforced in Strapi against the resolved IdamBox User and never branch on the auth mode. Phase 22 keeps a development fixture for the Admin role. The remaining risk is deployment-time: a Keycloak environment, the ADR 0004 realm changes, and `externalSubject` links for every user.
 - **Phase 8 residuals** (`docs/security/phase-08-residual-risks.md`):
   - decided: the fonts (R-08-24, G-10) and the AI transcript flag (R-08-12, G-7);
   - already closed in code: the CORS allowlist (R-08-11);
@@ -132,22 +133,19 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Session Continuity
 
-**Last session:** 2026-09-28
-**Stopped At:** paused at the weekly usage ceiling: 94% of the weekly limit against the brief's 95% ceiling, with the limit resetting at 2026-09-28 00:00 UTC (10:00 AEST). The operator restarts the session by hand. The last commit adds Phase 11's UI-SPEC and this state. The tree is clean, and `v2.0` is pushed to `origin`.
-**Resume File:** the operator's local v2.0 orchestration brief (git-excluded). Its unit instructions and per-phase seeds, including the carried verification items, sit alongside it.
+**Last session:** 2026-10-01
+**Stopped At:** post-demo Stage 0 done: branch `post-demo` created from `csrm-20260928` at `ece1a25`, baseline gates recorded, stale app paths and INT-02 corrected, `config.json` set to `model_profile: inherit` and `workflow.auto_advance: false`.
+**Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
 **Exact next step to resume:**
-1. Re-read the brief and this file, confirm the branch is `v2.0`, and check usage.
-2. Run these read-only planning units in parallel. None commits; the orchestrator commits each one's files by path:
-   - Phase 11, Unit C (patterns and plans), then Unit D and a revision;
-   - Phase 12, Unit B (its UI-SPEC numbers new extensions from X-11);
-   - Unit A for Phases 13, 16 and 19, whose dependencies already have a CONTEXT.md.
-3. Continue in the execution order: Phase 14 and 15 Unit A once Phase 13 has its CONTEXT.md, then 17, 17.1, 18, 20, 21 and 22.
-4. With every phase planned, self-host the fonts (G-10), then build from Phase 10, opening each phase with a fresh plan check.
+1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
+2. Stage 1: reconcile the demo asks into Phases 17, 17.1 and 20, and insert a decimal phase only for work that does not fit. Decisions go in `NEXT-WAVE-DECISIONS.md` from G-11, requirements continue the IDs, and ROADMAP coverage is updated.
+3. Stage 2: plan every remaining phase in execution order with the Next wave planning method, starting with Phase 11's patterns and plans.
+4. Stage 3: the G-10 fonts quick task, then build from Phase 10, opening each phase with a fresh plan check.
 
 ## Next Action
 
-**Resume v2.0 planning on branch `v2.0`** after the weekly usage reset, following Session Continuity above. Nothing is built yet. Both dev servers were running at the pause; the next session checks the ports.
+**Post-demo Stage 1 on branch `post-demo`**, following Session Continuity above. Nothing is built yet. No dev server was running at the start of the post-demo session.
 
 ## Accumulated Context
 

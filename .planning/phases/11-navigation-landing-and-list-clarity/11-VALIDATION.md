@@ -31,16 +31,16 @@ created: "2026-09-28"
 | Property | Value |
 |----------|-------|
 | **Framework** | Web: vitest 4.1.11 (jsdom) with @testing-library/react 16.3.0 and user-event 14.6.1. Strapi: `node:test`, compiled by `tsc -p tests/tsconfig.json` to `.tmp/tests-dist`, one process and one SQLite database per test file. E2E: Playwright 1.58.2 with @axe-core/playwright 4.11.0, Chromium, on the production build |
-| **Config file** | `apps/web/vitest.config.ts` (`src/**/*.test.{ts,tsx}`, 20 s timeouts); `apps/strapi/tests/tsconfig.json`; `apps/web/playwright.config.ts` (`desktop` 1440×900 runs every spec; `mobile` 375×812 with touch runs only `@journey` tests; one worker) |
+| **Config file** | `apps/csrm/vitest.config.ts` (`src/**/*.test.{ts,tsx}`, 20 s timeouts); `apps/backend/tests/tsconfig.json`; `apps/csrm/playwright.config.ts` (`desktop` 1440×900 runs every spec; `mobile` 375×812 with touch runs only `@journey` tests; one worker) |
 | **Node** | Prefix every command in Git Bash with `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" &&`. The native modules are built for Node 24.19.0 (pnpm 11.24.0) |
-| **Quick run command** | **Web:** `pnpm --filter @csrm/web exec vitest run <path> [<path> …]`, with paths under `apps/web`. Never `pnpm --filter @csrm/web test -- <pattern>`, which runs the whole suite.<br>**Strapi file, dev servers stopped:** `pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/strapi && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`.<br>**E2E, dev servers stopped:** `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts [--project desktop\|mobile]`. Each run builds for production first, so batch a plan's specs |
-| **Contract commands** | `pnpm --prefix apps/web api:generate`, then `pnpm --prefix apps/web api:check`. After the new route (plan 11-08), `SERVED_OPERATIONS_WRITE=1 pnpm --filter @csrm/strapi served-operations:write` with the dev servers stopped |
-| **Full suite command** | `pnpm --filter @csrm/web test`; `pnpm --filter @csrm/web typecheck`; `pnpm --prefix apps/web api:check`; `pnpm --filter @csrm/strapi test`; `pnpm --filter @csrm/web test:e2e` |
-| **Phase gate** | The five full-suite commands on the production build.<br>**Before:** ports 1337 and 3000 are free (in Git Bash, `netstat -ano \| grep -E ':(1337\|3000) .*LISTENING'` prints nothing).<br>**Afterwards:**<br>- `git status --porcelain` is empty; a Playwright run leaves the tree clean, with no restore step (G-6, Phase 8 D-12);<br>- the content-type freeze check prints nothing: `git diff --name-only <phase-11 CONTEXT commit>..HEAD -- 'apps/strapi/src/api/*/content-types/*'`;<br>- `cmp docs/references/idambox-csrm-role-function-api-catalogue.json apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` is silent |
+| **Quick run command** | **Web:** `pnpm --filter @csrm/web exec vitest run <path> [<path> …]`, with paths under `apps/csrm`. Never `pnpm --filter @csrm/web test -- <pattern>`, which runs the whole suite.<br>**Strapi file, dev servers stopped:** `pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/backend && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`.<br>**E2E, dev servers stopped:** `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts [--project desktop\|mobile]`. Each run builds for production first, so batch a plan's specs |
+| **Contract commands** | `pnpm --prefix apps/csrm api:generate`, then `pnpm --prefix apps/csrm api:check`. After the new route (plan 11-08), `SERVED_OPERATIONS_WRITE=1 pnpm --filter @csrm/strapi served-operations:write` with the dev servers stopped |
+| **Full suite command** | `pnpm --filter @csrm/web test`; `pnpm --filter @csrm/web typecheck`; `pnpm --prefix apps/csrm api:check`; `pnpm --filter @csrm/strapi test`; `pnpm --filter @csrm/web test:e2e` |
+| **Phase gate** | The five full-suite commands on the production build.<br>**Before:** ports 1337 and 3000 are free (in Git Bash, `netstat -ano \| grep -E ':(1337\|3000) .*LISTENING'` prints nothing).<br>**Afterwards:**<br>- `git status --porcelain` is empty; a Playwright run leaves the tree clean, with no restore step (G-6, Phase 8 D-12);<br>- the content-type freeze check prints nothing: `git diff --name-only <phase-11 CONTEXT commit>..HEAD -- 'apps/backend/src/api/*/content-types/*'`;<br>- `cmp docs/references/idambox-csrm-role-function-api-catalogue.json apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` is silent |
 | **Estimated runtime** | A web file takes under 20 s. A Strapi file takes 10 to 90 s, and the authorization matrix 2 to 4 minutes. The full web suite takes about 20 to 30 s, the full Strapi suite about 9 to 13 minutes, and the full Playwright suite about 11 to 15 minutes, likely longer with this phase's new journeys |
 
 **Known infrastructure facts.**
-1. **Shared `dist`:** the orchestrator's dev Strapi (1337) and Next (3000) run during planning and between plans. Anything that compiles Strapi shares `apps/strapi/dist`: a Strapi file, the Strapi suite and `served-operations:write`. So does a Playwright run. These wait until the servers are stopped. A task executed while they run records those proofs as pending for the plan's end.
+1. **Shared `dist`:** the orchestrator's dev Strapi (1337) and Next (3000) run during planning and between plans. Anything that compiles Strapi shares `apps/backend/dist`: a Strapi file, the Strapi suite and `served-operations:write`. So does a Playwright run. These wait until the servers are stopped. A task executed while they run records those proofs as pending for the plan's end.
 2. **No hosted AI:** automated suites pin the deterministic provider. No Phase 11 proof triggers generation, except the existing journeys that already generate with the deterministic provider.
 3. **Jobs are process-local** (R-08-36). The analyst Home's "Generation in progress" figure is proven through the existing queue bucket tests. No E2E relies on a job outliving a restart.
 4. **Windows vitest:** vitest can fail with `EPERM: rename`. Rerun that file alone before treating it as a real failure.
@@ -108,7 +108,7 @@ Seeded per proposed plan. The planner replaces each row with one row per task (`
 
 ## Requirement, Finding and Decision Map
 
-Each row names the proof, whether its file exists, and its state. Strapi files are named by their compiled `.js` form for the quick run. Web paths are under `apps/web`.
+Each row names the proof, whether its file exists, and its state. Strapi files are named by their compiled `.js` form for the quick run. Web paths are under `apps/csrm`.
 
 | Req / Finding / Decision | Behaviour to verify | Test type | Automated command / proof | File exists? | Status |
 |--------------------------|--------------------|-----------|---------------------------|--------------|--------|
@@ -154,14 +154,14 @@ Each row names the proof, whether its file exists, and its state. Strapi files a
 
 Each plan creates its test file in its first RED task.
 
-- [ ] `apps/web/src/config/navigation/navigation.test.ts`: the profiles, sections, labels equal to headings, and the collapsible section's open rule (plans 11-02 and 11-03). UX-07.
-- [ ] `apps/web/src/components/shell/navigation-counts.test.ts`: the capability-chosen reads, fail-soft, and a zero hidden (plan 11-10). UX-07.
-- [ ] `apps/web/src/features/home/*.test.tsx`: variant selection, the analyst order, the Requestor sections and the 375px DOM order (plans 11-02 and 11-09). UX-08.
-- [ ] `apps/web/src/features/quick-find/*.test.ts(x)`: the action (validation, capability lists, bounds, hrefs) and the dialog (keyboard, live region, guard) (plan 11-14). UX-10.
+- [ ] `apps/csrm/src/config/navigation/navigation.test.ts`: the profiles, sections, labels equal to headings, and the collapsible section's open rule (plans 11-02 and 11-03). UX-07.
+- [ ] `apps/csrm/src/components/shell/navigation-counts.test.ts`: the capability-chosen reads, fail-soft, and a zero hidden (plan 11-10). UX-07.
+- [ ] `apps/csrm/src/features/home/*.test.tsx`: variant selection, the analyst order, the Requestor sections and the 375px DOM order (plans 11-02 and 11-09). UX-08.
+- [ ] `apps/csrm/src/features/quick-find/*.test.ts(x)`: the action (validation, capability lists, bounds, hrefs) and the dialog (keyboard, live region, guard) (plan 11-14). UX-10.
 - [ ] The figure-link audit test beside the report and Home presentation modules (plan 11-13). UX-09.
-- [ ] `apps/web/e2e/navigation-and-home.spec.ts`, with `@journey` so the mobile project runs it (plans 11-02, 11-03, 11-09 and 11-10). UX-07, UX-08.
-- [ ] `apps/web/e2e/quick-find.spec.ts`, with `@journey` (plan 11-14). UX-10.
-- [ ] `apps/strapi/tests/my-requests.integration.test.ts`, plus a unit file for the query parser if the planner splits it (plan 11-08). UX-08, UX-09.
+- [ ] `apps/csrm/e2e/navigation-and-home.spec.ts`, with `@journey` so the mobile project runs it (plans 11-02, 11-03, 11-09 and 11-10). UX-07, UX-08.
+- [ ] `apps/csrm/e2e/quick-find.spec.ts`, with `@journey` (plan 11-14). UX-10.
+- [ ] `apps/backend/tests/my-requests.integration.test.ts`, plus a unit file for the query parser if the planner splits it (plan 11-08). UX-08, UX-09.
 
 *No framework install is needed: vitest, `node:test` and Playwright are in place.*
 

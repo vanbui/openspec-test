@@ -11,7 +11,7 @@
 
 #### Scope and contract boundary
 
-- **D-01:** No Strapi content-type schema change (`apps/strapi/src/api/*/content-types/*` stays frozen). Every change reads fields and relations that already exist:
+- **D-01:** No Strapi content-type schema change (`apps/backend/src/api/*/content-types/*` stays frozen). Every change reads fields and relations that already exist:
   - the request's `requestor`, `assessmentType`, `businessCriticality`, `dueDate` and `submittedDate`;
   - the Risk Assessment's status and release facts;
   - the Risk's `treatmentAction`, `residualRating`, `inherentRating`, `treatmentStatus`, `targetDate` and `closureDate`;
@@ -470,8 +470,8 @@ Phase 11 is mostly presentation and projection work over data that already exist
 
 ## Project Constraints (from AGENTS.md)
 
-The root `AGENTS.md` and `apps/web/AGENTS.md` are the project's instruction files. These directives bind every Phase 11 plan:
-- Next.js App Router and TypeScript strict mode. Prefer Server Components, using Client Components only where required. Next.js is 16.3.6, so read `apps/web/node_modules/next/dist/docs/` before framework-specific code.
+The root `AGENTS.md` and `apps/csrm/AGENTS.md` are the project's instruction files. These directives bind every Phase 11 plan:
+- Next.js App Router and TypeScript strict mode. Prefer Server Components, using Client Components only where required. Next.js is 16.3.6, so read `apps/csrm/node_modules/next/dist/docs/` before framework-specific code.
 - shadcn/ui before custom primitives; semantic theme tokens only; never hard-code BProton brand colours in feature components.
 - All pages work at mobile and desktop widths. WCAG 2.2 AA from 375px to 1440px.
 - No business or domain logic in JSX.
@@ -492,7 +492,7 @@ The root `AGENTS.md` and `apps/web/AGENTS.md` are the project's instruction file
 |---------|---------|---------|--------------|
 | next | 16.3.6 [VERIFIED: `node -p require('next/package.json').version`] | App Router, `redirects()`, Server Actions, `next/dynamic` | The project's framework |
 | react | 19.2.4 [VERIFIED: same] | `use()` for the streamed count promise; Suspense | Bundled with Next 16.3 |
-| cmdk | 1.1.1 [VERIFIED: `apps/web/node_modules/cmdk/package.json`, `npm view cmdk version`] | Combobox and listbox command menu under the shadcn `Command` | Already a dependency (`apps/web/package.json`: `"cmdk": "^1.1.1"`); shadcn's own Command component builds on it |
+| cmdk | 1.1.1 [VERIFIED: `apps/csrm/node_modules/cmdk/package.json`, `npm view cmdk version`] | Combobox and listbox command menu under the shadcn `Command` | Already a dependency (`apps/csrm/package.json`: `"cmdk": "^1.1.1"`); shadcn's own Command component builds on it |
 | radix-ui | 1.6.7 [VERIFIED] | `Dialog` (through `components/ui/dialog.tsx`) for the quick-find modal | The project's primitive layer |
 | @radix-ui/react-dialog | 1.1.15 [VERIFIED: package.json] | The mobile navigation sheet (existing) and cmdk's own peer | Pinned already |
 | @tanstack/react-table | 9.2.4 [VERIFIED: package.json] | DataTable | 06.6 D-02: extended, never forked |
@@ -537,13 +537,13 @@ This phase installs no package.
 
 ### Sidebar (UX-07, UAT-002)
 
-- **Today's model** [VERIFIED: `apps/web/src/config/navigation/navigation.ts:27,54-72`]:
+- **Today's model** [VERIFIED: `apps/csrm/src/config/navigation/navigation.ts:27,54-72`]:
   - `navigationGroups = ['Reports', 'Administration'] as const`;
   - ten ungrouped items: Workspace `/app`, My Requests, My Questionnaires, My Risk Assessments, New request, Analyst dashboard `/app/review`, Assessment Requests, Questionnaires, Risk Assessments and Risk register;
   - the group `Reports`: Alerts and Reports;
   - the group `Administration`: Risk Types, Controls, Information Systems and Information Assets.
   - Each item is `{ href, label, capability, icon, group? }`. `activeNavigationHref` (lines 40-52) marks the longest matching href at a path-segment boundary, and `/app` matches only itself.
-- **Rendering** [VERIFIED: `apps/web/src/components/shell/capability-navigation.tsx:29-66`]: ungrouped items first, then `role="group"` divs with an `aria-label`. `MobileNavigation` (lines 95-148) is a Radix Dialog sheet titled "Navigation", with a `Menu` trigger (08 D-26) and a Close control; it renders the same `CapabilityNavigation`, and `onNavigate` closes the sheet. Phase 10 plan 10-08 adds the guard's `onNavigate` to every link, and `GuardedLink` for the wordmark.
+- **Rendering** [VERIFIED: `apps/csrm/src/components/shell/capability-navigation.tsx:29-66`]: ungrouped items first, then `role="group"` divs with an `aria-label`. `MobileNavigation` (lines 95-148) is a Radix Dialog sheet titled "Navigation", with a `Menu` trigger (08 D-26) and a Close control; it renders the same `CapabilityNavigation`, and `onNavigate` closes the sheet. Phase 10 plan 10-08 adds the guard's `onNavigate` to every link, and `GuardedLink` for the wordmark.
 - **Headings that differ from labels today** [VERIFIED: the page files]:
   - `app/(app)/app/page.tsx:39` "Dashboard";
   - `app/(app)/app/requests/page.tsx:42` "My Requests";
@@ -581,7 +581,7 @@ This phase installs no package.
 
   The "seven extra list reads" note in `.planning/milestones/v1.0-STATE.md:718` is stale: `MILESTONES.md:121` records the replacement.
 - **The tiles that misled** (UAT-003, UAT-004): `RequestLifecycleWidget` (`requestor-dashboard.tsx:201-234`) renders seven stored-status tiles first in the grid (lines 260-281), one per row below `sm`.
-- **The lifecycle's `actor` is the viewer, not the holder** [VERIFIED: `apps/strapi/src/api/csrm-assessment-request/services/request-lifecycle.ts:41-62,77`]. `projectRequestLifecycle` sets `actor` from `requestActorFacts(state).analyst`. `actionFor` returns `waiting = "The work is waiting with the other party."` (line 49) whenever the step is not the viewer's.
+- **The lifecycle's `actor` is the viewer, not the holder** [VERIFIED: `apps/backend/src/api/csrm-assessment-request/services/request-lifecycle.ts:41-62,77`]. `projectRequestLifecycle` sets `actor` from `requestActorFacts(state).analyst`. `actionFor` returns `waiting = "The work is waiting with the other party."` (line 49) whenever the step is not the viewer's.
   - The steps: `draft`, `submitted`, `questionnaire-generated`, `questionnaire-released`, `questionnaire-submitted`, `assessment-drafted`, `assessment-reviewed`, `assessment-released` (lines 13-18).
   - The holder by step:
     - requestor: draft and questionnaire-released;
@@ -589,13 +589,13 @@ This phase installs no package.
     - none: assessment-released and closed.
 - **The Requestor's list reads** (`request-service.ts:56-107`) use the core `GET /csrm-assessment-requests` (owner-scoped, `_q` matching the title or number, `collection-scope.ts:155-164`). They do not project a lifecycle per item: only `findOne` does (`csrm-assessment-request.ts` controller, `findOne` at lines 112-139, through `REQUEST_RELATIONSHIP_POPULATE`, `relationship-scope.ts:30-34`).
 - **The reserved operation** [VERIFIED: the catalogue and `served-operations.json`]: `GET:/api/v1/my_requests` is FunctionApi `function.risk_assessment_requests.my_requests.api.01`, "List My Assessment Requests: Returns the signed-in Requestor's assessment requests with filtering, sorting, and pagination", under Function `function.risk_assessment_requests.my_requests` (menuPath `Risk Assessment Requests:My Requests`, roleIds `role.requestor`). It is unserved with the reason "reserved request alias: served by the owner-scoped core route GET /api/csrm-assessment-requests". The status summary precedent: `routes/my-request-status-summary.ts:1-31` (its own router, `requireRequestCollectionScope`) and `controllers/my-request-status-summary.ts:35-44` (it refuses any query key and counts only the owner's requests).
-- **The policy's owner scope** [VERIFIED: `apps/strapi/src/policies/csrm-authorization.ts:388-391`]: `requireRequestCollectionScope` sets `assessmentRequestCollectionScope: "own"` with the caller's numeric `requestorId`, for any actor holding the operation.
-- **The guarded fixtures** [VERIFIED: `apps/web/src/lib/testing/e2e-ui-state.ts:22-42`]: `__e2eState` (populated, loading, empty, error, permission) and `__e2ePartial`, which is `'draft-requests-error'` for the Requestor dashboard and `'analyst-top-alerts-error'` for the analyst.
-- **Recovery copy** [VERIFIED: `apps/web/src/components/states/states.tsx:132`]: the default action is "Return to workspace". Twenty-five occurrences of "Return to workspace" exist across `apps/web/src` and `apps/web/e2e`, including `app/(app)/not-found.tsx:19`, `app/not-found.tsx:27`, `src/features/risks/risk-details.tsx:164` and `app/(app)/app/review/requests/error.tsx:9` ("Back to workspace").
+- **The policy's owner scope** [VERIFIED: `apps/backend/src/policies/csrm-authorization.ts:388-391`]: `requireRequestCollectionScope` sets `assessmentRequestCollectionScope: "own"` with the caller's numeric `requestorId`, for any actor holding the operation.
+- **The guarded fixtures** [VERIFIED: `apps/csrm/src/lib/testing/e2e-ui-state.ts:22-42`]: `__e2eState` (populated, loading, empty, error, permission) and `__e2ePartial`, which is `'draft-requests-error'` for the Requestor dashboard and `'analyst-top-alerts-error'` for the analyst.
+- **Recovery copy** [VERIFIED: `apps/csrm/src/components/states/states.tsx:132`]: the default action is "Return to workspace". Twenty-five occurrences of "Return to workspace" exist across `apps/csrm/src` and `apps/csrm/e2e`, including `app/(app)/not-found.tsx:19`, `app/not-found.tsx:27`, `src/features/risks/risk-details.tsx:164` and `app/(app)/app/review/requests/error.tsx:9` ("Back to workspace").
 
 ### Stepper (UX-08 criterion 3; UAT-038)
 
-- **Layout** [VERIFIED: `apps/web/src/features/requests/request-lifecycle-stepper.tsx:32-64`]: an `h2` "Current lifecycle state: {label}", then an `ol` in `grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8`, so the eight steps stack in one column below 640px (the 880px block UAT-038 measured).
+- **Layout** [VERIFIED: `apps/csrm/src/features/requests/request-lifecycle-stepper.tsx:32-64`]: an `h2` "Current lifecycle state: {label}", then an `ol` in `grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8`, so the eight steps stack in one column below 640px (the 880px block UAT-038 measured).
 - **The Next action line** lives in the hub (`request-hub.tsx:82`), after a six-row `dl`.
 - **Page order:** the Requestor page (`app/(app)/app/requests/[documentId]/page.tsx:58-61`) and the analyst hub (`assessment-detail.tsx`, around line 76) render the stepper and then the hub.
 - **Phase 10 touches the hub:** 10-04 changes its copy and dates, and 10-14 adds `nextActionOverride`, set while a generation job is queued or running.
@@ -606,34 +606,34 @@ This phase installs no package.
 
 ### Lists (UX-09 criterion 1; UAT-035; the UAT-048 picker)
 
-- **Review queue projection** [VERIFIED: `apps/strapi/src/api/csrm-assessment-request/services/collection-scope.ts:336-344`]: `{ documentId, requestNumber, title, requestStatus, submittedDate }`, hydrated with `REVIEW_QUEUE_ITEM_FIELDS = ["documentId", "requestNumber", "title", "requestStatus", "submittedDate"]` (`review-queue-repository.ts:39`) and no populate (`hydrate`, lines 233-249).
+- **Review queue projection** [VERIFIED: `apps/backend/src/api/csrm-assessment-request/services/collection-scope.ts:336-344`]: `{ documentId, requestNumber, title, requestStatus, submittedDate }`, hydrated with `REVIEW_QUEUE_ITEM_FIELDS = ["documentId", "requestNumber", "title", "requestStatus", "submittedDate"]` (`review-queue-repository.ts:39`) and no populate (`hydrate`, lines 233-249).
   - **Buckets:** `REVIEW_QUEUE_BUCKETS = ["requires-attention", "awaiting-requestor", "generation-in-progress", "released"]` (`collection-scope.ts:54-59`).
   - **Statuses:** `REVIEWABLE_REQUEST_STATUSES = ["submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review"]` and `RELEASED_REQUEST_STATUSES = ["approved", "closed"]` (lines 45-52).
   - **Filters:** `safeReviewFilters` accepts exactly `["requestStatus", "title", "requestNumber", "dueDate", "queue"]` (line 228). The title and the request number are separate, ANDed `LIKE` filters (`review-queue-repository.ts:174-186`).
   - **Sort fields:** `dueDate`, `submittedDate`, `requestNumber`, `title`, `requestStatus` and `updatedAt` (`collection-scope.ts:64-71`).
-- **Request content type** [VERIFIED: `apps/strapi/src/api/csrm-assessment-request/content-types/csrm-assessment-request/schema.json`]:
+- **Request content type** [VERIFIED: `apps/backend/src/api/csrm-assessment-request/content-types/csrm-assessment-request/schema.json`]:
   - `requestor`: manyToOne to `idambox-user`;
   - `assessmentType`: enum `["BAU","Project","Other"]`;
   - `businessCriticality`: enum `["Low","Moderate","High","Critical"]`;
   - `dueDate`: date;
   - `submittedDate`: datetime.
-- **Web queue** [VERIFIED: `apps/web/src/features/assessments/assessment-list.tsx:103-129`]:
+- **Web queue** [VERIFIED: `apps/csrm/src/features/assessments/assessment-list.tsx:103-129`]:
   - columns Request, Title, Status and Submitted;
   - the Submitted date is formatted in UTC (lines 31-35);
   - the search box sends `filters[title]` only (`assessment-service.ts:333`), so the number cannot be searched;
   - the queue select offers the four buckets (lines 83-98).
-- **Risk Assessment list** [VERIFIED: `apps/strapi/src/api/csrm-assessment/services/assessment-scope.ts:101-137,197-208`]:
+- **Risk Assessment list** [VERIFIED: `apps/backend/src/api/csrm-assessment/services/assessment-scope.ts:101-137,197-208`]:
   - query keys `["q", "status", "sort", "page", "pageSize"]`;
   - `q` → `{ $or: [{ assessmentNumber: { $containsi: q } }, { summary: { $containsi: q } }] }` (line 116);
   - the data query already populates `assessmentRequest` with its `requestor`;
   - the projection `{ documentId, assessmentNumber, assessmentStatus, summary, overallRating, generatedDate, generatedBy, approvalDate }`;
   - both the analyst list (controller `listAssessments`, lines 139-144) and the owner list (`listMyReleasedAssessments`, lines 232-242) use `projectAssessmentSummary`.
   - **Web columns:** Assessment, Summary, Status and Draft initiated by (`assessment-list.tsx:131-155`).
-- **Related assessment picker** [VERIFIED: `apps/web/src/features/risks/risk-actions.ts:72-83`, `risk-service.ts:83-85`, `risk-schema.ts:303-316`]: `listRiskRegisterAssessments()` reads `GET /v1/risk_assessments` with no query (the default page of 25). The action then filters the labels, which are `assessmentNumber` only, by `includes(needle)`, so "payroll" finds nothing, and assessments past the first 25 cannot be found (UAT-048).
+- **Related assessment picker** [VERIFIED: `apps/csrm/src/features/risks/risk-actions.ts:72-83`, `risk-service.ts:83-85`, `risk-schema.ts:303-316`]: `listRiskRegisterAssessments()` reads `GET /v1/risk_assessments` with no query (the default page of 25). The action then filters the labels, which are `assessmentNumber` only, by `includes(needle)`, so "payroll" finds nothing, and assessments past the first 25 cannot be found (UAT-048).
 
 ### Figures (UX-09 criterion 2; UAT-048)
 
-- **Reports KPI tiles** [VERIFIED: `apps/web/src/features/reports/report-presentation.ts:112-140`]:
+- **Reports KPI tiles** [VERIFIED: `apps/csrm/src/features/reports/report-presentation.ts:112-140`]:
   - risk exposure links three tiles to the Risk Register;
   - treatment performance links Overdue to the alerts, and leaves "Due within {window}" and "No target date" plain;
   - throughput has two plain tiles;
@@ -641,26 +641,26 @@ This phase installs no package.
 - **Report tables** carry no links: `ReportTableRow = { key, label, values }` (line 25), and `exposedSystemRows` (lines 202-204) links no system.
 - **The analyst dashboard's figures link** (`analyst-dashboard-presentation.ts:80-119, 261-288, 332-345`), with two exceptions: the "Not rated" exposure row, because "the register has no 'not rated' filter" (lines 300 and 343), and the High and Critical footer, which opens every open Risk sorted (line 183-184).
 - **The Requestor dashboard's figures:** the released count and the rating chips link nowhere (`requestor-dashboard.tsx:132-156`).
-- **Risk Register filters** [VERIFIED: `apps/strapi/src/api/csrm-risk/services/risk-register-query.ts:3-7,21-35,54-60`]:
+- **Risk Register filters** [VERIFIED: `apps/backend/src/api/csrm-risk/services/risk-register-query.ts:3-7,21-35,54-60`]:
   - ratings `["Low", "Moderate", "High", "Critical"]`;
   - treatment statuses `["Not Started", "In Progress", "Overdue", "Complete"]`;
   - mitigation statuses `["Existing", "Planned", "Implemented", "Retired", "none"]`;
   - states `["open", "closed"]`;
   - allowed keys `q`, `treatmentStatus`, `inherentRating`, `residualRating`, `riskOwner`, `treatmentOwner`, `assessment`, `system`, `asset`, `mitigationStatus`, `state`, `targetDateFrom`, `targetDateTo`, `sort`, `page` and `pageSize`.
 
-  Rows carry a server-derived `treatmentDueState` (`risk-register.ts:36-48`), and the web already holds the vocabulary `riskTreatmentDueStates = ['overdue', 'due-soon', 'later', 'no-target-date', 'complete-or-closed']` (`apps/web/src/features/risks/risk-domain.ts:17`).
-- **Due windows** [VERIFIED: `apps/strapi/src/csrm/insights/insight-constants.ts:11,14`]: `ALERT_DUE_SOON_WINDOW_DAYS = 14` and `TREATMENT_REPORT_DUE_WINDOW_DAYS = 30`. The single rule, `deriveTreatmentDueState(facts, today, windowDays = ALERT_DUE_SOON_WINDOW_DAYS)` (`treatment-due-state.ts:54-69`), returns `"overdue" | "due-soon" | "later" | "no-target-date" | "complete-or-closed"`.
+  Rows carry a server-derived `treatmentDueState` (`risk-register.ts:36-48`), and the web already holds the vocabulary `riskTreatmentDueStates = ['overdue', 'due-soon', 'later', 'no-target-date', 'complete-or-closed']` (`apps/csrm/src/features/risks/risk-domain.ts:17`).
+- **Due windows** [VERIFIED: `apps/backend/src/csrm/insights/insight-constants.ts:11,14`]: `ALERT_DUE_SOON_WINDOW_DAYS = 14` and `TREATMENT_REPORT_DUE_WINDOW_DAYS = 30`. The single rule, `deriveTreatmentDueState(facts, today, windowDays = ALERT_DUE_SOON_WINDOW_DAYS)` (`treatment-due-state.ts:54-69`), returns `"overdue" | "due-soon" | "later" | "no-target-date" | "complete-or-closed"`.
 
 ### Exposure (DASH-03; UAT-060)
 
-- **Dashboard** [VERIFIED: `apps/strapi/src/api/csrm-analyst-insight/services/dashboard-summary.ts:147-154,208-250`]: `openContextualRisks = applyDisclosableParent(...).whereRaw("r.closure_date IS NULL")`. Exposure is `countDistinct` grouped by `residual_rating`; High and Critical is the same scope with `residual_rating IN ('Critical','High')`.
+- **Dashboard** [VERIFIED: `apps/backend/src/api/csrm-analyst-insight/services/dashboard-summary.ts:147-154,208-250`]: `openContextualRisks = applyDisclosableParent(...).whereRaw("r.closure_date IS NULL")`. Exposure is `countDistinct` grouped by `residual_rating`; High and Critical is the same scope with `residual_rating IN ('Critical','High')`.
 - **Report** [VERIFIED: `report-repository.ts:161-164,251-300`]: the same scope for every exposure section; the exposed systems join `csrm_risks_information_system_impacted_lnk`.
-- **The Risk Register scope** [VERIFIED: `apps/strapi/src/api/csrm-risk/services/risk-register.ts:137-164`]: `EXISTS` on `csrm_risks_assessment_lnk` joined to `csrm_assessments`, where the parent is either:
+- **The Risk Register scope** [VERIFIED: `apps/backend/src/api/csrm-risk/services/risk-register.ts:137-164`]: `EXISTS` on `csrm_risks_assessment_lnk` joined to `csrm_assessments`, where the parent is either:
   - **mutable:** `assessment_status IN ('draft','in-review') AND approval_date IS NULL AND NOT EXISTS approved_by link`; or
   - **released:** `assessment_status = 'approved' AND approval_date IS NOT NULL AND EXISTS approved_by link`.
 
   The two branches are disjoint, because the status sets differ.
-- **Treatment action** [VERIFIED: `apps/strapi/src/api/csrm-risk/content-types/csrm-risk/schema.json`]: an enumeration `["Accept","Treat"]`. The seeds set `"Treat"` (`seed-analyst-insights.ts:234`).
+- **Treatment action** [VERIFIED: `apps/backend/src/api/csrm-risk/content-types/csrm-risk/schema.json`]: an enumeration `["Accept","Treat"]`. The seeds set `"Treat"` (`seed-analyst-insights.ts:234`).
 - **Seeded fixtures for browser proofs** (`seed-analyst-insights.ts:184-297`):
   - an in-review assessment with Risks overdue (High), due soon (Moderate), critical (Critical, untreated) and closed (High, closed);
   - a released assessment with one Critical Risk in treatment.
@@ -674,10 +674,10 @@ This phase installs no package.
 
 ### Quick find (UX-10; G-5)
 
-- **The shadcn wrapper** [VERIFIED: `apps/web/src/components/ui/command.tsx`]: it imports `Command as CommandPrimitive` from `cmdk` and exports `Command`, `CommandDialog`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem`, `CommandShortcut` and `CommandSeparator`.
+- **The shadcn wrapper** [VERIFIED: `apps/csrm/src/components/ui/command.tsx`]: it imports `Command as CommandPrimitive` from `cmdk` and exports `Command`, `CommandDialog`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem`, `CommandShortcut` and `CommandSeparator`.
   - `CommandDialog` (lines 32-61) renders `<DialogHeader className="sr-only"><DialogTitle>{title}</DialogTitle>…</DialogHeader>` as a sibling before `<DialogContent>`, outside the portalled content. Its defaults are the title "Command Palette" and the description "Search for a command to run...".
   - Nothing in `src` or `app` imports it.
-- **cmdk 1.1.1's ARIA and keyboard handling** [VERIFIED: `apps/web/node_modules/cmdk/dist/index.mjs`, grep]:
+- **cmdk 1.1.1's ARIA and keyboard handling** [VERIFIED: `apps/csrm/node_modules/cmdk/dist/index.mjs`, grep]:
   - `role:"combobox"`, `"aria-autocomplete":"list"`, `"aria-expanded":!0` and `"aria-activedescendant"` on the input;
   - `role:"listbox"`, `role:"group"` and `role:"option"` with `"aria-selected"`;
   - the key cases `ArrowDown`, `ArrowUp`, `Home`, `End` and `Enter`, plus `j`, `k`, `n` and `p` under `vimBindings` (default `!0`, true);
@@ -692,7 +692,7 @@ This phase installs no package.
 - **Sequential dispatch** [VERIFIED: Next 16.3.6 bundled docs, `02-guides/server-actions.md` "Sequential dispatch on the client"]: "Next.js dispatches Server Actions one at a time per client … do not rely on `Promise.all` to parallelize Server Actions from the client. If you need parallel work, do it inside a single Server Action."
 - **Server Action security** [VERIFIED: same doc, "Security"]: an action is a public POST, so it must validate input and authenticate.
 - **The chain guard's inventory** [VERIFIED: `docs/references/served-operations.json` rows; `contract-operation-chain.test.ts:1-60`] records, per served operation, the `webCallers` files that call the client. Calling existing service functions from a new module leaves that inventory unchanged.
-- **Route budget** [VERIFIED: `apps/web/e2e/performance.spec.ts:55`]: `PERFORMANCE_BUDGETS = { deliveredJsBytes: 300_000, … }`. The heaviest routes already use 81 to 91% of it (R-08-34).
+- **Route budget** [VERIFIED: `apps/csrm/e2e/performance.spec.ts:55`]: `PERFORMANCE_BUDGETS = { deliveredJsBytes: 300_000, … }`. The heaviest routes already use 81 to 91% of it (R-08-34).
 
 ### Copy and time (the Phase 10 deferrals)
 
@@ -700,7 +700,7 @@ This phase installs no package.
   - `analyst-dashboard-presentation.ts:171,173,325`;
   - `report-presentation.ts:117,336,351,359,371,377,400,406`;
   - `report-copy.json:5,23`;
-  - `apps/strapi/src/api/csrm-analyst-insight/services/report-definitions.ts:24,39`;
+  - `apps/backend/src/api/csrm-analyst-insight/services/report-definitions.ts:24,39`;
   - `app/(app)/app/risks/page.tsx:13`. The Risk Register description is in the page, not in `features/risks/risk-register.tsx` as Phase 10's UI-SPEC §17.2 says.
 
   The administration, assessment editor, control implementation editor, request form and generation job strings belong to Phase 10.
@@ -731,22 +731,22 @@ Build on Phase 10's version of each (D-04). A Phase 11 plan reads the Phase 10 S
 
 | File | Phase 10 plans | Phase 11 change |
 |---|---|---|
-| `apps/web/src/components/shell/app-shell.tsx` | 10-01 (`TimeZoneProvider`, `ViewerTimeZoneSync`), 10-08 (`NavigationGuardProvider`) | The profile, the count promise prop and the quick-find control |
-| `apps/web/app/(app)/layout.tsx` | 10-01 (`readViewerTimeZone`) | Starts the count reads |
-| `apps/web/src/components/shell/capability-navigation.tsx` | 10-08 (`onNavigate` through the guard; the sheet closes after the guard allows) | Sections, the button, the collapsible section and the badges |
-| `apps/web/src/components/csrm/navigation-guard.tsx` | 10-08 (new: provider, `useLeaveGuard`, `GuardedLink`) | A programmatic navigation entry point for quick find (D-51) |
-| `apps/web/src/features/requests/request-hub.tsx` | 10-04 (copy and dates), 10-14 (`nextActionOverride`) | Holder wording; the phone presentation of the next action |
-| `apps/web/src/features/assessments/assessment-detail.tsx` | 10-02, 10-04, 10-12, 10-14 | Passes the override to the compact stepper |
-| `apps/web/app/(app)/app/requests/[documentId]/page.tsx` | 10-04 | Compact stepper props |
-| `apps/web/src/features/requests/request-domain.ts` | 10-04 and 10-12 (predicates) | The `approved` label; lifecycle and holder types |
-| `apps/web/src/features/assessments/assessment-schema.ts` and `assessment-service.ts` | 10-13, 10-15, 10-18, 10-20 | Queue item and summary schemas; list params |
-| `apps/web/src/features/assessments/released-assessment.tsx` | 10-02, 10-15 (the detail's instants) | The list's released date and the request title |
-| `apps/web/src/components/states/states.tsx`, `src/features/risks/risk-details.tsx` | 10-02, 10-20, 10-21 | Recovery copy (D-25) |
-| `apps/web/src/lib/performance/interface-copy-guard.test.ts` | 10-02 creates it; later Phase 10 plans extend it | Adds the dashboard, report, Risk Register and navigation files; drops the Phase 11 exclusions |
-| `apps/web/src/features/contract-response-parity.test.ts` | 10-09, 10-15 | New and changed parsers |
-| `docs/references/specification.json` and `apps/web/src/lib/api/generated/schema.d.ts` | 10-06, 10-10, 10-11, 10-13, 10-15, 10-16, 10-18 | C1 to C6 |
+| `apps/csrm/src/components/shell/app-shell.tsx` | 10-01 (`TimeZoneProvider`, `ViewerTimeZoneSync`), 10-08 (`NavigationGuardProvider`) | The profile, the count promise prop and the quick-find control |
+| `apps/csrm/app/(app)/layout.tsx` | 10-01 (`readViewerTimeZone`) | Starts the count reads |
+| `apps/csrm/src/components/shell/capability-navigation.tsx` | 10-08 (`onNavigate` through the guard; the sheet closes after the guard allows) | Sections, the button, the collapsible section and the badges |
+| `apps/csrm/src/components/csrm/navigation-guard.tsx` | 10-08 (new: provider, `useLeaveGuard`, `GuardedLink`) | A programmatic navigation entry point for quick find (D-51) |
+| `apps/csrm/src/features/requests/request-hub.tsx` | 10-04 (copy and dates), 10-14 (`nextActionOverride`) | Holder wording; the phone presentation of the next action |
+| `apps/csrm/src/features/assessments/assessment-detail.tsx` | 10-02, 10-04, 10-12, 10-14 | Passes the override to the compact stepper |
+| `apps/csrm/app/(app)/app/requests/[documentId]/page.tsx` | 10-04 | Compact stepper props |
+| `apps/csrm/src/features/requests/request-domain.ts` | 10-04 and 10-12 (predicates) | The `approved` label; lifecycle and holder types |
+| `apps/csrm/src/features/assessments/assessment-schema.ts` and `assessment-service.ts` | 10-13, 10-15, 10-18, 10-20 | Queue item and summary schemas; list params |
+| `apps/csrm/src/features/assessments/released-assessment.tsx` | 10-02, 10-15 (the detail's instants) | The list's released date and the request title |
+| `apps/csrm/src/components/states/states.tsx`, `src/features/risks/risk-details.tsx` | 10-02, 10-20, 10-21 | Recovery copy (D-25) |
+| `apps/csrm/src/lib/performance/interface-copy-guard.test.ts` | 10-02 creates it; later Phase 10 plans extend it | Adds the dashboard, report, Risk Register and navigation files; drops the Phase 11 exclusions |
+| `apps/csrm/src/features/contract-response-parity.test.ts` | 10-09, 10-15 | New and changed parsers |
+| `docs/references/specification.json` and `apps/csrm/src/lib/api/generated/schema.d.ts` | 10-06, 10-10, 10-11, 10-13, 10-15, 10-16, 10-18 | C1 to C6 |
 | Both catalogue copies, `served-operations.json`, `authorization-matrix.ts` | 10-13 | C6 |
-| `apps/strapi/src/api/csrm-assessment/services/assessment-scope.ts` and the assessment controller | 10-15, 10-18 | C2 |
+| `apps/backend/src/api/csrm-assessment/services/assessment-scope.ts` and the assessment controller | 10-15, 10-18 | C2 |
 | `docs/design/csrm-design-direction.md` | 10-01 (X-1 to X-5) | Phase 11's accepted extensions (plan 11-01) |
 | E2E specs: `questionnaire-workflow`, `assessment-release-workflow`, `requestor-request-workflow`, `request-relationship-states`, `questionnaire-governance-workflow`, `questionnaire-generation-workflow`, `administration-workflow`, `risk-register-workflow`, `performance` | many Phase 10 plans | See "E2E and copy assertions that change" |
 
@@ -798,7 +798,7 @@ Files only Phase 11 changes (Phase 10 lists none of them):
 ### Recommended Project Structure (additions and moves only)
 
 ```
-apps/web/
+apps/csrm/
 ├── next.config.ts                                   # + redirects(): /app/review → /app (307)
 ├── app/(app)/layout.tsx                             # starts navigation counts (Phase 10 zone read stays)
 ├── app/(app)/app/page.tsx                           # Home: picks the variant before any read
@@ -816,7 +816,7 @@ apps/web/
     │                                                #   quick-find-domain.ts (zod-free kinds, hrefs, labels)
     └── features/requests/                            # listMyRequests + parser in request-service/request-schema;
                                                      #   request-lifecycle-stepper.tsx compact variant
-apps/strapi/src/api/
+apps/backend/src/api/
 ├── csrm-assessment-request/services/my-requests.ts       # owner + holder SQL; hydrate; project
 ├── csrm-assessment-request/controllers/my-requests.ts
 ├── csrm-assessment-request/routes/my-requests.ts         # own router (as my-request-status-summary.ts)
@@ -831,7 +831,7 @@ apps/strapi/src/api/
 **Example** (a sketch: the names are proposals; the capability values are quoted from `capability-adapter.ts:1`: `'assessment-request:create','assessment-request:read','assessment:review','risk:manage','administration:manage'`):
 
 ```typescript
-// apps/web/src/config/navigation/navigation.ts (sketch)
+// apps/csrm/src/config/navigation/navigation.ts (sketch)
 export type NavigationCountKey = 'myRequestsNeedingAction' | 'questionnairesToAnswer' | 'requestsRequiringAttention' | 'overdueAlerts';
 export interface NavigationItem { href: string; label: string; capability: Capability; icon: LucideIcon; count?: NavigationCountKey }
 export interface NavigationSection {
@@ -858,7 +858,7 @@ export function navigationProfileFor(granted: ReadonlySet<Capability>): Navigati
 **Source:** "You can use React's `use` API to stream data from the server to client … pass the promise to your Client Component as prop" [VERIFIED: `01-getting-started/06-fetching-data.md:241-315`].
 
 ```typescript
-// apps/web/src/components/shell/navigation-counts.ts (sketch, 'server-only')
+// apps/csrm/src/components/shell/navigation-counts.ts (sketch, 'server-only')
 export type NavigationCounts = Partial<Record<NavigationCountKey, number>>;
 export function loadNavigationCounts(granted: ReadonlySet<Capability>): Promise<NavigationCounts> {
   // Each read settles to a number or undefined: a refusal or failure hides that badge, never zeroes it.
@@ -914,7 +914,7 @@ A literal source matches only that path. Nested paths such as `/app/review/reque
 **Where the facts come from:** `review-queue-repository.ts:71-131` (`fromQuestionnaireLink`, `questionnaireReleased`, `questionnaireSubmitted`, `assessmentExists`, `assessmentReleased`, `whereQuestionnaireHasSubmittedAnswer`). Export them, and do not copy them.
 
 ```typescript
-// apps/strapi/src/api/csrm-assessment-request/services/my-requests.ts (sketch)
+// apps/backend/src/api/csrm-assessment-request/services/my-requests.ts (sketch)
 // holder = requestor : status = 'draft'
 //                      OR (status IN reviewable AND questionnaireReleased AND NOT questionnaireSubmitted AND NOT assessmentExists)
 // holder = analyst   : status IN reviewable AND NOT (questionnaireReleased AND NOT questionnaireSubmitted AND NOT assessmentExists)
@@ -1085,7 +1085,7 @@ The phase renames headings, labels and a route, and moves a page. Each category 
 - the visible text starts the name (WCAG 2.5.3).
 
 ### Pitfall 6: The sign-in guard pins the old heading
-**What goes wrong:** `apps/web/src/lib/testing/e2e-sign-in-assertions.test.ts:17` requires every sign-in function to match `/getByRole\(\s*'heading',\s*\{[^}]*\bname:\s*'Dashboard'/`. Renaming the heading to Home fails the unit suite until the guard changes.
+**What goes wrong:** `apps/csrm/src/lib/testing/e2e-sign-in-assertions.test.ts:17` requires every sign-in function to match `/getByRole\(\s*'heading',\s*\{[^}]*\bname:\s*'Dashboard'/`. Renaming the heading to Home fails the unit suite until the guard changes.
 **How to avoid:** change the guard's regex to `'Home'` in the same plan as the heading, the shared helper and the seven spec-local sign-ins:
 - `e2e/helpers/navigation.ts:17`;
 - `analyst-insights.spec.ts:95`, `app-shell.spec.ts:29`, `design-contract.spec.ts:47`, `design-system-conformance.spec.ts:70,78,180` and `production-hardening.spec.ts:182`.
@@ -1166,7 +1166,7 @@ Browsers bind Ctrl+K to search or the address bar in some configurations [ASSUME
 ### Reading the owner id and scoping a list (the existing pattern)
 
 ```typescript
-// Source: apps/strapi/src/api/csrm-assessment-request/controllers/my-request-status-summary.ts:28-45 (existing)
+// Source: apps/backend/src/api/csrm-assessment-request/controllers/my-request-status-summary.ts:28-45 (existing)
 function ownRequestorId(state: unknown): number | null {
   const authorization = isRecord(state) && isRecord(state.csrmAuthorization) ? state.csrmAuthorization : null;
   if (authorization?.assessmentRequestCollectionScope !== "own") return null;
@@ -1178,7 +1178,7 @@ function ownRequestorId(state: unknown): number | null {
 ### The owner join (the existing pattern)
 
 ```typescript
-// Source: apps/strapi/src/api/csrm-assessment-request/services/request-status-summary.ts:72-78 (existing)
+// Source: apps/backend/src/api/csrm-assessment-request/services/request-status-summary.ts:72-78 (existing)
 connection.queryBuilder()
   .from("csrm_assessment_requests as r")
   .join("csrm_assessment_requests_requestor_lnk as o", "o.csrm_assessment_request_id", "r.id")
@@ -1188,7 +1188,7 @@ connection.queryBuilder()
 ### The existing awaiting-requestor predicate the holder reuses
 
 ```typescript
-// Source: apps/strapi/src/api/csrm-assessment-request/services/review-queue-repository.ts:144-150 (existing)
+// Source: apps/backend/src/api/csrm-assessment-request/services/review-queue-repository.ts:144-150 (existing)
 case "awaiting-requestor":
   query.whereExists(questionnaireReleased)
     .whereNotExists(questionnaireSubmitted)
@@ -1253,7 +1253,7 @@ Copy that must pass the interface copy guard once its file joins (D-54): `analys
 Each wave holds one plan, as in Phase 10.
 - **Why serial:**
   - every contract plan touches the specification and the generated client (D-05);
-  - almost every plan ends with a Playwright run, and runs share the production build and `apps/strapi/dist`;
+  - almost every plan ends with a Playwright run, and runs share the production build and `apps/backend/dist`;
   - the web-only plans touch hot shared files: the shell, the navigation, the E2E sign-in helper and the route lists.
 - **Why this order:** the shell, Home and sidebar moves come first, so every later plan writes its E2E against the final labels.
 
@@ -1325,9 +1325,9 @@ Plans 11-04, 11-05, 11-06, 11-08, 11-11 and 11-12 edit Strapi, so they run their
 | Property | Value |
 |----------|-------|
 | Framework | Web: vitest 4.1.11 (jsdom), @testing-library/react 16.3.0 and user-event 14.6.1. Strapi: `node:test` compiled by `tsc -p tests/tsconfig.json` to `.tmp/tests-dist`, one SQLite database per file. E2E: Playwright 1.58.2 with @axe-core/playwright 4.11.0 on the production build |
-| Config files | `apps/web/vitest.config.ts` (`src/**/*.test.{ts,tsx}`, 20 s timeouts); `apps/strapi/tests/tsconfig.json`; `apps/web/playwright.config.ts` (`desktop` 1440×900; `mobile` 375×812, `@journey` only; one worker) |
-| Quick run command | Web: `pnpm --filter @csrm/web exec vitest run <paths>`. Strapi file (servers stopped): `pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/strapi && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`. E2E (servers stopped): `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts` |
-| Full suite command | `pnpm --filter @csrm/web test`; `pnpm --filter @csrm/web typecheck`; `pnpm --prefix apps/web api:check`; `pnpm --filter @csrm/strapi test`; `pnpm --filter @csrm/web test:e2e` |
+| Config files | `apps/csrm/vitest.config.ts` (`src/**/*.test.{ts,tsx}`, 20 s timeouts); `apps/backend/tests/tsconfig.json`; `apps/csrm/playwright.config.ts` (`desktop` 1440×900; `mobile` 375×812, `@journey` only; one worker) |
+| Quick run command | Web: `pnpm --filter @csrm/web exec vitest run <paths>`. Strapi file (servers stopped): `pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/backend && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`. E2E (servers stopped): `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts` |
+| Full suite command | `pnpm --filter @csrm/web test`; `pnpm --filter @csrm/web typecheck`; `pnpm --prefix apps/csrm api:check`; `pnpm --filter @csrm/strapi test`; `pnpm --filter @csrm/web test:e2e` |
 
 ### Phase Requirements → Test Map
 
@@ -1355,7 +1355,7 @@ Plans 11-04, 11-05, 11-06, 11-08, 11-11 and 11-12 edit Strapi, so they run their
 | UX-10 | At 1440px and 375px: find by number and by title, open with Enter; the Secondary Requestor finds none of Jane's records; axe clean with the dialog open | E2E | `pnpm --filter @csrm/web test:e2e e2e/quick-find.spec.ts` | ❌ W0 |
 | DASH-03 | The stage partition (released + under assessment = scope, disjoint); accepted; partial-release rows in neither | Strapi integration | quick run `risk-register.integration.test.js`, `analyst-dashboard.integration.test.js`, `analyst-reports.integration.test.js` | ✅ |
 | DASH-03 | Widgets and reports state their scope; the accepted marker; under assessment separate | web unit + E2E | `pnpm --filter @csrm/web exec vitest run src/features/analyst-dashboard src/features/reports`; `analyst-insights.spec.ts` | ✅ |
-| All | The contract chain: specification, generated client, parity guard, chain guard, catalogue copies, served operations, matrix | web unit + Strapi | `pnpm --prefix apps/web api:check`; `pnpm --filter @csrm/web exec vitest run src/features/contract-response-parity.test.ts src/features/contract-operation-chain.test.ts`; quick run `authorization-matrix.integration.test.js`, `served-operations.integration.test.js`, `contract-catalogue.integration.test.js` | ✅ |
+| All | The contract chain: specification, generated client, parity guard, chain guard, catalogue copies, served operations, matrix | web unit + Strapi | `pnpm --prefix apps/csrm api:check`; `pnpm --filter @csrm/web exec vitest run src/features/contract-response-parity.test.ts src/features/contract-operation-chain.test.ts`; quick run `authorization-matrix.integration.test.js`, `served-operations.integration.test.js`, `contract-catalogue.integration.test.js` | ✅ |
 | All | Copy guard with the dashboard, report, Risk Register and navigation files added | web unit | `pnpm --filter @csrm/web exec vitest run src/lib/performance/interface-copy-guard.test.ts` | ✅ (after Phase 10) |
 
 ### Sampling Rate
@@ -1373,13 +1373,13 @@ Plans 11-04, 11-05, 11-06, 11-08, 11-11 and 11-12 edit Strapi, so they run their
 
 ### Wave 0 Gaps
 
-- [ ] `apps/web/src/config/navigation/navigation.test.ts`: profiles, sections, label = heading (UX-07).
-- [ ] `apps/web/src/components/shell/navigation-counts.test.ts`: capability-chosen reads, fail-soft, zero hidden (UX-07).
-- [ ] `apps/web/src/features/home/*.test.tsx`: variant selection, order, holder sections (UX-08).
-- [ ] `apps/web/src/features/quick-find/*.test.ts(x)`: the action and the dialog (UX-10).
-- [ ] `apps/web/e2e/navigation-and-home.spec.ts` (`@journey` for the mobile project) (UX-07, UX-08).
-- [ ] `apps/web/e2e/quick-find.spec.ts` (`@journey`) (UX-10).
-- [ ] `apps/strapi/tests/my-requests.integration.test.ts`, and optionally a unit file for the query parser (UX-08, D-02 item 6).
+- [ ] `apps/csrm/src/config/navigation/navigation.test.ts`: profiles, sections, label = heading (UX-07).
+- [ ] `apps/csrm/src/components/shell/navigation-counts.test.ts`: capability-chosen reads, fail-soft, zero hidden (UX-07).
+- [ ] `apps/csrm/src/features/home/*.test.tsx`: variant selection, order, holder sections (UX-08).
+- [ ] `apps/csrm/src/features/quick-find/*.test.ts(x)`: the action and the dialog (UX-10).
+- [ ] `apps/csrm/e2e/navigation-and-home.spec.ts` (`@journey` for the mobile project) (UX-07, UX-08).
+- [ ] `apps/csrm/e2e/quick-find.spec.ts` (`@journey`) (UX-10).
+- [ ] `apps/backend/tests/my-requests.integration.test.ts`, and optionally a unit file for the query parser (UX-08, D-02 item 6).
 - [ ] A figure-link audit, as a unit test beside the report and Home presentation modules (UX-09).
 
 No framework install is needed; the existing infrastructure covers the runners.
@@ -1420,7 +1420,7 @@ No framework install is needed; the existing infrastructure covers the runners.
   - the web: navigation, shell, layout, Home, dashboards, reports, lists, stepper, hub, schemas, services, tests and E2E specs, at the file:line references above;
   - Strapi: the policy, the request, queue, assessment, Risk Register, dashboard and report services, the lifecycle, the seeds, the content types and the tests;
   - the contract: `docs/references/specification.json`, the catalogue and `served-operations.json`.
-- **The Next.js 16.3.6 bundled docs** (`apps/web/node_modules/next/dist/docs/01-app/`): `03-layouts-and-pages.md`, `06-fetching-data.md`, `server-actions.md`, `revalidatePath.md`, `redirects.md`, `permanentRedirect.md`, `proxy.md` (Execution order), `lazy-loading.md`.
+- **The Next.js 16.3.6 bundled docs** (`apps/csrm/node_modules/next/dist/docs/01-app/`): `03-layouts-and-pages.md`, `06-fetching-data.md`, `server-actions.md`, `revalidatePath.md`, `redirects.md`, `permanentRedirect.md`, `proxy.md` (Execution order), `lazy-loading.md`.
 - **The installed `cmdk` 1.1.1** (`node_modules/cmdk/package.json` and `dist/index.mjs`) and `npm view cmdk`.
 - **Planning:** `.planning/phases/10-existing-flow-gap-closure/10-CONTEXT.md`, `10-UI-SPEC.md` and plans 10-01, 10-02, 10-04, 10-08, 10-14 and 10-15; `.planning/phases/07-analyst-dashboard-reports-and-alerts/07-CONTEXT.md`; `.planning/uat/product-gaps/`.
 

@@ -11,13 +11,13 @@
 
 ### Scope and contract boundary
 
-- **D-01:** No Strapi content-type schema changes (`apps/strapi/src/api/*/content-types/*` stays frozen). Anything that would need one is deferred with a note, not worked around: the Information Asset owner (UAT-053) is deferred. The questionnaire `governanceLog` JSON envelope gains one event kind and one optional field (D-10, D-18). That extends the envelope approved in `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md` and is recorded there as a dated amendment; it is not a content-type change. **Reversibility:** costly - events written with the new kind and field persist in stored questionnaires.
+- **D-01:** No Strapi content-type schema changes (`apps/backend/src/api/*/content-types/*` stays frozen). Anything that would need one is deferred with a note, not worked around: the Information Asset owner (UAT-053) is deferred. The questionnaire `governanceLog` JSON envelope gains one event kind and one optional field (D-10, D-18). That extends the envelope approved in `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md` and is recorded there as a dated amendment; it is not a content-type change. **Reversibility:** costly - events written with the new kind and field persist in stored questionnaires.
 - **D-02:** Every API change follows the established pattern:
   - exact IdamBox Role → Function → FunctionAPI grants in both catalogue copies, byte-identical;
   - record-level checks in Strapi;
   - the operation or schema in `docs/references/specification.json`, then `api:generate` and a clean `api:check`;
   - closed Zod parsers registered in the contract parity guard;
-  - a row in `apps/strapi/tests/fixtures/authorization-matrix.ts` for any new route;
+  - a row in `apps/backend/tests/fixtures/authorization-matrix.ts` for any new route;
   - `docs/references/served-operations.json` regenerated while the dev servers are stopped.
 
   The server shape and the client parser change in the same plan (the 06.9 lesson).
@@ -52,7 +52,7 @@
 
 - **D-07:** A released, unsubmitted questionnaire shows the analyst its questions read-only: text, answer type, required flag, choices and section, with no answers. It also shows "N of M answered" from the summary's existing `progress`. No answer content crosses before submission (the operator default for Phase 10).
 
-  No API change. `projectQuestionnaire` already serves `progress` to analysts (`apps/strapi/src/api/csrm-questionnaire/services/questionnaire-scope.ts:386-406`), and question answers stay masked until the submitted batch (`projectQuestions`).
+  No API change. `projectQuestionnaire` already serves `progress` to analysts (`apps/backend/src/api/csrm-questionnaire/services/questionnaire-scope.ts:386-406`), and question answers stay masked until the submitted batch (`projectQuestions`).
 
 ### Regeneration (UAT-019; QUES-08 criterion 3)
 
@@ -85,7 +85,7 @@
   - **Introduction first:** a short introduction built from existing facts: the request, why the Security Analyst asks, how many questions, that answers save automatically and can be finished later, and what to do when unsure. It must not promise a "Not sure" choice the form lacks; generated "Not sure" choices are Phase 12. The first section follows.
   - **Attention list:** "Questions requiring attention" appears only after a submit attempt and follows form order (section, then question). Root cause: `validateActiveRequiredAnswers` walks the definition in the server's order, and `projectQuestions` sorts by question order alone, so sections interleave.
   - **History:** moves below the questions. Its summary counts changes per release round and uses a neutral change icon; today it counts all rounds and borrows the latest event's icon, a bin after a deletion.
-- **D-14:** Radio groups select with the arrow keys however quickly the key is released. The shared radio wrapper (`apps/web/src/components/ui/radio-group.tsx`) handles the arrow keys itself, so selection follows focus as the ARIA radio pattern and the direction's segmented control require. The segmented control gets the same behaviour.
+- **D-14:** Radio groups select with the arrow keys however quickly the key is released. The shared radio wrapper (`apps/csrm/src/components/ui/radio-group.tsx`) handles the arrow keys itself, so selection follows focus as the ARIA radio pattern and the direction's segmented control require. The segmented control gets the same behaviour.
 
   Root cause (research): Radix radio-group 1.4.7 selects on focus only while a document-level arrow-key flag is set, but roving focus moves in a deferred timeout and the keyup clears the flag first on a fast release. The UAT's scripted key press hit exactly that. The segmented-control unit test already works around it by holding the key.
 - **D-15:** Submission dialogs and submitted notices say what happens next and how to change it, matching the actions the page then offers:
@@ -138,7 +138,7 @@
 - **D-23:** The three analyst detail routes check `assessment:review` before any read, as the analyst dashboard does (07 D-16). The routes are `/app/review/requests/[documentId]`, `/app/review/questionnaires/[documentId]` and `/app/review/assessments/[documentId]`.
   - A Requestor gets the route's existing permission state under the route's heading and static title. Metadata does not read the record for them.
   - Strapi stays authoritative; the gate is presentation.
-  - The existing permission headings stay, so the current denial proofs hold. The questionnaire journey step that expects a Requestor to see the analyst questionnaire page changes deliberately (`apps/web/e2e/questionnaire-workflow.spec.ts:181-190`).
+  - The existing permission headings stay, so the current denial proofs hold. The questionnaire journey step that expects a Requestor to see the analyst questionnaire page changes deliberately (`apps/csrm/e2e/questionnaire-workflow.spec.ts:181-190`).
 - **D-24:** Permission descriptions drop internal language ("effective CSRM capabilities", "Navigation visibility is not an authorization control", "owner record scope") and say plainly what the person can do instead. The locked heading "You don't have access to {area}" and the route headings stay.
 
 ### Generation status (UAT-041; UX-06 criterion 2)
@@ -292,7 +292,7 @@ The Next 16.3 bundled documentation settles the two framework questions:
 
 ## Project Constraints (from AGENTS.md)
 
-The binding project instructions are `AGENTS.md` and `apps/web/AGENTS.md`; the web app's other agent-instruction file only includes `apps/web/AGENTS.md`. Directives the planner must verify:
+The binding project instructions are `AGENTS.md` and `apps/csrm/AGENTS.md`; the web app's other agent-instruction file only includes `apps/csrm/AGENTS.md`. Directives the planner must verify:
 
 - Strapi is the production API boundary: no frontend API facade and no raw fetch in pages. The web uses the typed openapi-fetch layer only, and the chain guard (`contract-operation-chain.test.ts`) enforces this.
 - Keycloak stays disabled. Strapi enforces IdamBox Role → Function → FunctionAPI grants and record-level authorization; navigation visibility is not security.
@@ -304,7 +304,7 @@ The binding project instructions are `AGENTS.md` and `apps/web/AGENTS.md`; the w
 - Server Components by default, Client Components only where needed. Business logic stays out of JSX (domain modules), and external input is validated with shared schemas.
 - Use shadcn/ui before custom primitives, and add no dependency without a concrete reason. Phase 10 needs none.
 - Every material workflow gets automated tests.
-- Next.js 16.3.6 differs from training data, so read `apps/web/node_modules/next/dist/docs/` before framework code. This research did so for `onNavigate`, `cookies`, `revalidatePath` and hydration-safe dates.
+- Next.js 16.3.6 differs from training data, so read `apps/csrm/node_modules/next/dist/docs/` before framework code. This research did so for `onNavigate`, `cookies`, `revalidatePath` and hydration-safe dates.
 - Project skills: `.agents/skills/tdd` (vertical slices, red before green, test at agreed seams); `code-review` and `diagnosing-bugs` for review and defects.
 
 ## Architectural Responsibility Map
@@ -326,7 +326,7 @@ The binding project instructions are `AGENTS.md` and `apps/web/AGENTS.md`; the w
 
 ## Standard Stack
 
-No new dependencies. Everything below is already installed; versions were read from `apps/web/package.json` and `apps/strapi/package.json` this session [VERIFIED: package.json files].
+No new dependencies. Everything below is already installed; versions were read from `apps/csrm/package.json` and `apps/backend/package.json` this session [VERIFIED: package.json files].
 
 ### Core
 | Library | Version | Purpose | Why standard here |
@@ -371,7 +371,7 @@ Every root cause below was read in this session. A quote beside a `[VERIFIED]` t
 ### Group A - Cross-cutting truth (UX-06)
 
 #### UAT-062 - Analyst pages opened by a Requestor show analyst actions or an error
-- **Root cause** [VERIFIED: `apps/web/app/(app)/app/review/questionnaires/[documentId]/page.tsx:37-55`, `.../review/requests/[documentId]/page.tsx:21-43`, `.../review/assessments/[documentId]/page.tsx:29-43`]. The three routes read the record first and never check `assessment:review`.
+- **Root cause** [VERIFIED: `apps/csrm/app/(app)/app/review/questionnaires/[documentId]/page.tsx:37-55`, `.../review/requests/[documentId]/page.tsx:21-43`, `.../review/assessments/[documentId]/page.tsx:29-43`]. The three routes read the record first and never check `assessment:review`.
   - The questionnaire route renders `QuestionnaireReview` (with governance controls) for any questionnaire Strapi lets the caller read, and the owning Requestor may read their own.
   - The analyst dashboard is the correct pattern [VERIFIED: `app/(app)/app/review/(analyst-dashboard)/page.tsx:26-30`]: `if (!can('assessment:review', granted)) return <PermissionDeniedState area={analystDashboardCopy.area} />;`
   - The request route already resolves capabilities, but only after the read and only to build links (`review/requests/[documentId]/page.tsx:28-35`).
@@ -769,7 +769,7 @@ Every root cause below was read in this session. A quote beside a `[VERIFIED]` t
 
 ## Contract changes (D-03, in detail)
 
-All seven follow D-02. For each, "files" lists what changes. The spec, the generated `apps/web/src/lib/api/generated/schema.d.ts` and the parity guard change in every one.
+All seven follow D-02. For each, "files" lists what changes. The spec, the generated `apps/csrm/src/lib/api/generated/schema.d.ts` and the parity guard change in every one.
 
 1. **Conflict reason codes (D-22).**
    - **Spec:**
@@ -908,7 +908,7 @@ Governance editor ─ placement(section chooser, full question set incl. removed
 ### Recommended project structure (new modules)
 
 ```
-apps/web/src/
+apps/csrm/src/
 ├── lib/time/                     # formatInstant, formatCalendarDate, zone validation (zod-free), server-only getViewerTimeZone
 ├── components/csrm/
 │   ├── relation-picker.tsx       # the shared single-record server-backed picker (D-28)
@@ -969,7 +969,7 @@ Phase 10 is not a rename, but it changes stored and derived state:
 | Live service config | None; no `CSRM_AI_*` or other configuration changes | None |
 | OS-registered state | None | None |
 | Secrets and env vars | None added. The time-zone cookie is non-secret client state | None |
-| Build artifacts | `apps/web/src/lib/api/generated/schema.d.ts` (regenerated per contract plan), `docs/references/served-operations.json` (regenerated when the new route mounts), Strapi `dist` (compiled by tests) | Regenerate through the scripts; never hand-edit; Strapi tests only with the dev servers stopped |
+| Build artifacts | `apps/csrm/src/lib/api/generated/schema.d.ts` (regenerated per contract plan), `docs/references/served-operations.json` (regenerated when the new route mounts), Strapi `dist` (compiled by tests) | Regenerate through the scripts; never hand-edit; Strapi tests only with the dev servers stopped |
 
 ## Common Pitfalls
 
@@ -1025,7 +1025,7 @@ Four parsers this phase extends are already grandfathered entries: `listAssessme
 **What goes wrong:** "Submitted 27 Sept 2026 (UTC)" breaks `requestor-request-workflow.spec.ts:225`'s `$`-anchored regex. **How to avoid:** the UTC label only on time-of-day renders.
 
 ### Pitfall 14: Stale dist and dev servers
-**What goes wrong:** Strapi tests and Playwright compile into `apps/strapi/dist` beside the running dev Strapi. **How to avoid:** Strapi suites, `served-operations:write` and Playwright only with the dev servers stopped (the orchestrator's call).
+**What goes wrong:** Strapi tests and Playwright compile into `apps/backend/dist` beside the running dev Strapi. **How to avoid:** Strapi suites, `served-operations:write` and Playwright only with the dev servers stopped (the orchestrator's call).
 
 ### Pitfall 15: Vitest `EPERM: rename` on Windows
 **What goes wrong:** intermittent failures under disk load. **How to avoid:** rerun the file alone before treating it as real (STATE "Notes carried forward").
@@ -1034,7 +1034,7 @@ Four parsers this phase extends are already grandfathered entries: `listAssessme
 
 ### Blocking client navigation (Next 16.3.6 bundled docs)
 ```tsx
-// Source: apps/web/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md ("Blocking navigation")
+// Source: apps/csrm/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md ("Blocking navigation")
 <Link
   onNavigate={(e) => {
     if (isBlocked && !window.confirm('You have unsaved changes. Leave anyway?')) {
@@ -1251,11 +1251,11 @@ Two claims were assumptions in the first draft and were then verified from the i
 | Property | Value |
 |----------|-------|
 | Framework | Web: vitest 4.1.11 (jsdom) with Testing Library. Strapi: `node:test` over TypeScript compiled to `.tmp/tests-dist`. E2E: Playwright 1.58.2 on the production build |
-| Config files | `apps/web/vitest.config.ts` (includes `src/**/*.test.{ts,tsx}`, 20 s timeouts); `apps/strapi/tests/tsconfig.json`; `apps/web/playwright.config.ts` (projects `desktop` 1440×900 and `mobile` 375×812 for `@journey` tests, one worker) |
-| Quick run (web) | `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/web exec vitest run <path> [<path> …]`, with paths under `apps/web`. Not `pnpm --filter @csrm/web test -- <pattern>`: vitest ignores a pattern after `--` and runs the whole suite (recorded in `08-VALIDATION.md`, Test Infrastructure). |
-| Quick run (Strapi, one file, dev servers stopped) | `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/strapi && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`. The harness compiles the app itself (`compileStrapi`, `tests/helpers/strapi-http-harness.ts:443-447`) into the `dist` the dev Strapi shares, so the dev servers must be stopped. |
+| Config files | `apps/csrm/vitest.config.ts` (includes `src/**/*.test.{ts,tsx}`, 20 s timeouts); `apps/backend/tests/tsconfig.json`; `apps/csrm/playwright.config.ts` (projects `desktop` 1440×900 and `mobile` 375×812 for `@journey` tests, one worker) |
+| Quick run (web) | `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/web exec vitest run <path> [<path> …]`, with paths under `apps/csrm`. Not `pnpm --filter @csrm/web test -- <pattern>`: vitest ignores a pattern after `--` and runs the whole suite (recorded in `08-VALIDATION.md`, Test Infrastructure). |
+| Quick run (Strapi, one file, dev servers stopped) | `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/backend && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`. The harness compiles the app itself (`compileStrapi`, `tests/helpers/strapi-http-harness.ts:443-447`) into the `dist` the dev Strapi shares, so the dev servers must be stopped. |
 | Quick run (E2E, dev servers stopped) | `pnpm --filter @csrm/web test:e2e e2e/<spec>.spec.ts [--project desktop|mobile]`. Every run pays the production build first, so batch targeted specs per plan. |
-| Contract | `pnpm --prefix apps/web api:check` (after `api:generate`) |
+| Contract | `pnpm --prefix apps/csrm api:check` (after `api:generate`) |
 | Typecheck | `pnpm --filter @csrm/web typecheck` |
 | Full suites | `pnpm --filter @csrm/web test` (about 20 s); `pnpm --filter @csrm/strapi test` (serial, about 9-13 minutes); `pnpm --filter @csrm/web test:e2e` (about 11-15 minutes, dev servers stopped, run in the background) |
 
@@ -1289,16 +1289,16 @@ Two claims were assumptions in the first draft and were then verified from the i
 - **Per wave merge:** the full web unit suite, typecheck and `api:check`. The full Strapi suite for waves that touch Strapi (dev servers stopped).
 - **Phase gate:** all five commands, with ports 1337 and 3000 free. That is web unit, web typecheck, `api:check`, the Strapi suite, and Playwright in both projects on the production build. Afterwards, before `/gsd-verify-work`:
   - `git status --porcelain` is empty;
-  - the schema freeze check prints nothing: `git diff --name-only 98fe99c..HEAD -- 'apps/strapi/src/api/*/content-types/*'` (`98fe99c` is the CONTEXT commit, before any Phase 10 code);
+  - the schema freeze check prints nothing: `git diff --name-only 98fe99c..HEAD -- 'apps/backend/src/api/*/content-types/*'` (`98fe99c` is the CONTEXT commit, before any Phase 10 code);
   - `cmp` of the two catalogue copies is silent.
 
 ### Wave 0 Gaps
-- [ ] `apps/web/src/lib/time/format-instant.test.ts`: covers UX-06 criterion 3 (zones, UTC label rule).
-- [ ] `apps/web/src/components/ui/radio-group.test.tsx`: covers QUES-09 criterion 3 (quick press selects).
-- [ ] `apps/web/src/features/questionnaires/questionnaire-placement.test.ts`: covers QUES-08 criterion 1 (three real section shapes, removed questions).
-- [ ] `apps/web/src/features/questionnaires/use-answer-autosave.test.tsx` and a navigation-guard test: cover QUES-09 criterion 1.
-- [ ] `apps/web/src/components/csrm/relation-picker.test.tsx`: covers ASSESS-06 criterion 1.
-- [ ] `apps/web/src/features/assessments/release-readiness-summary.test.ts` and `control-label.test.ts`: cover ASSESS-06 criterion 4 and ADMIN-05.
+- [ ] `apps/csrm/src/lib/time/format-instant.test.ts`: covers UX-06 criterion 3 (zones, UTC label rule).
+- [ ] `apps/csrm/src/components/ui/radio-group.test.tsx`: covers QUES-09 criterion 3 (quick press selects).
+- [ ] `apps/csrm/src/features/questionnaires/questionnaire-placement.test.ts`: covers QUES-08 criterion 1 (three real section shapes, removed questions).
+- [ ] `apps/csrm/src/features/questionnaires/use-answer-autosave.test.tsx` and a navigation-guard test: cover QUES-09 criterion 1.
+- [ ] `apps/csrm/src/components/csrm/relation-picker.test.tsx`: covers ASSESS-06 criterion 1.
+- [ ] `apps/csrm/src/features/assessments/release-readiness-summary.test.ts` and `control-label.test.ts`: cover ASSESS-06 criterion 4 and ADMIN-05.
 - [ ] A conflict-reason transport and enum-parity test: covers UX-06 criterion 1.
 - [ ] A Strapi integration file for the generation-jobs read (or extend `questionnaire-generation.integration.test.ts`), plus the matrix row and the served-operations inventory.
 - [ ] E2E fixtures: new journeys create their own records through the UI (as `questionnaire-generation-workflow.spec.ts` does) and never reuse the one-shot seeded fixtures of the questionnaire and release journeys.
@@ -1336,7 +1336,7 @@ No framework installs are needed.
 ### Primary (HIGH confidence)
 - Repository source read this session: every `[VERIFIED: path:lines]` citation above.
 - `docs/references/specification.json` at lines 24905-24908, 24918-24935, 25793-25815 and 25824-25845, read this session.
-- Next 16.3.6 bundled docs: `apps/web/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md` (`onNavigate`, "Blocking navigation"), `.../02-guides/preventing-flash-before-hydration.md`, `.../03-api-reference/04-functions/revalidatePath.md`, `.../03-api-reference/04-functions/cookies.md`.
+- Next 16.3.6 bundled docs: `apps/csrm/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md` (`onNavigate`, "Blocking navigation"), `.../02-guides/preventing-flash-before-hydration.md`, `.../03-api-reference/04-functions/revalidatePath.md`, `.../03-api-reference/04-functions/cookies.md`.
 - Installed Radix sources: `@radix-ui/react-radio-group` 1.4.7 `dist/index.mjs:96-108, 324, 336-375`; `@radix-ui/react-roving-focus` 1.1.19 `dist/index.mjs:172-198`; `@radix-ui/react-slot` 1.3.3 `dist/index.mjs:81-95` (the version the radio primitive resolves through `react-primitive`); `@radix-ui/primitive` 1.1.7 `dist/index.mjs:6-13`.
 - Installed Strapi core 5.51.0: `dist/services/server/koa.js:16-28`; `dist/services/errors.js:52-64`.
 

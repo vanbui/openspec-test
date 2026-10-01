@@ -31,12 +31,12 @@ reviewed_at: "2026-09-27"
 
 | Property | Value |
 |----------|-------|
-| Tool | shadcn/ui, source-owned local components (`apps/web/components.json`: style `new-york`, RSC, CSS variables, neutral base, `iconLibrary: lucide`) |
+| Tool | shadcn/ui, source-owned local components (`apps/csrm/components.json`: style `new-york`, RSC, CSS variables, neutral base, `iconLibrary: lucide`) |
 | Preset | new-york; neutral base; CSS variables; RSC; Lucide icons |
 | Component library | Radix primitives through the installed `radix-ui` package (1.6.7), composed by the local shadcn/ui components |
 | Icon library | `lucide-react` 1.30.0, per §4 Iconography |
 | Font | Plus Jakarta Sans for UI text, data and numbers; Instrument Serif for page titles only; IBM Plex Mono for micro-labels and machine identifiers (§3.10, ADR 0001 gap 8) |
-| Tokens | Semantic tokens in `apps/web/app/globals.css`, whose values are the direction's; feature code consumes the mapped utilities only |
+| Tokens | Semantic tokens in `apps/csrm/app/globals.css`, whose values are the direction's; feature code consumes the mapped utilities only |
 | New dependencies | None. The picker composes the installed `Popover`; the leave warning composes the installed `AlertDialog`; time zone detection uses the platform `Intl` API |
 
 ---
@@ -45,7 +45,7 @@ reviewed_at: "2026-09-27"
 
 ### Source-owned shadcn/ui components
 
-Enumerated by `ls apps/web/src/components/ui/*.tsx | grep -v '\.test\.tsx$' | wc -l` — 30 components — radix-ui@1.6.7 (shadcn/ui new-york, source-owned; version from `node -p "require('radix-ui/package.json').version"` in `apps/web`) — 2026-09-27.
+Enumerated by `ls apps/csrm/src/components/ui/*.tsx | grep -v '\.test\.tsx$' | wc -l` — 30 components — radix-ui@1.6.7 (shadcn/ui new-york, source-owned; version from `node -p "require('radix-ui/package.json').version"` in `apps/csrm`) — 2026-09-27.
 
 A non-exhaustive list of the known-good components this phase uses, never a closed allowlist. The full set is `alert-dialog`, `alert`, `avatar`, `badge`, `breadcrumb`, `button`, `calendar`, `card`, `checkbox`, `command`, `dialog`, `dropdown-menu`, `form`, `input`, `label`, `pagination`, `popover`, `progress`, `radio-group`, `scroll-area`, `select`, `separator`, `sheet`, `skeleton`, `sonner`, `switch`, `table`, `tabs`, `textarea` and `tooltip`.
 
@@ -60,7 +60,7 @@ A non-exhaustive list of the known-good components this phase uses, never a clos
 
 ### CSRM shared primitives
 
-Enumerated by `ls apps/web/src/components/csrm/*.tsx apps/web/src/components/csrm/*.ts | grep -v '\.test\.' | wc -l` — 15 modules — @csrm/web@0.1.0 (source-owned) — 2026-09-27.
+Enumerated by `ls apps/csrm/src/components/csrm/*.tsx apps/csrm/src/components/csrm/*.ts | grep -v '\.test\.' | wc -l` — 15 modules — @csrm/web@0.1.0 (source-owned) — 2026-09-27.
 
 A non-exhaustive list; the executor may use any exported primitive.
 
@@ -1061,7 +1061,7 @@ A web unit test beside `src/lib/performance/zod-client-boundary.test.ts` scans t
 
 `Strapi`, `server-owned`, `server-directed`, `server-authorised`, `release fact`, `mutation control`, `natural key`, `natural-key`, `Invalid Administration CSV`, `non-editable`, `contextual`, `effective CSRM capabilities`, `record scope`, `Navigation visibility`, `authoritative`, `answer batch`, `least-privilege`, `Server validation`.
 
-**Files scanned:** every file this contract changes under `apps/web/src/features/{questionnaires,requests,assessments,risks,administration}` and `apps/web/src/components/{states,csrm}`, as the plans list them.
+**Files scanned:** every file this contract changes under `apps/csrm/src/features/{questionnaires,requests,assessments,risks,administration}` and `apps/csrm/src/components/{states,csrm}`, as the plans list them.
 
 **Excluded, with their phase:**
 - the analyst dashboard and reports (`features/analyst-dashboard/**`, `features/reports/**`): Phase 11, DASH-03;

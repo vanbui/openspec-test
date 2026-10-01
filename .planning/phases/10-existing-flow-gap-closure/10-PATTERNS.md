@@ -20,162 +20,162 @@ Paths are repository-relative. "self" means the file is modified and its own cur
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/web/src/lib/time/format-instant.ts` (new) | utility (zod-free) | transform | `apps/web/src/features/requests/request-domain.ts:144-155` (`formatRequestDate`) | role-match |
-| `apps/web/src/lib/time/format-instant.test.ts` (new) | test | transform | `apps/web/src/features/requests/request-workflow.test.tsx` (pure-function cases) | role-match |
-| `apps/web/src/lib/time/viewer-time-zone.ts` (new, server-only) | utility | request-response (cookie read) | `apps/web/src/lib/auth/development-session-adapter.ts:51-72` | exact (cookie read) |
-| `apps/web/src/lib/time/time-zone-actions.ts` (new, `'use server'`) | controller (Server Action) | request-response (cookie write) | `apps/web/src/lib/auth/development-session-adapter.ts:76-88` (`setDevelopmentRole`) | exact (cookie write) |
-| `apps/web/src/components/csrm/local-time.tsx` (new, client) | provider + component | event-driven (mount sync) | `apps/web/src/features/reports/report-period-control.tsx:26-33` (context provider) | role-match |
-| `apps/web/src/components/csrm/navigation-guard.tsx` (new, client) | provider + hook | event-driven | `apps/web/src/features/reports/report-period-control.tsx:26-40`; `apps/web/src/components/shell/capability-navigation.tsx:38-53` (Link) | role-match |
-| `apps/web/src/components/csrm/save-status.tsx` (new) | component | event-driven | `apps/web/src/features/risks/risk-details.tsx:110` (polite region) | partial |
-| `apps/web/src/lib/api/conflict-reasons.ts` (new, zod-free, not server-only) | model (closed vocabulary) | transform | `apps/web/src/features/requests/request-domain.ts:1-11` (`as const` vocabularies) | role-match |
-| `apps/strapi/src/csrm/conflict-reasons.ts` (new) | model | transform | `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-governance-log.ts:26-35` (frozen `as const` kinds) | role-match |
-| `apps/web/src/lib/performance/interface-copy-guard.test.ts` (new) | test (source scan) | batch | `apps/web/src/lib/performance/zod-client-boundary.test.ts` | role-match |
-| `apps/web/src/components/shell/app-shell.tsx` | component (server) | request-response | self, lines 14-37 | exact |
-| `apps/web/app/(app)/layout.tsx` | route layout | request-response | self, lines 8-33 | exact |
-| `apps/web/app/sign-in/page.tsx` | route page | request-response | self | exact |
-| `apps/web/src/components/shell/capability-navigation.tsx` | component (client) | event-driven | self, lines 38-53, 95-148 | exact |
-| `apps/web/src/components/shell/wordmark.tsx` | component | event-driven | self, line 25-27 | exact |
-| `apps/web/src/components/csrm/revert-audit-summary.tsx` | component (shared) | transform | self, lines 14-32 | exact |
-| `apps/web/src/lib/api/transport/server-client.ts` | service (transport, server-only) | request-response | self, lines 11-16, 94-96 | exact |
-| `apps/web/src/lib/api/transport/server-client.test.ts` | test | request-response | self | exact |
+| `apps/csrm/src/lib/time/format-instant.ts` (new) | utility (zod-free) | transform | `apps/csrm/src/features/requests/request-domain.ts:144-155` (`formatRequestDate`) | role-match |
+| `apps/csrm/src/lib/time/format-instant.test.ts` (new) | test | transform | `apps/csrm/src/features/requests/request-workflow.test.tsx` (pure-function cases) | role-match |
+| `apps/csrm/src/lib/time/viewer-time-zone.ts` (new, server-only) | utility | request-response (cookie read) | `apps/csrm/src/lib/auth/development-session-adapter.ts:51-72` | exact (cookie read) |
+| `apps/csrm/src/lib/time/time-zone-actions.ts` (new, `'use server'`) | controller (Server Action) | request-response (cookie write) | `apps/csrm/src/lib/auth/development-session-adapter.ts:76-88` (`setDevelopmentRole`) | exact (cookie write) |
+| `apps/csrm/src/components/csrm/local-time.tsx` (new, client) | provider + component | event-driven (mount sync) | `apps/csrm/src/features/reports/report-period-control.tsx:26-33` (context provider) | role-match |
+| `apps/csrm/src/components/csrm/navigation-guard.tsx` (new, client) | provider + hook | event-driven | `apps/csrm/src/features/reports/report-period-control.tsx:26-40`; `apps/csrm/src/components/shell/capability-navigation.tsx:38-53` (Link) | role-match |
+| `apps/csrm/src/components/csrm/save-status.tsx` (new) | component | event-driven | `apps/csrm/src/features/risks/risk-details.tsx:110` (polite region) | partial |
+| `apps/csrm/src/lib/api/conflict-reasons.ts` (new, zod-free, not server-only) | model (closed vocabulary) | transform | `apps/csrm/src/features/requests/request-domain.ts:1-11` (`as const` vocabularies) | role-match |
+| `apps/backend/src/csrm/conflict-reasons.ts` (new) | model | transform | `apps/backend/src/api/csrm-questionnaire/services/questionnaire-governance-log.ts:26-35` (frozen `as const` kinds) | role-match |
+| `apps/csrm/src/lib/performance/interface-copy-guard.test.ts` (new) | test (source scan) | batch | `apps/csrm/src/lib/performance/zod-client-boundary.test.ts` | role-match |
+| `apps/csrm/src/components/shell/app-shell.tsx` | component (server) | request-response | self, lines 14-37 | exact |
+| `apps/csrm/app/(app)/layout.tsx` | route layout | request-response | self, lines 8-33 | exact |
+| `apps/csrm/app/sign-in/page.tsx` | route page | request-response | self | exact |
+| `apps/csrm/src/components/shell/capability-navigation.tsx` | component (client) | event-driven | self, lines 38-53, 95-148 | exact |
+| `apps/csrm/src/components/shell/wordmark.tsx` | component | event-driven | self, line 25-27 | exact |
+| `apps/csrm/src/components/csrm/revert-audit-summary.tsx` | component (shared) | transform | self, lines 14-32 | exact |
+| `apps/csrm/src/lib/api/transport/server-client.ts` | service (transport, server-only) | request-response | self, lines 11-16, 94-96 | exact |
+| `apps/csrm/src/lib/api/transport/server-client.test.ts` | test | request-response | self | exact |
 | `docs/design/csrm-design-direction.md` | config (design authority) | - | self, §2 Voice and §4 Forms (`**Name (CSRM extension, date).**` form) | exact |
 
 ### Analyst route gate and permission copy
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/web/app/(app)/app/review/requests/[documentId]/page.tsx` | route page | request-response | `apps/web/app/(app)/app/review/(analyst-dashboard)/page.tsx:25-29` | exact |
-| `apps/web/app/(app)/app/review/questionnaires/[documentId]/page.tsx` | route page | request-response | same | exact |
-| `apps/web/app/(app)/app/review/assessments/[documentId]/page.tsx` | route page | request-response | same | exact |
-| `apps/web/src/features/assessments/analyst-route-gate.test.tsx` (new) | test | request-response | `apps/web/src/features/analyst-dashboard/analyst-dashboard.test.tsx:13-36, 509-532` | exact |
-| `apps/web/src/lib/metadata/record-route-titles.test.ts` | test | request-response | self, lines 11-80 | exact |
-| `apps/web/src/components/states/states.tsx` (+ `states.test.tsx`) | component | - | self, lines 119-136 | exact |
-| `apps/web/src/features/questionnaires/questionnaire-review.tsx` | component (client) | request-response | self, lines 32-44 | exact |
-| `apps/web/src/features/assessments/assessment-detail.tsx` | component (client) | request-response | self, lines 38-52 | exact |
-| `apps/web/src/features/assessments/assessment-editor.tsx` | component (client) | CRUD | self, line 99 | exact |
-| `apps/web/src/features/questionnaires/questionnaire-detail.tsx` | component (client) | request-response | self, line 33 | exact |
-| `apps/web/src/features/assessments/released-assessment.tsx` | component (client) | request-response | self, line 109 | exact |
-| `apps/web/src/features/risks/risk-details.tsx` | component (client) | CRUD | self, line 157 | exact |
-| `apps/web/src/features/administration/administration-workspace.tsx` | component (client) | request-response | self, line 100 | exact |
+| `apps/csrm/app/(app)/app/review/requests/[documentId]/page.tsx` | route page | request-response | `apps/csrm/app/(app)/app/review/(analyst-dashboard)/page.tsx:25-29` | exact |
+| `apps/csrm/app/(app)/app/review/questionnaires/[documentId]/page.tsx` | route page | request-response | same | exact |
+| `apps/csrm/app/(app)/app/review/assessments/[documentId]/page.tsx` | route page | request-response | same | exact |
+| `apps/csrm/src/features/assessments/analyst-route-gate.test.tsx` (new) | test | request-response | `apps/csrm/src/features/analyst-dashboard/analyst-dashboard.test.tsx:13-36, 509-532` | exact |
+| `apps/csrm/src/lib/metadata/record-route-titles.test.ts` | test | request-response | self, lines 11-80 | exact |
+| `apps/csrm/src/components/states/states.tsx` (+ `states.test.tsx`) | component | - | self, lines 119-136 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-review.tsx` | component (client) | request-response | self, lines 32-44 | exact |
+| `apps/csrm/src/features/assessments/assessment-detail.tsx` | component (client) | request-response | self, lines 38-52 | exact |
+| `apps/csrm/src/features/assessments/assessment-editor.tsx` | component (client) | CRUD | self, line 99 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-detail.tsx` | component (client) | request-response | self, line 33 | exact |
+| `apps/csrm/src/features/assessments/released-assessment.tsx` | component (client) | request-response | self, line 109 | exact |
+| `apps/csrm/src/features/risks/risk-details.tsx` | component (client) | CRUD | self, line 157 | exact |
+| `apps/csrm/src/features/administration/administration-workspace.tsx` | component (client) | request-response | self, line 100 | exact |
 
 ### Request pages (REQ-07)
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/web/src/features/requests/request-context-details.tsx` (new, zod-free) | component | transform | `apps/web/app/(app)/app/requests/[documentId]/page.tsx:36-38, 68-80` | exact |
-| `apps/web/src/features/requests/request-context-details.test.tsx` (new) | test | transform | `apps/web/src/features/requests/request-hub.test.tsx` | role-match |
-| `apps/web/app/(app)/app/requests/[documentId]/page.tsx` | route page | request-response | self | exact |
-| `apps/web/src/features/requests/request-workflow-actions.tsx` | component (client) | CRUD | self, lines 23-62 | exact |
-| `apps/web/src/features/requests/request-domain.ts` | model (zod-free) | transform | self, lines 1-20, 82-90, 144-155 | exact |
-| `apps/web/src/features/requests/request-hub.tsx` | component (shared) | transform | self, lines 73-91 | exact |
-| `apps/web/src/features/requests/request-form.tsx` | component (client) | CRUD | self, lines 200, 232, 241, 264-299 | exact |
+| `apps/csrm/src/features/requests/request-context-details.tsx` (new, zod-free) | component | transform | `apps/csrm/app/(app)/app/requests/[documentId]/page.tsx:36-38, 68-80` | exact |
+| `apps/csrm/src/features/requests/request-context-details.test.tsx` (new) | test | transform | `apps/csrm/src/features/requests/request-hub.test.tsx` | role-match |
+| `apps/csrm/app/(app)/app/requests/[documentId]/page.tsx` | route page | request-response | self | exact |
+| `apps/csrm/src/features/requests/request-workflow-actions.tsx` | component (client) | CRUD | self, lines 23-62 | exact |
+| `apps/csrm/src/features/requests/request-domain.ts` | model (zod-free) | transform | self, lines 1-20, 82-90, 144-155 | exact |
+| `apps/csrm/src/features/requests/request-hub.tsx` | component (shared) | transform | self, lines 73-91 | exact |
+| `apps/csrm/src/features/requests/request-form.tsx` | component (client) | CRUD | self, lines 200, 232, 241, 264-299 | exact |
 
 ### Questionnaire: Requestor side (QUES-09)
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/web/src/features/questionnaires/questionnaire-workflow-rules.ts` (new, zod-free) | model (predicates) | transform | `apps/web/src/features/requests/request-domain.ts` (`canRequestorEdit`) | role-match |
-| `apps/web/src/features/questionnaires/use-answer-autosave.ts` (new) | hook | event-driven | `apps/web/src/features/assessments/owner-combobox.tsx:60-83` (debounce + sequence ref) | partial |
-| `apps/web/src/features/questionnaires/questionnaire-renderer.tsx` | component (client) | CRUD | self, lines 288-306, 336, 343, 366-374, 387 | exact |
-| `apps/web/src/features/questionnaires/questionnaire-detail.tsx` | component (client) | request-response | self, lines 32-53, 74-78 | exact |
-| `apps/web/src/features/questionnaires/questionnaire-revision-timeline.tsx` | component (shared) | transform | self, lines 9-72 | exact |
-| `apps/web/src/features/questionnaires/questionnaire-actions.ts` | controller (Server Actions) | request-response | self, lines 82-122, 162-182 | exact |
-| `apps/web/src/components/ui/radio-group.tsx` (+ new `radio-group.test.tsx`) | component (shadcn wrapper) | event-driven | self, lines 22-43; test analog `apps/web/src/components/csrm/segmented-control.test.tsx:15-91` | exact |
-| `apps/web/src/components/csrm/segmented-control.tsx` | component | event-driven | self, lines 44-66 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-workflow-rules.ts` (new, zod-free) | model (predicates) | transform | `apps/csrm/src/features/requests/request-domain.ts` (`canRequestorEdit`) | role-match |
+| `apps/csrm/src/features/questionnaires/use-answer-autosave.ts` (new) | hook | event-driven | `apps/csrm/src/features/assessments/owner-combobox.tsx:60-83` (debounce + sequence ref) | partial |
+| `apps/csrm/src/features/questionnaires/questionnaire-renderer.tsx` | component (client) | CRUD | self, lines 288-306, 336, 343, 366-374, 387 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-detail.tsx` | component (client) | request-response | self, lines 32-53, 74-78 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-revision-timeline.tsx` | component (shared) | transform | self, lines 9-72 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-actions.ts` | controller (Server Actions) | request-response | self, lines 82-122, 162-182 | exact |
+| `apps/csrm/src/components/ui/radio-group.tsx` (+ new `radio-group.test.tsx`) | component (shadcn wrapper) | event-driven | self, lines 22-43; test analog `apps/csrm/src/components/csrm/segmented-control.test.tsx:15-91` | exact |
+| `apps/csrm/src/components/csrm/segmented-control.tsx` | component | event-driven | self, lines 44-66 | exact |
 
 ### Questionnaire: governance (QUES-08)
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/web/src/features/questionnaires/questionnaire-placement.ts` (new, zod-free) | utility | transform | `apps/web/src/features/questionnaires/questionnaire-domain.ts` (`orderQuestionnaire`); rules in `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-definition.ts:174-207` | role-match |
-| `apps/web/src/features/questionnaires/questionnaire-governance.tsx` | component (client) | CRUD | self, lines 35-108 | exact |
-| `apps/web/src/features/questionnaires/questionnaire-service.ts` | service (server-only) | request-response | self, lines 88-113, 379-394 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-governance-log.ts` | service | event-driven (append-only log) | self, lines 26-60, 128-159 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-governance-workflow.ts` | service | CRUD | self, lines 208-243, 278-335, 394-441 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-scope.ts` | service (projection) | transform | self, lines 260-346, 386-429 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-generation-workflow.ts` | service | batch (job) | self, lines 15, 27-37, 67-70 | exact |
-| `apps/web/src/features/assessments/questionnaire-generation-job.tsx` | component (client) | event-driven (polling) | self, lines 47-110, 170-204 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-placement.ts` (new, zod-free) | utility | transform | `apps/csrm/src/features/questionnaires/questionnaire-domain.ts` (`orderQuestionnaire`); rules in `apps/backend/src/api/csrm-questionnaire/services/questionnaire-definition.ts:174-207` | role-match |
+| `apps/csrm/src/features/questionnaires/questionnaire-governance.tsx` | component (client) | CRUD | self, lines 35-108 | exact |
+| `apps/csrm/src/features/questionnaires/questionnaire-service.ts` | service (server-only) | request-response | self, lines 88-113, 379-394 | exact |
+| `apps/backend/src/api/csrm-questionnaire/services/questionnaire-governance-log.ts` | service | event-driven (append-only log) | self, lines 26-60, 128-159 | exact |
+| `apps/backend/src/api/csrm-questionnaire/services/questionnaire-governance-workflow.ts` | service | CRUD | self, lines 208-243, 278-335, 394-441 | exact |
+| `apps/backend/src/api/csrm-questionnaire/services/questionnaire-scope.ts` | service (projection) | transform | self, lines 260-346, 386-429 | exact |
+| `apps/backend/src/api/csrm-questionnaire/services/questionnaire-generation-workflow.ts` | service | batch (job) | self, lines 15, 27-37, 67-70 | exact |
+| `apps/csrm/src/features/assessments/questionnaire-generation-job.tsx` | component (client) | event-driven (polling) | self, lines 47-110, 170-204 | exact |
 | `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md` | config (contract record) | - | self (sections Gap … Limitation) | exact |
 
 ### Generation status (UX-06 criterion 2)
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/strapi/src/api/csrm-questionnaire/routes/csrm-questionnaire.ts` | route | request-response | self, lines 35-38, 61-78 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/operations.ts` | config | - | self, lines 15-17 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/controllers/csrm-questionnaire.ts` | controller | request-response | self, lines 103-114, 340-356 | exact |
-| `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-generation-registry.ts` | service (process-local store) | event-driven | self, lines 13-34 | exact |
-| `apps/strapi/src/api/csrm-assessment/services/assessment-draft-registry.ts` | service (process-local store) | event-driven | self, lines 107-115, 204-233 | exact |
-| `apps/strapi/src/policies/csrm-authorization.ts` | middleware (policy) | request-response | self, lines 41-49 | exact |
-| `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` | config (grants) | - | `function.questionnaire_generation.job_read_api` at lines 59, 133-148, 2222-2232 | exact |
-| `apps/strapi/tests/fixtures/authorization-matrix.ts` | test fixture | request-response | self, lines 176-178, 881-902 | exact |
-| `apps/strapi/tests/contract-catalogue.integration.test.ts` | test | - | self, lines 172-176 | exact |
-| `apps/strapi/tests/helpers/strapi-http-harness.ts` | test helper | - | self, lines 507-552, 578-588 | exact |
-| `apps/strapi/tests/questionnaire-generation.integration.test.ts` | test | request-response | self | exact |
+| `apps/backend/src/api/csrm-questionnaire/routes/csrm-questionnaire.ts` | route | request-response | self, lines 35-38, 61-78 | exact |
+| `apps/backend/src/api/csrm-questionnaire/operations.ts` | config | - | self, lines 15-17 | exact |
+| `apps/backend/src/api/csrm-questionnaire/controllers/csrm-questionnaire.ts` | controller | request-response | self, lines 103-114, 340-356 | exact |
+| `apps/backend/src/api/csrm-questionnaire/services/questionnaire-generation-registry.ts` | service (process-local store) | event-driven | self, lines 13-34 | exact |
+| `apps/backend/src/api/csrm-assessment/services/assessment-draft-registry.ts` | service (process-local store) | event-driven | self, lines 107-115, 204-233 | exact |
+| `apps/backend/src/policies/csrm-authorization.ts` | middleware (policy) | request-response | self, lines 41-49 | exact |
+| `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` | config (grants) | - | `function.questionnaire_generation.job_read_api` at lines 59, 133-148, 2222-2232 | exact |
+| `apps/backend/tests/fixtures/authorization-matrix.ts` | test fixture | request-response | self, lines 176-178, 881-902 | exact |
+| `apps/backend/tests/contract-catalogue.integration.test.ts` | test | - | self, lines 172-176 | exact |
+| `apps/backend/tests/helpers/strapi-http-harness.ts` | test helper | - | self, lines 507-552, 578-588 | exact |
+| `apps/backend/tests/questionnaire-generation.integration.test.ts` | test | request-response | self | exact |
 | `docs/references/served-operations.json` | generated inventory | - | regenerated by `served-operations:write` | generated |
 
 ### Assessment editing (ASSESS-06), released view (ASSESS-07)
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/web/src/components/csrm/relation-picker.tsx` (new, client, zod-free) | component | request-response (debounced search) | `apps/web/src/features/assessments/owner-combobox.tsx:119-256` | exact |
-| `apps/web/src/components/csrm/relation-picker.test.tsx` (new) | test | event-driven | owner-combobox cases in `apps/web/src/features/assessments/assessment-editor.test.tsx` | role-match |
-| `apps/web/src/features/assessments/control-label.ts` (new, zod-free) | utility | transform | `apps/web/src/features/assessments/assessment-domain.ts` | role-match |
-| `apps/web/src/features/assessments/release-readiness-summary.ts` (new, zod-free) | utility | transform | `apps/web/src/features/assessments/assessment-domain.ts` (`releaseReadinessPresentation`) | exact |
-| `apps/web/src/features/assessments/released-risk-details.tsx` (new, zod-free) | component | transform | `apps/web/src/features/assessments/released-assessment.tsx:125-165` (`ReleasedRisk`) | exact |
-| `apps/web/src/features/assessments/risk-editor.tsx` | component (client) | CRUD | self, lines 155-198 | exact |
-| `apps/web/src/features/assessments/control-implementation-editor.tsx` | component (client) | CRUD | self, lines 119-145 | exact |
-| `apps/web/src/features/assessments/assessment-editor.tsx` | component (client) | CRUD | self, lines 160, 175-341 | exact |
-| `apps/web/src/features/assessments/assessment-schema.ts` | model (zod, server) | transform | self, lines 251, 279-285, 369-373, 406-416 | exact |
-| `apps/web/src/features/assessments/assessment-service.ts` | service (server-only) | request-response | self, lines 114-164, 217-246 | exact |
-| `apps/web/src/features/assessments/assessment-actions.ts` | controller (Server Actions) | request-response | self, lines 41-48, 121-135, 199-231 | exact |
-| `apps/web/src/features/risks/risk-detail-editor.tsx`, `mitigation-control-list.tsx` | component (client) | CRUD | self, lines 186-216 and 66-213 | exact |
-| `apps/web/app/(app)/app/risks/[documentId]/page.tsx` | route page | request-response | self | exact |
-| `apps/strapi/src/api/csrm-assessment/services/assessment-scope.ts` | service (projection) | transform | self, lines 310-358; precedent `apps/strapi/src/api/csrm-risk/services/risk-register.ts:165-183` | exact |
-| `apps/strapi/src/api/csrm-assessment/controllers/csrm-assessment.ts` | controller | request-response | self, lines 254-295 | exact |
-| `apps/strapi/src/api/csrm-control-implementation/services/control-implementation-workflow.ts` | service | CRUD | self, lines 136-155 | exact |
-| `apps/strapi/src/api/csrm-risk/controllers/csrm-risk.ts` | controller | request-response | self, lines 188-207 | exact |
+| `apps/csrm/src/components/csrm/relation-picker.tsx` (new, client, zod-free) | component | request-response (debounced search) | `apps/csrm/src/features/assessments/owner-combobox.tsx:119-256` | exact |
+| `apps/csrm/src/components/csrm/relation-picker.test.tsx` (new) | test | event-driven | owner-combobox cases in `apps/csrm/src/features/assessments/assessment-editor.test.tsx` | role-match |
+| `apps/csrm/src/features/assessments/control-label.ts` (new, zod-free) | utility | transform | `apps/csrm/src/features/assessments/assessment-domain.ts` | role-match |
+| `apps/csrm/src/features/assessments/release-readiness-summary.ts` (new, zod-free) | utility | transform | `apps/csrm/src/features/assessments/assessment-domain.ts` (`releaseReadinessPresentation`) | exact |
+| `apps/csrm/src/features/assessments/released-risk-details.tsx` (new, zod-free) | component | transform | `apps/csrm/src/features/assessments/released-assessment.tsx:125-165` (`ReleasedRisk`) | exact |
+| `apps/csrm/src/features/assessments/risk-editor.tsx` | component (client) | CRUD | self, lines 155-198 | exact |
+| `apps/csrm/src/features/assessments/control-implementation-editor.tsx` | component (client) | CRUD | self, lines 119-145 | exact |
+| `apps/csrm/src/features/assessments/assessment-editor.tsx` | component (client) | CRUD | self, lines 160, 175-341 | exact |
+| `apps/csrm/src/features/assessments/assessment-schema.ts` | model (zod, server) | transform | self, lines 251, 279-285, 369-373, 406-416 | exact |
+| `apps/csrm/src/features/assessments/assessment-service.ts` | service (server-only) | request-response | self, lines 114-164, 217-246 | exact |
+| `apps/csrm/src/features/assessments/assessment-actions.ts` | controller (Server Actions) | request-response | self, lines 41-48, 121-135, 199-231 | exact |
+| `apps/csrm/src/features/risks/risk-detail-editor.tsx`, `mitigation-control-list.tsx` | component (client) | CRUD | self, lines 186-216 and 66-213 | exact |
+| `apps/csrm/app/(app)/app/risks/[documentId]/page.tsx` | route page | request-response | self | exact |
+| `apps/backend/src/api/csrm-assessment/services/assessment-scope.ts` | service (projection) | transform | self, lines 310-358; precedent `apps/backend/src/api/csrm-risk/services/risk-register.ts:165-183` | exact |
+| `apps/backend/src/api/csrm-assessment/controllers/csrm-assessment.ts` | controller | request-response | self, lines 254-295 | exact |
+| `apps/backend/src/api/csrm-control-implementation/services/control-implementation-workflow.ts` | service | CRUD | self, lines 136-155 | exact |
+| `apps/backend/src/api/csrm-risk/controllers/csrm-risk.ts` | controller | request-response | self, lines 188-207 | exact |
 
 ### Reference data (ADMIN-05) and CSV copy
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `apps/strapi/src/api/csrm-administration/services/administration-query.ts` | service (projection) | transform | self, lines 250-266 | exact |
-| `apps/web/src/features/administration/administration-schema.ts`, `administration-form.tsx`, `administration-workspace.tsx`, `administration-actions.ts` | model / component / Server Action | CRUD | self (schema line 201; form 87, 189-256; workspace 85-86, 197-204, 251; actions 96-106) | exact |
-| `apps/strapi/src/bootstrap/controls/privacy-act-app-ndb-2026-06-04.json` | config (seed data) | batch | self, APP entries (APP-11 at lines 92-97) | exact |
-| `apps/strapi/src/bootstrap/seed-assessment-workflow.ts` | config (seed) | batch | self, lines 14-27, 67-79 | exact |
-| `apps/web/src/features/administration/csv-import-flow.tsx`, `csv-client-parser.ts`; `apps/strapi/src/api/csrm-administration/services/csv-import.ts` | component / utility / service | file-I/O | self (flow 108-196; parser 27, 164-165; Strapi 95, 229, 232) | exact |
+| `apps/backend/src/api/csrm-administration/services/administration-query.ts` | service (projection) | transform | self, lines 250-266 | exact |
+| `apps/csrm/src/features/administration/administration-schema.ts`, `administration-form.tsx`, `administration-workspace.tsx`, `administration-actions.ts` | model / component / Server Action | CRUD | self (schema line 201; form 87, 189-256; workspace 85-86, 197-204, 251; actions 96-106) | exact |
+| `apps/backend/src/bootstrap/controls/privacy-act-app-ndb-2026-06-04.json` | config (seed data) | batch | self, APP entries (APP-11 at lines 92-97) | exact |
+| `apps/backend/src/bootstrap/seed-assessment-workflow.ts` | config (seed) | batch | self, lines 14-27, 67-79 | exact |
+| `apps/csrm/src/features/administration/csv-import-flow.tsx`, `csv-client-parser.ts`; `apps/backend/src/api/csrm-administration/services/csv-import.ts` | component / utility / service | file-I/O | self (flow 108-196; parser 27, 164-165; Strapi 95, 229, 232) | exact |
 
 ### Contract and generated files
 
 | File | Role | Data Flow | Pattern |
 |---|---|---|---|
 | `docs/references/specification.json` | config (contract) | - | components edited in place; `api:generate` then `api:check` |
-| `apps/web/src/lib/api/generated/schema.d.ts` | generated | - | `pnpm --prefix apps/web api:generate`, never hand-edited |
-| `apps/web/src/features/contract-response-parity.test.ts` | test (guard) | batch | self, lines 56-151 (grandfather list, count at line 683) |
-| `apps/web/src/features/contract-operation-chain.test.ts` | test (guard) | batch | self, lines 47, 179-208 |
+| `apps/csrm/src/lib/api/generated/schema.d.ts` | generated | - | `pnpm --prefix apps/csrm api:generate`, never hand-edited |
+| `apps/csrm/src/features/contract-response-parity.test.ts` | test (guard) | batch | self, lines 56-151 (grandfather list, count at line 683) |
+| `apps/csrm/src/features/contract-operation-chain.test.ts` | test (guard) | batch | self, lines 47, 179-208 |
 
 ### E2E specs
 
 | File | Changes | Analog for new steps |
 |---|---|---|
-| `apps/web/e2e/questionnaire-workflow.spec.ts` | UI-SPEC E1-E5 and new autosave, guard and arrow-key steps | self, lines 181-330 |
-| `apps/web/e2e/questionnaire-governance-workflow.spec.ts` | E8, E9, in-viewport form, Brisbane local time | self, lines 24-31 (`expectAtBothWidths`), 108-180 |
-| `apps/web/e2e/questionnaire-generation-workflow.spec.ts` | E7, add after deterministic generation, return mid-job | self, lines 58-156 (creates its own request) |
-| `apps/web/e2e/requestor-request-workflow.spec.ts` | E6, in-page submit then revert, analyst request context | self, lines 196-275 |
-| `apps/web/e2e/request-relationship-states.spec.ts` | E15 | self, lines 24, 114-120 |
-| `apps/web/e2e/assessment-release-workflow.spec.ts` | E10-E14 and new gate, picker, save-status steps | self, lines 170-330 |
-| `apps/web/e2e/risk-register-workflow.spec.ts` | E16 | self, lines 597-603 |
-| `apps/web/e2e/performance.spec.ts` | E5 | self, lines 110-118 |
-| `apps/web/e2e/administration-workflow.spec.ts` | owner name, columns, "5.1" once | self |
+| `apps/csrm/e2e/questionnaire-workflow.spec.ts` | UI-SPEC E1-E5 and new autosave, guard and arrow-key steps | self, lines 181-330 |
+| `apps/csrm/e2e/questionnaire-governance-workflow.spec.ts` | E8, E9, in-viewport form, Brisbane local time | self, lines 24-31 (`expectAtBothWidths`), 108-180 |
+| `apps/csrm/e2e/questionnaire-generation-workflow.spec.ts` | E7, add after deterministic generation, return mid-job | self, lines 58-156 (creates its own request) |
+| `apps/csrm/e2e/requestor-request-workflow.spec.ts` | E6, in-page submit then revert, analyst request context | self, lines 196-275 |
+| `apps/csrm/e2e/request-relationship-states.spec.ts` | E15 | self, lines 24, 114-120 |
+| `apps/csrm/e2e/assessment-release-workflow.spec.ts` | E10-E14 and new gate, picker, save-status steps | self, lines 170-330 |
+| `apps/csrm/e2e/risk-register-workflow.spec.ts` | E16 | self, lines 597-603 |
+| `apps/csrm/e2e/performance.spec.ts` | E5 | self, lines 110-118 |
+| `apps/csrm/e2e/administration-workflow.spec.ts` | owner name, columns, "5.1" once | self |
 
 ---
 
 ## Pattern Assignments
 
-### `apps/web/app/(app)/app/review/{requests,questionnaires,assessments}/[documentId]/page.tsx` (route page, gate before read)
+### `apps/csrm/app/(app)/app/review/{requests,questionnaires,assessments}/[documentId]/page.tsx` (route page, gate before read)
 
-**Analog:** `apps/web/app/(app)/app/review/(analyst-dashboard)/page.tsx`
+**Analog:** `apps/csrm/app/(app)/app/review/(analyst-dashboard)/page.tsx`
 
 **Imports** (lines 3, 8-9):
 ```typescript
@@ -197,13 +197,13 @@ export async function AnalystDashboardContent({ searchParams }: AnalystDashboard
 
 **Permission rendering to reuse** (the route's own states, not the shared one): `AssessmentDetail state="permission"` (`assessment-detail.tsx:38-52`), `QuestionnaireReview state="permission"` (`questionnaire-review.tsx:34-36`), `AssessmentEditor state="permission"` (`assessment-editor.tsx:99`).
 
-**Test pattern** (`apps/web/src/features/analyst-dashboard/analyst-dashboard.test.tsx:13-36` and `509-523`): hoisted `mocks` with `current` and `granted`, `vi.mock('@/lib/auth/development-session-adapter', () => ({ getSessionAdapter: () => ({ current: mocks.current, capabilitiesFor: () => ({ granted: mocks.granted }) }) }))`, then assert the service mock `not.toHaveBeenCalled()` and the alert text. `record-route-titles.test.ts:11-40` mocks the three services but no session adapter; once the routes gate, that file needs the same session mock (granted with `assessment:review` for its existing cases).
+**Test pattern** (`apps/csrm/src/features/analyst-dashboard/analyst-dashboard.test.tsx:13-36` and `509-523`): hoisted `mocks` with `current` and `granted`, `vi.mock('@/lib/auth/development-session-adapter', () => ({ getSessionAdapter: () => ({ current: mocks.current, capabilitiesFor: () => ({ granted: mocks.granted }) }) }))`, then assert the service mock `not.toHaveBeenCalled()` and the alert text. `record-route-titles.test.ts:11-40` mocks the three services but no session adapter; once the routes gate, that file needs the same session mock (granted with `assessment:review` for its existing cases).
 
 ---
 
-### `apps/web/src/lib/time/*` and `apps/web/src/components/csrm/local-time.tsx` (viewer time zone, D-19)
+### `apps/csrm/src/lib/time/*` and `apps/csrm/src/components/csrm/local-time.tsx` (viewer time zone, D-19)
 
-**Cookie read analog** (`apps/web/src/lib/auth/development-session-adapter.ts:51-54, 67-68`):
+**Cookie read analog** (`apps/csrm/src/lib/auth/development-session-adapter.ts:51-54, 67-68`):
 ```typescript
 async function requestUsesHttps(): Promise<boolean> {
   const forwardedProtocol = (await headers()).get('x-forwarded-proto');
@@ -227,9 +227,9 @@ async function requestUsesHttps(): Promise<boolean> {
     });
   }
 ```
-Copy the `secure` rule exactly (the E2E origin is plain HTTP on 127.0.0.1, so an unconditional `secure: true` cookie would never be sent back). Next 16.3: `cookies()` is async; `.set` works only in a Server Function or Route Handler (`apps/web/node_modules/next/dist/docs/01-app/03-api-reference/04-functions/cookies.md`).
+Copy the `secure` rule exactly (the E2E origin is plain HTTP on 127.0.0.1, so an unconditional `secure: true` cookie would never be sent back). Next 16.3: `cookies()` is async; `.set` works only in a Server Function or Route Handler (`apps/csrm/node_modules/next/dist/docs/01-app/03-api-reference/04-functions/cookies.md`).
 
-**Formatter analog to replace** (`apps/web/src/features/requests/request-domain.ts:144-155`):
+**Formatter analog to replace** (`apps/csrm/src/features/requests/request-domain.ts:144-155`):
 ```typescript
 export function formatRequestDate(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -240,7 +240,7 @@ export function formatRequestDate(value: string | null | undefined): string | nu
 ```
 The same UTC pattern with a time of day is in `questionnaire-revision-timeline.tsx:18-22` and `revert-audit-summary.tsx:14-21`; `released-assessment.tsx:35` uses `dateStyle: 'long'`. `formatRequestDate` also formats calendar dates (`dueDate`) and the Requestor dashboard labels, which stay UTC (D-19 "calendar dates stay zone-free"; dashboards are Phase 11).
 
-**Context provider analog** (`apps/web/src/features/reports/report-period-control.tsx:26-33`, React 19 `<Context value>` form):
+**Context provider analog** (`apps/csrm/src/features/reports/report-period-control.tsx:26-33`, React 19 `<Context value>` form):
 ```typescript
 const ReportTransitionContext = createContext<ReportTransition | null>(null);
 
@@ -252,13 +252,13 @@ export function ReportTransitionProvider({ children }: { children: ReactNode }) 
 }
 ```
 
-**Where the provider mounts** (`apps/web/src/components/shell/app-shell.tsx:14-37` is a Server Component; `apps/web/app/(app)/layout.tsx:8-33` is `force-dynamic` and renders `AppShell` in both branches). The layout reads the cookie and passes the zone to `AppShell`, which wraps its content in the client provider. `RevertAuditSummary` and `RequestHub` are also rendered by the Server Component page `app/(app)/app/requests/[documentId]/page.tsx:61, 79`, so they render a client `LocalInstant` rather than calling a hook.
+**Where the provider mounts** (`apps/csrm/src/components/shell/app-shell.tsx:14-37` is a Server Component; `apps/csrm/app/(app)/layout.tsx:8-33` is `force-dynamic` and renders `AppShell` in both branches). The layout reads the cookie and passes the zone to `AppShell`, which wraps its content in the client provider. `RevertAuditSummary` and `RequestHub` are also rendered by the Server Component page `app/(app)/app/requests/[documentId]/page.tsx:61, 79`, so they render a client `LocalInstant` rather than calling a hook.
 
 ---
 
-### `apps/web/src/components/csrm/navigation-guard.tsx` (D-12)
+### `apps/csrm/src/components/csrm/navigation-guard.tsx` (D-12)
 
-**Link pattern to guard** (`apps/web/src/components/shell/capability-navigation.tsx:38-53`):
+**Link pattern to guard** (`apps/csrm/src/components/shell/capability-navigation.tsx:38-53`):
 ```typescript
   const renderLink = (item: NavigationItem) => {
     const Icon = item.icon;
@@ -267,13 +267,13 @@ export function ReportTransitionProvider({ children }: { children: ReactNode }) 
 ```
 The component's own `onNavigate` prop (line 22) is an `onClick` that closes the mobile sheet (`MobileNavigation`, lines 95-148); Next's `Link` `onNavigate` is a different prop. Other in-app links the questionnaire page shows: `Wordmark` (`wordmark.tsx:25-27`) and the `RecordLink` "Assessment request {number}" in `questionnaire-detail.tsx:55-72` (`record-link.tsx:9-11` wraps `Link`).
 
-**Framework pattern:** `apps/web/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md`, "Blocking navigation": `onNavigate={(e) => { if (isBlocked && !confirm(...)) e.preventDefault() }}` with a React context. CSRM replaces `window.confirm` with `ConfirmDialog` in controlled mode and calls `router.push(href)` on confirm (`apps/web/src/components/csrm/confirm-dialog.tsx`).
+**Framework pattern:** `apps/csrm/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md`, "Blocking navigation": `onNavigate={(e) => { if (isBlocked && !confirm(...)) e.preventDefault() }}` with a React context. CSRM replaces `window.confirm` with `ConfirmDialog` in controlled mode and calls `router.push(href)` on confirm (`apps/csrm/src/components/csrm/confirm-dialog.tsx`).
 
 ---
 
-### `apps/web/src/components/csrm/relation-picker.tsx` (D-28, X-2)
+### `apps/csrm/src/components/csrm/relation-picker.tsx` (D-28, X-2)
 
-**Analog:** `apps/web/src/features/assessments/owner-combobox.tsx`
+**Analog:** `apps/csrm/src/features/assessments/owner-combobox.tsx`
 
 **Imports and debounce** (lines 1-6, 24):
 ```typescript
@@ -300,22 +300,22 @@ The schema import is type-only, so the client bundle carries no zod (`zod-client
 The multi-select sibling (`RelationMultiSelect`, lines 36-117) shows the relation result type the request selector actions already return: `{ ok: true; data: readonly { documentId: string; name: string }[] } | { ok: false; formError: string }` (`request-actions.ts:55-75`).
 
 **Search sources the picker calls:**
-- systems and assets: `searchInformationSystemsAction`, `searchInformationAssetsAction` (`apps/web/src/features/requests/request-actions.ts:69-75`), a 25-row selector page (`request-service.ts:121`), labels for selected ids through `hydrate…Selections` (`request-service.ts`, POST `…/selected`, at most 100 ids);
-- controls: `listAdministrationControls(query)` (`apps/web/src/features/administration/administration-service.ts:186-192`), where `q` matches number, name and framework server-side (`apps/strapi/src/api/csrm-administration/services/administration-config.ts` `searchColumns`), page sizes 10, 25, 50 or 100 (`administration-schema.ts:227`).
+- systems and assets: `searchInformationSystemsAction`, `searchInformationAssetsAction` (`apps/csrm/src/features/requests/request-actions.ts:69-75`), a 25-row selector page (`request-service.ts:121`), labels for selected ids through `hydrate…Selections` (`request-service.ts`, POST `…/selected`, at most 100 ids);
+- controls: `listAdministrationControls(query)` (`apps/csrm/src/features/administration/administration-service.ts:186-192`), where `q` matches number, name and framework server-side (`apps/backend/src/api/csrm-administration/services/administration-config.ts` `searchColumns`), page sizes 10, 25, 50 or 100 (`administration-schema.ts:227`).
 
 ---
 
-### `apps/web/src/components/ui/radio-group.tsx` and `segmented-control.tsx` (D-14)
+### `apps/csrm/src/components/ui/radio-group.tsx` and `segmented-control.tsx` (D-14)
 
 **Wrapper to change** (`radio-group.tsx:22-43`): `RadioGroupItem` spreads `...props` onto `RadioGroupPrimitive.Item`; the fix adds an `onKeyDown` that calls the caller's handler first, then handles unmodified arrow keys with `preventDefault()`, `focus()` and `click()` on the next enabled `[role="radio"]` in the closest `[role="radiogroup"]`, wrapping. `segmented-control.tsx:54-64` renders `RadioGroupPrimitive.Item` directly and needs the same handler.
 
-**Test analog** (`apps/web/src/components/csrm/segmented-control.test.tsx:55-76`): today it holds the key (`'{ArrowRight>}'` … `'{/ArrowRight}'`) to work around the race; the new wrapper test uses `user.keyboard('{ArrowDown}')` without holding, which fails before the fix. The harness at lines 15-33 (a controlled component between two buttons) and the single-tab-stop case at lines 78-91 are the patterns to copy.
+**Test analog** (`apps/csrm/src/components/csrm/segmented-control.test.tsx:55-76`): today it holds the key (`'{ArrowRight>}'` … `'{/ArrowRight}'`) to work around the race; the new wrapper test uses `user.keyboard('{ArrowDown}')` without holding, which fails before the fix. The harness at lines 15-33 (a controlled component between two buttons) and the single-tab-stop case at lines 78-91 are the patterns to copy.
 
 ---
 
-### `apps/web/src/features/requests/request-context-details.tsx` (D-20)
+### `apps/csrm/src/features/requests/request-context-details.tsx` (D-20)
 
-**Analog:** `apps/web/app/(app)/app/requests/[documentId]/page.tsx`
+**Analog:** `apps/csrm/app/(app)/app/requests/[documentId]/page.tsx`
 
 ```typescript
 function DetailItem({ label, value }: { label: string; value: string | null | undefined }) {
@@ -338,7 +338,7 @@ function DetailItem({ label, value }: { label: string; value: string | null | un
 
 ---
 
-### `apps/web/src/features/requests/request-domain.ts`, `apps/web/src/features/questionnaires/questionnaire-workflow-rules.ts` (D-22 predicates)
+### `apps/csrm/src/features/requests/request-domain.ts`, `apps/csrm/src/features/questionnaires/questionnaire-workflow-rules.ts` (D-22 predicates)
 
 **Analog:** zod-free vocabulary and predicates in `request-domain.ts:1-20` and `assessment-domain.ts:1-40` (the only schema import is `import type`, line 1 of `assessment-domain.ts`).
 
@@ -346,13 +346,13 @@ function DetailItem({ label, value }: { label: string; value: string | null | un
 
 ---
 
-### `apps/web/src/features/questionnaires/questionnaire-placement.ts` (D-05)
+### `apps/csrm/src/features/questionnaires/questionnaire-placement.ts` (D-05)
 
 **Rules to mirror** (Strapi `questionnaire-definition.ts:174-207`, as quoted in research): one section key per section order, identical metadata per key, a unique `${section.key}:${order}`, across removed questions too. **Web input today:** the question list parser drops removed questions before validating (`questionnaire-service.ts:88-109`, filter on `options.deleted`). **Server output:** `projectQuestions` (`questionnaire-scope.ts:408-429`) serves every question, removed ones with their stored `options` (`schemaVersion: 2` and `deleted: { deletedAt, deletedBy }`, written at `questionnaire-governance-workflow.ts:463`) and a top-level `deleted`. Neither `deleted` nor `schemaVersion: 2` is declared in `QuestionnaireQuestion`/`QuestionnaireQuestionOptions` (`schemaVersion` is `const: 1`), so a placement parser must accept them as optional and never require them. The draft to replace: `blankQuestion` (`questionnaire-governance.tsx:36`) with `sectionKey: 'general'` and `sectionOrder: 0`.
 
 ---
 
-### `apps/web/src/features/questionnaires/use-answer-autosave.ts` (D-11)
+### `apps/csrm/src/features/questionnaires/use-answer-autosave.ts` (D-11)
 
 **Partial analog:** the debounce-with-sequence pattern in `owner-combobox.tsx:153-168`:
 ```typescript
@@ -368,10 +368,10 @@ function DetailItem({ label, value }: { label: string; value: string | null | un
 
 ---
 
-### `apps/web/src/lib/api/conflict-reasons.ts`, `apps/strapi/src/csrm/conflict-reasons.ts` and the transport (D-22 reasons)
+### `apps/csrm/src/lib/api/conflict-reasons.ts`, `apps/backend/src/csrm/conflict-reasons.ts` and the transport (D-22 reasons)
 
 **Strapi helpers that gain `details`:**
-- `apps/strapi/src/api/csrm-assessment-request/controllers/csrm-assessment-request.ts:49-53`:
+- `apps/backend/src/api/csrm-assessment-request/controllers/csrm-assessment-request.ts:49-53`:
 ```typescript
 function denyConflict(ctx: ErrorContext, message: string): unknown {
   if (ctx.conflict) return ctx.conflict(message);
@@ -379,7 +379,7 @@ function denyConflict(ctx: ErrorContext, message: string): unknown {
   return { data: null, error: { status: 409, name: "ConflictError", message } };
 }
 ```
-- `apps/strapi/src/api/csrm-questionnaire/controllers/csrm-questionnaire.ts:103-114`:
+- `apps/backend/src/api/csrm-questionnaire/controllers/csrm-questionnaire.ts:103-114`:
 ```typescript
 function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string): unknown {
   const responder = status === 400 ? ctx.badRequest : status === 403 ? ctx.forbidden : status === 404 ? ctx.notFound : ctx.conflict;
@@ -401,7 +401,7 @@ export const GOVERNANCE_EVENT_KINDS = Object.freeze([
 export type GovernanceEventKind = (typeof GOVERNANCE_EVENT_KINDS)[number];
 ```
 
-**Transport today** (`apps/web/src/lib/api/transport/server-client.ts:11-16, 94-96`):
+**Transport today** (`apps/csrm/src/lib/api/transport/server-client.ts:11-16, 94-96`):
 ```typescript
 export type TransportError = { message: string; status?: number; kind?: 'response-contract-mismatch'; operation?: string };
 …
@@ -417,7 +417,7 @@ Every service already hands the openapi-fetch `error` body to it (`assessment-se
 
 ### Contract parsers and the parity guard (every API change)
 
-**Registration analog** (`apps/web/src/features/assessments/assessment-service.ts:114-164`):
+**Registration analog** (`apps/csrm/src/features/assessments/assessment-service.ts:114-164`):
 ```typescript
 export const contractResponseParsers: readonly ContractResponseParser[] = [
   { label: 'listAssessmentRequests', component: 'AssessmentRequestQueueResponse', parser: requestQueueResponseSchema },
@@ -434,13 +434,13 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
 
 **Questionnaire registry** (`questionnaire-service.ts:379-394`) and its closed enums at lines 29 (timeline kinds), 49 (revision) and 110-113 (`governanceEventSchema`).
 
-**Chain guard** (`contract-operation-chain.test.ts:47, 179-208`): every `.GET(`/`.POST(` call site must equal the inventory's `webCallers`, which `served-operations:write` computes from the web tree (`apps/strapi/tests/served-operations.integration.test.ts:260, 404-487`). The web call must exist before the inventory is regenerated.
+**Chain guard** (`contract-operation-chain.test.ts:47, 179-208`): every `.GET(`/`.POST(` call site must equal the inventory's `webCallers`, which `served-operations:write` computes from the web tree (`apps/backend/tests/served-operations.integration.test.ts:260, 404-487`). The web call must exist before the inventory is regenerated.
 
 ---
 
 ### New route `GET /v1/assessment_requests/{requestId}/generation_jobs` (D-25)
 
-**Route analog** (`apps/strapi/src/api/csrm-questionnaire/routes/csrm-questionnaire.ts:35-38, 61-72`):
+**Route analog** (`apps/backend/src/api/csrm-questionnaire/routes/csrm-questionnaire.ts:35-38, 61-72`):
 ```typescript
 const generationPolicies = (operation: string, requestScope = false) => [
   "global::csrm-app-enabled",
@@ -473,7 +473,7 @@ const generationPolicies = (operation: string, requestScope = false) => [
 ```
 The role's function list (line 59) names each Function id.
 
-**Matrix analog** (`apps/strapi/tests/fixtures/authorization-matrix.ts:176-178, 891-896`):
+**Matrix analog** (`apps/backend/tests/fixtures/authorization-matrix.ts:176-178, 891-896`):
 ```typescript
 function humanAnalystOnly(status: number): MatrixExpectation {
   return { owner: 403, other: 403, analyst: status, serviceAgent: 403, noIdentity: 403 };
@@ -493,7 +493,7 @@ function humanAnalystOnly(status: number): MatrixExpectation {
 
 ### Released view projections (D-34) and the applicable-control summary (D-31)
 
-**Precedent for a control summary** (`apps/strapi/src/api/csrm-risk/services/risk-register.ts:165-183`):
+**Precedent for a control summary** (`apps/backend/src/api/csrm-risk/services/risk-register.ts:165-183`):
 ```typescript
 function projectControlImplementation(document: RecordValue): RecordValue {
   if (typeof document.documentId !== "string" || !isRecord(document.control)
@@ -503,13 +503,13 @@ function projectControlImplementation(document: RecordValue): RecordValue {
     control: { documentId: document.control.documentId, controlNumber: document.control.controlNumber, name: document.control.name },
     controlOwner: projectDetailUser(document.controlOwner), …
 ```
-**Projections to change** (`apps/strapi/src/api/csrm-assessment/services/assessment-scope.ts`): `projectRiskSummary` (310-318, five fields, also the mutation response: leave it), `projectRiskTypeSummary` (320-326), `projectControlSummary` (328-338, no `framework`), `projectControlImplementationSummary` (344-358, `control` is the id). The create and update responses use their own `projectControlImplementationSummary` in `control-implementation-workflow.ts:136-155`, so both must populate `control`. The Requestor list read is `listAssessmentRisks` in `csrm-assessment.ts:254-271` (released-for-owner or 404).
+**Projections to change** (`apps/backend/src/api/csrm-assessment/services/assessment-scope.ts`): `projectRiskSummary` (310-318, five fields, also the mutation response: leave it), `projectRiskTypeSummary` (320-326), `projectControlSummary` (328-338, no `framework`), `projectControlImplementationSummary` (344-358, `control` is the id). The create and update responses use their own `projectControlImplementationSummary` in `control-implementation-workflow.ts:136-155`, so both must populate `control`. The Requestor list read is `listAssessmentRisks` in `csrm-assessment.ts:254-271` (released-for-owner or 404).
 
 ---
 
 ### Administration owner name (D-37)
 
-**Projection to extend** (`apps/strapi/src/api/csrm-administration/services/administration-query.ts:250-266`):
+**Projection to extend** (`apps/backend/src/api/csrm-administration/services/administration-query.ts:250-266`):
 ```typescript
   if (kind === "information-systems") {
     const owner = isRecord(input.owner) ? input.owner.documentId : input.owner;
@@ -523,7 +523,7 @@ The repository already populates `owner`. Web seeding to fix: `administration-fo
 
 ### Seed content (D-36 content)
 
-**Risk Type descriptions** (`apps/strapi/src/bootstrap/seed-assessment-workflow.ts:14-27`):
+**Risk Type descriptions** (`apps/backend/src/bootstrap/seed-assessment-workflow.ts:14-27`):
 ```typescript
 export const ASSESSMENT_RISK_TYPE_SEEDS: Readonly<Record<DeterministicAssessmentRiskTypeName, RiskTypeSeed>> = {
   "Internet Exposure": {
@@ -533,36 +533,36 @@ export const ASSESSMENT_RISK_TYPE_SEEDS: Readonly<Record<DeterministicAssessment
 ```
 Reconciled on every seeded start (lines 67-79, `riskTypeService.update({ documentId, data })`). `assessment-seed.integration.test.ts:145` reads the export.
 
-**APP titles** (`privacy-act-app-ndb-2026-06-04.json`, APP-11 at lines 92-97): `"title": "security of personal"` with `"legalText": "information 11.1 If an APP entity …"`. The seeded control name is `${control.id} — ${label}` (`apps/strapi/src/bootstrap/seed-csrm-data.ts:225-236`), which the D-36 display rule strips.
+**APP titles** (`privacy-act-app-ndb-2026-06-04.json`, APP-11 at lines 92-97): `"title": "security of personal"` with `"legalText": "information 11.1 If an APP entity …"`. The seeded control name is `${control.id} — ${label}` (`apps/backend/src/bootstrap/seed-csrm-data.ts:225-236`), which the D-36 display rule strips.
 
 ---
 
 ### E2E journeys that create their own records
 
-**Analog:** `apps/web/e2e/questionnaire-generation-workflow.spec.ts:58-100` (signs in as the Requestor at 375, creates and submits a uniquely titled request, signs in as the Security Analyst, generates with the deterministic provider). **Sign-in helper** (`apps/web/e2e/helpers/navigation.ts:12-19`) asserts the level-one `Dashboard` heading and the role in the banner, never the URL. **Width helper** (`questionnaire-governance-workflow.spec.ts:24-31`, `expectAtBothWidths`).
+**Analog:** `apps/csrm/e2e/questionnaire-generation-workflow.spec.ts:58-100` (signs in as the Requestor at 375, creates and submits a uniquely titled request, signs in as the Security Analyst, generates with the deterministic provider). **Sign-in helper** (`apps/csrm/e2e/helpers/navigation.ts:12-19`) asserts the level-one `Dashboard` heading and the role in the banner, never the URL. **Width helper** (`questionnaire-governance-workflow.spec.ts:24-31`, `expectAtBothWidths`).
 
 ---
 
 ## Shared Patterns
 
 ### Authorization stays in Strapi; the web gates presentation only
-**Source:** `apps/web/app/(app)/app/review/(analyst-dashboard)/page.tsx:21-29` (comment and gate); `apps/strapi/src/policies/csrm-authorization.ts:271-282` (exact grant, then the human-analyst set).
+**Source:** `apps/csrm/app/(app)/app/review/(analyst-dashboard)/page.tsx:21-29` (comment and gate); `apps/backend/src/policies/csrm-authorization.ts:271-282` (exact grant, then the human-analyst set).
 **Apply to:** the three analyst detail routes, the jobs read, every new search action (they call existing authorised operations; the web never widens a grant).
 
 ### Closed parsers, bounded contract, one plan per server and client change
 **Source:** `contract-response-parity.test.ts:56-151` and `assessment-service.ts:114-164`.
-**Apply to:** the seven API changes. The spec edit, `pnpm --prefix apps/web api:generate`, the parser and its registration, and the Strapi projection change in the same plan (D-02, the 06.9 lesson). `api:check` is `pnpm api:generate && git diff --exit-code -- src/lib/api/generated/schema.d.ts` (`apps/web/package.json`), so the regenerated file is committed with the spec.
+**Apply to:** the seven API changes. The spec edit, `pnpm --prefix apps/csrm api:generate`, the parser and its registration, and the Strapi projection change in the same plan (D-02, the 06.9 lesson). `api:check` is `pnpm api:generate && git diff --exit-code -- src/lib/api/generated/schema.d.ts` (`apps/csrm/package.json`), so the regenerated file is committed with the spec.
 
 ### Zod stays out of client modules on zod-free routes
-**Source:** `apps/web/src/lib/performance/zod-client-boundary.test.ts:113-125` (routes) and `74-82` (type-only imports are erased).
+**Source:** `apps/csrm/src/lib/performance/zod-client-boundary.test.ts:113-125` (routes) and `74-82` (type-only imports are erased).
 **Apply to:** every new client module: `local-time.tsx`, `navigation-guard.tsx`, `save-status.tsx`, `relation-picker.tsx`, `request-context-details.tsx`, `released-risk-details.tsx`, `control-label.ts`, `release-readiness-summary.ts`, `questionnaire-workflow-rules.ts`, `questionnaire-placement.ts`, `use-answer-autosave.ts`, `src/lib/api/conflict-reasons.ts`, `src/lib/time/format-instant.ts`.
 
 ### Server-only modules
-**Source:** `apps/web/src/lib/security/server-only-boundary.test.ts:29-37` (transport, auth, gates and every `*-service.ts` start with `import 'server-only'`).
+**Source:** `apps/csrm/src/lib/security/server-only-boundary.test.ts:29-37` (transport, auth, gates and every `*-service.ts` start with `import 'server-only'`).
 **Apply to:** `src/lib/time/viewer-time-zone.ts` (reads the cookie; add `import 'server-only'` although the guard does not enumerate `lib/time`), and any new service function (it lives in an existing `*-service.ts`).
 
 ### Server Action results
-**Source:** `apps/web/src/features/assessments/assessment-actions.ts:41-48`:
+**Source:** `apps/csrm/src/features/assessments/assessment-actions.ts:41-48`:
 ```typescript
 export type AssessmentServerActionResult<T> =
   | { ok: true; data: T }
@@ -575,14 +575,14 @@ export type AssessmentServerActionResult<T> =
 **Apply to:** every conflict that gains a reason: pass `{ reason }` as `details`, keep the message, and keep the fallback body shape `{ data: null, error: { status, name, message, details } }`.
 
 ### Tests that mock the session
-**Source:** `apps/web/src/features/analyst-dashboard/analyst-dashboard.test.tsx:13-36`.
+**Source:** `apps/csrm/src/features/analyst-dashboard/analyst-dashboard.test.tsx:13-36`.
 **Apply to:** the gate tests and `record-route-titles.test.ts`.
 
 ### Strapi mounted proofs
-**Source:** `apps/strapi/tests/questionnaire-generation.integration.test.ts` and `strapi-http-harness.ts`. Quick run of one file (dev servers stopped): `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/strapi && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`.
+**Source:** `apps/backend/tests/questionnaire-generation.integration.test.ts` and `strapi-http-harness.ts`. Quick run of one file (dev servers stopped): `export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/strapi exec tsc -p tests/tsconfig.json --pretty false && cd apps/backend && node --test --test-concurrency=1 --test-timeout=600000 .tmp/tests-dist/tests/<file>.test.js`.
 
 ### Web quick run
-`export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/web exec vitest run <path> [<path> …]` with paths relative to `apps/web`. A pattern after `--` is ignored by vitest and runs the whole suite (`08-VALIDATION.md`). On Windows, rerun a file alone after `EPERM: rename` before treating it as a failure.
+`export PATH="/c/ProgramData/nvm/v24.19.0:$PATH" && pnpm --filter @csrm/web exec vitest run <path> [<path> …]` with paths relative to `apps/csrm`. A pattern after `--` is ignored by vitest and runs the whole suite (`08-VALIDATION.md`). On Windows, rerun a file alone after `EPERM: rename` before treating it as a failure.
 
 ---
 
@@ -592,14 +592,14 @@ Files with no close match in the codebase; the planner uses RESEARCH.md patterns
 
 | File | Role | Data Flow | Reason |
 |------|------|-----------|--------|
-| `apps/web/src/features/questionnaires/use-answer-autosave.ts` | hook | event-driven | No existing hook combines a debounce, a single in-flight save, one queued follow-up, a blur flush and a failure state. The combobox debounce is the nearest idiom (partial) |
-| `apps/web/src/components/csrm/navigation-guard.tsx` | provider | event-driven | The product has never blocked navigation. The pattern is Next 16.3 `link.md` "Blocking navigation" plus the existing `ConfirmDialog` |
-| `apps/web/src/lib/performance/interface-copy-guard.test.ts` | test | batch | The zod boundary guard walks imports; this guard reads string literals and JSX text with the TypeScript compiler API (`typescript` 5.9.3 is a web devDependency), which no current test does |
-| `apps/web/src/lib/api/conflict-reasons.ts` and `apps/strapi/src/csrm/conflict-reasons.ts` | model | transform | No shared error vocabulary exists; the frozen `as const` event kinds are the style analog only |
-| `apps/web/src/lib/time/viewer-time-zone.ts` with `local-time.tsx` | utility + provider | request-response | No viewer preference is stored today; the session cookie code is the mechanical analog (cookie read and write), and `preventing-flash-before-hydration.md` "When to use other approaches" is the framework source |
+| `apps/csrm/src/features/questionnaires/use-answer-autosave.ts` | hook | event-driven | No existing hook combines a debounce, a single in-flight save, one queued follow-up, a blur flush and a failure state. The combobox debounce is the nearest idiom (partial) |
+| `apps/csrm/src/components/csrm/navigation-guard.tsx` | provider | event-driven | The product has never blocked navigation. The pattern is Next 16.3 `link.md` "Blocking navigation" plus the existing `ConfirmDialog` |
+| `apps/csrm/src/lib/performance/interface-copy-guard.test.ts` | test | batch | The zod boundary guard walks imports; this guard reads string literals and JSX text with the TypeScript compiler API (`typescript` 5.9.3 is a web devDependency), which no current test does |
+| `apps/csrm/src/lib/api/conflict-reasons.ts` and `apps/backend/src/csrm/conflict-reasons.ts` | model | transform | No shared error vocabulary exists; the frozen `as const` event kinds are the style analog only |
+| `apps/csrm/src/lib/time/viewer-time-zone.ts` with `local-time.tsx` | utility + provider | request-response | No viewer preference is stored today; the session cookie code is the mechanical analog (cookie read and write), and `preventing-flash-before-hydration.md` "When to use other approaches" is the framework source |
 
 ## Metadata
 
-**Analog search scope:** `apps/web/app`, `apps/web/src/{components,features,lib}`, `apps/web/e2e`, `apps/strapi/src/{api,bootstrap,csrm,policies}`, `apps/strapi/tests`, `docs/references`, `docs/contract-gaps`, `docs/design`.
+**Analog search scope:** `apps/csrm/app`, `apps/csrm/src/{components,features,lib}`, `apps/csrm/e2e`, `apps/backend/src/{api,bootstrap,csrm,policies}`, `apps/backend/tests`, `docs/references`, `docs/contract-gaps`, `docs/design`.
 **Files scanned:** about 160 (every file named in CONTEXT and RESEARCH, their tests, and the analogs above).
 **Pattern extraction date:** 2026-09-27

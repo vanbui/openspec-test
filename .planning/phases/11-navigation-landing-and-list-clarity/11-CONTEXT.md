@@ -46,7 +46,7 @@ Out of scope:
 
 ### Scope and contract boundary
 
-- **D-01:** No Strapi content-type schema change (`apps/strapi/src/api/*/content-types/*` stays frozen). Every change reads fields and relations that already exist:
+- **D-01:** No Strapi content-type schema change (`apps/backend/src/api/*/content-types/*` stays frozen). Every change reads fields and relations that already exist:
   - the request's `requestor`, `assessmentType`, `businessCriticality`, `dueDate` and `submittedDate`;
   - the Risk Assessment's status and release facts;
   - the Risk's `treatmentAction`, `residualRating`, `inherentRating`, `treatmentStatus`, `targetDate` and `closureDate`;
@@ -508,11 +508,11 @@ The operator delegated the product decisions on 2026-09-27 (`.planning/NEXT-WAVE
 
 ### Contract and authorization
 - `docs/references/specification.json`: `AssessmentRequestQueueItem`, `AssessmentSummary`, `AssessmentRequestLifecycleNextAction`, `MyRequestStatusSummary`, `DashboardSummary`, `RatingCounts`, `DashboardHighCriticalRisks`, `RiskExposureReport`, `TreatmentPerformanceReport`, `RiskRegisterItem`, and the query parameters of `/v1/assessment_requests`, `/v1/risk_assessments`, `/v1/my_risk_assessments` and `/v1/risks`.
-- `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json`: the My Requests Function, the reserved `GET:/api/v1/my_requests`, and design note 9.
+- `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json`: the My Requests Function, the reserved `GET:/api/v1/my_requests`, and design note 9.
 - `docs/references/served-operations.json`: the unserved `GET:/api/v1/my_requests` row, and `webCallers`.
-- `apps/strapi/src/policies/csrm-authorization.ts`: `requireRequestCollectionScope`, `requireAnalystRequestCollectionScope`, `requireAnalystRiskRegisterScope` and `requireAnalystInsightScope`.
-- `apps/strapi/tests/fixtures/authorization-matrix.ts`: the six-actor rows.
-- `apps/web/src/features/contract-response-parity.test.ts` and `apps/web/src/features/contract-operation-chain.test.ts`: the parser and chain guards.
+- `apps/backend/src/policies/csrm-authorization.ts`: `requireRequestCollectionScope`, `requireAnalystRequestCollectionScope`, `requireAnalystRiskRegisterScope` and `requireAnalystInsightScope`.
+- `apps/backend/tests/fixtures/authorization-matrix.ts`: the six-actor rows.
+- `apps/csrm/src/features/contract-response-parity.test.ts` and `apps/csrm/src/features/contract-operation-chain.test.ts`: the parser and chain guards.
 
 ### Design and framework
 - `docs/design/csrm-design-direction.md`:
@@ -521,7 +521,7 @@ The operator delegated the product decisions on 2026-09-27 (`.planning/NEXT-WAVE
   - §4 Dialogs, Empty states, Record links, Skeletons and Print;
   - §3.10 Type scale; §5 Motion; §6 Do-not list.
 - `docs/adr/0001-adopt-bproton-design-system.md`: the adopted system and its gap decisions.
-- Next.js 16.3.6 docs under `apps/web/node_modules/next/dist/docs/01-app/`:
+- Next.js 16.3.6 docs under `apps/csrm/node_modules/next/dist/docs/01-app/`:
   - `01-getting-started/03-layouts-and-pages.md`: layouts do not re-render on navigation;
   - `01-getting-started/06-fetching-data.md`: streaming a promise into a Client Component with `use`;
   - `02-guides/server-actions.md`: sequential dispatch, and the security of actions;
@@ -536,18 +536,18 @@ The operator delegated the product decisions on 2026-09-27 (`.planning/NEXT-WAVE
 ## Existing Code Insights
 
 ### Reusable Assets
-- `apps/web/src/config/navigation/navigation.ts`: the capability-gated item list and `activeNavigationHref`, the longest-match current-item rule. It becomes the profile and section data (D-06).
-- `apps/web/src/components/shell/capability-navigation.tsx`: `CapabilityNavigation`, which renders labelled `role="group"` sections, and `MobileNavigation`, the Radix dialog drawer with the `Menu` trigger and the Close control. It is extended rather than forked, and keeps Phase 10's guard wiring.
-- `apps/web/src/features/analyst-dashboard/*`: the analyst dashboard's service (five parallel reads, each failing on its own), presentation (all copy and links), schema and component (KPI strip, widgets, footers). It moves under the analyst Home.
-- `apps/web/src/features/dashboard/*`: the Requestor dashboard's service (six reads) and widgets. It is rebuilt as the Requestor Home (D-19).
-- `apps/web/src/components/ui/command.tsx`: the shadcn Command over `cmdk` 1.1.1, unused today. Quick find uses it (D-48).
-- `apps/web/src/components/csrm/data-table.tsx`: DataTable with sorting, filter chips, density, sticky identifier column and mobile cards. The review lists stay on it.
-- `apps/web/src/components/csrm/status-badge.tsx`: `statusPresentation`, the one status mapping, where D-46's label changes; and `risk-rating-badge.tsx`, for the highest residual rating.
-- `apps/web/src/components/csrm/kpi-tile.tsx` and `bar-chart.tsx`: the exposure figures' primitives.
+- `apps/csrm/src/config/navigation/navigation.ts`: the capability-gated item list and `activeNavigationHref`, the longest-match current-item rule. It becomes the profile and section data (D-06).
+- `apps/csrm/src/components/shell/capability-navigation.tsx`: `CapabilityNavigation`, which renders labelled `role="group"` sections, and `MobileNavigation`, the Radix dialog drawer with the `Menu` trigger and the Close control. It is extended rather than forked, and keeps Phase 10's guard wiring.
+- `apps/csrm/src/features/analyst-dashboard/*`: the analyst dashboard's service (five parallel reads, each failing on its own), presentation (all copy and links), schema and component (KPI strip, widgets, footers). It moves under the analyst Home.
+- `apps/csrm/src/features/dashboard/*`: the Requestor dashboard's service (six reads) and widgets. It is rebuilt as the Requestor Home (D-19).
+- `apps/csrm/src/components/ui/command.tsx`: the shadcn Command over `cmdk` 1.1.1, unused today. Quick find uses it (D-48).
+- `apps/csrm/src/components/csrm/data-table.tsx`: DataTable with sorting, filter chips, density, sticky identifier column and mobile cards. The review lists stay on it.
+- `apps/csrm/src/components/csrm/status-badge.tsx`: `statusPresentation`, the one status mapping, where D-46's label changes; and `risk-rating-badge.tsx`, for the highest residual rating.
+- `apps/csrm/src/components/csrm/kpi-tile.tsx` and `bar-chart.tsx`: the exposure figures' primitives.
 - Phase 10 artifacts, once Phase 10 executes:
-  - `apps/web/src/lib/time/format-instant.ts` and `apps/web/src/components/csrm/local-time.tsx`: local time;
-  - `apps/web/src/components/csrm/navigation-guard.tsx`: the guarded navigation;
-  - `apps/web/src/lib/performance/interface-copy-guard.test.ts`: the copy guard.
+  - `apps/csrm/src/lib/time/format-instant.ts` and `apps/csrm/src/components/csrm/local-time.tsx`: local time;
+  - `apps/csrm/src/components/csrm/navigation-guard.tsx`: the guarded navigation;
+  - `apps/csrm/src/lib/performance/interface-copy-guard.test.ts`: the copy guard.
 - Strapi `review-queue-repository.ts`: the lifecycle facts as SQL (`questionnaireReleased`, `questionnaireSubmitted`, `assessmentExists` and `assessmentReleased`), which D-20's holder predicate reuses; `countReviewQueueBucket`.
 - Strapi `risk-register.ts` `applyDisclosableParent`: the released and mutable branches that D-40 splits into stage predicates.
 - Strapi `request-status-summary.ts`, its controller and its route: the owner-scoped group-by pattern that `GET /v1/my_requests` follows.
@@ -562,10 +562,10 @@ The operator delegated the product decisions on 2026-09-27 (`.planning/NEXT-WAVE
 
 ### Integration Points
 - **Shell:**
-  - `apps/web/app/(app)/layout.tsx`: session, capabilities, and now the count promise;
-  - `apps/web/src/components/shell/app-shell.tsx`: sidebar, header and quick-find control;
-  - `apps/web/next.config.ts`: the `/app/review` redirect.
-- **Home:** `apps/web/app/(app)/app/page.tsx`, its `loading.tsx` and `error.tsx`, and the retiring `apps/web/app/(app)/app/review/(analyst-dashboard)/`.
+  - `apps/csrm/app/(app)/layout.tsx`: session, capabilities, and now the count promise;
+  - `apps/csrm/src/components/shell/app-shell.tsx`: sidebar, header and quick-find control;
+  - `apps/csrm/next.config.ts`: the `/app/review` redirect.
+- **Home:** `apps/csrm/app/(app)/app/page.tsx`, its `loading.tsx` and `error.tsx`, and the retiring `apps/csrm/app/(app)/app/review/(analyst-dashboard)/`.
 - **Request pages:** `request-lifecycle-stepper.tsx`, `request-hub.tsx`, `assessment-detail.tsx` and `app/(app)/app/requests/[documentId]/page.tsx`. On the Strapi side, `request-lifecycle.ts`.
 - **Lists:**
   - `assessment-list.tsx`, `assessment-schema.ts` and `assessment-service.ts`;
@@ -576,10 +576,10 @@ The operator delegated the product decisions on 2026-09-27 (`.planning/NEXT-WAVE
   On the Strapi side: `collection-scope.ts`, `review-queue-repository.ts`, `assessment-scope.ts` with the assessment controller, and `risk-register-query.ts` with `risk-register.ts`.
 - **Exposure and reports:** `dashboard-summary.ts`, `report-repository.ts`, `report-definitions.ts` and `insight-constants.ts` (Strapi); `analyst-dashboard-*`, `report-*` and `report-copy.json` (web).
 - **Tests:**
-  - `apps/web/e2e/helpers/navigation.ts` (`signInAs`);
-  - `apps/web/src/lib/testing/e2e-sign-in-assertions.test.ts` and `e2e-ui-state-route-authorization.test.tsx`;
-  - `apps/web/src/lib/performance/zod-client-boundary.test.ts`;
-  - `apps/web/e2e/performance.spec.ts` (key routes and budgets).
+  - `apps/csrm/e2e/helpers/navigation.ts` (`signInAs`);
+  - `apps/csrm/src/lib/testing/e2e-sign-in-assertions.test.ts` and `e2e-ui-state-route-authorization.test.tsx`;
+  - `apps/csrm/src/lib/performance/zod-client-boundary.test.ts`;
+  - `apps/csrm/e2e/performance.spec.ts` (key routes and budgets).
 </code_context>
 
 <specifics>

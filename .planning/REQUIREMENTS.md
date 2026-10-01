@@ -184,7 +184,10 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ## Future Requirements
 
-- **INT-02** (carried from v1.0, deferred by operator decision): the application uses Keycloak authorization-code authentication, and Strapi validates token issuer, audience, signature, expiry and effective CSRM authorisation server-side. Keycloak stays disabled until the operator provides an environment.
+- **INT-02** (carried from v1.0): the application uses Keycloak authorization-code authentication, and Strapi validates token issuer, audience, signature, expiry and effective CSRM authorisation server-side.
+  - Status (2026-10-01): implemented and flag-gated, and off in development. The web's OIDC sign-in (ADR 0003, quick task 260929-u0w, with the avatar menu of quick task 260930-iei) runs only with `CSRM_AUTH_OIDC_ENABLED=true`. Strapi's access-token verification (ADR 0004, `b6000d0`) runs only with `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true`, and provisioning (ADR 0002) only with `IDAMBOX_KEYCLOAK_PROVISIONING=true`. Development, the unit suites and Playwright keep all three off and use the development identity bridge (`CSRM_DEV_IDENTITY=true`).
+  - Rule for v2.0 work: every new authorisation rule is enforced in Strapi against the resolved IdamBox User, so the development bridge and a Keycloak-verified user behave identically. Authorisation never branches on the auth mode, and the OIDC tests stay green.
+  - Open: enabling it in a deployment needs a Keycloak environment, the realm changes of ADR 0004 and every IdamBox User linked through `externalSubject`.
 - **COLLAB-03**: comments and activity history on questionnaires and assessments. Notes on requests are COLLAB-01.
 - **NOTIFY-03**: notification preferences per user, and further channels.
 - **TENANT-01**: customers can administer tenant-specific branding and multi-tenant configuration.

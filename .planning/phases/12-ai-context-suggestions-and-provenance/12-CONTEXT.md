@@ -68,7 +68,7 @@ Out of scope: analyst instructions to the AI and any re-run (Phases 15 and 16); 
 
 ### The assessment context (INT-05; UAT-030)
 
-- **D-04:** One assessment context builder serves both operations. It is a deep module in `apps/strapi/src/csrm/ai/`: it loads its own records, and returns the model-facing context, the run's context summary, its source catalogue and the policy decision. It holds:
+- **D-04:** One assessment context builder serves both operations. It is a deep module in `apps/backend/src/csrm/ai/`: it loads its own records, and returns the model-facing context, the run's context summary, its source catalogue and the policy decision. It holds:
   - **Request fields:** title, description, assessment type, division, business unit, business purpose, business criticality, third-party involvement, third-party details and regulatory requirements.
   - **Systems and assets:** each selected information system (name, description, type, environment, deployment model, criticality, internet-facing, external access, hosting location, lifecycle) and each selected information asset (name, description, type, location, data classification, confidentiality, integrity and availability ratings, and the personal, legal and card-data flags).
   - **Questions, for draft generation only:** every active, visible question, with its section, text, help text, answer type and the Requestor's submitted answer, rendered with choice labels and "Not answered".
@@ -110,7 +110,7 @@ Out of scope: analyst instructions to the AI and any re-run (Phases 15 and 16); 
   - inherent and residual ratings are the product of the two scores, banded 1–4 Low, 5–9 Moderate, 10–16 High and 20–25 Critical;
   - the overall rating is the highest derived residual rating.
 
-  The model outputs no rating, and the parser re-derives each rating and rejects a mismatch. The vocabulary and derivation live in one shared module, `apps/strapi/src/csrm/risk-scale.ts`.
+  The model outputs no rating, and the parser re-derives each rating and rejects a mismatch. The vocabulary and derivation live in one shared module, `apps/backend/src/csrm/risk-scale.ts`.
   - **Phase 18** imports the module to enforce the closed vocabulary on risk create and update, adds the web mirror, and adds the override with a reason.
   - **Phase 22** sources the module's scales, bands and appetite from Admin configuration; its interface stays.
   - **Phase 12** does not change the risk editor's likelihood and consequence inputs.
@@ -295,7 +295,7 @@ Out of scope: analyst instructions to the AI and any re-run (Phases 15 and 16); 
 
 ### Planner's Discretion
 
-- Module decomposition and file placement under `apps/strapi/src/csrm/ai/` and `apps/web/src/features/`, for example a new `ai-assistance` feature folder.
+- Module decomposition and file placement under `apps/backend/src/csrm/ai/` and `apps/csrm/src/features/`, for example a new `ai-assistance` feature folder.
 - The relevance ranking's details (tokenising, stop words, weighting) within D-06 and D-12. It stays deterministic, dependency-free and unit-tested.
 - The exact bounds within the proposed ranges (library counts, character budgets, suggestions and uncited claims per risk).
 - Reason-code, Function and operation names within the families `12-RESEARCH.md` proposes.
@@ -351,15 +351,15 @@ The hosted provider's approval for production data remains the operator's and do
 
 ### Contract, authorization and records
 - `docs/references/specification.json`: `QuestionnaireQuestion`, `QuestionnaireSummary`, `AnalystAssessmentDetail`, `AnalystRiskDetail`, `RequestorReleasedAssessmentDetail`, `ReleaseReadinessRiskRequirement`, `QuestionnaireGenerationJob`, `AssessmentDraftJob`, and the conflict response schemas.
-- `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json`: the byte-identical copies; `function.questionnaire_generation.*` is the pattern for D-32.
+- `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json`: the byte-identical copies; `function.questionnaire_generation.*` is the pattern for D-32.
 - `docs/references/served-operations.json`.
 - `docs/contract-gaps/phase-06.1-revert-audit-facts.md` and `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md`: the record format; `phase-04-deterministic-draft-jobs.md`, `phase-06.2-questionnaire-generation-provenance.md` and `phase-06.7-ai-provider-provenance.md`: the deferrals D-19 supersedes.
 - `docs/security/phase-08-residual-risks.md`: R-08-12, R-08-34, R-08-35, R-08-36 and R-08-42.
-- `apps/strapi/src/policies/csrm-authorization.ts`, `apps/strapi/tests/fixtures/authorization-matrix.ts`, `apps/strapi/tests/contract-catalogue.integration.test.ts`, `apps/web/src/features/contract-response-parity.test.ts` and `apps/web/src/features/contract-operation-chain.test.ts`.
+- `apps/backend/src/policies/csrm-authorization.ts`, `apps/backend/tests/fixtures/authorization-matrix.ts`, `apps/backend/tests/contract-catalogue.integration.test.ts`, `apps/csrm/src/features/contract-response-parity.test.ts` and `apps/csrm/src/features/contract-operation-chain.test.ts`.
 
 ### Design and framework
 - `docs/design/csrm-design-direction.md` and `docs/adr/0001-adopt-bproton-design-system.md`: every UI value, badges and tags, never colour alone, forms (hint text), toasts, empty states and motion.
-- `apps/web/node_modules/next/dist/docs/01-app/02-guides/server-actions.md` (sequential dispatch; one response carries data and UI), `01-app/02-guides/lazy-loading.md` (`next/dynamic` from Client Components) and `01-app/03-api-reference/04-functions/refresh.md`.
+- `apps/csrm/node_modules/next/dist/docs/01-app/02-guides/server-actions.md` (sequential dispatch; one response carries data and UI), `01-app/02-guides/lazy-loading.md` (`next/dynamic` from Client Components) and `01-app/03-api-reference/04-functions/refresh.md`.
 
 ### External
 - Azure OpenAI structured outputs, "JSON Schema support and limitations" (https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/structured-outputs, updated 2026-08-24): the portable schema subset of D-06.
@@ -369,16 +369,16 @@ The hosted provider's approval for production data remains the operator's and do
 ## Existing Code Insights
 
 ### Reusable Assets
-- `apps/strapi/src/csrm/prompt-data.ts`: `promptDataTag` escapes `&`, `<` and `>` and wraps a value in a labelled tag; the untrusted data block builds on it.
-- `apps/strapi/src/csrm/openai-compatible-client.ts`: `requestJsonCompletion` (strict JSON schema, no tools, typed failure codes) and `logCompletionDiagnostic`, the place D-30 gates.
-- `apps/strapi/src/api/csrm-assessment/services/assessment-draft-provider.ts`: `compareRiskTypeNames` and `sortRiskProposals` (keep the ordering rule) and the closed parser to evolve.
-- `apps/strapi/src/api/csrm-questionnaire/services/openai-compatible-questionnaire-generation-provider.ts`: `toQuestionnaireGenerationProposal`, the model-shape-to-definition adapter pattern for both operations.
-- `apps/strapi/tests/helpers/fake-openai-compatible-server.ts`: the endpoint double for wire-shape provider tests.
-- `apps/strapi/src/api/csrm-assessment/services/assessment-workflow.ts`: `withMutableAssessmentMutation` (serialisation, lock, edit transition), `projectReleaseReadiness` and `validateReleaseReadiness` (the readiness vocabulary), `submittedAnswers` (active and visible answers).
-- `apps/strapi/src/api/csrm-control-implementation/services/control-implementation-workflow.ts`: control implementation creation, reused by "Add as planned control".
-- `apps/strapi/src/api/csrm-questionnaire/services/questionnaire-governance-log.ts`: with Phase 10's `countAnalystChangesSinceGeneration`, the basis for question provenance.
-- `apps/strapi/src/utils/development-identity-enabled.ts`: the `NODE_ENV` plus `CSRM_ENVIRONMENT` double key D-27 reuses.
-- Phase 10's new modules: `apps/strapi/src/csrm/conflict-reasons.ts`, `apps/web/src/lib/api/conflict-reasons.ts`, `apps/web/src/lib/api/refusal-copy.ts`, `apps/web/src/components/csrm/save-status.tsx`, `apps/web/src/features/questionnaires/questionnaire-introduction.tsx`, `apps/web/src/features/assessments/control-label.ts`, `released-risk-details.tsx` and `release-readiness-summary.ts`.
+- `apps/backend/src/csrm/prompt-data.ts`: `promptDataTag` escapes `&`, `<` and `>` and wraps a value in a labelled tag; the untrusted data block builds on it.
+- `apps/backend/src/csrm/openai-compatible-client.ts`: `requestJsonCompletion` (strict JSON schema, no tools, typed failure codes) and `logCompletionDiagnostic`, the place D-30 gates.
+- `apps/backend/src/api/csrm-assessment/services/assessment-draft-provider.ts`: `compareRiskTypeNames` and `sortRiskProposals` (keep the ordering rule) and the closed parser to evolve.
+- `apps/backend/src/api/csrm-questionnaire/services/openai-compatible-questionnaire-generation-provider.ts`: `toQuestionnaireGenerationProposal`, the model-shape-to-definition adapter pattern for both operations.
+- `apps/backend/tests/helpers/fake-openai-compatible-server.ts`: the endpoint double for wire-shape provider tests.
+- `apps/backend/src/api/csrm-assessment/services/assessment-workflow.ts`: `withMutableAssessmentMutation` (serialisation, lock, edit transition), `projectReleaseReadiness` and `validateReleaseReadiness` (the readiness vocabulary), `submittedAnswers` (active and visible answers).
+- `apps/backend/src/api/csrm-control-implementation/services/control-implementation-workflow.ts`: control implementation creation, reused by "Add as planned control".
+- `apps/backend/src/api/csrm-questionnaire/services/questionnaire-governance-log.ts`: with Phase 10's `countAnalystChangesSinceGeneration`, the basis for question provenance.
+- `apps/backend/src/utils/development-identity-enabled.ts`: the `NODE_ENV` plus `CSRM_ENVIRONMENT` double key D-27 reuses.
+- Phase 10's new modules: `apps/backend/src/csrm/conflict-reasons.ts`, `apps/csrm/src/lib/api/conflict-reasons.ts`, `apps/csrm/src/lib/api/refusal-copy.ts`, `apps/csrm/src/components/csrm/save-status.tsx`, `apps/csrm/src/features/questionnaires/questionnaire-introduction.tsx`, `apps/csrm/src/features/assessments/control-label.ts`, `released-risk-details.tsx` and `release-readiness-summary.ts`.
 
 ### Established Patterns
 - Provider substitution behind `AssessmentDraftProvider` and `QuestionnaireGenerationProvider`. Deterministic providers are the test default, the E2E Strapi pins `CSRM_AI_PROVIDER=deterministic`, and the provider is resolved at call time.
@@ -401,7 +401,7 @@ The hosted provider's approval for production data remains the operator's and do
   - `released-assessment.tsx`.
   - `assessment-detail.tsx`, with the two job panels.
   - The questionnaire schema, service, renderer, governance and introduction modules.
-  - The assessment and questionnaire review page loaders under `apps/web/app/(app)/app/review/`.
+  - The assessment and questionnaire review page loaders under `apps/csrm/app/(app)/app/review/`.
 </code_context>
 
 <specifics>

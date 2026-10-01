@@ -19,13 +19,13 @@ Out of scope: any Strapi content-type schema change; new capabilities that belon
 
 ### Scope and contract boundary
 
-- **D-01:** No Strapi content-type schema changes (`apps/strapi/src/api/*/content-types/*` stays frozen). Anything that would need one is deferred with a note, not worked around: the Information Asset owner (UAT-053) is deferred. The questionnaire `governanceLog` JSON envelope gains one event kind and one optional field (D-10, D-18). That extends the envelope approved in `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md` and is recorded there as a dated amendment; it is not a content-type change. **Reversibility:** costly - events written with the new kind and field persist in stored questionnaires.
+- **D-01:** No Strapi content-type schema changes (`apps/backend/src/api/*/content-types/*` stays frozen). Anything that would need one is deferred with a note, not worked around: the Information Asset owner (UAT-053) is deferred. The questionnaire `governanceLog` JSON envelope gains one event kind and one optional field (D-10, D-18). That extends the envelope approved in `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md` and is recorded there as a dated amendment; it is not a content-type change. **Reversibility:** costly - events written with the new kind and field persist in stored questionnaires.
 - **D-02:** Every API change follows the established pattern:
   - exact IdamBox Role → Function → FunctionAPI grants in both catalogue copies, byte-identical;
   - record-level checks in Strapi;
   - the operation or schema in `docs/references/specification.json`, then `api:generate` and a clean `api:check`;
   - closed Zod parsers registered in the contract parity guard;
-  - a row in `apps/strapi/tests/fixtures/authorization-matrix.ts` for any new route;
+  - a row in `apps/backend/tests/fixtures/authorization-matrix.ts` for any new route;
   - `docs/references/served-operations.json` regenerated while the dev servers are stopped.
 
   The server shape and the client parser change in the same plan (the 06.9 lesson).
@@ -60,7 +60,7 @@ Out of scope: any Strapi content-type schema change; new capabilities that belon
 
 - **D-07:** A released, unsubmitted questionnaire shows the analyst its questions read-only: text, answer type, required flag, choices and section, with no answers. It also shows "N of M answered" from the summary's existing `progress`. No answer content crosses before submission (the operator default for Phase 10).
 
-  No API change. `projectQuestionnaire` already serves `progress` to analysts (`apps/strapi/src/api/csrm-questionnaire/services/questionnaire-scope.ts:386-406`), and question answers stay masked until the submitted batch (`projectQuestions`).
+  No API change. `projectQuestionnaire` already serves `progress` to analysts (`apps/backend/src/api/csrm-questionnaire/services/questionnaire-scope.ts:386-406`), and question answers stay masked until the submitted batch (`projectQuestions`).
 
 ### Regeneration (UAT-019; QUES-08 criterion 3)
 
@@ -93,7 +93,7 @@ Out of scope: any Strapi content-type schema change; new capabilities that belon
   - **Introduction first:** a short introduction built from existing facts: the request, why the Security Analyst asks, how many questions, that answers save automatically and can be finished later, and what to do when unsure. It must not promise a "Not sure" choice the form lacks; generated "Not sure" choices are Phase 12. The first section follows.
   - **Attention list:** "Questions requiring attention" appears only after a submit attempt and follows form order (section, then question). Root cause: `validateActiveRequiredAnswers` walks the definition in the server's order, and `projectQuestions` sorts by question order alone, so sections interleave.
   - **History:** moves below the questions. Its summary counts changes per release round and uses a neutral change icon; today it counts all rounds and borrows the latest event's icon, a bin after a deletion.
-- **D-14:** Radio groups select with the arrow keys however quickly the key is released. The shared radio wrapper (`apps/web/src/components/ui/radio-group.tsx`) handles the arrow keys itself, so selection follows focus as the ARIA radio pattern and the direction's segmented control require. The segmented control gets the same behaviour.
+- **D-14:** Radio groups select with the arrow keys however quickly the key is released. The shared radio wrapper (`apps/csrm/src/components/ui/radio-group.tsx`) handles the arrow keys itself, so selection follows focus as the ARIA radio pattern and the direction's segmented control require. The segmented control gets the same behaviour.
 
   Root cause (research): Radix radio-group 1.4.7 selects on focus only while a document-level arrow-key flag is set, but roving focus moves in a deferred timeout and the keyup clears the flag first on a fast release. The UAT's scripted key press hit exactly that. The segmented-control unit test already works around it by holding the key.
 - **D-15:** Submission dialogs and submitted notices say what happens next and how to change it, matching the actions the page then offers:
@@ -146,7 +146,7 @@ Out of scope: any Strapi content-type schema change; new capabilities that belon
 - **D-23:** The three analyst detail routes check `assessment:review` before any read, as the analyst dashboard does (07 D-16). The routes are `/app/review/requests/[documentId]`, `/app/review/questionnaires/[documentId]` and `/app/review/assessments/[documentId]`.
   - A Requestor gets the route's existing permission state under the route's heading and static title. Metadata does not read the record for them.
   - Strapi stays authoritative; the gate is presentation.
-  - The existing permission headings stay, so the current denial proofs hold. The questionnaire journey step that expects a Requestor to see the analyst questionnaire page changes deliberately (`apps/web/e2e/questionnaire-workflow.spec.ts:181-190`).
+  - The existing permission headings stay, so the current denial proofs hold. The questionnaire journey step that expects a Requestor to see the analyst questionnaire page changes deliberately (`apps/csrm/e2e/questionnaire-workflow.spec.ts:181-190`).
 - **D-24:** Permission descriptions drop internal language ("effective CSRM capabilities", "Navigation visibility is not an authorization control", "owner record scope") and say plainly what the person can do instead. The locked heading "You don't have access to {area}" and the route headings stay.
 
 ### Generation status (UAT-041; UX-06 criterion 2)
@@ -265,7 +265,7 @@ The operator delegated the product decisions (`.planning/NEXT-WAVE-DECISIONS.md`
   - **Plans:** the titles reach the dev database on the next seeded Strapi start, as 10-17's corrections do.
   - **Proof:** tests assert that no seeded control is left untitled, and a picker search finds a control by a word from its title.
 - **D-47 (confirms D-25; G-6):** Every human Security Analyst sees a request's generation-job status, and research assumption A4 is closed. Requestors never see the job.
-- **D-48 (G-6):** The Playwright rule follows Phase 8 D-12: a run leaves the tree clean, and a dirty tree afterwards is a harness defect to log, not something to restore. The plans drop the `git checkout -- apps/web/next-env.d.ts apps/web/tsconfig.json` step and assert a clean tree instead.
+- **D-48 (G-6):** The Playwright rule follows Phase 8 D-12: a run leaves the tree clean, and a dirty tree afterwards is a harness defect to log, not something to restore. The plans drop the `git checkout -- apps/csrm/next-env.d.ts apps/csrm/tsconfig.json` step and assert a clean tree instead.
 
 The operator decisions this phase listed as open are settled: decision 15 by D-46, and the answered-count rule (D-07) stands as decided.
 
@@ -315,36 +315,36 @@ No other open decision affects Phase 10.
 
 ### Contract and authorization
 - `docs/references/specification.json`: `QuestionnaireQuestionMutationRequest`, `QuestionnaireGovernanceEvent`, `QuestionnaireRevisionTimelineEvent`, `QuestionnaireWorkflowErrorResponse`, `AssessmentWorkflowErrorResponse`, `RiskSummary`, `ControlImplementationSummary`, `RiskTypeSummary`, `RiskDetailControl`, `QuestionnaireGenerationJob`, and the Administration Information System schemas.
-- `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json`: byte-identical grant catalogue copies; the `function.questionnaire_generation.*` API-only Functions are the pattern for D-25.
+- `docs/references/idambox-csrm-role-function-api-catalogue.json` and `apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json`: byte-identical grant catalogue copies; the `function.questionnaire_generation.*` API-only Functions are the pattern for D-25.
 - `docs/references/served-operations.json`: the served inventory the web chain guard reads.
 - `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md`: the governance-log envelope D-01 amends.
 - `docs/contract-gaps/phase-04-deterministic-draft-jobs.md` and `docs/contract-gaps/phase-06.2-questionnaire-generation-provenance.md`: the job registry contracts D-25 extends.
-- `apps/strapi/src/policies/csrm-authorization.ts`: grant enforcement and the human-analyst guard.
-- `apps/web/src/features/contract-response-parity.test.ts` and `apps/web/src/features/contract-operation-chain.test.ts`: the parser and chain guards.
-- `apps/strapi/tests/fixtures/authorization-matrix.ts`: the six-actor matrix rows.
+- `apps/backend/src/policies/csrm-authorization.ts`: grant enforcement and the human-analyst guard.
+- `apps/csrm/src/features/contract-response-parity.test.ts` and `apps/csrm/src/features/contract-operation-chain.test.ts`: the parser and chain guards.
+- `apps/backend/tests/fixtures/authorization-matrix.ts`: the six-actor matrix rows.
 
 ### Design and framework
 - `docs/design/csrm-design-direction.md`: every UI value; the voice (§2 BProton "Voice"), Forms (radio and segmented control keyboard behaviour), Dialogs, Toasts, Empty states and record links.
 - `docs/adr/0001-adopt-bproton-design-system.md`: the adopted system and its gap decisions.
-- `apps/web/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md` ("Blocking navigation", `onNavigate`): the D-12 mechanism.
-- `apps/web/node_modules/next/dist/docs/01-app/02-guides/preventing-flash-before-hydration.md`: time-zone formatting options behind D-19.
-- `apps/web/node_modules/next/dist/docs/01-app/03-api-reference/04-functions/revalidatePath.md` and `cookies.md`: Server Action revalidation and cookie behaviour (D-11, D-19).
+- `apps/csrm/node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md` ("Blocking navigation", `onNavigate`): the D-12 mechanism.
+- `apps/csrm/node_modules/next/dist/docs/01-app/02-guides/preventing-flash-before-hydration.md`: time-zone formatting options behind D-19.
+- `apps/csrm/node_modules/next/dist/docs/01-app/03-api-reference/04-functions/revalidatePath.md` and `cookies.md`: Server Action revalidation and cookie behaviour (D-11, D-19).
 </canonical_refs>
 
 <code_context>
 ## Existing Code Insights
 
 ### Reusable Assets
-- `apps/web/src/features/assessments/owner-combobox.tsx`: `OwnerCombobox`, the single user picker, and `RelationMultiSelect`, the bounded multi picker. With `RelationCombobox` in `apps/web/src/features/risks/risk-register-filters.tsx` they are the established server-backed combobox pattern that D-28 generalises into one single-record picker.
-- `apps/web/src/features/requests/request-service.ts`: `searchInformationSystems` and `searchInformationAssets` (a bounded selector page of 25) and `hydrate…Selections` (labels for selected ids); `request-actions.ts` exposes the search actions.
-- `apps/web/src/features/administration/administration-service.ts`: the Administration control list with `q` (server-side match on number, name and framework). `searchApplicableControlsAction` today filters the full library in the action and should move to the server-side search.
-- `apps/web/src/components/states/states.tsx`: shared state primitives with locked headings (`PermissionDeniedState`, `ErrorState`, `EmptyState`).
-- `apps/web/src/components/csrm/confirm-dialog.tsx`: every confirmation dialog, reason field included.
-- `apps/web/src/features/questionnaires/questionnaire-domain.ts`: `orderQuestionnaire` (section, then question order), the correct order for the attention list.
-- `apps/web/src/features/assessments/questionnaire-generation-job.tsx` and `assessment-draft-job.tsx`: both already accept `initialJob`, but no caller passes one.
-- `apps/web/src/lib/metadata/record-route-metadata.ts`: route titles resolved through the page's cached read.
-- The Risk Register's save messages ("Risk changes saved.", "Mitigation control changes saved.") in `apps/web/src/features/risks/risk-details.tsx`: an existing save-status pattern (an `sr-only` live region there; D-33 needs a visible one).
-- `apps/web/src/components/csrm/status-badge.tsx` (`statusPresentation`), `record-link.tsx`, `page-header.tsx`, `detail-section.tsx`, `form-section.tsx`.
+- `apps/csrm/src/features/assessments/owner-combobox.tsx`: `OwnerCombobox`, the single user picker, and `RelationMultiSelect`, the bounded multi picker. With `RelationCombobox` in `apps/csrm/src/features/risks/risk-register-filters.tsx` they are the established server-backed combobox pattern that D-28 generalises into one single-record picker.
+- `apps/csrm/src/features/requests/request-service.ts`: `searchInformationSystems` and `searchInformationAssets` (a bounded selector page of 25) and `hydrate…Selections` (labels for selected ids); `request-actions.ts` exposes the search actions.
+- `apps/csrm/src/features/administration/administration-service.ts`: the Administration control list with `q` (server-side match on number, name and framework). `searchApplicableControlsAction` today filters the full library in the action and should move to the server-side search.
+- `apps/csrm/src/components/states/states.tsx`: shared state primitives with locked headings (`PermissionDeniedState`, `ErrorState`, `EmptyState`).
+- `apps/csrm/src/components/csrm/confirm-dialog.tsx`: every confirmation dialog, reason field included.
+- `apps/csrm/src/features/questionnaires/questionnaire-domain.ts`: `orderQuestionnaire` (section, then question order), the correct order for the attention list.
+- `apps/csrm/src/features/assessments/questionnaire-generation-job.tsx` and `assessment-draft-job.tsx`: both already accept `initialJob`, but no caller passes one.
+- `apps/csrm/src/lib/metadata/record-route-metadata.ts`: route titles resolved through the page's cached read.
+- The Risk Register's save messages ("Risk changes saved.", "Mitigation control changes saved.") in `apps/csrm/src/features/risks/risk-details.tsx`: an existing save-status pattern (an `sr-only` live region there; D-33 needs a visible one).
+- `apps/csrm/src/components/csrm/status-badge.tsx` (`statusPresentation`), `record-link.tsx`, `page-header.tsx`, `detail-section.tsx`, `form-section.tsx`.
 
 ### Established Patterns
 - Typed openapi-fetch service modules and Server Actions only; the chain guard forbids raw fetch and unlisted operations.
