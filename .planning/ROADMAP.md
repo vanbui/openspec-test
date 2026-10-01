@@ -1229,10 +1229,81 @@ Plans:
 3. Role holders are visible in CSRM and export for an access review, and every configuration change shows who made it, when, and the old and new values.
 4. Direct URLs to Admin screens show the permission state to everyone else.
 
-**Plans:** 0 plans
+**Plans:** 25 plans (wave 1 pairs the records with the pure modules; then one per wave)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 22 to break down)
+**Wave 1**
+- [ ] 22-01-PLAN.md — Record the 22-UI-SPEC's extensions X-74 to X-80 in the design direction (orchestrator constraint; D-25), the glossary entries "Admin (role)" and "Retired (Risk Type, list entry)" (D-25) and the dated 
+- [ ] 22-02-PLAN.md — Build, RED first, the pure modules D-28 puts beside the records: the five setting parsers and defaults with their constraints (D-10, D-13 to D-17), the round criteria snapshot (D-11), the list and req
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 22-03-PLAN.md — Apply the schema changes the pilot approved (D-01; records 2 and 3) and prove them on a fresh boot with existing rows unchanged; prove the four new types are hidden and unwritable from the Content Man
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 22-04-PLAN.md — Add `role.admin` to both catalogue copies and re-grant the eight Administration Functions (D-02): reads to both roles, writes moved into four Admin-only manage Functions. Split the policy's Administra
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 22-05-PLAN.md — Build the settings store (D-10): rows parsed at boot into one in-memory store that a committed change replaces; the change log's one writer (D-12); and the configuration read and write operations (D-0
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 22-06-PLAN.md — Point every configuration point's getter at the 22-05 store (D-10), keeping each explicit argument: the scale's bands and descriptions (D-13), the appetite with its new `treatmentExpected` and the nar
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 22-07-PLAN.md — Write the round criteria snapshot at "Submit final assessment" and evaluate every act and read of the round under it (D-11; D-01 item 6; 22-RESEARCH §3), keep everything between rounds on the current 
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 22-08-PLAN.md — Record a change row for every Admin create, update and import apply of reference data (D-06, D-12), add the Information Asset owner to the write, reads and export (D-21; closes UAT-053's remaining hal
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 22-09-PLAN.md — Serve Risk Type retirement and reinstatement (D-03 group 3) in `function.administration.risk_types_manage_api`, add the list's status filter and the picker's active-only offer, refuse a new choice of 
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 22-10-PLAN.md — Serve the two-level list (D-03 group 2) in `function.configuration.request_lists_api`: the Admin's read with retired entries and use counts, and add, rename, reorder, retire and reinstate with the div
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 22-11-PLAN.md — Build D-08's role-change recording as a document middleware (22-RESEARCH §1): a database diff before and after each user or role write, one `role-assignment` change row per affected user in the same t
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 22-12-PLAN.md — Serve the role holders read and export (D-07; D-03 group 5) and the change log read and export (D-12; D-03 group 6) through the endpoint chain with `function.access_review.role_holders_api` and `funct
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 22-13-PLAN.md — Serve shared-view governance (D-20; D-03 group 7) in `function.saved_views.governance_api`: list every shared view, rename, unshare with its restore, and transfer with its reverse, each a change row (
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 22-14-PLAN.md — Serve the two manual starts (G-20; D-22; D-03 group 8) in `function.generation.manual_start_api`, human Security Analyst only: the availability decision (policy refusal, a failed or interrupted latest
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 22-15-PLAN.md — Serve the manual start's reads (D-03 item 8; D-22, D-23): the jobs read's `aiPolicy.manualStart` per kind and viewer, and the analyst questionnaire and assessment `generation.manualStart` facts, with 
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 22-16-PLAN.md — Conclude the service agent's role review (D-09): withdraw every explicit grant of `role.security_analyst_agent` in both catalogue copies, keep the explicit refusals as defence in depth, turn the matri
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 22-17-PLAN.md — Add the Admin persona (D-26) in 17-02's and 17.1-17's shape: the development seed with the Admin role, the fixed Keycloak fixture subject and the matching realm user changed together, the README rows,
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 22-18-PLAN.md — Split `administration:manage` into the four capabilities of D-24 with their anchors, give the Admin a navigation profile (UI-SPEC §1.1), gate the reference routes on read versus manage with the permis
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 22-19-PLAN.md — Build the access review screens on 22-12's reads: Role holders (D-07; X-79; UI-SPEC §9) and the Change log with its details sheet (D-12; X-78; UI-SPEC §10), the reusable history sheet (X-29), both exp
+
+**Wave 19** *(blocked on Wave 18 completion)*
+- [ ] 22-20-PLAN.md — Build the configuration index and the five setting pages on 22-05's operations (D-10, D-13 to D-17, D-24, D-25; UI-SPEC §5, §6): X-74's editor and confirmation, X-56's conflict, the invalid summary, R
+
+**Wave 20** *(blocked on Wave 19 completion)*
+- [ ] 22-21-PLAN.md — Build the divisions and business units page on 22-10's operations (D-19; X-76, X-77; UI-SPEC §7.1, §7.2) and turn the request form's division and business unit into selects from the served form metada
+
+**Wave 21** *(blocked on Wave 20 completion)*
+- [ ] 22-22-PLAN.md — Complete the reference data screens for the Admin (D-06, D-18, D-21; UI-SPEC §4): the Show control, retire and reinstate with Undo, the asset owner, History and plain usage; mark retired Risk Types in
+
+**Wave 22** *(blocked on Wave 21 completion)*
+- [ ] 22-23-PLAN.md — Build the shared views page on 22-13's operations (D-20; UI-SPEC §8): the table with its owner notes and filter, rename, stop sharing and transfer with exact Undo, and family AA3's view rows, with the
+
+**Wave 23** *(blocked on Wave 22 completion)*
+- [ ] 22-24-PLAN.md — Build the manual start in the generation cards (G-20; D-22; X-80; UI-SPEC §11.1, §11.2) on 22-14's operations and 22-15's served state, the analyst's provenance header for a manually started record (D
+
+**Wave 24** *(blocked on Wave 23 completion)*
+- [ ] 22-25-PLAN.md — Write the phase spec `apps/csrm/e2e/admin-configuration.spec.ts` (D-27) proving SC1 to SC4 and G-20 at 1440 and 375 with axe, each change restored in its own teardown; add the configuration page to th
 
 ### Next-wave coverage
 
