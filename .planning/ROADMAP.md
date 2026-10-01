@@ -341,10 +341,63 @@ Plans:
 4. The analyst replies with a note the Requestor sees; each note shows its author and local time, and another Requestor cannot read it.
 5. A note can be marked "changes the AI inputs", which Phases 12, 15 and 16 read.
 
-**Plans:** 0 plans
+**Plans:** 19 plans (wave 1 pairs the two contract records; then one per wave, serialised by the spec, catalogue, matrix and test build)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 13 to break down)
+**Wave 1**
+- [ ] 13-01-PLAN.md — Record the 13-UI-SPEC's extensions X-15 to X-18 in the design direction (orchestrator constraint: before any implementing task; D-34). Write `docs/contract-gaps/phase-13-request-assignment.md` in the 
+- [ ] 13-02-PLAN.md — Write `docs/contract-gaps/phase-13-request-notes.md` in the format of the 06.1 and 06.8 records (D-01 item 2), carrying the note `sequence` and the read state's `lastReadSequence` (Orchestrator Confir
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 13-03-PLAN.md — Add the four approved request attributes (D-01 item 1), extract the per-request lock (13-RESEARCH §E), and serve `PUT /api/v1/assessment_requests/{requestId}/assignee` with its eligibility, G-1 and ch
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 13-04-PLAN.md — Serve the eligible-analyst read end to end (D-06), add the web's assignment Server Actions with refusal family K and a transport that keeps a 403's reason, and add the assignment projection to the req
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 13-05-PLAN.md — Create the two approved content types (D-01 item 2) and serve `GET` and `POST /api/v1/assessment_requests/{requestId}/notes` and `POST …/notes/read` with the window, the readers, the unread rule, the 
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 13-06-PLAN.md — Serve the AI-input mark end to end (D-26), add the notes summary to the request read (D-24, D-25), and add the two refusals on existing operations (D-03 item 13): the request delete with notes (D-21) 
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 13-07-PLAN.md — Seed and offer a second human Security Analyst persona for development and E2E only (D-31), with no Keycloak fixture subject, and prove the sign-in at both widths.
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 13-08-PLAN.md — Widen the generation-job reads and retries to every human analyst who may read the request, change `canRetry`'s meaning, attribute a retry to the retrying analyst, project the initiator's name, declar
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 13-09-PLAN.md — Build the X-15 assignee control on the analyst's request page: the Assignment section with its states, optimistic actions, Undo toasts, rollback and focus (D-05, D-16; UI-SPEC §5.2, §7), the picker wi
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 13-10-PLAN.md — Build the X-16 notes thread and composer on both request pages with the X-17 unread marker, optimistic posting, mark-read on view, the closed and empty states, earlier notes and the hub's `Notes` figu
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 13-11-PLAN.md — Add the X-18 AI-input switch and composer checkbox for analysts (D-26; UI-SPEC §10.1, §10.4) and the no-lost-input behaviour: session-kept composer text, the beforeunload guard and the unsent-text wel
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 13-12-PLAN.md — Extend the review queue contract and SQL with the `open` bucket, the `assignee` and `notes` filters and three item fields (D-13, D-24), and the Requests page with the `Assigned to` column, row and car
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 13-13-PLAN.md — Add the `Assigned to me` view and its navigation item and count, change the `Requests` count's meaning (D-14), and add the assignee to quick find's line 2 (D-13); change the existing navigation and qu
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 13-14-PLAN.md — Add the per-viewer counts to the dashboard summary (D-15) and recompose the analyst Home's tile 1 and Review queue widget (UI-SPEC §3), changing the existing assertions deliberately (U1, E1).
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 13-15-PLAN.md — Name the assignee in the Requestor-facing holder sentences (D-17), add the assignee name, the unread count and the notes filter to My requests and the unread total to the status summary (D-17, D-24), 
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 13-16-PLAN.md — Build Phase 12's notes extension point (D-27): load the marked notes, render each as a delimited untrusted block, bound them, and record them in a v2 context summary that the run read and its web pars
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 13-17-PLAN.md — Implement D-29's "AI inputs changed" signal in one module and serve it on the analyst's request read and in the `generation` block of the questionnaire and assessment reads; add the assignee and the n
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 13-18-PLAN.md — Render D-29's signal in Phase 12's provenance header and the hub's generation cards (UI-SPEC §10.2), the notes group of the "What the AI used" sheet (§10.3), and the assignee and notes lines under the
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 13-19-PLAN.md — Run the full gate on the production build with the static checks, have the orchestrator walk the four actors in the browser at 375 and 1440, and record the evidence and the coverage of every requireme
 
 ### Phase 14: Request attachments
 

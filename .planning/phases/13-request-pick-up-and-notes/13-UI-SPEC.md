@@ -501,6 +501,7 @@ If the window closed (D-22) while text was unsent (a `NOTES_CLOSED` refusal, or 
 | Reason | Copy | Kind |
 |---|---|---|
 | `NOTES_CLOSED` | `Notes are closed on this request now, so your note wasn’t added. Your text is kept below.` | blocked (§9.4) |
+| `NOTES_LIMIT_REACHED` (added on 2026-10-01 during planning, plan 13-05) | `This request has reached its limit of 500 notes, so your note wasn’t added.` | blocked (a field error; the text stays in the composer) |
 | 400 (length or empty) | §8.3's validation copy | field |
 | 404 | The request page's not-found state on refresh | blocked |
 | 403 | `You can’t add notes to this request.` | blocked |
@@ -558,6 +559,7 @@ The switch flips at once at the pending opacity and rolls back on failure. Focus
 | `OWN_REQUEST` | `A Security Analyst can’t change the AI inputs of a request they raised.` | blocked |
 | 403 | `You can’t change the AI inputs on this request.` | blocked |
 | 404 | `This note is no longer available. Refresh the page.` | blocked |
+| 409 (`NOTES_CLOSED`, `HISTORY_UNAVAILABLE` or unknown; added on 2026-10-01 during planning, plan 13-06) | `This note’s mark can’t change now. Refresh the page.` | blocked |
 | Network, timeout or 5xx | `We couldn’t change the mark. Try again.` | retryable |
 
 ---
