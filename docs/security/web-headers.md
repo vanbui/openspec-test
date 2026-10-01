@@ -35,7 +35,7 @@ default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-sr
 | `script-src` | `'self' 'nonce-<nonce>' 'strict-dynamic'` | A script runs only if it carries this request's nonce, and `'strict-dynamic'` extends that trust to the chunks Next's nonce-bearing scripts load. An injected inline script, event-handler attribute or `javascript:` URL has no nonce and is blocked, and so is `eval`. CSP Level 3 browsers ignore `'self'` alongside `'strict-dynamic'`; it is kept as the fallback for older ones. |
 | `style-src` | `'self' 'unsafe-inline'` | Inline styles are allowed; see residual 1. |
 | `img-src` | `'self' data: blob:` | The logo and icons are same-origin, CSS and components use `data:` images, and `blob:` covers object URLs. No image loads from another origin, so CSS cannot send data to a foreign host through an image request. |
-| `font-src` | `'self'` | `next/font/google` downloads the three families at build time and serves them from `/_next/static/media`, so the browser never contacts Google. |
+| `font-src` | `'self'` | The three families are self-hosted from `apps/csrm/app/fonts/` through `next/font/local` (G-10) and served from `/_next/static/media`, so neither the build nor the browser contacts a font host. |
 | `connect-src` | `'self'` | The browser talks only to the web origin (client-side navigations and Server Actions). It never calls Strapi, whose API token stays on the server. |
 | `object-src` | `'none'` | No plugins. |
 | `base-uri` | `'self'` | An injected `<base>` cannot re-point relative URLs. |

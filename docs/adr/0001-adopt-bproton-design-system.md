@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-24
+- **Amended:** 2026-10-02 (G-10: the three families are self-hosted)
 - **Supersedes:** the Phase 06.5 scope decision "The cool neutral scale, Inter, and the existing accent all stand" (`.planning/ROADMAP.md`, Phase 06.5), and the rejections in `docs/design/csrm-design-direction.md` §2 revision of 2026-08-29.
 - **Source of truth:** BProton design system, https://claude.ai/artifact/QaGDSeesQHocAe3yvoGpAx (`project/README.md`, `project/tokens.json`, `project/assets/Logos/README.md`; synced from `dthbui/bproton-website-v2@2383fbe` on 2026-09-20).
 
@@ -20,7 +21,7 @@ CSRM adopts the BProton design system. Every value the system defines is used ex
 ### Adopted as defined
 
 - Colour: `background`, `foreground`, `card`, `muted`, `muted-foreground`, `border`, `accent`, `accent-foreground`, `surface-dark`, `surface-dark-muted`, `selection`, and the ink and on-dark alpha tokens.
-- Type families: Plus Jakarta Sans (`--font-sans`), Instrument Serif 400 (`--font-display`), IBM Plex Mono 400/500 (`--font-mono`), loaded with `next/font/google`.
+- Type families: Plus Jakarta Sans (`--font-sans`), Instrument Serif 400 (`--font-display`), IBM Plex Mono 400/500 (`--font-mono`), loaded with `next/font/google`. Since 2026-10-02 they are self-hosted through `next/font/local` (see the amendment below).
 - Radius `sm`, `md`, `2xl`, `full`; shadows `shadow-button*`; easings `ease-out-expo`, `ease-out-soft`; spacing `grid-max`, `container-max`, `gutter-*`, `header-h-*`.
 - The logo file and the header lockup: `foreground` tile, `radius-md`, 6px padding around a 20px mark, then "BProton" in `wordmark`. The same file is the favicon.
 - Pill buttons, hover that lifts rather than recolours, borders instead of shadows, the scrolled-header treatment.
@@ -55,3 +56,13 @@ CSRM adopts the BProton design system. Every value the system defines is used ex
 - Phase UI specifications stay deferential: their font rows now point at the direction document instead of naming Inter.
 - The phrase "one blue accent" disappears from the product vocabulary. Blue now means *info status* only.
 - The loaded Plus Jakarta Sans exposes tabular figures (`tnum`), verified in the browser on 2026-09-24, so numeric columns stay in the sans face.
+
+## Amendment 2026-10-02: self-hosted families (G-10)
+
+- **Decision source:** `.planning/NEXT-WAVE-DECISIONS.md` G-10, built by quick task 261002-2y8. It closes R-08-24.
+- **What changed:** the loader only. The families, weights, normal style, swap display and CSS variables are unchanged, and no design value changes.
+- **Why:** R-08-24. The Google loader fetched the families from Google Fonts on every build and dev compile, and failed builds four times (2026-09-25 and 2026-09-26).
+- **Provenance:** the three @fontsource 5.3.0 packages from the npm registry (Plus Jakarta Sans 2.071, Instrument Serif 1.000, IBM Plex Mono 2.3), copied byte-identical into `apps/csrm/app/fonts/`. Its README records every file's SHA-256 and each tarball's integrity. No dependency is added.
+- **Licence:** SIL Open Font License 1.1. The licence text sits beside the files.
+- **Coverage:** latin is preloaded. latin-ext is downloaded on demand by `unicode-range`, through a companion face listed first in each font token, because `next/font/local` sets preload and descriptors per call, not per file. Cyrillic and vietnamese are not shipped.
+- **Fallback metrics:** the same local fallback fonts as before (Arial for Plus Jakarta Sans and IBM Plex Mono, Times New Roman for Instrument Serif). The metrics are now computed from the files and sit within 0.1-3% of the Google values.

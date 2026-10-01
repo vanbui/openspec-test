@@ -213,7 +213,7 @@ Tokens live under `--spacing-*` so they generate `max-w-grid-max`, `px-gutter-sm
 
 ### 3.10 Type scale (Plus Jakarta Sans, Instrument Serif, IBM Plex Mono; weights 400/500/600 only)
 
-Families, loaded with `next/font/google` in the root layout:
+Families, self-hosted from `apps/csrm/app/fonts/` and loaded with `next/font/local` in the root layout (ADR 0001, amendment of 2026-10-02):
 
 - `--font-sans`: Plus Jakarta Sans 400/500/600. All UI text, data and numbers.
 - `--font-display`: Instrument Serif 400. Page titles and the wordmark only; never below 20px, never for data or numbers. Italic is not used.
