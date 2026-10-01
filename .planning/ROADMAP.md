@@ -772,10 +772,61 @@ Plans:
 4. Released and Requestor views are read-only but copyable, and rows import from and export to CSV and XLSX.
 5. 150 risks scroll and edit without visible lag at 1440px, and phones show a card list.
 
-**Plans:** 0 plans
+**Plans:** 19 plans (waves 1 and 2 pair independent work; then one per wave, serialised by the contract files, the Strapi build and Playwright)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 18 to break down)
+**Wave 1**
+- [ ] 18-01-PLAN.md — Record the 18-UI-SPEC's extensions X-53 to X-61 in the design direction before any implementing task (orchestrator constraint, D-28), with the UI-SPEC's orchestrator amendments 1 and 3 applied, and th
+- [ ] 18-02-PLAN.md — Build, RED first, the pure modules D-30 places beside the records: the scale reading and the rating write rules in Phase 12's `risk-scale.ts` (D-20, D-21, D-22), per-cell compare-and-set and the bulk 
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 18-03-PLAN.md — Build the risk table's grid on the installed TanStack Table 9.2.4 as the DataTable's grid mode (D-04's lean, research Answer 1), with the APG keymap (D-17), the unsaved change set with undo and redo h
+- [ ] 18-04-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 to 17 files, because the contract chain (the specification, both catalogue copies, served operations, the matrix) or the grid's editors and their tests change
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 18-05-PLAN.md — Put the grid of 18-03 on the real Risks route (D-06) with the X-58 local navigation and the server's mode (18-04), and run decision 7's measured spike (D-04): axe and a scripted APG walk in both modes
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 18-06-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 to 17 files, because the contract chain (the specification, both catalogue copies, served operations, the matrix) or the grid's editors and their tests change
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 18-07-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 to 17 files, because the contract chain (the specification, both catalogue copies, served operations, the matrix) or the grid's editors and their tests change
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 18-08-PLAN.md — Build the risk import (D-23) and the current-view export (D-24) as Strapi services on Phase 19's reader, header matching, converters, writers, export pipeline and event log, and Phase 14's reader exte
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 18-09-PLAN.md — Serve 18-08's import and export through the endpoint chain (D-02): five operations, two Functions in both catalogue copies, `HUMAN_ANALYST_ONLY_OPERATIONS`, the export in `SERVICE_IDENTITY_REFUSED_OPE
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 18-10-PLAN.md — Serve `CsrmSavedView` (18-04's type) through four operations (D-09) with ownership, sharing, uniqueness and bounds, a strict write parser and a fail-safe read (18-02), and the one sharing decision Pha
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 18-11-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 to 17 files, because the contract chain (the specification, both catalogue copies, served operations, the matrix) or the grid's editors and their tests change
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 18-12-PLAN.md — Scope note (orchestrator, 2026-10-01): four executable tasks at the scope limit; each extends the previous one in the same clipboard module, and the pilot's pacing rule (planner-context) accepts this.
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 18-13-PLAN.md — Build copy (D-18) with Phase 19's neutraliser (Orchestrator Confirmation) and paste (D-19) with mapping, the web mirror of the converters (parity over 18-02's fixture), the X-55 preview with its apply
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 18-14-PLAN.md — Mirror 18-02's filter-and-sort module in the web with a parity test (D-08), build the toolbar's search, `Show`, column menus, filter popovers and chips, sort and the address (D-08), the grid's column 
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 18-15-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 to 17 files, because the contract chain (the specification, both catalogue copies, served operations, the matrix) or the grid's editors and their tests change
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 18-16-PLAN.md — Move every existing spec that drives a per-risk card to the Risks route and the detail sheet (D-06, D-29), through one shared helper, while the Overview still shows its cards, so 18-17 can remove them
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 18-17-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 to 17 files, because the contract chain (the specification, both catalogue copies, served operations, the matrix) or the grid's editors and their tests change
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 18-18-PLAN.md — Present the read-only modes from the server's mode (D-05) with their banners; give every participant the read-only, copyable grid of their projection above Phase 17's cards (D-05, D-06, D-07, UI-D17);
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 18-19-PLAN.md — Build the risk import route on Phase 19's five steps (D-23) and the table's Export through 19-06's dialog with the current view (D-24), the keyboard shortcuts dialog (D-17), SC4's CSV and XLSX round t
 
 ### Phase 19: CSV export and import hardening
 
