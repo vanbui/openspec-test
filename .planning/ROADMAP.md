@@ -633,10 +633,63 @@ API for participant reads, owner nomination, response submission and residual pr
 5. An unrelated Requestor gets the refusal a missing record gets for the assessment, its risks, control implementations and responses, at every stage, in the API and the UI; each participant is told in the app when the response waits or arrives.
 6. Playwright, first slice of the post-demo journey: a Requestor raises a request; the analyst assesses it, nominates a different first-line risk owner for two of its risks (the two that owner later accepts and treats in Phase 17.1's slice) and releases it for response; the Requestor and that owner view it and respond; an unrelated Requestor is refused at each step, in the UI and the API.
 
-**Plans:** 0 plans
+**Plans:** 19 plans (wave 1 pairs the contract records with the development persona; then one per wave, serialised by the spec, the catalogues, the matrix and Playwright)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 17 to break down)
+**Wave 1**
+- [ ] 17-01-PLAN.md — Record the 17-UI-SPEC's extensions X-36 to X-41 in the design direction (orchestrator constraint, D-71) and add the "Response round" and "Participant" glossary entries (D-73), both before any implemen
+- [ ] 17-02-PLAN.md — Scope note (orchestrator, 2026-10-01): 16 files, because the risk-owner persona and the unrelated Requestor touch the development seed, the fixture subjects (ADR 0004), the realm import, the sign-in f
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 17-03-PLAN.md — Create the approved schema (D-01): the three new types and the private gate pair (D-11), proven on a fresh boot with legacy assessments unchanged (D-05, D-23). Build the pure participation module (D-0
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 17-04-PLAN.md — Harden `GET /api/v1/users?search=` in place (D-52): two to 100 characters, no other parameter, at most 20 eligible people through Phase 19.1's `isEligiblePerson` with a set-level form (D-16), two fiel
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 17-05-PLAN.md — Serve owner nomination (D-17): the batch operation and the risk update's `riskOwner`, with one validation (D-16, D-20): eligible people only through Phase 19.1's `isEligiblePerson`, never the request'
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 17-06-PLAN.md — Add G-11's owner rule to Phase 16's one editable guard (D-18, D-45), keep `isAssessmentEditable` record-level, extend Phase 13's assignment rules (assignee eligibility excludes named owners; assignmen
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 17-07-PLAN.md — Widen the existing Requestor branches of the detail, risks and control-implementation reads to the participant predicate (D-22, D-23, D-27), with the participant projection and the `beingPrepared` mas
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 17-08-PLAN.md — Move "My risk assessments" and its rating summary from the owner filter onto a repository over the participant SQL predicate (D-28), with the stage, parts, round and awaited flag per item and closed f
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 17-09-PLAN.md — Serve "Release for response" and "Close round {n}" (D-09, D-12, D-13) to the assigned analyst only, with release-for-response readiness (D-10), the gate pair on the first round (D-11), one requested r
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 17-10-PLAN.md — Add the response step to the published lifecycle with the `skipped` state (D-07; X-41), the `participants` holder (D-08) in the pure rule, the My requests SQL and `byHolder`, the next-action sentences
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 17-11-PLAN.md — Serve the participant's own response (D-31 to D-35, D-37): read, save and submit, with the draft envelope parser and completeness rules as a pure module, the participation rule per item (D-32), items 
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 17-12-PLAN.md — Add D-57's two kinds to Phase 19.1's registry (`response-requested`, `response-submitted`) and the part `risk-owner`, with their facts, sentences and destinations (17-UI-SPEC §12), readability through
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 17-13-PLAN.md — Serve the response decisions batch (D-38): accept a proposed control into a library control through the existing control-implementation creation path, accept a proposed owner under the nomination rule
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 17-14-PLAN.md — Serve "Reassess residual risk" (D-46) as a new operation on Phase 16's risk proposal job family and Phase 15's registry (D-47), with a run per provider call, the AI data policy at enqueue and executio
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 17-15-PLAN.md — Build the analyst's side of the response stage in the editor (D-69): the Participants section and the nomination sheet with the X-40 person picker (D-17, D-55), release-for-response readiness and its 
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 17-16-PLAN.md — Build the analyst's decisions and the reassessment in the editor: the Responses section under each risk (D-36; X-38), the add form, reject row and group reject with Undo and rollback (D-38, D-39; UI-D
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 17-17-PLAN.md — Make the participant page stage-aware (D-25, D-27, D-69; 17-UI-SPEC §6), add the participant form of the round panel and the response form with autosave, the phone sheet and submission (D-31 to D-35; 
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 17-18-PLAN.md — Build the list and landing surfaces of the participant read (D-28): "My risk assessments" with stage, part, filters and empty states (17-UI-SPEC §14.1), the sidebar count of awaited responses (§14.2; 
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 17-19-PLAN.md — Create `apps/csrm/e2e/risk-owner-journey.spec.ts` with its first slice (D-76; SC6; orchestrator constraint), its negative-case and Strapi API helpers, and the mobile project entry; write `response-sta
 
 ### Phase 17.1: Review, peer approval and risk acceptance (INSERTED)
 
