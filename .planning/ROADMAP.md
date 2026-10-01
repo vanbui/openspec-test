@@ -216,8 +216,8 @@ Plans:
 **Closes:** UAT-013, UAT-014
 **Intent:** F2, A1, A2, R2
 **Decisions:** one accountable assignee: analysts self-assign or any analyst assigns, editing is not exclusive, and reassignment is recorded (#10); an analyst cannot be assigned a request they raised (G-1); both actors add notes from submission until closure; a note can mark the AI inputs as changed.
-**Contract and datamodel:** an assignee relation on the request and a note entity: contract-gap records first, then an approval checkpoint; API for assign, release, note create and list with exact grants and record-level checks. Security note O-5 is settled by G-1 (separation of duties).
-**Size:** M
+**Contract and datamodel:** an assignee relation on the request and a note entity with per-person read state: `docs/contract-gaps/phase-13-request-assignment.md` and `docs/contract-gaps/phase-13-request-notes.md` first, then an approval checkpoint; API for pick up, assign, reassign and unassign (one compare-and-set operation), the eligible-analyst read, note create and list, mark read, and the analyst's "changes the AI inputs" mark, with exact grants and record-level checks. Security note O-5 is settled by G-1 (separation of duties). One `assertAssignedAnalyst` predicate serves Phase 17.1's submit, recall, and release and close.
+**Size:** L (was M: the read state, the eligible-analyst read and the AI-input mark join assignment and notes)
 
 **Success Criteria:**
 
