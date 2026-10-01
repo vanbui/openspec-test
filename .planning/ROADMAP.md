@@ -268,7 +268,7 @@ Plans:
 **Closes:** UAT-017, UAT-018
 **Intent:** F4, A2 (Phase 9 workflow)
 **Decisions:** re-runs propose additions and changes to unanswered questions only, and analyst edits change only through an accepted proposal (#4, reversing the pre-06.2 rule that regeneration is refused once any answer exists); analyst instructions are trusted but bounded, in their own slot, logged in the run record, never holding Requestor text (#5).
-**Contract and datamodel:** API (a questionnaire proposal operation and job with exact grants); uses Phase 12's run record.
+**Contract and datamodel:** API only, with exact grants: starting a questionnaire-wide proposal and a question rewrite (both jobs), the proposal job read and retry, the proposals read, and the questionnaire's proposal decisions, plus an optional analyst instruction on questionnaire generation and two new refusals on its replacement path. Proposals live in Phase 12's run record, so there is no content-type change. Two approved records change by dated amendments, `docs/contract-gaps/phase-12-ai-run-record-and-provenance.md` and `docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md`, followed by an approval checkpoint (G-6) before any code writes the new shapes.
 **Size:** M
 
 **Success Criteria:**
