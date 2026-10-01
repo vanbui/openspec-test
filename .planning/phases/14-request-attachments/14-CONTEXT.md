@@ -650,6 +650,10 @@ The AI never decides what it reads: only a human Security Analyst's recorded opt
 - **UI-SPEC UI-D1 (accepted):** visible copy says "file"; "attachment" stays the record and API term, and a Phase 14 plan adds the glossary entry.
 - **UI-SPEC UI-D14 (accepted):** attachment state badges are neutral, each state told apart by its text and icon, with refusal copy that says what to do next.
 - **X-22 extends Phase 13's X-18:** execution order records X-18 first.
+- **Research settled (14-RESEARCH):** a 25 MiB download works as a Server Action return; text extraction uses `unpdf` for PDF, the shared `read-excel-file` for XLSX, and CSRM's own ZIP and Office-text reader for DOCX and PPTX, with no `file-type` dependency. Each new dependency is justified in the plan that installs it.
+- **Shared modules this phase builds for Phase 19:** `csrm/files/zip-archive.ts`, `csrm/spreadsheets/xlsx-reader.ts`, `csrm/audit/security-event-log.ts`, and the web's `lib/files/file-response` and `save-file` helpers. Phase 19 reuses them.
+- **ISM-2059 (scan before storage) and D-13 (confirmed):** D-13 stands. When the scanner is down, a file waits in private, isolated quarantine. It is never served, extracted or offered to the AI until a scan passes, which is the compensating control. A Phase 14 plan task records the clash as a residual in `docs/security/phase-08-residual-risks.md`, with a second residual for per-path body limits at the reverse proxy (under R-08-04).
+- **HTTP 422 for malware found (accepted):** the 422 carries a closed reason. It is documented in the contract-gap record, and the web transport keeps the reason, with a test.
 - **For the research and the plans to verify:** UI-SPEC UI-D3, UI-D5 and UI-D30, and the UI-SPEC's "Research to verify" list, including that a client provider in the `(app)` layout keeps `File` objects across in-app navigation.
 
 ---

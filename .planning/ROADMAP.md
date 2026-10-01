@@ -519,7 +519,7 @@ Plans:
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** NOTIFY-01
-**Depends on:** Phases 11 (the header and Home) and 13 (assignment and notes, two of its events); it runs after Phase 19 and before Phase 17
+**Depends on:** Phases 11 (the header and Home), 13 (assignment and notes, two of its events) and 19 (its check that refuses service identities); it runs after Phase 19 and before Phase 17
 **Closes:** no UAT finding of its own (NOTIFY-01 traces to UAT-025, which Phase 17 closes)
 **Intent:** F8, A1, PD-1 (decision 18, G-18)
 **Decisions:** one notification per recipient per event, written in the same transaction as its event through one notification service, and never for the person who acted, a service identity or an inactive user; nobody is told about a record they may not read, checked whenever the list and the count are read; the server words each notification and gives its destination at read time, storing no titles; per-person read state, cleared by opening, "Mark as read", "Mark all as read" or acting on the work; a header control with the unread count, a panel and a Notifications page, with no polling; channel-neutral, so Phase 20 adds email delivery without changing the entity; never deleted, following the request's retention (decision 18, G-18; the decisions Phase 17's discussion recorded as its D-56 to D-63). Its first kinds are the events that exist before Phase 17: assignment (Phase 13), questionnaire released and submitted, assessment released, and new notes (Phase 13). Phases 17, 17.1, 17.2 and 20 add theirs without a schema change. Inserted 2026-10-01 (`NEXT-WAVE-DECISIONS.md`, G-19), because the notification centre pushed Phase 17 beyond size L.
