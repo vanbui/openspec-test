@@ -5,7 +5,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
  * dashboard). Plan 09 adds the cross-screen analyst journey, which also opens every report, and one
  * denial matrix across every Phase 7 route for both Requestor identities.
  *
- * The fixture keys are duplicated by value from apps/strapi/src/bootstrap/seed-analyst-insights.ts,
+ * The fixture keys are duplicated by value from apps/backend/src/bootstrap/seed-analyst-insights.ts,
  * which reconciles them with boot-relative dates on every Strapi boot. Other specs create records
  * during a run, so these proofs assert fixture membership, actor-correct links and denial, and
  * never a global total (D-24).

@@ -1,14 +1,14 @@
 # Strapi HTTP hardening (Phase 8)
 
 - **Date:** 2026-09-25; the CORS section was revised on 2026-09-26 after the phase security audit (R-08-11)
-- **Scope:** the HTTP surface of the Strapi API process (`apps/strapi`, Strapi 5.51.0). The admin panel is out of scope (Phase 8 decision D-39); the web application's headers are D-19, recorded by plan 08-10 in `docs/security/web-headers.md`.
+- **Scope:** the HTTP surface of the Strapi API process (`apps/backend`, Strapi 5.51.0). The admin panel is out of scope (Phase 8 decision D-39); the web application's headers are D-19, recorded by plan 08-10 in `docs/security/web-headers.md`.
 - **Decisions:** D-20 (review the security middleware; prove the safe error envelope) and D-39 (remove `strapi::poweredBy`; keep `strapi::security` at its defaults, each documented with its reason). D-39 names the phase security record; this document is its Strapi section.
 - **Threats:** T-08-05-03 (stack or internal message in a 500), T-08-05-04 (`X-Powered-By`), T-08-05-05 (sensitive data in server logs), T-08-05-08 (clickjacking of API responses, accepted).
-- **Evidence:** every header value below was observed on a mounted Strapi through the integration test harness (`apps/strapi/tests/helpers/strapi-http-harness.ts`) after the change, on a 200, a 403, a 401, a 404 and a forced 500; the proofs are named under each section.
+- **Evidence:** every header value below was observed on a mounted Strapi through the integration test harness (`apps/backend/tests/helpers/strapi-http-harness.ts`) after the change, on a 200, a 403, a 401, a 404 and a forced 500; the proofs are named under each section.
 
 ## Middleware order as configured
 
-`apps/strapi/config/middlewares.ts`, outermost first:
+`apps/backend/config/middlewares.ts`, outermost first:
 
 | # | Middleware | Role here |
 |---|------------|-----------|
@@ -21,7 +21,7 @@
 | 7 | `strapi::body` | koa-body 6.0.1 with the limits below (see Body limits). |
 | 8 | `strapi::session` | koa-session: signed, `httpOnly`, `secure` when `NODE_ENV=production`. The CSRM routes authenticate with the API token and never read it. |
 | 9 | `strapi::favicon` | Serves the favicon. |
-| 10 | `strapi::public` | Serves `apps/strapi/public`: `robots.txt` and the local upload directory, which is empty (CSRM stores no uploads; file-upload questions are deferred). |
+| 10 | `strapi::public` | Serves `apps/backend/public`: `robots.txt` and the local upload directory, which is empty (CSRM stores no uploads; file-upload questions are deferred). |
 
 `strapi::poweredBy` was the sixth entry until this plan and is removed (see X-Powered-By).
 
@@ -46,12 +46,12 @@ Strapi 5.51.0 passes this configuration to helmet (`@strapi/core/dist/middleware
 | `xPermittedCrossDomainPolicies` (helmet default) | `none` | `X-Permitted-Cross-Domain-Policies: none` | Harmless legacy default. |
 | `xPoweredBy` (helmet default) | on | removes `X-Powered-By` | helmet removes the header before the request reaches the inner middlewares, so it could never stop `strapi::poweredBy`, which set it again after the response was built. |
 
-The proof is `apps/strapi/tests/http-hardening.integration.test.ts` › "every response carries helmet's headers and never X-Powered-By": on a 200, a 403 and a forced 500 it asserts `X-Frame-Options: SAMEORIGIN`, the HSTS value above, `nosniff`, `no-referrer`, a CSP with `default-src 'self'` and `frame-ancestors 'self'` and without `upgrade-insecure-requests`, and the absence of COOP, COEP, CORP, `Origin-Agent-Cluster`, `X-XSS-Protection` and `X-Powered-By`. A change to any default fails it.
+The proof is `apps/backend/tests/http-hardening.integration.test.ts` › "every response carries helmet's headers and never X-Powered-By": on a 200, a 403 and a forced 500 it asserts `X-Frame-Options: SAMEORIGIN`, the HSTS value above, `nosniff`, `no-referrer`, a CSP with `default-src 'self'` and `frame-ancestors 'self'` and without `upgrade-insecure-requests`, and the absence of COOP, COEP, CORP, `Origin-Agent-Cluster`, `X-XSS-Protection` and `X-Powered-By`. A change to any default fails it.
 
 ## X-Powered-By (D-39, ASVS V14.3.3)
 
 - **Before:** `strapi::poweredBy` (`@strapi/core/dist/middlewares/powered-by.js`) set `X-Powered-By: Strapi <strapi.io>` after the inner middlewares returned, so it rode on every response that completed without a thrown error. It was observed on a 200, a 401 and a 404; a thrown policy 403 or 500 skipped it, and so did a CORS preflight. The RED run of `http-hardening.integration.test.ts` failed on the 200 (`X_POWERED_BY_SENT_200`, commit `62accfb`).
-- **After:** the entry is removed from `apps/strapi/config/middlewares.ts`. Nothing else sets the header (Koa sets none): the same test observes it absent on a 200, a 403 and a 500, and a probe through the same harness during this review saw it absent on a 401, a 404 and a preflight as well.
+- **After:** the entry is removed from `apps/backend/config/middlewares.ts`. Nothing else sets the header (Koa sets none): the same test observes it absent on a 200, a 403 and a 500, and a probe through the same harness during this review saw it absent on a 401, a 404 and a preflight as well.
 
 ## Error envelope (D-20, ASVS V7.4.1)
 
@@ -65,9 +65,9 @@ A handler's deliberate 4xx answer carries the message the handler chose. The har
 
 Proofs:
 
-- `apps/strapi/tests/http-hardening.integration.test.ts` › "a forced internal error answers the bare 500 envelope with no stack and no internal message". The harness installs a test-only middleware (D-38) inside `strapi::errors` that throws a plain `Error` carrying an internal detail for a request with `x-csrm-test-internal-error: 1`; the body deep-equals the envelope, carries no `stack` key at any depth and matches none of `injected`, `SQL` or a `file.js:line` frame. Without the header the same route answers 200, so the middleware is inert. Nothing test-only exists under `apps/strapi/src`.
+- `apps/backend/tests/http-hardening.integration.test.ts` › "a forced internal error answers the bare 500 envelope with no stack and no internal message". The harness installs a test-only middleware (D-38) inside `strapi::errors` that throws a plain `Error` carrying an internal detail for a request with `x-csrm-test-internal-error: 1`; the body deep-equals the envelope, carries no `stack` key at any depth and matches none of `injected`, `SQL` or a `file.js:line` frame. Without the header the same route answers 200, so the middleware is inert. Nothing test-only exists under `apps/backend/src`.
 - Same file › "a production error path answers the same bare envelope without test-only plumbing": the email plugin's send handler, given an empty body, throws inside a production code path and answers the identical envelope, with no provider detail.
-- `apps/strapi/tests/assessment-workflow.integration.test.ts` › "mounted explicit release is readiness-gated, atomic, and concurrent-safe": the injected failure of the release's second write answers the exact envelope (`FAILED_RELEASE_ENVELOPE_NOT_BARE`) and the release is rolled back.
+- `apps/backend/tests/assessment-workflow.integration.test.ts` › "mounted explicit release is readiness-gated, atomic, and concurrent-safe": the injected failure of the release's second write answers the exact envelope (`FAILED_RELEASE_ENVELOPE_NOT_BARE`) and the release is rolled back.
 
 ## Body limits (ASVS V12.1.1)
 
@@ -81,7 +81,7 @@ Proofs:
 | One multipart file | 50 MB (52,428,800 bytes) | `formidable.maxFileSize`; an oversize file is answered 413 |
 | All multipart files | 250 MB (262,144,000 bytes) | `formidable.maxTotalFileSize` |
 
-The CSV import routes, CSRM's only multipart consumers, enforce a tighter bound of their own: at most 5,242,880 bytes (5 MB), 5,000 rows and 65,536 bytes per record (`apps/strapi/src/api/csrm-administration/services/csv-import.ts`), answering 413 `IMPORT_LIMIT_EXCEEDED` above the byte limit. The upload plugin's `POST /api/upload` is the other multipart route; CSRM does not use it, and the authorization matrix records that only the API token reaches it.
+The CSV import routes, CSRM's only multipart consumers, enforce a tighter bound of their own: at most 5,242,880 bytes (5 MB), 5,000 rows and 65,536 bytes per record (`apps/backend/src/api/csrm-administration/services/csv-import.ts`), answering 413 `IMPORT_LIMIT_EXCEEDED` above the byte limit. The upload plugin's `POST /api/upload` is the other multipart route; CSRM does not use it, and the authorization matrix records that only the API token reaches it.
 
 ## CORS (restricted by default; R-08-11)
 
@@ -107,7 +107,7 @@ The phase security audit found what it missed. The same policy governs the admin
 
 No browser needs cross-origin access to Strapi. The web calls it server-side. The admin panel is served from Strapi's own origin, in development too, where `strapi develop` runs Vite as middleware on Strapi's own HTTP server.
 
-So `config/middlewares.ts` configures `strapi::cors` with an explicit origin list. The list is read from `CSRM_CORS_ALLOWED_ORIGINS` by `src/utils/cors-allowed-origins.ts`, and `apps/strapi/.env.example` documents the variable with an empty default. Every other `strapi::cors` setting keeps Strapi's default.
+So `config/middlewares.ts` configures `strapi::cors` with an explicit origin list. The list is read from `CSRM_CORS_ALLOWED_ORIGINS` by `src/utils/cors-allowed-origins.ts`, and `apps/backend/.env.example` documents the variable with an empty default. Every other `strapi::cors` setting keeps Strapi's default.
 
 | Request | Answer |
 |---------|--------|
@@ -123,13 +123,13 @@ Listing an origin is an operator decision, recorded as residual R-08-11. A liste
 
 ### Proofs
 
-- `apps/strapi/tests/http-hardening.integration.test.ts`, the default:
+- `apps/backend/tests/http-hardening.integration.test.ts`, the default:
   - › "a foreign origin is granted no cross-origin read of the content API or the admin access-token route". It checks an `/api` read (200), `POST /admin/access-token` (401 without the refresh cookie) and a preflight to each. None carries `Access-Control-Allow-Origin`, `-Credentials`, `-Methods` or `-Headers`.
   - › "the admin panel's same-origin requests are answered exactly as before". `GET /admin/init` and `POST /admin/access-token` return the same status and body whether or not they carry Strapi's own origin.
-- `apps/strapi/tests/cors-allowlist.integration.test.ts`, a harness booted with two origins, written with the spacing and trailing slash an operator might use:
+- `apps/backend/tests/cors-allowlist.integration.test.ts`, a harness booted with two origins, written with the spacing and trailing slash an operator might use:
   - each listed origin is granted on an `/api` read and on the access-token preflight (204, credentials, `POST` allowed, `Vary: Origin`);
   - these are granted nothing: a foreign origin, the `http` scheme, another port, a subdomain, a suffix lookalike and `null`.
-- `apps/strapi/tests/cors-allowed-origins.unit.test.ts` covers the parser's normalisation and refusals.
+- `apps/backend/tests/cors-allowed-origins.unit.test.ts` covers the parser's normalisation and refusals.
 - The test harness pins `CSRM_CORS_ALLOWED_ORIGINS`, empty unless a test sets it, so a developer's `.env` never reaches a test.
 
 Before the change, two tests failed on the echoed origin:
@@ -144,11 +144,11 @@ Observed by plan 08-03 on the mounted Strapi and recorded in its summary: any `/
 
 ## Plugin routes the API token reaches (recorded)
 
-`apps/strapi/tests/authorization-matrix.integration.test.ts` states an outcome for every route the users-permissions, upload, email, i18n and content-type-builder plugins keep mounted. A caller without the token is refused everywhere except the public users-permissions authentication routes, which refuse every request because no account exists. The full-access token holder can list, create (201) and delete users-permissions accounts, create users-permissions roles, and reach the email and upload handlers. This is the D-37 residual: the token never leaves the web server, and INT-02 replaces this surface.
+`apps/backend/tests/authorization-matrix.integration.test.ts` states an outcome for every route the users-permissions, upload, email, i18n and content-type-builder plugins keep mounted. A caller without the token is refused everywhere except the public users-permissions authentication routes, which refuse every request because no account exists. The full-access token holder can list, create (201) and delete users-permissions accounts, create users-permissions roles, and reach the email and upload handlers. This is the D-37 residual: the token never leaves the web server, and INT-02 replaces this surface.
 
 ## Logging review
 
-T-08-R10 and T-08-05-05, ASVS V7.1.1 and V7.1.2. Swept on 2026-09-25 with `grep -rn "strapi.log" apps/strapi/src` (and `console.*`, which has no hit). The sweep found thirteen call sites:
+T-08-R10 and T-08-05-05, ASVS V7.1.1 and V7.1.2. Swept on 2026-09-25 with `grep -rn "strapi.log" apps/backend/src` (and `console.*`, which has no hit). The sweep found thirteen call sites:
 
 | Call site | Level | What it writes | Request body, token or personal data? |
 |-----------|-------|----------------|---------------------------------------|

@@ -35,7 +35,7 @@ import { startAuthorizationHttpHarness, type AuthorizationHttpHarness } from "./
  * still fails when any status differs from its row (SR-07).
  */
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi, two more the repository root.
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend, two more the repository root.
 const strapiDir = path.resolve(__dirname, "..", "..", "..");
 const repositoryDir = path.resolve(strapiDir, "..", "..");
 const testsDir = path.join(strapiDir, "tests");

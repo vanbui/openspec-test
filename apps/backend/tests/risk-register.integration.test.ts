@@ -11,7 +11,7 @@ const harnessPromise = startAuthorizationHttpHarness();
 after(async () => (await harnessPromise).close());
 let fixtureSequence = 0;
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi,
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend,
 // two more resolve the repository root.
 const repositoryDir = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const specification = JSON.parse(

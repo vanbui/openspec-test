@@ -2,7 +2,7 @@
 
 ## Resolved contract record
 
-**Resolved:** The contract work was completed in `docs/references/specification.json` and the generated declaration was regenerated at `apps/web/src/lib/api/generated/schema.d.ts`. `GET /csrm-assessment-requests/{id}` now declares `data.relationships` with discriminated questionnaire and assessment availability unions, including bounded residual Risk counts. This record is retained as historical context; it no longer blocks Plan 06.4-04.
+**Resolved:** The contract work was completed in `docs/references/specification.json` and the generated declaration was regenerated at `apps/csrm/src/lib/api/generated/schema.d.ts`. `GET /csrm-assessment-requests/{id}` now declares `data.relationships` with discriminated questionnaire and assessment availability unions, including bounded residual Risk counts. This record is retained as historical context; it no longer blocks Plan 06.4-04.
 
 ## Original blocking contract mismatch
 
@@ -27,7 +27,7 @@ the web declarations are regenerated from that final specification.
   residual Risk counts.
 - The `absent` and `unavailable` variants must contain only `availability`; in
   particular, unavailable must not carry an identifier or tally.
-- Regenerate `apps/web/src/lib/api/generated/schema.d.ts` with
+- Regenerate `apps/csrm/src/lib/api/generated/schema.d.ts` with
   `pnpm --filter @csrm/web api:generate` after the specification is final.
 
 ## Reason this is not a datamodel change

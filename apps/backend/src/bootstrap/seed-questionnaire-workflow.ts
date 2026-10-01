@@ -116,14 +116,14 @@ const QUESTION_SEEDS: readonly QuestionSeed[] = [
 const SUBMITTED_VALUES: Readonly<Record<string, string | boolean | readonly string[]>> = {
   "service-name": "Customer portal",
   "service-description":
-    "About 38,000 customers a month use the portal to view bills, make payments through the payment gateway, update contact details and raise service requests. Release 4.2 adds self-service change of bank account details, upload of identity documents for verification, and passkey sign-in. The contact centre and the billing team rely on it as the system of entry for customer changes; an outage of more than four hours moves that work back to the phones.",
+    "About 38,000 customers a month use the portal to view bills, make payments through the payment gateway, update their phone number and email address and raise service requests. Release 4.2 adds self-service change of bank account details, upload of identity documents for verification, and passkey sign-in. The contact centre and the billing team rely on it as the system of entry for customer changes; an outage of more than four hours moves that work back to the phones.",
   "handles-personal-data": true,
   "personal-data-types": ["contact", "identity"],
   "hosting-model": "cloud",
   "production-url": "https://portal.example.test",
   "go-live-date": "2026-10-01",
   "third-party-providers":
-    "Microsoft Azure hosts the portal in Australia East (App Service, Azure SQL Database, Storage, Front Door) and provides customer identity through Entra External ID. A managed support provider deploys releases and has just-in-time read access to production; part of its team is offshore and can see customer contact details in application logs. The payment gateway takes card payments on its own hosted page. An external firm performs the annual penetration test.",
+    "Microsoft Azure hosts the portal in Australia East (App Service, Azure SQL Database, Storage, Front Door) and provides customer identity through Entra External ID. A managed support provider deploys releases and has just-in-time read access to production; part of its team is offshore and can see customer phone numbers and email addresses in application logs. The payment gateway takes card payments on its own hosted page. An external firm performs the annual penetration test.",
 };
 
 function service(strapi: Core.Strapi, uid: string): SeedDocumentService {

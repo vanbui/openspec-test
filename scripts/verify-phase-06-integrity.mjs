@@ -8,10 +8,10 @@ const root = resolve(import.meta.dirname, '..');
 const phaseDirectory = join(root, '.planning', 'phases', '06-administration-and-csv-imports');
 const diagnostics = [];
 const frozenSchemas = new Map([
-  ['apps/strapi/src/api/csrm-risk-type/content-types/csrm-risk-type/schema.json', 'DCD3BF389CE79D992CAB7E97692C883BB5E769FEADF2F5159DDCEC5BF16F2921'],
-  ['apps/strapi/src/api/csrm-control/content-types/csrm-control/schema.json', 'C37151CCAE3C798BC128AB4902AB85D12914C76C922D48F67F32C92DA7011F30'],
-  ['apps/strapi/src/api/csrm-information-system/content-types/csrm-information-system/schema.json', 'CD1636590493BD2AB35DEF7B040E940EFD2918976137FE5EEAD3029B192E0C53'],
-  ['apps/strapi/src/api/csrm-information-asset/content-types/csrm-information-asset/schema.json', 'E0DA75DCE74AD4E90DB52B8C44F1391B1DA5A6BC457922E31E351F61CB3DDAC5'],
+  ['apps/backend/src/api/csrm-risk-type/content-types/csrm-risk-type/schema.json', 'DCD3BF389CE79D992CAB7E97692C883BB5E769FEADF2F5159DDCEC5BF16F2921'],
+  ['apps/backend/src/api/csrm-control/content-types/csrm-control/schema.json', 'C37151CCAE3C798BC128AB4902AB85D12914C76C922D48F67F32C92DA7011F30'],
+  ['apps/backend/src/api/csrm-information-system/content-types/csrm-information-system/schema.json', 'CD1636590493BD2AB35DEF7B040E940EFD2918976137FE5EEAD3029B192E0C53'],
+  ['apps/backend/src/api/csrm-information-asset/content-types/csrm-information-asset/schema.json', 'E0DA75DCE74AD4E90DB52B8C44F1391B1DA5A6BC457922E31E351F61CB3DDAC5'],
 ]);
 
 function report(ok, name, detail) {
@@ -101,7 +101,7 @@ report(schemaFailures.length === 0, 'frozen content-type schemas', schemaFailure
 
 const cataloguePaths = [
   'docs/references/idambox-csrm-role-function-api-catalogue.json',
-  'apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json',
+  'apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json',
 ];
 const catalogueBuffers = cataloguePaths.map((path) => readFileSync(join(root, path)));
 report(catalogueBuffers[0].equals(catalogueBuffers[1]), 'catalogue byte identity', 'authoritative and bootstrap copies compared');
@@ -113,20 +113,20 @@ const deleteGrants = administrationApis.filter((entry) => entry.url.startsWith('
 report(deleteGrants.length === 0, 'catalogue no-delete boundary', deleteGrants.map((entry) => entry.url).join(', ') || 'no Administration DELETE grant');
 
 const requiredTests = [
-  'apps/strapi/tests/administration.unit.test.ts',
-  'apps/strapi/tests/administration.integration.test.ts',
-  'apps/web/src/features/administration/administration-schema.test.ts',
-  'apps/web/src/features/administration/administration-service.test.ts',
-  'apps/web/src/features/administration/administration-workflow.test.tsx',
-  'apps/web/e2e/administration-workflow.spec.ts',
+  'apps/backend/tests/administration.unit.test.ts',
+  'apps/backend/tests/administration.integration.test.ts',
+  'apps/csrm/src/features/administration/administration-schema.test.ts',
+  'apps/csrm/src/features/administration/administration-service.test.ts',
+  'apps/csrm/src/features/administration/administration-workflow.test.tsx',
+  'apps/csrm/e2e/administration-workflow.spec.ts',
 ];
 const missingTests = requiredTests.filter((path) => !existsSync(join(root, path)));
 report(missingTests.length === 0, 'Phase 6 test inventory', missingTests.join(', ') || `${requiredTests.length} required files present`);
 
 const phaseTestFiles = [
-  ...listFiles(join(root, 'apps', 'strapi', 'tests'), (path) => /(?:administration.*|authorization\.integration)\.test\.ts$/.test(path)),
-  ...listFiles(join(root, 'apps', 'web', 'src', 'features', 'administration'), (path) => /\.test\.tsx?$/.test(path)),
-  join(root, 'apps', 'web', 'e2e', 'administration-workflow.spec.ts'),
+  ...listFiles(join(root, 'apps', 'backend', 'tests'), (path) => /(?:administration.*|authorization\.integration)\.test\.ts$/.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'src', 'features', 'administration'), (path) => /\.test\.tsx?$/.test(path)),
+  join(root, 'apps', 'csrm', 'e2e', 'administration-workflow.spec.ts'),
 ];
 const escapeViolations = violations(phaseTestFiles, [
   ['focused/skipped test call', /\b(?:test|it|describe)\s*\.\s*(?:only|skip|fixme)\s*\(/],
@@ -148,22 +148,22 @@ const missingAnchors = [
 ].filter((anchor) => !allTestText.includes(anchor));
 report(missingAnchors.length === 0, 'acceptance anchor coverage', missingAnchors.join(', ') || 'ADMIN-01..04 and T-06-01..08 are named');
 
-const harnessFiles = [join(root, 'apps', 'web', 'playwright.config.ts'), ...phaseTestFiles];
+const harnessFiles = [join(root, 'apps', 'csrm', 'playwright.config.ts'), ...phaseTestFiles];
 const livePortViolations = violations(harnessFiles, [['hard-coded live port', /(?:https?:\/\/(?:127\.0\.0\.1|localhost):)?(?:1337|3000)\b/]]);
 report(livePortViolations.length === 0, 'isolated ports', livePortViolations.join(', ') || 'no executable 1337/3000 target');
-const playwright = read('apps/web/playwright.config.ts');
+const playwright = read('apps/csrm/playwright.config.ts');
 report(/reuseExistingServer:\s*false/g.test(playwright) && /playwright-e2e-\$\{invocationId\}\.db/.test(playwright)
   && /playwright-next-\$\{invocationId\}/.test(playwright), 'isolated Playwright lifecycle', 'derived servers, database, and dist directory inspected');
 
-const integrationEvidence = read('apps/strapi/tests/administration.integration.test.ts');
-const browserEvidence = read('apps/web/e2e/administration-workflow.spec.ts');
+const integrationEvidence = read('apps/backend/tests/administration.integration.test.ts');
+const browserEvidence = read('apps/csrm/e2e/administration-workflow.spec.ts');
 report(/countAdministrationRecords/.test(integrationEvidence) && /doesNotMatch/.test(integrationEvidence)
   && /expectDeniedWithoutDisclosure/.test(browserEvidence) && /input\[type="file"\]/.test(browserEvidence),
   'denial non-enumeration and zero-write evidence', 'mounted and browser denial assertions inspected');
 
-const developmentGate = read('apps/strapi/src/utils/development-identity-enabled.ts');
-const riskSeed = read('apps/strapi/src/bootstrap/seed-risk-register-workflow.ts');
-const seedTest = read('apps/strapi/tests/risk-register-seed.integration.test.ts');
+const developmentGate = read('apps/backend/src/utils/development-identity-enabled.ts');
+const riskSeed = read('apps/backend/src/bootstrap/seed-risk-register-workflow.ts');
+const seedTest = read('apps/backend/tests/risk-register-seed.integration.test.ts');
 report(/NODE_ENV\s*===\s*["']development["']/.test(developmentGate)
   && /CSRM_ENVIRONMENT\s*===\s*["']development["']/.test(developmentGate)
   && /CSRM_DEV_IDENTITY\s*===\s*["']true["']/.test(developmentGate)
@@ -173,19 +173,19 @@ report(/NODE_ENV\s*===\s*["']development["']/.test(developmentGate)
 
 const sourceExtensions = /\.(?:[cm]?[jt]sx?)$/;
 const administrationProductionFiles = [
-  ...listFiles(join(root, 'apps', 'web', 'src', 'features', 'administration'), (path) => sourceExtensions.test(path) && !/\.test\./.test(path)),
-  ...listFiles(join(root, 'apps', 'web', 'app', '(app)', 'app', 'admin'), (path) => sourceExtensions.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'src', 'features', 'administration'), (path) => sourceExtensions.test(path) && !/\.test\./.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'app', '(app)', 'app', 'admin'), (path) => sourceExtensions.test(path)),
 ];
 const rawFetch = violations(administrationProductionFiles, [['raw fetch', /\bfetch\s*\(/]]);
 report(rawFetch.length === 0, 'typed Administration transport', rawFetch.join(', ') || 'no raw fetch in feature or page code');
-const facadeFiles = listFiles(join(root, 'apps', 'web', 'app', 'api'), (path) => /administration|risk-types|controls|information-systems|information-assets/i.test(path));
+const facadeFiles = listFiles(join(root, 'apps', 'csrm', 'app', 'api'), (path) => /administration|risk-types|controls|information-systems|information-assets/i.test(path));
 report(facadeFiles.length === 0, 'no frontend API facade', facadeFiles.map(repoPath).join(', ') || 'no Administration Route Handler');
 
 const genericRoutePaths = [
-  'apps/strapi/src/api/csrm-risk-type/routes/csrm-risk-type.ts',
-  'apps/strapi/src/api/csrm-control/routes/csrm-control.ts',
-  'apps/strapi/src/api/csrm-information-system/routes/csrm-information-system.ts',
-  'apps/strapi/src/api/csrm-information-asset/routes/csrm-information-asset.ts',
+  'apps/backend/src/api/csrm-risk-type/routes/csrm-risk-type.ts',
+  'apps/backend/src/api/csrm-control/routes/csrm-control.ts',
+  'apps/backend/src/api/csrm-information-system/routes/csrm-information-system.ts',
+  'apps/backend/src/api/csrm-information-asset/routes/csrm-information-asset.ts',
 ];
 const genericExposure = violations(genericRoutePaths.map((path) => join(root, path)), [
   ['generic mutation/delete route', /^\s*(?:create|update|delete)\s*:/m],
@@ -202,21 +202,21 @@ const specification = JSON.parse(read('docs/references/specification.json'));
 const survivingLegacyPaths = legacyCrudPaths.filter((path) => Object.hasOwn(specification.paths ?? {}, path));
 report(survivingLegacyPaths.length === 0, 'legacy OpenAPI CRUD removal', survivingLegacyPaths.join(', ') || 'disabled legacy CRUD families absent');
 const webContractFiles = [
-  ...listFiles(join(root, 'apps', 'web', 'src'), (path) => sourceExtensions.test(path) && !/\.test\./.test(path)),
-  ...listFiles(join(root, 'apps', 'web', 'app'), (path) => sourceExtensions.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'src'), (path) => sourceExtensions.test(path) && !/\.test\./.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'app'), (path) => sourceExtensions.test(path)),
 ];
 const legacyConsumers = violations(webContractFiles, legacyCrudPaths.map((path) => [
   `legacy contract path ${path}`,
   new RegExp(`["']${path.replaceAll('/', '\\/')}(?:["'/])`),
 ]));
 report(legacyConsumers.length === 0, 'legacy OpenAPI consumer removal', legacyConsumers.join(', ') || 'no web source consumers');
-const obsoleteRedVerifierAbsent = !existsSync(join(root, 'apps', 'web', 'scripts', 'verify-administration-red.mjs'));
+const obsoleteRedVerifierAbsent = !existsSync(join(root, 'apps', 'csrm', 'scripts', 'verify-administration-red.mjs'));
 report(obsoleteRedVerifierAbsent, 'obsolete Administration RED verifier removal',
   obsoleteRedVerifierAbsent ? 'verify-administration-red.mjs is absent' : 'verify-administration-red.mjs still exists');
 
-const adminRoutePath = join(root, 'apps', 'strapi', 'src', 'api', 'csrm-administration', 'routes', 'csrm-administration.ts');
-const operationPath = join(root, 'apps', 'strapi', 'src', 'api', 'csrm-administration', 'operations.ts');
-const riskRoutePath = join(root, 'apps', 'strapi', 'src', 'api', 'csrm-risk', 'routes', 'csrm-risk.ts');
+const adminRoutePath = join(root, 'apps', 'backend', 'src', 'api', 'csrm-administration', 'routes', 'csrm-administration.ts');
+const operationPath = join(root, 'apps', 'backend', 'src', 'api', 'csrm-administration', 'operations.ts');
+const riskRoutePath = join(root, 'apps', 'backend', 'src', 'api', 'csrm-risk', 'routes', 'csrm-risk.ts');
 if (existsSync(adminRoutePath) && existsSync(operationPath) && existsSync(riskRoutePath)) {
   const route = readFileSync(adminRoutePath, 'utf8');
   const riskRoute = readFileSync(riskRoutePath, 'utf8');
@@ -261,7 +261,7 @@ if (phaseBase) {
   report(!attribution.test(`${commitMessages}\n${added}`), 'AI attribution', 'commit messages and added lines inspected');
 
   const dependencyFailures = [];
-  for (const packagePath of ['package.json', 'apps/strapi/package.json', 'apps/web/package.json']) {
+  for (const packagePath of ['package.json', 'apps/backend/package.json', 'apps/csrm/package.json']) {
     const beforeResult = spawnSync('git', ['show', `${phaseBase}^:${packagePath}`], { cwd: root, encoding: 'utf8' });
     if (beforeResult.status !== 0) continue;
     const before = JSON.parse(beforeResult.stdout);

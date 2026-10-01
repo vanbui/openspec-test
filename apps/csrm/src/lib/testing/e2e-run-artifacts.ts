@@ -19,11 +19,11 @@ export function runArtifactDisposition(exitCode: number, keepRequested: boolean)
 }
 
 export type RunArtifactNames = {
-  /** The SQLite file the run's Strapi uses, relative to apps/strapi. */
+  /** The SQLite file the run's Strapi uses, relative to apps/backend. */
   databaseFilename: string;
-  /** The production build `next build` writes, relative to apps/web. */
+  /** The production build `next build` writes, relative to apps/csrm. */
   nextDistDir: string;
-  /** The build the conformance spec's ordinary `next dev` server writes, relative to apps/web. */
+  /** The build the conformance spec's ordinary `next dev` server writes, relative to apps/csrm. */
   ordinaryNextDistDir: string;
 };
 

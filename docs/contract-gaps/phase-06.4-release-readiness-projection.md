@@ -2,7 +2,7 @@
 
 ## Resolved contract record
 
-**Resolved:** The contract work was completed in `docs/references/specification.json` and the generated declaration was regenerated at `apps/web/src/lib/api/generated/schema.d.ts`. `ReleaseReadiness` now exposes the complete discriminated `requirements` set with assessment and Risk scopes. This record is retained as historical context; it no longer blocks the dependent work.
+**Resolved:** The contract work was completed in `docs/references/specification.json` and the generated declaration was regenerated at `apps/csrm/src/lib/api/generated/schema.d.ts`. `ReleaseReadiness` now exposes the complete discriminated `requirements` set with assessment and Risk scopes. This record is retained as historical context; it no longer blocks the dependent work.
 
 ## Original blocking contract mismatch
 
@@ -35,7 +35,7 @@ extension or hand-editing generated declarations.
   reconstructed from display order or an array index.
 - Do not allow a destination, Risk number, or unrelated relation data on an
   assessment-scoped requirement.
-- Regenerate `apps/web/src/lib/api/generated/schema.d.ts` using
+- Regenerate `apps/csrm/src/lib/api/generated/schema.d.ts` using
   `pnpm --filter @csrm/web api:generate` only after the specification is final.
 - Update the assessment response parser and its response-parser inventory entry
   together with the published schema, then exercise contract nullability modes.

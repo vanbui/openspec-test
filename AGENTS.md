@@ -2,7 +2,7 @@
 
 ## Project
 
-IdamBox Cyber Risk Manager (CSRM) is a Turborepo application with Strapi at `apps/strapi` and a Next.js App Router client at `apps/web`.
+IdamBox Cyber Risk Manager (CSRM) is a Turborepo application with Strapi at `apps/backend` and a Next.js App Router client at `apps/csrm`.
 
 ## Authoritative References
 

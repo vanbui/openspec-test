@@ -34,7 +34,7 @@ const D = (days: number): string => addUtcDays(today, days);
 const LIST_PATH = "/api/v1/alerts";
 const SUMMARY_PATH = "/api/v1/alerts/summary";
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi,
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend,
 // two more resolve the repository root.
 const repositoryDir = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const specification = JSON.parse(

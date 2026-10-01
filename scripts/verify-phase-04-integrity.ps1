@@ -57,7 +57,7 @@ try {
   $changedFiles = @(Invoke-Git @('diff', '--name-only', "$approvedPhaseBase..HEAD") | Where-Object { $_.Trim() })
   if ($changedFiles.Count -eq 0) { Fail "Phase 4 diff $approvedPhaseBase..HEAD is empty." }
 
-  $frozenSchemaPattern = '^apps/strapi/src/api/(csrm-assessment|csrm-risk|csrm-risk-type|csrm-control|csrm-control-implementation)/content-types/[^/]+/schema\.json$'
+  $frozenSchemaPattern = '^apps/backend/src/api/(csrm-assessment|csrm-risk|csrm-risk-type|csrm-control|csrm-control-implementation)/content-types/[^/]+/schema\.json$'
   $manifestPattern = '(^|/)package\.json$|(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|npm-shrinkwrap\.json)$'
   $protectedChanges = @($changedFiles | Where-Object { $_ -match $frozenSchemaPattern -or $_ -match $manifestPattern })
   if ($protectedChanges.Count -gt 0) {
@@ -115,11 +115,11 @@ try {
   }
 
   $phase4TestFiles = @(
-    'apps/strapi/tests/assessment-workflow.integration.test.ts'
-    'apps/strapi/tests/contract-catalogue.integration.test.ts'
-    'apps/web/e2e/assessment-release-workflow.spec.ts'
-    Get-ChildItem 'apps/web/src/features/assessments' -Recurse -Include '*.test.ts', '*.test.tsx' | ForEach-Object FullName
-    Get-ChildItem 'apps/web/src/features/dashboard' -Recurse -Include '*.test.ts', '*.test.tsx' | ForEach-Object FullName
+    'apps/backend/tests/assessment-workflow.integration.test.ts'
+    'apps/backend/tests/contract-catalogue.integration.test.ts'
+    'apps/csrm/e2e/assessment-release-workflow.spec.ts'
+    Get-ChildItem 'apps/csrm/src/features/assessments' -Recurse -Include '*.test.ts', '*.test.tsx' | ForEach-Object FullName
+    Get-ChildItem 'apps/csrm/src/features/dashboard' -Recurse -Include '*.test.ts', '*.test.tsx' | ForEach-Object FullName
   )
   $testEscapePattern = 'PHASE4_RED|execArgv|expectsFocused|\.skip\s*\(|\.only\s*\(|\.fixme\s*\(|existsSync|Test-Path|if\s*\([^\)]*(file|path|exist)[^\)]*\)\s*(?:\{\s*)?(return|throw|continue)'
   $testEscapeHits = @(Select-String -Path $phase4TestFiles -Pattern $testEscapePattern -CaseSensitive:$false)
@@ -128,7 +128,7 @@ try {
     Fail "Phase 4 test escape mechanisms remain:`n$($formatted -join "`n")"
   }
 
-  foreach ($packagePath in @('package.json', 'apps/strapi/package.json', 'apps/web/package.json')) {
+  foreach ($packagePath in @('package.json', 'apps/backend/package.json', 'apps/csrm/package.json')) {
     $scripts = (Get-Content $packagePath -Raw | ConvertFrom-Json).scripts
     foreach ($scriptName in @('test', 'test:e2e')) {
       $property = $scripts.PSObject.Properties[$scriptName]
@@ -139,7 +139,7 @@ try {
     }
   }
 
-  $scanPaths = @('apps/strapi/src', 'apps/strapi/tests', 'apps/web/app', 'apps/web/src', 'apps/web/e2e')
+  $scanPaths = @('apps/backend/src', 'apps/backend/tests', 'apps/csrm/app', 'apps/csrm/src', 'apps/csrm/e2e')
   $addedDiff = @(Invoke-Git (@('diff', '--unified=0', '--no-color', "$approvedPhaseBase..HEAD", '--') + $scanPaths))
   if ($addedDiff.Count -eq 0) { Fail 'Production/test diff scan returned no content.' }
 
@@ -185,7 +185,7 @@ try {
   }
 
   $catalogueA = 'docs/references/idambox-csrm-role-function-api-catalogue.json'
-  $catalogueB = 'apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json'
+  $catalogueB = 'apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json'
   $catalogueHash = 'A67CC51BFA34D2A882D04C0DB706FB05A49D9E320EC8A6B3FC71A8ED54351F89'
   foreach ($cataloguePath in @($catalogueA, $catalogueB)) {
     if ((Get-FileHash $cataloguePath -Algorithm SHA256).Hash -ne $catalogueHash) { Fail "$cataloguePath SHA-256 does not match the approved catalogue hash." }

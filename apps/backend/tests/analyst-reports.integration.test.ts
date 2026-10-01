@@ -30,12 +30,12 @@ const daysBefore = (instant: string, days: number): string => new Date(Date.pars
 const INDEX_PATH = "/api/v1/reports";
 const reportPath = (key: string): string => `${INDEX_PATH}/${key}`;
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi,
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend,
 // two more resolve the repository root.
 const repositoryDir = path.resolve(__dirname, "..", "..", "..", "..", "..");
 /** UI-D19: the web's canonical key-to-copy map, which the served definitions must equal. */
 const REPORT_COPY = JSON.parse(
-  readFileSync(path.join(repositoryDir, "apps", "web", "src", "features", "reports", "report-copy.json"), "utf8"),
+  readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "features", "reports", "report-copy.json"), "utf8"),
 ) as Array<{ key: string; title: string; description: string; metadataTitle: string }>;
 
 type SpecSchema = {

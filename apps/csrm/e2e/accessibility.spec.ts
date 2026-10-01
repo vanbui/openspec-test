@@ -28,7 +28,7 @@ type AxeResults = Awaited<ReturnType<AxeBuilder['analyze']>>;
 const widths = [1440, 375] as const;
 const wcagTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-// Seeded fixtures (apps/strapi/src/bootstrap): Jane's questionnaire workflow and navigation lifecycle
+// Seeded fixtures (apps/backend/src/bootstrap): Jane's questionnaire workflow and navigation lifecycle
 // records, the Security Analyst's own submitted request, the Risk Register and the Phase 7 fixtures.
 const analystReviewTitle = 'Customer portal questionnaire awaiting release';
 const releasedQuestionnaireTitle = 'Customer portal questionnaire draft';
@@ -37,7 +37,7 @@ const analystAssessmentNumber = 'ASM-E2E-NAV-ANALYST-001';
 const ownerAssessmentNumber = 'ASM-E2E-NAV-OWNER-001';
 const analystOwnRequestTitle = 'Azure Pipeline Decorator for all delivery pipelines';
 const mutableRiskNumber = 'RSK-DEV-MUTABLE-001';
-// Duplicated by value from apps/strapi/src/bootstrap/seed-analyst-insights.ts (the Phase 7 fixture).
+// Duplicated by value from apps/backend/src/bootstrap/seed-analyst-insights.ts (the Phase 7 fixture).
 const phase7OverdueRiskNumber = 'RSK-E2E-P7-OVERDUE-001';
 
 /*

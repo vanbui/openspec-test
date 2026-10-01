@@ -88,8 +88,8 @@ if (phaseBase) {
   const forbiddenChanges = changedPaths.filter((path) =>
     /(^|\/)package\.json$/.test(path)
     || /(^|\/)pnpm-lock\.yaml$/.test(path)
-    || path === 'apps/strapi/src/api/csrm-risk/content-types/csrm-risk/schema.json'
-    || path === 'apps/strapi/src/api/csrm-control-implementation/content-types/csrm-control-implementation/schema.json');
+    || path === 'apps/backend/src/api/csrm-risk/content-types/csrm-risk/schema.json'
+    || path === 'apps/backend/src/api/csrm-control-implementation/content-types/csrm-control-implementation/schema.json');
   forbiddenChanges.length === 0
     ? pass('immutable package and schema paths', `${changedPaths.length} changed paths inspected`)
     : fail('immutable package and schema paths', forbiddenChanges.join(', '));
@@ -97,7 +97,7 @@ if (phaseBase) {
 
 const cataloguePaths = [
   'docs/references/idambox-csrm-role-function-api-catalogue.json',
-  'apps/strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json',
+  'apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json',
 ];
 const catalogueBuffers = cataloguePaths.map((path) => readFileSync(join(root, path)));
 const catalogueHashes = catalogueBuffers.map((buffer) => createHash('sha256').update(buffer).digest('hex').toUpperCase());
@@ -108,7 +108,7 @@ catalogueHashes.every((hash) => hash === expectedCatalogueHash)
   ? pass('catalogue SHA-256', expectedCatalogueHash)
   : fail('catalogue SHA-256', catalogueHashes.join(', '));
 
-const publicPermissions = read('apps/strapi/src/bootstrap/reconcile-development-public-permissions.ts');
+const publicPermissions = read('apps/backend/src/bootstrap/reconcile-development-public-permissions.ts');
 const publicRiskActions = [
   'api::csrm-risk.csrm-risk.listRisks',
   'api::csrm-risk.csrm-risk.getRisk',
@@ -119,15 +119,15 @@ publicRiskActions.length === 0
 
 const sourceExtensions = /\.(?:[cm]?[jt]sx?)$/;
 const riskProductionFiles = [
-  ...listFiles(join(root, 'apps', 'web', 'src', 'features', 'risks'), (path) => sourceExtensions.test(path)),
-  ...listFiles(join(root, 'apps', 'web', 'app', '(app)', 'app', 'risks'), (path) => sourceExtensions.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'src', 'features', 'risks'), (path) => sourceExtensions.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'app', '(app)', 'app', 'risks'), (path) => sourceExtensions.test(path)),
 ];
 const phaseTestFiles = [
-  ...listFiles(join(root, 'apps', 'web', 'e2e'), (path) => /risk-register.*\.spec\.ts$/.test(path)),
-  ...listFiles(join(root, 'apps', 'web', 'src', 'features', 'risks'), (path) => /\.test\.[jt]sx?$/.test(path)),
-  ...listFiles(join(root, 'apps', 'strapi', 'tests'), (path) => /risk-register|contract-catalogue/.test(path) && sourceExtensions.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'e2e'), (path) => /risk-register.*\.spec\.ts$/.test(path)),
+  ...listFiles(join(root, 'apps', 'csrm', 'src', 'features', 'risks'), (path) => /\.test\.[jt]sx?$/.test(path)),
+  ...listFiles(join(root, 'apps', 'backend', 'tests'), (path) => /risk-register|contract-catalogue/.test(path) && sourceExtensions.test(path)),
 ];
-const harnessFiles = [join(root, 'apps', 'web', 'playwright.config.ts'), ...phaseTestFiles];
+const harnessFiles = [join(root, 'apps', 'csrm', 'playwright.config.ts'), ...phaseTestFiles];
 
 const escapeViolations = violations(phaseTestFiles, [
   ['focused/skipped test call', /\b(?:test|it|describe)\s*\.\s*(?:only|skip|fixme)\s*\(/],

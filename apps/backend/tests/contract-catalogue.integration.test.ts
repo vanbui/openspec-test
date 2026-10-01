@@ -26,7 +26,7 @@ type JsonObject = Record<string, any>;
 const harnessPromise = startAuthorizationHttpHarness();
 after(async () => (await harnessPromise).close());
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi.
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
 const appDir = path.resolve(__dirname, "..", "..", "..");
 const repositoryDir = path.resolve(appDir, "..", "..");
 const catalogueFilename = "idambox-csrm-role-function-api-catalogue.json";
@@ -180,7 +180,7 @@ test("questionnaire generation routes have byte-identical catalogue and human-on
   const authoritativePath = path.join(repositoryDir, "docs", "references", catalogueFilename);
   const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
   const catalogue = parseJsonFile(authoritativePath, "QUESTIONNAIRE_GENERATION_CATALOGUE_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   assert.equal(Buffer.compare(readFileSync(authoritativePath), readFileSync(bootstrapPath)), 0, "QUESTIONNAIRE_GENERATION_CATALOGUE_BYTE_DRIFT");
 
   for (const route of questionnaireGenerationRoutes) {
@@ -210,7 +210,7 @@ test("Phase 3 questionnaire routes have exact contract and effective-grant parit
   const bootstrapBytes = readFileSync(bootstrapPath);
   const catalogue = parseJsonFile(authoritativePath, "UNEXPECTED_CATALOGUE_PARSE");
   const generatedSchema = readFileSync(
-    path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"),
+    path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"),
     "utf8",
   );
   assert.equal(Buffer.compare(authoritativeBytes, bootstrapBytes), 0, "UNEXPECTED_CATALOGUE_BYTE_DRIFT");
@@ -342,7 +342,7 @@ test("Phase 4 assessment routes have closed DTOs and exact contract/catalogue pa
   const bootstrapBytes = readFileSync(bootstrapPath);
   const catalogue = parseJsonFile(authoritativePath, "UNEXPECTED_CATALOGUE_PARSE");
   const generatedSchema = readFileSync(
-    path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"),
+    path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"),
     "utf8",
   );
   assert.equal(Buffer.compare(authoritativeBytes, bootstrapBytes), 0, "UNEXPECTED_CATALOGUE_BYTE_DRIFT");
@@ -545,7 +545,7 @@ test("Phase 5 Risk Register list has a closed generated contract and exact catal
   const bootstrapBytes = readFileSync(bootstrapPath);
   const catalogue = parseJsonFile(authoritativePath, "UNEXPECTED_CATALOGUE_PARSE");
   const generatedSchema = readFileSync(
-    path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"),
+    path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"),
     "utf8",
   );
 
@@ -623,7 +623,7 @@ test("Phase 5 Risk detail has a closed generated contract and exact catalogue pa
   const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
   const catalogue = parseJsonFile(authoritativePath, "UNEXPECTED_CATALOGUE_PARSE");
   const generatedSchema = readFileSync(
-    path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"),
+    path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"),
     "utf8",
   );
 
@@ -804,7 +804,7 @@ test("request revert contract, catalogue, generated types, and mounted route sta
   const authoritativePath = path.join(repositoryDir, "docs", "references", catalogueFilename);
   const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
   const catalogue = parseJsonFile(authoritativePath, "UNEXPECTED_REVERT_CATALOGUE_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   const route = "POST:/api/v1/assessment_requests/{requestId}/revert_to_draft";
 
   assert.equal(Buffer.compare(readFileSync(authoritativePath), readFileSync(bootstrapPath)), 0, "UNEXPECTED_REVERT_CATALOGUE_BYTE_DRIFT");
@@ -881,7 +881,7 @@ test("Phase 06.8 questionnaire governance surface is published and human-analyst
   const authoritativePath = path.join(repositoryDir, "docs", "references", catalogueFilename);
   const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
   const catalogue = parseJsonFile(authoritativePath, "PHASE68_CATALOGUE_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   assert.equal(Buffer.compare(readFileSync(authoritativePath), readFileSync(bootstrapPath)), 0, "PHASE68_CATALOGUE_BYTE_DRIFT");
 
   const analystOperations = effectiveOperations(catalogue, "role.security_analyst");
@@ -1046,7 +1046,7 @@ test("Phase 06.9 list status filters publish the complete datamodel vocabularies
     "UNEXPECTED_SPECIFICATION_PARSE",
   );
   const generatedSchema = readFileSync(
-    path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"),
+    path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"),
     "utf8",
   );
   const contentType = (name: string) => parseJsonFile(
@@ -1192,7 +1192,7 @@ test("Phase 7 Requestor status summary is published closed and granted through M
   const authoritativePath = path.join(repositoryDir, "docs", "references", catalogueFilename);
   const bootstrapPath = path.join(appDir, "src", "bootstrap", catalogueFilename);
   const catalogue = parseJsonFile(authoritativePath, "PHASE7_SUMMARY_CATALOGUE_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   assert.equal(Buffer.compare(readFileSync(authoritativePath), readFileSync(bootstrapPath)), 0, "PHASE7_SUMMARY_CATALOGUE_BYTE_DRIFT");
 
   const catalogueUrl = "GET:/api/v1/my_requests/status_summary";
@@ -1261,7 +1261,7 @@ test("Phase 7 Requestor status summary is published closed and granted through M
  */
 test("Phase 7 Risk Register rows publish the server-derived treatment due state", () => {
   const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_DUE_STATE_SPECIFICATION_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   const dueStates = ["overdue", "due-soon", "later", "no-target-date", "complete-or-closed"];
 
   const dueState = specification.components?.schemas?.TreatmentDueState;
@@ -1294,7 +1294,7 @@ test("Phase 7 Risk Register rows publish the server-derived treatment due state"
  */
 test("Phase 7 Risk Register publishes the closed open and closed state filter", () => {
   const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_STATE_SPECIFICATION_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   const register = operation(specification, "/v1/risks", "get");
 
   assert.deepEqual(parameter(register, "state"), {
@@ -1320,7 +1320,7 @@ test("Phase 7 Risk Register publishes the closed open and closed state filter", 
  */
 test("Phase 7 analyst alerts are published closed and match the shared alert vocabulary", () => {
   const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_ALERT_SPECIFICATION_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   const schemas = specification.components?.schemas ?? {};
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 
@@ -1456,7 +1456,7 @@ test("Phase 7 analyst alerts are published closed and match the shared alert voc
  */
 test("Phase 7 analyst reports are published closed and match the served report set", () => {
   const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_REPORT_SPECIFICATION_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   const schemas = specification.components?.schemas ?? {};
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
   const count = { type: "integer", minimum: 0 };
@@ -1690,7 +1690,7 @@ test("Phase 7 analyst reports are published closed and match the served report s
  */
 test("Phase 7 analyst dashboard summary is published closed and matches the served summary", () => {
   const specification = parseJsonFile(path.join(repositoryDir, "docs", "references", "specification.json"), "PHASE7_DASHBOARD_SPECIFICATION_PARSE");
-  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "web", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
+  const generatedSchema = readFileSync(path.join(repositoryDir, "apps", "csrm", "src", "lib", "api", "generated", "schema.d.ts"), "utf8");
   const schemas = specification.components?.schemas ?? {};
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
   const count = { type: "integer", minimum: 0 };

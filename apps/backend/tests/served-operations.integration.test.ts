@@ -32,10 +32,10 @@ import {
 
 type JsonObject = Record<string, any>;
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi.
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
 const appDir = path.resolve(__dirname, "..", "..", "..");
 const repositoryDir = path.resolve(appDir, "..", "..");
-const webDir = path.join(repositoryDir, "apps", "web");
+const webDir = path.join(repositoryDir, "apps", "csrm");
 const inventoryFilename = path.join(repositoryDir, "docs", "references", "served-operations.json");
 const catalogueFilename = "idambox-csrm-role-function-api-catalogue.json";
 const WRITE_COMMAND = "SERVED_OPERATIONS_WRITE=1 pnpm --filter @csrm/strapi served-operations:write";
@@ -237,7 +237,7 @@ function specOperationIndex(specification: JsonObject) {
 
 /*
  * How the web reaches the generated client, read exactly as the web chain guard
- * reads it (apps/web/src/features/contract-operation-chain.test.ts, SR-03): an
+ * reads it (apps/csrm/src/features/contract-operation-chain.test.ts, SR-03): an
  * HTTP-method call through any receiver, and a method taken off the client into
  * a binding of its own or reached by a computed key, which would hide its call.
  */

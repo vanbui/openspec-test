@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-26
 - **Decisions:** D-24 (measure the production build, record budgets, fix only real problems, no new tooling), D-51 (answer research Open Question 2 with one `next experimental-analyze --output` run), D-23 (no dependency added).
-- **Evidence:** `apps/web/e2e/performance.spec.ts` (the measurement), `apps/web/src/lib/testing/performance-metrics.ts` (the median and budget arithmetic, unit-tested), `apps/web/src/lib/performance/zod-client-boundary.test.ts` (the guard the fixes below added).
+- **Evidence:** `apps/csrm/e2e/performance.spec.ts` (the measurement), `apps/csrm/src/lib/testing/performance-metrics.ts` (the median and budget arithmetic, unit-tested), `apps/csrm/src/lib/performance/zod-client-boundary.test.ts` (the guard the fixes below added).
 - **Measured on:** commit `5f4c741`. The first measured run ran on the same tree just before that commit; the committed spec differs from it by one comment line.
 
 **These figures are a baseline for this host, not a production SLA.** The browser, the web server and the API all ran on one workstation. A later phase compares against this record by re-running the command at the end, on comparable hardware.
@@ -17,7 +17,7 @@
 | Web | Next 16.3.6 production build (`next build`, then `next start` with its default gzip compression), React 19.2.4. The root layout renders per request (`force-dynamic`, for the CSP nonce, plan 08-10) |
 | API | Strapi 5.51.0 `develop` on a run-isolated SQLite database seeded by `IDAMBOX_SEED_CORE` and `IDAMBOX_SEED_CSRM`, with the deterministic AI provider |
 | Browser | Playwright 1.58.2 driving Chromium 145.0.7632.6 (the `desktop` project's Desktop Chrome profile), viewport 1440×900, HTTP cache disabled |
-| Harness | `apps/web/playwright.config.ts`: the attested production E2E runtime (plans 08-02 and 08-11); both servers on derived loopback ports |
+| Harness | `apps/csrm/playwright.config.ts`: the attested production E2E runtime (plans 08-02 and 08-11); both servers on derived loopback ports |
 
 ## Method
 
@@ -95,7 +95,7 @@ Variance worth noting:
 
 ## Budgets
 
-`PERFORMANCE_BUDGETS` in `apps/web/e2e/performance.spec.ts` holds the research ceilings (08-RESEARCH A8). It is never loosened:
+`PERFORMANCE_BUDGETS` in `apps/csrm/e2e/performance.spec.ts` holds the research ceilings (08-RESEARCH A8). It is never loosened:
 
 | Metric | Ceiling |
 |---|---|
@@ -144,7 +144,7 @@ Several fixes saved more than the zod chunk. The request detail and the Controls
 
 ## Corroboration: `next experimental-analyze --output` (D-51, research Open Question 2)
 
-**Run.** Once, on commit `5f4c741`, with CSRM's development servers stopped, from `apps/web`:
+**Run.** Once, on commit `5f4c741`, with CSRM's development servers stopped, from `apps/csrm`:
 
 ```bash
 export PATH="/c/ProgramData/nvm/v24.19.0:$PATH"
@@ -153,7 +153,7 @@ pnpm exec next experimental-analyze --output
 
 It printed `Analyze completed in 3.0s. Results written to …\apps\web\.next\diagnostics\analyze.` in 4 s wall, and left `git status --porcelain` empty (`.next/` is ignored).
 
-**Output location (a correction to the research).** `apps/web/.next/diagnostics/analyze`, not `apps/web/.tmp/`. `build/analyze/index.js` hard-codes `distDir = join(dir, '.next')`, so `CSRM_NEXT_DIST_DIR` does not move it. That directory is shared with `next dev`, which is why the development servers must be stopped.
+**Output location (a correction to the research).** `apps/csrm/.next/diagnostics/analyze`, not `apps/csrm/.tmp/`. `build/analyze/index.js` hard-codes `distDir = join(dir, '.next')`, so `CSRM_NEXT_DIST_DIR` does not move it. That directory is shared with `next dev`, which is why the development servers must be stopped.
 
 **Output shape.** The analyzer's static UI plus `data/`, 33 files, 8.6 MB:
 - **`data/routes.json`:** a flat array of 29 route patterns, the 13 dynamic routes first, then 16 static ones (including `/icon.png` and `/sign-in`), for example `"/app/admin/[collection]"`, `"/app/risks/[documentId]"`, `"/app"`. It lists routes only.
@@ -180,7 +180,7 @@ The analyzer and the build agree to 1,423 bytes (0.2 %). The build's figure is t
 
 ## How to re-run
 
-With CSRM's development servers stopped (ports 1337 and 3000 must be free of CSRM's servers; `apps/strapi/dist` is shared with `strapi develop`), from the repository root in Git Bash:
+With CSRM's development servers stopped (ports 1337 and 3000 must be free of CSRM's servers; `apps/backend/dist` is shared with `strapi develop`), from the repository root in Git Bash:
 
 ```bash
 export PATH="/c/ProgramData/nvm/v24.19.0:$PATH"
@@ -189,9 +189,9 @@ pnpm --filter @csrm/web test:e2e --project=desktop e2e/performance.spec.ts
 
 - **Linux build host:** use `export PATH="/opt/node24/bin:$PATH"` and `export PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright` instead.
 - **Project flag:** write `--project=desktop`. The spaced form `--project desktop <file>` takes the file path as a project name.
-- **Output:** each run writes its medians, samples and first-sample asset list to `apps/web/.tmp/performance/baseline-desktop.json` (ignored) and attaches `performance-summary` and `performance-assets` to each test.
+- **Output:** each run writes its medians, samples and first-sample asset list to `apps/csrm/.tmp/performance/baseline-desktop.json` (ignored) and attaches `performance-summary` and `performance-assets` to each test.
 - **Time:** about 90 s, including the Strapi boot and `next build`.
-- **Analyzer:** run `pnpm exec next experimental-analyze --output` from `apps/web` with the development servers stopped.
+- **Analyzer:** run `pnpm exec next experimental-analyze --output` from `apps/csrm` with the development servers stopped.
 - **Afterwards:** the tree stays clean. `git status --porcelain` printed nothing after every run above.
 
 ### In the full suite

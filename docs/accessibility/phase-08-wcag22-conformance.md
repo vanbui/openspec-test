@@ -6,7 +6,7 @@
 - **Threats:** T-08-12-01 (criteria axe cannot decide left unrecorded), T-08-12-02 (a denial rendering data before its permission state), T-08-12-03 (the keyboard proof submitting a request).
 - **Build under test:** the production build (`next build`, then `next start`, `NODE_ENV=production`) inside the attested E2E runtime, against `strapi develop` with the seeded, run-isolated SQLite database. Next 16.3.6, React 19.2.4.
 - **Tools:** Playwright 1.58.2 driving Chromium 145.0.7632.6 (Chrome for Testing); `@axe-core/playwright` 4.11.0 with axe-core 4.11.4.
-- **Evidence:** `apps/web/e2e/accessibility.spec.ts` (the sweep and the proofs below), `apps/web/e2e/helpers/focus.ts`, the journey specs each row cites, and the unit tests named in the fixes table. Measured on commit `2748402` (the sweep) and the tree after it; the run figures are under "Runs".
+- **Evidence:** `apps/csrm/e2e/accessibility.spec.ts` (the sweep and the proofs below), `apps/csrm/e2e/helpers/focus.ts`, the journey specs each row cites, and the unit tests named in the fixes table. Measured on commit `2748402` (the sweep) and the tree after it; the run figures are under "Runs".
 
 ## Scope
 

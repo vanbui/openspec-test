@@ -26,12 +26,12 @@ process.env.CSRM_AUTH_OIDC_ENABLED = 'false';
  *
  * The run gets its own ports, its own SQLite file, and its own Next build
  * directory, but `strapi develop` has no equivalent knob for its output: both
- * this run and a dev server compile into the single `apps/strapi/dist`. Running
+ * this run and a dev server compile into the single `apps/backend/dist`. Running
  * them together makes one process clean that directory while the other writes
  * into it, which surfaces as `ENOTEMPTY` during "Cleaning dist dir" and leaves a
  * half-written build behind. The symptom afterwards is a mounted route
  * answering 405, which reads like an authorization or routing bug and is not
- * one; `rm -rf apps/strapi/dist` and a restart clears it.
+ * one; `rm -rf apps/backend/dist` and a restart clears it.
  *
  * Browsers must also be present: `npx playwright install chromium` downloads
  * both the browser and the headless shell this config launches. On the shared
@@ -110,7 +110,7 @@ process.env.CSRM_E2E_ATTESTATION_NONCE_VALUE ??= e2eRuntimeNonce;
  * still be using are never touched.
  */
 if (process.env.TEST_WORKER_INDEX === undefined) {
-  const runArtifacts = runArtifactPaths({ strapiDir: join(__dirname, '..', 'strapi'), webDir: __dirname, names: runNames });
+  const runArtifacts = runArtifactPaths({ strapiDir: join(__dirname, '..', 'backend'), webDir: __dirname, names: runNames });
   process.once('exit', (exitCode) => {
     const present = runArtifacts.filter((path) => existsSync(path));
     if (present.length === 0) return;
@@ -198,7 +198,7 @@ export default defineConfig({
   webServer: [
     {
       command: runPnpm('develop'),
-      cwd: '../strapi',
+      cwd: '../backend',
       env: {
         NODE_ENV: 'development',
         HOST: '127.0.0.1',

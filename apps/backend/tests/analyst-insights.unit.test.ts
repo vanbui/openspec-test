@@ -61,7 +61,7 @@ import {
 import { ACTIVITY_KINDS, mergeRecentActivity } from "../src/csrm/insights/recent-activity";
 import type { ActivityItem } from "../src/csrm/insights/recent-activity";
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi.
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
 const appDir = path.resolve(__dirname, "..", "..", "..");
 
 /** Vocabularies are read from the frozen datamodel, never restated. */

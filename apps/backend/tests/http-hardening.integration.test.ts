@@ -44,7 +44,7 @@ function assertNoStackKey(value: unknown, at = "body"): void {
 test("the internal-error sentinel exists only in the test harness, never in application source", () => {
   // D-38: the forced failure is test plumbing. Pinning the header name keeps this scan honest if the constant moves.
   assert.equal(INTERNAL_ERROR_HEADER, "x-csrm-test-internal-error", "INTERNAL_ERROR_SENTINEL_RENAMED");
-  // Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi.
+  // Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
   const sourceDir = path.resolve(__dirname, "..", "..", "..", "src");
   const offenders = readdirSync(sourceDir, { recursive: true, encoding: "utf8" })
     .map((entry) => path.join(sourceDir, entry))

@@ -40,7 +40,7 @@ bookkeeping.
 
 These fields are persistence-only in this phase. No API projection exposes
 them, `docs/references/specification.json` remains unchanged, no route or
-capability-catalogue entry changes, and no `apps/web` code is touched.
+capability-catalogue entry changes, and no `apps/csrm` code is touched.
 
 This addition does not claim durable job records, restart recovery of an
 in-flight attempt, input snapshots, proposal sources, field-level
@@ -48,6 +48,6 @@ human-change tracking, prompt history, or job audit history. Those capabilities
 remain deferred to Phase 8. Interface and API projections must not imply
 stronger persistence, recovery, or attribution than this record describes.
 
-No migration file accompanies this change. `apps/strapi/database/migrations/`
+No migration file accompanies this change. `apps/backend/database/migrations/`
 is an empty placeholder, and Strapi schema sync handles additive optional
 attributes, following the unbroken Phase 06.1 and Phase 06.2 precedent.

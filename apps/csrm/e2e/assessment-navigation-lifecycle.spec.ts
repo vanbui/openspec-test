@@ -9,7 +9,7 @@ const analystRequestTitle = 'Zero trust network access for contractors';
 const ownerAssessmentNumber = 'ASM-E2E-NAV-OWNER-001';
 const ownerRequestNumber = 'RAR-E2E-NAV-OWNER-001';
 const ownerRequestTitle = 'Enterprise password manager rollout';
-// Jane's seeded questionnaire and its request (apps/strapi/src/bootstrap/seed-questionnaire-workflow.ts).
+// Jane's seeded questionnaire and its request (apps/backend/src/bootstrap/seed-questionnaire-workflow.ts).
 const ownerQuestionnaireNumber = 'QUES-DEV-DRAFT-001';
 const ownerQuestionnaireTitle = 'Customer portal questionnaire draft';
 const ownerQuestionnaireRequestNumber = 'RAR-DEV-QUES-DRAFT-001';

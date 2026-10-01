@@ -7,7 +7,7 @@ Opening a released risk assessment as the owning Requestor can render
 
 ## Mechanism
 
-`releasedAssessmentDetailSchema` in `apps/web/src/features/assessments/assessment-schema.ts`
+`releasedAssessmentDetailSchema` in `apps/csrm/src/features/assessments/assessment-schema.ts`
 wraps the closed assessment detail schema in a refinement that fails when:
 
 - `assessmentStatus` is not `approved`, or
@@ -51,7 +51,7 @@ release transition already writes all four facts in a single update.
 `response-contract-mismatch` and the released detail route renders the failing
 operation in development only; production still shows the neutral message.
 
-**4. Guarded.** `apps/web/src/features/contract-response-parity.test.ts` builds
+**4. Guarded.** `apps/csrm/src/features/contract-response-parity.test.ts` builds
 payloads directly from `docs/references/specification.json` and feeds them to the
 real client parsers, in three modes: contract-required properties only, every
 declared property, and every nullable property served as null. The third mode is

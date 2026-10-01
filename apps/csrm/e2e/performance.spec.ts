@@ -44,7 +44,7 @@ import { expectSettled } from './helpers/settle';
  * Only the `desktop` project runs this file (it is outside the mobile project's testMatch). The budgets
  * live here and in docs/performance/phase-08-baseline.md, which records their derivation, the
  * measured baseline and how to re-run it. Each run writes its medians and samples to
- * apps/web/.tmp/performance/baseline-<project>.json (ignored).
+ * apps/csrm/.tmp/performance/baseline-<project>.json (ignored).
  */
 
 test.use({ trace: 'off' });
@@ -89,7 +89,7 @@ type KeyRouteEntry = {
 
 const main = (page: Page) => page.getByRole('main');
 
-// Seeded fixtures (apps/strapi/src/bootstrap): Jane's navigation lifecycle and questionnaire records, the Risk Register.
+// Seeded fixtures (apps/backend/src/bootstrap): Jane's navigation lifecycle and questionnaire records, the Risk Register.
 const KEY_ROUTES: readonly KeyRouteEntry[] = [
   {
     route: '/app', actor: 'Requestor', title: 'Dashboard | IdamBox CSRM', heading: 'Dashboard',

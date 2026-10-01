@@ -16,7 +16,7 @@ import reportRoutes from "../src/api/csrm-analyst-insight/routes/reports";
  * their operations here.
  */
 
-// Tests compile into `.tmp/tests-dist/tests`, so three parents resolve apps/strapi.
+// Tests compile into `.tmp/tests-dist/tests`, so three parents resolve apps/backend.
 const appDir = path.resolve(__dirname, "..", "..", "..");
 
 type RoutePolicy = string | { name: string; config?: Record<string, unknown> };

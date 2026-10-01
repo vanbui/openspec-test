@@ -13,7 +13,7 @@ import {
   selectReviewQueueBucket,
 } from "../src/api/csrm-assessment-request/services/collection-scope";
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi.
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
 const appDir = path.resolve(__dirname, "..", "..", "..");
 
 /** The request-status vocabulary is read from the frozen datamodel, never restated. */

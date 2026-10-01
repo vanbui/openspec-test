@@ -33,7 +33,7 @@ const at = (date: string): string => `${date}T00:00:00.000Z`;
 
 const SUMMARY_PATH = "/api/v1/dashboard/summary";
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi,
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend,
 // two more resolve the repository root.
 const repositoryDir = path.resolve(__dirname, "..", "..", "..", "..", "..");
 

@@ -3,7 +3,7 @@ node_modules/
 .pnpm-store/
 .turbo/
 .next/
-apps/web/next-env.d.ts
+apps/csrm/next-env.d.ts
 coverage/
 playwright-report/
 test-results/
@@ -14,23 +14,23 @@ test-results/
 .env.*
 !.env.example
 !.env.local.example
-apps/strapi/.tmp/
-apps/web/.tmp/
-apps/strapi/.strapi/
-apps/strapi/dist/
-apps/strapi/build/
-apps/strapi/public/uploads/*
-!apps/strapi/public/uploads/.gitkeep
+apps/backend/.tmp/
+apps/csrm/.tmp/
+apps/backend/.strapi/
+apps/backend/dist/
+apps/backend/build/
+apps/backend/public/uploads/*
+!apps/backend/public/uploads/.gitkeep
 *.sqlite
 *.sqlite3
 *.log
 
 # Strapi migration exclusions
-apps/strapi/node_modules/
-apps/strapi/.planning/
-apps/strapi/.git/
-apps/strapi/package-lock.json
-apps/strapi/yarn.lock
+apps/backend/node_modules/
+apps/backend/.planning/
+apps/backend/.git/
+apps/backend/package-lock.json
+apps/backend/yarn.lock
 
 # GSD workflow runtime state (per-run dispatch sentinel)
 .gsd/

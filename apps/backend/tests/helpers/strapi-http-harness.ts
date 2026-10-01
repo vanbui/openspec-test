@@ -210,7 +210,7 @@ export const INTERNAL_ERROR_HEADER = "x-csrm-test-internal-error";
  * Koa stack before `listen`, so it sits after every configured middleware
  * (`strapi::errors` and `strapi::security` included) and before the router that
  * `listen` mounts: the error is formatted by Strapi's own error middleware, not
- * by Koa's default handler. Nothing of this exists in apps/strapi/src.
+ * by Koa's default handler. Nothing of this exists in apps/backend/src.
  */
 function internalErrorMiddleware() {
   return async (ctx: { get: (name: string) => string; state: Record<string, unknown> }, next: () => Promise<unknown>) => {

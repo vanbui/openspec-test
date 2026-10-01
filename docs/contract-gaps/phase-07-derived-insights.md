@@ -218,7 +218,7 @@ answer envelopes. A database predicate cannot run those parsers.
 
 - The bucket SQL treats a questionnaire as submitted when any of its answers has `state` equal to
   `submitted`. It reads the JSON path with `whereJsonPath` and never compares JSON text.
-- The equivalence test in `apps/strapi/tests/review-queue-buckets.integration.test.ts` proves the
+- The equivalence test in `apps/backend/tests/review-queue-buckets.integration.test.ts` proves the
   predicate agrees with the in-application rule. It covers one fixture per lifecycle step, plus two
   isolating fixtures.
 - These divergences are accepted:
@@ -336,7 +336,7 @@ Phase 7.
 The Phase 7 plans found or deferred these. All but the last predate the phase, and none affects a
 Phase 7 figure.
 
-- **`apps/strapi/tests/authorization.policy.test.js` never runs.**
+- **`apps/backend/tests/authorization.policy.test.js` never runs.**
   - The Strapi test script passes `dist/tests/authorization.policy.test.js` to `node --test`.
   - `tsc` does not compile JavaScript test sources, so the path matches nothing and Node skips it
     silently.
@@ -350,7 +350,7 @@ Phase 7 figure.
   - The web keys on the status and never parses an error body closed, so nothing reaches a user.
   - A contract pass should declare `data: null` or strip it.
 - **The parity guard does not exercise the Risk Register parser.**
-  - `apps/web/src/features/contract-response-parity.test.ts` synthesises integers as their minimum or
+  - `apps/csrm/src/features/contract-response-parity.test.ts` synthesises integers as their minimum or
     1 and ignores integer enumerations. `RiskRegisterPagination.pageSize`, which is 10, 25 or 50, is
     therefore always 1.
   - The register parser rejects every synthesised payload at `meta.pagination.pageSize`, and the

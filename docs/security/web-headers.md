@@ -1,17 +1,17 @@
 # Web security headers and Content-Security-Policy (Phase 8)
 
 - **Date:** 2026-09-26
-- **Scope:** every HTTP response of the Next.js web application (`apps/web`, Next 16.3.6): documents, Server Action posts, client-side navigation requests and static assets, on a production build (`next build`, then `next start`) and under `next dev`. The Strapi API's headers are recorded in `docs/security/strapi-http-hardening.md`. With that record, this document is an input to the phase security record.
+- **Scope:** every HTTP response of the Next.js web application (`apps/csrm`, Next 16.3.6): documents, Server Action posts, client-side navigation requests and static assets, on a production build (`next build`, then `next start`) and under `next dev`. The Strapi API's headers are recorded in `docs/security/strapi-http-hardening.md`. With that record, this document is an input to the phase security record.
 - **Decisions:** D-19 (the header set, the Content-Security-Policy, zero violations), D-21 (validation record: output safety), D-22 (no server-only value in the browser), D-42 (TLS directives), D-47 (the session cookie's `Secure` flag) and D-48 (the Server Action origin check).
 - **Threats:** T-08-10-01 to T-08-10-07 (T-08-R05, R06, R07, R08, R11, R13 and R18).
-- **Evidence:** every production value below was observed on the production build by `apps/web/e2e/production-hardening.spec.ts` (2026-09-26) and is pinned by the unit tests in `apps/web/src/lib/security/`. The development policy was observed on an isolated `next dev`. Each section names its proofs.
+- **Evidence:** every production value below was observed on the production build by `apps/csrm/e2e/production-hardening.spec.ts` (2026-09-26) and is pinned by the unit tests in `apps/csrm/src/lib/security/`. The development policy was observed on an isolated `next dev`. Each section names its proofs.
 
 ## Header set
 
 | Header | Value | Set by | Applies to | Decision | ASVS 4.0.3 |
 |---|---|---|---|---|---|
-| `Content-Security-Policy` | the policy below, with a fresh nonce for each request | `apps/web/proxy.ts`, through `buildContentSecurityPolicy` in `src/lib/security/content-security-policy.ts` | every request the matcher admits: documents, Server Action posts and client-side navigation requests | D-19, D-42 | V14.4.3 |
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` | `apps/web/next.config.ts`, `headers()`, only when `NODE_ENV` is `production` as the configuration loads | every path, static assets included | D-19, D-42 | V14.4.5 |
+| `Content-Security-Policy` | the policy below, with a fresh nonce for each request | `apps/csrm/proxy.ts`, through `buildContentSecurityPolicy` in `src/lib/security/content-security-policy.ts` | every request the matcher admits: documents, Server Action posts and client-side navigation requests | D-19, D-42 | V14.4.3 |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` | `apps/csrm/next.config.ts`, `headers()`, only when `NODE_ENV` is `production` as the configuration loads | every path, static assets included | D-19, D-42 | V14.4.5 |
 | `X-Content-Type-Options` | `nosniff` | `next.config.ts` | every path | D-19 | V14.4.4 |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | `next.config.ts` | every path | D-19 | V14.4.6 |
 | `X-Frame-Options` | `DENY` | `next.config.ts` | every path | D-19 | V14.4.7 |
@@ -50,7 +50,7 @@ default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-sr
 - The first sweep of the production build found three further causes of violations, each fixed at its source:
   1. **Next 16.3.3 to 16.3.6.** 16.3.3 rendered the asset scripts of `loading`, `error` and `template` boundaries without the nonce (`create-component-styles-and-scripts`), so the policy blocked them. Under `next dev` this produced 94 blocked loads of three boundary chunks across the signed-in routes. In the production build it blocked the `(app)/app/loading` chunk on `/app/requests/new`. Next 16.3.5 added the nonce (vercel/next.js#98403). 16.3.6 also fixes GHSA-vcvr-r3jv-pc5j, in `next/og`, which CSRM does not use.
   2. **Every page renders per request** (`export const dynamic = 'force-dynamic'` in `app/layout.tsx`). A nonce exists only while a request renders. The build had prerendered the unmatched-URL page (`/_not-found`), so its eleven script files and its two inline scripts carried no nonce, and every one was blocked.
-  3. **Zod parses without code generation in the browser** (`apps/web/instrumentation-client.ts`). Zod 4 tries `new Function` once, when the first object schema is built, to decide whether it can compile its parsers. The browser reported that caught attempt as a `script-src` `eval` violation on the request form and the Risk Register. The instrumentation file runs before the application's modules and switches zod to jitless parsing, which skips the attempt; parsing and rejection are unchanged. The server never runs the file and keeps compiled parsers. The file imports `config` from `zod/v4/core` rather than the `z` namespace, because it loads on every page. Measured on the root chunks, it adds 329 bytes gzipped; the namespace would have added 64,677.
+  3. **Zod parses without code generation in the browser** (`apps/csrm/instrumentation-client.ts`). Zod 4 tries `new Function` once, when the first object schema is built, to decide whether it can compile its parsers. The browser reported that caught attempt as a `script-src` `eval` violation on the request form and the Risk Register. The instrumentation file runs before the application's modules and switches zod to jitless parsing, which skips the attempt; parsing and rejection are unchanged. The server never runs the file and keeps compiled parsers. The file imports `config` from `zod/v4/core` rather than the `z` namespace, because it loads on every page. Measured on the root chunks, it adds 329 bytes gzipped; the namespace would have added 64,677.
 - Proof in the served HTML: every `<script>` tag of the `/sign-in`, signed-in `/app` and 404 documents carries that document's nonce, and consecutive documents get different nonces.
 
 ### The matcher
@@ -148,13 +148,13 @@ default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-sr
 
 | Proof | What it shows |
 |---|---|
-| `apps/web/src/lib/security/content-security-policy.test.ts` | The exact production and development policies. The development branch differs by `'unsafe-eval'` alone. The HTTPS upgrade is sent only over HTTPS. The nonce is validated, never echoed, and read back by Next's own extractor. |
-| `apps/web/src/lib/security/proxy.test.ts` | One nonce is set on the request (as `x-nonce` and inside the policy) and the same policy on the response. Every request gets a fresh nonce. The policy follows the protocol and `NODE_ENV`. The matcher skips static files, images, the favicon and prefetches, and runs for any URL that only resembles one of them. The root layout renders every page per request. |
-| `apps/web/src/lib/security/security-headers.test.ts` | The static header rule for every path. HSTS is sent only by production builds and never with `preload`. No static CSP is set. `poweredByHeader` is off. |
-| `apps/web/src/lib/security/instrumentation-client.test.ts` | Zod is jitless in the browser, and parsing is unchanged. |
-| `apps/web/src/lib/security/server-only-boundary.test.ts`, `output-safety.test.ts` | D-22 and D-21 as above. |
-| `apps/web/e2e/production-hardening.spec.ts` | On the production build: the development sign-in refused without the attestation, and again when the build is started with `NODE_ENV=development`, the build's real sign-in action minting no cookie in either; the header set; the nonce on every served script; zero violations on 64 routes for four visitors at 1440px and 375px; a client-side navigation with no development runtime; the client-chunk scan; the Server Action origin check. |
-| `apps/web/e2e/helpers/csp.ts` | The collector: every `securitypolicyviolation` event, reported to the test process even from a page it has left, and every policy console message. Chromium words these "Refused to …" in older releases and "… violates the following Content Security Policy directive …" since, so both wordings are matched. |
+| `apps/csrm/src/lib/security/content-security-policy.test.ts` | The exact production and development policies. The development branch differs by `'unsafe-eval'` alone. The HTTPS upgrade is sent only over HTTPS. The nonce is validated, never echoed, and read back by Next's own extractor. |
+| `apps/csrm/src/lib/security/proxy.test.ts` | One nonce is set on the request (as `x-nonce` and inside the policy) and the same policy on the response. Every request gets a fresh nonce. The policy follows the protocol and `NODE_ENV`. The matcher skips static files, images, the favicon and prefetches, and runs for any URL that only resembles one of them. The root layout renders every page per request. |
+| `apps/csrm/src/lib/security/security-headers.test.ts` | The static header rule for every path. HSTS is sent only by production builds and never with `preload`. No static CSP is set. `poweredByHeader` is off. |
+| `apps/csrm/src/lib/security/instrumentation-client.test.ts` | Zod is jitless in the browser, and parsing is unchanged. |
+| `apps/csrm/src/lib/security/server-only-boundary.test.ts`, `output-safety.test.ts` | D-22 and D-21 as above. |
+| `apps/csrm/e2e/production-hardening.spec.ts` | On the production build: the development sign-in refused without the attestation, and again when the build is started with `NODE_ENV=development`, the build's real sign-in action minting no cookie in either; the header set; the nonce on every served script; zero violations on 64 routes for four visitors at 1440px and 375px; a client-side navigation with no development runtime; the client-chunk scan; the Server Action origin check. |
+| `apps/csrm/e2e/helpers/csp.ts` | The collector: every `securitypolicyviolation` event, reported to the test process even from a page it has left, and every policy console message. Chromium words these "Refused to …" in older releases and "… violates the following Content Security Policy directive …" since, so both wordings are matched. |
 
 ## Keeping this true
 

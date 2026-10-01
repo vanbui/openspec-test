@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { runArtifactDisposition, runArtifactNames, runArtifactPaths } from './e2e-run-artifacts';
 
 const invocationId = '0f8fad5b-d9cb-469f-a165-70867728950e';
-const strapiDir = join('repo', 'apps', 'strapi');
-const webDir = join('repo', 'apps', 'web');
+const strapiDir = join('repo', 'apps', 'backend');
+const webDir = join('repo', 'apps', 'csrm');
 
 describe('the disposition of a finished run', () => {
   it('removes the artifacts of a run that passed', () => {

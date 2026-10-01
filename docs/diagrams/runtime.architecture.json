@@ -33,7 +33,7 @@
         130,
         64
       ],
-      "tag": "apps/web"
+      "tag": "apps/csrm"
     },
     {
       "id": "policy",
@@ -63,7 +63,7 @@
         130,
         64
       ],
-      "tag": "apps/strapi"
+      "tag": "apps/backend"
     },
     {
       "id": "db",

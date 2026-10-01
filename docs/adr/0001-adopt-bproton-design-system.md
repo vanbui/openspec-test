@@ -51,7 +51,7 @@ CSRM adopts the BProton design system. Every value the system defines is used ex
 ## Consequences
 
 - Visual change is broad but mechanical. Components keep consuming semantic token names; values change in `globals.css`. Class-only edits: `bg-accent` hovers move to `bg-muted`/`bg-hover`, radius classes are re-mapped, and buttons become pills.
-- `docs/design/csrm-design-direction.md` is rewritten to these values. The browser conformance suite (`apps/web/e2e/design-system-conformance.spec.ts`) parses its §3.10 table, so it will fail until the CSS implementation lands. Doc and implementation ship on the same branch.
+- `docs/design/csrm-design-direction.md` is rewritten to these values. The browser conformance suite (`apps/csrm/e2e/design-system-conformance.spec.ts`) parses its §3.10 table, so it will fail until the CSS implementation lands. Doc and implementation ship on the same branch.
 - Phase UI specifications stay deferential: their font rows now point at the direction document instead of naming Inter.
 - The phrase "one blue accent" disappears from the product vocabulary. Blue now means *info status* only.
 - The loaded Plus Jakarta Sans exposes tabular figures (`tnum`), verified in the browser on 2026-09-24, so numeric columns stay in the sans face.

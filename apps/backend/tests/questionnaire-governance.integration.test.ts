@@ -5,7 +5,7 @@ import test, { after } from "node:test";
 
 import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
 
-// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/strapi,
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend,
 // two more resolve the repository root.
 const repositoryDir = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const specification = JSON.parse(readFileSync(path.join(repositoryDir, "docs", "references", "specification.json"), "utf8")) as Record<string, any>;
