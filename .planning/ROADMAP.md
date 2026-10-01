@@ -796,10 +796,51 @@ Plans:
 5. The Requestor who owns no risk can raise a point but not send back; the analyst cannot send back or resolve a participant's point; an unrelated Requestor gets the refusal a missing record gets for the points and the history, in the API and the UI.
 6. Playwright, third slice: Phase 17.1's journey with the contest inserted after "Submit final assessment": the owner contests two points and sends the assessment back, the analyst edits and resubmits, then the owner accepts one risk and treats another and the analyst releases and closes; the analyst cannot accept, and an unrelated Requestor is refused at each step, in the UI and the API.
 
-**Plans:** 0 plans
+**Plans:** 15 plans (wave 1 pairs the contract record with the pure modules; then one per wave)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 17.2 to break down)
+**Wave 1**
+- [ ] 17.2-01-PLAN.md — Record the 17.2-UI-SPEC's extensions X-48 to X-52 in the design direction (orchestrator constraint; D-25) and the glossary entries "Send back" and "Withdrawn (contest point)" (D-25), both before any i
+- [ ] 17.2-02-PLAN.md — Build the pure modules D-28 puts beside the record, each RED-first (the `tdd` skill; D-26: each behaviour gets a failing test first at its seam): the target vocabulary and the snapshot cutter (D-04), 
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 17.2-03-PLAN.md — After the pilot's approval, apply the schema changes of `phase-17.2-contest-points.md` (D-01) and prove them on a fresh boot with legacy rows unchanged, no core route (D-20) and the control-implementa
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 17.2-04-PLAN.md — Serve the eight point operations (D-02 items 1 to 5): raise (D-04, D-06), list and read one with its thread and comparison (D-05, D-14, D-16), reply (D-07), answer (D-08), resolve, withdraw and undo (
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 17.2-05-PLAN.md — Serve "Send back" (D-02 item 6, D-11) to current risk owners and executive approvers with an open contest point of their own, closing the acceptance round as `returned` and reopening the whole assessm
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 17.2-06-PLAN.md — Add the one "no open point" predicate to 17.1's two readiness projections (D-12) so it gates mark reviewed, submission, and release and close (orchestrator constraint), re-checked inside release and c
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 17.2-07-PLAN.md — Extend the reads that change shape (D-02 item 8, D-16): the participant projection (per-target counts, the latest round's outcome facts, the viewer's contest acts) and the analyst detail (per-target o
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 17.2-08-PLAN.md — Serve the history read (D-02 item 7, D-15): `GET /api/v1/risk_assessments/{assessmentId}/history` with its closed event vocabulary, round windows (17.2-02), per-actor projection (participants without 
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 17.2-09-PLAN.md — Add the four contest notification kinds to Phase 19.1's registry and emit them through its service in each act's own transaction (D-17; orchestrator constraint: the notification kinds go through 19.1'
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 17.2-10-PLAN.md — Build the web's typed layer for the ten operations (D-02; D-28 step 7): closed parsers, server-only services, Server Actions with revalidation and a closed result, the history read's parser and servic
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 17.2-11-PLAN.md — Build the reading and discussion surfaces (D-23, D-24; 17.2-UI-SPEC §4, §5.1 to §5.3, §5.6): the "Contest points" section on both assessment pages, the point sheet with its comparison (X-50 through Ph
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 17.2-12-PLAN.md — Build every act on a point in the UI: the raise form with its target picker and every entry point (D-04, D-06; 17.2-UI-SPEC §3; amendment 1's "Close and keep draft"), including 17.1's decision-view se
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 17.2-13-PLAN.md — Build the send-back confirmation and the returned round's surfaces (D-11, D-13; X-51; 17.2-UI-SPEC §6), the contest items in "Review and submit" and release readiness (D-12; §7), and round n+1's "stan
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 17.2-14-PLAN.md — Build the history route per actor (D-15, D-23; X-52; 17.2-UI-SPEC §9 and orchestrator amendment 4) on the typed read from 17.2-10, linked from both assessment pages, and the list and Home figures for 
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 17.2-15-PLAN.md — Insert the contest slice into `apps/csrm/e2e/risk-owner-journey.spec.ts` after `submitFinalAssessment` (orchestrator constraint; D-27; SC6): two points raised, sent back, the analyst edits and answers
 
 ### Phase 18: Risk table and spreadsheet interoperability
 

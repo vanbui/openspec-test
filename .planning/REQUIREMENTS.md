@@ -219,10 +219,10 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - [ ] **NOTIFY-04**: Participants and analysts are told in the app about contest points and returned assessments.
   - Acceptance: (1) a contest point raised notifies the assigned analyst, an answer notifies the point's raiser, and an assessment sent back notifies the assigned analyst and the other participants; (2) each notification opens the point or the assessment, and nobody is told about a point on an assessment they do not take part in; (3) these events stay in the app (decision 18).
   - Trace: PD-3 · Phase 17.2 (G-18)
+  - Amended (2026-10-01, Phase 17.2 context D-17): a reply to a contest point notifies the point's raiser, the assigned analyst and any other analyst who answered the point (`contest-point-replied`).
 
 ### CSV Import and Export
 
-  - Amended (2026-10-01, Phase 17.2 context D-17): a reply to a contest point notifies the point's raiser and the assigned analyst (`contest-point-replied`).
 - [ ] **CSV-01**: Registers, lists, queues, alerts and reports export to CSV and XLSX.
   - Acceptance: (1) exports follow the current filters, search and sort, default to the visible columns with a column choice, and are named after the view and date; (2) Strapi scopes each export to what the viewer may read, and a Requestor exports only their own released assessments (decision 12); (3) values starting with `=`, `+`, `-`, `@`, tab or carriage return are neutralised, and CSV is UTF-8 with a BOM; (4) every export is logged with actor, view, filters and row count, and a released assessment prints as an A4 report (decision 12).
   - Trace: Q3 · UAT-049 · Phase 19
