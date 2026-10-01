@@ -1,9 +1,10 @@
 # Post-demo brief: reconcile, plan and build the risk-owner acceptance flow
 
 **Status:** the active brief for the post-demo work, from 2026-10-01. It is the Resume File STATE.md names. It replaces "the operator's local v2.0 orchestration brief (git-excluded)", which does not exist in this repository.
-**Branch:** `post-demo`, created from `csrm-20260928` at `ece1a25`. Commit only here; never push, open a PR or merge.
+**Branch:** `post-demo`, created from `csrm-20260928` at `ece1a25`. Commit only here. Push only `post-demo` to `origin`, fast-forward, as section 7 records; never open a PR or merge.
 **Roles:** the pilot (the operator's main session) owns the result and every gate. A worker subagent runs the GSD planning and execution units, and the pilot accepts its work only with evidence.
-**Sections:** 1 overrides, 2 dev-mode rules, 3 baseline, 4 host notes, 5 gate commands, 6 the operator's prompt (verbatim).
+**Sections:** 1 overrides, 2 dev-mode rules, 3 baseline, 4 host notes, 5 gate commands, 6 the operator's prompt (verbatim), 7 the operator's later updates.
+**Resume prompt for later sessions:** `.planning/prompts/post-demo-build.md`.
 
 ## 1. Overrides to stale planning facts
 
@@ -52,7 +53,18 @@ Both are leftovers of the `d161fce` rename: the files exist under `../backend/`.
   export PATH="/c/ProgramData/nvm/v24.19.0:$PATH"
   pnpm() { /c/ProgramData/nvm/v24.19.0/node /c/ProgramData/nvm/v24.19.0/node_modules/corepack/dist/pnpm.js "$@"; }
   ```
-  Child processes that resolve `pnpm` from PATH, such as Turbo, need a `pnpm` and a `pnpm.cmd` file shim on PATH. Playwright does not: it runs its servers with `process.execPath` and the `pnpm.js` beside it, so it inherits Node 24 when started under Node 24.
+  Child processes that resolve `pnpm` from PATH need a `pnpm` and a `pnpm.cmd` file shim on PATH. That covers Turbo, and package scripts that call `pnpm` themselves, such as `api:check`. Playwright does not need one: it runs its servers with `process.execPath` and the `pnpm.js` beside it, so it inherits Node 24 when started under Node 24.
+
+  The full recipe, once per session, with `S` set to that session's scratchpad directory:
+  ```bash
+  S="<this session's scratchpad directory>"
+  mkdir -p "$S/bin"
+  printf '#!/bin/sh\nexec /c/ProgramData/nvm/v24.19.0/node /c/ProgramData/nvm/v24.19.0/node_modules/corepack/dist/pnpm.js "$@"\n' > "$S/bin/pnpm"
+  chmod +x "$S/bin/pnpm"
+  printf '%s\r\n' '@"C:\ProgramData\nvm\v24.19.0\node.exe" "C:\ProgramData\nvm\v24.19.0\node_modules\corepack\dist\pnpm.js" %*' > "$S/bin/pnpm.cmd"
+  printf 'export PATH="%s/bin:/c/ProgramData/nvm/v24.19.0:$PATH"\n' "$S" > "$S/node24.sh"
+  ```
+  The lines carry no heredocs, so they work when copied with this list's indentation. Then start every Bash command that runs node or pnpm with `source "$S/node24.sh"`, and check it with `node --version` (v24.19.0) and `cmd //c "pnpm.cmd --version"` (11.24.0). Tested on this host on 2026-10-02.
 - **`api:check` and line endings.** `core.autocrlf` is `true`. `api:check` rewrites `apps/csrm/src/lib/api/generated/schema.d.ts` with LF, so `git status` may list it as modified with an empty diff. Run `git update-index --refresh -- apps/csrm/src/lib/api/generated/schema.d.ts` afterwards. It is non-destructive and only refreshes the stat cache. Never stage the file unless the contract really changed.
 - **Playwright.** Stop any Strapi dev server first: `strapi develop` shares `apps/backend/dist` with the harness (see the header of `apps/csrm/playwright.config.ts`). The run uses its own ports, SQLite file and Next build directory, and must leave the tree clean (Phase 8 D-12; G-6).
 - **Agents.** `.claude/agents/csrm-worker.md` does not exist in this repository, so the worker runs as a `general-purpose` agent with `model: "opus"`.
@@ -215,3 +227,15 @@ Then commit.
 - the decisions, one line each, with reversals flagged;
 - the phases planned and built;
 - open questions for me, most important first.
+
+---
+
+## 7. The operator's later updates
+
+These come after the verbatim prompt in section 6 and amend it where they say so.
+
+**2026-10-02: push the branch, and a resume prompt for later sessions.** The operator: "Once all the planning is done, push and commit. Make sure that the branch is on git. Then, create the prompt for future Claude Code sessions to autonomously build out through all the phases."
+
+- **Pushing.** `post-demo` is pushed to `origin` (`https://github.com/vanbui/idambox.git`), first at `25bfc73` once the planning gate passed. From now on it is pushed after each phase lands and at every pause, fast-forward only. This replaces section 6's "never push" for `post-demo` alone. Never force-push or push another branch, and never merge, rebase or open a pull request.
+- **Resume prompt.** `.planning/prompts/post-demo-build.md` holds the prompt the operator pastes into each later session. It resumes from STATE.md and builds the remaining phases in execution order until the milestone is built or the usage ceiling is near.
+- **The base branch moved.** After `post-demo` branched from `ece1a25`, `origin/csrm-20260928` gained `326eb3a` ("Move the example questions to docs/references", the operator's housekeeping: `csrm-questions.seed.json` moved into `docs/references`, the overlay script changed, and `yarn.lock` removed). `post-demo` does not include it, and the files do not overlap. Integrating the two branches is the operator's call.
