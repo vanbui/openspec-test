@@ -108,7 +108,7 @@ describe('feedback composites', () => {
       readFileSync(
         resolve(
           process.cwd(),
-          '../strapi/src/api/csrm-assessment-request/content-types/csrm-assessment-request/schema.json',
+          '../backend/src/api/csrm-assessment-request/content-types/csrm-assessment-request/schema.json',
         ),
         'utf8',
       ),

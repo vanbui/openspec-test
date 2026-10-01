@@ -49,7 +49,7 @@ const authoritativeCataloguePath = resolve(
 );
 const bootstrapCataloguePath = resolve(
   process.cwd(),
-  '../strapi/src/bootstrap/idambox-csrm-role-function-api-catalogue.json',
+  '../backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json',
 );
 const contractGapPath = resolve(
   process.cwd(),
