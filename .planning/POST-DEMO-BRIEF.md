@@ -35,7 +35,7 @@ Recorded before any change on `post-demo`. A failure here is baseline, not a reg
 | Lint | `pnpm --dir apps/csrm lint` (the web's lint is `next typegen && tsc --noEmit`; there is no ESLint) | clean | — |
 | Web unit (Vitest) | `pnpm --dir apps/csrm test` | **2,046 / 2,048**: 2 baseline failures, below | 1,892 / 1,892 |
 | Strapi (node:test) | `pnpm --dir apps/backend test` | **578 / 578** (10 min 45 s) | 526 / 526 |
-| Playwright (desktop and mobile, production build) | `pnpm --dir apps/csrm test:e2e` | running at the Stage 0 commit; recorded in the commit that follows | 84 / 84 |
+| Playwright (desktop and mobile, production build) | `pnpm --dir apps/csrm test:e2e` | **84 / 84** (11.1 min); the tree was clean afterwards | 84 / 84 |
 
 Baseline failures:
 
