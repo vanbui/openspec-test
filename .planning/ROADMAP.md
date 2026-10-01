@@ -436,8 +436,8 @@ Plans:
 **Closes:** UAT-049, UAT-051, UAT-052
 **Intent:** Q3
 **Decisions:** CSV and XLSX in the viewer's authorised scope, with Requestors exporting their own released assessments; formula-like values neutralised; every export logged with actor, view, filters and row count; a print-ready A4 report of the released assessment (#12).
-**Contract and datamodel:** API (export operations reusing each list's filters and authorised scope; parser tolerance); a likely XLSX dependency, justified; no content-type change.
-**Size:** M
+**Contract and datamodel:** API (export operations reusing each list's filters and authorised scope; parser tolerance); a likely XLSX dependency, justified; no content-type change. The two contract changes are documented first, followed by an approval checkpoint (G-6): `docs/contract-gaps/phase-19-exports-and-export-log.md` (the export operations and grants, the row cap, formats and neutralisation, and the export log in Strapi's server log) and `docs/contract-gaps/phase-19-import-tolerance.md` (amending `phase-06-administration-import-contract.md`).
+**Size:** L (was M: about 22 export and import operations, each following one pattern)
 
 **Success Criteria:**
 
