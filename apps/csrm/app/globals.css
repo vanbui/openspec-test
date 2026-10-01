@@ -184,11 +184,17 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  /* Each family's latin-ext companion comes first, so its unicode-range claims only
+     latin-ext characters and is downloaded only when a page renders one (G-10). */
+  --font-sans:
+    var(--font-jakarta-latin-ext), var(--font-jakarta), "Plus Jakarta Sans",
+    system-ui, sans-serif;
   --font-display:
-    var(--font-instrument), "Instrument Serif", "Plus Jakarta Sans", system-ui,
-    serif;
-  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+    var(--font-instrument-latin-ext), var(--font-instrument), "Instrument Serif",
+    "Plus Jakarta Sans", system-ui, serif;
+  --font-mono:
+    var(--font-plex-mono-latin-ext), var(--font-plex-mono), "IBM Plex Mono",
+    ui-monospace, monospace;
 
   --color-background: var(--background);
   --color-overlay: var(--overlay-background);

@@ -5,13 +5,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 /*
- * next/font/google is compiled away by Next; outside it the loaders are stubs that return the
- * shape the fonts module reads, so the test can see which font variables reach the document.
+ * next/font/local is compiled away by Next, and outside it the loader throws. The stub returns the
+ * shape the fonts module reads, named after each call's CSS variable, so the test can see which font
+ * variables reach the document.
  */
-vi.mock('next/font/google', () => {
-  const loader = (family: string) => () => ({ className: `${family}-font`, style: { fontFamily: family }, variable: `${family}-variable` });
-  return { IBM_Plex_Mono: loader('plex-mono'), Instrument_Serif: loader('instrument'), Plus_Jakarta_Sans: loader('jakarta') };
-});
+vi.mock('next/font/local', () => ({
+  default: (options: { variable: string }) => {
+    const name = options.variable.replace(/^--font-/, '');
+    return { className: `${name}-font`, style: { fontFamily: name }, variable: `${name}-variable` };
+  },
+}));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
 }));
@@ -87,7 +90,7 @@ describe('the global error', () => {
   it('renders its own document with the stylesheet fonts, the title and the locked copy', () => {
     const markup = renderToStaticMarkup(<GlobalError error={error} retry={() => undefined} />);
 
-    expect(markup).toContain('<html lang="en" class="jakarta-variable instrument-variable plex-mono-variable"');
+    expect(markup).toContain('<html lang="en" class="jakarta-variable jakarta-latin-ext-variable instrument-variable instrument-latin-ext-variable plex-mono-variable plex-mono-latin-ext-variable"');
     expect(markup).toContain('<body');
     expect(markup).toContain(`<title>${globalErrorCopy.title}</title>`);
     expect(markup).toContain(`<h1>${globalErrorCopy.heading}</h1>`);
