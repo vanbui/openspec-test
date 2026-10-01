@@ -502,6 +502,16 @@ Other seams:
 - **Contract-gap records before an approval checkpoint; settings apply forward and never rewrite recorded decisions:** confirmed, as four records and one checkpoint (`<contract_gaps>`). **Precision:** an open acceptance round keeps the configuration it opened under, by a snapshot on the round (D-11), answering 17.1-RESEARCH's open question.
 - **Direct URLs to Admin screens show the permission state; a Security Analyst without the Admin role reads but cannot change reference data:** confirmed (D-06, D-24). **Added:** the Admin gets the permission state at analyst URLs; usage shows to the Admin as plain counts; seeds stop overwriting Admin-owned reference data (D-06); reference data changes join the change log (D-12); role changes made in the identity records are recorded (D-08).
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+The research raised three questions and one residual. Each is settled as follows and binds the plans:
+
+- **Context too large:** a request whose AI context exceeds the bound counts as generation "unavailable" (D-22), so the manual start (G-20) is offered, although no run was recorded.
+- **The manual questionnaire's title** defaults on the server from the request, so the manual-start confirmation needs no title field.
+- **"Review complete" in D-22** means the same eligibility check that generation uses. No new stored fact is added.
+- **Hidden content types:** `visible: false` on the four new types removes their admin-panel write permissions. Reading by direct URL remains, and a Phase 22 plan task records it as a residual in `docs/security/phase-08-residual-risks.md`.
+- **The Admin development fixture** (`...5e05`) stays consistent with the realm import, provided the realm user carries no realm role. The OIDC tests stay green, without starting Keycloak.
+
 ---
 
 *Phase: 22-admin-role-and-configurable-lists*
