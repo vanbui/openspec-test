@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { expect, test, type CDPSession, type Locator, type Page } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 
 import { harnessPort } from '../src/lib/testing/e2e-harness-ports';
@@ -295,6 +296,188 @@ test.describe('design-system type contract', () => {
       await page.goto('/app/review/assessments');
       if (width < 768) await expect(page.getByRole('list')).toBeVisible(); else await expect(page.getByRole('table', { name: 'Risk assessments for review' })).toBeVisible();
     }
+  });
+});
+
+/*
+ * Self-hosted type families (G-10, closes R-08-24). app/fonts.ts loads the three families through
+ * next/font/local from the files committed in app/fonts. On the production build this proves that
+ * the preloads are exactly the six committed latin files, that each family renders in its own face
+ * at every weight in use, that latin-ext text renders in family and its files load only on demand,
+ * and that neither the page, its HTML and stylesheets nor the build output reach a Google font host.
+ */
+/* Written with escaped dots so the pattern cannot match its own source text. */
+const googleFontHost = /fonts\.(?:googleapis|gstatic)\.com/;
+const latinExtSample = 'Łukasz Dvořák Māori Ştefan';
+
+function sha256(bytes: Buffer | string): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+/** The committed font files by SHA-256, and the names of each group the test reasons about. */
+function committedFonts() {
+  const directory = resolve(process.cwd(), 'app', 'fonts');
+  const names = readdirSync(directory).filter((name) => name.endsWith('.woff2')).sort();
+  const byHash = new Map(names.map((name) => [sha256(readFileSync(join(directory, name))), name] as const));
+  return {
+    names,
+    byHash,
+    latin: names.filter((name) => /-latin-\d{3}-normal\.woff2$/.test(name)),
+    latinExt400: names.filter((name) => name.endsWith('-latin-ext-400-normal.woff2')),
+    latinExtHeavier: names.filter((name) => /-latin-ext-(?:500|600)-normal\.woff2$/.test(name)),
+  };
+}
+
+/** The platform fonts Chromium used for the text inside the first element matching the selector. */
+async function platformFonts(session: CDPSession, selector: string) {
+  // A fresh document every call, so a node id is never stale after the page changes.
+  const { root } = await session.send('DOM.getDocument', { depth: 0 });
+  const { nodeId } = await session.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+  if (nodeId === 0) throw new Error(`SELF_HOSTED_FONTS_NODE_MISSING: no element matches ${selector}`);
+  const { fonts } = await session.send('CSS.getPlatformFontsForNode', { nodeId });
+  return fonts.map(({ postScriptName, isCustomFont }) => ({ postScriptName, isCustomFont }));
+}
+
+/** Appends a probe with the given inline style and text to main. */
+async function probe(page: Page, id: string, style: string, text: string) {
+  await page.evaluate(({ id, style, text }) => {
+    const element = document.createElement('div');
+    element.dataset.g10Probe = id;
+    element.setAttribute('style', style);
+    element.textContent = text;
+    const main = document.querySelector('main');
+    if (!main) throw new Error('SELF_HOSTED_FONTS_MAIN_MISSING');
+    main.append(element);
+  }, { id, style, text });
+}
+
+function buildTextFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    return entry.isDirectory() ? buildTextFiles(path) : [path];
+  });
+}
+
+test.describe('self-hosted type families (G-10, R-08-24)', () => {
+  test('serves, renders and loads the three families from the origin only', async ({ page }) => {
+    test.setTimeout(120_000);
+    const fonts = committedFonts();
+    expect(fonts.names, 'app/fonts holds the 12 committed woff2 files').toHaveLength(12);
+    expect(fonts.latin, 'six latin files').toHaveLength(6);
+    expect(fonts.latinExt400, 'three latin-ext 400 files').toHaveLength(3);
+    expect(fonts.latinExtHeavier, 'three latin-ext 500 and 600 files').toHaveLength(3);
+
+    const requests: Array<{ url: string; resourceType: string }> = [];
+    page.on('request', (request) => requests.push({ url: request.url(), resourceType: request.resourceType() }));
+    const fetched: Array<{ url: string; file: string }> = [];
+    const pending: Array<Promise<void>> = [];
+    page.on('response', (response) => {
+      if (response.request().resourceType() !== 'font') return;
+      pending.push(response.body().then((body) => {
+        const hash = sha256(body);
+        fetched.push({ url: response.url(), file: fonts.byHash.get(hash) ?? `UNKNOWN_FONT:${hash}` });
+      }));
+    });
+    const fetchedFiles = async () => {
+      await Promise.all(pending);
+      return [...new Set(fetched.map(({ file }) => file))].sort();
+    };
+
+    const response = await page.goto('/sign-in');
+    expect(response?.ok(), '/sign-in responds').toBe(true);
+    await expect(page.getByRole('heading', { level: 1, name: 'Development sign-in' })).toBeVisible();
+    const origin = new URL(page.url()).origin;
+
+    // Preloads: same-origin build media whose bytes are exactly the six committed latin files.
+    const preloads = await page.locator('link[rel="preload"][as="font"]').evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''));
+    const preloadHashes: string[] = [];
+    for (const href of preloads) {
+      const url = new URL(href, page.url());
+      expect(url.origin, `the preload ${href} is same-origin`).toBe(origin);
+      expect(url.pathname, `the preload ${href} is build media`).toMatch(/^\/_next\/static\/media\//);
+      const preloadResponse = await page.request.get(url.toString());
+      expect(preloadResponse.ok(), `the preload ${href} is served`).toBe(true);
+      preloadHashes.push(sha256(await preloadResponse.body()));
+    }
+    expect(preloadHashes.map((hash) => fonts.byHash.get(hash) ?? `UNKNOWN_FONT:${hash}`).sort(), '/sign-in preloads exactly the six committed latin files').toEqual(fonts.latin);
+
+    // Rendered faces: each element's text in its own self-hosted face at the weight in use.
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    const session = await page.context().newCDPSession(page);
+    await session.send('DOM.enable');
+    await session.send('CSS.enable');
+    const expectFace = async (selector: string, postScriptName: string) => {
+      await expect.poll(() => platformFonts(session, selector), { message: `${selector} renders in ${postScriptName} only` })
+        .toEqual([{ isCustomFont: true, postScriptName }]);
+    };
+    await expectFace('.sign-in-card h1', 'InstrumentSerif-Regular');
+    await expectFace('.sign-in-card .wordmark', 'InstrumentSerif-Regular');
+    await expectFace('.sign-in-eyebrow', 'IBMPlexMono-Regular');
+    await expectFace('.sign-in-lead', 'PlusJakartaSans-Regular');
+    // The button renders in the Plus Jakarta Sans face of its computed weight (the unlayered
+    // `button { font: inherit }` reset in globals.css decides that weight, not the loader).
+    const requestorButton = 'button[name="role"][value="Requestor"]';
+    const buttonWeight = await page.locator(requestorButton).evaluate((element) => getComputedStyle(element).fontWeight);
+    const jakartaFaces: Record<string, string> = { 400: 'PlusJakartaSans-Regular', 500: 'PlusJakartaSans-Medium', 600: 'PlusJakartaSans-SemiBold' };
+    expect(Object.keys(jakartaFaces), `the Continue as Requestor button uses a shipped weight, not ${buttonWeight}`).toContain(buttonWeight);
+    await expectFace(requestorButton, jakartaFaces[buttonWeight]!);
+    await probe(page, 'sans-500', 'font-family: var(--font-sans); font-weight: 500', 'Medium weight');
+    await probe(page, 'sans-600', 'font-family: var(--font-sans); font-weight: 600', 'Semibold weight');
+    await probe(page, 'mono-500', 'font-family: var(--font-mono); font-weight: 500', 'Medium weight');
+    await expectFace('[data-g10-probe="sans-500"]', 'PlusJakartaSans-Medium');
+    await expectFace('[data-g10-probe="sans-600"]', 'PlusJakartaSans-SemiBold');
+    await expectFace('[data-g10-probe="mono-500"]', 'IBMPlexMono-Medium');
+
+    // Before any latin-ext text, only latin files are fetched.
+    const beforeLatinExt = await fetchedFiles();
+    expect(beforeLatinExt.filter((file) => !fonts.latin.includes(file)), 'only latin files load before latin-ext text renders').toEqual([]);
+
+    // latin-ext renders in family, and only its 400 files load for 400-weight text.
+    await probe(page, 'sans-latin-ext', 'font-family: var(--font-sans); font-weight: 400', latinExtSample);
+    await probe(page, 'display-latin-ext', 'font-family: var(--font-display); font-size: 28px', latinExtSample);
+    await probe(page, 'mono-latin-ext', 'font-family: var(--font-mono); text-transform: uppercase', latinExtSample);
+    await expectFace('[data-g10-probe="sans-latin-ext"]', 'PlusJakartaSans-Regular');
+    await expectFace('[data-g10-probe="display-latin-ext"]', 'InstrumentSerif-Regular');
+    await expectFace('[data-g10-probe="mono-latin-ext"]', 'IBMPlexMono-Regular');
+    await expect.poll(fetchedFiles, { message: 'latin-ext text loads the latin-ext 400 file of each family' })
+      .toEqual(expect.arrayContaining(fonts.latinExt400));
+    const afterLatinExt = await fetchedFiles();
+    expect(afterLatinExt.filter((file) => fonts.latinExtHeavier.includes(file)), '400-weight latin-ext text loads no latin-ext 500 or 600 file').toEqual([]);
+    expect(afterLatinExt.filter((file) => !fonts.names.includes(file)), 'every font response is a committed file').toEqual([]);
+
+    // No request leaves the origin, and every font comes from the build media.
+    expect(requests.filter(({ url }) => googleFontHost.test(url)).map(({ url }) => url), 'no request reaches a Google font host').toEqual([]);
+    expect(requests.filter(({ url }) => !url.startsWith(`${origin}/`) && !url.startsWith('data:')).map(({ url }) => url), 'no request leaves the web origin').toEqual([]);
+    const fontRequests = requests.filter(({ resourceType }) => resourceType === 'font');
+    expect(fontRequests.length, 'the page requested its fonts').toBeGreaterThanOrEqual(6);
+    for (const { url } of fontRequests) {
+      const parsed = new URL(url);
+      expect(parsed.origin, `the font request ${url} is same-origin`).toBe(origin);
+      expect(parsed.pathname, `the font request ${url} is build media`).toMatch(/^\/_next\/static\/media\//);
+    }
+
+    // The HTML and every stylesheet it links name no Google font host.
+    expect(await response!.text(), 'the /sign-in HTML names no Google font host').not.toMatch(googleFontHost);
+    const stylesheets = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''));
+    expect(stylesheets.length, '/sign-in links its stylesheets').toBeGreaterThan(0);
+    for (const href of stylesheets) {
+      const stylesheet = await page.request.get(new URL(href, page.url()).toString());
+      expect(stylesheet.ok(), `the stylesheet ${href} is served`).toBe(true);
+      expect(await stylesheet.text(), `the stylesheet ${href} names no Google font host`).not.toMatch(googleFontHost);
+    }
+
+    // The build output names no Google font host.
+    const distDirectory = process.env.CSRM_E2E_NEXT_DIST_DIR;
+    if (!distDirectory) throw new Error('SELF_HOSTED_FONTS_RUN_VALUE_MISSING: playwright.config.ts did not expose CSRM_E2E_NEXT_DIST_DIR');
+    const distDir = resolve(process.cwd(), distDirectory);
+    const buildFiles = ['static', 'server']
+      .flatMap((directory) => buildTextFiles(join(distDir, directory)))
+      .filter((file) => /\.(?:js|mjs|cjs|css|html|json|rsc|txt|map)$/.test(file));
+    expect(buildFiles.length, 'the scan reads the build, not an empty directory').toBeGreaterThanOrEqual(10);
+    const offenders = buildFiles
+      .filter((file) => googleFontHost.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(distDir, file).split(sep).join('/'));
+    expect(offenders, 'no build file names a Google font host').toEqual([]);
   });
 });
 
