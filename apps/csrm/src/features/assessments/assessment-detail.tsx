@@ -73,17 +73,17 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, request, s
   return (
     <>
       <PageHeader description={request.requestNumber} status={<StatusBadge status={request.requestStatus} />} title={request.title} />
-      <div className="mt-6"><RequestLifecycleStepper lifecycle={request.lifecycle} /></div>
-      <div className="mt-6"><RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} /></div>
-      {request.requestStatus === 'submitted' && request.relationships?.assessment.availability !== 'available' ? <div className="mb-4"><AnalystRequestRevert documentId={request.documentId} /></div> : null}
       <div className="grid gap-6">
+        <RequestLifecycleStepper lifecycle={request.lifecycle} />
+        <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} />
+        {request.requestStatus === 'submitted' && request.relationships?.assessment.availability !== 'available' ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <DetailSection description="Submitted business context for analyst review." title="Request context">
           <dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Description" value={request.description} /><DetailValue label="Business purpose" value={request.businessPurpose} /><DetailValue label="Division" value={request.division} /><DetailValue label="Business unit" value={request.businessUnit} /><DetailValue label="Business criticality" value={request.businessCriticality} /><DetailValue label="Submitted date" value={request.submittedDate ? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(request.submittedDate)) : null} /></dl>
           <RevertAuditSummary className="mt-6" facts={request} />
         </DetailSection>
+        {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob hasExistingQuestionnaire={questionnaire.availability === 'available'} requestId={request.documentId} /> : null}
+        {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}
       </div>
-      {request.requestStatus === 'submitted' ? <div className="mt-6"><QuestionnaireGenerationJob hasExistingQuestionnaire={questionnaire.availability === 'available'} requestId={request.documentId} /></div> : null}
-      {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} className="mt-6" questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}
     </>
   );
 }

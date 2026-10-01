@@ -263,6 +263,77 @@ describe('analyst review presentations', () => {
     expect(container).toHaveClass('grid', 'gap-6');
     expect(container?.className).not.toMatch(/\bgrid-cols-/);
   });
+
+  /*
+   * jsdom computes no layout, so sharing one `grid gap-6` container with no child margins stands in for the
+   * 24px rhythm. Blocks spaced by their own one-sided margins are what left the request relationships card
+   * flush against the next block.
+   */
+  const verticalMargin = /(^|\s)(mt|mb|my)-/;
+
+  it('keeps the shared section gap between the request relationships and the request context', () => {
+    const detail = {
+      documentId: 'request-6',
+      requestNumber: 'RAR-0046',
+      title: 'Section gap review',
+      description: 'Draft request with relationships.',
+      requestStatus: 'draft' as const,
+      submittedDate: null,
+      dueDate: null,
+      updatedAt: null,
+      dueDateLabel: null,
+      updatedDateLabel: null,
+      informationSystems: [],
+      informationAssets: [],
+      questionnaire: null,
+      assessment: null,
+      relationships: {
+        questionnaire: { availability: 'absent' as const },
+        assessment: { availability: 'absent' as const },
+      },
+    };
+    render(<AssessmentDetail request={detail} state="populated" />);
+
+    const container = screen.getByRole('region', { name: 'Request context' }).parentElement as HTMLElement;
+    expect(container).toHaveClass('grid', 'gap-6');
+    expect(container).toContainElement(screen.getByRole('region', { name: 'Request relationships' }));
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
+    for (const child of Array.from(container.children)) expect(child.className).not.toMatch(verticalMargin);
+  });
+
+  it('keeps the same gap around the analyst reversal and the generation cards', () => {
+    const detail = {
+      documentId: 'request-7',
+      requestNumber: 'RAR-0047',
+      title: 'Reversal gap review',
+      description: 'Submitted request with a submitted questionnaire.',
+      requestStatus: 'submitted' as const,
+      submittedDate: '2026-08-30T01:00:00.000Z',
+      dueDate: null,
+      updatedAt: null,
+      dueDateLabel: null,
+      updatedDateLabel: null,
+      informationSystems: [],
+      informationAssets: [],
+      questionnaire: { documentId: 'questionnaire/id', title: 'Portal questionnaire' },
+      assessment: null,
+      relationships: {
+        questionnaire: { availability: 'available' as const, documentId: 'questionnaire/id', questionnaireNumber: null, title: 'Portal questionnaire', state: 'submitted' },
+        assessment: { availability: 'absent' as const },
+      },
+    };
+    render(<AssessmentDetail request={detail} state="populated" />);
+
+    const container = screen.getByRole('region', { name: 'Request context' }).parentElement as HTMLElement;
+    const reversal = screen.getByRole('button', { name: 'Return to draft' });
+    expect(container).toHaveClass('grid', 'gap-6');
+    expect(container).toContainElement(screen.getByRole('region', { name: 'Request relationships' }));
+    expect(container).toContainElement(reversal);
+    expect(container).toContainElement(screen.getByText('Questionnaire generation'));
+    expect(container).toContainElement(screen.getByText('Assessment draft generation'));
+    expect(reversal.parentElement).not.toBe(container);
+    for (const child of Array.from(container.children)) expect(child.className).not.toMatch(verticalMargin);
+  });
 });
 
 /*
