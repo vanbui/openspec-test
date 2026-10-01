@@ -772,10 +772,38 @@ Plans:
 4. A notification whose record its recipient can no longer read leaves the list and the count; an unrelated Requestor never sees another person's notification or learns of its record, in the API and the UI, and the service identity receives none.
 5. The centre is a sheet at 375px and a panel from 768px, and works by keyboard alone.
 
-**Plans:** 0 plans
+**Plans:** 10 plans (one per wave, a linear chain)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 19.1 to break down)
+**Wave 1**
+- [ ] 19.1-01-PLAN.md — Record the 19.1-UI-SPEC's extensions X-33 to X-35 in the design direction (orchestrator constraint, D-30) and add the "Notification" glossary entry (D-31), both before any implementing task. Write `do
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 19.1-02-PLAN.md — Create the approved `CsrmNotification` content type (D-01) and the pure modules D-41 places beside it: the kind registry (D-08, D-11, D-12), the facts envelope (D-09), the read-time projection (D-16, 
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 19.1-03-PLAN.md — Build the notification service (`notify`, D-05 to D-08) and the repository whose one SQL readability predicate feeds the list, the total, the unread count and "Mark all as read" (D-13 to D-15), with e
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 19.1-04-PLAN.md — Serve the three operations (D-03) through standalone routes with the caller as the only scope and the service identity refused (D-35, D-36), publish them in the specification, both catalogue copies an
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 19.1-05-PLAN.md — Hook the two Phase 13 events (D-11): `request-assigned` in `changeRequestAssignee` with the reversal read of the former assignee's analyst-part notifications (D-21, Orchestrator Confirmation), and `no
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 19.1-06-PLAN.md — Hook the three workflow events (D-11): `questionnaire-released` in `releaseQuestionnaire`, `questionnaire-submitted` in `submitQuestionnaire` with the Requestor's acting read (D-20), and `assessment-r
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 19.1-07-PLAN.md — Add the `notification:read` capability (D-37), start the unread summary in the layout without awaiting it (D-25), and render the header control with its count capsule and accessible name in its place 
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 19.1-08-PLAN.md — Build the panel (D-26, X-35) and the item (X-34) the header control opens, the one-step opening through Phase 10's guard (D-19), the client count store with optimistic changes reconciled by `asOf` (D-
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 19.1-09-PLAN.md — Add Mark all as read with its Undo toast to the panel through one shared hook the page reuses (D-19, D-29), the two remaining Server Actions, and the count's two event-driven refresh points: once afte
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 19.1-10-PLAN.md — Build the Notifications page (D-27) with its views, pagination, per-item marks, Mark all as read with Undo and its states, then complete `notification-centre.spec.ts` with success criteria 1 to 5 and 
 
 ### Phase 20: Oversight registers and post-release tracking
 
