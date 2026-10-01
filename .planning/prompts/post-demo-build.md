@@ -22,7 +22,8 @@ Supervise, and run a worker subagent for the heavy GSD execution, one launch per
    - `.planning/NEXT-WAVE-DECISIONS.md`: decisions 1–18, G-1 to G-10, and the post-demo G-11 to G-20;
    - `AGENTS.md`, `CONTEXT.md` and `.planning/config.json`.
 3. Check the repository:
-   - run `git status`, `git log --oneline -5` and `git fetch origin`, then compare `post-demo` with `origin/post-demo`;
+   - make sure `post-demo` is checked out, and run `git switch post-demo` if it isn't;
+   - run `git status`, `git log --oneline -5` and `git fetch origin`, then compare `post-demo` with `origin/post-demo`. If `origin` is ahead, fast-forward with `git merge --ff-only origin/post-demo`; never create a merge commit;
    - expect a clean tree apart from the three operator items in brief §2;
    - if an interrupted session left work in the tree, finish or set it aside as STATE.md's notes say, and never stage the operator items.
 4. Check usage with `mcp__ccd_session_mgmt__get_usage` (load it through ToolSearch).
@@ -97,7 +98,7 @@ For each phase:
 - **Pushing:**
   - push `post-demo` to `origin` (`https://github.com/vanbui/idambox.git`) after each phase lands and at every pause, fast-forward only;
   - never force-push or push another branch;
-  - never merge, rebase or open a pull request.
+  - never merge, rebase or open a pull request. The one exception is fast-forwarding `post-demo` to `origin/post-demo` with `--ff-only`, which creates no merge commit.
 - **The other branch:** `origin/csrm-20260928` gained `326eb3a` (my housekeeping) after `post-demo` branched from `ece1a25`. Do not merge it: integration is mine.
 
 ## 4. Pausing
