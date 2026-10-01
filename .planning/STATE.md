@@ -6,10 +6,10 @@ current_phase: 10
 current_phase_name: UI-SPEC approved, with 7 of 7 checker dimensions passing; plans next
 status: planning
 stopped_at: "paused at the weekly usage ceiling: 94% of the weekly limit against the brief's 95% ceiling, with the limit resetting at 2026-09-28 00:00 UTC (10:00 AEST). The operator restarts the session by hand. The last commit adds Phase 11's UI-SPEC and this state. The tree is clean, and `v2.0` is pushed to `origin`."
-last_updated: "2026-10-01T05:11:25.092Z"
-last_activity: 2026-09-30
+last_updated: "2026-10-01T05:33:24.123Z"
+last_activity: 2026-10-01
 last_activity_desc: "Completed quick task 260929-u0w: Add production-only OIDC sign-in to the CSRM web app against Keycloak"
-state_head: a11d51b7a4abc1f22c4da243f02d5d8fb9d73557
+state_head: e10a1a1e4579ae643da71a6212c9d9c686fd3e3e
 progress:
   total_phases: 14
   completed_phases: 0
@@ -33,7 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 Phase: 11 (UI-SPEC approved, with 7 of 7 checker dimensions passing; plans next). Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22 and 17.1 are not yet planned.
 Plan: —
 Status: Planning v2.0 on branch `v2.0` (mode: plan-all-first); paused at the weekly usage ceiling
-Last activity: 2026-10-01 - Completed quick task 261001-kxa: Make the Request context card span the full content width in the Analyst request detail view, matching the Requestor view
+Last activity: 2026-10-01 - Completed quick task 261001-le4: Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view
 
 ## Milestone
 
@@ -98,6 +98,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 | 260929-u0w | Add production-only OIDC sign-in to the CSRM web app against Keycloak | 2026-09-29 | 0f27661 | [260929-u0w-add-production-only-oidc-sign-in-to-the-](./quick/260929-u0w-add-production-only-oidc-sign-in-to-the-/) |
 | 260930-iei | When CSRM_AUTH_OIDC_ENABLED=true, move the Signed in as / Sign out block to a top-right initials avatar menu with name, email and Sign out | 2026-09-30 | e76aa5f | [260930-iei-when-csrm-auth-oidc-enabled-true-move-th](./quick/260930-iei-when-csrm-auth-oidc-enabled-true-move-th/) |
 | 261001-kxa | Make the Request context card span the full content width in the Analyst request detail view, matching the Requestor view | 2026-10-01 | a11d51b | [261001-kxa-update-the-analyst-request-detail-view-a](./quick/261001-kxa-update-the-analyst-request-detail-view-a/) |
+| 261001-le4 | Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view | 2026-10-01 | e10a1a1 | [261001-le4-add-the-missing-gap-between-the-request-](./quick/261001-le4-add-the-missing-gap-between-the-request-/) |
 
 ## Deferred Items
 
