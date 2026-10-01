@@ -60,7 +60,7 @@ CSRM adopts the BProton design system. Every value the system defines is used ex
 ## Amendment 2026-10-02: self-hosted families (G-10)
 
 - **Decision source:** `.planning/NEXT-WAVE-DECISIONS.md` G-10, built by quick task 261002-2y8. It closes R-08-24.
-- **What changed:** the loader only. The families, weights, normal style, swap display and CSS variables are unchanged, and no design value changes.
+- **What changed:** the loader, and each font token now lists its family's latin-ext companion first (see Coverage). The families, weights, normal style, swap display and CSS variables are unchanged, and no design value changes.
 - **Why:** R-08-24. The Google loader fetched the families from Google Fonts on every build and dev compile, and the fetch failed four times on 2026-09-25 and 2026-09-26: in three builds and one `next dev` compile.
 - **Provenance:** the three @fontsource 5.3.0 packages from the npm registry (Plus Jakarta Sans 2.071, Instrument Serif 1.000, IBM Plex Mono 2.3), copied byte-identical into `apps/csrm/app/fonts/`. Its README records every file's SHA-256 and each tarball's integrity. No dependency is added.
 - **Licence:** SIL Open Font License 1.1. The licence text sits beside the files.
