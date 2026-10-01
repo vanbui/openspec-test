@@ -1156,10 +1156,56 @@ Plans:
 3. Median and 90th-percentile time per stage are shown and link to the slowest items.
 4. Failed AI jobs in the last seven days are visible to analysts.
 
-**Plans:** 0 plans
+**Plans:** 18 plans (waves 1, 2 and 11 pair independent work; otherwise one per wave)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 21 to break down)
+**Wave 1**
+- [ ] 21-01-PLAN.md — Record the 21-UI-SPEC's extensions X-68 to X-73 in the design direction before any implementing task (orchestrator constraint; D-27). Write `docs/contract-gaps/phase-21-stage-history.md` (D-01, D-03 t
+- [ ] 21-02-PLAN.md — Scope note (orchestrator, 2026-10-02): four tasks at the scope limit; each extends the previous one in the same module or report, and the pilot's pacing rule (planner-context) accepts this. Build, RED
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 21-03-PLAN.md — Create the approved CsrmStageTransition (D-01) and the one recorder (D-07): the facts loader, before-and-after derivation, append-on-change against the latest row or the stage before the act, the act'
+- [ ] 21-04-PLAN.md — Scope note (orchestrator, 2026-10-02): four tasks at the scope limit; each extends the previous one in the same module or report, and the pilot's pacing rule (planner-context) accepts this. Build, RED
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 21-05-PLAN.md — Scope note (orchestrator, 2026-10-02): four tasks at the scope limit; each extends the previous one in the same module or report, and the pilot's pacing rule (planner-context) accepts this. Call the o
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 21-06-PLAN.md — Scope note (orchestrator, 2026-10-02): four tasks at the scope limit; each extends the previous one in the same module or report, and the pilot's pacing rule (planner-context) accepts this. Build the 
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 21-07-PLAN.md — Add the review queue's closed `stage` and `ageBand` filters, the `inStage` sort and projection (D-03 items 5 and 7, D-12) over 21-06's shared latest-row join and band predicate, so the queue's totals 
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 21-08-PLAN.md — Publish the `cycle-times` report key end to end (D-03): its closed parser with the period and Phase 20's filters, its computation through 21-06's `cycleTimes`, its specification schema, its export tab
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 21-09-PLAN.md — Serve `GET /api/v1/reports/{reportKey}/records` (D-03 item 2; 21-RESEARCH R10) with its closed parser (D-03 item 7), one `{ figure, rows }` function per kind (D-26), the cycle-times kinds `stage-episo
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 21-10-PLAN.md — Render the figure drill-down page `/app/reports/{reportKey}/records` (X-72; D-26), for the cycle-times kinds (D-10, D-12), reading 21-09's typed layer from a Server Component, with its five states, it
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 21-11-PLAN.md — Publish the `risk-trend` report key end to end (D-03, D-13): its parameters (period 12 by default, Phase 20's filters), its computation through 21-06's `riskTrend`, its specification, its export (D-19
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 21-12-PLAN.md — Serve `GET /api/v1/risks/heat_map` (D-03 item 4, D-15) as a sibling of the register list over its closed query, folding positions through the published scale (18 D-21; 17.1 D-58) with withdrawn risks 
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 21-13-PLAN.md — Draw the register's `Show as: Heat map` display (D-15; UI-SPEC §6) from 21-12's typed layer with 21-04's `RiskMatrixPair` (X-69; D-16), with links from every cell and off-scale axis to the equal regis
+- [ ] 21-14-PLAN.md — Publish the `ai-assistance` report key end to end (D-03, D-21 to D-23) with the `ai-runs` drill-down kind on the shared records route and page (D-22, D-26), its export (D-19), and the run read the pol
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 21-15-PLAN.md — Extend the dashboard summary (D-18) with failed AI runs, computed only for a viewer holding the run read (D-02, D-21; 07 D-34), queue ageing for the team and the viewer (D-12), and reviews due (D-20's
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 21-16-PLAN.md — Scope note (orchestrator, 2026-10-02): four tasks at the scope limit; each extends the previous one in the same module or report, and the pilot's pacing rule (planner-context) accepts this. Add D-20's
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 21-17-PLAN.md — Lead the Reports index with the leadership view (D-19; UI-SPEC §3), composed from the risk-trend, risk-exposure, cycle-times and AI assistance reads with each section failing alone (07 D-34), every fi
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 21-18-PLAN.md — Scope note (orchestrator, 2026-10-02): four tasks at the scope limit; each extends the previous one in the same module or report, and the pilot's pacing rule (planner-context) accepts this. Seed the t
 
 ### Phase 22: Admin role and configurable lists
 
