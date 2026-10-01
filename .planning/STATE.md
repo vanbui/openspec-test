@@ -6,9 +6,9 @@ current_phase: 10
 current_phase_name: post-demo Stage 2, planning every remaining phase in execution order from Phase 11
 status: planning
 stopped_at: "post-demo Stage 2: Phases 11, 12 and 13 planned (21, 19 and 19 plans, plan checks passed); Phases 13 onwards in planning, with Phase 19.1 inserted (G-19)."
-last_updated: "2026-10-01T10:55:14.934Z"
+last_updated: "2026-10-01T11:23:06.481Z"
 last_activity: 2026-10-01
-last_activity_desc: "Phase 14 planned: 17 plans, plan check passed on iteration 1"
+last_activity_desc: "Phase 16 planned: 15 plans, plan check passed on iteration 1 (two warnings settled by recorded notes)"
 state_head: e10a1a1e4579ae643da71a6212c9d9c686fd3e3e
 progress:
   total_phases: 16
@@ -32,16 +32,16 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 Stage 2 of the post-demo brief: planning every remaining phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22). Phase 19.1, the in-app notification centre, was inserted on 2026-10-01 (G-19), taking NOTIFY-01 from Phase 17.
 
-- **Planned, with a passing plan check:** Phases 10 (23 plans; a fresh plan check runs before it is built), 11 (21), 12 (19), 13 (19) and 14 (17).
+- **Planned, with a passing plan check:** Phases 10 (23 plans; a fresh plan check runs before it is built), 11 (21), 12 (19), 13 (19), 14 (17) and 16 (15).
 - **In planning:**
-  - CONTEXT is committed for Phases 15 to 17.2, and research for Phases 15 to 17.1, 19 and 19.1.
-  - UI-SPECs are approved for Phases 12 to 16, 19 and 19.1 (X-11 to X-35), and Phase 17's is being written.
-  - Phase 15 is planned and awaits its check, and Phase 16 is being planned.
-- **Not started:** Phases 18 and 20 (both can now be discussed), then 21 and 22.
+  - CONTEXT is committed for Phases 15 to 18, and research for Phases 15, 17, 17.1, 19 and 19.1.
+  - UI-SPECs are approved for Phases 12 to 16, 19, 19.1 and 17 (X-11 to X-41), and Phase 17's is being written.
+  - Phase 15 is planned and in its pre-check revision; Phase 16 is planned (it passed before 15 because its check ran first).
+- **Not started:** Phase 20 (being discussed), then 21 and 22.
 
 Plan: —
 Status: Planning v2.0 on branch `post-demo` (mode: plan-all-first; the pilot drives every transition, and auto-advance is off)
-Last activity: 2026-10-01 - Phase 14 planned: 17 plans, plan check passed on iteration 1
+Last activity: 2026-10-01 - Phase 16 planned: 15 plans, plan check passed on iteration 1 (two warnings settled by recorded notes)
 
 ## Milestone
 

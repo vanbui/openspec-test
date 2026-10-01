@@ -519,10 +519,53 @@ Plans:
 3. "Rewrite this risk" shows a field-by-field diff the analyst accepts or rejects.
 4. Released risks cannot be withdrawn, deleted or re-run.
 
-**Plans:** 0 plans
+**Plans:** 15 plans (one per wave, serialised by the shared Strapi build, the spec and the catalogues)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 16 to break down)
+**Wave 1**
+- [ ] 16-01-PLAN.md — Record the 16-UI-SPEC's extensions X-27 to X-29 in the design direction (orchestrator constraint: before any implementing task; D-46). Write `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 16-02-PLAN.md — Scope note (orchestrator, 2026-10-01): this plan has four tasks, at the scope limit. They stay together because each task builds on the previous one in the same files, and splitting would separate a r
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 16-03-PLAN.md — Apply the approved schema change (D-01): the three withdrawal attributes on `CsrmRisk` and the new `CsrmRiskHistoryEvent` type with its only writer and its paginated read service. Add the four new clo
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 16-04-PLAN.md — Scope note (orchestrator, 2026-10-01): this plan has four tasks, at the scope limit. They stay together because each task builds on the previous one in the same files, and splitting would separate a r
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 16-05-PLAN.md — Serve `POST /api/v1/risk_assessments/{assessmentId}/risk_withdrawals`, `POST /api/v1/risk_assessments/{assessmentId}/risk_reinstatements` and `GET /api/v1/risks/{riskId}/history` (D-03 items 1 to 3) a
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 16-06-PLAN.md — Apply the active-risk rule (D-13) to every assessment-side and Requestor reader: release readiness and the release path, the analyst detail (all risks, each with its `withdrawal` block, readiness over
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 16-07-PLAN.md — Apply the active-risk rule's SQL form (D-13) to the Risk Register list and filters, its detail (the `withdrawal` block), the dashboard summary, the alerts, the reports and the exposure figures; add th
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 16-08-PLAN.md — Build the two targeted AI operations' context, wire, adapters and providers on Phase 12's foundations (D-25), with the existing, withdrawn and decided lists (D-31), the target and its controls (D-35),
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 16-09-PLAN.md — Serve `POST /api/v1/risk_assessments/{assessmentId}/risk_suggestions`, `POST /api/v1/risks/{riskId}/rewrite`, `GET /api/v1/risk_proposal_jobs/{jobId}`, `POST /api/v1/risk_proposal_jobs/{jobId}/retry` 
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 16-10-PLAN.md — Extend Phase 12's decision operation with run-scoped targets (D-39) on Phase 15's fold (D-40): add a suggested risk (D-33), confirm a change with the stale check (D-37) and the Accept rule (D-38, G-14
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 16-11-PLAN.md — Build `apps/csrm/src/features/risk-curation/`'s schema, service, actions and zod-free domain module for withdrawal, reinstatement, Undo, history, both AI operations, jobs, the proposals read and decis
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 16-12-PLAN.md — Build the X-27 withdrawn-record pieces (`RiskCardActions`, `WithdrawRiskForm`, `useRiskWithdrawal`, `WithdrawnRiskCard`, the `risk` status family) and the X-29 `RiskHistorySheet` (D-11, D-18 to D-21, 
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 16-13-PLAN.md — Build the AI proposals section (§2), proposed-risk cards with similarity (§3), Rewrite this risk with the AI rewrite comparison (§4), batch decisions with optimistic feedback, rollback, Undo and focus
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 16-14-PLAN.md — Integrate 16-12's and 16-13's pieces into the analyst assessment editor (D-45): the page loader's proposals read, the section before Identified Risks, the `Show` filter (`?risks=withdrawn`), card acti
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 16-15-PLAN.md — Finish the interface in the Risk Register (D-08, D-45; UI-SPEC §11), then prove the phase end to end with `apps/csrm/e2e/risk-curation.spec.ts` (D-50) and run the full gate with the freeze, catalogue,
 
 ### Phase 17: Mitigation response and residual reassessment
 
