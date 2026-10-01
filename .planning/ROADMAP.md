@@ -175,10 +175,71 @@ Plans:
 5. Exposure widgets and reports say whether they include unreleased risks, and a released request reads "Released".
 6. Ctrl+K or ⌘K finds a request, questionnaire, assessment or risk by number or title and opens it, showing only records the user may read.
 
-**Plans:** 0 plans
+**Plans:** 21 plans (one per wave; serialised by Playwright and shared files)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 11 to break down)
+**Wave 1**
+- [ ] 11-01-PLAN.md — Record the UI-SPEC's extensions X-6 to X-10 in the design direction first (orchestrator constraint: the first Phase 11 plan records them before any implementing task). Then deliver D-46 end to end: th
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 11-02-PLAN.md — Make `/app` Home for both actors (D-16): the page reads the session's capabilities, renders the analyst Home (today's analyst dashboard content, moved) for `assessment:review` and the Requestor Home (
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 11-03-PLAN.md — Reorder the analyst Home to lead with the queue, deadlines and alerts (D-18) and set its tiles two by two below xl so the queue is on the first 375px screen (UI-D20). Render Recent activity dates thro
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 11-04-PLAN.md — Introduce one heading string per navigation destination (`page-headings.ts`) and make the navigation label, the `PageHeader` title and the route title read it (D-09, UI-SPEC §2.1). Rename the headings
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 11-05-PLAN.md — Turn the flat navigation list into per-actor profiles of labelled sections (D-06 to D-08, D-12, D-13), render them in the sidebar and the drawer through the one component that keeps Phase 10's guard o
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 11-06-PLAN.md — Deliver D-02 item 1 through the full endpoint chain: the queue projection gains the requestor's display name, assessment type, business criticality, due date and days since submission; `filters[q]` ma
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 11-07-PLAN.md — Deliver D-02 item 2 through the full chain: the shared assessment projection gains `requestTitle`, `riskCount` and `highestResidualRating`; `q` also matches the request title; `overallRating`, `approv
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 11-08-PLAN.md — Deliver D-02 item 5: the lifecycle's `nextAction` gains `holder`, and `request-lifecycle.ts`'s sentences name the holder (D-20, D-21, D-27, UI-SPEC §6.1), through the specification, the closed web par
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 11-09-PLAN.md — Build the compact lifecycle stepper below 768px (D-26, X-9) on both request pages, with one next action displayed per width (UI-D23) and Phase 10's generation-job override feeding it on the analyst hu
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 11-10-PLAN.md — Serve the catalogue-reserved `GET /v1/my_requests` (D-03) with an owner predicate from the policy and a holder predicate built from the review queue's lifecycle facts (D-02 item 6, D-20), projecting e
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 11-11-PLAN.md — Move My requests onto `GET /v1/my_requests` (D-34): add the `Next step` column with the holder line and the server's sentence, the `Show` holder filter and chip, the local `Updated` date, and the hold
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 11-12-PLAN.md — Rebuild the Requestor Home (D-19 to D-24) on `GET /v1/my_requests`'s holder: Needs your action, With the Security Analyst and Released assessments, each bounded with its total and an equal list link (
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 11-13-PLAN.md — Add the count badges of D-10 to the sidebar and drawer: server-scoped, bounded reads through existing service functions (D-11), started in the layout without awaiting them and streamed to the navigati
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 11-14-PLAN.md — Split the Risk register's scope into its two named branches, released and under assessment (D-40), and expose them as the `stage` filter and row field, with `treatmentAction` as a filter and row field
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 11-15-PLAN.md — Complete D-02 item 3: the Risk register's closed filters `dueState`, `mitigationEffectiveness`, `mitigationStatus=any`, the `none` values and `impactedSystem=none`, so every figure that counts Risks c
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 11-16-PLAN.md — Deliver D-02 item 4's dashboard half: the summary's exposure splits into released, released-and-accepted and under-assessment rating counts using the Risk register's named branches (D-40, D-41), and t
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 11-17-PLAN.md — Deliver D-02 item 4's report half: the risk-exposure report counts released Risks and adds the accepted and under-assessment figures (D-42); the treatment-performance window becomes 14 days (D-38), co
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 11-18-PLAN.md — Link every remaining report figure to its list (D-35 to D-39, X-10, UI-SPEC §8): `ReportTable` gains cell and row-header links; the presentation module builds each href and accessible name from the li
+
+**Wave 19** *(blocked on Wave 18 completion)*
+- [ ] 11-19-PLAN.md — Build quick find (D-47 to D-52, X-7, X-8): the header search control and the shortcut, a lazily loaded dialog on the source-owned shadcn `Command` (cmdk 1.1.1, already installed), one validated Server
+
+**Wave 20** *(blocked on Wave 19 completion)*
+- [ ] 11-20-PLAN.md — Complete quick find's states (D-53), phone sheet and desktop frame (X-8), focus rules and guard interaction (D-48, D-51), the kept term (UI-D12) and the cold-open and load-failure paths (D-52), and ca
+
+**Wave 21** *(blocked on Wave 20 completion)*
+- [ ] 11-21-PLAN.md — Close Phase 11 in three steps. First, the full gate on the production build with the static checks D-01 and D-02 require, committed before the clean-tree check. Second, a blocking checkpoint: the orch
 
 ### Phase 12: AI context, suggestions and provenance
 
