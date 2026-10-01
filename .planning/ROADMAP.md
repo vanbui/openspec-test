@@ -262,10 +262,63 @@ Plans:
 4. The assessment and questionnaire mark AI-proposed values and show who generated them, when and with which provider; the Requestor's view says AI assisted and an analyst reviewed.
 5. A generated questionnaire for a non-expert request has help text and choice questions with "Not sure".
 
-**Plans:** 0 plans
+**Plans:** 19 plans (waves 1 and 2 pair the contract record with the harness pins; then one per wave, serialised by the shared Strapi test build and Playwright)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 12 to break down)
+**Wave 1**
+- [ ] 12-01-PLAN.md — Record the 12-UI-SPEC's extensions X-11 to X-14 in the design direction (orchestrator constraint: before any implementing task). Write `docs/contract-gaps/phase-12-ai-run-record-and-provenance.md` in 
+- [ ] 12-02-PLAN.md — Build the shared scale module (D-10, D-11) and the AI data policy module (D-26 to D-28), wire the new ceiling setting from environment to configuration to boot validation (D-27), gate the transcript d
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 12-03-PLAN.md — Build the deep context module in `apps/backend/src/csrm/ai/` (D-04 to D-08): a loader that reads the request, its selected systems and assets, the submitted questionnaire (draft only), the Risk Type l
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 12-04-PLAN.md — Apply the approved schema change (D-01): the `CsrmAiRun` content type and the optional `aiProvenance` JSON on `CsrmRisk` and `CsrmAssessment`. Add the run-record service (lifecycle, append-only decisi
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 12-05-PLAN.md — Move questionnaire generation onto the assessment context (D-04, D-16), give it the wire v2 shape and adapter inside the portable schema subset (D-06), persist help text (D-17), guarantee "Not sure" o
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 12-06-PLAN.md — Replace the draft provider layer with the internal proposal v2, a context-aware closed parser, the hosted adapter for wire v2 and a deterministic provider that exercises every behaviour (D-09 to D-15)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 12-07-PLAN.md — Refuse both AI operations at enqueue when the data policy refuses (D-28), carrying the closed reasons through Strapi, the specification and the web's refusal copy (D-02), and prove the enqueue and exe
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 12-08-PLAN.md — Project `helpText` on every question read (D-17), `aiAssisted` on every questionnaire summary, and, for analysts only, the `generation` facts on the header and `aiOrigin` on each question (D-22, D-23,
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 12-09-PLAN.md — Project the assessment's `generation` facts and the assessment's and each risk's `aiProvenance` to the analyst (D-21, D-23, D-25), resolving actors, controls and citation labels in bounded reads, and 
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 12-10-PLAN.md — Serve the run read (D-25) as a human-analyst-only operation with its web service and Server Action; move draft generation and its job read and retry into human-analyst-only Functions (D-32); withdraw 
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 12-11-PLAN.md — Give the one mutability guard its closed reason end to end and add the transition option to `withMutableAssessmentMutation`, as the 2026-10-01 confirmations and Phase 16 D-22 and D-23 fix them. Add th
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 12-12-PLAN.md — Build the decision operation (D-24) for AI-proposed fields, on 12-11's guard reason and transition option, with its grant and matrix row, its contract and the typed web service, and the G-14 refusal t
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 12-13-PLAN.md — Extend 12-12's decision operation to suggested controls (D-12): "Add as planned control", dismiss and restore, the guarded Undo (UI-D12), and the G-14 refusal when a suggestion is added and an AI Acce
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 12-14-PLAN.md — Add the request's AI policy status to Phase 10's generation-jobs read (D-29) and render it on both job cards: the allowed caption, the two refusal alerts in place of the actions, the three new failure
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 12-15-PLAN.md — Build the provenance header (X-11), the "What the AI used" side sheet (X-13) and the Requestor's notice, mount them on the analyst's assessment editor (all states), the analyst's questionnaire review 
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 12-16-PLAN.md — Add the "Review of AI proposals" readiness requirement (D-21), and build the field markers, review bars, Confirm and Confirm remaining with optimistic feedback, rollback and Undo (D-24, D-35, D-36), t
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 12-17-PLAN.md — Build the citations and their source popover (X-12, D-14), the uncited claims region, and the suggested controls list with add, dismiss, restore and Undo (D-12, D-24, UI-D11, UI-D12), and place them i
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 12-18-PLAN.md — Render help text for both actors, Not sure, the Requestor's introduction disclosure, the analyst's question origin markers, the help text field in the governance form and the release dialog's variant 
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 12-19-PLAN.md — Write the UAT-A-like journey (D-38; UI-SPEC §14.1 E6) with its own records at both widths and axe, share the release helper with the release journey, add the glossary entries, record the API coverage 
 
 ### Phase 13: Request pick-up and notes
 
