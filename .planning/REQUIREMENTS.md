@@ -217,6 +217,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### CSV Import and Export
 
+  - Amended (2026-10-01, Phase 17.2 context D-17): a reply to a contest point notifies the point's raiser and the assigned analyst (`contest-point-replied`).
 - [ ] **CSV-01**: Registers, lists, queues, alerts and reports export to CSV and XLSX.
   - Acceptance: (1) exports follow the current filters, search and sort, default to the visible columns with a column choice, and are named after the view and date; (2) Strapi scopes each export to what the viewer may read, and a Requestor exports only their own released assessments (decision 12); (3) values starting with `=`, `+`, `-`, `@`, tab or carriage return are neutralised, and CSV is UTF-8 with a BOM; (4) every export is logged with actor, view, filters and row count, and a released assessment prints as an A4 report (decision 12).
   - Trace: Q3 · UAT-049 · Phase 19
