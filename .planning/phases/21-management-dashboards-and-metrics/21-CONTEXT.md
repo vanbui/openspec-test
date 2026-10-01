@@ -436,6 +436,15 @@ Other seams:
 - **The leadership trend, the heat map readable without colour, failed AI jobs for analysts:** confirmed (D-13 to D-16, D-18, D-21, D-22). **Precision:** a failed AI job is a failed or interrupted run, grouped by job, with recovery shown.
 - **Every figure opens its records; only readable records count; the service identity refused; Requestors see no management metrics:** confirmed (D-17, D-25, D-26, `<authorisation>`). **Added:** the Requestor's one personal addition, the time in the current stage (D-17).
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+The research raised three questions. Each is settled as follows and binds the plans:
+
+- **Deleting a request with stage history** is refused with 409 `REQUEST_HAS_STAGE_HISTORY`, beside Phases 13, 14 and 16's delete refusals. A draft that was never submitted has no rows and stays deletable.
+- **The trend fixture's write exception:** record 1's amendments include `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md`. The development fixture may set the times of history rows it creates, through the development seed path only and never through any API. The rows stay append-only for every other writer.
+- **Time to release ends at `approvalDate`** (D-11). The released stage row is written at that same instant.
+- **Recorder findings bind the plans (21-RESEARCH):** the recorder compares against the stage before the act and takes its time from the act. Submission is wrapped in `withRequestLock`, and the questionnaire acts take the request lock first, so the lock order is the same everywhere.
+
 ---
 
 *Phase: 21-management-dashboards-and-metrics*
