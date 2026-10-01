@@ -525,6 +525,15 @@ Keycloak authenticates. Strapi enforces Role → Function → FunctionAPI, then 
   - Phones: confirmed.
 - **Added from the ROADMAP's contract line:** the review lists adopt the column chooser (D-10).
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+The research raised three questions. Each is settled as follows and binds the plans:
+
+- **Copied cells are neutralised:** text copied out of the table goes through Phase 19's neutraliser (19 D-11), as exports do. Pasting into CSRM strips the mark, as Phase 19's import does.
+- **Lag thresholds (18-RESEARCH A3):** at 150 risks, keyboard interactions p75 ≤ 100 ms and max ≤ 200 ms, with no scroll frame over 100 ms; at 1,000 risks, p75 ≤ 200 ms. Only a measured failure adds TanStack Virtual, justified in the plan that adds it.
+- **Strapi's JSON limit is pinned:** `jsonLimit: '1mb'` is set explicitly in `config/middlewares.ts`, matching the bulk bound of 1,000 rows and 1,000,000 bytes per save.
+- **The grid is TanStack Table 9.2.4 (installed),** which passes decision 7's spike criteria on paper. react-data-grid fails them.
+
 ---
 
 *Phase: 18-risk-table-and-spreadsheet-interoperability*
