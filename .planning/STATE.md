@@ -5,15 +5,15 @@ milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
 current_phase_name: post-demo Stage 2, planning every remaining phase in execution order from Phase 11
 status: planning
-stopped_at: "post-demo Stage 2: Phases 11, 12 and 13 planned (21, 19 and 19 plans, plan checks passed); Phases 13 onwards in planning, with Phase 19.1 inserted (G-19)."
-last_updated: "2026-10-01T11:34:45.749Z"
+stopped_at: "post-demo Stage 2: Phases 10 to 16 and 19.1 planned; 19 and 17 being planned; every UI-SPEC but 22's approved."
+last_updated: "2026-10-01T12:30:48.535Z"
 last_activity: 2026-10-01
-last_activity_desc: "Phase 15 planned: 14 plans, plan check passed on iteration 1 (scope warning settled by recorded notes)"
+last_activity_desc: "Phase 19.1 planned: 10 plans, plan check passed on iteration 1"
 state_head: e10a1a1e4579ae643da71a6212c9d9c686fd3e3e
 progress:
   total_phases: 16
   completed_phases: 0
-  total_plans: 128
+  total_plans: 138
   completed_plans: 0
   percent: 0
 current_plan: 0
@@ -32,16 +32,17 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 Stage 2 of the post-demo brief: planning every remaining phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22). Phase 19.1, the in-app notification centre, was inserted on 2026-10-01 (G-19), taking NOTIFY-01 from Phase 17.
 
-- **Planned, with a passing plan check:** Phases 10 (23 plans; a fresh plan check runs before it is built), 11 (21), 12 (19), 13 (19), 14 (17), 15 (14) and 16 (15).
+- **Planned, with a passing plan check:** Phases 10 (23 plans; a fresh plan check runs before it is built), 11 (21), 12 (19), 13 (19), 14 (17), 15 (14), 16 (15) and 19.1 (10).
 - **In planning:**
-  - CONTEXT is committed for Phases 17 to 18, 19 and 19.1; research for 17, 17.1, 19 and 19.1; Phase 20 is being discussed.
-  - UI-SPECs are approved for Phases 12 to 17.1, 19 and 19.1 (X-11 to X-47); Phase 17.2's is next.
-  - Phase 19 is being planned; Phases 19.1 and 17 are ready for their planners.
-- **Not started:** Phases 21 and 22, which wait for Phase 20's CONTEXT.
+  - Phase 19 is being planned, and so is Phase 17.
+  - CONTEXT is committed for every remaining phase except 22, whose discussion is running.
+  - UI-SPECs are approved for Phases 12 to 21 (X-11 to X-73); only Phase 22's remains.
+  - Research is committed for 17 and 17.1; 17.2, 18, 20 and 21 still need it.
+- **Not started:** pattern maps for 17.1 onwards, then their planners.
 
 Plan: —
 Status: Planning v2.0 on branch `post-demo` (mode: plan-all-first; the pilot drives every transition, and auto-advance is off)
-Last activity: 2026-10-01 - Phase 15 planned: 14 plans, plan check passed on iteration 1 (scope warning settled by recorded notes)
+Last activity: 2026-10-01 - Phase 19.1 planned: 10 plans, plan check passed on iteration 1
 
 ## Milestone
 
@@ -152,13 +153,13 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 ## Session Continuity
 
 **Last session:** 2026-10-01
-**Stopped At:** post-demo Stage 2: Phases 11, 12 and 13 planned (21, 19 and 19 plans, plan checks passed); Phases 13 onwards in planning, with Phase 19.1 inserted (G-19).
+**Stopped At:** post-demo Stage 2: Phases 10 to 16 and 19.1 planned; 19 and 17 being planned; every UI-SPEC but 22's approved.
 **Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage. Economy rules from the pilot: at most about three heavy units at once; CONTEXT of about 30 decisions or fewer; research answers only the open questions; warnings are handled with recorded notes.
-2. Continue Stage 2 in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) from the first phase without a passing plan check (now Phase 19). For each phase, look in its directory for CONTEXT, UI-SPEC, RESEARCH and VALIDATION, PATTERNS, PLANs and PLAN-CHECK, and run the next missing unit with GSD's agents: discussion in auto mode, then the UI-SPEC (serial in execution order, numbering extensions after the highest X-n in the committed UI-SPECs), then research, patterns, plans, and the plan check with up to three revisions. Then write the phase's `Plans:` list into ROADMAP.md, commit by explicit path, and update this section.
-   - Next units when this was written: the Phase 19 planner (running) and its check; the planners for 19.1 and 17; the 17.2 UI-SPEC (X-48 onwards); the patterns for 17.1; research for 17.2 and 18; the Phase 20 discussion result, then the 21 and 22 discussions.
+2. Continue Stage 2 in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) from the first phase without a passing plan check (now Phase 19). For each phase, look in its directory for CONTEXT, UI-SPEC, RESEARCH and VALIDATION, PATTERNS, PLANs and PLAN-CHECK, and run the next missing unit with GSD's agents: discussion in auto mode, then the UI-SPEC (serial in execution order, numbering extensions after the highest X-n in the committed UI-SPECs, now X-73), then research, patterns, plans, and the plan check with up to three revisions. Then write the phase's `Plans:` list into ROADMAP.md, commit by explicit path, and update this section.
+   - Next units when this was written: the checks for 19 and 17 once their planners finish; the 22 discussion result, then its UI-SPEC (X-74 onwards); research for 17.2, 18, 20, 21 and 22; pattern maps and planners for 17.1, 17.2, 18, 20, 21 and 22.
 3. Phase directories may hold uncommitted agent output from an interrupted session: keep complete files, and re-run any unit whose output is missing or partial.
 4. Once every phase has passing plans, run the planning gate: plans and a passing check for each phase; each ask PD-1 to PD-5 traced to a requirement, a phase, a success criterion and plans; no pre-rename app paths; `/gsd-health` clean.
 5. Stage 3: the G-10 fonts quick task, then build from Phase 10, opening each phase with a fresh plan check.
