@@ -6,10 +6,10 @@ current_phase: 10
 current_phase_name: "post-demo Stage 3: the G-10 fonts quick task, then Phase 10 (fresh plan check, then execution)"
 status: planning
 stopped_at: "post-demo planning gate passed (2026-10-02): 16 phases and 290 plans, each phase with a passing plan check; Stage 3 starts with the G-10 fonts quick task."
-last_updated: "2026-10-01T15:56:52.119Z"
+last_updated: "2026-10-01T17:24:08.918Z"
 last_activity: 2026-10-02
-last_activity_desc: "Stage 2 complete: Phases 11 to 22 planned (Phase 10 was already planned), every plan check passed"
-state_head: 1811f2335830dbaaee6c0c1f31aaba62573eb2c7
+last_activity_desc: "Completed quick task 261002-2y8: Self-host the three BProton font families through next/font/local (G-10, R-08-24)"
+state_head: e3d805de9ebfc4780dc52f23cc24689085050ba5
 progress:
   total_phases: 16
   completed_phases: 0
@@ -38,7 +38,7 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 
 Plan: —
 Status: Planned; Stage 3 not started (the pilot drives every transition, and auto-advance is off)
-Last activity: 2026-10-02 - Stage 2 complete: Phases 11 to 22 planned (Phase 10 was already planned), every plan check passed
+Last activity: 2026-10-02 - Completed quick task 261002-2y8: Self-host the three BProton font families through next/font/local (G-10, R-08-24)
 
 ## Milestone
 
@@ -115,6 +115,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 | 260930-iei | When CSRM_AUTH_OIDC_ENABLED=true, move the Signed in as / Sign out block to a top-right initials avatar menu with name, email and Sign out | 2026-09-30 | e76aa5f | [260930-iei-when-csrm-auth-oidc-enabled-true-move-th](./quick/260930-iei-when-csrm-auth-oidc-enabled-true-move-th/) |
 | 261001-kxa | Make the Request context card span the full content width in the Analyst request detail view, matching the Requestor view | 2026-10-01 | a11d51b | [261001-kxa-update-the-analyst-request-detail-view-a](./quick/261001-kxa-update-the-analyst-request-detail-view-a/) |
 | 261001-le4 | Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view | 2026-10-01 | e10a1a1 | [261001-le4-add-the-missing-gap-between-the-request-](./quick/261001-le4-add-the-missing-gap-between-the-request-/) |
+| 261002-2y8 | Self-host the three BProton font families through next/font/local (G-10, R-08-24) | 2026-10-02 | e3d805d | [261002-2y8-self-host-the-three-bproton-font-familie](./quick/261002-2y8-self-host-the-three-bproton-font-familie/) |
 
 ## Deferred Items
 
