@@ -821,6 +821,7 @@ Keycloak authenticates. Strapi enforces Role → Function → FunctionAPI, then 
 ## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
 
 - **Phase 10 D-08 narrowed (accepted by the pilot):** D-09 narrows Phase 10 D-08's "Replace questionnaire". Phase 10 builds first: its plan 10-12 delivers D-08 as written, for Phase 10's own scope. This phase narrows it when it runs, and the Phase 15 plan that adds D-09's refusals changes 10-12's behaviour and tests in that plan.
+- **UI-SPEC points settled:** family J's "no longer open" message is reworded neutrally, and a Phase 15 plan changes Phase 12's planned copy and its tests. UI-D25 keeps the Requestor's unsaved answers in session storage when a save is refused, as Phase 13's note drafts are. While proposals are open, a line linking to the panel replaces the release and draft actions, and a Phase 15 plan changes Phase 10 §1.1's surface and tests. Internal state names such as "Accepted" never reach visible text.
 - **Research questions settled:** the open-proposal count is `null` for an analyst who raised the request, because they take no AI action on it (D-32). Undo after a release and a return to draft is allowed and recorded as a normal change. Waves 4 and 5 are proven through test-harness helpers, as 12-04 does, and the routes and grants land in wave 6 (D-37). Phase 13 exposes its context-wide AI operations as one exported constant, which this phase extends; this is a seam for the Phase 13 plans.
 
 ---

@@ -572,6 +572,7 @@ The discussion raised four shared-file changes. Each is settled as follows and b
 - **The notification centre moves to Phase 19.1 (G-19).** D-56 to D-63 are now Phase 19.1's to decide and build: the entity, its read state, the centre's UI, and the kinds that exist before Phase 17. This phase keeps D-57's `response-requested` and `response-submitted` kinds, emits them through Phase 19.1's notification service, and no longer writes `phase-17-notifications.md`. NOTIFY-01 moves to Phase 19.1. ROADMAP success criterion 5 ("each participant is told in the app when the response waits or arrives") stays here. Phase 17 is now sized L.
 - **ROADMAP wording:** the Phase 17 entry now says it narrows "every risk and control mutation is analyst-only", rather than reversing it (D-04).
 - **ASSESS-12 criterion 1** now reads: existing controls each with an owner found by name and its evidence, or planned controls each with an owner found by name and a due date (D-33).
+- **D-25's readable fields** include the issue statement, cause, impact and the rating rationales, which Phase 17.1's deciders need (17.1-CONTEXT D-47).
 - **The eligible-person predicate (D-16) comes from Phase 19.1** (19.1-CONTEXT D-07), which executes first. This phase reuses it and builds no second one.
 - **Phase 11's Requestor Home:** the new `participants` holder changes the wording of Phase 11's "With the Security Analyst" section. The Phase 17 plan that adds the holder updates that section's copy and its tests. No shared file changes now.
 ---

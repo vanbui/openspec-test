@@ -205,6 +205,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
   - Trace: F8, PD-1 · UAT-025 · Phase 19.1 (moved from Phase 17 by G-19, 2026-10-01)
   - Amended (2026-10-01, G-18): nominated risk owners and executive approvers receive notifications, release now also closes the request, and later phases' events join the same centre.
   - Amended (2026-10-01, G-19): the centre moves to Phase 19.1 with the events that exist before Phase 17, and Phases 17, 17.1, 17.2 and 20 add theirs.
+  - Amended (2026-10-01, Phase 17.1 context D-54): peer approval requested and peer approval given join Phase 17.1's events.
 - [ ] **NOTIFY-02**: Users receive due-date reminders in the app and by email.
   - Acceptance: (1) treatments due within seven days or overdue remind their treatment owner, acceptance and exemption reviews due remind the risk owner or executive approver who decided, an assessment's next review due reminds the assigned analyst, and a decision waiting more than seven days reminds its decider; overdue treatments escalate to the assigned analyst and the risk owner; (2) email goes through Strapi's email plugin, with a capture provider in development and tests so nothing leaves the machine, and the production mail provider is deployment configuration (decision 18).
   - Trace: O1, Q1, PD-5 · UAT-046, UAT-058 · Phase 20
