@@ -262,7 +262,7 @@ Plans:
 4. The assessment and questionnaire mark AI-proposed values and show who generated them, when and with which provider; the Requestor's view says AI assisted and an analyst reviewed.
 5. A generated questionnaire for a non-expert request has help text and choice questions with "Not sure".
 
-**Plans:** 19 plans (waves 1 and 2 pair the contract record with the harness pins; then one per wave, serialised by the shared Strapi test build and Playwright)
+**Plans:** 19 plans (wave 1 pairs the contract record with the harness pins; then one per wave, serialised by the shared Strapi test build and Playwright)
 
 Plans:
 **Wave 1**

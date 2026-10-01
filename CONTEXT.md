@@ -15,7 +15,7 @@ The stage in which a Security Analyst has shared an unreleased assessment with t
 _Avoid_: Released (alone), Shared, Published
 
 **Risk owner**:
-The person named on a risk in `CsrmRisk.riskOwner`, who decides it: accepts it or approves its treatment. A Security Analyst nominates each risk's owner, and the nominated risk owners of an assessment are the distinct owners of its non-withdrawn risks (G-11). A risk owner holds only the Requestor birthright role and reads the assessment because they are named on it.
+The person named on a risk in `CsrmRisk.riskOwner`, who decides it: accepts it or approves its treatment. A Security Analyst nominates each risk's owner, and the nominated risk owners of an assessment are the distinct owners of its non-withdrawn risks (G-11). A risk owner needs only the Requestor birthright role, and reads the assessment because they are named on it. A Security Analyst may be named only when they take no analyst part in that assessment (G-11).
 _Avoid_: Business owner, Sponsor (the request's `sponsor` is a different relation), Approver
 
 **Executive approver**:
