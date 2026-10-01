@@ -76,7 +76,7 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, request, s
       <div className="mt-6"><RequestLifecycleStepper lifecycle={request.lifecycle} /></div>
       <div className="mt-6"><RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} /></div>
       {request.requestStatus === 'submitted' && request.relationships?.assessment.availability !== 'available' ? <div className="mb-4"><AnalystRequestRevert documentId={request.documentId} /></div> : null}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)]">
+      <div className="grid gap-6">
         <DetailSection description="Submitted business context for analyst review." title="Request context">
           <dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Description" value={request.description} /><DetailValue label="Business purpose" value={request.businessPurpose} /><DetailValue label="Division" value={request.division} /><DetailValue label="Business unit" value={request.businessUnit} /><DetailValue label="Business criticality" value={request.businessCriticality} /><DetailValue label="Submitted date" value={request.submittedDate ? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(request.submittedDate)) : null} /></dl>
           <RevertAuditSummary className="mt-6" facts={request} />

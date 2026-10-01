@@ -235,6 +235,34 @@ describe('analyst review presentations', () => {
     expect(screen.getByText('Business unit was wrong.')).toBeInTheDocument();
     expect(screen.getByText('Bob Doe')).toBeInTheDocument();
   });
+
+  /*
+   * jsdom computes no layout, so the class list stands in for it. A two-track column template around a
+   * single child is what left the card at about two thirds of the row, with an empty track beside it.
+   */
+  it('lets the request context section span the full width of its container', () => {
+    const detail = {
+      documentId: 'request-5',
+      requestNumber: 'RAR-0045',
+      title: 'Full width context review',
+      description: 'Draft request with no relationships.',
+      requestStatus: 'draft' as const,
+      submittedDate: null,
+      dueDate: null,
+      updatedAt: null,
+      dueDateLabel: null,
+      updatedDateLabel: null,
+      informationSystems: [],
+      informationAssets: [],
+      questionnaire: null,
+      assessment: null,
+    };
+    render(<AssessmentDetail request={detail} state="populated" />);
+
+    const container = screen.getByRole('region', { name: 'Request context' }).parentElement;
+    expect(container).toHaveClass('grid', 'gap-6');
+    expect(container?.className).not.toMatch(/\bgrid-cols-/);
+  });
 });
 
 /*
