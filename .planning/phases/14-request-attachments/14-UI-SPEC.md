@@ -529,6 +529,7 @@ Each Server Action maps the served reason to the copy below. Reason names are th
 | `ATTACHMENT_LIMIT_REACHED` (restore) | `This request already has 20 files. Remove another file before restoring this one.` | blocked |
 | `ATTACHMENTS_CLOSED` | `Files closed when the assessment was released, so this file can’t change.` | blocked (refreshes) |
 | `REQUEST_NOT_SUBMITTED` | `This request is a draft now, so its files can’t change. Refresh the page to see where it is.` | blocked |
+| `HISTORY_UNAVAILABLE` (added on 2026-10-01 during planning, plan 14-05) | `This file’s history is full, so it can’t change any more. Contact your administrator.` | blocked |
 | 403 | `You can’t change this request’s files.` | blocked |
 | 404 | `This file is no longer available. Refresh the page.` | blocked |
 | Network, timeout or 5xx | `We couldn’t download the file. Try again.`, `We couldn’t remove the file. Try again.` or `We couldn’t restore the file. Try again.` | retryable |

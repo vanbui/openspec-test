@@ -420,10 +420,59 @@ Plans:
 4. Each file shows who added it and when, and removal is recorded.
 5. The analyst includes one file's text in the AI context and the run record shows it; excluded files never reach the provider.
 
-**Plans:** 0 plans
+**Plans:** 17 plans (one per wave, serialised by the spec, both catalogue copies, the matrix and the shared test build)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 14 to break down)
+**Wave 1**
+- [ ] 14-01-PLAN.md — Record the 14-UI-SPEC's extensions X-19 to X-23 in `docs/design/csrm-design-direction.md` and the `Attachment` glossary entry in the root `CONTEXT.md` (orchestrator constraint: before any implementing
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 14-02-PLAN.md — Build the dependency-free ZIP reader and OOXML text scanner, verify and install the three justified dependencies, and build the shared XLSX reader and the worker-isolated extraction with its caps (D-3
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 14-03-PLAN.md — Build the screening pipeline Phase 14's upload and Phase 20's evidence files share: the attachment policy (types, limits, names, retention), the content check (D-09), the scanner port with its develop
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 14-04-PLAN.md — Build the storage port over the upload plugin with a CSRM private local provider and the private S3 configuration (D-06, D-07), unmount the upload plugin's content-API routes with their matrix and inv
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 14-05-PLAN.md — Add Phase 14's closed refusal reasons in one contract change to Strapi's list, both error response schemas (with `detection` for the 422) and the web's list (D-04 item 10, D-11); make the web transpor
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 14-06-PLAN.md — Create the approved content type (D-01) and serve `GET` and `POST /api/v1/assessment_requests/{requestId}/attachments` with the window, the note link, the readers, the limits under the per-request loc
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 14-07-PLAN.md — Serve `GET /api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content` (the contract's first binary response) with the readers, the state refusals, the digest check and the D-23 header
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 14-08-PLAN.md — Serve `PUT /api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal` with soft, recorded removal and restore and their actor rules (D-19 to D-21), add the viewer's attachment summary
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 14-09-PLAN.md — Serve `PUT …/attachments/{attachmentId}/ai_input` and `GET …/attachments/{attachmentId}/ai_text` as human-analyst-only operations with their rules, extraction on opt-in, caps and policy check (D-30, D
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 14-10-PLAN.md — Extend Phase 12's context builder with the attachment blocks inside the untrusted data block, the per-run attachment bound and the job failure that names the included files (D-33, D-34); add the run s
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 14-11-PLAN.md — Add the request's file counts and the files half of the AI-inputs-changed signal to the analyst questionnaire and assessment reads (D-27, D-36), with their contract and web parsers (D-03), and render 
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 14-12-PLAN.md — Build the web's attachment feature for adding files on a draft: the zod-free domain module, the X-23 size formatter, the upload and list Server Actions, the X-19 field, the X-20 queue, the tab's in-me
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 14-13-PLAN.md — Complete the `Files` section on both request pages: the client list with Download (Server Action, file-response check, save helper), optimistic Remove with Undo and rollback, the removed group with Re
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 14-14-PLAN.md — Add files to the new-request form and the draft's edit form (D-26, D-27; UI-SPEC §2), with create and update that stay on the page while files are queued (UI-D3), the submit dialog's wait line (UI-D5)
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 14-15-PLAN.md — Give Phase 13's composer and thread files (D-17; UI-SPEC §4): `Attach files` and chips in the composer, the note-first posting order with rollback, each note's file chips and the link back from each f
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 14-16-PLAN.md — Build the analyst's AI controls in the UI: the per-file switch with its facts line and Undo, the section-level reasons, the lazily loaded text preview sheet, the Server Actions behind them (D-30, D-31
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 14-17-PLAN.md — Run UAT-012's yardstick scenario as one Playwright journey across the four personas at both widths, record the deployment requirements, the hardening notes, the residuals and the API coverage matrix, 
 
 ### Phase 15: Steerable questionnaire AI
 
