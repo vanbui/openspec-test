@@ -107,7 +107,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
   - decided: the fonts (R-08-24, G-10) and the AI transcript flag (R-08-12, G-7);
   - already closed in code: the CORS allowlist (R-08-11);
   - still open, and deployment-time only: the proxy topology (R-08-04), log retention (R-08-13) and CSP reporting (R-08-07);
-  - carried: the in-memory job registry and the shared job store (R-08-36) and PostgreSQL execution (R-08-37). Phases 13 and 21 touch jobs.
+  - carried: the in-memory job registry and the shared job store (R-08-36) and PostgreSQL execution (R-08-37). Phases 13 and 21 touch jobs. Phase 21 narrows R-08-36 to in-flight coordination, because job history is Phase 12's persisted run record, and adds its new query constructs to R-08-37's checklist (21-CONTEXT D-21, D-24).
 - **Plans written ahead:** Phases 11–22 and 17.1 are planned against today's code plus the planned outputs of earlier phases. Re-run each phase's plan check just before executing it.
 
 ### Quick Tasks Completed

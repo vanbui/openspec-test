@@ -186,6 +186,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - [ ] **DASH-04**: Each audience has a metric set that answers its questions, with every figure opening its records.
   - Acceptance: (1) Requestor, Security Analyst and risk-manager metric sets as in `REPORT.md` §4, each widget stating its scope; (2) failed AI jobs in the last seven days are visible to analysts.
   - Trace: Q1 · UAT-059 · Phase 21
+  - Amended (2026-10-01, Phase 21 context D-17, D-21): management metrics are for human Security Analysts only, and first-line users keep their personal figures; a failed AI job is a failed or interrupted run in Phase 12's run record, grouped by job.
 - [ ] **DASH-05**: Trends, a heat map, cycle times and ageing come from recorded history.
   - Acceptance: (1) open released risks by residual rating over 12 months; (2) a likelihood-by-consequence heat map of inherent and residual positions for the filtered set, readable without colour (decision 13: accessible SVG components with a data-table alternative); (3) median and 90th-percentile time per stage linking to the slowest items, and queue ageing bands.
   - Trace: Q1 · UAT-059 · Phase 21
