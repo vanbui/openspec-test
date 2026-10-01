@@ -731,6 +731,15 @@ Keycloak authenticates. Strapi enforces Role → Function → FunctionAPI, then 
 - **Divisions and business units stay free text with suggestions until Phase 22:** confirmed, with the suggestion scope that keeps Requestors to their own values (D-22).
 - **The post-demo journey:** confirmed as `sliceTrackTreatment`, with its negatives (D-30). Seam: 17.1's Treat step should name Jane as the treatment owner.
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+The research raised four questions. Each is settled as follows and binds the plans:
+
+- **Tracked treatments:** count released, Treat, not-withdrawn risks, whether open or closed. A closed one reads `complete-or-closed` (D-07 and D-09 reconciled).
+- **Close Risk's description:** a Phase 20 plan changes the catalogue description in both catalogue copies to match D-15 (closure needs no completed treatment). This is a contract change, under the phase's record and approval.
+- **The journey:** Phase 17's first slice raises a Project-type request, so this phase's final slice finds the treated risk through the "Project" view. The Phase 17 planner was told.
+- **The notification service:** Phase 19.1's committed service stays as planned. This phase extends it with a system actor for scheduled writes, explicit recipients and returned notification ids, with tests, in the plan that adds reminders.
+
 ---
 
 *Phase: 20-oversight-registers-and-post-release-tracking*
