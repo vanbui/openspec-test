@@ -3,9 +3,9 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
-current_phase_name: "post-demo Stage 2 complete (every phase planned); Stage 3 builds from Phase 10"
+current_phase_name: "post-demo Stage 3: the G-10 fonts quick task, then Phase 10 (fresh plan check, then execution)"
 status: planning
-stopped_at: "post-demo Stage 2 complete: every phase planned (290 plans) with a passing plan check; the planning gate is the pilot's."
+stopped_at: "post-demo planning gate passed (2026-10-02): 16 phases and 290 plans, each phase with a passing plan check; Stage 3 starts with the G-10 fonts quick task."
 last_updated: "2026-10-01T15:56:52.119Z"
 last_activity: 2026-10-02
 last_activity_desc: "Stage 2 complete: Phases 11 to 22 planned (Phase 10 was already planned), every plan check passed"
@@ -148,19 +148,25 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Session Continuity
 
-**Last session:** 2026-10-01
-**Stopped At:** post-demo Stage 2 complete: every phase planned (290 plans) with a passing plan check; the planning gate is the pilot's.
+**Last session:** 2026-10-02
+**Stopped At:** post-demo planning gate passed (2026-10-02, pilot). Stage 3 starts with the G-10 fonts quick task.
+
+**Planning gate record (2026-10-02, pilot):**
+- Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
+- Every ask PD-1 to PD-5 traces to requirements, a phase, success criteria and plans (ASSESS-21 to 26, COLLAB-04, NOTIFY-04 and RISK-06 each appear in plan frontmatter; the journey spec `apps/csrm/e2e/risk-owner-journey.spec.ts` is built by 17-19, 17.1-18, 17.2-15 and 20-23).
+- No pre-rename app path in Phases 10–22, ROADMAP, REQUIREMENTS, STATE, PROJECT, NEXT-WAVE-DECISIONS or CONTEXT.md.
+- `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
 **Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
-2. Stage 2 is complete: every phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) has its CONTEXT, an approved UI-SPEC, research, a pattern map, plans and a passing plan check. Its planning gate is the pilot's.
-3. Stage 3 (the pilot's call): the G-10 self-hosted fonts quick task, then build each phase in execution order. Each phase opens with a fresh plan check, then `/gsd-execute-phase`, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
+2. Stage 2 is complete and its planning gate passed: every phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) has its CONTEXT, an approved UI-SPEC, research, a pattern map, plans and a passing plan check.
+3. Stage 3: the G-10 self-hosted fonts quick task, then build each phase in execution order. Each phase opens with a fresh plan check, then `/gsd-execute-phase`, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
 4. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
 
 ## Next Action
 
-**The pilot's planning gate for post-demo Stage 2, then Stage 3 on branch `post-demo`,** following Session Continuity above. Nothing is built yet. No dev server was running during Stage 2.
+**Post-demo Stage 3 on branch `post-demo`,** following Session Continuity above. Nothing is built yet. No dev server was running during Stage 2.
 
 ## Accumulated Context
 
