@@ -93,7 +93,7 @@ Now you can logon to the CSRM app at http://localhost:3000.
 
 Note that the secrets in `apps/backend/.env.example` are local-development placeholders only. Use real secrets in your local environment and never commit them.
 
-## Run the backend and CSRM with Keycloak sign-in
+## Run the backend and CSRM with Keycloak sign-in (optional)
 
 By default the CSRM web signs in through the development identity bridge and needs no Keycloak. These steps switch both applications to real Keycloak OIDC sign-in instead: the web (`apps/csrm`) signs people in against the local Keycloak in `idp/`, and Strapi (`apps/backend`) verifies each caller's Keycloak access token and applies their IdamBox Role -> Function -> FunctionApi grants. The design is recorded in `docs/adr/0003-production-only-keycloak-oidc-sign-in.md` and `docs/adr/0004-strapi-verifies-keycloak-access-tokens.md`.
 
