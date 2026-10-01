@@ -10,6 +10,8 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 **Defined:** 2026-09-27, from the product gap UAT (`.planning/uat/product-gaps/`). Each requirement has acceptance criteria and a trace to the operator's intended product (IDs from `BRIEF.md`: roles R1–R3, flow F1–F10, A1–A2, oversight O1–O2, qualities Q1–Q5), to the findings it closes (`FINDINGS.md`) and to its phase. Decision numbers refer to `.planning/NEXT-WAVE-DECISIONS.md`.
 
+**Post-demo (2026-10-01):** nine requirements come from the product demo's risk-owner asks, PD-1 to PD-5, and decisions G-11 to G-18 (`NEXT-WAVE-DECISIONS.md`, Post-demo decisions). They trace to those IDs and close no UAT finding. Each requirement those decisions changed carries an "Amended" line saying what changed.
+
 ### Requests
 
 - [ ] **REQ-07**: A Security Analyst sees every field the Requestor submitted, and each actor's request actions refresh after every workflow transition.
@@ -27,6 +29,9 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - [ ] **COLLAB-02**: The Requestor and Security Analysts can attach supporting files (PDF, office documents, spreadsheets) to a request at intake and at any later stage.
   - Acceptance: (1) allowed files (PDF, DOCX, XLSX, PPTX, CSV, TXT, PNG and JPEG, checked by content; up to 25 MB each and 20 per request) upload at creation and later, each showing name, size, uploader and time, and download only through an authorised operation; (2) a disallowed type, an oversize file or a file that fails the malware scan is refused with its reason; (3) only actors who may read the request can list or download its files, and another Requestor is refused at every route; (4) removal records actor and time, and retention follows the assessment's; (5) the analyst opts each file's extracted text into the AI context, off by default; included text is size-capped, marked as untrusted, and never sent above the provider's approved classification ceiling (decision 2, G-3).
   - Trace: F1, A1 · UAT-012 · Phase 14
+- [ ] **COLLAB-04**: Participants contest any part of an assessment under acceptance, and each point gets a recorded answer.
+  - Acceptance: (1) while an acceptance round is open, the Requestor, a risk owner or an executive approver raises a contest point on anything they can read (an assessment field, a whole risk, one risk field or a control implementation), with a required reason; (2) each point has an append-only reply thread of attributed plain text, shown in the viewer's local time, and a status of open, answered, then resolved or withdrawn by its raiser; (3) every participant and analyst of the assessment sees each point beside the content it targets and in the round's list; (4) release is refused while any point is open, and an answered point its raiser did not resolve stays on the record as answered; (5) nobody edits or deletes a point or a reply, and an unrelated user, Requestor or not, gets the refusal a missing record gets at every contest-point route, in the API and the UI.
+  - Trace: PD-3 · Phase 17.2 (G-15)
 
 ### Questionnaires
 
@@ -63,18 +68,21 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - [ ] **ASSESS-10**: A Security Analyst can re-run the AI for one risk or to propose additional risks.
   - Acceptance: (1) "Suggest more risks" proposes risks that do not duplicate existing ones, each accepted or rejected on its own; (2) "Rewrite this risk" proposes field changes as a diff accepted per field; (3) each run is recorded with instruction, analyst, time and provider, and released risks cannot be re-run.
   - Trace: F7, A2 · UAT-028 · Phase 16
-- [ ] **ASSESS-11**: A Security Analyst can release the initial risks to the Requestor for a response.
-  - Acceptance: (1) in a "Released for response" stage the owning Requestor reads the initial risks, and sees nothing of them before it; (2) the Requestor edits only the response, never the risk fields, and the analyst can close the round and open another; (3) another Requestor cannot see or respond to the risks at any stage.
-  - Trace: F8 · UAT-025 · Phase 17 (decision 3, reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only")
-- [ ] **ASSESS-12**: The Requestor responds to each initial risk with mitigating controls, and the analyst decides on each.
-  - Acceptance: (1) per risk, the Requestor proposes existing or planned controls with owner, evidence and due date, then submits the response; (2) the analyst accepts, edits or rejects each proposed control with a reason, and accepted ones become control implementations.
-  - Trace: F8, F9 · UAT-025 · Phase 17
+- [ ] **ASSESS-11**: A Security Analyst can release the initial risks to the Requestor and the nominated risk owners for a response.
+  - Acceptance: (1) in a "Released for response" stage the owning Requestor and every nominated risk owner (ASSESS-21) read the initial risks, and see nothing of them before it; (2) the Requestor and the owners edit only their responses, never the risk fields, and the analyst can close the round and open another; (3) an unrelated user, Requestor or not, cannot see or respond to the risks at any stage, and gets the refusal a missing record gets (ASSESS-22).
+  - Trace: F8, PD-1 · UAT-025 · Phase 17 (decision 3 and G-12, reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only")
+  - Amended (2026-10-01, G-11, G-12): the nominated risk owners join the Requestor in criteria 1 and 2, and criterion 3 names the refusal.
+- [ ] **ASSESS-12**: The Requestor and the nominated risk owners respond to each initial risk with mitigating controls, and the analyst decides on each.
+  - Acceptance: (1) per risk, the Requestor or the risk's owner proposes existing or planned controls, each with an owner found by name (ASSESS-23), evidence and a due date, may propose a different risk owner, and then submits the response; (2) the analyst accepts, edits or rejects each proposed control with a reason, and accepted ones become control implementations; (3) a risk owner responds only on the risks they own, and the Requestor on any risk of their request; Strapi refuses every other response.
+  - Trace: F8, F9, PD-1 · UAT-025 · Phase 17
+  - Amended (2026-10-01, G-11, G-17): nominated owners respond as well as the Requestor, control owners are found by name, and criterion 3 is new.
 - [ ] **ASSESS-13**: The AI proposes a residual-risk write-up from the recorded controls and responses.
   - Acceptance: (1) "Reassess residual risk", per risk or for the assessment, proposes residual likelihood, consequence, rating and rationale citing the accepted controls; (2) the analyst accepts proposals per field and can re-run.
   - Trace: F9 · UAT-026 · Phase 17
 - [ ] **ASSESS-14**: A Security Analyst marks an assessment reviewed explicitly.
-  - Acceptance: (1) "Mark reviewed" is offered once the release requirements are met and records reviewer and time; (2) edits after review show as "changed since review" and need review again before release; (3) when any residual risk is Critical, a threshold the Admin can change from Phase 22, a second Security Analyst approves before release; (4) neither the reviewer nor the approver can be the Requestor of that request (G-1).
+  - Acceptance: (1) "Mark reviewed" is offered once the release requirements are met and records reviewer and time; (2) edits after review show as "changed since review" and need review again before the assessment is submitted for acceptance; (3) when any residual risk is Critical, a threshold the Admin can change from Phase 22, a second Security Analyst approves before the assessment is submitted for acceptance; (4) neither the reviewer nor the approver can be the Requestor of that request (G-1), or a risk owner or executive approver on that assessment (G-11).
   - Trace: F10 · UAT-040 · Phase 17.1 (decision 17, reversing save-driven review, 06.8 D-04 and D-13)
+  - Amended (2026-10-01, G-11, G-13): review and peer approval now come before "Submit final assessment" (ASSESS-24), not just before release, and criterion 4 adds risk owners and executive approvers.
 - [ ] **ASSESS-15**: An assessment's risks are available as a table with configurable columns, sort, filter, a frozen first column and saved views.
   - Acceptance: (1) one row per risk with the default columns of `REPORT.md` §7 and every other field through a column chooser; (2) sort by any column, per-column filters, quick search, a row count, and named saved views that are personal by default and shareable with analysts; (3) below 768px the risks show as a stacked card list with a detail sheet, with no grid editing on phones; (4) 150 risks scroll and edit without visible lag at 1440px within the route JavaScript budget or a recorded exception.
   - Trace: Q4, F7 · UAT-039, UAT-055 · Phase 18
@@ -90,9 +98,28 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - [ ] **ASSESS-19**: A Security Analyst imports rows into, and exports rows from, an assessment's risks.
   - Acceptance: (1) CSV or XLSX import creates and updates risks by risk number, and bulk-imports control implementations by risk number and control number, through the five-step preview; (2) export writes the current view (visible columns, filters, sort) to CSV and XLSX with formula-injection protection.
   - Trace: Q3, Q4 · UAT-050 · Phase 18
-- [ ] **ASSESS-20**: The risk owner approves each risk's treatment plan and accepts its residual risk before release, within the authority the risk appetite sets.
-  - Acceptance: (1) each risk's owner sees an acceptance request on their Home and accepts or declines with a rationale, and a decline returns the risk to the analyst with its reason; (2) the risk owner accepts Low and Moderate residual risk, High also needs a named executive approver, and only a named executive approver accepts Critical risk, as a time-limited exception (decision 8); (3) each acceptance records who accepted, under what authority, the rationale and a review date from the appetite's interval, and shows in the released assessment and in the register's "Accepted risks" view; (4) release is refused until every risk's treatment plan is approved and its residual risk accepted.
-  - Trace: F8, F10 · UAT-025, UAT-040 · Phase 17.1 (G-2; ISO/IEC 27001:2022 clause 6.1.3 f)
+- [ ] **ASSESS-20**: Each risk's owner decides it, accept or treat, before release, within the authority the risk appetite sets.
+  - Acceptance: (1) each risk's owner, and for High and Critical risk its executive approver, sees the acceptance request on their Home and in the app's notifications, and the owner decides each of their risks: Accept with a rationale, offered only for a risk with no planned control implementation, or Treat with a treatment plan, a treatment owner found by name (defaulting to the risk owner, ASSESS-23) and a resolve date, starting at Not Started; the analyst's values pre-fill the form as a recommendation; (2) authority follows the residual rating whichever the choice: the risk owner decides Low and Moderate risk, High also needs the named executive approver, and for Critical risk the owner proposes and only the named executive approver decides, as a time-limited exception that sets the exemption flag and a review date three months out; for High and Critical risk an Accept rationale says why treatment is not practicable; the analyst names the executive approver before submission, and it is a different person from the risk owner (decision 8); (3) each decision records who decided, when, the authority, the choice, the rationale, a review date from the appetite's interval and a fingerprint of the risk, is never overwritten, can be revised by its decider until release, and shows in the released assessment and in the register's "Accepted risks" view; (4) release is refused until every risk has a valid decision under the authority it needs; (5) only the named risk owner or executive approver can decide a risk: Strapi refuses the assigned analyst, every other Security Analyst, the Requestor when not named, an unrelated user and the service identity, and the UI shows them no decision control.
+  - Trace: F8, F10, PD-2, PD-4 · UAT-025, UAT-040 · Phase 17.1 (G-2, G-14; ISO/IEC 27001:2022 clause 6.1.3 f)
+  - Amended (2026-10-01, G-14, G-15): criterion 1 replaces "accepts or declines with a rationale, and a decline returns the risk to the analyst" with the explicit Accept or Treat decision, because a disagreement is now a contest point (COLLAB-04); criterion 2 applies the authority to Treat as well as Accept; criterion 3 adds the fingerprint and revisions; criterion 5 is new.
+- [ ] **ASSESS-21**: A Security Analyst nominates a risk owner for every risk before releasing the assessment for response.
+  - Acceptance: (1) the analyst sets each risk's owner (`riskOwner`) through the analyst user search, or one owner for every risk in one step, and the risk's history records each change with who and when; (2) release for response is refused, with its reason, while any non-withdrawn risk has no owner, and Strapi refuses an inactive user or a service identity as owner; (3) the Requestor or a nominated owner can propose a different owner in the response or a note, and only an analyst changes it; (4) Strapi refuses to name the request's assigned analyst as a risk owner, and refuses a person named as a risk owner every analyst mutation of that assessment, whatever roles they hold; Phase 17.1 extends the rule to reviewers, peer approvers and executive approvers (ASSESS-14, ASSESS-20).
+  - Trace: PD-1, F8 · Phase 17 (G-11, extending G-1)
+- [ ] **ASSESS-22**: The Requestor and the nominated risk owners read the whole assessment from its first release for response, and nobody else does.
+  - Acceptance: (1) from the first release for response, or the first submission for acceptance if the analyst skipped the response stage, Strapi grants the Requestor, every nominated risk owner and every named executive approver a read of the assessment's fields and every non-withdrawn risk with its control implementations and responses, plus, as Phases 17.1 and 17.2 add them, the decisions and contest points with their history; the gate reads a dedicated fact that is never cleared, and an assessment released before this flow has none, so only its Requestor reads it whole, as in v1; (2) the read lasts through every round, the analyst's rework and the released record, each view names its stage (Released for response, With the Security Analyst, Awaiting acceptance, Released), and actions are open only in their own stage and, for a risk owner, only on their own risks; (3) a participant who is not the Requestor also reads the request's summary (number, title, description, assessment type, division, business unit, business criticality, systems and assets) but not its questionnaire, notes or attachments; (4) before the gate opens, and for anyone who is not a current participant, every assessment, risk, control implementation, response and history route returns the refusal a missing record gets, and the web shows the not-found page; an unrelated Requestor is refused this way at every stage, in the API and the UI; (5) "My risk assessments" lists every assessment the person takes part in, with their part, and the print-ready report and export of a released assessment are open to every participant (extending decision 12 and CSV-01).
+  - Trace: PD-1, F8 · Phase 17 (G-12, extending decision 3 and reversing v1's owner-only Requestor read, Phase 4)
+- [ ] **ASSESS-23**: First-line users find people by name through a least-privilege search.
+  - Acceptance: (1) `GET /api/v1/users?search=` returns at most 20 active human users whose display name contains a term of at least two characters, each as `documentId` and `displayName` only; (2) it never returns an inactive user or a service identity, never includes email, username or roles, refuses a shorter term or any other query parameter, and refuses a caller without an active IdamBox User, as every CSRM route does; (3) every search is recorded in the server log with the actor, the time, the term and the result count; (4) the Requestor and nominated risk owners use it to name planned-control owners in the response, and Phase 17.1 reuses it for the treatment owner; sponsor selection stays unavailable.
+  - Trace: PD-4, F8 · Phase 17 (G-17, settling Phase 2's deferred least-privilege directory contract)
+- [ ] **ASSESS-24**: A Security Analyst submits the final assessment for acceptance in numbered rounds, and can recall it.
+  - Acceptance: (1) "Submit final assessment" is offered to the assigned analyst only when "Mark reviewed" is current, peer approval is in place where decision 17 needs it, every risk has an owner and, at High or Critical residual rating, a named executive approver, and every other readiness condition is met; otherwise the page says what is outstanding; (2) submitting opens acceptance round n, tells each participant with a decision to make in the app, and makes Strapi refuse every analyst edit to the assessment, its risks and their control implementations, by any route, until the round closes; (3) the assigned analyst can recall an open round with a reason, which closes it as "recalled" and reopens everything for editing, and the next submission opens round n+1; (4) a decision from an earlier round stays valid only while its risk matches the fingerprint recorded with it; otherwise it is voided as "superseded by a change in round n+1", kept in the history, and its decider is told in the app to decide again; (5) Strapi refuses submit and recall to any caller other than the assigned human Security Analyst, including other analysts, the service identity, the Requestor and risk owners.
+  - Trace: PD-2, PD-3, F10 · Phase 17.1 (G-13, G-15)
+- [ ] **ASSESS-25**: The assigned Security Analyst releases the accepted assessment and closes the request in one confirmed step.
+  - Acceptance: (1) "Release and close" is offered once every non-withdrawn risk has a valid decision under the authority it needs, with a confirmation that says what it does, and Strapi refuses it with its reason before then; (2) the confirmed step sets, in one transaction, the assessment to `approved` with `approvedBy`, `approvalDate` and `assessmentDate`, and the request to `closed`; the assessment reads "Released" and the request "Closed" everywhere, and the assessment's next review date is the earliest decision review date unless the analyst set an earlier one; (3) released reads, lists, summaries and exports work for a `closed` request exactly as for a request released before this flow (`approved`), and the released record is immutable (decision 9); (4) Strapi refuses the step to any caller other than the assigned human Security Analyst, and no AI path or service identity can decide, release or close; (5) every participant is told in the app that the assessment was released and the request closed.
+  - Trace: PD-2, F10 · Phase 17.1 (G-13, reversing v1's release transition to request `approved`, Phase 4)
+- [ ] **ASSESS-26**: A returned assessment is reworked, every contest point is answered, and owners decide again only what changed.
+  - Acceptance: (1) a risk owner or an executive approver sends the assessment back with at least one contest point, which closes round n as "returned" and reopens the whole assessment for editing, and any edit withdraws "Mark reviewed" and a Critical peer approval (decision 17); (2) the analyst answers each point of the closed round "changed", saying what changed, or "kept", with a reason, and cannot resubmit while any is unanswered or before marking the assessment reviewed again; (3) in round n+1 each decider sees which of their decisions stand and, for each voided one, every changed field before and after; (4) the assessment's history shows every round, submission, recall, decision, revision, void, contest point, reply and answer with who and when, to its participants and analysts; (5) the Requestor who owns no risk can raise points but cannot send back, the analyst cannot send back or resolve a participant's point, and an unrelated user gets the refusal a missing record gets for the history and every rework route.
+  - Trace: PD-3 · Phase 17.2 (G-15, reversing G-2's per-risk decline)
 
 ### Risk Register and Oversight
 
@@ -100,11 +127,16 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
   - Acceptance: (1) the register, the review queues and the assessment list show and filter by assessment type, with "Project" and "BAU" saved views; (2) the exposure and throughput reports and the analyst Home break down by type.
   - Trace: O1 · UAT-045 · Phase 20
 - [ ] **RISK-04**: Released risks track treatment to closure without reopening the assessment.
-  - Acceptance: (1) after release, treatment owners and analysts update treatment status, progress notes, dates and evidence, and a Security Analyst re-rates residual risk after treatment and closes the risk with a reason, each as a recorded review, while statements and inherent ratings stay frozen (decision 9); (2) the released assessment is unchanged, and the risk's history shows each change with actor and time.
-  - Trace: O1 · UAT-046 · Phase 20
+  - Acceptance: (1) after release, the treatment owner updates treatment status, progress notes and evidence; the risk owner also changes the treatment owner, the plan and the due date, each with a reason; a Security Analyst can do all of these, re-rates residual risk after treatment and closes the risk with a reason, each as a recorded review; statements, inherent ratings and the decision record stay frozen (decision 9); (2) the released assessment is unchanged, and the risk's history shows each change with actor, time and the old and new values; (3) a risk released under the acceptance flow starts tracking from its owner's Treat decision (ASSESS-20), and a risk released before it from its released treatment fields.
+  - Trace: O1, PD-5 · UAT-046 · Phase 20
+  - Amended (2026-10-01, G-16): criterion 1 states who may change what and freezes the decision record, criterion 2 adds the old and new values, and criterion 3 is new.
 - [ ] **RISK-05**: Risk, treatment and control owners see the risks and treatments they own.
-  - Acceptance: (1) "My risks and treatments" lists, scoped by Strapi, the records where the viewer is risk, treatment or control owner, with due-soon and overdue flags, and the acceptances awaiting them or due for review, and nobody else's; (2) owners can update treatment progress on their released risks where RISK-04 allows.
-  - Trace: O1, Q1 · UAT-058 · Phase 20
+  - Acceptance: (1) "My risks and treatments" lists, scoped by Strapi, the records where the viewer is risk, treatment or control owner, with due-soon and overdue flags, the decisions and executive approvals awaiting them, the decisions to make again after a change, and the decisions due for review, and nobody else's; a risk owner sees the treatment of each of their risks, whoever owns it; (2) owners can update treatment progress on their released risks where RISK-04 allows; (3) another person's risk or treatment returns the refusal a missing record gets, by any route.
+  - Trace: O1, Q1, PD-5 · UAT-058 · Phase 20
+  - Amended (2026-10-01, G-12, G-16): criterion 1 adds executive approvals, decisions to make again and the risk owner's view of their risks' treatments; criterion 3 is new.
+- [ ] **RISK-06**: Treatments move through a recorded lifecycle to completion on evidence, and become Overdue by their date.
+  - Acceptance: (1) people set a treatment's status to Not Started, In Progress or Complete, and the server sets Overdue once `treatmentResolveDate` has passed without completion, in a daily run and on any update; (2) every read, export, Home figure, alert, report and reminder derives due soon and overdue from the same date by the same rule (`targetDate` only for a treated risk without a resolve date), and an overdue treatment leaves Overdue only on completion or a date change, returning to its last progress status; (3) completion needs an evidence statement and records who completed it and when, progress notes are append-only and attributed, and evidence files can be attached through Phase 14's attachment service; (4) a due-date change needs a reason, is made by the risk owner or a Security Analyst, and is recorded with the old and new dates; (5) an unrelated user gets the refusal a missing record gets for any treatment read or update, and a treatment owner who is not the risk owner is refused any change to a risk field, the plan or the due date, in the API and the UI.
+  - Trace: PD-5, O1 · Phase 20 (G-16, reversing Phase 7 D-04 in part)
 
 ### Administration
 
@@ -164,11 +196,16 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 ### Notifications
 
 - [ ] **NOTIFY-01**: Users are told in the app when work waits for them.
-  - Acceptance: (1) an in-app notification centre with an unread count and per-user read state tells people when work waits for them: assignment, questionnaire released and submitted, risks released for response, response submitted, acceptance requested and decided, assessment released, and new notes; (2) each notification opens the record it is about, within what the person may read (decision 18).
-  - Trace: F8 · UAT-025 · Phase 17
+  - Acceptance: (1) an in-app notification centre with an unread count and per-user read state tells people when work waits for them: assignment, questionnaire released and submitted, risks released for response (to the Requestor and each nominated risk owner), response submitted, acceptance requested and decided, assessment released and request closed, and new notes; Phases 17.1 and 17.2 add their events to the same centre (G-18); (2) each notification opens the record it is about, within what the person may read, and nobody is told about a record they may not read (decision 18).
+  - Trace: F8, PD-1 · UAT-025 · Phase 17
+  - Amended (2026-10-01, G-18): nominated risk owners and executive approvers receive notifications, release now also closes the request, and later phases' events join the same centre.
 - [ ] **NOTIFY-02**: Users receive due-date reminders in the app and by email.
-  - Acceptance: (1) treatments due within seven days or overdue, acceptance and exemption reviews due, and an assessment's next review due produce reminders to their owner, and overdue items escalate to the assigned analyst; (2) email goes through Strapi's email plugin, with a capture provider in development and tests so nothing leaves the machine, and the production mail provider is deployment configuration (decision 18).
-  - Trace: O1, Q1 · UAT-046, UAT-058 · Phase 20
+  - Acceptance: (1) treatments due within seven days or overdue remind their treatment owner, acceptance and exemption reviews due remind the risk owner or executive approver who decided, an assessment's next review due reminds the assigned analyst, and a decision waiting more than seven days reminds its decider; overdue treatments escalate to the assigned analyst and the risk owner; (2) email goes through Strapi's email plugin, with a capture provider in development and tests so nothing leaves the machine, and the production mail provider is deployment configuration (decision 18).
+  - Trace: O1, Q1, PD-5 · UAT-046, UAT-058 · Phase 20
+  - Amended (2026-10-01, G-16, G-18): each reminder names its recipient, a decision left waiting is reminded, and escalation reaches the risk owner as well as the assigned analyst.
+- [ ] **NOTIFY-04**: Participants and analysts are told in the app about contest points and returned assessments.
+  - Acceptance: (1) a contest point raised notifies the assigned analyst, an answer notifies the point's raiser, and an assessment sent back notifies the assigned analyst and the other participants; (2) each notification opens the point or the assessment, and nobody is told about a point on an assessment they do not take part in; (3) these events stay in the app (decision 18).
+  - Trace: PD-3 · Phase 17.2 (G-18)
 
 ### CSV Import and Export
 
@@ -188,7 +225,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
   - Status (2026-10-01): implemented and flag-gated, and off in development. The web's OIDC sign-in (ADR 0003, quick task 260929-u0w, with the avatar menu of quick task 260930-iei) runs only with `CSRM_AUTH_OIDC_ENABLED=true`. Strapi's access-token verification (ADR 0004, `b6000d0`) runs only with `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true`, and provisioning (ADR 0002) only with `IDAMBOX_KEYCLOAK_PROVISIONING=true`. Development, the unit suites and Playwright keep all three off and use the development identity bridge (`CSRM_DEV_IDENTITY=true`).
   - Rule for v2.0 work: every new authorisation rule is enforced in Strapi against the resolved IdamBox User, so the development bridge and a Keycloak-verified user behave identically. Authorisation never branches on the auth mode, and the OIDC tests stay green.
   - Open: enabling it in a deployment needs a Keycloak environment, the realm changes of ADR 0004 and every IdamBox User linked through `externalSubject`.
-- **COLLAB-03**: comments and activity history on questionnaires and assessments. Notes on requests are COLLAB-01.
+- **COLLAB-03**: comments and activity history on questionnaires and assessments. Notes on requests are COLLAB-01. Contest points (COLLAB-04) belong to acceptance rounds and are not general comments, so this stays future (G-15).
 - **NOTIFY-03**: notification preferences per user, and further channels.
 - **TENANT-01**: customers can administer tenant-specific branding and multi-tenant configuration.
 - **WORKFLOW-01**: administrators can configure no-code workflow definitions.
@@ -203,7 +240,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 | Native mobile app | Responsive web application is the first delivery. |
 | Full GRC suite and custom ML training | Not part of the core assessment workflow. |
 | Frontend API facade | The Strapi OpenAPI contract is the production service contract. |
-| Email and other external notification channels (next wave) | NOTIFY-01 is in-app only this wave; external channels need operator infrastructure. |
+| Notification channels beyond the app and email | NOTIFY-01 and NOTIFY-04 are in-app, and NOTIFY-02 adds email reminders in Phase 20 (decision 18, G-18). Further channels and per-user preferences are NOTIFY-03. |
 | Role assignment inside CSRM (next wave) | Role assignment stays in the identity platform unless the operator approves it with dual control and audit (`REPORT.md` §9, decision 1); Phase 8 removed the IAM routes deliberately. |
 
 ## Traceability
@@ -217,19 +254,31 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 | COLLAB-02 | Phase 14 | Pending |
 | QUES-11, QUES-12 | Phase 15 | Pending |
 | ASSESS-09, ASSESS-10 | Phase 16 | Pending |
-| ASSESS-11, ASSESS-12, ASSESS-13, NOTIFY-01 | Phase 17 | Pending |
-| ASSESS-14, ASSESS-20 | Phase 17.1 | Pending |
+| ASSESS-11, ASSESS-12, ASSESS-13, ASSESS-21, ASSESS-22, ASSESS-23, NOTIFY-01 | Phase 17 | Pending |
+| ASSESS-14, ASSESS-20, ASSESS-24, ASSESS-25 | Phase 17.1 | Pending |
+| COLLAB-04, ASSESS-26, NOTIFY-04 | Phase 17.2 | Pending |
 | ASSESS-15, ASSESS-16, ASSESS-17, ASSESS-18, ASSESS-19 | Phase 18 | Pending |
 | CSV-01, CSV-02, CSV-03 | Phase 19 | Pending |
-| RISK-03, RISK-04, RISK-05, ADMIN-06, NOTIFY-02 | Phase 20 | Pending |
+| RISK-03, RISK-04, RISK-05, RISK-06, ADMIN-06, NOTIFY-02 | Phase 20 | Pending |
 | DASH-04, DASH-05 | Phase 21 | Pending |
 | ADMIN-07, ADMIN-08 | Phase 22 | Pending |
 
+**Post-demo asks** (`NEXT-WAVE-DECISIONS.md`, Post-demo decisions):
+
+| Ask | Requirements | Phase |
+|---|---|---|
+| PD-1 The nominated risk owner and the Requestor view the assessment | ASSESS-21, ASSESS-22; amended ASSESS-11, ASSESS-12, NOTIFY-01 | 17 |
+| PD-2 Acceptance after the final assessment closes the request | ASSESS-24, ASSESS-25; amended ASSESS-14, ASSESS-20 | 17.1 |
+| PD-3 The owner contests anything, and the analyst edits everything again | COLLAB-04, ASSESS-26, NOTIFY-04; the recall and voids of ASSESS-24 | 17.2; 17.1 |
+| PD-4 Acceptance or a treatment plan | amended ASSESS-20; ASSESS-23, the people search it uses | 17.1; 17 |
+| PD-5 Treatment plans are tracked | RISK-06; amended RISK-04, RISK-05, NOTIFY-02 | 20 |
+
 **Coverage:**
 
-- v2.0 requirements: 46 total, mapped to Phases 10–22 and 17.1: 46, unmapped: 0 ✓
+- v2.0 requirements: 55 total (46 from the product gap UAT and 9 from the post-demo asks), mapped to Phases 10–22, 17.1 and 17.2: 55, unmapped: 0 ✓
 - Product gap UAT findings: 65, each closed by exactly one phase ✓
+- Post-demo asks: PD-1 to PD-5, each traced to at least one requirement, a phase and its success criteria ✓
 
 ---
 *Requirements defined: 2026-09-27*
-*Last updated: 2026-09-28 — v2.0 started. v1.0 requirements archived, and INT-02 carried as a future requirement.*
+*Last updated: 2026-10-01 — post-demo decisions G-11 to G-18: nine requirements added (55 in all), eight amended, and Phase 17.2 inserted.*

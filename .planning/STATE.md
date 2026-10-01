@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
-current_phase_name: post-demo Stage 1, reconciling the demo asks into Phases 17, 17.1 and 20; Phase 11 plans next in Stage 2
+current_phase_name: post-demo Stage 2, planning every remaining phase in execution order from Phase 11
 status: planning
-stopped_at: "Post-demo Stage 0 done on branch `post-demo` (from `csrm-20260928` at `ece1a25`): baseline gates recorded in `.planning/POST-DEMO-BRIEF.md`, stale app paths and INT-02 corrected, config set to `inherit` with auto-advance off. Stage 1 (reconcile the asks) is next."
+stopped_at: "Post-demo Stage 1 approved on branch `post-demo`: decisions G-11 to G-18, nine requirements added (55 in all), Phases 17, 17.1 and 20 amended and Phase 17.2 inserted. Stage 2 (plan every remaining phase) is next."
 last_updated: "2026-10-01T05:33:24.123Z"
 last_activity: 2026-10-01
 last_activity_desc: "Completed quick task 260929-u0w: Add production-only OIDC sign-in to the CSRM web app against Keycloak"
 state_head: e10a1a1e4579ae643da71a6212c9d9c686fd3e3e
 progress:
-  total_phases: 14
+  total_phases: 15
   completed_phases: 0
   total_plans: 23
   completed_plans: 0
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 ## Current Position
 
-Stage 1 of the post-demo brief: reconciling the asks into Phases 17, 17.1 and 20, with a decimal phase only for work that does not fit. Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 11 has its UI-SPEC, and its plans are next. Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22 and 17.1 are not yet planned.
+Stage 2 of the post-demo brief: planning every remaining phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 17, 17.1, 17.2, 18, 20, 21, 22). Stage 1 is approved: decisions G-11 to G-18 amend Phases 17, 17.1 and 20 and insert Phase 17.2. Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 11 has its UI-SPEC, and its plans are next. Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22, 17.1 and 17.2 are not yet planned.
 Plan: —
 Status: Planning v2.0 on branch `post-demo` (mode: plan-all-first; the pilot drives every transition, and auto-advance is off)
 Last activity: 2026-10-01 - Completed quick task 261001-le4: Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view
@@ -38,9 +38,9 @@ Last activity: 2026-10-01 - Completed quick task 261001-le4: Add the missing gap
 ## Milestone
 
 **Version:** 2.0, Assessment Lifecycle and Oversight
-**Phases:** 10–22 and 17.1 (14 phases). Execution order: 10, 11, 12, 13, 14, 15, 16, 19, 17, 17.1, 18, 20, 21, 22.
-**Requirements:** 46 in `.planning/REQUIREMENTS.md`, tracing all 65 product gap UAT findings (`.planning/uat/product-gaps/`).
-**Decisions:** `.planning/NEXT-WAVE-DECISIONS.md`: the eighteen from the UAT report and G-1 to G-10.
+**Phases:** 10–22, 17.1 and 17.2 (15 phases). Execution order: 10, 11, 12, 13, 14, 15, 16, 19, 17, 17.1, 17.2, 18, 20, 21, 22.
+**Requirements:** 55 in `.planning/REQUIREMENTS.md`: 46 tracing all 65 product gap UAT findings (`.planning/uat/product-gaps/`), and 9 from the product demo's risk-owner asks PD-1 to PD-5.
+**Decisions:** `.planning/NEXT-WAVE-DECISIONS.md`: the eighteen from the UAT report, G-1 to G-10, and the post-demo G-11 to G-18.
 **Previous milestone:** v1.0, shipped 2026-09-26 and closed 2026-09-28:
 - `.planning/MILESTONES.md`;
 - `.planning/milestones/v1.0-ROADMAP.md` and `v1.0-REQUIREMENTS.md`;
@@ -81,6 +81,14 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
   - Recorded UI extensions form one milestone-wide sequence in `docs/design/csrm-design-direction.md`: Phase 10's X-1 to X-5 (recorded by plan 10-01), then Phase 11's X-6 to X-10 (recorded by Phase 11's first plan). Each later UI-SPEC numbers after the highest number in the committed UI-SPECs, so Phase 12 starts at X-11. Phase 7's X-1 to X-13 were local to its own contract; they are in the direction as dated CSRM extension notes and are cited by those.
   - Phase 11's UI-D33 is approved: "mitigation control" is the display term for a Control Implementation in the copy that phase rewrites, as in Phase 7's contract, Phase 10's D-28 and D-33, and the Risk Register's save messages. The JDL name stays in the data model and API.
 - [Post-demo start, 2026-10-01]: The product demo's risk-owner asks are reconciled, planned and built on branch `post-demo` under `.planning/POST-DEMO-BRIEF.md`. That brief overrides three stale facts: the `v2.0` branch and the git-excluded brief above; the app paths, now `apps/backend` and `apps/csrm` (`d161fce`); and INT-02, now implemented, flag-gated and off in development. GSD agents inherit the session model, and auto-advance is off, so the pilot drives every transition.
+- [Post-demo G-11, 2026-10-01]: The nominated risk owners are each risk's own `riskOwner`, set by the analyst (one step for all) and required before release for response; no request-level owner and no reuse of `sponsor`; the assigned analyst, the reviewer and the peer approver cannot be a risk owner or executive approver on that assessment, and an owner cannot act on it as an analyst (extends G-1).
+- [Post-demo G-12, 2026-10-01]: The Requestor, the nominated risk owners and named executive approvers read the whole assessment from its first release for response through the released record, with the stage labelled; anyone else gets the refusal a missing record gets at every route and stage (extends decision 3; reverses v1's owner-only Requestor read).
+- [Post-demo G-13, 2026-10-01]: "Submit final assessment" opens numbered acceptance rounds that lock analyst editing, and the assigned analyst can recall a round; once every risk has a valid decision, the assigned analyst releases and closes in one confirmed step (assessment `approved`, request `closed`, shown "Closed"); automatic closure on the last decision is rejected (reverses v1's release transition to request `approved`; decision 16's "Released" request label now covers only earlier releases).
+- [Post-demo G-14, 2026-10-01]: Each risk takes an explicit Accept or Treat decision from its named owner, with authority by residual rating for both choices (High adds the named executive approver; only the executive decides Critical, as a time-limited exception); Accept only where no planned control exists; each decision records authority, rationale, review date and a fingerprint; no analyst, AI or service identity decides (reverses G-2's per-risk decline).
+- [Post-demo G-15, 2026-10-01]: Contest points are their own entity (Phase 17.2): any participant raises one on any content they can read, with a reason, a reply thread and a status; sending back or recalling reopens the whole assessment, every point is answered before resubmission, and a decision survives a round only while its risk's fingerprint is unchanged (reverses G-2's decline that returned one risk).
+- [Post-demo G-16, 2026-10-01]: Phase 20 tracks treatments from Not Started through In Progress to Complete on evidence; the server sets Overdue from `treatmentResolveDate` and every read derives it by the same rule; date changes need a reason; overdue treatments escalate to the assigned analyst and the risk owner (new RISK-06; reverses Phase 7 D-04 in part).
+- [Post-demo G-17, 2026-10-01]: First-line users find people through the already-granted `GET /api/v1/users?search=`, hardened (two characters, active human users only, `documentId` and `displayName` only, every search logged): control owners in Phase 17, then treatment owners in 17.1 (settles Phase 2's deferred directory contract; sponsor selection stays off).
+- [Post-demo G-18, 2026-10-01]: Risk owners and executive approvers receive in-app notifications at each stage (Phases 17 and 17.1, and NOTIFY-04 for contest points in 17.2), and decisions left waiting get email reminders from Phase 20.
 
 ## Risks and Open Decisions
 
@@ -134,18 +142,18 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 ## Session Continuity
 
 **Last session:** 2026-10-01
-**Stopped At:** post-demo Stage 0 done: branch `post-demo` created from `csrm-20260928` at `ece1a25`, baseline gates recorded, stale app paths and INT-02 corrected, `config.json` set to `model_profile: inherit` and `workflow.auto_advance: false`.
+**Stopped At:** post-demo Stage 1 approved and committed: decisions G-11 to G-18 (`NEXT-WAVE-DECISIONS.md`, Post-demo decisions), nine requirements added (55 in all), Phases 17, 17.1 and 20 amended, and Phase 17.2 inserted. Stage 0 recorded the baseline: web 2,046/2,048 (two stale paths, fixed in `678b117`), Strapi 578/578, Playwright 84/84.
 **Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
-2. Stage 1: reconcile the demo asks into Phases 17, 17.1 and 20, and insert a decimal phase only for work that does not fit. Decisions go in `NEXT-WAVE-DECISIONS.md` from G-11, requirements continue the IDs, and ROADMAP coverage is updated.
-3. Stage 2: plan every remaining phase in execution order with the Next wave planning method, starting with Phase 11's patterns and plans.
+2. Stage 2: plan every remaining phase in execution order with the Next wave planning method, starting with Phase 11's patterns and plans. Read-only units run in parallel once their dependencies have a CONTEXT.md; the pilot commits each unit's files by path.
+3. The planning gate: every phase has plans and a passing check, every ask (PD-1 to PD-5) traces to a requirement, a phase and a success criterion, nothing references the pre-rename app paths, and `/gsd-health` is clean.
 4. Stage 3: the G-10 fonts quick task, then build from Phase 10, opening each phase with a fresh plan check.
 
 ## Next Action
 
-**Post-demo Stage 1 on branch `post-demo`**, following Session Continuity above. Nothing is built yet. No dev server was running at the start of the post-demo session.
+**Post-demo Stage 2 on branch `post-demo`**, following Session Continuity above. Nothing is built yet. No dev server was running at the start of the post-demo session.
 
 ## Accumulated Context
 
@@ -155,3 +163,4 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - Phase 17.1 inserted after Phase 17 (2026-09-27): Review, peer approval and risk acceptance (`NEXT-WAVE-DECISIONS.md` decision 17 and G-2). There are now 46 requirements.
 - v1.0 closed (2026-09-28): an override close-out, with its phase directories kept and Phase 06.10 moved to backlog 999.1.
 - v2.0 started (2026-09-28): Assessment Lifecycle and Oversight, Phases 10–22 and 17.1.
+- Phase 17.2 inserted after Phase 17.1 (2026-10-01): Contest points and rework rounds (`NEXT-WAVE-DECISIONS.md` G-15), because the contest-and-rework loop would push Phase 17.1 past size L. The post-demo decisions G-11 to G-18 also amend Phases 17, 17.1 and 20; there are now 55 requirements.

@@ -9,3 +9,33 @@ The product label for a `CsrmAssessment` whose `assessmentStatus` holds the JDL 
 _Avoid_: Approved (as the label of an assessment's status), Published
 
 Only the displayed label changes. The stored value `approved`, the `status=approved` query value and the request-status label `Approved` (`CsrmRequestStatus`) are unchanged.
+
+**Released for response (Risk Assessment stage)**:
+The stage in which a Security Analyst has shared an unreleased assessment with the Requestor and the nominated risk owners for their response, in numbered rounds (decision 3, G-12). It is not a release: nothing is final, and the analyst can still edit the assessment between rounds.
+_Avoid_: Released (alone), Shared, Published
+
+**Risk owner**:
+The person named on a risk in `CsrmRisk.riskOwner`, who decides it: accepts it or approves its treatment. A Security Analyst nominates each risk's owner, and the nominated risk owners of an assessment are the distinct owners of its non-withdrawn risks (G-11). A risk owner holds only the Requestor birthright role and reads the assessment because they are named on it.
+_Avoid_: Business owner, Sponsor (the request's `sponsor` is a different relation), Approver
+
+**Executive approver**:
+The person a Security Analyst names on a High or Critical risk, whose decision the risk appetite needs as well as the risk owner's, or for Critical risk instead of it (decision 8, G-14). The JDL has no name for this part; it is a person named on the record, not an IdamBox Role.
+_Avoid_: Approver or Peer approver (a peer approval is a second Security Analyst's, decision 17), Sponsor, Delegate
+
+**Submit final assessment**:
+The Security Analyst's action that asks for acceptance. It opens an acceptance round in which each risk owner and executive approver decides their risks, and it locks the analyst's editing until the round is recalled, returned or ended by release (G-13). It releases nothing.
+_Avoid_: Submit for approval (the catalogue's unserved `submit_for_approval` intent), Send for sign-off, Release
+
+**Accept, Treat (risk decisions)**:
+The two decisions a risk owner makes on a risk, stored in `treatmentAction` (`CsrmTreatmentAction`: `ACCEPT`, `TREAT`). Accept retains the risk, with a rationale; Treat commits to a treatment plan with a treatment owner and a resolve date (G-14). A value set before the owner decides is the analyst's recommendation, not a decision.
+_Avoid_: Approve, Sign off, Decline (there is no per-risk decline: a disagreement is a contest point)
+
+**Contest point**:
+A participant's recorded challenge to one piece of an assessment under acceptance (an assessment field, a risk or one of its fields, or a control implementation), with a required reason, a reply thread and a status: open, answered, then resolved or withdrawn (G-15). Sending the assessment back with contest points reopens all of it for the Security Analyst. The JDL has no name for it.
+_Avoid_: Comment, Note (a note belongs to a request, COLLAB-01), Dispute, Objection
+
+**Closed (Assessment Request status)**:
+The product label for a `CsrmAssessmentRequest` whose `requestStatus` holds the JDL value `closed` (`CsrmRequestStatus.CLOSED`): every risk of its assessment has a valid decision, and the assigned Security Analyst has released the assessment and closed the request in one step (G-13).
+_Avoid_: Complete, Done, Resolved, Accepted
+
+A request released before this flow keeps `approved`, which reads "Released" from Phase 11 (decision 16). A closed request's assessment stays `approved` and reads "Released"; the assessment's own `closed` status is unused.

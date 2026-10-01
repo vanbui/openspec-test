@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Controlled Cyber Risk Assessment Workflow** — Phases 1–9 with 06.1–06.10 (shipped to `main` 2026-09-26; closed 2026-09-28). Full detail: `.planning/milestones/v1.0-ROADMAP.md`.
-- 🚧 **v2.0 Assessment Lifecycle and Oversight** — Phases 10–22 and 17.1 (planning).
+- 🚧 **v2.0 Assessment Lifecycle and Oversight** — Phases 10–22, 17.1 and 17.2 (planning).
 
 ## Phases
 
@@ -32,11 +32,11 @@
 
 </details>
 
-## v2.0 Assessment Lifecycle and Oversight (Phases 10–22 and 17.1)
+## v2.0 Assessment Lifecycle and Oversight (Phases 10–22, 17.1 and 17.2)
 
 Added 2026-09-27 from the product gap UAT in `.planning/uat/product-gaps/` (`REPORT.md`, `FINDINGS.md` and `FINDINGS.csv`, 65 findings). These phases take CSRM from the v1 workflow to the operator's intended product (`BRIEF.md`, Appendix A: roles R1–R3, core flow F1–F10, A1–A2 at any point, oversight O1–O2, qualities Q1–Q5). Every finding maps to exactly one phase (the `Proposed phase` column of `FINDINGS.csv`) and to at least one Next-wave requirement in `REQUIREMENTS.md`. Milestone v1.0 stays open (STATE.md Decisions, 2026-09-27): these phases continue its numbering, and the operator may move them into their own milestone when v1.0 is closed.
 
-**Decisions.** The operator delegated the product decisions on 2026-09-27. `.planning/NEXT-WAVE-DECISIONS.md` records all eighteen from `REPORT.md` §9 and six more (G-1 to G-6), each grounded in cyber-governance practice and a premium experience bar. Each phase's CONTEXT.md cites the numbers it depends on.
+**Decisions.** The operator delegated the product decisions on 2026-09-27. `.planning/NEXT-WAVE-DECISIONS.md` records all eighteen from `REPORT.md` §9 and six more (G-1 to G-6), each grounded in cyber-governance practice and a premium experience bar. Each phase's CONTEXT.md cites the numbers it depends on. On 2026-10-01 the post-demo decisions G-11 to G-18 reconciled the product demo's risk-owner asks (PD-1 to PD-5) into Phases 17, 17.1 and 20, and inserted Phase 17.2.
 
 **Frozen datamodel.** A phase that needs a content-type change writes its `docs/contract-gaps/` record first. The schema change then waits at a checkpoint until the record is reviewed and approved (G-6). Phases 10, 11, 12 (except its run record and provenance), 19 and 21's first metric set need no content-type change.
 
@@ -46,7 +46,7 @@ Added 2026-09-27 from the product gap UAT in `.planning/uat/product-gaps/` (`REP
 |---|---|---|
 | 1. Fix and trust | 10 → 11 → 12 | Fixes what users hit today, clarifies navigation and landing, and gives the AI full context and visible provenance, which every later AI phase builds on |
 | 2. Collaboration and iterative AI | 13 → 14 → 15 → 16, then 19 | Notes and assignment come before the steps that use new information; export is independent and delivers CSV early |
-| 3. The full flow and the table | 17 → 17.1 → 18 → 20 | The response stage needs notes, curation and provenance; review and acceptance close the flow; the risk table needs withdrawal, provenance markers and export; post-release tracking needs the registers |
+| 3. The full flow and the table | 17 → 17.1 → 17.2 → 18 → 20 | The response stage needs notes, curation and provenance; review and acceptance close the flow, and contest rounds rework it before closure; the risk table needs withdrawal, provenance markers, export and the acceptance-round lock; post-release tracking needs the registers and the owners' decisions |
 | 4. Oversight and administration | 21 → 22 | Metrics need the history, assignment and scales from earlier phases; the Admin role takes over the configuration they introduce |
 
 Phase 19 runs before Phase 18, because the risk table's import and export reuse its export and spreadsheet infrastructure.
@@ -310,23 +310,30 @@ Plans:
 
 ### Phase 17: Mitigation response and residual reassessment
 
-**Goal:** As a Requestor, I want to see the initial risks and tell the analyst which controls we have or plan, and as a Security Analyst I want the AI to reassess residual risk from those responses, so that the final assessment reflects the business's real mitigations.
+**Goal:** As a Requestor or a nominated risk owner, I want to see the assessment once it is released for response and tell the analyst which controls we have or plan, and as a Security Analyst I want to nominate each risk's owner and have the AI reassess residual risk from the responses, so that the final assessment reflects the business's real mitigations and the people who must accept it have seen it.
 **Mode:** mvp
 **UI hint:** yes
-**Requirements:** ASSESS-11, ASSESS-12, ASSESS-13, NOTIFY-01
-**Depends on:** Phases 12, 13 and 16
+**Requirements:** ASSESS-11, ASSESS-12, ASSESS-13, ASSESS-21, ASSESS-22, ASSESS-23, NOTIFY-01
+**Depends on:** Phases 12, 13, 16 and 19 (participants export what they read)
 **Closes:** UAT-025, UAT-026
-**Intent:** F8, F9 (Phase 9 workflow)
-**Decisions:** one analyst-controlled "Released for response" stage, repeatable in numbered rounds, in which the Requestor and named risk owners respond with the treatment plan (#3), reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only"; an in-app notification centre with per-user read state (#18). Review, peer approval and risk acceptance follow in Phase 17.1.
-**Contract and datamodel:** a new assessment stage in the published status vocabulary, a Requestor response per risk and per-user notification read state: contract-gap records first, then an approval checkpoint; API for Requestor reads of risks released for response, response submission and residual proposals, with record-level checks.
+**Intent:** F8, F9, PD-1, PD-4 (Phase 9 workflow)
+**Decisions:** one analyst-controlled "Released for response" stage, repeatable in numbered rounds, in which the Requestor and named risk owners respond with the treatment plan (#3), reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only"; the analyst nominates each risk's owner, every risk needs one before release for response, and nobody who assesses a risk owns it (G-11); the Requestor, the nominated owners and named executive approvers read the whole assessment from its first release for response, and anyone else gets the refusal a missing record gets (G-12, reversing v1's owner-only Requestor read); first-line users find people through the hardened user search (G-17); an in-app notification centre with per-user read state, which risk owners receive too (#18, G-18). Review, peer approval and risk acceptance follow in Phase 17.1.
+**Contract and datamodel:** contract-gap records first, then an approval checkpoint (G-6):
+- `docs/contract-gaps/phase-17-response-rounds.md`: the response stage in the published status vocabulary, its numbered rounds, the response per risk from the Requestor or the risk's owner, and the first-release fact that opens the participant read (a dedicated fact that is never cleared, like 06.8's questionnaire release fact);
+- `docs/contract-gaps/phase-17-participant-read.md`: who participates and what they read, amending `phase-04-composite-release-fact.md` ("Requestor visibility and projections");
+- `docs/contract-gaps/phase-17-notifications.md`: notifications and per-user read state.
+
+API for participant reads, owner nomination, response submission and residual proposals, with record-level checks. The hardened `GET /api/v1/users?search=` is an API change only: the operation is already catalogued for the Requestor. A development fixture identity for a first-line risk owner who is not the Requestor, so the journey has a Requestor, a different risk owner, an analyst and an unrelated Requestor.
 **Size:** L
 
 **Success Criteria:**
 
-1. The Requestor sees UAT-A's initial risks after the analyst releases them for response, and not before.
-2. The Requestor adds two mitigating controls to a risk and submits; the analyst accepts one and rejects one with a reason.
-3. "Reassess residual risk" proposes new residual values citing the accepted controls, and the analyst accepts them per field.
-4. Another Requestor cannot see or respond to the risks at any stage, and each actor is told in the app when the response waits or arrives.
+1. The analyst nominates the Requestor as owner of every risk in one step, then a different first-line person for one risk; release for response is refused while any risk has no owner, and the assigned analyst cannot be named.
+2. The Requestor and that risk owner see the whole of UAT-A's assessment after the analyst releases it for response, and nothing of it before; the owner finds it in "My risk assessments" marked with their part, responds only on their own risk, and, once the assessment is released, prints and exports it as the Requestor can.
+3. The Requestor adds two mitigating controls to a risk, naming a control owner found by name, and submits; the analyst accepts one and rejects one with a reason. The people search needs two characters, returns no email and no service identity, and logs each search.
+4. "Reassess residual risk" proposes new residual values citing the accepted controls, and the analyst accepts them per field.
+5. An unrelated Requestor gets the refusal a missing record gets for the assessment, its risks, control implementations and responses, at every stage, in the API and the UI; each participant is told in the app when the response waits or arrives.
+6. Playwright, first slice of the post-demo journey: a Requestor raises a request; the analyst assesses it, nominates a different first-line risk owner for two of its risks (the two that owner later accepts and treats in Phase 17.1's slice) and releases it for response; the Requestor and that owner view it and respond; an unrelated Requestor is refused at each step, in the UI and the API.
 
 **Plans:** 0 plans
 
@@ -335,28 +342,63 @@ Plans:
 
 ### Phase 17.1: Review, peer approval and risk acceptance (INSERTED)
 
-**Goal:** As a risk owner, I want to approve the treatment plan and accept the residual risk of my risks within my authority, and as a Security Analyst I want an explicit review and, for the most serious outcomes, a colleague's approval before release, so that every released assessment carries accountable acceptance and independent review.
+**Goal:** As a risk owner, I want to decide each of my risks, accepting it or approving its treatment, within my authority once the analyst submits the final assessment, and as a Security Analyst I want an explicit review, a colleague's approval for the most serious outcomes, and one confirmed step that releases the assessment and closes the request, so that every closed request carries accountable acceptance and independent review.
 **Mode:** mvp
 **UI hint:** yes
-**Requirements:** ASSESS-14, ASSESS-20
+**Requirements:** ASSESS-14, ASSESS-20, ASSESS-24, ASSESS-25
 **Depends on:** Phase 17
 **Closes:** UAT-040
-**Intent:** F8, F10 (ISO/IEC 27001:2022 clause 6.1.3 f)
-**Decisions:** an explicit "Mark reviewed" by the assigned analyst, withdrawn by any later edit; a second Security Analyst approves before release when any residual risk is Critical, a threshold the Admin can change from Phase 22 (#17); acceptance authority and review intervals by residual rating (#8); risk owners accept within their authority, High and Critical need a named executive approver, and a decline returns the risk to the analyst (G-2); nobody reviews, approves or releases the assessment of a request they raised (G-1). Inserted 2026-09-27 (`NEXT-WAVE-DECISIONS.md`), taking ASSESS-14 and UAT-040 from Phase 17.
-**Contract and datamodel:** review, peer-approval and acceptance facts (reviewer, approver, acceptor, authority, rationale, review date): contract-gap record first, then an approval checkpoint (G-6); API for mark reviewed, approve, request acceptance and record acceptance, with exact grants and record-level checks (acceptance is open only to the named risk owner or approver, through the Requestor birthright); release readiness gains the review, approval and acceptance conditions.
-**Size:** M
+**Intent:** F8, F10, PD-2, PD-4 (ISO/IEC 27001:2022 clause 6.1.3 f)
+**Decisions:** an explicit "Mark reviewed" by the assigned analyst, withdrawn by any later edit; a second Security Analyst approves before submission when any residual risk is Critical, a threshold the Admin can change from Phase 22 (#17, G-13); "Submit final assessment" opens numbered acceptance rounds that lock analyst editing, the assigned analyst can recall a round, and once every risk has a valid decision the assigned analyst releases and closes in one confirmed step, the request reading "Closed" (G-13, reversing v1's release transition to request `approved`); each risk takes an explicit Accept or Treat decision from its named owner, with authority by residual rating for both choices: High adds the named executive approver, only the executive approver decides Critical risk, as a time-limited exception, and a disagreement is a contest point rather than a decline (#8, G-14, reversing G-2's decline); decisions carry a fingerprint and survive a round only while their risk is unchanged (G-15); the treatment owner is found by name (G-17); nobody reviews, approves or releases the assessment of a request they raised (G-1), and nobody who assesses a risk decides it (G-11); participants are told in the app at each step (G-18). Inserted 2026-09-27 (`NEXT-WAVE-DECISIONS.md`), taking ASSESS-14 and UAT-040 from Phase 17; amended 2026-10-01 by the post-demo decisions.
+**Contract and datamodel:** contract-gap records first, then an approval checkpoint (G-6):
+- `docs/contract-gaps/phase-17.1-review-and-peer-approval.md`: explicit review facts (reviewer, time, withdrawal by an edit) and peer-approval facts, replacing the save-driven `reviewedBy` of 06.8 D-13;
+- `docs/contract-gaps/phase-17.1-acceptance-rounds-and-decisions.md`: acceptance rounds (number; opened, recalled or completed, by whom, when and why), the per-risk decision record (decider, authority, choice, rationale, review date, fingerprint, revision and void), and the named executive approver of each High or Critical risk;
+- `docs/contract-gaps/phase-17.1-release-and-close.md`: the release transition to request `closed` and the released predicate over `approved` or `closed`, amending `phase-04-composite-release-fact.md` ("Transitions and irreversibility").
+
+API for mark reviewed, peer approval, executive approver nomination, submit, recall, decide and revise, and release and close, with exact grants and record-level checks: decisions are open only to the named risk owner or executive approver, through the Requestor birthright; submit, recall, and release and close only to the assigned human Security Analyst (`HUMAN_ANALYST_ONLY_OPERATIONS`); every analyst editing route refuses while a round is open. Release readiness gains the review, approval and decision conditions.
+**Size:** L (was M: submission rounds, recall, decisions for both choices, and release and close join review and acceptance; the contest loop moves to Phase 17.2 to keep this phase within L)
 
 **Success Criteria:**
 
-1. The analyst marks the assessment reviewed, and a later edit shows as "changed since review" and withdraws the review.
-2. With a Critical residual risk, release waits for a second Security Analyst's approval, which neither the assignee nor the Requestor of that request can give.
-3. The owner of a Moderate risk accepts it with a rationale from their Home; a High risk also needs the named executive approver; a decline returns the risk to the analyst with its reason.
-4. Release is refused until every risk's treatment plan is approved and its residual risk accepted by the authority the appetite requires, and the released assessment shows who accepted each risk, under what authority, and its review date.
+1. The analyst marks the assessment reviewed; a later edit shows as "changed since review", withdraws the review and withholds "Submit final assessment" until the analyst marks it again.
+2. With a Critical residual risk, submission waits for a second Security Analyst's approval, which neither the assignee, the Requestor nor a risk owner of that assessment can give.
+3. After "Submit final assessment", Strapi refuses the analyst's edits while round 1 is open; a recall with a reason reopens editing, and in round 2 an unchanged risk's decision stands while a changed risk's decision is voided and its owner is asked again.
+4. The owner of a Moderate risk accepts it with a rationale from their Home, and treats a Low risk with a plan, a treatment owner found by name and a due date; Accept is not offered for a risk with a planned control; a High risk also needs the named executive approver; only the executive approver decides a Critical risk, as a time-limited exception.
+5. Release is refused until every risk has a valid decision under the authority it needs; the assigned analyst then releases and closes in one confirmed step, the request reads "Closed" everywhere, and the released assessment shows who decided each risk, under what authority, and its review date; the Requestor and the risk owner still read the released assessment of the closed request, and a request released before this flow still reads as released.
+6. The assigned analyst, another analyst and the service identity cannot decide a risk: the API refuses, and the UI shows them no decision control. Only the assigned analyst can submit, recall, and release and close. An unrelated Requestor gets the refusal a missing record gets at every route, in the API and the UI.
+7. Playwright, second slice: continuing Phase 17's journey, the analyst submits the final assessment; the different risk owner accepts one of their risks and treats the other with a plan, a treatment owner and a due date, and every other risk is decided by its owner; the analyst releases and closes, and the request reads "Closed"; the analyst cannot accept, and an unrelated Requestor is refused at each step, in the UI and the API.
 
 **Plans:** 0 plans
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 17.1 to break down)
+
+### Phase 17.2: Contest points and rework rounds (INSERTED)
+
+**Goal:** As a risk owner, I want to contest anything in an assessment I am asked to accept and see each point answered, and as a Security Analyst I want to rework the whole assessment and resubmit it, so that acceptance rests on content both lines have challenged and agreed.
+**Mode:** mvp
+**UI hint:** yes
+**Requirements:** COLLAB-04, ASSESS-26, NOTIFY-04
+**Depends on:** Phase 17.1
+**Closes:** no UAT finding (post-demo ask PD-3)
+**Intent:** PD-3, F10
+**Decisions:** contest points are their own recorded concept, raised by any participant on any content they can read, each with a reason, a reply thread and a status; a risk owner or executive approver sends the assessment back, which reopens all of it; the analyst answers every point before resubmitting; decisions survive only for unchanged risks, and their deciders see what changed (G-15, reversing G-2's per-risk decline); the raiser, the analyst and the other participants are told in the app (G-18). Inserted 2026-10-01 (`NEXT-WAVE-DECISIONS.md`, G-15), because the contest-and-rework loop would push Phase 17.1 past size L.
+**Contract and datamodel:** `docs/contract-gaps/phase-17.2-contest-points.md` first, then an approval checkpoint (G-6): the contest point (target, reason, status, raiser), its replies and answer, and the acceptance round's "returned" fact. API to raise, reply to, answer, resolve and withdraw points and to send an assessment back, with exact grants and record-level checks: the assessment's participants raise and reply, the raiser resolves or withdraws, a Security Analyst answers, and a risk owner or executive approver sends back.
+**Size:** M
+
+**Success Criteria:**
+
+1. In an open round the risk owner raises two contest points, one on a risk's treatment plan and one on the overall rating, each with a reason, and sends the assessment back; round 1 closes as "returned".
+2. The analyst edits the risk and answers that point "changed", answers the other "kept" with a reason, and cannot resubmit while either is unanswered or before marking the assessment reviewed again; release is refused while any point is open.
+3. In round 2 the owner sees which decisions stand and, for the changed risk, each changed field before and after, and decides it again.
+4. The history shows both rounds, both points with their replies and answers, and the void, with who and when; the analyst and the owner are told in the app at each step.
+5. The Requestor who owns no risk can raise a point but not send back; the analyst cannot send back or resolve a participant's point; an unrelated Requestor gets the refusal a missing record gets for the points and the history, in the API and the UI.
+6. Playwright, third slice: Phase 17.1's journey with the contest inserted after "Submit final assessment": the owner contests two points and sends the assessment back, the analyst edits and resubmits, then the owner accepts one risk and treats another and the analyst releases and closes; the analyst cannot accept, and an unrelated Requestor is refused at each step, in the UI and the API.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 17.2 to break down)
 
 ### Phase 18: Risk table and spreadsheet interoperability
 
@@ -364,7 +406,7 @@ Plans:
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** ASSESS-15, ASSESS-16, ASSESS-17, ASSESS-18, ASSESS-19
-**Depends on:** Phases 12, 16 and 19
+**Depends on:** Phases 12, 16, 17.1 (bulk edits honour the acceptance-round lock and void changed decisions, ASSESS-24) and 19
 **Closes:** UAT-008, UAT-039, UAT-050, UAT-055, UAT-056, UAT-057, UAT-063
 **Intent:** Q4, Q3, F7
 **Decisions:** the grid follows a research spike with pass-or-fail criteria (ARIA grid conformance at WCAG 2.2 AA, a permissive licence only, the route JavaScript budget, semantic tokens), leaning to the DataTable on TanStack Table (#7); the 5 × 5 scales with the product-banded rating and an override with a reason (#8); saved views personal by default and shareable with analysts; no persisted risk is hard-deleted from the table (#6).
@@ -413,24 +455,26 @@ Plans:
 
 ### Phase 20: Oversight registers and post-release tracking
 
-**Goal:** As a risk manager, I want registers by assessment type that stay current after release, and as a risk owner I want to see and update my treatments, so that oversight reflects what is actually being done.
+**Goal:** As a risk manager, I want registers by assessment type that stay current after release, and as a risk or treatment owner I want to track each treatment to completion on evidence, so that oversight reflects what is actually being done.
 **Mode:** mvp
 **UI hint:** yes
-**Requirements:** RISK-03, RISK-04, RISK-05, ADMIN-06, NOTIFY-02
-**Depends on:** Phases 11 and 17 (notifications for due reminders)
+**Requirements:** RISK-03, RISK-04, RISK-05, RISK-06, ADMIN-06, NOTIFY-02
+**Depends on:** Phases 11, 14 (evidence files), 17 (notifications for due reminders), 17.1 (the decisions whose treatments it tracks) and 17.2 (the full post-demo journey)
 **Closes:** UAT-045, UAT-046, UAT-047, UAT-058
-**Intent:** O1, O2, Q1
-**Decisions:** the released assessment stays an immutable record while its risks live on in the register: treatment updates by owners and analysts, residual re-rating and closure by a Security Analyst as a recorded review, statements and inherent ratings frozen, every change in history (#9); due-date reminders in the app and by email through Strapi's email plugin, with a capture provider in development and tests (#18); divisions and business units stay free text with suggestions until the Admin lists of Phase 22.
-**Contract and datamodel:** API (type filter and projection through the request, an owner-scoped risk read with a Requestor grant, post-release treatment operations, usage reads); post-release history: contract-gap record first, then an approval checkpoint.
-**Size:** M
+**Intent:** O1, O2, Q1, PD-5
+**Decisions:** the released assessment stays an immutable record while its risks live on in the register: treatment updates by owners and analysts, residual re-rating and closure by a Security Analyst as a recorded review, statements and inherent ratings frozen, every change in history (#9); each treatment moves from Not Started through In Progress to Complete on evidence, the server sets Overdue from `treatmentResolveDate` and every read derives it by the same rule, date changes need a reason, and overdue treatments escalate to the assigned analyst and the risk owner (G-16, reversing Phase 7 D-04 in part); due-date reminders in the app and by email through Strapi's email plugin, with a capture provider in development and tests, and email reminders for decisions left waiting (#18, G-18); divisions and business units stay free text with suggestions until the Admin lists of Phase 22.
+**Contract and datamodel:** API (type filter and projection through the request, an owner-scoped risk read with a Requestor grant, post-release treatment operations, usage reads); a daily scheduled run in Strapi. Contract-gap record first, then an approval checkpoint (G-6): `docs/contract-gaps/phase-20-treatment-tracking.md`, covering post-release history (old and new values, actor, time), progress notes, evidence and its files, date-change reasons, and the server-written `Overdue` with its governing date, amending `phase-07-derived-insights.md`'s treatment due-state rule. Reminder delivery facts join Phase 17's notification record or get their own; the plan decides.
+**Size:** L (was M: the treatment lifecycle of RISK-06)
 
 **Success Criteria:**
 
 1. The register has "Project" and "BAU" saved views, and the exposure reports break down by type.
-2. A treatment on a released risk moves to Complete and the risk closes with a reason; the released assessment is unchanged and the history shows the change.
-3. A Requestor sees the risks they own, with due dates, and nobody else's.
+2. The treatment from the Phase 17.1 journey moves from Not Started to In Progress to Complete with an evidence statement, recording who and when; the analyst re-rates residual risk and closes the risk with a reason; the released assessment is unchanged, and the history shows each change.
+3. A risk owner sees their risks, their risks' treatments and the decisions awaiting them or due for review in "My risks and treatments"; a treatment owner sees their treatments with due dates; neither sees anybody else's.
 4. A system's page lists its requests and open risks by residual rating.
-5. A treatment due within seven days produces an in-app reminder and an email in the development capture mailbox, and an overdue one escalates to the assigned analyst.
+5. A treatment due within seven days produces an in-app reminder and an email in the development capture mailbox; once its resolve date passes it reads Overdue in the register, Home, alerts and exports, and escalates to the assigned analyst and the risk owner; a date change with a reason clears it. A decision left waiting more than seven days reminds its decider in the app and by email.
+6. An unrelated user gets the refusal a missing record gets for another person's treatment, by any route; a treatment owner cannot change a risk field, the plan or the due date; completing without evidence is refused.
+7. Playwright, final slice: the whole post-demo journey passes end to end, from a Requestor raising a request through release for response, responses from the Requestor and a different risk owner, submission, two contest points and a resubmission, an accepted risk and a treated risk, and release and closure, to the treatment tracked to Complete; an unrelated Requestor is refused at every step, in the UI and the API, and the analyst cannot accept.
 
 **Plans:** 0 plans
 
@@ -443,7 +487,7 @@ Plans:
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** DASH-04, DASH-05
-**Depends on:** Phases 13, 18 and 20
+**Depends on:** Phases 13, 17.2 (stage times include the response, acceptance and rework rounds), 18 and 20
 **Closes:** UAT-059
 **Intent:** Q1
 **Decisions:** metric sets per audience as `REPORT.md` §4 proposes, plus accepted risks and exemptions due for review; custom accessible SVG charts with data-table alternatives, and a charting library only if needs grow (#13).
@@ -490,8 +534,19 @@ Plans:
 
 ### Next-wave coverage
 
-All 46 Next-wave requirements (`REQUIREMENTS.md`) map to exactly one of Phases 10–22 and 17.1, and all 65 product gap UAT findings close in exactly one phase (the `Closes` lines above). UAT-040 closes in Phase 17.1: it moved from Phase 17 on 2026-09-27, after the UAT register's `Proposed phase` column was written. COLLAB-01 and NOTIFY-01 move from v2 Requirements into this wave. INT-02 (Keycloak) is implemented behind flags and off in development (2026-10-01: ADRs 0003 and 0004); Phase 22 uses a development fixture for the Admin role. Phase 06.10 stays deferred.
+All 55 Next-wave requirements (`REQUIREMENTS.md`) map to exactly one of Phases 10–22, 17.1 and 17.2: the 46 from the product gap UAT, and nine added on 2026-10-01 from the product demo's risk-owner asks (ASSESS-21 to ASSESS-26, COLLAB-04, NOTIFY-04 and RISK-06). All 65 product gap UAT findings close in exactly one phase (the `Closes` lines above). UAT-040 closes in Phase 17.1: it moved from Phase 17 on 2026-09-27, after the UAT register's `Proposed phase` column was written. COLLAB-01 and NOTIFY-01 move from v2 Requirements into this wave. INT-02 (Keycloak) is implemented behind flags and off in development (2026-10-01: ADRs 0003 and 0004); Phase 22 uses a development fixture for the Admin role. Phase 06.10 stays deferred.
 
+**Post-demo asks** (`NEXT-WAVE-DECISIONS.md`, Post-demo decisions; requirements amended in passing are in `REQUIREMENTS.md`):
+
+| Ask | New requirements | Phases |
+|---|---|---|
+| PD-1 The nominated risk owner and the Requestor view the assessment | ASSESS-21, ASSESS-22 | 17 |
+| PD-2 Acceptance after the final assessment closes the request | ASSESS-24, ASSESS-25 (with ASSESS-20 amended) | 17.1 |
+| PD-3 The owner contests anything, and the analyst edits everything again | COLLAB-04, ASSESS-26, NOTIFY-04; recall and voids in ASSESS-24 | 17.2; 17.1 |
+| PD-4 Acceptance or a treatment plan | ASSESS-20 amended; ASSESS-23 for the people search | 17.1; 17 |
+| PD-5 Treatment plans are tracked | RISK-06 (with RISK-04, RISK-05 and NOTIFY-02 amended) | 20 |
+
+**The post-demo journey.** The brief's full-path Playwright journey (`.planning/POST-DEMO-BRIEF.md`, Stage 3 item 4) is built in slices, each a success criterion: Phase 17 (a Requestor raises a request, the analyst assesses it, nominates a different first-line risk owner for two of its risks and releases it for response, and the Requestor and that owner view it and respond), Phase 17.1 (the analyst submits the final assessment, the owner accepts one of their risks and treats the other, every other risk is decided by its owner, and the analyst releases and closes), Phase 17.2 (two contest points, an edit and a resubmission, inserted after the submission) and Phase 20 (the treatment tracked to Complete). Every slice carries the negative cases: an unrelated Requestor is refused at each step, in the UI and the API, and the analyst cannot accept. The journey passes end to end once Phase 20 lands.
 
 ## Backlog
 
@@ -505,4 +560,4 @@ Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ---
-*Roadmap created: 2026-08-27; regrouped 2026-09-28 at the v1.0 close (v1.0 detail archived in `.planning/milestones/v1.0-ROADMAP.md`). v2.0 was added 2026-09-27 from the product gap UAT, with the delegated decisions in `NEXT-WAVE-DECISIONS.md` and Phase 17.1 inserted.*
+*Roadmap created: 2026-08-27; regrouped 2026-09-28 at the v1.0 close (v1.0 detail archived in `.planning/milestones/v1.0-ROADMAP.md`). v2.0 was added 2026-09-27 from the product gap UAT, with the delegated decisions in `NEXT-WAVE-DECISIONS.md` and Phase 17.1 inserted. The post-demo decisions (2026-10-01) amended Phases 17, 17.1 and 20 and inserted Phase 17.2.*
