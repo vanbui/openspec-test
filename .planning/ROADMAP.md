@@ -621,11 +621,11 @@ Plans:
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** ASSESS-15, ASSESS-16, ASSESS-17, ASSESS-18, ASSESS-19
-**Depends on:** Phases 12, 16, 17.1 (bulk edits honour the acceptance-round lock and void changed decisions, ASSESS-24) and 19
+**Depends on:** Phases 12, 16, 17.1 (bulk edits honour the acceptance-round lock and void changed decisions, ASSESS-24), 17.2 (its detail sheet carries every per-risk surface up to the contest points) and 19
 **Closes:** UAT-008, UAT-039, UAT-050, UAT-055, UAT-056, UAT-057, UAT-063
 **Intent:** Q4, Q3, F7
 **Decisions:** the grid follows a research spike with pass-or-fail criteria (ARIA grid conformance at WCAG 2.2 AA, a permissive licence only, the route JavaScript budget, semantic tokens), leaning to the DataTable on TanStack Table (#7); the 5 × 5 scales with the product-banded rating and an override with a reason (#8); saved views personal by default and shareable with analysts; no persisted risk is hard-deleted from the table (#6).
-**Contract and datamodel:** API (bulk update and create with exact grants, and bulk withdrawal through Phase 16's batch withdrawal operation; closed vocabularies for likelihood and consequence on the existing string fields); the risk change history is Phase 16's append-only risk history, extended by a record that amends `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md` rather than a second history; server-side saved views: contract-gap records first, then an approval checkpoint; possibly a grid dependency, justified by the spike. The review lists adopt this phase's column chooser (deferred here from Phase 11, D-33).
+**Contract and datamodel:** API (bulk update and create with exact grants, and bulk withdrawal through Phase 16's batch withdrawal operation; closed vocabularies for likelihood and consequence on the existing string fields); the risk change history is Phase 16's append-only risk history, extended by a record that amends `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md` rather than a second history; server-side saved views: contract-gap records first, then an approval checkpoint (`docs/contract-gaps/phase-18-risk-scales-and-rating-override.md` with the two override-reason fields on `CsrmRisk`, `docs/contract-gaps/phase-18-saved-views.md` for `CsrmSavedView`, and `docs/contract-gaps/phase-18-bulk-risk-changes-and-import.md` with no schema change); possibly a grid dependency, justified by the spike. The review lists adopt this phase's column chooser (deferred here from Phase 11, D-33).
 **Size:** L
 
 **Success Criteria:**
