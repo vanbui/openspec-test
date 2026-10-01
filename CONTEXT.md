@@ -38,6 +38,10 @@ _Avoid_: Owner (a risk owner decides risks, G-11), Handler
 An attributed, append-only plain-text message on an Assessment Request between its Requestor and the Security Analysts, from the request's first submission until its assessment is released (COLLAB-01, Phase 13). A Security Analyst can mark a note as changing the AI inputs, and only marked notes reach the AI, as untrusted text. Risk owners and other participants do not read notes: their channel is the contest point.
 _Avoid_: Comment, Message, Contest point (a challenge to an assessment under acceptance)
 
+**Confirm (AI proposal)**:
+The Security Analyst's review of an AI-proposed value, risk, control or question: confirming makes it the analyst's own content, and the API records it as `accept` (Phase 12). Visible copy says "Confirm", never "Accept", because Accept is the risk owner's decision (G-14). The analyst's negative is "Dismiss" for a suggestion and "Reject" for a proposed change (decision 6).
+_Avoid_: Accept, Approve (for an analyst's review of AI output)
+
 **Withdrawn (Risk)**:
 A persisted, unreleased `CsrmRisk` that a Security Analyst has taken out of its assessment, recording who, when and why (decision 6, Phase 16). It keeps its number, fields and history, is read-only until a Security Analyst reinstates it with a reason, and counts nowhere: not in release readiness, figures, registers, or any Requestor or participant read. Only Security Analysts see it. No persisted risk is ever deleted.
 _Avoid_: Deleted, Removed, Rejected (a rejected AI proposal is a different fact), Closed (a risk's closure after release is Phase 20's)

@@ -451,6 +451,18 @@ The operator's words from the demo, split into the IDs that requirements trace t
 - **Phases:** 19.1, 17 and 20 (its reminders use the centre).
 - **Reverses:** decision 18's placement of the in-app centre in Phase 17. Its substance is unchanged.
 
+**G-20 A way forward when the AI data policy refuses generation.**
+- **Ask:** Phase 12's UI-SPEC found that nothing in CSRM creates a questionnaire or an assessment draft without AI. When the data policy refuses generation (G-3: the request's classification is above the provider's approved ceiling, or production has no ceiling set), the request cannot move on.
+- **Options:**
+  1. A manual start in Phase 22: the assigned analyst starts an empty questionnaire or an empty assessment draft and completes it by hand whenever generation is refused or unavailable, recorded as started without AI. Until then, the refusal says why and who can act. Chosen.
+  2. Offer the local deterministic provider as a template in Phase 12. It sends nothing to any provider, but its output is a fixed test fixture (for example, four generic questions built from the request's fields), which would read as an assessment draft without being one. The policy also deliberately covers it, so that suites can prove refusals (12-CONTEXT D-27, D-30). Rejected: cheap to wire, but a governance risk.
+  3. Pull the manual start into Phase 12. Rejected: Phase 12 is about AI context and provenance. The refusal is reachable only when an operator sets a ceiling, because development has none by default, and Phase 22 owns that setting.
+  4. Leave the refusal final until the configuration changes. Rejected: AI is advisory, so the assessment process must never depend on it.
+- **Choice:** Phase 22 delivers the manual start (option 1). Until then, Phase 12's refusal is never a silent dead end. Its copy states the real reason (the request's classification and the ceiling) and who can change it: an administrator, through the `CSRM_AI_DATA_CLASSIFICATION_CEILING` deployment setting. That setting is named in the backend `.example` template with a safe default: empty means no ceiling in development, and production fails closed until it is set.
+- **Basis:** AI output is advisory (AGENTS.md), and people perform the ISO/IEC 27005 process; data minimisation and the operator's approval of providers (G-3, G-7) can refuse AI, but they must not stop the assessment.
+- **Phases:** 12 (the refusal copy and the `.example` setting) and 22 (the manual start).
+- **Reverses:** nothing.
+
 ## What stays open
 
 - **INT-02:** the Keycloak environment is still needed. Keycloak stays disabled until it exists.

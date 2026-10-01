@@ -818,6 +818,10 @@ Keycloak authenticates. Strapi enforces Role → Function → FunctionAPI, then 
 - **Local model evaluation of these operations:** backlog 999.1. The portable schema subset keeps it open.
 </deferred>
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+- **Phase 10 D-08 narrowed (accepted by the pilot):** D-09 narrows Phase 10 D-08's "Replace questionnaire". Phase 10 builds first: its plan 10-12 delivers D-08 as written, for Phase 10's own scope. This phase narrows it when it runs, and the Phase 15 plan that adds D-09's refusals changes 10-12's behaviour and tests in that plan.
+
 ---
 
 *Phase: 15-steerable-questionnaire-ai*

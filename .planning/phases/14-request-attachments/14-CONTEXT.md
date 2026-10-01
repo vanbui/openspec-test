@@ -645,6 +645,13 @@ The AI never decides what it reads: only a human Security Analyst's recorded opt
 - **Email-in attachments** and file events beyond notes in the notification centre.
 </deferred>
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+- **UI-SPEC UI-D1 (accepted):** visible copy says "file"; "attachment" stays the record and API term, and a Phase 14 plan adds the glossary entry.
+- **UI-SPEC UI-D14 (accepted):** attachment state badges are neutral, each state told apart by its text and icon, with refusal copy that says what to do next.
+- **X-22 extends Phase 13's X-18:** execution order records X-18 first.
+- **For the research and the plans to verify:** UI-SPEC UI-D3, UI-D5 and UI-D30, and the UI-SPEC's "Research to verify" list, including that a client provider in the `(app)` layout keeps `File` objects across in-app navigation.
+
 ---
 
 *Phase: 14-request-attachments*
