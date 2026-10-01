@@ -914,7 +914,7 @@ Plans:
 **Intent:** R1, O2
 **Decisions:** the Admin owns reference data and configuration (the Risk Type library, controls, systems, assets, scales, rating bands, risk appetite with its acceptance authority, divisions and business units, shared register views, the peer-review threshold and the AI data policy), with a read-only, exportable view of role holders; role assignment stays in the identity platform; the Admin holds no analyst grants, and every configuration change is recorded (#1, G-1).
 **Contract and datamodel:** catalogue (a new IdamBox Role in both catalogue copies, re-granted Administration functions, a development sign-in fixture); configurable lists need entities: contract-gap records first, then an approval checkpoint. Role assignment in CSRM would re-open the IAM routes that 08 D-36 and D-44 removed, and is not planned.
-**Size:** M
+**Size:** L (was M: the Admin role and its re-granted Functions, the settings with a forward-only criteria snapshot, one append-only change log, and the carried items; 22-CONTEXT D-28)
 
 **Success Criteria:**
 

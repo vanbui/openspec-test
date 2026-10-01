@@ -64,6 +64,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - [ ] **ASSESS-08**: AI draft generation uses the organisation's Risk Type library and proposes controls and treatments for the analyst to accept.
   - Acceptance: (1) drafts draw on the active Risk Type library, whose active types the Admin controls from Phase 22 (decision 14), and may propose several risks per type; (2) each proposed risk carries suggested controls from the whole control library as one-click "add as planned control" proposals; (3) a draft may propose Accept, with a rationale, only for Low or Moderate residual risk (decision 8), and the analyst confirms.
   - Trace: F6, F7 · UAT-029, UAT-031, UAT-044 · Phase 12
+  - Amended (2026-10-01, Phase 22 context D-14): the Admin's risk appetite can narrow the AI's Accept limit (Low or Moderate, decision 8) but never widen it.
 - [ ] **ASSESS-09**: A Security Analyst can withdraw an unreleased risk with a reason.
   - Acceptance: (1) a withdrawn risk leaves the assessment, release readiness and counts, and the history keeps it with reason, actor and time; (2) no persisted risk is ever hard-deleted: an unsaved row is discarded, and a rejected AI proposal is recorded as rejected in the run record (decision 6); (3) Strapi refuses to withdraw a released risk, which closes through the register instead.
   - Trace: F7 · UAT-027 · Phase 16
