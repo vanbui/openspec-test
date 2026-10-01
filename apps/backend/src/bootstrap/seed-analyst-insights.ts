@@ -2,6 +2,7 @@ import type { Core } from "@strapi/strapi";
 
 import { addUtcDays, utcToday } from "../csrm/insights/utc-date";
 import { developmentIdentityEnabled } from "../utils/development-identity-enabled";
+import { seedRequestDetails } from "./seed-request-details";
 
 /*
  * The dedicated Phase 7 fixture (D-23). It gives every analyst alert kind, the
@@ -33,10 +34,10 @@ export const ANALYST_INSIGHTS_FIXTURE = {
     ineffective: "E8-MULTI_FACTOR_AUTHENTICATION-001",
   },
   requests: {
-    overdue: { requestNumber: "RAR-E2E-P7-OVERDUE-001", title: "Phase 7 overdue review request", requestStatus: "under-review" },
-    dueSoon: { requestNumber: "RAR-E2E-P7-DUESOON-001", title: "Phase 7 due soon review request", requestStatus: "questionnaire-in-progress" },
-    mutable: { requestNumber: "RAR-E2E-P7-MUTABLE-001", title: "Phase 7 analyst review request", requestStatus: "under-review" },
-    released: { requestNumber: "RAR-E2E-P7-RELEASED-001", title: "Phase 7 released review request", requestStatus: "approved" },
+    overdue: { requestNumber: "RAR-E2E-P7-OVERDUE-001", title: "Privileged access vault upgrade and clustering", requestStatus: "under-review" },
+    dueSoon: { requestNumber: "RAR-E2E-P7-DUESOON-001", title: "Security log migration to Microsoft Sentinel", requestStatus: "questionnaire-in-progress" },
+    mutable: { requestNumber: "RAR-E2E-P7-MUTABLE-001", title: "Operational reporting platform annual review", requestStatus: "under-review" },
+    released: { requestNumber: "RAR-E2E-P7-RELEASED-001", title: "Immutable cloud backup for tier 1 systems", requestStatus: "approved" },
   },
   assessments: {
     mutable: "ASM-E2E-P7-MUTABLE-001",
@@ -141,16 +142,12 @@ async function reconcileAnalystInsights(strapi: Core.Strapi, options: SeedAnalys
   const requestService = service(strapi, "api::csrm-assessment-request.csrm-assessment-request");
   const request = (
     fixture: typeof requests[keyof typeof requests],
-    facts: { submittedDate: string; dueDate: string | null; purpose: string },
+    facts: { submittedDate: string; dueDate: string | null },
   ) => reconcile(requestService, { requestNumber: { $eq: fixture.requestNumber } }, {
     requestNumber: fixture.requestNumber,
     title: fixture.title,
-    description: "Dedicated Phase 7 fixture for the analyst dashboard, reports and alerts.",
-    assessmentType: "Project",
-    businessUnit: "Security Operations",
-    businessPurpose: facts.purpose,
+    ...seedRequestDetails(fixture.requestNumber),
     businessCriticality: "High",
-    thirdPartyInvolvement: false,
     requestStatus: fixture.requestStatus,
     submittedDate: facts.submittedDate,
     dueDate: facts.dueDate,
@@ -162,22 +159,18 @@ async function reconcileAnalystInsights(strapi: Core.Strapi, options: SeedAnalys
   await request(requests.overdue, {
     submittedDate: instant("RAR-E2E-P7-OVERDUE-001.submittedDate"),
     dueDate: day("RAR-E2E-P7-OVERDUE-001.dueDate"),
-    purpose: "Hold a review whose due date has passed.",
   });
   await request(requests.dueSoon, {
     submittedDate: instant("RAR-E2E-P7-DUESOON-001.submittedDate"),
     dueDate: day("RAR-E2E-P7-DUESOON-001.dueDate"),
-    purpose: "Hold a review that falls due within the alert window.",
   });
   const mutableRequest = await request(requests.mutable, {
     submittedDate: instant("RAR-E2E-P7-MUTABLE-001.submittedDate"),
     dueDate: null,
-    purpose: "Carry the in-review assessment whose Risks raise the treatment alerts.",
   });
   const releasedRequest = await request(requests.released, {
     submittedDate: instant("RAR-E2E-P7-RELEASED-001.submittedDate"),
     dueDate: null,
-    purpose: "Carry the released assessment whose review date has passed.",
   });
 
   const assessmentService = service(strapi, "api::csrm-assessment.csrm-assessment");

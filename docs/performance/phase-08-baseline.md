@@ -65,7 +65,7 @@ The Task 2 measured run (2026-09-26 03:11:36Z–03:13:02Z): 10 passed, 1.4 min r
 | `/app/admin/controls` | Security Analyst | 18 | 216,513 | 702,913 | 18,397 | 6.5 | 68.0 | 106.9 | 124 |
 
 The record routes open seeded fixtures:
-- **Request:** `RAR-E2E-NAV-OWNER-001`, *Owner navigation lifecycle released request*.
+- **Request:** `RAR-E2E-NAV-OWNER-001`, *Enterprise password manager rollout*.
 - **Questionnaire:** Jane's *Customer portal questionnaire draft*.
 - **Review editor:** `ASM-E2E-NAV-OWNER-001`.
 - **Risk:** `RSK-DEV-MUTABLE-001`.

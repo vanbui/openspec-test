@@ -32,10 +32,10 @@ const wcagTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // records, the Security Analyst's own submitted request, the Risk Register and the Phase 7 fixtures.
 const analystReviewTitle = 'Customer portal questionnaire awaiting release';
 const releasedQuestionnaireTitle = 'Customer portal questionnaire draft';
-const requestTitle = 'Customer portal questionnaire draft request';
+const requestTitle = 'Customer portal virtual assistant and live chat';
 const analystAssessmentNumber = 'ASM-E2E-NAV-ANALYST-001';
 const ownerAssessmentNumber = 'ASM-E2E-NAV-OWNER-001';
-const analystOwnRequestTitle = 'Other Requestor security assessment';
+const analystOwnRequestTitle = 'Azure Pipeline Decorator for all delivery pipelines';
 const mutableRiskNumber = 'RSK-DEV-MUTABLE-001';
 // Duplicated by value from apps/strapi/src/bootstrap/seed-analyst-insights.ts (the Phase 7 fixture).
 const phase7OverdueRiskNumber = 'RSK-E2E-P7-OVERDUE-001';

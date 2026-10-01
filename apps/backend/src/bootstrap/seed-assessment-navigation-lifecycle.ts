@@ -1,6 +1,7 @@
 import type { Core } from "@strapi/strapi";
 
 import { developmentIdentityEnabled } from "../utils/development-identity-enabled";
+import { seedRequestDetails } from "./seed-request-details";
 
 const OWNER_EMAIL = "jane.doe@idambox.com";
 const ANALYST_EMAIL = "bob.doe@idambox.com";
@@ -9,10 +10,10 @@ const NON_OWNER_EMAIL = "maya.requestor@idambox.com";
 export const ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE = {
   analystAssessmentNumber: "ASM-E2E-NAV-ANALYST-001",
   analystRequestNumber: "RAR-E2E-NAV-ANALYST-001",
-  analystRequestTitle: "Analyst navigation lifecycle review request",
+  analystRequestTitle: "Zero trust network access for contractors",
   ownerAssessmentNumber: "ASM-E2E-NAV-OWNER-001",
   ownerRequestNumber: "RAR-E2E-NAV-OWNER-001",
-  ownerRequestTitle: "Owner navigation lifecycle released request",
+  ownerRequestTitle: "Enterprise password manager rollout",
 } as const;
 
 type SeedDocument = { documentId: string };
@@ -69,12 +70,8 @@ export async function seedAssessmentNavigationLifecycle(strapi: Core.Strapi): Pr
   }, {
     requestNumber: ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE.ownerRequestNumber,
     title: ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE.ownerRequestTitle,
-    description: "Dedicated released assessment fixture owned only by the primary Requestor.",
-    assessmentType: "Project",
-    businessUnit: "Navigation assurance",
-    businessPurpose: "Prove Requestor assessment navigation and record-level denial.",
+    ...seedRequestDetails(ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE.ownerRequestNumber),
     businessCriticality: "High",
-    thirdPartyInvolvement: false,
     submittedDate: "2026-09-01T00:00:00.000Z",
     requestStatus: "approved",
     requestor: owner.documentId,
@@ -101,12 +98,8 @@ export async function seedAssessmentNavigationLifecycle(strapi: Core.Strapi): Pr
   }, {
     requestNumber: ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE.analystRequestNumber,
     title: ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE.analystRequestTitle,
-    description: "Dedicated in-review assessment fixture for the Security Analyst.",
-    assessmentType: "Project",
-    businessUnit: "Navigation assurance",
-    businessPurpose: "Prove Analyst assessment navigation and lifecycle visibility.",
+    ...seedRequestDetails(ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE.analystRequestNumber),
     businessCriticality: "Moderate",
-    thirdPartyInvolvement: false,
     submittedDate: "2026-09-04T00:00:00.000Z",
     requestStatus: "under-review",
     requestor: owner.documentId,

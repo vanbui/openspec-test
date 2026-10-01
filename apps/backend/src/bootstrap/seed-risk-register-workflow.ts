@@ -1,6 +1,7 @@
 import type { Core } from "@strapi/strapi";
 
 import { developmentIdentityEnabled } from "../utils/development-identity-enabled";
+import { seedRequestDetails } from "./seed-request-details";
 
 const BOB_EMAIL = "bob.doe@idambox.com";
 const RISK_TYPE_NAME = "Internet Exposure";
@@ -75,7 +76,9 @@ async function reconcileRiskRegisterWorkflow(strapi: Core.Strapi): Promise<void>
     const releasedRequest = await requestService.create({
       data: {
         requestNumber: RISK_REGISTER_FIXTURE_KEYS.releasedRequestNumber,
-        title: "Canonical released assessment request",
+        title: "Customer portal public outage map without sign-in",
+        ...seedRequestDetails(RISK_REGISTER_FIXTURE_KEYS.releasedRequestNumber),
+        businessCriticality: "Moderate",
         requestStatus: "approved",
         submittedDate: "2026-08-30T00:00:00.000Z",
         requestor: bob.documentId,
@@ -133,16 +136,12 @@ async function reconcileRiskRegisterWorkflow(strapi: Core.Strapi): Promise<void>
   }
 
   const requestPresentation = {
-    title: "Mutable Risk Register development assessment",
-    description: "Stable development fixture for authorised Security Analyst Risk maintenance.",
+    title: "Customer portal penetration test findings",
+    ...seedRequestDetails(RISK_REGISTER_FIXTURE_KEYS.requestNumber),
     requestor: bob.documentId,
   };
   const requestCreationFacts = {
-    assessmentType: "Project",
-    businessUnit: "Security Operations",
-    businessPurpose: "Exercise Risk Register search, detail, and mitigation maintenance.",
     businessCriticality: "High",
-    thirdPartyInvolvement: false,
   };
   const request = await reconcileByStableKey({
     documentService: requestService,

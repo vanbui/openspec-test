@@ -100,8 +100,8 @@ const KEY_ROUTES: readonly KeyRouteEntry[] = [
     populated: (page) => main(page).locator('a.record-link'),
   },
   {
-    route: '/app/requests/{documentId}', actor: 'Requestor', title: 'Assessment Request | IdamBox CSRM', heading: 'Owner navigation lifecycle released request',
-    resolve: { list: '/app/requests?q=RAR-E2E-NAV-OWNER-001', link: (page) => main(page).getByRole('link', { name: 'Owner navigation lifecycle released request', exact: true }) },
+    route: '/app/requests/{documentId}', actor: 'Requestor', title: 'Assessment Request | IdamBox CSRM', heading: 'Enterprise password manager rollout',
+    resolve: { list: '/app/requests?q=RAR-E2E-NAV-OWNER-001', link: (page) => main(page).getByRole('link', { name: 'Enterprise password manager rollout', exact: true }) },
     populated: (page) => page.getByRole('region', { name: 'Request actions' }),
   },
   {

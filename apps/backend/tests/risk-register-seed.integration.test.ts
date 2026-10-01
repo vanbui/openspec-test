@@ -141,7 +141,7 @@ before(async () => {
   const releasedRequest = await strapi.documents("api::csrm-assessment-request.csrm-assessment-request").create({
     data: {
       requestNumber: "RAR-RELEASED-33SAEN",
-      title: "Canonical released assessment request",
+      title: "Customer portal public outage map without sign-in",
       requestStatus: "approved",
       submittedDate: "2026-08-30T00:00:00.000Z",
       requestor: bob.documentId,

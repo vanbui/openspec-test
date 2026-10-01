@@ -4,7 +4,7 @@ import { strapiHealthUrl, webOrigin } from './harness-urls';
 import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
 import { signInAs } from './helpers/navigation';
 
-const submittedRequestTitle = 'Customer portal security assessment';
+const submittedRequestTitle = 'Customer portal release 4.2 self-service changes';
 const deterministicRiskStatement = 'Internet exposure may increase the likelihood of unauthorised access to the service.';
 
 async function expectNoHorizontalOverflow(page: Page, message: string): Promise<void> {
@@ -119,7 +119,7 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   const submittedRequestHref = await submittedRequest.getAttribute('href');
   expect(submittedRequestHref).toMatch(/^\/app\/review\/requests\/[^/]+$/);
 
-  const crossOwnerRequest = page.getByRole('link', { name: 'Other Requestor security assessment' });
+  const crossOwnerRequest = page.getByRole('link', { name: 'Azure Pipeline Decorator for all delivery pipelines' });
   const crossOwnerHref = await crossOwnerRequest.getAttribute('href');
   expect(crossOwnerHref).toMatch(/^\/app\/review\/requests\/[^/]+$/);
 

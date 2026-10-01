@@ -4,7 +4,7 @@ import { strapiHealthUrl } from './harness-urls';
 import { signInAs } from './helpers/navigation';
 
 const unreleasedTitle = 'Customer portal questionnaire awaiting release';
-const unreleasedRequestTitle = 'Customer portal questionnaire awaiting release request';
+const unreleasedRequestTitle = 'Customer portal mobile app and public API';
 const serviceNameQuestion = 'What is the name of the service being assessed?';
 const serviceDescriptionQuestion = 'Describe what the service does and who relies on it.';
 const personalDataQuestion = 'Will the service handle personal information?';

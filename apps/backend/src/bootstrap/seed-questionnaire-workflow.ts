@@ -2,6 +2,7 @@ import type { Core } from "@strapi/strapi";
 
 import { parseQuestionnaireDefinition } from "../api/csrm-questionnaire/services/questionnaire-definition";
 import { developmentIdentityEnabled } from "../utils/development-identity-enabled";
+import { seedRequestDetails } from "./seed-request-details";
 
 const JANE_EMAIL = "jane.doe@idambox.com";
 const BOB_EMAIL = "bob.doe@idambox.com";
@@ -114,13 +115,15 @@ const QUESTION_SEEDS: readonly QuestionSeed[] = [
 
 const SUBMITTED_VALUES: Readonly<Record<string, string | boolean | readonly string[]>> = {
   "service-name": "Customer portal",
-  "service-description": "Customers use the portal to access and manage account services.",
+  "service-description":
+    "About 38,000 customers a month use the portal to view bills, make payments through the payment gateway, update contact details and raise service requests. Release 4.2 adds self-service change of bank account details, upload of identity documents for verification, and passkey sign-in. The contact centre and the billing team rely on it as the system of entry for customer changes; an outage of more than four hours moves that work back to the phones.",
   "handles-personal-data": true,
   "personal-data-types": ["contact", "identity"],
   "hosting-model": "cloud",
   "production-url": "https://portal.example.test",
   "go-live-date": "2026-10-01",
-  "third-party-providers": "Managed cloud hosting and support providers.",
+  "third-party-providers":
+    "Microsoft Azure hosts the portal in Australia East (App Service, Azure SQL Database, Storage, Front Door) and provides customer identity through Entra External ID. A managed support provider deploys releases and has just-in-time read access to production; part of its team is offshore and can see customer contact details in application logs. The payment gateway takes card payments on its own hosted page. An external firm performs the annual penetration test.",
 };
 
 function service(strapi: Core.Strapi, uid: string): SeedDocumentService {
@@ -181,13 +184,9 @@ export async function seedQuestionnaireWorkflow(strapi: Core.Strapi): Promise<vo
 
   const crossOwnerRequestData = {
     requestNumber: CROSS_OWNER_REQUEST_NUMBER,
-    title: "Other Requestor security assessment",
-    description: "Existing submitted request used to prove owner-scoped assessment access.",
-    assessmentType: "Project",
-    businessUnit: "Security Operations",
-    businessPurpose: "Exercise the owner boundary for assessment review.",
+    title: "Azure Pipeline Decorator for all delivery pipelines",
+    ...seedRequestDetails(CROSS_OWNER_REQUEST_NUMBER),
     businessCriticality: "Moderate",
-    thirdPartyInvolvement: false,
     submittedDate: "2026-08-29T00:00:00.000Z",
     requestStatus: "submitted",
     requestor: bob.documentId,
@@ -204,14 +203,9 @@ export async function seedQuestionnaireWorkflow(strapi: Core.Strapi): Promise<vo
 
   const requestData = {
     requestNumber: REQUEST_NUMBER,
-    title: "Customer portal security assessment",
-    description: "Assess the customer portal before its next production release.",
-    assessmentType: "Project",
-    businessUnit: "Digital Services",
-    businessPurpose: "Provide customers with secure access to account services.",
+    title: "Customer portal release 4.2 self-service changes",
+    ...seedRequestDetails(REQUEST_NUMBER),
     businessCriticality: "High",
-    thirdPartyInvolvement: true,
-    thirdPartyDetails: "Cloud hosting and managed support providers contribute to delivery.",
     submittedDate: "2026-08-30T00:00:00.000Z",
     requestStatus: "questionnaire-in-progress",
     requestor: jane.documentId,
@@ -269,13 +263,9 @@ export async function seedQuestionnaireWorkflow(strapi: Core.Strapi): Promise<vo
 
   const draftRequestData = {
     requestNumber: DRAFT_REQUEST_NUMBER,
-    title: "Customer portal questionnaire draft request",
-    description: "A mutable development fixture used to exercise the Requestor questionnaire workflow.",
-    assessmentType: "Project",
-    businessUnit: "Digital Services",
-    businessPurpose: "Exercise draft, validation, and submission questionnaire states.",
+    title: "Customer portal virtual assistant and live chat",
+    ...seedRequestDetails(DRAFT_REQUEST_NUMBER),
     businessCriticality: "High",
-    thirdPartyInvolvement: false,
     requestStatus: "questionnaire-in-progress",
     requestor: jane.documentId,
   };
@@ -335,13 +325,9 @@ export async function seedQuestionnaireWorkflow(strapi: Core.Strapi): Promise<vo
    */
   const unreleasedRequestData = {
     requestNumber: UNRELEASED_REQUEST_NUMBER,
-    title: "Customer portal questionnaire awaiting release request",
-    description: "A development fixture whose questionnaire has never been released to its Requestor.",
-    assessmentType: "Project",
-    businessUnit: "Digital Services",
-    businessPurpose: "Exercise the questionnaire release gate from both actors.",
+    title: "Customer portal mobile app and public API",
+    ...seedRequestDetails(UNRELEASED_REQUEST_NUMBER),
     businessCriticality: "Moderate",
-    thirdPartyInvolvement: false,
     requestStatus: "questionnaire-in-progress",
     requestor: jane.documentId,
   };

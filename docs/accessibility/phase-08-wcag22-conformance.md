@@ -39,7 +39,7 @@ Every route below is scanned at 1440 and 375 by the test named. "Record" routes 
 | Route | State scanned | Test (`accessibility.spec.ts`) |
 |---|---|---|
 | `/app` | personal dashboard, seven lifecycle cards | has no axe violations in the signed-in CSRM shell |
-| `/app/requests` | populated (`Other Requestor security assessment`) | has no axe violations on the analyst lists, create forms, records and administration routes |
+| `/app/requests` | populated (`Azure Pipeline Decorator for all delivery pipelines`) | has no axe violations on the analyst lists, create forms, records and administration routes |
 | `/app/requests/{id}` (the analyst's own submitted request) | populated, request actions | same |
 | `/app/requests/new` | the request form | same |
 | `/app/questionnaires`, `/app/assessments` | the analyst's own records or the empty state | same |
@@ -67,7 +67,7 @@ Every route below is scanned at 1440 and 375 by the test named. "Record" routes 
 | `/app` | seven lifecycle cards | has no axe violations on the Requestor lists, record edit and refusal routes; phase 06.8 surfaces |
 | `/app/requests`, `/app/questionnaires`, `/app/assessments` | populated with Jane's fixtures | Requestor lists, record edit and refusal routes |
 | `/app/requests/new` | the request form | same |
-| `/app/requests/{id}` | the request hub (`Customer portal questionnaire draft request`) | phase 06.8 governed questionnaire surfaces |
+| `/app/requests/{id}` | the request hub (`Customer portal virtual assistant and live chat`) | phase 06.8 governed questionnaire surfaces |
 | `/app/requests/{id}/edit` | the refusal of a request past draft, under the page's heading `Edit assessment request` | Requestor lists, record edit and refusal routes |
 | `/app/questionnaires/{id}` | the draft questionnaire with its completion summary | phase 06.8 governed questionnaire surfaces |
 | `/app/assessments/{id}` | the released assessment with its lifecycle | phase 06.9 assessment lifecycle detail surfaces |

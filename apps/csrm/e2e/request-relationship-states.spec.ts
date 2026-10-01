@@ -16,8 +16,8 @@ import { signInAs } from './helpers/navigation';
 
 // Titles, because a list opens a record from its title and only the seeded
 // numbers and titles are stable — document ids are generated per seed.
-const requestWithNoAssessment = 'Customer portal questionnaire draft request';
-const releasedRequest = 'Canonical released assessment request';
+const requestWithNoAssessment = 'Customer portal virtual assistant and live chat';
+const releasedRequest = 'Customer portal public outage map without sign-in';
 const releasedAssessmentNumber = 'ASM-2026-33SAEN';
 
 const relationshipSection = 'Request relationships';

@@ -5,15 +5,15 @@ import { primaryViewport, signInAs } from './helpers/navigation';
 
 const analystAssessmentNumber = 'ASM-E2E-NAV-ANALYST-001';
 const analystRequestNumber = 'RAR-E2E-NAV-ANALYST-001';
-const analystRequestTitle = 'Analyst navigation lifecycle review request';
+const analystRequestTitle = 'Zero trust network access for contractors';
 const ownerAssessmentNumber = 'ASM-E2E-NAV-OWNER-001';
 const ownerRequestNumber = 'RAR-E2E-NAV-OWNER-001';
-const ownerRequestTitle = 'Owner navigation lifecycle released request';
+const ownerRequestTitle = 'Enterprise password manager rollout';
 // Jane's seeded questionnaire and its request (apps/strapi/src/bootstrap/seed-questionnaire-workflow.ts).
 const ownerQuestionnaireNumber = 'QUES-DEV-DRAFT-001';
 const ownerQuestionnaireTitle = 'Customer portal questionnaire draft';
 const ownerQuestionnaireRequestNumber = 'RAR-DEV-QUES-DRAFT-001';
-const ownerQuestionnaireRequestTitle = 'Customer portal questionnaire draft request';
+const ownerQuestionnaireRequestTitle = 'Customer portal virtual assistant and live chat';
 
 async function expectNoHorizontalOverflow(page: Page, message: string): Promise<void> {
   await expect.poll(
