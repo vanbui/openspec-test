@@ -30,7 +30,7 @@ export function AssessmentDetailSkeleton() {
     <div aria-label="Loading assessment request review" className="space-y-6" role="status">
       <span className="sr-only">Loading assessment request review</span>
       <div className="space-y-2"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-4 w-1/3" /></div>
-      <div className="grid gap-4 lg:grid-cols-2"><Skeleton className="h-48 w-full" /><Skeleton className="h-48 w-full" /></div>
+      <div className="grid gap-6"><Skeleton className="h-48 w-full" /><Skeleton className="h-48 w-full" /></div>
     </div>
   );
 }
@@ -52,7 +52,7 @@ function SafeDetailState({ state }: { state: Exclude<AssessmentDetailState, 'pop
 }
 
 function DetailValue({ label, value }: { label: string; value: string | null | undefined }) {
-  return <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 text-sm text-foreground">{value || 'Not provided'}</dd></div>;
+  return <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-foreground">{value || 'Not provided'}</dd></div>;
 }
 
 export function AssessmentDetail({ assessmentHref, questionnaireHref, request, state }: { assessmentHref?: string; questionnaireHref?: string; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
