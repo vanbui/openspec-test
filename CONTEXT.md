@@ -30,6 +30,14 @@ _Avoid_: Submit for approval (the catalogue's unserved `submit_for_approval` int
 The two decisions a risk owner makes on a risk, stored in `treatmentAction` (`CsrmTreatmentAction`: `ACCEPT`, `TREAT`). Accept retains the risk, with a rationale; Treat commits to a treatment plan with a treatment owner and a resolve date (G-14). A value set before the owner decides is the analyst's recommendation, not a decision.
 _Avoid_: Approve, Sign off, Decline (there is no per-risk decline: a disagreement is a contest point)
 
+**Assigned analyst**:
+The one Security Analyst accountable for an Assessment Request (decision 10, Phase 13): an active human analyst who did not raise the request (G-1), who picked it up from the queue or was assigned by another analyst, with every change recorded. Editing is not exclusive, but from Phase 17.1 only the assigned analyst marks the assessment reviewed, submits it for acceptance, recalls a round, and releases and closes (G-13).
+_Avoid_: Owner (a risk owner decides risks, G-11), Handler
+
+**Note (request)**:
+An attributed, append-only plain-text message on an Assessment Request between its Requestor and the Security Analysts, from the request's first submission until its assessment is released (COLLAB-01, Phase 13). A Security Analyst can mark a note as changing the AI inputs, and only marked notes reach the AI, as untrusted text. Risk owners and other participants do not read notes: their channel is the contest point.
+_Avoid_: Comment, Message, Contest point (a challenge to an assessment under acceptance)
+
 **Withdrawn (Risk)**:
 A persisted, unreleased `CsrmRisk` that a Security Analyst has taken out of its assessment, recording who, when and why (decision 6, Phase 16). It keeps its number, fields and history, is read-only until a Security Analyst reinstates it with a reason, and counts nowhere: not in release readiness, figures, registers, or any Requestor or participant read. Only Security Analysts see it. No persisted risk is ever deleted.
 _Avoid_: Deleted, Removed, Rejected (a rejected AI proposal is a different fact), Closed (a risk's closure after release is Phase 20's)

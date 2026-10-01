@@ -639,6 +639,17 @@ Keycloak authenticates. Strapi enforces Role → Function → FunctionAPI, then 
 - **A shared job store** or persisted job history: R-08-36, Phase 21.
 </deferred>
 
+## Orchestrator Confirmations (2026-10-01, post-demo Stage 2)
+
+The research and the UI-SPEC raised these points. Each is settled as follows and binds the plans:
+
+- **Unread ordering:** the notes record gives each note a per-request `sequence` and the read state a `lastReadSequence`, and unseen is computed from the sequence, never from post times. Both fields are in `docs/contract-gaps/phase-13-request-notes.md` before its approval checkpoint.
+- **`ASSIGNMENT_CHANGED`:** the 409 carries only its closed reason, in Phase 10's closed `details`, and the web re-reads the request to show the current assignee. There is no new error schema.
+- **`OWN_REQUEST`:** 403 with the closed reason, not 409. Phase 10's web transport keeps the reason on a 403 too, with a test.
+- **Phase 11's queue wording:** D-13 governs. "Assigned to me" is an `assignee` filter over the `open` bucket, not a new bucket. Phase 11 leaves the slot without fixing its model, and its plan 11-06 is corrected to match.
+- **People projection:** the plan that adds the assignee relations filters `populate` and projects every person as `documentId` and `displayName` only, including today's `revertedBy`, which currently exposes email, username and external subject to the Next server.
+- **UI-SPEC UI-D7 and UI-D18 are accepted:** sidebar counts open their page unfiltered (Phase 11 §1.3), with the Home figures opening the exact lists, and unsent note text survives in-app navigation for the browser session.
+
 ---
 
 *Phase: 13-request-pick-up-and-notes*
