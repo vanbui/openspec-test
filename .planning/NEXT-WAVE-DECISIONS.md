@@ -211,7 +211,8 @@ The lean is to extend the DataTable on TanStack Table with TanStack Virtual.
     - New Phase 17.2, "Contest points and rework rounds", inserted after Phase 17.1, takes COLLAB-04, ASSESS-26 and NOTIFY-04 (G-15), because the contest-and-rework loop would push Phase 17.1 past L.
     - Phase 20 takes RISK-06 and grows from M to L.
     - Phase 17 now depends on Phase 19, Phase 18 on Phase 17.1, Phase 20 on Phases 14, 17.1 and 17.2, and Phase 21 on Phase 17.2.
-  - Execution order: 10, 11, 12, 13, 14, 15, 16, 19, 17, 17.1, 17.2, 18, 20, 21, 22 (17.2 added on 2026-10-01).
+    - New Phase 19.1, "In-app notification centre", inserted after Phase 19 and run before Phase 17, takes NOTIFY-01 from Phase 17 (G-19). Phases 17 and 20 now depend on it.
+  - Execution order: 10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22 (17.2 and 19.1 added on 2026-10-01).
 
 ## Operator-delegated infrastructure and release decisions
 
@@ -435,6 +436,20 @@ The operator's words from the demo, split into the IDs that requirements trace t
 - **Basis:** people are told when work waits for them (decision 18), and overdue work has an escalation path.
 - **Phases:** 17, 17.1, 17.2 and 20.
 - **Reverses:** nothing. It extends decision 18's event list and NOTIFY-02's escalation.
+
+**G-19 The notification centre in its own phase.**
+- **Ask:** Phase 17's discussion found the phase beyond size L as scoped: four new content types, a participant read across every assessment route, a new AI operation, three new UI surfaces, and a notification centre wired into seven events (17-CONTEXT D-78).
+- **Options:**
+  1. Move the notification centre (NOTIFY-01; 17-CONTEXT D-56 to D-63) into a new Phase 19.1 that runs after Phase 19 and before Phase 17. Chosen.
+  2. Keep it in Phase 17 and accept a phase beyond L. Rejected: work that pushes a phase past L is split (as G-15 did for Phase 17.2), and the centre is the most self-contained part of Phase 17.
+  3. Move it to Phase 17.1. Rejected: Phase 17's own response events need it, and Phase 17.1 is already L.
+- **Choice:**
+  - Phase 19.1 builds the centre, its per-person read state and its first kinds, from the events that exist before Phase 17: assignment and notes (Phase 13), the questionnaire released and submitted, and the assessment released.
+  - Phase 17 adds the response kinds through the same notification service, and Phases 17.1, 17.2 and 20 add theirs as G-18 lists.
+  - NOTIFY-01 moves to Phase 19.1, and the contract-gap record becomes `docs/contract-gaps/phase-19.1-notifications.md`.
+- **Basis:** a vertical slice that is useful on its own, because people are told when work waits for them (decision 18), and phases kept within L so that each is built and verified in one pass.
+- **Phases:** 19.1, 17 and 20 (its reminders use the centre).
+- **Reverses:** decision 18's placement of the in-app centre in Phase 17. Its substance is unchanged.
 
 ## What stays open
 

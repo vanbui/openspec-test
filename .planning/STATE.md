@@ -11,7 +11,7 @@ last_activity: 2026-10-01
 last_activity_desc: "Completed quick task 260929-u0w: Add production-only OIDC sign-in to the CSRM web app against Keycloak"
 state_head: e10a1a1e4579ae643da71a6212c9d9c686fd3e3e
 progress:
-  total_phases: 15
+  total_phases: 16
   completed_phases: 0
   total_plans: 23
   completed_plans: 0
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 ## Current Position
 
-Stage 2 of the post-demo brief: planning every remaining phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 17, 17.1, 17.2, 18, 20, 21, 22). Stage 1 is approved: decisions G-11 to G-18 amend Phases 17, 17.1 and 20 and insert Phase 17.2. Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 11 has its UI-SPEC, and its plans are next. Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22, 17.1 and 17.2 are not yet planned.
+Stage 2 of the post-demo brief: planning every remaining phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22). Stage 1 is approved: decisions G-11 to G-18 amend Phases 17, 17.1 and 20 and insert Phase 17.2. Phase 10 is planned (23 plans; a fresh plan check runs before it is built). Phase 11 has its UI-SPEC, and its plans are next. Phase 12 is discussed and researched, with its UI-SPEC next. Phases 13–22, 17.1 and 17.2 are not yet planned.
 Plan: —
 Status: Planning v2.0 on branch `post-demo` (mode: plan-all-first; the pilot drives every transition, and auto-advance is off)
 Last activity: 2026-10-01 - Completed quick task 261001-le4: Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view
@@ -38,7 +38,7 @@ Last activity: 2026-10-01 - Completed quick task 261001-le4: Add the missing gap
 ## Milestone
 
 **Version:** 2.0, Assessment Lifecycle and Oversight
-**Phases:** 10–22, 17.1 and 17.2 (15 phases). Execution order: 10, 11, 12, 13, 14, 15, 16, 19, 17, 17.1, 17.2, 18, 20, 21, 22.
+**Phases:** 10–22, 17.1, 17.2 and 19.1 (16 phases). Execution order: 10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22.
 **Requirements:** 55 in `.planning/REQUIREMENTS.md`: 46 tracing all 65 product gap UAT findings (`.planning/uat/product-gaps/`), and 9 from the product demo's risk-owner asks PD-1 to PD-5.
 **Decisions:** `.planning/NEXT-WAVE-DECISIONS.md`: the eighteen from the UAT report, G-1 to G-10, and the post-demo G-11 to G-18.
 **Previous milestone:** v1.0, shipped 2026-09-26 and closed 2026-09-28:
@@ -89,6 +89,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Post-demo G-16, 2026-10-01]: Phase 20 tracks treatments from Not Started through In Progress to Complete on evidence; the server sets Overdue from `treatmentResolveDate` and every read derives it by the same rule; date changes need a reason; overdue treatments escalate to the assigned analyst and the risk owner (new RISK-06; reverses Phase 7 D-04 in part).
 - [Post-demo G-17, 2026-10-01]: First-line users find people through the already-granted `GET /api/v1/users?search=`, hardened (two characters, active human users only, `documentId` and `displayName` only, every search logged): control owners in Phase 17, then treatment owners in 17.1 (settles Phase 2's deferred directory contract; sponsor selection stays off).
 - [Post-demo G-18, 2026-10-01]: Risk owners and executive approvers receive in-app notifications at each stage (Phases 17 and 17.1, and NOTIFY-04 for contest points in 17.2), and decisions left waiting get email reminders from Phase 20.
+- [Post-demo G-19, 2026-10-01]: The in-app notification centre moves from Phase 17 into the inserted Phase 19.1 (after 19, before 17), keeping Phase 17 within L; NOTIFY-01 moves with it, its first kinds are the events that exist before Phase 17, and Phase 17 adds its response kinds through the same service (reverses only decision 18's placement of the centre in Phase 17).
 
 ## Risks and Open Decisions
 
@@ -164,3 +165,4 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - v1.0 closed (2026-09-28): an override close-out, with its phase directories kept and Phase 06.10 moved to backlog 999.1.
 - v2.0 started (2026-09-28): Assessment Lifecycle and Oversight, Phases 10–22 and 17.1.
 - Phase 17.2 inserted after Phase 17.1 (2026-10-01): Contest points and rework rounds (`NEXT-WAVE-DECISIONS.md` G-15), because the contest-and-rework loop would push Phase 17.1 past size L. The post-demo decisions G-11 to G-18 also amend Phases 17, 17.1 and 20; there are now 55 requirements.
+- Phase 19.1 inserted after Phase 19 (2026-10-01): In-app notification centre (`NEXT-WAVE-DECISIONS.md` G-19), because the notification centre pushed Phase 17 beyond size L. NOTIFY-01 moves from Phase 17, and Phase 19.1 runs before Phase 17.

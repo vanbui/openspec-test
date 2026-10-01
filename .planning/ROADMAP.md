@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Controlled Cyber Risk Assessment Workflow** — Phases 1–9 with 06.1–06.10 (shipped to `main` 2026-09-26; closed 2026-09-28). Full detail: `.planning/milestones/v1.0-ROADMAP.md`.
-- 🚧 **v2.0 Assessment Lifecycle and Oversight** — Phases 10–22, 17.1 and 17.2 (planning).
+- 🚧 **v2.0 Assessment Lifecycle and Oversight** — Phases 10–22, 17.1, 17.2 and 19.1 (planning).
 
 ## Phases
 
@@ -32,11 +32,11 @@
 
 </details>
 
-## v2.0 Assessment Lifecycle and Oversight (Phases 10–22, 17.1 and 17.2)
+## v2.0 Assessment Lifecycle and Oversight (Phases 10–22, 17.1, 17.2 and 19.1)
 
 Added 2026-09-27 from the product gap UAT in `.planning/uat/product-gaps/` (`REPORT.md`, `FINDINGS.md` and `FINDINGS.csv`, 65 findings). These phases take CSRM from the v1 workflow to the operator's intended product (`BRIEF.md`, Appendix A: roles R1–R3, core flow F1–F10, A1–A2 at any point, oversight O1–O2, qualities Q1–Q5). Every finding maps to exactly one phase (the `Proposed phase` column of `FINDINGS.csv`) and to at least one Next-wave requirement in `REQUIREMENTS.md`. Milestone v1.0 stays open (STATE.md Decisions, 2026-09-27): these phases continue its numbering, and the operator may move them into their own milestone when v1.0 is closed.
 
-**Decisions.** The operator delegated the product decisions on 2026-09-27. `.planning/NEXT-WAVE-DECISIONS.md` records all eighteen from `REPORT.md` §9 and six more (G-1 to G-6), each grounded in cyber-governance practice and a premium experience bar. Each phase's CONTEXT.md cites the numbers it depends on. On 2026-10-01 the post-demo decisions G-11 to G-18 reconciled the product demo's risk-owner asks (PD-1 to PD-5) into Phases 17, 17.1 and 20, and inserted Phase 17.2.
+**Decisions.** The operator delegated the product decisions on 2026-09-27. `.planning/NEXT-WAVE-DECISIONS.md` records all eighteen from `REPORT.md` §9 and six more (G-1 to G-6), each grounded in cyber-governance practice and a premium experience bar. Each phase's CONTEXT.md cites the numbers it depends on. On 2026-10-01 the post-demo decisions G-11 to G-18 reconciled the product demo's risk-owner asks (PD-1 to PD-5) into Phases 17, 17.1 and 20, and inserted Phase 17.2. The same day, G-19 moved the in-app notification centre out of Phase 17 into the inserted Phase 19.1, which keeps Phase 17 within size L.
 
 **Frozen datamodel.** A phase that needs a content-type change writes its `docs/contract-gaps/` record first. The schema change then waits at a checkpoint until the record is reviewed and approved (G-6). Phases 10, 11, 12 (except its run record and provenance), 19 and 21's first metric set need no content-type change.
 
@@ -45,7 +45,7 @@ Added 2026-09-27 from the product gap UAT in `.planning/uat/product-gaps/` (`REP
 | Wave | Phases | Why this order |
 |---|---|---|
 | 1. Fix and trust | 10 → 11 → 12 | Fixes what users hit today, clarifies navigation and landing, and gives the AI full context and visible provenance, which every later AI phase builds on |
-| 2. Collaboration and iterative AI | 13 → 14 → 15 → 16, then 19 | Notes and assignment come before the steps that use new information; export is independent and delivers CSV early |
+| 2. Collaboration and iterative AI | 13 → 14 → 15 → 16, then 19 → 19.1 | Notes and assignment come before the steps that use new information; export is independent and delivers CSV early; the notification centre lands before the response stage that sends most of its events |
 | 3. The full flow and the table | 17 → 17.1 → 17.2 → 18 → 20 | The response stage needs notes, curation and provenance; review and acceptance close the flow, and contest rounds rework it before closure; the risk table needs withdrawal, provenance markers, export and the acceptance-round lock; post-release tracking needs the registers and the owners' decisions |
 | 4. Oversight and administration | 21 → 22 | Metrics need the history, assignment and scales from earlier phases; the Admin role takes over the configuration they introduce |
 
@@ -313,15 +313,14 @@ Plans:
 **Goal:** As a Requestor or a nominated risk owner, I want to see the assessment once it is released for response and tell the analyst which controls we have or plan, and as a Security Analyst I want to nominate each risk's owner and have the AI reassess residual risk from the responses, so that the final assessment reflects the business's real mitigations and the people who must accept it have seen it.
 **Mode:** mvp
 **UI hint:** yes
-**Requirements:** ASSESS-11, ASSESS-12, ASSESS-13, ASSESS-21, ASSESS-22, ASSESS-23, NOTIFY-01
-**Depends on:** Phases 12, 13, 16 and 19 (participants export what they read)
+**Requirements:** ASSESS-11, ASSESS-12, ASSESS-13, ASSESS-21, ASSESS-22, ASSESS-23
+**Depends on:** Phases 12, 13, 16, 19 (participants export what they read) and 19.1 (the notification centre that carries its response events)
 **Closes:** UAT-025, UAT-026
 **Intent:** F8, F9, PD-1, PD-4 (Phase 9 workflow)
-**Decisions:** one analyst-controlled "Released for response" stage, repeatable in numbered rounds, in which the Requestor and named risk owners respond with the treatment plan (#3), reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only"; the analyst nominates each risk's owner, every risk needs one before release for response, and nobody who assesses a risk owns it (G-11); the Requestor, the nominated owners and named executive approvers read the whole assessment from its first release for response, and anyone else gets the refusal a missing record gets (G-12, reversing v1's owner-only Requestor read); first-line users find people through the hardened user search (G-17); an in-app notification centre with per-user read state, which risk owners receive too (#18, G-18). Review, peer approval and risk acceptance follow in Phase 17.1.
+**Decisions:** one analyst-controlled "Released for response" stage, repeatable in numbered rounds, in which the Requestor and named risk owners respond with the treatment plan (#3), reversing ASSESS-05's release-only visibility and narrowing "every risk and control mutation is analyst-only" (participants submit responses, and only the analyst applies them to risks and controls); the analyst nominates each risk's owner, every risk needs one before release for response, and nobody who assesses a risk owns it (G-11); the Requestor, the nominated owners and named executive approvers read the whole assessment from its first release for response, and anyone else gets the refusal a missing record gets (G-12, reversing v1's owner-only Requestor read); first-line users find people through the hardened user search (G-17); the Requestor and the risk owners are told in the app when a response waits or arrives, through Phase 19.1's notification centre (#18, G-18, G-19). Review, peer approval and risk acceptance follow in Phase 17.1.
 **Contract and datamodel:** contract-gap records first, then an approval checkpoint (G-6):
 - `docs/contract-gaps/phase-17-response-rounds.md`: the response stage in the published status vocabulary, its numbered rounds, the response per risk from the Requestor or the risk's owner, and the first-release fact that opens the participant read (a dedicated fact that is never cleared, like 06.8's questionnaire release fact);
 - `docs/contract-gaps/phase-17-participant-read.md`: who participates and what they read, amending `phase-04-composite-release-fact.md` ("Requestor visibility and projections");
-- `docs/contract-gaps/phase-17-notifications.md`: notifications and per-user read state.
 
 API for participant reads, owner nomination, response submission and residual proposals, with record-level checks. The hardened `GET /api/v1/users?search=` is an API change only: the operation is already catalogued for the Requestor. A development fixture identity for a first-line risk owner who is not the Requestor, so the journey has a Requestor, a different risk owner, an analyst and an unrelated Requestor.
 **Size:** L
@@ -453,17 +452,43 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd-plan-phase 19 to break down)
 
+### Phase 19.1: In-app notification centre (INSERTED)
+
+**Goal:** As a Requestor, a risk owner or a Security Analyst, I want to be told in the app when work waits for me and to open it in one step, so that nothing waits unseen between the people in the flow.
+**Mode:** mvp
+**UI hint:** yes
+**Requirements:** NOTIFY-01
+**Depends on:** Phases 11 (the header and Home) and 13 (assignment and notes, two of its events); it runs after Phase 19 and before Phase 17
+**Closes:** no UAT finding of its own (NOTIFY-01 traces to UAT-025, which Phase 17 closes)
+**Intent:** F8, A1, PD-1 (decision 18, G-18)
+**Decisions:** one notification per recipient per event, written in the same transaction as its event through one notification service, and never for the person who acted, a service identity or an inactive user; nobody is told about a record they may not read, checked whenever the list and the count are read; the server words each notification and gives its destination at read time, storing no titles; per-person read state, cleared by opening, "Mark as read", "Mark all as read" or acting on the work; a header control with the unread count, a panel and a Notifications page, with no polling; channel-neutral, so Phase 20 adds email delivery without changing the entity; never deleted, following the request's retention (decision 18, G-18; the decisions Phase 17's discussion recorded as its D-56 to D-63). Its first kinds are the events that exist before Phase 17: assignment (Phase 13), questionnaire released and submitted, assessment released, and new notes (Phase 13). Phases 17, 17.1, 17.2 and 20 add theirs without a schema change. Inserted 2026-10-01 (`NEXT-WAVE-DECISIONS.md`, G-19), because the notification centre pushed Phase 17 beyond size L.
+**Contract and datamodel:** `docs/contract-gaps/phase-19.1-notifications.md` first (the notification, its per-person read state, and the closed kind vocabulary later phases extend), then an approval checkpoint (G-6); API for the list, the unread count, mark read and mark all read, with exact grants for every human user and record-level checks at read time.
+**Size:** M
+
+**Success Criteria:**
+
+1. When an analyst assigns a request to a colleague, the colleague sees the unread count rise in the header and opens the request from the notification in one step; the analyst who acted is not notified.
+2. The Requestor is told when the questionnaire and the assessment are released, the assigned analyst when the answers are submitted, and each side of a request when the other posts a note; each notification names its record by number and title.
+3. Opening a notification, "Mark as read", "Mark all as read" and acting on the work clear it; the count stays exact without polling, and a failed count read shows no badge.
+4. A notification whose record its recipient can no longer read leaves the list and the count; an unrelated Requestor never sees another person's notification or learns of its record, in the API and the UI, and the service identity receives none.
+5. The centre is a sheet at 375px and a panel from 768px, and works by keyboard alone.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 19.1 to break down)
+
 ### Phase 20: Oversight registers and post-release tracking
 
 **Goal:** As a risk manager, I want registers by assessment type that stay current after release, and as a risk or treatment owner I want to track each treatment to completion on evidence, so that oversight reflects what is actually being done.
 **Mode:** mvp
 **UI hint:** yes
 **Requirements:** RISK-03, RISK-04, RISK-05, RISK-06, ADMIN-06, NOTIFY-02
-**Depends on:** Phases 11, 14 (evidence files), 17 (notifications for due reminders), 17.1 (the decisions whose treatments it tracks) and 17.2 (the full post-demo journey)
+**Depends on:** Phases 11, 14 (evidence files), 19.1 (the notification centre for due reminders), 17, 17.1 (the decisions whose treatments it tracks) and 17.2 (the full post-demo journey)
 **Closes:** UAT-045, UAT-046, UAT-047, UAT-058
 **Intent:** O1, O2, Q1, PD-5
 **Decisions:** the released assessment stays an immutable record while its risks live on in the register: treatment updates by owners and analysts, residual re-rating and closure by a Security Analyst as a recorded review, statements and inherent ratings frozen, every change in history (#9); each treatment moves from Not Started through In Progress to Complete on evidence, the server sets Overdue from `treatmentResolveDate` and every read derives it by the same rule, date changes need a reason, and overdue treatments escalate to the assigned analyst and the risk owner (G-16, reversing Phase 7 D-04 in part); due-date reminders in the app and by email through Strapi's email plugin, with a capture provider in development and tests, and email reminders for decisions left waiting (#18, G-18); divisions and business units stay free text with suggestions until the Admin lists of Phase 22.
-**Contract and datamodel:** API (type filter and projection through the request, an owner-scoped risk read with a Requestor grant, post-release treatment operations, usage reads); a daily scheduled run in Strapi. Contract-gap record first, then an approval checkpoint (G-6): `docs/contract-gaps/phase-20-treatment-tracking.md`, covering post-release history (old and new values, actor, time), progress notes, evidence and its files, date-change reasons, and the server-written `Overdue` with its governing date, amending `phase-07-derived-insights.md`'s treatment due-state rule. Reminder delivery facts join Phase 17's notification record or get their own; the plan decides.
+**Contract and datamodel:** API (type filter and projection through the request, an owner-scoped risk read with a Requestor grant, post-release treatment operations, usage reads); a daily scheduled run in Strapi. Contract-gap record first, then an approval checkpoint (G-6): `docs/contract-gaps/phase-20-treatment-tracking.md`, covering post-release history (old and new values, actor, time), progress notes, evidence and its files, date-change reasons, and the server-written `Overdue` with its governing date, amending `phase-07-derived-insights.md`'s treatment due-state rule. Reminder delivery facts join Phase 19.1's notification record or get their own; the plan decides.
 **Size:** L (was M: the treatment lifecycle of RISK-06)
 
 **Success Criteria:**
@@ -515,6 +540,7 @@ Plans:
 **Depends on:** Phases 12, 17.1, 18 and 20 (the configuration they introduce); Keycloak identities exist behind flags (INT-02, off in development), so the Admin role uses a development fixture here
 **Closes:** UAT-061
 **Carried from Phase 10:** the Information Asset owner (the rest of UAT-053, ADMIN-05 criterion 1), which needs a contract-gap record.
+**Carried from Phases 12, 14 and 19.1 (2026-10-01):** a manual start path, an empty questionnaire or assessment draft, for a request whose generation the AI data policy refuses, because the Admin's ceiling setting makes that refusal reachable (12-CONTEXT, Orchestrator Confirmations); the attachment retention period, which decision 2 makes an Admin setting (14-CONTEXT); and a shorter retention for read notifications, a candidate setting (17-CONTEXT D-63, now Phase 19.1's).
 **Intent:** R1, O2
 **Decisions:** the Admin owns reference data and configuration (the Risk Type library, controls, systems, assets, scales, rating bands, risk appetite with its acceptance authority, divisions and business units, shared register views, the peer-review threshold and the AI data policy), with a read-only, exportable view of role holders; role assignment stays in the identity platform; the Admin holds no analyst grants, and every configuration change is recorded (#1, G-1).
 **Contract and datamodel:** catalogue (a new IdamBox Role in both catalogue copies, re-granted Administration functions, a development sign-in fixture); configurable lists need entities: contract-gap records first, then an approval checkpoint. Role assignment in CSRM would re-open the IAM routes that 08 D-36 and D-44 removed, and is not planned.
@@ -534,7 +560,7 @@ Plans:
 
 ### Next-wave coverage
 
-All 55 Next-wave requirements (`REQUIREMENTS.md`) map to exactly one of Phases 10–22, 17.1 and 17.2: the 46 from the product gap UAT, and nine added on 2026-10-01 from the product demo's risk-owner asks (ASSESS-21 to ASSESS-26, COLLAB-04, NOTIFY-04 and RISK-06). All 65 product gap UAT findings close in exactly one phase (the `Closes` lines above). UAT-040 closes in Phase 17.1: it moved from Phase 17 on 2026-09-27, after the UAT register's `Proposed phase` column was written. COLLAB-01 and NOTIFY-01 move from v2 Requirements into this wave. INT-02 (Keycloak) is implemented behind flags and off in development (2026-10-01: ADRs 0003 and 0004); Phase 22 uses a development fixture for the Admin role. Phase 06.10 stays deferred.
+All 55 Next-wave requirements (`REQUIREMENTS.md`) map to exactly one of Phases 10–22, 17.1, 17.2 and 19.1: the 46 from the product gap UAT, and nine added on 2026-10-01 from the product demo's risk-owner asks (ASSESS-21 to ASSESS-26, COLLAB-04, NOTIFY-04 and RISK-06). All 65 product gap UAT findings close in exactly one phase (the `Closes` lines above). UAT-040 closes in Phase 17.1: it moved from Phase 17 on 2026-09-27, after the UAT register's `Proposed phase` column was written. COLLAB-01 and NOTIFY-01 move from v2 Requirements into this wave. INT-02 (Keycloak) is implemented behind flags and off in development (2026-10-01: ADRs 0003 and 0004); Phase 22 uses a development fixture for the Admin role. Phase 06.10 stays deferred.
 
 **Post-demo asks** (`NEXT-WAVE-DECISIONS.md`, Post-demo decisions; requirements amended in passing are in `REQUIREMENTS.md`):
 

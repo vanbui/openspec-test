@@ -4,9 +4,9 @@
   "milestone": "v2.0 — Assessment Lifecycle and Oversight",
   "phases": [],
   "next": {
-    "command": "/gsd:discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 10)",
+    "reason": "Phase 10 of 15 — needs a plan"
   },
-  "updated_at": "2026-09-27T14:07:18.605Z"
+  "updated_at": "2026-10-01T08:45:01.357Z"
 }

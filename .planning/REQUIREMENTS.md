@@ -73,7 +73,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
   - Trace: F8, PD-1 · UAT-025 · Phase 17 (decision 3 and G-12, reversing ASSESS-05's release-only visibility and "every risk and control mutation is analyst-only")
   - Amended (2026-10-01, G-11, G-12): the nominated risk owners join the Requestor in criteria 1 and 2, and criterion 3 names the refusal.
 - [ ] **ASSESS-12**: The Requestor and the nominated risk owners respond to each initial risk with mitigating controls, and the analyst decides on each.
-  - Acceptance: (1) per risk, the Requestor or the risk's owner proposes existing or planned controls, each with an owner found by name (ASSESS-23), evidence and a due date, may propose a different risk owner, and then submits the response; (2) the analyst accepts, edits or rejects each proposed control with a reason, and accepted ones become control implementations; (3) a risk owner responds only on the risks they own, and the Requestor on any risk of their request; Strapi refuses every other response.
+  - Acceptance: (1) per risk, the Requestor or the risk's owner proposes existing controls, each with an owner found by name (ASSESS-23) and its evidence, or planned controls, each with an owner found by name and a due date, may propose a different risk owner, and then submits the response; (2) the analyst accepts, edits or rejects each proposed control with a reason, and accepted ones become control implementations; (3) a risk owner responds only on the risks they own, and the Requestor on any risk of their request; Strapi refuses every other response.
   - Trace: F8, F9, PD-1 · UAT-025 · Phase 17
   - Amended (2026-10-01, G-11, G-17): nominated owners respond as well as the Requestor, control owners are found by name, and criterion 3 is new.
 - [ ] **ASSESS-13**: The AI proposes a residual-risk write-up from the recorded controls and responses.
@@ -196,8 +196,8 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 ### Notifications
 
 - [ ] **NOTIFY-01**: Users are told in the app when work waits for them.
-  - Acceptance: (1) an in-app notification centre with an unread count and per-user read state tells people when work waits for them: assignment, questionnaire released and submitted, risks released for response (to the Requestor and each nominated risk owner), response submitted, acceptance requested and decided, assessment released and request closed, and new notes; Phases 17.1 and 17.2 add their events to the same centre (G-18); (2) each notification opens the record it is about, within what the person may read, and nobody is told about a record they may not read (decision 18).
-  - Trace: F8, PD-1 · UAT-025 · Phase 17
+  - Acceptance: (1) an in-app notification centre with an unread count and per-user read state tells people when work waits for them: assignment, questionnaire released and submitted, risks released for response (to the Requestor and each nominated risk owner), response submitted, acceptance requested and decided, assessment released and request closed, and new notes; Phase 19.1 builds the centre with the events that exist before Phase 17, and Phases 17, 17.1, 17.2 and 20 add theirs to it (G-18, G-19); (2) each notification opens the record it is about, within what the person may read, and nobody is told about a record they may not read (decision 18).
+  - Trace: F8, PD-1 · UAT-025 · Phase 19.1 (moved from Phase 17 by G-19, 2026-10-01)
   - Amended (2026-10-01, G-18): nominated risk owners and executive approvers receive notifications, release now also closes the request, and later phases' events join the same centre.
 - [ ] **NOTIFY-02**: Users receive due-date reminders in the app and by email.
   - Acceptance: (1) treatments due within seven days or overdue remind their treatment owner, acceptance and exemption reviews due remind the risk owner or executive approver who decided, an assessment's next review due reminds the assigned analyst, and a decision waiting more than seven days reminds its decider; overdue treatments escalate to the assigned analyst and the risk owner; (2) email goes through Strapi's email plugin, with a capture provider in development and tests so nothing leaves the machine, and the production mail provider is deployment configuration (decision 18).
@@ -254,11 +254,12 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 | COLLAB-02 | Phase 14 | Pending |
 | QUES-11, QUES-12 | Phase 15 | Pending |
 | ASSESS-09, ASSESS-10 | Phase 16 | Pending |
-| ASSESS-11, ASSESS-12, ASSESS-13, ASSESS-21, ASSESS-22, ASSESS-23, NOTIFY-01 | Phase 17 | Pending |
+| ASSESS-11, ASSESS-12, ASSESS-13, ASSESS-21, ASSESS-22, ASSESS-23 | Phase 17 | Pending |
 | ASSESS-14, ASSESS-20, ASSESS-24, ASSESS-25 | Phase 17.1 | Pending |
 | COLLAB-04, ASSESS-26, NOTIFY-04 | Phase 17.2 | Pending |
 | ASSESS-15, ASSESS-16, ASSESS-17, ASSESS-18, ASSESS-19 | Phase 18 | Pending |
 | CSV-01, CSV-02, CSV-03 | Phase 19 | Pending |
+| NOTIFY-01 | Phase 19.1 | Pending |
 | RISK-03, RISK-04, RISK-05, RISK-06, ADMIN-06, NOTIFY-02 | Phase 20 | Pending |
 | DASH-04, DASH-05 | Phase 21 | Pending |
 | ADMIN-07, ADMIN-08 | Phase 22 | Pending |
@@ -267,7 +268,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 | Ask | Requirements | Phase |
 |---|---|---|
-| PD-1 The nominated risk owner and the Requestor view the assessment | ASSESS-21, ASSESS-22; amended ASSESS-11, ASSESS-12, NOTIFY-01 | 17 |
+| PD-1 The nominated risk owner and the Requestor view the assessment | ASSESS-21, ASSESS-22; amended ASSESS-11, ASSESS-12, NOTIFY-01 | 17; 19.1 |
 | PD-2 Acceptance after the final assessment closes the request | ASSESS-24, ASSESS-25; amended ASSESS-14, ASSESS-20 | 17.1 |
 | PD-3 The owner contests anything, and the analyst edits everything again | COLLAB-04, ASSESS-26, NOTIFY-04; the recall and voids of ASSESS-24 | 17.2; 17.1 |
 | PD-4 Acceptance or a treatment plan | amended ASSESS-20; ASSESS-23, the people search it uses | 17.1; 17 |
@@ -275,7 +276,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 **Coverage:**
 
-- v2.0 requirements: 55 total (46 from the product gap UAT and 9 from the post-demo asks), mapped to Phases 10–22, 17.1 and 17.2: 55, unmapped: 0 ✓
+- v2.0 requirements: 55 total (46 from the product gap UAT and 9 from the post-demo asks), mapped to Phases 10–22, 17.1, 17.2 and 19.1: 55, unmapped: 0 ✓
 - Product gap UAT findings: 65, each closed by exactly one phase ✓
 - Post-demo asks: PD-1 to PD-5, each traced to at least one requirement, a phase and its success criteria ✓
 
