@@ -746,10 +746,53 @@ Plans:
 5. A lower-case duplicate of an existing name is held for a decision.
 6. A released assessment prints as a clean A4 report.
 
-**Plans:** 0 plans
+**Plans:** 15 plans (one per wave, serialised by the spec, both catalogue copies, the matrix and the Strapi test build)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 19 to break down)
+**Wave 1**
+- [ ] 19-01-PLAN.md — Record the 19-UI-SPEC's extensions X-30 to X-32 in the design direction (orchestrator constraint: after Phase 16's X-27 to X-29 and before any implementing task). Write `docs/contract-gaps/phase-19-ex
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 19-02-PLAN.md — Add the 19 approved closed reasons to Strapi's `CONFLICT_REASONS`, both specification enums and the web mirror (D-03 group 4); add the closed details `rowCount`, `rowCap` and `found` to `AssessmentWor
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 19-03-PLAN.md — Add `write-excel-file@4.1.1` to Strapi only, justified (D-12); move the neutraliser into `csrm/spreadsheets/neutralise.ts` with its exact inverse (D-11); build the CSV and XLSX writers (D-08); extend 
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 19-04-PLAN.md — Build the export pipeline in Strapi (D-05, D-17), the view registry with the Risk register as its first view (D-05, D-36), the vocabulary of columns, fixed tables, import columns and labels with its p
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 19-05-PLAN.md — Serve the reserved `GET /api/v1/risks/export` (D-03 group 1): extend the authorisation policy with the generic `SERVICE_IDENTITY_REFUSED_OPERATIONS` set and the `underlyingRead` rule (D-13), add the r
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 19-06-PLAN.md — Scope note (orchestrator, 2026-10-01): 17 files, because each served export carries the D-02 chain together: the specification, both catalogue copies, served operations, the authorisation matrix, the 
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 19-07-PLAN.md — Scope note (orchestrator, 2026-10-01): 17 files, because each served export carries the D-02 chain together: the specification, both catalogue copies, served operations, the authorisation matrix, the 
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 19-08-PLAN.md — Serve the Questionnaires, My questionnaires and Alerts exports (D-03 group 1, D-04) over the 19-04 pipeline: export variants of each list's own query builder or parser, three views, routes beside thei
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 19-09-PLAN.md — Serve the reserved `POST /api/v1/reports/{reportKey}/export` (D-03 group 1, D-22): a closed body parsed with the report's own parser, the report computed as its read computes it, the figures shaped as
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 19-10-PLAN.md — Gather the released-assessment read into one module (D-14) and switch the three released reads and the My risk assessments list to it with no behaviour change; serve the released-assessment export for
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 19-11-PLAN.md — Add one typed export function per operation to its feature service (D-19), one Server Action per view in `features/exports/export-actions.ts`, and the `ExportButton` in the page header of every list s
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 19-12-PLAN.md — Factor the released page's loader into one shared module and add the two report routes on it (D-23); render the report document and its print rules as X-31 (D-24); put `Print report` and `Export` in b
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 19-13-PLAN.md — Move the four Administration imports onto the 19-03 reader, header matcher and value converters (D-25 to D-29), add the `similar` tier and its commit decisions (D-30), keep issue codes in the preview 
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 19-14-PLAN.md — Serve the template and error-report operations for the four collections (D-03 group 3, D-31, D-32) and the four reference-list exports (D-04, D-33); grant them through the four Administration Function
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 19-15-PLAN.md — Rework the web import flow onto Strapi's tolerant import (D-25 to D-32): retire the client parser, show file refusals with fix-it steps, warnings and notes, the similar-row decisions (X-32), template 
 
 ### Phase 19.1: In-app notification centre (INSERTED)
 
