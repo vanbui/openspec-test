@@ -249,6 +249,11 @@ On 2026-09-28 the operator delegated the remaining items as well ("Use your own 
   - `uat-trial` is pushed to `origin` as a branch at stable boundaries (after the milestone switch, and when planning ends), once the attribution audit is clean. It holds documents only.
   - Nothing is pushed to `dev` or `main`, and no pull request or merge is made: integration stays with the team's review.
 - **G-10 Self-hosted fonts.** Plus Jakarta Sans, Instrument Serif and IBM Plex Mono (all SIL Open Font License) are served from the app through `next/font/local` instead of `next/font/google`. This takes a third-party request out of every build and page, making builds and the E2E suite hermetic (R-08-24), and changes no design value. It is a quick task before Phase 10 executes, and ADR 0001 gets an amendment note.
+  - **Done 2026-10-02:** quick task 261002-2y8 (`4913c90` to `6ae258b`).
+    - The files are unmodified copies of `@fontsource` 5.3.0 from the npm registry, with their OFL licences and SHA-256 hashes in `apps/csrm/app/fonts/README.md`.
+    - The latin and latin-ext subsets ship, and only latin is preloaded.
+    - A build with every outbound request blocked succeeds, and no build output or page names a Google host.
+    - Follow-up before Phase 10: restore the Vietnamese coverage that the Google-era build served in the family, for Plus Jakarta Sans and IBM Plex Mono.
 
 ## Post-demo decisions
 

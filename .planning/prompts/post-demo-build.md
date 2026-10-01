@@ -42,7 +42,7 @@ Start with the first phase that is not complete. STATE.md says which. A phase is
 - its VERIFICATION.md passes;
 - its gate is green.
 
-If STATE.md's quick-task table does not show the G-10 self-hosted fonts task as done, do that first.
+Before the next phase, do any quick task STATE.md's Session Continuity names. After G-10, that is the typography follow-up from quick task 261002-2y8. Run each as a GSD quick task (`/gsd-quick`), with the full gate afterwards.
 
 For each phase:
 

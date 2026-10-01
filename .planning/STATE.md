@@ -3,9 +3,9 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
-current_phase_name: "post-demo Stage 3: the G-10 fonts quick task, then Phase 10 (fresh plan check, then execution)"
+current_phase_name: "post-demo Stage 3: G-10 done; the typography follow-up quick task, then Phase 10"
 status: planning
-stopped_at: "post-demo planning gate passed (2026-10-02): 16 phases and 290 plans, each phase with a passing plan check; Stage 3 starts with the G-10 fonts quick task."
+stopped_at: "post-demo Stage 3 started: the G-10 fonts quick task 261002-2y8 is done and accepted (gate green at e3d805d); next: the typography follow-up quick task, then Phase 10."
 last_updated: "2026-10-01T17:24:08.918Z"
 last_activity: 2026-10-02
 last_activity_desc: "Completed quick task 261002-2y8: Self-host the three BProton font families through next/font/local (G-10, R-08-24)"
@@ -34,10 +34,11 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 
 - **Planned, with a passing plan check:** 290 plans. Phase 10 has 23 (its 2026-09-27 check is resolved, and it gets a fresh check before it is built). Then 11 (21), 12 (19), 13 (19), 14 (17), 15 (14), 16 (15), 19 (15), 19.1 (10), 17 (19), 17.1 (18), 17.2 (15), 18 (19), 20 (23, kept whole by the pilot, with a named seam), 21 (18) and 22 (25). Each phase's verdict is in its `NN-PLAN-CHECK.md`.
 - **UI-SPECs:** approved for Phases 10 to 22, with milestone-wide extensions X-1 to X-80, each recorded in the design direction by a plan task before it is used.
-- **Next:** the pilot's planning gate, then Stage 3 (the G-10 fonts quick task, then Phase 10, opening with a fresh plan check). Nothing is built yet.
+- **Done in Stage 3:** the G-10 fonts quick task 261002-2y8 (`4913c90` to `6ae258b`), accepted by the pilot with the gate green: web 2,053/2,053, Strapi 578/578, Playwright 85/85.
+- **Next:** the typography follow-up quick task (Session Continuity, step 3), then Phase 10, opening with a fresh plan check. No phase is built yet.
 
 Plan: —
-Status: Planned; Stage 3 not started (the pilot drives every transition, and auto-advance is off)
+Status: Stage 3 in progress: G-10 done; the typography follow-up quick task, then Phase 10, are next (the pilot drives every transition, and auto-advance is off)
 Last activity: 2026-10-02 - Completed quick task 261002-2y8: Self-host the three BProton font families through next/font/local (G-10, R-08-24)
 
 ## Milestone
@@ -101,7 +102,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 
 - **INT-02 (Keycloak):** implemented, flag-gated, and off in development (updated 2026-10-01). OIDC sign-in (ADR 0003, quick tasks 260929-u0w and 260930-iei) and Strapi access-token verification (ADR 0004, `b6000d0`) ship behind `CSRM_AUTH_OIDC_ENABLED` and `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION`, with provisioning behind `IDAMBOX_KEYCLOAK_PROVISIONING` (ADR 0002). Development and every suite keep them off and use the development identity bridge; nobody starts Keycloak or flips them during v2.0 work. New authorisation rules are enforced in Strapi against the resolved IdamBox User and never branch on the auth mode. Phase 22 keeps a development fixture for the Admin role. The remaining risk is deployment-time: a Keycloak environment, the ADR 0004 realm changes, and `externalSubject` links for every user.
 - **Phase 8 residuals** (`docs/security/phase-08-residual-risks.md`):
-  - decided: the fonts (R-08-24, G-10) and the AI transcript flag (R-08-12, G-7);
+  - closed: the fonts (R-08-24, G-10), self-hosted by quick task 261002-2y8 on 2026-10-02;
+  - decided: the AI transcript flag (R-08-12, G-7);
   - already closed in code: the CORS allowlist (R-08-11);
   - still open, and deployment-time only: the proxy topology (R-08-04), log retention (R-08-13) and CSP reporting (R-08-07);
   - carried: the in-memory job registry and the shared job store (R-08-36) and PostgreSQL execution (R-08-37). Phases 13 and 21 touch jobs. Phase 21 narrows R-08-36 to in-flight coordination, because job history is Phase 12's persisted run record, and adds its new query constructs to R-08-37's checklist (21-CONTEXT D-21, D-24).
@@ -145,29 +147,38 @@ Items acknowledged and deferred at milestone close, most recent first:
 - web 1,892/1,892;
 - typecheck and `api:check` clean.
 
+**Post-demo baseline** (2026-10-01, `ece1a25`): Playwright 84/84; Strapi 578/578; web 2,046/2,048, with two stale paths fixed in `678b117`.
+
+**Post-demo gate after G-10** (2026-10-02, `e3d805d`): Playwright 85/85 (81 desktop, 4 mobile); Strapi 578/578; web 2,053/2,053; typecheck, lint and `api:check` clean.
+
 Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Session Continuity
 
 **Last session:** 2026-10-02
-**Stopped At:** post-demo planning gate passed (2026-10-02, pilot). Stage 3 starts with the G-10 fonts quick task.
+**Stopped At:** post-demo Stage 3 started (2026-10-02): the G-10 fonts quick task 261002-2y8 is done and accepted by the pilot, with the gate green at `e3d805d`. Everything is committed and pushed to `origin/post-demo`. Weekly usage reached 89%, so this session ends at this clean boundary.
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
 - Every ask PD-1 to PD-5 traces to requirements, a phase, success criteria and plans (ASSESS-21 to 26, COLLAB-04, NOTIFY-04 and RISK-06 each appear in plan frontmatter; the journey spec `apps/csrm/e2e/risk-owner-journey.spec.ts` is built by 17-19, 17.1-18, 17.2-15 and 20-23).
 - No pre-rename app path in Phases 10–22, ROADMAP, REQUIREMENTS, STATE, PROJECT, NEXT-WAVE-DECISIONS or CONTEXT.md.
 - `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
+**Resume prompt:** `.planning/prompts/post-demo-build.md`. Paste the launcher line the operator was given into a new session after the weekly reset.
 **Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
 2. Stage 2 is complete and its planning gate passed: every phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) has its CONTEXT, an approved UI-SPEC, research, a pattern map, plans and a passing plan check.
-3. Stage 3: the G-10 self-hosted fonts quick task, then build each phase in execution order. Each phase opens with a fresh plan check, then `/gsd-execute-phase`, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
-4. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
+3. Quick task, before Phase 10: the typography follow-ups from 261002-2y8 (its `deferred-items.md`).
+   - **Vietnamese glyphs:** restore Vietnamese coverage for Plus Jakarta Sans and IBM Plex Mono. The Google-era build served it in the family, and Vietnamese-Australian names such as "Nguyễn" now mix faces. Use a lazy-loaded subset, about 24 KB; Instrument Serif has no Vietnamese subset.
+   - **Button weight:** buttons render at weight 400, not the direction's 500. The cause is the unlayered `button, select, input, textarea { font: inherit; }` reset in `apps/csrm/app/globals.css` (from `8495a37`). Move it into `@layer base`, and extend the conformance spec to assert the button weight.
+   - Run the full gate afterwards.
+4. Stage 3: build each phase in execution order, from Phase 10. Each phase opens with a fresh plan check, then `/gsd-execute-phase`, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
+5. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
 
 ## Next Action
 
-**Post-demo Stage 3 on branch `post-demo`,** following Session Continuity above. Nothing is built yet. No dev server was running during Stage 2.
+**Post-demo Stage 3 on branch `post-demo`:** the typography follow-up quick task, then Phase 10 (a fresh plan check, then execution), following Session Continuity above. No phase is built yet.
 
 ## Accumulated Context
 
