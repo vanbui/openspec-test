@@ -181,6 +181,16 @@ describe('RelationPicker (X-2, UI-SPEC §13.1)', () => {
     expect(screen.getByRole('combobox', { name: 'Control' })).toHaveFocus();
   });
 
+  it('tells a screen reader which record is already set, keeping the label as its name (WR-303)', () => {
+    render(<Harness initial={app11} suggested={applicable} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    expect(input).toHaveAccessibleName('Control');
+    expect(input).toHaveAccessibleDescription(`${hint} Selected control: ${app11.name}`);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Control' }));
+    expect(input).toHaveAccessibleDescription(hint);
+  });
+
   it('asks for a search when it has no suggestions and the query is empty', () => {
     render(<Harness />);
     const input = screen.getByRole('combobox', { name: 'Control' });
