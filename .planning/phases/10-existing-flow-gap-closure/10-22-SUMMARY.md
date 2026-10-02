@@ -313,3 +313,8 @@ None. The titles reach the operator's development database on the orchestrator's
 ---
 *Phase: 10-existing-flow-gap-closure*
 *Completed: 2026-10-02*
+
+## Self-Check: PASSED
+
+- Files: `csrm-control-titles.json`, `control-titles.unit.test.ts` and this summary exist.
+- Commits: `ff097fb`, `00b022e`, `1636310`, `2e76a2d`, `575172e` and `d208e12` are on `post-demo`, each with the Co-Authored-By trailer.
