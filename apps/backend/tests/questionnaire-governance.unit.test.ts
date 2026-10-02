@@ -237,6 +237,61 @@ test("projectGovernanceEvents gives the analyst a question event's stored text a
 });
 
 /*
+ * D-17: an event written before snapshots existed is named by resolving its key against every
+ * question, removed ones included, but only when it is not older than the latest generation. An
+ * older event's key may belong to a replaced question set, so it names no question at all.
+ */
+test("projectGovernanceEvents resolves an older event's question text only from the latest generation on", () => {
+  const removed = {
+    documentId: "question-2",
+    questionText: "Where was the service hosted?",
+    answerType: "Text",
+    options: {
+      schemaVersion: 2,
+      questionKey: "legacy-hosting",
+      section: { key: "context", title: "Context", order: 1 },
+      order: 2,
+      required: false,
+      deleted: { deletedAt: "2026-09-04T00:00:00.000Z", deletedBy: ACTOR },
+    },
+    answer: null,
+  };
+  const generatedDate = "2026-09-02T00:00:00.000Z";
+  const source = questionnaire({ generatedDate, questions: [question(), removed], governanceLog: [
+    event({ kind: "question-edited", at: "2026-09-03T00:00:00.000Z", questionKey: "service-name" }),
+    event({ kind: "question-deleted", at: "2026-09-04T00:00:00.000Z", questionKey: "legacy-hosting" }),
+    event({ kind: "question-edited", at: "2026-09-01T00:00:00.000Z", questionKey: "service-name" }),
+    event({ kind: "answer-cleared", at: generatedDate, questionKey: "service-name", explanation: "The choices changed." }),
+    event({ kind: "question-added", at: "2026-09-03T00:00:00.000Z", questionKey: "never-stored" }),
+    event({ kind: "question-edited", at: "2026-09-01T00:00:00.000Z", questionKey: "service-name", questionText: "What was the service called?" }),
+  ] });
+  const analyst = projectGovernanceEvents(source, "analyst");
+  assert.equal(analyst[0]?.questionText, "What is the name of the service?", "CURRENT_QUESTION_NOT_RESOLVED_BY_KEY");
+  assert.equal(analyst[1]?.questionText, "Where was the service hosted?", "REMOVED_QUESTION_NOT_RESOLVED_BY_KEY");
+  assert.equal("questionText" in (analyst[2] ?? {}), false, "EVENT_OLDER_THAN_THE_GENERATION_WAS_RESOLVED");
+  assert.equal(analyst[2]?.questionKey, "service-name", "OLDER_EVENT_LOST_ITS_KEY");
+  assert.equal(analyst[3]?.questionText, "What is the name of the service?", "EVENT_AT_THE_GENERATION_NOT_RESOLVED");
+  assert.equal("questionText" in (analyst[4] ?? {}), false, "UNKNOWN_KEY_WAS_GIVEN_A_TEXT");
+  assert.equal(analyst[5]?.questionText, "What was the service called?", "SNAPSHOT_NOT_PREFERRED_OVER_RESOLUTION");
+  for (const [index, entry] of projectGovernanceEvents(source, "requestor").entries()) {
+    assert.equal("questionText" in entry, false, `REQUESTOR_RECEIVED_RESOLVED_TEXT_${index}`);
+  }
+
+  // With no generation recorded, every key resolves.
+  const ungenerated = projectGovernanceEvents(questionnaire({ questions: [question(), removed], governanceLog: [
+    event({ kind: "question-edited", at: "2026-08-01T00:00:00.000Z", questionKey: "service-name" }),
+  ] }), "analyst");
+  assert.equal(ungenerated[0]?.questionText, "What is the name of the service?", "KEY_NOT_RESOLVED_WITHOUT_A_GENERATION");
+
+  // A resolved text is bounded like a snapshot.
+  const long = { ...question(), questionText: "b".repeat(600) };
+  const bounded = projectGovernanceEvents(questionnaire({ generatedDate, questions: [long], governanceLog: [
+    event({ kind: "question-edited", at: "2026-09-03T00:00:00.000Z", questionKey: "service-name" }),
+  ] }), "analyst");
+  assert.equal(bounded[0]?.questionText, `${"b".repeat(499)}…`, "RESOLVED_TEXT_NOT_BOUNDED");
+});
+
+/*
  * D-31 (Phase 8): the projection stays pure. It names an analyst actor only
  * through the resolver its caller built from one lookup, keeps a null name for
  * an id the resolver cannot name, and never consults it for a Requestor.

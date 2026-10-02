@@ -136,6 +136,25 @@ describe('QuestionnaireRevisionTimeline', () => {
     expect(screen.queryByText(/hosting-region/)).not.toBeInTheDocument();
   });
 
+  it('reads a question it cannot name as a question from an earlier version (UI-SPEC §4.2)', () => {
+    const unnamed: QuestionnaireSummary = {
+      ...questionnaire,
+      events: [{ kind: 'question-deleted', at: '2026-09-03T00:00:00.000Z', by: { documentId: 'analyst-1', displayName: 'Morgan Analyst' }, questionKey: 'hosting-region' }],
+    };
+    render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={unnamed} />);
+    const value = screen.getByText('A question from an earlier version');
+    expect(value).toHaveClass('text-foreground-secondary');
+    expect(value.closest('p')).toHaveTextContent('Question: A question from an earlier version');
+    expect(value.closest('p')).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.queryByText(/hosting-region/)).not.toBeInTheDocument();
+  });
+
+  it('shows no question line on an event that concerns no question', () => {
+    const released: QuestionnaireSummary = { ...questionnaire, events: [(questionnaire.events ?? [])[0]!] };
+    render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={released} />);
+    expect(screen.queryByText(/Question:/)).not.toBeInTheDocument();
+  });
+
   it('renders the explicit empty state at both depths', () => {
     const empty = { ...questionnaire, events: [] };
     const view = render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={empty} />);
