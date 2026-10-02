@@ -22599,6 +22599,16 @@
         "responses": { "202": { "description": "Questionnaire generation job accepted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/QuestionnaireGenerationJobResponse" } } } }, "400": { "$ref": "#/components/responses/QuestionnaireBadRequest" }, "403": { "$ref": "#/components/responses/QuestionnaireForbidden" }, "404": { "$ref": "#/components/responses/QuestionnaireNotFound" }, "409": { "$ref": "#/components/responses/QuestionnaireConflict" } }
       }
     },
+    "/v1/assessment_requests/{requestId}/generation_jobs": {
+      "get": {
+        "operationId": "questionnaire-generation/get-request-generation-jobs",
+        "summary": "Get a request's current generation jobs for a human Security Analyst",
+        "description": "Returns the request's questionnaire generation job (the active one, else the most recent retained) and the assessment draft job for its questionnaire, each with whether the viewing analyst may retry it. Jobs are process-local, so after a restart both entries are null.",
+        "tags": ["questionnaire-generation"],
+        "parameters": [{ "name": "requestId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "The request's current generation jobs", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestGenerationJobsResponse" } } } }, "400": { "$ref": "#/components/responses/QuestionnaireBadRequest" }, "403": { "$ref": "#/components/responses/QuestionnaireForbidden" }, "404": { "$ref": "#/components/responses/QuestionnaireNotFound" } }
+      }
+    },
     "/v1/questionnaire_generation_jobs/{jobId}": {
       "get": {
         "operationId": "questionnaire-generation/get-questionnaire-generation-job",
@@ -25907,6 +25917,10 @@
       },
       "GeneratedQuestionnaireSummary": { "type": "object", "properties": { "documentId": { "type": "string" }, "questionnaireNumber": { "type": "string" }, "title": { "type": "string" }, "generatedDate": { "type": "string", "format": "date-time", "nullable": true }, "generatedBy": { "type": "object", "properties": { "documentId": { "type": "string" }, "displayName": { "type": "string", "nullable": true } }, "required": ["documentId", "displayName"], "additionalProperties": false, "nullable": true } }, "required": ["documentId", "questionnaireNumber", "title", "generatedDate", "generatedBy"], "additionalProperties": false },
       "QuestionnaireGenerationJobResponse": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/QuestionnaireGenerationJob" } }, "required": ["data"], "additionalProperties": false },
+      "RequestQuestionnaireGenerationJob": { "type": "object", "properties": { "job": { "$ref": "#/components/schemas/QuestionnaireGenerationJob" }, "canRetry": { "type": "boolean", "description": "Whether the viewing analyst may retry the job: only its initiating analyst may." } }, "required": ["job", "canRetry"], "additionalProperties": false },
+      "RequestAssessmentDraftJob": { "type": "object", "properties": { "job": { "$ref": "#/components/schemas/AssessmentDraftJob" }, "canRetry": { "type": "boolean", "description": "Whether the viewing analyst may retry the job: only its initiating analyst may." } }, "required": ["job", "canRetry"], "additionalProperties": false },
+      "RequestGenerationJobs": { "type": "object", "properties": { "questionnaireGeneration": { "anyOf": [{ "$ref": "#/components/schemas/RequestQuestionnaireGenerationJob" }, { "type": "null" }] }, "assessmentDraft": { "anyOf": [{ "$ref": "#/components/schemas/RequestAssessmentDraftJob" }, { "type": "null" }] } }, "required": ["questionnaireGeneration", "assessmentDraft"], "additionalProperties": false },
+      "RequestGenerationJobsResponse": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/RequestGenerationJobs" } }, "required": ["data"], "additionalProperties": false },
       "QuestionnaireAssessmentRequestSummary": {
         "oneOf": [
           { "$ref": "#/components/schemas/QuestionnaireAssessmentRequestAvailable" },

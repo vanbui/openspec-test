@@ -16,6 +16,7 @@ import {
   analystAssessmentDetailSchema,
   assessmentDraftJobSchema,
   questionnaireGenerationJobSchema,
+  requestGenerationJobsResponseSchema,
   assessmentRatingSummarySchema,
   assessmentRequestQueueItemSchema,
   assessmentStatusSummarySchema,
@@ -42,6 +43,7 @@ import {
   type AssessmentDetail,
   type AssessmentDraftJob,
   type QuestionnaireGenerationJob,
+  type RequestGenerationJobs,
   type AssessmentRating,
   type AssessmentSummary,
   type AssessmentUpdateInput,
@@ -125,6 +127,30 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
     // questionnaire generation. The queued job the guard is served refuses the
     // fields only a later state carries, named one by one.
     narrowedPaths: ['data.startedAt', 'data.completedAt', 'data.failureCode', 'data.failureMessage', 'data.questionnaire'],
+  },
+  {
+    label: 'getRequestGenerationJobs',
+    component: 'RequestGenerationJobsResponse',
+    parser: requestGenerationJobsResponseSchema,
+    narrowedPaths: [
+      // The flat QuestionnaireGenerationJob component, narrowed per state exactly
+      // as getQuestionnaireGenerationJob narrows it (docs/contract-gaps/).
+      'data.questionnaireGeneration.job.startedAt',
+      'data.questionnaireGeneration.job.completedAt',
+      'data.questionnaireGeneration.job.failureCode',
+      'data.questionnaireGeneration.job.failureMessage',
+      'data.questionnaireGeneration.job.questionnaire',
+      // Reuses the closed job parsers, whose identifier bounds the by-id job
+      // operations declare later (D-27, Phase 13). Until then they are
+      // grandfathered under getQuestionnaireGenerationJob and
+      // getAssessmentDraftJob, and this Phase 10 parser names each one here.
+      'data.questionnaireGeneration.job.jobId',
+      'data.questionnaireGeneration.job.requestId',
+      'data.questionnaireGeneration.job.providerName',
+      'data.questionnaireGeneration.job.providerVersion',
+      'data.assessmentDraft.job.jobId',
+      'data.assessmentDraft.job.questionnaireId',
+    ],
   },
   {
     label: 'listMyReleasedAssessments',
@@ -372,6 +398,13 @@ export async function retryQuestionnaireGenerationJob(jobId: string): Promise<Tr
   return request((client) => client.POST('/v1/questionnaire_generation_jobs/{jobId}/retry', {
     params: { path: { jobId: id(jobId) } },
   }), (payload) => questionnaireGenerationJobResponseSchema.parse(payload).data);
+}
+
+/** D-25: the request's current questionnaire generation and assessment draft jobs, each with this viewer's retry right. */
+export async function getRequestGenerationJobs(requestId: string): Promise<TransportResult<RequestGenerationJobs>> {
+  return request((client) => client.GET('/v1/assessment_requests/{requestId}/generation_jobs', {
+    params: { path: { requestId: id(requestId) } },
+  }), (payload) => requestGenerationJobsResponseSchema.parse(payload).data, 'GET /v1/assessment_requests/{requestId}/generation_jobs');
 }
 
 export function listAnalystAssessments(): Promise<TransportResult<readonly AssessmentSummary[]>>;

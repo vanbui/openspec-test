@@ -74,7 +74,8 @@ function registry(strapi: Strapi) { const existing = registryByStrapi.get(strapi
 /*
  * The initiating analyst is held in the registry for actor scoping and is not
  * projected, matching projectAssessmentDraftJob. Only that analyst can read the
- * job at all, so echoing their own identifier back adds nothing and the closed
+ * job by id, and the request read (D-25) shows other analysts only whether they
+ * may retry it, so the identifier never crosses the boundary and the closed
  * client schema rejects the unrecognised key.
  */
 export function projectQuestionnaireGenerationJob(job: QuestionnaireGenerationJobRecord, questionnaire?: RecordValue | null): RecordValue { return { jobId: job.jobId, requestId: job.requestId, providerName: job.providerName, providerVersion: job.providerVersion, status: job.status, attempt: job.attempt, queuedAt: job.queuedAt, ...(job.startedAt ? { startedAt: job.startedAt } : {}), ...(job.completedAt ? { completedAt: job.completedAt } : {}), ...(job.failure ? { failureCode: job.failure.code, failureMessage: job.failure.message } : {}), ...(job.status === "completed" && questionnaire ? { questionnaire: projectGeneratedQuestionnaire(questionnaire) } : {}) }; }
@@ -104,6 +105,29 @@ export async function generateQuestionnaire(input: { strapi: Strapi; requestId: 
   if (record(request.questionnaire) && isReleased(request.questionnaire)) throw new QuestionnaireGenerationWorkflowError(409, RELEASED_REPLACEMENT_MESSAGE, "QUESTIONNAIRE_RELEASED"); return projectQuestionnaireGenerationJob(registry(input.strapi).enqueue({ requestId: input.requestId, initiatingAnalystDocumentId: actor(input.analystDocumentId).documentId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version, replaceUnansweredQuestionnaire: input.replaceUnansweredQuestionnaire === true })); }
 async function job(input: { strapi: Strapi; jobId: string; analystDocumentId: string; retry?: boolean }): Promise<RecordValue> { const result = input.retry ? registry(input.strapi).retry(input.jobId, actor(input.analystDocumentId)) : registry(input.strapi).get(input.jobId, actor(input.analystDocumentId)); const questionnaire = result.questionnaireId ? await input.strapi.documents("api::csrm-questionnaire.csrm-questionnaire").findOne({ documentId: result.questionnaireId, populate: { generatedBy: true, assessmentRequest: true, questions: true } }) : null; if (result.status === "completed" && !questionnaire) throw new QuestionnaireGenerationWorkflowError(409, "Generated questionnaire could not be loaded."); return projectQuestionnaireGenerationJob(result, questionnaire); }
 export const getQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: string; analystDocumentId: string }) => job(input);
+/*
+ * D-25: a request's current generation jobs, for any human analyst who may
+ * review it (the route's grant and human-analyst guard decide who that is).
+ * Each job keeps its closed projection, so the initiating analyst is never
+ * disclosed; only whether this viewer may retry it is added beside it. Jobs
+ * are process-local (R-08-36), so after a restart both entries are null. A
+ * completed job whose questionnaire can no longer be loaded is no current job
+ * at all, so it reads as null rather than failing the whole read.
+ */
+export async function getRequestGenerationJobs(input: { strapi: Strapi; requestId: string; viewerDocumentId: string }): Promise<RecordValue> {
+  const viewer = actor(input.viewerDocumentId).documentId;
+  const request = await input.strapi.documents("api::csrm-assessment-request.csrm-assessment-request").findOne({ documentId: input.requestId });
+  if (!request) throw new QuestionnaireGenerationWorkflowError(404, "Assessment request was not found.");
+  const latest = registry(input.strapi).latestForRequest(input.requestId, viewer);
+  let questionnaireGeneration: RecordValue | null = null;
+  if (latest) {
+    const questionnaire = latest.job.status === "completed" && latest.job.questionnaireId
+      ? await input.strapi.documents("api::csrm-questionnaire.csrm-questionnaire").findOne({ documentId: latest.job.questionnaireId, populate: { generatedBy: true } })
+      : null;
+    if (latest.job.status !== "completed" || questionnaire) questionnaireGeneration = { job: projectQuestionnaireGenerationJob(latest.job, questionnaire), canRetry: latest.canRetry };
+  }
+  return { questionnaireGeneration, assessmentDraft: null };
+}
 export const retryQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: string; analystDocumentId: string }) => job({ ...input, retry: true });
 /*
  * The review queues bind the active request ids into an IN / NOT IN predicate,

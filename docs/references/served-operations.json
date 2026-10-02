@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T22:34:34.901Z",
+  "generatedAt": "2026-10-02T07:46:03.301Z",
   "served": [
     {
       "method": "DELETE",
@@ -224,6 +224,30 @@
         "role.security_analyst_agent"
       ],
       "specOperationId": "assessment-workflow/get-assessment-request-queue",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests/:requestId/generation_jobs",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.getRequestGenerationJobs",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
+        "requireRequestOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_generation.request_jobs_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-generation/get-request-generation-jobs",
       "webCallers": [
         "src/features/assessments/assessment-service.ts"
       ]

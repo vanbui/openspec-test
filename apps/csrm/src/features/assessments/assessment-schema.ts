@@ -147,6 +147,19 @@ export const questionnaireGenerationJobSchema = z.discriminatedUnion('status', [
 ]);
 export type QuestionnaireGenerationJob = z.infer<typeof questionnaireGenerationJobSchema>;
 
+/*
+ * D-25: a request's current generation jobs, read by any human analyst who may
+ * review the request. Each entry is the closed job the by-id reads already
+ * parse, plus whether this viewer may retry it (only its initiating analyst
+ * may); either is null when there is no such job in the server process.
+ */
+export const requestGenerationJobsSchema = z.object({
+  questionnaireGeneration: z.object({ job: questionnaireGenerationJobSchema, canRetry: z.boolean() }).strict().nullable(),
+  assessmentDraft: z.object({ job: assessmentDraftJobSchema, canRetry: z.boolean() }).strict().nullable(),
+}).strict();
+export const requestGenerationJobsResponseSchema = z.object({ data: requestGenerationJobsSchema }).strict();
+export type RequestGenerationJobs = z.infer<typeof requestGenerationJobsSchema>;
+
 export const assessmentSummarySchema = z.object({
   documentId: documentIdSchema,
   assessmentNumber: z.string().trim().min(1).max(255),

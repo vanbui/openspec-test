@@ -57,6 +57,7 @@
         "function.questionnaire.revert_to_draft_api",
         "function.questionnaire_generation.generate_api",
         "function.questionnaire_generation.job_read_api",
+        "function.questionnaire_generation.request_jobs_read_api",
         "function.questionnaire_generation.retry_api",
         "function.questionnaire_governance.release_api",
         "function.questionnaire_governance.return_to_review_api",
@@ -146,6 +147,22 @@
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.request_jobs_read_api",
+      "name": "Request Generation Jobs Read API",
+      "description": "Human analyst-only read of a request's current generation jobs. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_generation.request_jobs_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
       ]
     },
     {
@@ -2250,6 +2267,18 @@
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.questionnaire_generation.request_jobs_read_api.api.01",
+      "name": "Get Request Generation Jobs",
+      "description": "Returns a request's current questionnaire generation job and the assessment draft job for its questionnaire, each with whether the viewing analyst may retry it.",
+      "url": "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
+      "functionId": "function.questionnaire_generation.request_jobs_read_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
       ]
     },
     {

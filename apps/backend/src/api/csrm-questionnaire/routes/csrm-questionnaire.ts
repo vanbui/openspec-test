@@ -77,6 +77,13 @@ const config: Core.RouterConfig = {
       config: { policies: generationPolicies(CSRM_QUESTIONNAIRE_OPERATIONS.retryGenerationJob) },
     },
     {
+      // D-25: any human analyst reads a request's current generation jobs; the request must exist.
+      method: "GET",
+      path: "/v1/assessment_requests/:requestId/generation_jobs",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.getRequestGenerationJobs",
+      config: { policies: generationPolicies(CSRM_QUESTIONNAIRE_OPERATIONS.getRequestGenerationJobs, true) },
+    },
+    {
       method: "POST",
       path: "/v1/questionnaires/:questionnaireId/release",
       handler: "api::csrm-questionnaire.csrm-questionnaire.release",

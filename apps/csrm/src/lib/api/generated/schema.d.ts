@@ -1035,6 +1035,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/assessment_requests/{requestId}/generation_jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a request's current generation jobs for a human Security Analyst
+         * @description Returns the request's questionnaire generation job (the active one, else the most recent retained) and the assessment draft job for its questionnaire, each with whether the viewing analyst may retry it. Jobs are process-local, so after a restart both entries are null.
+         */
+        get: operations["questionnaire-generation/get-request-generation-jobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/questionnaire_generation_jobs/{jobId}": {
         parameters: {
             query?: never;
@@ -2926,6 +2946,23 @@ export interface components {
         };
         QuestionnaireGenerationJobResponse: {
             data: components["schemas"]["QuestionnaireGenerationJob"];
+        };
+        RequestQuestionnaireGenerationJob: {
+            job: components["schemas"]["QuestionnaireGenerationJob"];
+            /** @description Whether the viewing analyst may retry the job: only its initiating analyst may. */
+            canRetry: boolean;
+        };
+        RequestAssessmentDraftJob: {
+            job: components["schemas"]["AssessmentDraftJob"];
+            /** @description Whether the viewing analyst may retry the job: only its initiating analyst may. */
+            canRetry: boolean;
+        };
+        RequestGenerationJobs: {
+            questionnaireGeneration: components["schemas"]["RequestQuestionnaireGenerationJob"] | null;
+            assessmentDraft: components["schemas"]["RequestAssessmentDraftJob"] | null;
+        };
+        RequestGenerationJobsResponse: {
+            data: components["schemas"]["RequestGenerationJobs"];
         };
         QuestionnaireAssessmentRequestSummary: components["schemas"]["QuestionnaireAssessmentRequestAvailable"] | components["schemas"]["QuestionnaireAssessmentRequestAbsent"] | components["schemas"]["QuestionnaireAssessmentRequestUnavailable"];
         QuestionnaireAssessmentRequestAvailable: {
@@ -14264,6 +14301,31 @@ export interface operations {
             403: components["responses"]["QuestionnaireForbidden"];
             404: components["responses"]["QuestionnaireNotFound"];
             409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-generation/get-request-generation-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request's current generation jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestGenerationJobsResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
         };
     };
     "questionnaire-generation/get-questionnaire-generation-job": {

@@ -36,7 +36,7 @@ import {
   generateAssessment,
 } from "../../csrm-assessment/services/assessment-workflow";
 import { AssessmentDraftRegistryError } from "../../csrm-assessment/services/assessment-draft-registry";
-import { generateQuestionnaire, getQuestionnaireGenerationJob, QuestionnaireGenerationRegistryError, QuestionnaireGenerationWorkflowError, retryQuestionnaireGenerationJob } from "../services/questionnaire-generation-workflow";
+import { generateQuestionnaire, getQuestionnaireGenerationJob, getRequestGenerationJobs, QuestionnaireGenerationRegistryError, QuestionnaireGenerationWorkflowError, retryQuestionnaireGenerationJob } from "../services/questionnaire-generation-workflow";
 
 const UID = "api::csrm-questionnaire.csrm-questionnaire" as const;
 const QUESTION_UID = "api::csrm-question.csrm-question" as const;
@@ -354,6 +354,14 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
     },
     async getGenerationJob(ctx: RecordValue) {
       try { const jobId = routeId(ctx, "jobId"); const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null; if (!jobId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied."); return { data: await getQuestionnaireGenerationJob({ strapi: strapi as never, jobId, analystDocumentId: identity.documentId }) }; } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message, error instanceof QuestionnaireGenerationWorkflowError ? error.reason : undefined); throw error; }
+    },
+    async getRequestGenerationJobs(ctx: RecordValue) {
+      try {
+        const requestId = routeId(ctx, "requestId");
+        const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null;
+        if (!requestId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied.");
+        return { data: await getRequestGenerationJobs({ strapi: strapi as never, requestId, viewerDocumentId: identity.documentId }) };
+      } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message, error instanceof QuestionnaireGenerationWorkflowError ? error.reason : undefined); throw error; }
     },
     async retryGenerationJob(ctx: RecordValue) {
       try { const jobId = routeId(ctx, "jobId"); const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null; const request = isRecord(ctx.request) ? ctx.request : {}; if (!jobId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied."); if (request.body !== undefined && (!isRecord(request.body) || Object.keys(request.body).length > 0)) return safeError(ctx, 400, "Questionnaire generation data is invalid."); ctx.status = 202; return { data: await retryQuestionnaireGenerationJob({ strapi: strapi as never, jobId, analystDocumentId: identity.documentId }) }; } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message, error instanceof QuestionnaireGenerationWorkflowError ? error.reason : undefined); throw error; }

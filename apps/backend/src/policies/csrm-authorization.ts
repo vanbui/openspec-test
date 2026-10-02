@@ -17,8 +17,9 @@ const ANALYST_INSIGHT_OPERATIONS: ReadonlySet<string> = new Set(Object.values(CS
 
 /*
  * Operations no automation identity may reach, whatever the catalogue says: the
- * assessment release, the five questionnaire governance operations and the five
- * analyst insight operations. An identity holding an analyst-shaped role name is
+ * assessment release, the five questionnaire governance operations, the read of a
+ * request's current generation jobs and the five analyst insight operations. An
+ * identity holding an analyst-shaped role name is
  * denied each of them unless the grant comes from the human Security Analyst role.
  *
  * For the assessment release this set is the refusal itself. Its FunctionAPI
@@ -29,12 +30,14 @@ const ANALYST_INSIGHT_OPERATIONS: ReadonlySet<string> = new Set(Object.values(CS
  * keeps AI-assisted automation from becoming a releasing authority (the
  * authorization matrix's release row refuses the seeded agent).
  *
- * The catalogue grants the other ten to `role.security_analyst` only, so for them
+ * The catalogue grants the other eleven to `role.security_analyst` only, so for them
  * the set is a second, independent refusal: a later catalogue edit that
  * accidentally widened one of those Functions still could not reach automation.
  * The five questionnaire governance URLs are listed as literals so the guard is in
- * place from the moment each handler is mounted. The analyst insight operations
- * (D-07) summarise workload across every record in the analyst's scope, so they
+ * place from the moment each handler is mounted. The read of a request's current
+ * generation jobs (Phase 10 D-25) is listed the same way: every human analyst
+ * may see what is generating on a request, and no automation identity may. The
+ * analyst insight operations (D-07) summarise workload across every record in the analyst's scope, so they
  * are human analyst work only, and the guard is in place before any insight
  * handler is mounted.
  */
@@ -45,6 +48,7 @@ export const HUMAN_ANALYST_ONLY_OPERATIONS: ReadonlySet<string> = new Set([
   "POST:/api/v1/questionnaires/{questionnaireId}/questions",
   "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
   "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+  "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
   ...ANALYST_INSIGHT_OPERATIONS,
 ]);
 

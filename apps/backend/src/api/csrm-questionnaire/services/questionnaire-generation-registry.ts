@@ -30,5 +30,25 @@ export function createQuestionnaireGenerationRegistry(options: Options) {
   const hasActiveJob = (requestId: string): boolean => activeByRequest.has(requestId);
   /** A sorted copy of the request ids with a queued or running job. */
   const activeRequestIds = (): readonly string[] => [...activeByRequest.keys()].sort();
-  return { enqueue, get, retry, cleanup, hasActiveJob, activeRequestIds };
+  /*
+   * D-25: the request's current job for any analyst who may review it — the
+   * active job, else the retained terminal job queued last (a tie keeps the job
+   * registered last). Whether the viewer may retry it is the only actor fact
+   * returned; the by-id `get` and `retry` keep their initiator-only `authorize`
+   * (D-27), and this read neither authorises nor touches `lastAccess`, so a
+   * status poll never keeps a job retained.
+   */
+  const latestForRequest = (requestId: string, viewerDocumentId: string): { job: QuestionnaireGenerationJobRecord; canRetry: boolean } | null => {
+    cleanup();
+    if (!nonBlank(requestId) || !nonBlank(viewerDocumentId)) return null;
+    const activeJobId = activeByRequest.get(requestId);
+    let selected = activeJobId ? jobs.get(activeJobId) : undefined;
+    if (!selected) {
+      for (const job of jobs.values()) {
+        if (job.requestId === requestId && terminal(job.status) && (!selected || job.queuedAt >= selected.queuedAt)) selected = job;
+      }
+    }
+    return selected ? { job: publicJob(selected), canRetry: viewerDocumentId === selected.initiatingAnalystDocumentId } : null;
+  };
+  return { enqueue, get, retry, cleanup, hasActiveJob, activeRequestIds, latestForRequest };
 }

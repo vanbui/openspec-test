@@ -15,4 +15,5 @@ export const CSRM_QUESTIONNAIRE_OPERATIONS = {
   generate: "POST:/api/v1/assessment_requests/{requestId}/generate_questionnaire",
   getGenerationJob: "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
   retryGenerationJob: "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
+  getRequestGenerationJobs: "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
 } as const;
