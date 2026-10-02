@@ -51,7 +51,8 @@ export type ControlImplementationEditorProps = {
   options: ControlImplementationEditorOptions;
   riskId: string;
   onCreated?: (implementation: ControlImplementation) => void;
-  onUpdated?: () => void;
+  /** Hands the page the record Strapi saved, so the page and this form both hold the latest saved values (CR-201). */
+  onUpdated?: (implementation: ControlImplementation) => void;
   onRemoved?: (implementationId: string) => void;
   /** Moves focus to the Control input when the form opens (UI-SPEC §13.1). */
   focusControlOnOpen?: boolean;
@@ -108,7 +109,18 @@ export function ControlImplementationEditor({ addedAt, assessmentId, focusContro
   const controlInput = useRef<HTMLInputElement>(null);
   const controlErrorId = useId();
   const ownerErrorId = useId();
-  const initial = initialValues(implementation);
+  /*
+   * The record last saved is what the next save compares with (CR-201): Strapi's answer to each save replaces
+   * it, and a newer record from the page does too. The page-load record never stays the baseline, so a field
+   * set back to its page-load value after a save is a change and is sent.
+   */
+  const [savedImplementation, setSavedImplementation] = useState(implementation);
+  const [pageImplementation, setPageImplementation] = useState(implementation);
+  if (implementation !== pageImplementation) {
+    setPageImplementation(implementation);
+    setSavedImplementation(implementation);
+  }
+  const initial = initialValues(savedImplementation);
   const form = useForm<ControlImplementationUpdateInput>({ defaultValues: initial });
   const confirmation = useRecordSaveStatus(form.watch, addedAt);
 
@@ -153,8 +165,9 @@ export function ControlImplementationEditor({ addedAt, assessmentId, focusContro
     // Confirmed only after an ok result, so a save that did not persist never reads as saved (T-10-54).
     if (mode === 'create') onCreated?.(result.data);
     else {
+      setSavedImplementation(result.data);
       confirmation.saved();
-      onUpdated?.();
+      onUpdated?.(result.data);
     }
   }
 

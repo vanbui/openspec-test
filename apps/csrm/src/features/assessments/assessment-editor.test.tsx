@@ -886,7 +886,9 @@ describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 a
     await userEvent.click(save);
     await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent('Risk saved at'));
 
+    // A real change: the saved comment is now the baseline, so an unchanged save would send nothing (CR-201).
     actionMocks.updateRiskAction.mockResolvedValueOnce({ ok: false, formError: 'The assessment service is unavailable. Please try again later.' });
+    await userEvent.type(screen.getByLabelText('Comments'), ' Again.');
     await userEvent.click(save);
     expect(await screen.findByText('Risk not saved')).toBeInTheDocument();
     expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();

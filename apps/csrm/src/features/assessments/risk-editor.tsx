@@ -157,7 +157,18 @@ function normalizeEmptyValues(values: RiskUpdateInput): RiskUpdateInput {
 
 export function RiskEditor({ addedAt, assessmentId, mode, onCreated, onRelationChosen, onUpdated, options, risk, searchOwners }: RiskEditorProps) {
   const [formError, setFormError] = useState<string | null>(null);
-  const initial = selectedValues(risk);
+  /*
+   * The Risk as last saved is what the next save compares with (CR-201): each accepted save updates it from
+   * what was sent and what Strapi answered, and a newer Risk from the page replaces it. The page-load Risk never
+   * stays the baseline, so a field set back to its page-load value after a save is a change and is sent.
+   */
+  const [savedRisk, setSavedRisk] = useState(risk);
+  const [pageRisk, setPageRisk] = useState(risk);
+  if (risk !== pageRisk) {
+    setPageRisk(risk);
+    setSavedRisk(risk);
+  }
+  const initial = selectedValues(savedRisk);
   const form = useForm<RiskUpdateInput>({ defaultValues: initial });
   const { clearErrors, formState, handleSubmit, register, setError, setValue, watch } = form;
   const confirmation = useRecordSaveStatus(watch, addedAt);
@@ -211,8 +222,12 @@ export function RiskEditor({ addedAt, assessmentId, mode, onCreated, onRelationC
     // Confirmed only after an ok result, so a save that did not persist never reads as saved (T-10-54).
     if (mode === 'create') onCreated?.({ ...normalized, ...result.data } as EditableRisk);
     else {
+      // Strapi answers with the Risk summary (riskSchema); the fields it does not serve hold what was just saved.
+      const { riskNumber, riskStatement, inherentRating, residualRating } = result.data;
+      const saved = { ...savedRisk, ...submitted, riskNumber, riskStatement, inherentRating, residualRating } as EditableRisk;
+      setSavedRisk(saved);
       confirmation.saved();
-      onUpdated?.({ ...risk, ...submitted, ...result.data } as EditableRisk);
+      onUpdated?.(saved);
     }
   }
 

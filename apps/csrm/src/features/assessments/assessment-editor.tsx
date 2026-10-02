@@ -22,6 +22,7 @@ import { refreshAnalystAssessmentAction, releaseAssessmentAction, saveAssessment
 import {
   type ActiveUser,
   type AnalystAssessmentDetail,
+  type AssessmentDetail,
   type AssessmentRiskListItem,
   type AssessmentUpdateInput,
   type ControlImplementation,
@@ -191,11 +192,42 @@ export function AssessmentEditor({
   const canOfferRelease = mutable && currentAssessment.assessmentStatus === 'in-review';
   const assessmentId = currentAssessment.documentId;
 
+  /*
+   * After every accepted change the server's answer is applied first, then the assessment is read again for the
+   * release facts that change derives (CR-201). A failed read keeps what the answers already applied, so no form
+   * compares with page-load values and no new Risk is hidden.
+   */
   async function refreshAssessment(): Promise<void> {
     const result = await refreshAnalystAssessmentAction({ assessmentId });
     if (!result.ok) return;
     setCurrentAssessment(result.data);
     setRisks(result.data.risks);
+  }
+
+  function applySavedAssessment(saved: AssessmentDetail) {
+    setCurrentAssessment((current) => (current ? { ...current, ...saved } : current));
+    void refreshAssessment();
+  }
+
+  function applySavedRisk(saved: AnalystRisk) {
+    setRisks((current) => current.map((item) => (item.documentId === saved.documentId ? saved : item)));
+    void refreshAssessment();
+  }
+
+  function applyCreatedRisk(created: AnalystRisk) {
+    setRisks((current) => (current.some((item) => item.documentId === created.documentId) ? current : [...current, created]));
+    markAdded(created.documentId);
+    setAddingRisk(false);
+    setPendingFocus({ kind: 'add-risk' });
+    void refreshAssessment();
+  }
+
+  function applySavedImplementation(riskId: string, saved: ControlImplementation) {
+    setImplementations((current) => ({
+      ...current,
+      [riskId]: (current[riskId] ?? []).map((item) => (item.documentId === saved.documentId ? saved : item)),
+    }));
+    void refreshAssessment();
   }
 
   async function release() {
@@ -251,7 +283,7 @@ export function AssessmentEditor({
         : null}
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <AssessmentMetadata assessment={currentAssessment} mutable={mutable} onUpdated={refreshAssessment} />
+        <AssessmentMetadata assessment={currentAssessment} mutable={mutable} onUpdated={applySavedAssessment} />
         <Card>
           <CardHeader>
             <h2 className="text-heading-sm">Release readiness</h2>
@@ -286,7 +318,7 @@ export function AssessmentEditor({
               <CardContent className="grid min-w-0 gap-6">
                 {mutable ? (
                   <>
-                    <RiskEditor addedAt={addedAt[risk.documentId]} assessmentId={currentAssessment.documentId} mode="edit" onRelationChosen={rememberRelation} onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} />
+                    <RiskEditor addedAt={addedAt[risk.documentId]} assessmentId={currentAssessment.documentId} mode="edit" onRelationChosen={rememberRelation} onUpdated={applySavedRisk} options={options} risk={risk} searchOwners={searchOwners} />
                     <section aria-label={`Mitigation controls for ${risk.riskNumber}`} className="grid gap-4">
                       <h3 className="text-heading-sm">Mitigation controls</h3>
                       {(implementations[risk.documentId] ?? []).map((implementation) => (
@@ -296,7 +328,7 @@ export function AssessmentEditor({
                           implementation={implementation}
                           key={implementation.documentId}
                           mode="edit"
-                          onUpdated={() => { void refreshAssessment(); }}
+                          onUpdated={(saved) => applySavedImplementation(risk.documentId, saved)}
                           onRemoved={(implementationId) => { setImplementations((current) => ({ ...current, [risk.documentId]: (current[risk.documentId] ?? []).filter((item) => item.documentId !== implementationId) })); void refreshAssessment(); }}
                           options={controlOptionsFor(risk)}
                           riskId={risk.documentId}
@@ -336,7 +368,7 @@ export function AssessmentEditor({
               </CardContent>
             </Card>
           ))}
-          {mutable && addingRisk ? <Card><CardHeader><CardTitle>Add Risk</CardTitle></CardHeader><CardContent><RiskEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={(created) => { markAdded(created.documentId); setAddingRisk(false); setPendingFocus({ kind: 'add-risk' }); void refreshAssessment(); }} onRelationChosen={rememberRelation} options={options} searchOwners={searchOwners} /></CardContent></Card> : null}
+          {mutable && addingRisk ? <Card><CardHeader><CardTitle>Add Risk</CardTitle></CardHeader><CardContent><RiskEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={applyCreatedRisk} onRelationChosen={rememberRelation} options={options} searchOwners={searchOwners} /></CardContent></Card> : null}
           {mutable && !addingRisk ? <Button className="justify-self-start" onClick={() => setAddingRisk(true)} ref={addRiskButton} type="button"><PlusIcon aria-hidden="true" />Add Risk</Button> : null}
         </div>
       </DetailSection>
@@ -439,7 +471,7 @@ function ReleaseReadinessRequirements({ summary }: { summary: ReleaseReadinessSu
   );
 }
 
-function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: AnalystAssessmentDetail; mutable: boolean; onUpdated: () => void }) {
+function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: AnalystAssessmentDetail; mutable: boolean; onUpdated: (saved: AssessmentDetail) => void }) {
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<AssessmentUpdateInput>({ defaultValues: assessmentDetailsFormValues(assessment) });
   const confirmation = useRecordSaveStatus(form.watch);
@@ -464,7 +496,7 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
     }
     // Confirmed only after an ok result, so a save that did not persist never reads as saved (T-10-54).
     confirmation.saved();
-    onUpdated();
+    onUpdated(result.data);
   }
 
   if (!mutable) {
