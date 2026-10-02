@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-18-PLAN.md
-last_updated: "2026-10-02T11:33:49.697Z"
+stopped_at: Completed 10-19-PLAN.md
+last_updated: "2026-10-02T12:01:29.040Z"
 last_activity: 2026-10-02
-last_activity_desc: "Plan 10-18 complete (the assessment editor's mitigation control is a searchable record picker: the Risk Type's applicable controls first, then the whole library on the server ten at a time; the picker Risk Type list carries bounded applicable-control summaries; the review page no longer loads the control library; UAT-006 control part, UAT-054 control copy)"
-state_head: 97da6291db221ec8b2917168d236aa747a61212f
+last_activity_desc: "Plan 10-19 complete (the system, asset and control fields in both editors are record pickers that search the whole inventory or library on the server; the request's systems and assets come first under On this request; the Risk Register reads the Risk's assessment then its request and degrades to search only; neither page loads an option list; UAT-010, UAT-006 Risk Register part, UAT-054 mitigation copy)"
+state_head: fff7ccfdb46813dee5cd486d51d6cf6e4ada3880
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 18
+  completed_plans: 19
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 19 of 23
+Plan: 20 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-18 complete: RelationPicker (zod-free, shadcn Input and Popover; suggested group, debounced paged server search, full-page, no-match and Retry search states) replaces the native Reusable control select; RiskTypeSummary.applicableControls (RiskTypeApplicableControl, 1-255, max 1,000) from Strapi through the spec and both closed parsers; searchControlsAction reads one Administration control page of 10; Choose a control.; the remove dialog keeps the control in the library; E11 and E12 pick APP-11 by typing and read it back by label with no id; the accessibility sweep's Control heading follows the label rule (10-17 drift); web 2,677/2,677, Strapi 608/608 (933 s), release journey and accessibility audit 12/12 on the second run, typecheck, lint and api:check clean
+Last activity: 2026-10-02 — Plan 10-19 complete: Information system impacted, Information asset impacted and the Risk Register's Control are RelationPicker fields in both editors; the request's selections come first (On this request), the Risk Type's applicable controls first in the Control picker; a chosen record is named from the request, the served Risk list or relation, or a search, else Name not available; the Risk Register mitigation card reads the control label from the response summary with the UI-SPEC 13.5 copy; ASSESS06_SYSTEM_PAST_FIRST_PAGE imports 26 systems and finds the 26th by typing; web 2,694/2,694, Risk Register journey desktop and mobile and release journey 3/3, typecheck clean
 
 ## Milestone
 
@@ -135,6 +135,9 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-17: CSV messages name the matching column through keyLabel (Control number for Controls, else Name) in the web parser and Strapi's csv-import.ts alike; the APP titles and Risk Type descriptions reach the development database on the next seeded Strapi start (the control seed rewrites earlier-seeded rows, proven on a truncated APP-11).
 - [Phase 10]: 10-18: RelationPicker (components/csrm/relation-picker.tsx, zod-free, shadcn Input and Popover) is the single-record picker for 10-19 and 10-20: a suggested group first, a debounced server search paged by pageSize with a stale-response guard, options named by aria-label and described by their second line, ArrowDown or Alt+ArrowDown or a pointer press opens it (never Tab), Enter never submits, Selected {noun}: {label} with Clear {label}. The assessment editor's Control field uses it with applicableControlGroup (assessment-domain.ts) and searchControlsAction (one Administration control page of 10, labelled by controlPickerItem); the review page no longer loads the control library.
 - [Phase 10]: 10-18: the picker Risk Type list (GET /v1/risk_types with no query) serves RiskTypeSummary.applicableControls, each a RiskTypeApplicableControl of documentId, controlNumber, name and framework within 1-255 (a control outside the bounds is left out, never partial), sorted by control number and capped at 1,000; both closed picker parsers mirror it. chooseRelationMessage replaces selectRelationMessage (Choose a control.). The accessibility sweep now heads a Control record by its control label, repairing an expectation 10-17's title change left behind.
+- [Phase 10]: 10-19: the review page reads the served Risk list for every assessment and the originating request only while it can change; the Risk Register reads the Risk's assessment then its request for a mutable Risk and degrades to search only on any failure
+- [Phase 10]: 10-19: a saved Risk Register mitigation card takes its control from the response's controlSummary, else the current control only while the choice is unchanged; otherwise the form reads the UI-SPEC 13.5 unavailable message
+- [Phase 10]: 10-19: a record chosen by search joins the assessment editor's label map (onRelationChosen), so a remounted editor keeps its name; an unknown id reads Name not available, never the id
 
 ## Risks and Open Decisions
 
@@ -215,11 +218,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P16 | 37 min | 2 tasks | 10 files |
 | Phase 10 P17 | 36 min | 3 tasks | 18 files |
 | Phase 10 P18 | 47 min | 3 tasks | 24 files |
+| Phase 10 P19 | 24 min | 3 tasks | 13 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T11:33:38.956Z
-**Stopped At:** Completed 10-18-PLAN.md
+**Last session:** 2026-10-02T12:01:15.434Z
+**Stopped At:** Completed 10-19-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
