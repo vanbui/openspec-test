@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { ConflictReason } from '@/lib/api/conflict-reasons';
+import { refusalMessage, requestConflictMessage } from '@/lib/api/refusal-copy';
 import {
   requestDraftSchema,
   requestSubmitSchema,
@@ -14,13 +16,24 @@ import { searchInformationAssets, searchInformationSystems } from './request-ser
 
 export type RequestActionResult =
   | { ok: true; data: RequestMutationResult }
-  | { ok: false; fieldErrors?: Record<string, string[] | undefined>; formError?: string };
+  | {
+      ok: false;
+      fieldErrors?: Record<string, string[] | undefined>;
+      formError?: string;
+      /** The closed-list rule a refused workflow action named; never Strapi's message (T-10-17). */
+      reason?: ConflictReason;
+    };
 
 function validationFailure(error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } }): RequestActionResult {
   return { ok: false, fieldErrors: error.flatten().fieldErrors };
 }
 
-function serviceFailure(status?: number): RequestActionResult {
+/**
+ * A request conflict (409) reads its family's sentence for a revert (UI-SPEC §10.2 A) and the §10.3 sentence
+ * for a create, edit or submit, which also saves the request's fields. Other statuses keep their messages.
+ */
+function serviceFailure(error: { status?: number; reason?: ConflictReason }, operation: 'save' | 'revert' = 'save'): RequestActionResult {
+  const { status, reason } = error;
   if (status === 400) {
     return { ok: false, formError: 'The request could not be saved. Check the fields and try again.' };
   }
@@ -31,7 +44,8 @@ function serviceFailure(status?: number): RequestActionResult {
     return { ok: false, formError: 'This request is no longer available.' };
   }
   if (status === 409) {
-    return { ok: false, formError: 'This request changed while you were editing it. Reload and try again.' };
+    if (operation === 'save') return { ok: false, formError: requestConflictMessage };
+    return { ok: false, formError: refusalMessage('requestRevert', reason), ...(reason ? { reason } : {}) };
   }
   return { ok: false, formError: 'The request service is unavailable. Please try again later.' };
 }
@@ -78,7 +92,7 @@ export async function revertRequestToDraftAction(input: unknown): Promise<Reques
   const parsed = requestRevertSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error);
   const result = await revertRequestToDraft(parsed.data.documentId, parsed.data.reason);
-  if (result.error !== null) return serviceFailure(result.error.status);
+  if (result.error !== null) return serviceFailure(result.error, 'revert');
   revalidateReversalPages(result.data.documentId);
   return { ok: true, data: result.data };
 }
@@ -88,7 +102,7 @@ export async function createRequestAction(input: unknown): Promise<RequestAction
   if (!parsed.success) return validationFailure(parsed.error);
 
   const result = await createRequest(parsed.data);
-  if (result.error !== null) return serviceFailure(result.error.status);
+  if (result.error !== null) return serviceFailure(result.error);
 
   revalidateRequestPages();
   redirect(`/app/requests/${result.data.documentId}`);
@@ -100,7 +114,7 @@ export async function updateRequestAction(input: unknown): Promise<RequestAction
 
   const { documentId, ...fields } = parsed.data;
   const result = await updateRequest(documentId, fields);
-  if (result.error !== null) return serviceFailure(result.error.status);
+  if (result.error !== null) return serviceFailure(result.error);
 
   revalidateRequestPages(result.data.documentId);
   redirect(`/app/requests/${result.data.documentId}`);
@@ -112,7 +126,7 @@ export async function submitRequestAction(input: unknown): Promise<RequestAction
 
   const { documentId, ...fields } = parsed.data;
   const result = await submitRequest(documentId, fields);
-  if (result.error !== null) return serviceFailure(result.error.status);
+  if (result.error !== null) return serviceFailure(result.error);
 
   revalidateRequestPages(result.data.documentId);
   return { ok: true, data: result.data };
