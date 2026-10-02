@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
 
+import { conflictDetails, type ConflictReason } from "../../../csrm/conflict-reasons";
 import {
   buildQuestionnaireCollectionQuery,
   governanceActorIds,
@@ -100,7 +101,8 @@ function projectMutation(result: RecordValue): RecordValue {
   };
 }
 
-function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string): unknown {
+/** A safe error response; a conflict also names the rule that refused it when one is known (D-22). */
+function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string, reason?: ConflictReason): unknown {
   const responder = status === 400
     ? ctx.badRequest
     : status === 403
@@ -108,9 +110,10 @@ function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: str
       : status === 404
         ? ctx.notFound
         : ctx.conflict;
-  if (typeof responder === "function") return responder.call(ctx, message);
+  const details = status === 409 ? conflictDetails(reason) : undefined;
+  if (typeof responder === "function") return responder.call(ctx, message, details);
   ctx.status = status;
-  return { data: null, error: { status, message } };
+  return { data: null, error: { status, message, ...(details ? { details } : {}) } };
 }
 
 function questionnaireId(ctx: RecordValue): string | null {
@@ -203,7 +206,7 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
       });
       return { data: projectMutation(result) };
     } catch (error) {
-      if (error instanceof QuestionnaireWorkflowError) return safeError(ctx, error.status, error.message);
+      if (error instanceof QuestionnaireWorkflowError) return safeError(ctx, error.status, error.message, error.reason);
       if (error instanceof QuestionnaireQueryError) return safeError(ctx, 403, "CSRM questionnaire mutation is denied.");
       throw error;
     }
@@ -240,7 +243,7 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
         });
         return { data: projectQuestionnaire(released) };
       } catch (error) {
-        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message);
+        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message, error.reason);
         if (error instanceof QuestionnaireQueryError) return safeError(ctx, 403, "CSRM questionnaire governance is denied.");
         throw error;
       }
@@ -263,7 +266,7 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
         });
         return { data: returned };
       } catch (error) {
-        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message);
+        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message, error.reason);
         if (error instanceof QuestionnaireQueryError) return safeError(ctx, 403, "CSRM questionnaire governance is denied.");
         throw error;
       }
@@ -276,7 +279,7 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
         const request = isRecord(ctx.request) ? ctx.request : {};
         return { data: await addQuestionnaireQuestion({ strapi: strapi as never, questionnaireDocumentId: documentId, actor: questionnaireActor(ctx.state), actorDocumentId: identity.documentId, body: request.body }) };
       } catch (error) {
-        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message);
+        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message, error.reason);
         if (error instanceof QuestionnaireQueryError) return safeError(ctx, 403, "CSRM questionnaire governance is denied.");
         throw error;
       }
@@ -289,7 +292,7 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
         const request = isRecord(ctx.request) ? ctx.request : {};
         return { data: await editQuestionnaireQuestion({ strapi: strapi as never, questionnaireDocumentId: documentId, questionDocumentId: questionId, actor: questionnaireActor(ctx.state), actorDocumentId: identity.documentId, body: request.body }) };
       } catch (error) {
-        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message);
+        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message, error.reason);
         if (error instanceof QuestionnaireQueryError) return safeError(ctx, 403, "CSRM questionnaire governance is denied.");
         throw error;
       }
@@ -303,7 +306,7 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
         if (request.body !== undefined && (!isRecord(request.body) || Object.keys(request.body).length > 0)) return safeError(ctx, 400, "CSRM questionnaire question deletion data is invalid.");
         return { data: await deleteQuestionnaireQuestion({ strapi: strapi as never, questionnaireDocumentId: documentId, questionDocumentId: questionId, actor: questionnaireActor(ctx.state), actorDocumentId: identity.documentId, body: request.body }) };
       } catch (error) {
-        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message);
+        if (error instanceof QuestionnaireGovernanceError) return safeError(ctx, error.status, error.message, error.reason);
         if (error instanceof QuestionnaireQueryError) return safeError(ctx, 403, "CSRM questionnaire governance is denied.");
         throw error;
       }
@@ -346,13 +349,13 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
         if (request.body !== undefined && (!isRecord(request.body) || Object.keys(request.body).some((key) => key !== "replaceUnansweredQuestionnaire") || ("replaceUnansweredQuestionnaire" in request.body && typeof request.body.replaceUnansweredQuestionnaire !== "boolean"))) return safeError(ctx, 400, "Questionnaire generation data is invalid.");
         ctx.status = 202;
         return { data: await generateQuestionnaire({ strapi: strapi as never, requestId, analystDocumentId: identity.documentId, replaceUnansweredQuestionnaire: isRecord(request.body) && request.body.replaceUnansweredQuestionnaire === true }) };
-      } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message); throw error; }
+      } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message, error instanceof QuestionnaireGenerationWorkflowError ? error.reason : undefined); throw error; }
     },
     async getGenerationJob(ctx: RecordValue) {
-      try { const jobId = routeId(ctx, "jobId"); const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null; if (!jobId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied."); return { data: await getQuestionnaireGenerationJob({ strapi: strapi as never, jobId, analystDocumentId: identity.documentId }) }; } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message); throw error; }
+      try { const jobId = routeId(ctx, "jobId"); const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null; if (!jobId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied."); return { data: await getQuestionnaireGenerationJob({ strapi: strapi as never, jobId, analystDocumentId: identity.documentId }) }; } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message, error instanceof QuestionnaireGenerationWorkflowError ? error.reason : undefined); throw error; }
     },
     async retryGenerationJob(ctx: RecordValue) {
-      try { const jobId = routeId(ctx, "jobId"); const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null; const request = isRecord(ctx.request) ? ctx.request : {}; if (!jobId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied."); if (request.body !== undefined && (!isRecord(request.body) || Object.keys(request.body).length > 0)) return safeError(ctx, 400, "Questionnaire generation data is invalid."); ctx.status = 202; return { data: await retryQuestionnaireGenerationJob({ strapi: strapi as never, jobId, analystDocumentId: identity.documentId }) }; } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message); throw error; }
+      try { const jobId = routeId(ctx, "jobId"); const identity = isRecord(ctx.state) && isRecord(ctx.state.idamboxUser) ? ctx.state.idamboxUser : null; const request = isRecord(ctx.request) ? ctx.request : {}; if (!jobId || !identity || typeof identity.documentId !== "string") return safeError(ctx, 403, "Questionnaire generation job access is denied."); if (request.body !== undefined && (!isRecord(request.body) || Object.keys(request.body).length > 0)) return safeError(ctx, 400, "Questionnaire generation data is invalid."); ctx.status = 202; return { data: await retryQuestionnaireGenerationJob({ strapi: strapi as never, jobId, analystDocumentId: identity.documentId }) }; } catch (error) { if (error instanceof QuestionnaireGenerationWorkflowError || error instanceof QuestionnaireGenerationRegistryError) return safeError(ctx, error.status, error.message, error instanceof QuestionnaireGenerationWorkflowError ? error.reason : undefined); throw error; }
     },
     async findWorkflowOne(ctx: RecordValue) {
       const request: RecordValue = isRecord(ctx.request) ? ctx.request : {};

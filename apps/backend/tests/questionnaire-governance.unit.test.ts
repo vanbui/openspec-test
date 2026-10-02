@@ -315,16 +315,19 @@ test("the analyst-review gate accepts only the editable questionnaire stage", ()
       { requestStatus },
     ), `ANALYST_REVIEW_GATE_REJECTED_${requestStatus}`);
   }
-  const refusingCases: Array<[string, Record<string, unknown>, Record<string, unknown>]> = [
-    ["RELEASED", { releasedAt: AT }, { requestStatus: "questionnaire-in-progress" }],
-    ...["risk-assessment-drafted", "under-review", "approved", "closed", "draft"].map((requestStatus) =>
-      [`STATUS_${requestStatus}`, { releasedAt: null }, { requestStatus }] as [string, Record<string, unknown>, Record<string, unknown>]),
-    ["ASSESSMENT", { releasedAt: null }, { requestStatus: "questionnaire-in-progress", assessment: { documentId: "assessment-1" } }],
+  // Each refusal names the one rule behind it (D-22): a release, work on the assessment, or a stage
+  // the questionnaire cannot be governed at.
+  const refusingCases: Array<[string, Record<string, unknown>, Record<string, unknown>, string]> = [
+    ["RELEASED", { releasedAt: AT }, { requestStatus: "questionnaire-in-progress" }, "QUESTIONNAIRE_RELEASED"],
+    ...["risk-assessment-drafted", "under-review", "approved", "closed"].map((requestStatus) =>
+      [`STATUS_${requestStatus}`, { releasedAt: null }, { requestStatus }, "ASSESSMENT_STARTED"] as [string, Record<string, unknown>, Record<string, unknown>, string]),
+    ["STATUS_draft", { releasedAt: null }, { requestStatus: "draft" }, "REQUEST_NOT_ELIGIBLE"],
+    ["ASSESSMENT", { releasedAt: null }, { requestStatus: "questionnaire-in-progress", assessment: { documentId: "assessment-1" } }, "ASSESSMENT_STARTED"],
   ];
-  for (const [diagnostic, questionnaireValue, requestValue] of refusingCases) {
+  for (const [diagnostic, questionnaireValue, requestValue, reason] of refusingCases) {
     assert.throws(
       () => assertQuestionnaireInAnalystReview(questionnaireValue, requestValue),
-      (error: unknown) => error instanceof QuestionnaireGovernanceError && error.status === 409,
+      (error: unknown) => error instanceof QuestionnaireGovernanceError && error.status === 409 && error.reason === reason,
       `ANALYST_REVIEW_GATE_ACCEPTED_${diagnostic}`,
     );
   }

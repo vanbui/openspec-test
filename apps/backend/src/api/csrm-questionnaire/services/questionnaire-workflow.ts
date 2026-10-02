@@ -7,6 +7,7 @@ import {
   type QuestionnaireDefinitionQuestion,
   type QuestionnaireValue,
 } from "./questionnaire-definition";
+import type { ConflictReason } from "../../../csrm/conflict-reasons";
 import { parseRevertReason } from "../../csrm-assessment-request/services/revert-reason";
 
 type RecordValue = Record<string, unknown>;
@@ -19,8 +20,14 @@ export type AnswerEnvelope = {
 };
 type AnswerUpdate = { questionKey: string; value: QuestionnaireValue };
 
+/**
+ * The request stages that follow the questionnaire: the assessment draft moves the request to
+ * `risk-assessment-drafted`, so from there on the questionnaire is evidence for an assessment.
+ */
+export const ASSESSMENT_STAGE_REQUEST_STATUSES = Object.freeze(["risk-assessment-drafted", "under-review", "approved", "closed"] as const);
+
 export class QuestionnaireWorkflowError extends Error {
-  constructor(public readonly status: 400 | 403 | 404 | 409, message: string) {
+  constructor(public readonly status: 400 | 403 | 404 | 409, message: string, public readonly reason?: ConflictReason) {
     super(message);
     this.name = "QuestionnaireWorkflowError";
   }
@@ -99,12 +106,12 @@ export function normalizeDraftAnswers(
 export function nextRequestStatusAfterDraft(status: string): string {
   if (status === "submitted") return "questionnaire-in-progress";
   if (status === "questionnaire-in-progress") return status;
-  throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not answerable.");
+  throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not answerable.", "QUESTIONNAIRE_NOT_ANSWERABLE");
 }
 
 export function assertMutableAnswerBatch(answers: Record<string, unknown>): void {
   if (Object.values(answers).some((answer) => isRecord(answer) && answer.state === "submitted")) {
-    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire has already been submitted.");
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire has already been submitted.", "QUESTIONNAIRE_ALREADY_SUBMITTED");
   }
 }
 
@@ -119,7 +126,7 @@ export function buildSubmittedAnswerBatch(
 ): Record<string, AnswerEnvelope> {
   assertMutableAnswerBatch(answers);
   if (activeQuestionnaireDefinition(definition).length === 0) {
-    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire has no active questions.");
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire has no active questions.", "QUESTIONNAIRE_HAS_NO_QUESTIONS");
   }
   const values = currentValues(answers);
   const visible = new Set(getVisibleQuestionKeys(definition, values));
@@ -128,7 +135,7 @@ export function buildSubmittedAnswerBatch(
     const value = values[question.questionKey] ?? null;
     if (!isQuestionnaireValueValid(question, value)
       || (question.required && (!hasValue(value) || question.answerType === "File upload"))) {
-      throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is incomplete.");
+      throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is incomplete.", "QUESTIONNAIRE_INCOMPLETE");
     }
   }
   const timestamp = now.toISOString();
@@ -248,7 +255,7 @@ async function loadWorkflow(input: WorkflowInput): Promise<{
   if (!questionnaire) throw new QuestionnaireWorkflowError(404, "CSRM questionnaire was not found.");
   const request = isRecord(questionnaire.assessmentRequest) ? questionnaire.assessmentRequest : null;
   if (!request || typeof request.documentId !== "string" || typeof request.requestStatus !== "string") {
-    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not answerable.");
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not answerable.", "QUESTIONNAIRE_NOT_ANSWERABLE");
   }
   try {
     return {
@@ -275,8 +282,14 @@ async function loadReversalWorkflow(input: WorkflowInput): Promise<{
   });
   if (!questionnaire) throw new QuestionnaireWorkflowError(404, "CSRM questionnaire was not found.");
   const request = isRecord(questionnaire.assessmentRequest) ? questionnaire.assessmentRequest : null;
-  if (!request || typeof request.documentId !== "string" || request.requestStatus !== "questionnaire-in-progress" || request.assessment) {
-    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire cannot be reverted to draft.");
+  if (!request || typeof request.documentId !== "string") {
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire cannot be reverted to draft.", "REQUEST_NOT_ELIGIBLE");
+  }
+  if (request.assessment || ASSESSMENT_STAGE_REQUEST_STATUSES.includes(request.requestStatus as never)) {
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire cannot be reverted to draft.", "ASSESSMENT_STARTED");
+  }
+  if (request.requestStatus !== "questionnaire-in-progress") {
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire cannot be reverted to draft.", "REQUEST_NOT_ELIGIBLE");
   }
   try {
     return { questionnaire, request, definition: parseQuestionnaireDefinition(questionnaire.questions) };
@@ -346,7 +359,7 @@ export function buildDraftAnswerBatch(
   const visible = new Set(getVisibleQuestionKeys(definition, currentValues(answers)));
   const active = activeQuestionnaireDefinition(definition).filter((question) => visible.has(question.questionKey));
   if (active.length === 0 || active.some((question) => answers[question.questionKey]?.state !== "submitted")) {
-    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not submitted.");
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not submitted.", "QUESTIONNAIRE_NOT_SUBMITTED");
   }
   const timestamp = now.toISOString();
   return Object.fromEntries(active.map((question) => {

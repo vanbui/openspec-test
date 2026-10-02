@@ -23,8 +23,9 @@ import {
 } from "./questionnaire-definition";
 import { appendGovernanceEvent, GovernanceLogError } from "./questionnaire-governance-log";
 import { parseRevertReason } from "../../csrm-assessment-request/services/revert-reason";
-import { parseAnswerEnvelope, type AnswerEnvelope } from "./questionnaire-workflow";
+import { ASSESSMENT_STAGE_REQUEST_STATUSES, parseAnswerEnvelope, type AnswerEnvelope } from "./questionnaire-workflow";
 import { projectQuestionnaire } from "./questionnaire-scope";
+import type { ConflictReason } from "../../../csrm/conflict-reasons";
 
 type RecordValue = Record<string, unknown>;
 
@@ -35,9 +36,34 @@ const QUESTION_UID = "api::csrm-question.csrm-question";
 const RELEASABLE_REQUEST_STATUSES = Object.freeze(["submitted", "questionnaire-in-progress"] as const);
 
 export class QuestionnaireGovernanceError extends Error {
-  constructor(public readonly status: 400 | 403 | 404 | 409, message: string) {
+  constructor(public readonly status: 400 | 403 | 404 | 409, message: string, public readonly reason?: ConflictReason) {
     super(message);
     this.name = "QuestionnaireGovernanceError";
+  }
+}
+
+const HISTORY_UNAVAILABLE_MESSAGE = "CSRM questionnaire governance history cannot be extended.";
+
+/**
+ * Why the request's stage no longer lets the analyst govern its questionnaire, or undefined while
+ * it does. Work on the assessment has started once an assessment exists or the request has reached
+ * an assessment stage; any other stage outside the releasable ones is not eligible.
+ */
+function requestStageConflict(request: RecordValue): ConflictReason | undefined {
+  if (request.assessment || (ASSESSMENT_STAGE_REQUEST_STATUSES as readonly unknown[]).includes(request.requestStatus)) return "ASSESSMENT_STARTED";
+  if (!(RELEASABLE_REQUEST_STATUSES as readonly unknown[]).includes(request.requestStatus)) return "REQUEST_NOT_ELIGIBLE";
+  return undefined;
+}
+
+/** Appends one event, turning a log that cannot take it (full at 1,000 entries, or unreadable) into a conflict. */
+function appendOrConflict(existing: unknown, event: unknown): ReturnType<typeof appendGovernanceEvent> {
+  try {
+    return appendGovernanceEvent(existing, event);
+  } catch (error) {
+    if (error instanceof GovernanceLogError) {
+      throw new QuestionnaireGovernanceError(409, HISTORY_UNAVAILABLE_MESSAGE, "HISTORY_UNAVAILABLE");
+    }
+    throw error;
   }
 }
 
@@ -207,24 +233,22 @@ async function loadGovernanceQuestionnaire(input: GovernanceWorkflowInput): Prom
 
 function assertReleasable(questionnaire: RecordValue): void {
   if (typeof questionnaire.releasedAt === "string" && questionnaire.releasedAt.length > 0) {
-    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire has already been released.");
+    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire has already been released.", "QUESTIONNAIRE_RELEASED");
   }
   const request = isRecord(questionnaire.assessmentRequest) ? questionnaire.assessmentRequest : null;
-  if (!request
-    || typeof request.documentId !== "string"
-    || typeof request.requestStatus !== "string"
-    || !(RELEASABLE_REQUEST_STATUSES as readonly string[]).includes(request.requestStatus)
-    || request.assessment) {
-    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released.");
+  if (!request || typeof request.documentId !== "string" || typeof request.requestStatus !== "string") {
+    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released.", "REQUEST_NOT_ELIGIBLE");
   }
+  const stageConflict = requestStageConflict(request);
+  if (stageConflict) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released.", stageConflict);
   try {
     const definition = parseQuestionnaireDefinition(questionnaire.questions);
     if (activeQuestionnaireDefinition(definition).length === 0) {
-      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released without an active question.");
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released without an active question.", "QUESTIONNAIRE_HAS_NO_QUESTIONS");
     }
   } catch (error) {
     if (error instanceof QuestionnaireDefinitionError) {
-      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released.");
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released.", "DEFINITION_INVALID");
     }
     throw error;
   }
@@ -235,11 +259,11 @@ function assertReleasable(questionnaire: RecordValue): void {
  * the authoritative gate for analyst-only questionnaire changes.
  */
 export function assertQuestionnaireInAnalystReview(questionnaire: RecordValue, request: RecordValue): void {
-  if ((typeof questionnaire.releasedAt === "string" && questionnaire.releasedAt.length > 0)
-    || !RELEASABLE_REQUEST_STATUSES.includes(request.requestStatus as never)
-    || request.assessment) {
-    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is not in analyst review.");
+  if (typeof questionnaire.releasedAt === "string" && questionnaire.releasedAt.length > 0) {
+    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is not in analyst review.", "QUESTIONNAIRE_RELEASED");
   }
+  const stageConflict = requestStageConflict(request);
+  if (stageConflict) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is not in analyst review.", stageConflict);
 }
 
 /** Converts submitted answer envelopes back to editable drafts without changing values. */
@@ -269,7 +293,7 @@ function governanceAnswerMap(definition: Array<{ questionKey: string; answer: un
       continue;
     }
     const answer = parseAnswerEnvelope(question.answer);
-    if (!answer) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire answer data is invalid.");
+    if (!answer) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire answer data is invalid.", "ANSWER_DATA_INVALID");
     answers[question.questionKey] = answer;
   }
   return answers;
@@ -286,42 +310,36 @@ export async function returnQuestionnaireToAnalystReview(input: GovernanceWorkfl
     const questionnaire = await loadGovernanceQuestionnaire(input);
     const request = isRecord(questionnaire.assessmentRequest) ? questionnaire.assessmentRequest : null;
     if (!request || typeof request.requestStatus !== "string") {
-      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be returned to review.");
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be returned to review.", "REQUEST_NOT_ELIGIBLE");
     }
     if (!(typeof questionnaire.releasedAt === "string" && questionnaire.releasedAt.length > 0)) {
-      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is already in analyst review.");
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is already in analyst review.", "ALREADY_IN_ANALYST_REVIEW");
     }
     const definition = parseQuestionnaireDefinition(questionnaire.questions);
     try {
       assertQuestionnaireInAnalystReview({ ...questionnaire, releasedAt: null }, request);
     } catch (error) {
       if (error instanceof QuestionnaireGovernanceError) {
-        throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be returned to review.");
+        throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be returned to review.", error.reason);
       }
       throw error;
     }
     const now = input.now ?? new Date();
     const answers = returnAnswersToDraft(definition, governanceAnswerMap(definition), now);
+    // The log is extended before any answer is written, so a log that cannot take the event
+    // refuses the return without leaving answers returned to draft.
+    const governanceLog = appendOrConflict(questionnaire.governanceLog, {
+      schemaVersion: 1,
+      kind: "returned-to-review",
+      at: now.toISOString(),
+      by: input.actorDocumentId as string,
+      reason,
+    });
     for (const question of definition) {
       await input.strapi.documents(QUESTION_UID).update({
         documentId: question.documentId,
         data: { answer: answers[question.questionKey] ?? null },
       });
-    }
-    let governanceLog;
-    try {
-      governanceLog = appendGovernanceEvent(questionnaire.governanceLog, {
-        schemaVersion: 1,
-        kind: "returned-to-review",
-        at: now.toISOString(),
-        by: input.actorDocumentId as string,
-        reason,
-      });
-    } catch (error) {
-      if (error instanceof GovernanceLogError) {
-        throw new QuestionnaireGovernanceError(409, "CSRM questionnaire governance history cannot be extended.");
-      }
-      throw error;
     }
     await input.strapi.documents(QUESTIONNAIRE_UID).update({
       documentId: input.questionnaireDocumentId,
@@ -366,7 +384,7 @@ export async function releaseQuestionnaire(input: GovernanceWorkflowInput): Prom
          * until the envelope is repaired, and the release gate itself is
          * unaffected because it reads the dedicated facts instead.
          */
-        throw new QuestionnaireGovernanceError(409, "CSRM questionnaire governance history cannot be extended.");
+        throw new QuestionnaireGovernanceError(409, HISTORY_UNAVAILABLE_MESSAGE, "HISTORY_UNAVAILABLE");
       }
       throw error;
     }
@@ -391,10 +409,17 @@ function questionOptions(question: QuestionnaireDefinitionQuestion): RecordValue
   };
 }
 
+/*
+ * A definition error on add or edit is a placement or section clash, typically another analyst's
+ * change saved first (D-06), so the analyst is told to reload; a log error is its own reason.
+ */
 function governanceConflict(error: unknown): never {
   if (error instanceof QuestionnaireGovernanceError) throw error;
-  if (error instanceof QuestionnaireDefinitionError || error instanceof GovernanceLogError) {
-    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire definition cannot be changed.");
+  if (error instanceof QuestionnaireDefinitionError) {
+    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire definition cannot be changed.", "DEFINITION_CONFLICT");
+  }
+  if (error instanceof GovernanceLogError) {
+    throw new QuestionnaireGovernanceError(409, "CSRM questionnaire definition cannot be changed.", "HISTORY_UNAVAILABLE");
   }
   throw error;
 }
@@ -430,7 +455,7 @@ function questionByDocumentId(questionnaire: RecordValue, documentId: string): Q
 }
 
 function appendQuestionEvent(questionnaire: RecordValue, kind: "question-added" | "question-edited" | "question-deleted" | "answer-cleared", questionKey: string, input: GovernanceWorkflowInput, explanation?: string): unknown {
-  return appendGovernanceEvent(questionnaire.governanceLog, {
+  return appendOrConflict(questionnaire.governanceLog, {
     schemaVersion: 1,
     kind,
     at: (input.now ?? new Date()).toISOString(),
@@ -442,7 +467,7 @@ function appendQuestionEvent(questionnaire: RecordValue, kind: "question-added" 
 
 function assertQuestionMutationStage(questionnaire: RecordValue): void {
   const request = isRecord(questionnaire.assessmentRequest) ? questionnaire.assessmentRequest : null;
-  if (!request) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is not in analyst review.");
+  if (!request) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire is not in analyst review.", "REQUEST_NOT_ELIGIBLE");
   assertQuestionnaireInAnalystReview(questionnaire, request);
 }
 
@@ -452,13 +477,13 @@ export async function deleteQuestionnaireQuestion(input: GovernanceWorkflowInput
     assertQuestionMutationStage(questionnaire);
     let question: QuestionnaireDefinitionQuestion;
     try { question = questionByDocumentId(questionnaire, input.questionDocumentId); } catch (error) { return governanceConflict(error); }
-    if (question.deleted) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question has already been deleted.");
+    if (question.deleted) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question has already been deleted.", "QUESTION_REMOVED");
     const definition = parseQuestionnaireDefinition(questionnaire.questions);
     if (activeQuestionnaireDefinition(definition).some((candidate) => candidate.visibility?.questionKey === question.questionKey)) {
-      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question cannot be deleted while an active question depends on it.");
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question cannot be deleted while an active question depends on it.", "QUESTION_HAS_DEPENDENTS");
     }
     if (activeQuestionnaireDefinition(definition).length <= 1) {
-      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire must retain an active question.");
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire must retain an active question.", "LAST_ACTIVE_QUESTION");
     }
     const deleted = { ...question, schemaVersion: 2 as const, deleted: { deletedAt: (input.now ?? new Date()).toISOString(), deletedBy: input.actorDocumentId as string } };
     const governanceLog = appendQuestionEvent(questionnaire, "question-deleted", question.questionKey, input);
@@ -527,8 +552,9 @@ export async function addQuestionnaireQuestion(input: GovernanceWorkflowInput): 
     try { validateDefinition([...definition, question]); } catch (error) { return governanceConflict(error); }
     const create = input.strapi.documents(QUESTION_UID).create;
     if (!create) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question cannot be created.");
-    await create({ data: { questionText: question.questionText, helpText: payload.helpText ?? null, answerType: question.answerType, options: questionOptions(question), answer: null, questionnaire: input.questionnaireDocumentId } });
+    // Extended before the question is created, so a log that cannot take the event adds nothing.
     const governanceLog = appendQuestionEvent(questionnaire, "question-added", question.questionKey, input);
+    await create({ data: { questionText: question.questionText, helpText: payload.helpText ?? null, answerType: question.answerType, options: questionOptions(question), answer: null, questionnaire: input.questionnaireDocumentId } });
     await input.strapi.documents(QUESTIONNAIRE_UID).update({ documentId: input.questionnaireDocumentId, data: { governanceLog } });
     return resultForGovernance(await loadGovernanceQuestionnaire(input));
   });
@@ -541,14 +567,14 @@ export async function editQuestionnaireQuestion(input: GovernanceWorkflowInput &
     assertQuestionMutationStage(questionnaire);
     let question: QuestionnaireDefinitionQuestion;
     try { question = questionByDocumentId(questionnaire, input.questionDocumentId); } catch (error) { return governanceConflict(error); }
-    if (question.deleted) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question has been deleted.");
+    if (question.deleted) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question has been deleted.", "QUESTION_REMOVED");
     const revised = candidateQuestion(question, payload);
     const definition = parseQuestionnaireDefinition(questionnaire.questions);
     let validated: QuestionnaireDefinitionQuestion[];
     try { validated = validateDefinition(definition.map((candidate) => candidate.documentId === question.documentId ? revised : candidate)); } catch (error) { return governanceConflict(error); }
     const stored = validated.find((candidate) => candidate.documentId === question.documentId) as QuestionnaireDefinitionQuestion;
     const parsedAnswer = question.answer === null || question.answer === undefined ? null : parseAnswerEnvelope(question.answer);
-    if (question.answer !== null && question.answer !== undefined && !parsedAnswer) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire answer data is invalid.");
+    if (question.answer !== null && question.answer !== undefined && !parsedAnswer) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire answer data is invalid.", "ANSWER_DATA_INVALID");
     // Only a stored answer can be cleared. An edit to a question nobody has
     // answered yet must not append an answer-cleared event, or the revision
     // timeline would claim a loss that never happened.
