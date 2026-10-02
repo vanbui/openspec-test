@@ -369,8 +369,9 @@ describe('analyst assessment editor contract', () => {
     const optionNames = (group: HTMLElement) => within(group).getAllByRole('option').map((option) => option.getAttribute('aria-label'));
 
     const systemPicker = screen.getByRole('combobox', { name: 'Information system impacted' });
-    expect(systemPicker).toHaveAccessibleDescription('Search by name. Systems selected on the request come first.');
-    expect(screen.getByRole('combobox', { name: 'Information asset impacted' })).toHaveAccessibleDescription('Search by name. Assets selected on the request come first.');
+    // WR-303: the record already chosen is part of each picker's description.
+    expect(systemPicker).toHaveAccessibleDescription('Search by name. Systems selected on the request come first. Selected system: Customer portal');
+    expect(screen.getByRole('combobox', { name: 'Information asset impacted' })).toHaveAccessibleDescription('Search by name. Assets selected on the request come first. Selected asset: Customer data');
     expect(document.querySelector('select[name="informationSystemImpacted"], select[name="informationAssetImpacted"]')).toBeNull();
 
     fireEvent.click(systemPicker);

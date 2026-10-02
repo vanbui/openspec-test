@@ -487,7 +487,8 @@ describe('RiskDetails', () => {
     await user.click(screen.getByRole('button', { name: 'Edit risk' }));
 
     const systemPicker = screen.getByRole('combobox', { name: 'Information system impacted' });
-    expect(systemPicker).toHaveAccessibleDescription('Search by name. Systems selected on the request come first.');
+    // WR-303: the record already chosen is part of the picker's description.
+    expect(systemPicker).toHaveAccessibleDescription('Search by name. Systems selected on the request come first. Selected system: Customer portal');
     expect(screen.getByText('Selected system: Customer portal')).toBeInTheDocument();
     expect(screen.getByText('Selected asset: Identity records')).toBeInTheDocument();
     expect(screen.getByRole('form', { name: 'Edit Risk' }).querySelector('select[name="informationSystemImpacted"], select[name="informationAssetImpacted"]')).toBeNull();
