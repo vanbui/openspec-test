@@ -241,6 +241,20 @@ export function rememberSavedQuestionnaire(documentId: string, saved: SavedQuest
   savedQuestionnaires.set(documentId, saved);
 }
 
+/*
+ * When the page's answers last changed, the time the session record is compared with. A save's time is its
+ * latest answer's time, and saving answers does not touch the questionnaire's own updatedAt, so this is the later
+ * of the two, compared as instants (D-11). An unreadable time never wins over a readable one.
+ */
+export function answersUpdatedAt(questionnaire: { updatedAt: string }, definition: QuestionnaireDefinition): string {
+  return definition.reduce((latest, question) => {
+    const answered = question.answer?.updatedAt;
+    if (!answered || Number.isNaN(instant(answered))) return latest;
+    const current = instant(latest);
+    return Number.isNaN(current) || instant(answered) > current ? answered : latest;
+  }, questionnaire.updatedAt);
+}
+
 /** The remembered save for this questionnaire when it is later than `updatedAt`, else undefined. */
 export function savedQuestionnaireAfter(documentId: string, updatedAt: string | undefined): SavedQuestionnaire | undefined {
   const saved = savedQuestionnaires.get(documentId);

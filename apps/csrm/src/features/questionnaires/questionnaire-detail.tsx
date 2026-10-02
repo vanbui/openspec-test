@@ -16,7 +16,8 @@ import { QuestionnaireRenderer } from './questionnaire-renderer';
 import { revertQuestionnaireToDraftAction } from './questionnaire-actions';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { availableAssessmentRequest, getVisibleQuestionKeys } from './questionnaire-domain';
+import { availableAssessmentRequest, introductionFacts } from './questionnaire-domain';
+import { answersUpdatedAt } from './use-answer-autosave';
 import { QuestionnaireIntroduction } from './questionnaire-introduction';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
@@ -60,26 +61,6 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
       </div>
     </>
   );
-}
-
-/*
- * When this page's answers last changed. A save's time is its latest answer's time, and saving answers does
- * not touch the questionnaire's own updatedAt, so the page compares with the later of the two (D-11).
- */
-function answersUpdatedAt(questionnaire: QuestionnaireSummary, definition: QuestionnaireDefinition): string {
-  return definition.reduce((latest, question) => {
-    const answered = question.answer?.updatedAt;
-    return answered && Date.parse(answered) > Date.parse(latest) ? answered : latest;
-  }, questionnaire.updatedAt);
-}
-
-/** The count the completion card starts from: the questions shown for the answers the page loaded with. */
-function introductionFacts(definition: QuestionnaireDefinition): { questionCount: number; hasConditionalQuestions: boolean } {
-  const loadedAnswers = Object.fromEntries(definition.map((question) => [question.questionKey, question.answer]));
-  return {
-    questionCount: getVisibleQuestionKeys(definition, loadedAnswers).length,
-    hasConditionalQuestions: definition.some((question) => question.visibility != null),
-  };
 }
 
 function QuestionnaireRequestRelationship({ assessmentRequestHref, questionnaire }: Pick<QuestionnaireDetailProps, 'assessmentRequestHref'> & { questionnaire: QuestionnaireSummary }) {

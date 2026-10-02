@@ -75,6 +75,18 @@ export function getVisibleQuestionKeys(
   return keys;
 }
 
+/**
+ * The introduction's facts (UI-SPEC §5.2): the number of questions shown for the answers the definition holds, the
+ * count the completion card starts from, and whether more may appear.
+ */
+export function introductionFacts(definition: QuestionnaireDefinition): { questionCount: number; hasConditionalQuestions: boolean } {
+  const heldAnswers = Object.fromEntries(definition.map((question) => [question.questionKey, question.answer]));
+  return {
+    questionCount: getVisibleQuestionKeys(definition, heldAnswers).length,
+    hasConditionalQuestions: definition.some((question) => question.visibility != null),
+  };
+}
+
 function hasAnswerValue(answer: QuestionnaireAnswer | null | undefined): boolean {
   const value = answer?.value;
   if (value === null || value === undefined) return false;
