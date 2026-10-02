@@ -129,8 +129,8 @@ const descriptionSchema = z.preprocess(
   (value) => typeof value === 'string' && value.trim() === '' ? null : value,
   z.string().trim().max(10_000, maxCharactersMessage(10_000)).nullable(),
 );
-const applicableControlsSchema = z.array(administrationDocumentIdSchema).max(1_000, 'Select 1,000 Applicable Controls or fewer.')
-  .refine((values) => new Set(values).size === values.length, 'Applicable Controls must be distinct.');
+const applicableControlsSchema = z.array(administrationDocumentIdSchema).max(1_000, 'Select 1,000 applicable controls or fewer.')
+  .refine((values) => new Set(values).size === values.length, 'Applicable controls must be distinct.');
 
 export const riskTypeCreateInputSchema = z.object({
   name: nameSchema,
