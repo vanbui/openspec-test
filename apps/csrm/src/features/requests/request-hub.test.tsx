@@ -32,6 +32,15 @@ function request(overrides: Partial<CsrmAssessmentRequest> = {}): CsrmAssessment
 const hrefs = { questionnaire: '/app/questionnaires/q-1', assessment: '/app/assessments/a-1' };
 
 describe('RequestHub', () => {
+  it('reads a next-action override as plain text after the unchanged prefix (UI-SPEC §12.3)', () => {
+    render(<RequestHub hrefs={hrefs} lifecycle={lifecycle} nextActionOverride="Questionnaire generation is in progress. Review the questionnaire when it’s ready." request={request()} />);
+
+    const line = screen.getByText('Next action:').closest('p') as HTMLElement;
+    expect(line).toHaveTextContent('Next action: Questionnaire generation is in progress. Review the questionnaire when it’s ready.');
+    expect(within(line).queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Answer and submit the questionnaire.' })).not.toBeInTheDocument();
+  });
+
   it('renders all six available summaries with only the supplied record destinations', () => {
     render(<RequestHub hrefs={hrefs} lifecycle={lifecycle} request={request()} />);
     expect(screen.getByText('Next action:')).toBeInTheDocument();

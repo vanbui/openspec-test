@@ -99,6 +99,8 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     expect(screen.getByText('Taking longer than expected')).toBeInTheDocument();
+    // UI-SPEC §12.1: the timed-out body no longer names the server-owned job.
+    expect(screen.getByText('Automatic checks stopped after 30 seconds. Generation may still be running.')).toBeInTheDocument();
     const countAtTimeout = actionMocks.getQuestionnaireGenerationJobAction.mock.calls.length;
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
     expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledTimes(countAtTimeout);
@@ -399,5 +401,110 @@ describe('a questionnaire generation job seeded when the analyst comes back', ()
 
     expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeInTheDocument();
     expect(screen.queryByText(leaveAndReturn)).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * D-26 (UI-SPEC §12.1, §12.5): Retry stays with the analyst who started the job. Another analyst sees the
+ * failure, is told who may retry it and may start a new job. When the jobs read failed, the idle action says
+ * what starting does. The card reports its job's status so the hub can say generation is in progress.
+ */
+const retryRights = 'Only the Security Analyst who started it can retry it.';
+const readFailed = 'We couldn’t check whether a generation is already running. If one is, starting generation shows its progress instead of starting another.';
+
+describe('retry rights, a failed jobs read and the reported status', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    ['generate', 'Generate questionnaire'],
+    ['replace', 'Replace questionnaire'],
+  ] as const)('shows another analyst’s failed job with who may retry it, and offers %s instead of Retry', (action, label) => {
+    render(<QuestionnaireGenerationJob action={action} analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job: failedJob, canRetry: false }} />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Questionnaire generation failed');
+    expect(alert).toHaveTextContent('The provider could not prepare a questionnaire.');
+    expect(alert).toHaveTextContent(retryRights);
+    expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: label })).toBeEnabled();
+  });
+
+  it('lets another analyst start a new job after a failure they cannot retry', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: { ...queuedJob, jobId: 'job-two' } });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: failedJob, canRetry: false }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledWith({ requestId: 'request-one', replaceUnansweredQuestionnaire: false });
+    expect(actionMocks.retryQuestionnaireGenerationJobAction).not.toHaveBeenCalled();
+    expect(screen.getByText('Questionnaire generation is queued', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('offers the initiator Retry questionnaire generation without the retry-rights line', () => {
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: failedJob, canRetry: true }} />);
+
+    expect(screen.getByRole('button', { name: 'Retry questionnaire generation' })).toBeEnabled();
+    expect(screen.queryByText(retryRights)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['generate', 'Generate questionnaire'],
+    ['replace', 'Replace questionnaire'],
+  ] as const)('says what starting does above %s when the jobs read failed', (action, label) => {
+    render(<QuestionnaireGenerationJob action={action} analystChangesSinceGeneration={0} jobsReadFailed requestId="request-one" />);
+
+    const line = screen.getByText(readFailed);
+    expect(line).toHaveClass('text-sm', 'text-foreground-secondary');
+    expect(line.compareDocumentPosition(screen.getByRole('button', { name: label })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('does not show the failed-read line while a job is shown', () => {
+    render(<QuestionnaireGenerationJob action="generate" jobsReadFailed requestId="request-one" seededJob={{ job: queuedJob, canRetry: true }} />);
+
+    expect(screen.queryByText(readFailed)).not.toBeInTheDocument();
+  });
+
+  it('titles a refused start as a start that could not begin, not as a failed status check', async () => {
+    const refusal = 'A questionnaire can be generated only while the request is submitted, and this request has moved on.';
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: false, formError: refusal, reason: 'REQUEST_NOT_ELIGIBLE' });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Questionnaire generation couldn’t start');
+    expect(alert).toHaveTextContent(refusal);
+    expect(alert).not.toHaveTextContent('Status unavailable');
+  });
+
+  it('keeps Status unavailable for a status check that failed', async () => {
+    actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: false, formError: 'The assessment service is unavailable.' });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: queuedJob, canRetry: true }} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Status unavailable');
+  });
+
+  it('reports the job status as it changes, and no job when nothing is seeded', async () => {
+    const onJobStatusChange = vi.fn();
+    actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: completedJob });
+    const { unmount } = render(<QuestionnaireGenerationJob action="generate" onJobStatusChange={onJobStatusChange} requestId="request-one" seededJob={{ job: runningJob, canRetry: true }} />);
+
+    expect(onJobStatusChange).toHaveBeenLastCalledWith('running');
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(onJobStatusChange).toHaveBeenLastCalledWith('completed');
+    unmount();
+
+    const idle = vi.fn();
+    render(<QuestionnaireGenerationJob action="generate" onJobStatusChange={idle} requestId="request-one" />);
+    expect(idle).toHaveBeenLastCalledWith(null);
   });
 });
