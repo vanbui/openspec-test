@@ -45,9 +45,6 @@ export type MitigationControlListProps = {
   searchOwners?: RiskOwnerSearch;
 };
 
-/** UI-SPEC §13.5: a saved control the response cannot name. */
-const controlUnavailableMessage = 'The selected control is no longer available. Choose another control.';
-
 const emptyValues: ControlImplementationCreateInput = {
   control: '', controlOwner: null, controlStatus: null, effectivenessRating: null,
   evidence: null, implementationDueDate: null, implementedDate: null, reviewDate: null,
@@ -76,16 +73,24 @@ function delta(values: ControlImplementationCreateInput, initial: ControlImpleme
 
 /**
  * The card for a saved mitigation control. The control is named by the response's served summary (10-15), else
- * by the card's current control when the choice did not change; with neither, it cannot be named (null). The
- * owner is the saved control implementation's own `controlOwner`, so anyone found by the owner search is named
- * (D-28), never looked up among the names already on the Risk.
+ * by the card's current control when the choice did not change, else by the analyst's own choice: the write has
+ * succeeded, so it is never reported as a failure (WR-306). A choice with no name reads `Name not available`
+ * (§16.4), never an id. The owner is the saved control implementation's own `controlOwner`, so anyone found by
+ * the owner search is named (D-28), never looked up among the names already on the Risk.
  */
-function mergeImplementation(current: Mitigation | undefined, values: ControlImplementationCreateInput, result: ControlImplementation): Mitigation | null {
+function mergeImplementation(
+  current: Mitigation | undefined,
+  values: ControlImplementationCreateInput,
+  result: ControlImplementation,
+  chosen: RelationPickerItem | null,
+): Mitigation {
   const summary = result.controlSummary;
   const control = summary
     ? { documentId: summary.documentId, controlNumber: summary.controlNumber, name: summary.name }
-    : current?.control.documentId === values.control ? current.control : undefined;
-  if (!control) return null;
+    : current?.control.documentId === values.control
+      ? current.control
+      // The choice's label is already the control label, so it stands as the number with no title of its own.
+      : { documentId: values.control, controlNumber: chosen?.documentId === values.control ? chosen.name : 'Name not available', name: '' };
   return {
     documentId: result.documentId || current?.documentId || '',
     control,
@@ -245,12 +250,7 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
       setError(result.formError);
       return;
     }
-    const merged = mergeImplementation(implementation, normalized, result.data);
-    if (!merged) {
-      setError(controlUnavailableMessage);
-      return;
-    }
-    onChanged(merged);
+    onChanged(mergeImplementation(implementation, normalized, result.data, selectedControl));
   }
 
   return (
