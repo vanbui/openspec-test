@@ -79,6 +79,7 @@ export function RelationPicker({
 }: RelationPickerProps) {
   const inputId = useId();
   const hintId = useId();
+  const selectedId = useId();
   const listboxId = useId();
   const suggestedLabelId = useId();
   const otherLabelId = useId();
@@ -178,7 +179,8 @@ export function RelationPicker({
   else if (term && !error && options.length === 0) status = noMatchText;
   else if (term && !error && results.length >= pageSize) status = `Showing the first ${pageSize} matches. Keep typing to narrow the list.`;
 
-  const describedBy = [hint ? hintId : null, invalid && errorId ? errorId : null].filter(Boolean).join(' ') || undefined;
+  // The chosen record is part of the description, so a screen reader hears it while the input is empty; the name stays the label.
+  const describedBy = [hint ? hintId : null, value ? selectedId : null, invalid && errorId ? errorId : null].filter(Boolean).join(' ') || undefined;
   const listboxShown = isOpen && options.length > 0;
 
   const renderOption = (item: RelationPickerItem, index: number) => {
@@ -314,7 +316,7 @@ export function RelationPicker({
       </Popover>
       {value ? (
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-          <span className="min-w-0 break-words">Selected {noun}: {value.name}</span>
+          <span className="min-w-0 break-words" id={selectedId}>Selected {noun}: {value.name}</span>
           <button aria-label={`Clear ${label}`} className="min-h-6 text-primary underline-offset-4 hover:underline" onClick={clear} type="button">Clear</button>
         </div>
       ) : null}
