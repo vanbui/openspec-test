@@ -302,6 +302,24 @@ test("ADMIN-02 Controls remain globally queried, closed, persistent, and field-s
   assert.deepEqual(await harness.getAdministrationRecord("controls", fixtures.controls.update), beforeConflict);
 });
 
+/*
+ * D-46, D-29: the control search every picker uses matches number, name and framework, so a word from a
+ * loaded title finds its control. Before the Annex A names were loaded, `masking` matched nothing.
+ */
+test("ADMIN-05 D-46 the control search finds an Annex A control by a word from its name", async () => {
+  const harness = await harnessPromise;
+  const response = await harness.request({
+    path: "/api/v1/controls?q=masking&sort=controlNumber%3Aasc&page=1&pageSize=10",
+    identity: harness.identities.analyst,
+  });
+  assert.equal(response.status, 200, await response.clone().text());
+  const body = await responseJson(response) as { data: Array<{ controlNumber: string; name: string }> };
+  assert.deepEqual(
+    body.data.filter((record) => record.controlNumber === "8.11").map((record) => record.name),
+    ["8.11 — Data masking"],
+  );
+});
+
 test("ADMIN-03 Systems and Assets preserve exact fields, owner scope, and normalized concurrency", async () => {
   const harness = await harnessPromise;
   await harness.seedAdministrationFixtures();

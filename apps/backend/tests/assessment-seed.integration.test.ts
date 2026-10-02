@@ -133,6 +133,32 @@ test("ADMIN-05 a seeded start corrects a Privacy Principle an earlier seed store
   assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
 });
 
+/*
+ * D-46 (operator decision 15): an Annex A control carries the standard's control name from the CSRM
+ * title file, and no ISO control text. A database seeded before the titles existed stores the bare
+ * number; the next seeded start renames it, and a further seeded start changes nothing (D-36).
+ */
+test("ADMIN-05 D-46 a seeded start names an Annex A control and loads no ISO text", async () => {
+  const control = await seededControl("5.1");
+  assert.equal(control.name, "5.1 — Policies for information security");
+  assert.ok(control.description === null || control.description === undefined, `5.1 has no description: ${String(control.description)}`);
+});
+
+test("ADMIN-05 D-46 a seeded start titles a control an earlier seed stored by its number, then changes nothing", async () => {
+  const control = await seededControl("5.1");
+  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { name: "5.1" } });
+  assert.equal((await seededControl("5.1")).name, "5.1");
+  await seedCsrmData(strapi as never);
+  const restored = await seededControl("5.1");
+  assert.equal(restored.documentId, control.documentId);
+  assert.equal(restored.name, "5.1 — Policies for information security");
+  await seedCsrmData(strapi as never);
+  const unchanged = await seededControl("5.1");
+  assert.equal(unchanged.name, restored.name);
+  assert.equal(String(unchanged.updatedAt), String(restored.updatedAt), "a further seeded start leaves 5.1 untouched");
+  assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
+});
+
 test("assessment workflow RiskType seed requires every exact development gate", async () => {
   for (const values of [
     { nodeEnv: "production", environment: "development", identity: "true", seed: "true" },
