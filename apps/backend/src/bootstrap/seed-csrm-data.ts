@@ -248,6 +248,93 @@ export function parseControlTitles(
   source: string,
   catalogues: ControlCatalogue[],
 ): Map<string, string> {
+  return parseControlTitleFile(sourceFile, source, catalogues).titles;
+}
+
+/*
+ * supersededTitles keeps each title an earlier seed stored for a control, so a seeded start can recognise a
+ * name it wrote (10-23 walkthrough fix 3). It may list only controls the file titles, each with a non-empty
+ * list of well-formed titles other than the current one.
+ */
+function parseSupersededTitles(
+  sourceFile: string,
+  superseded: JsonValue | undefined,
+  titles: JsonObject,
+): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+
+  if (superseded === undefined) {
+    return result;
+  }
+
+  if (!isJsonObject(superseded)) {
+    throw controlTitleError(sourceFile, "must define supersededTitles as an object.");
+  }
+
+  for (const [catalogueFile, catalogueSuperseded] of Object.entries(superseded)) {
+    const catalogueTitles = titles[catalogueFile];
+
+    if (!isJsonObject(catalogueTitles)) {
+      throw controlTitleError(
+        sourceFile,
+        `lists superseded titles for ${catalogueFile}, which it does not title.`,
+      );
+    }
+
+    if (!isJsonObject(catalogueSuperseded)) {
+      throw controlTitleError(
+        sourceFile,
+        `must map ${catalogueFile} control ids to superseded titles.`,
+      );
+    }
+
+    for (const [controlId, earlierTitles] of Object.entries(catalogueSuperseded)) {
+      const currentTitle = catalogueTitles[controlId];
+
+      if (typeof currentTitle !== "string") {
+        throw controlTitleError(
+          sourceFile,
+          `lists superseded titles for ${controlId}, which it does not title in ${catalogueFile}.`,
+        );
+      }
+
+      if (!Array.isArray(earlierTitles) || earlierTitles.length === 0) {
+        throw controlTitleError(
+          sourceFile,
+          `must list the superseded titles of ${controlId} in ${catalogueFile} as a non-empty list.`,
+        );
+      }
+
+      for (const earlierTitle of earlierTitles) {
+        const problem = controlTitleProblem(controlId, earlierTitle);
+
+        if (problem) {
+          throw controlTitleError(
+            sourceFile,
+            `has a superseded title for ${controlId} in ${catalogueFile} that ${problem}.`,
+          );
+        }
+
+        if (earlierTitle === currentTitle) {
+          throw controlTitleError(
+            sourceFile,
+            `lists the current title of ${controlId} in ${catalogueFile} as superseded.`,
+          );
+        }
+      }
+
+      result.set(controlId, earlierTitles as string[]);
+    }
+  }
+
+  return result;
+}
+
+function parseControlTitleFile(
+  sourceFile: string,
+  source: string,
+  catalogues: ControlCatalogue[],
+): { supersededTitles: Map<string, string[]>; titles: Map<string, string> } {
   let parsed: unknown;
 
   try {
@@ -353,7 +440,10 @@ export function parseControlTitles(
     }
   }
 
-  return result;
+  return {
+    supersededTitles: parseSupersededTitles(sourceFile, parsed.supersededTitles, titles),
+    titles: result,
+  };
 }
 
 /*
@@ -362,7 +452,11 @@ export function parseControlTitles(
  */
 export async function readControlLibrary(
   appRoot: string,
-): Promise<{ catalogues: ControlCatalogue[]; titles: Map<string, string> }> {
+): Promise<{
+  catalogues: ControlCatalogue[];
+  supersededTitles: Map<string, string[]>;
+  titles: Map<string, string>;
+}> {
   const catalogueDirectory = path.resolve(
     appRoot,
     "src",
@@ -394,7 +488,7 @@ export async function readControlLibrary(
 
   return {
     catalogues,
-    titles: parseControlTitles(CONTROL_TITLE_FILE, titleSource, catalogues),
+    ...parseControlTitleFile(CONTROL_TITLE_FILE, titleSource, catalogues),
   };
 }
 
@@ -494,6 +588,14 @@ function stableJson(value: unknown): string {
  * and a seeded start keeps it, unless it is beyond the Controls contract bound, which no valid write can
  * store. A seed-written description is replaced by the current seed's (APP-13's over-long text, for one).
  */
+function storedCatalogueEntry(existingControl: ExistingControl): JsonObject | undefined {
+  const sourceData: unknown = existingControl.sourceData;
+
+  return isJsonObject(sourceData) && isJsonObject(sourceData.control)
+    ? sourceData.control
+    : undefined;
+}
+
 function operatorDescription(existingControl: ExistingControl): string | undefined {
   const stored: unknown = existingControl.description;
 
@@ -505,26 +607,59 @@ function operatorDescription(existingControl: ExistingControl): string | undefin
     return undefined;
   }
 
-  const sourceData: unknown = existingControl.sourceData;
-  const seededEntry =
-    isJsonObject(sourceData) && isJsonObject(sourceData.control)
-      ? sourceData.control
-      : undefined;
+  const seededEntry = storedCatalogueEntry(existingControl);
 
   return seededEntry && stored === controlDescription(seededEntry)
     ? undefined
     : stored;
 }
 
+/*
+ * The same ownership test for a name (10-23 walkthrough fix 3). A stored name the seed wrote is the bare
+ * number, the name its stored catalogue entry gives, or the number with a title an earlier seed stored
+ * (the title file's supersededTitles). A seeded start replaces those with the current name; any other
+ * non-blank name is an operator's own, and a seeded start keeps it.
+ */
+function operatorName(
+  existingControl: ExistingControl,
+  supersededTitles: Map<string, string[]>,
+): string | undefined {
+  const stored: unknown = existingControl.name;
+  const controlNumber = existingControl.controlNumber;
+
+  if (typeof stored !== "string" || stored.trim().length === 0 || !controlNumber) {
+    return undefined;
+  }
+
+  const seedWrittenNames = new Set([
+    controlNumber,
+    ...(supersededTitles.get(controlNumber) ?? []).map(
+      (title) => `${controlNumber} — ${title}`,
+    ),
+  ]);
+  const seededEntry = storedCatalogueEntry(existingControl);
+  const seededLabel = seededEntry ? catalogueLabel(seededEntry) : undefined;
+
+  if (seededLabel) {
+    seedWrittenNames.add(`${controlNumber} — ${seededLabel}`);
+  }
+
+  return seedWrittenNames.has(stored) ? undefined : stored;
+}
+
 function reconciledControlSeed(
   existingControl: ExistingControl,
   controlSeed: ControlSeed,
+  supersededTitles: Map<string, string[]>,
 ): ControlSeed {
   const description = operatorDescription(existingControl);
+  const name = operatorName(existingControl, supersededTitles);
 
-  return description === undefined
-    ? controlSeed
-    : { ...controlSeed, description };
+  return {
+    ...controlSeed,
+    ...(description === undefined ? {} : { description }),
+    ...(name === undefined ? {} : { name }),
+  };
 }
 
 function controlNeedsUpdate(
@@ -569,6 +704,7 @@ async function findExistingControls(
 async function seedCsrmControls(
   strapi: Core.Strapi,
   controlSeeds: ControlSeed[],
+  supersededTitles: Map<string, string[]>,
 ) {
   const controlService = strapi.documents("api::csrm-control.csrm-control");
   const existingControls = await findExistingControls(strapi);
@@ -584,7 +720,11 @@ async function seedCsrmControls(
       continue;
     }
 
-    const reconciledSeed = reconciledControlSeed(existingControl, controlSeed);
+    const reconciledSeed = reconciledControlSeed(
+      existingControl,
+      controlSeed,
+      supersededTitles,
+    );
 
     if (controlNeedsUpdate(existingControl, reconciledSeed)) {
       await controlService.update({
@@ -637,7 +777,7 @@ export async function seedCsrmData(strapi: Core.Strapi) {
   const informationSystemService = strapi.documents("api::csrm-information-system.csrm-information-system");
   const informationAssetService = strapi.documents("api::csrm-information-asset.csrm-information-asset");
 
-  await seedCsrmControls(strapi, controlSeeds);
+  await seedCsrmControls(strapi, controlSeeds, controlLibrary.supersededTitles);
 
   const existingApplications = await applicationService.findMany({
     filters: {
