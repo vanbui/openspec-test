@@ -611,8 +611,8 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   /*
    * ASSESS06_SYSTEM_PAST_FIRST_PAGE (D-28, UAT-010): a system the old 25-row option list could never show is
    * found by typing. The proof brings its own fixture (D-39): 26 uniquely named Information Systems imported
-   * through the Administration CSV import. A prefix search fills one 25-row page without the 26th; typing its
-   * name finds it. The edit is then discarded by reloading, so the shared mutable Risk is unchanged.
+   * through the Administration CSV import. A prefix search fills one 25-row page, leaving one of them out; typing
+   * its name finds it. The edit is then discarded by reloading, so the shared mutable Risk is unchanged.
    */
   const pickerSuffix = Date.now().toString(36);
   const pickerSystemName = (index: number) => `Picker proof ${pickerSuffix} ${String(index).padStart(2, '0')}`;
@@ -635,16 +635,25 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   const systemPicker = pickerRiskForm.getByRole('combobox', { name: 'Information system impacted', exact: true });
   await systemPicker.fill(`Picker proof ${pickerSuffix}`);
   await expect(page.getByText('Showing the first 25 matches. Keep typing to narrow the list.', { exact: true }), 'the prefix fills one bounded page').toBeVisible();
-  await expect(page.getByRole('option', { name: pickerSystemName(1), exact: true })).toBeVisible();
-  await expect(page.getByRole('option', { name: pickerSystemName(26), exact: true }), 'the 26th system is past the first page').toHaveCount(0);
-  await systemPicker.fill(pickerSystemName(26));
-  const pastFirstPage = page.getByRole('option', { name: pickerSystemName(26), exact: true });
-  await expect(pastFirstPage, 'typing its name finds the 26th system').toBeVisible();
+  /*
+   * IN-407: the search sends no sort, so which proof system misses the page is the server's choice. The page holds
+   * exactly 25 of the 26, and the one it leaves out is found by typing its name.
+   */
+  await expect(page.getByRole('option', { name: new RegExp(`^Picker proof ${pickerSuffix} \d{2}$`) }), 'the page holds 25 of the 26 proof systems').toHaveCount(25);
+  const pageMisses: string[] = [];
+  for (let index = 1; index <= 26; index += 1) {
+    if (await page.getByRole('option', { name: pickerSystemName(index), exact: true }).count() === 0) pageMisses.push(pickerSystemName(index));
+  }
+  expect(pageMisses, 'one proof system is past the first page').toHaveLength(1);
+  const pastFirstPageName = pageMisses[0]!;
+  await systemPicker.fill(pastFirstPageName);
+  const pastFirstPage = page.getByRole('option', { name: pastFirstPageName, exact: true });
+  await expect(pastFirstPage, 'typing its name finds the system past the first page').toBeVisible();
   await pastFirstPage.click();
-  await expect(pickerRiskForm.getByText(`Selected system: ${pickerSystemName(26)}`, { exact: true })).toBeVisible();
+  await expect(pickerRiskForm.getByText(`Selected system: ${pastFirstPageName}`, { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Edit risk' })).toBeVisible();
-  await expect(page.getByText(pickerSystemName(26)), 'the discarded choice left the shared Risk unchanged').toHaveCount(0);
+  await expect(page.getByText(pastFirstPageName), 'the discarded choice left the shared Risk unchanged').toHaveCount(0);
 
   for (const width of viewportWidths) {
     await expectRegisterGeometry(page, width);
