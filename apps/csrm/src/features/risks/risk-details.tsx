@@ -28,7 +28,7 @@ export type RiskDetailsProps = {
 
 type Conflict = Extract<RiskDetailServerActionResult<never>, { conflict: true }>;
 
-const safeHeader = <PageHeader title="Risk details" description="View a contextual Risk and its mitigation-control information." />;
+const safeHeader = <PageHeader title="Risk details" description="View a Risk and the controls that mitigate it." />;
 
 /** Scrolls the element the URL's hash names into view, if it is on the page. */
 function scrollToLocationHash() {
@@ -94,7 +94,7 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
 
   const mutable = current.parentLock === 'mutable';
   const canEdit = mutable && options && searchOwners;
-  const description = `Contextual Risk — ${excerpt(current.riskStatement)}`;
+  const description = excerpt(current.riskStatement);
   const status = (
     <div className="flex flex-wrap items-center gap-2" aria-label="Risk ratings and status">
       <span className="text-sm font-medium">Inherent</span>{current.inherentRating ? <RiskRatingBadge rating={current.inherentRating} /> : <span className="text-sm">Not provided</span>}
@@ -112,7 +112,7 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
         {/* Inside the section grid, the notice keeps the page's section rhythm above the first section (W-12). */}
         {!mutable ? <Alert><LockKeyholeIcon aria-hidden="true" /><AlertTitle>Released assessment - read only</AlertTitle><AlertDescription>This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.</AlertDescription></Alert> : null}
         {editing && canEdit ? (
-          <DetailSection title="Risk statement and classification" description="Edit the Risk using the server-authorised field set.">
+          <DetailSection title="Risk statement and classification" description="Edit this Risk’s details.">
             <RiskDetailEditor detail={current} options={options} searchOwners={searchOwners} onCancel={() => { setEditing(false); setMessage(''); focusEdit(); }} onConflict={handleConflict} onNoChange={() => setMessage('No changes to save.')} onSaved={(updated) => { setCurrent(updated); setEditing(false); setMessage('Risk changes saved.'); focusEdit(); }} />
           </DetailSection>
         ) : (
@@ -126,7 +126,7 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
           </>
         )}
         {/* The anchor Control Implementation alerts open at (UI-SPEC §9 item 5). */}
-        <DetailSection title="Mitigation controls" description="Contextual Control implementations linked to reusable Controls." headingId="mitigation-controls">
+        <DetailSection title="Mitigation controls" description="Controls that mitigate this Risk, from the control library." headingId="mitigation-controls">
           <MitigationControlList implementations={current.controlImplementations} mutable={mutable} options={mutable ? options : undefined} riskId={current.documentId} riskTypeId={current.riskType?.documentId ?? null} searchOwners={mutable ? searchOwners : undefined} onConflict={handleConflict} onChanged={(implementations, nextMessage) => { setCurrent({ ...current, controlImplementations: [...implementations] }); setMessage(nextMessage); }} />
         </DetailSection>
         <DetailSection title="Related records"><DefinitionList rows={relatedRows(current)} /></DetailSection>
@@ -227,7 +227,7 @@ function relatedRows(detail: RiskDetail): DetailRow[] {
 }
 
 function excerpt(value: string | null): string {
-  if (!value) return 'Risk statement not provided';
+  if (!value) return 'No risk statement recorded';
   return value.length > 120 ? `${value.slice(0, 117)}…` : value;
 }
 

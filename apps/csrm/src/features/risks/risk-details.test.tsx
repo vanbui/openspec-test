@@ -304,7 +304,7 @@ describe('RiskDetails', () => {
 
     view.rerender(<RiskDetails detail={{ ...detail, riskStatement: 'Updated contextual Risk statement.' }} options={options} searchOwners={searchOwners} />);
     expect(screen.getByRole('status')).toHaveTextContent('Risk changes saved.');
-    expect(screen.getByText('Updated contextual Risk statement.')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Risk statement and classification' })).getByText('Updated contextual Risk statement.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Edit risk' }));
     await user.type(screen.getByRole('textbox', { name: 'Comments' }), ' Unsaved');
@@ -532,7 +532,7 @@ describe('RiskDetails', () => {
     expect(notice.parentElement).toHaveClass('grid', 'gap-8');
     expect(notice.nextElementSibling).toHaveTextContent('Risk statement and classification');
     expect(screen.getByText('This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.')).toBeInTheDocument();
-    expect(screen.getByText('Customer identity data may be disclosed through a compromised service account.')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Risk statement and classification' })).getByText('Customer identity data may be disclosed through a compromised service account.')).toBeInTheDocument();
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Edit|Save|Add|Remove|Close/i })).not.toBeInTheDocument();
     expect(container.querySelector('[disabled]')).not.toBeInTheDocument();

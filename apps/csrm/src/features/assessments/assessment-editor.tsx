@@ -239,7 +239,11 @@ export function AssessmentEditor({
         <Alert aria-live="polite">
           {currentAssessment.assessmentStatus === 'approved' ? <CheckCircle2Icon aria-hidden="true" /> : <LockKeyholeIcon aria-hidden="true" />}
           <AlertTitle>{currentAssessment.assessmentStatus === 'approved' ? 'Assessment released' : 'Assessment is read-only'}</AlertTitle>
-          <AlertDescription>{currentAssessment.assessmentStatus === 'approved' ? 'Release is complete. Analyst mutation controls have been removed.' : 'A release fact exists or this workflow state cannot be changed.'}</AlertDescription>
+          <AlertDescription>{currentAssessment.assessmentStatus === 'approved'
+            ? 'The Requestor can now read this assessment. It can no longer be changed.'
+            : currentAssessment.assessmentStatus === 'closed'
+              ? 'This assessment is closed, so it can no longer be changed.'
+              : 'This assessment can no longer be changed in its current state.'}</AlertDescription>
         </Alert>
       ) : null}
       {hasSupersededReview(currentAssessment)
@@ -259,7 +263,7 @@ export function AssessmentEditor({
               <ConfirmDialog
                 confirmLabel="Confirm release"
                 confirmVariant="destructive"
-                description="Release is irreversible. Requestors will receive the assessment as read-only, and all analyst mutation controls will be removed."
+                description="Release can’t be undone. The Requestor will receive this assessment read-only, and no one can change it afterwards."
                 errorMessage={releaseError}
                 onConfirm={release}
                 pendingLabel="Releasing assessment…"
@@ -271,7 +275,7 @@ export function AssessmentEditor({
         </Card>
       </div>
 
-      <DetailSection description="Contextual Risks identified for this assessment. Risk Types remain reusable non-editable references." headingFocusable headingId="identified-risks" title="Identified Risks">
+      <DetailSection description="Risks identified in this assessment, with their ratings, treatment and mitigation controls." headingFocusable headingId="identified-risks" title="Identified Risks">
         <div className="grid min-w-0 gap-5">
           {risks.length === 0 ? <p className="text-sm text-muted-foreground">No Risks have been identified.</p> : risks.map((risk) => (
             <Card className="min-w-0" id={`risk-${encodeURIComponent(risk.documentId)}`} key={risk.documentId} tabIndex={-1}>
@@ -472,7 +476,7 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
   }
 
   return (
-    <DetailSection description="Edit the analyst-owned assessment conclusion. Workflow and release facts are server-owned." headingFocusable headingId="assessment-details" title="Assessment details">
+    <DetailSection description="Record the assessment’s summary, overall rating and recommendations." headingFocusable headingId="assessment-details" title="Assessment details">
       <form className="grid gap-5" noValidate onSubmit={form.handleSubmit(submit)}>
         {formError ? <Alert variant="destructive"><AlertTitle>Assessment not saved</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
         <MetadataFieldErrorInput error={form.formState.errors.summary?.message} label="Summary"><Textarea aria-describedby={form.formState.errors.summary ? 'summary-error' : undefined} aria-invalid={Boolean(form.formState.errors.summary)} {...form.register('summary')} /></MetadataFieldErrorInput>
