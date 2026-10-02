@@ -88,3 +88,41 @@ is scoped to one questionnaire and is readable only through the same ownership a
 collection-scope checks as every other questionnaire read; no separate unscoped history
 endpoint is introduced. A cross-aggregate audit trail spanning requests, assessments, and
 risks remains out of scope and is deferred to a future domain-model decision.
+
+## Phase 10 amendment (2026-09-27): question text snapshots
+
+Decided in Phase 10 (10-CONTEXT D-01, D-17 and D-18) and recorded on 2026-10-02 with the change
+that implements it (plan 10-10). It extends the `governanceLog` event envelope above; it is not a
+content-type change, and no attribute of `CsrmQuestionnaire` or `CsrmQuestion` changes.
+
+**The added key.** A governance event may carry one more optional key, `questionText`: a string
+of 1 to 500 characters. The event stays at `schemaVersion` 1, and the closed parser still rejects
+every key it does not declare. The writer trims the question's text and, when it is longer than
+500 characters, keeps its first 499 and a closing ellipsis (`…`).
+
+**Which events carry it.** The four question events, each with the question's own words:
+
+| Event | Text kept |
+| --- | --- |
+| `question-added` | the new question's text |
+| `question-edited` | the question's text after the edit |
+| `question-deleted` | the text the question had when it was removed |
+| `answer-cleared` | the text of the revised question whose answer was cleared |
+
+**Write discipline.** The snapshot is part of the event, so it is appended in the same transaction
+as the change it documents, before any write, under the rules in "Write Discipline" above. A log
+that cannot take the event refuses the change (`HISTORY_UNAVAILABLE`) and leaves nothing behind.
+
+**Reading older events.** Events written before this amendment carry no `questionText`, and no
+stored log is migrated. The analyst timeline projection names such an event by resolving its
+`questionKey` against every question of the questionnaire, removed ones included, only when the
+event is not older than the questionnaire's latest generation (`generatedDate`; a questionnaire
+with none resolves every key). Question keys are not versioned, so an older event's key may belong
+to a question set a replacement has since discarded: such an event, and one whose key matches no
+question, names no question, and the timeline reads it as "a question from an earlier version". A
+resolved text is bounded exactly like a snapshot.
+
+**Who reads it.** Only the analyst projection carries `questionText`, beside the `questionKey` it
+already carried. The Requestor projection is unchanged: `kind`, `at` and `explanation`, never a
+question's text, key or actor. The published schemas `QuestionnaireGovernanceEvent` and
+`QuestionnaireRevisionTimelineEvent` declare the key with the same bounds.

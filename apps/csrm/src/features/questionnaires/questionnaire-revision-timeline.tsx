@@ -28,7 +28,7 @@ function DetailEntry({ event }: { event: TimelineEvent }) {
   return <li className="grid min-w-0 gap-2 rounded-lg border border-border bg-card p-3">
     <div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{presentation.label}</p><p className="text-sm text-muted-foreground"><LocalInstant style="date-time" value={event.at} /> by {actor(event)}</p></div></div>
     {event.reason ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Reason: </span>{event.reason}</p> : null}
-    {event.questionText ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Question: </span>{event.questionText}</p> : null}
+    {event.questionText || event.questionKey ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Question: </span>{event.questionText ?? <span className="text-foreground-secondary">A question from an earlier version</span>}</p> : null}
     {event.explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Detail: </span>{event.explanation}</p> : null}
   </li>;
 }

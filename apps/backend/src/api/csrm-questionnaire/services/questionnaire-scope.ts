@@ -9,6 +9,7 @@ import {
   GOVERNANCE_EVENT_KINDS,
   parseGovernanceEvent,
   parseGovernanceLog,
+  questionTextSnapshot,
   summariseGovernanceLog,
   type GovernanceEvent,
 } from "./questionnaire-governance-log";
@@ -307,6 +308,38 @@ export function governanceActorNames(users: readonly unknown[]): (documentId: st
 }
 
 /*
+ * Names the question an analyst timeline event concerns (D-17). A snapshot written with the
+ * event always wins. An event without one, written before snapshots existed, is resolved by its
+ * key against every question the read populated, removed ones included, but only when it is not
+ * older than the questionnaire's latest generation: keys are not versioned, so an older event's
+ * key may belong to a question set that a replacement has since discarded. Such an event, an
+ * unknown key, or a generation date that cannot be read names no question, and the timeline reads
+ * it as a question from an earlier version. A resolved text is bounded like a snapshot.
+ */
+function questionTextResolver(document: RecordValue): (event: GovernanceEvent) => string | undefined {
+  const generatedDate = document.generatedDate instanceof Date ? document.generatedDate.toISOString() : document.generatedDate;
+  const generatedAt = typeof generatedDate === "string" && generatedDate.length > 0 ? Date.parse(generatedDate) : null;
+  const unreadableGeneration = generatedDate !== null && generatedDate !== undefined && (generatedAt === null || Number.isNaN(generatedAt));
+  const texts = new Map<string, string>();
+  for (const question of questionsOf(document)) {
+    const questionKey = questionKeyOf(question);
+    if (questionKey !== null && typeof question.questionText === "string" && question.questionText.trim().length > 0 && !texts.has(questionKey)) {
+      texts.set(questionKey, questionTextSnapshot(question.questionText));
+    }
+  }
+  return (event) => {
+    if (event.questionText !== undefined) return event.questionText;
+    if (event.questionKey === undefined || unreadableGeneration) return undefined;
+    if (generatedAt !== null && Date.parse(event.at) < generatedAt) return undefined;
+    return texts.get(event.questionKey);
+  };
+}
+
+function withQuestionText(questionText: string | undefined): RecordValue {
+  return questionText === undefined ? {} : { questionText };
+}
+
+/*
  * The revision history is a narrative projection, never an authorization
  * input. It is read only after the questionnaire route has resolved the
  * caller's existing ownership or collection-scope grant.
@@ -321,6 +354,7 @@ export function projectGovernanceEvents(
   actor: QuestionnaireActor,
   resolveDisplayName?: (documentId: string) => string | null,
 ): RecordValue[] {
+  const questionText = actor === "analyst" ? questionTextResolver(document) : undefined;
   return projectableGovernanceEvents(document)
     .map((event) => actor === "analyst"
       ? {
@@ -336,7 +370,7 @@ export function projectGovernanceEvents(
         by: projectRevertedBy({ documentId: event.by, displayName: resolveDisplayName?.(event.by) ?? null }),
         ...(event.reason === undefined ? {} : { reason: event.reason }),
         ...(event.questionKey === undefined ? {} : { questionKey: event.questionKey }),
-        ...(event.questionText === undefined ? {} : { questionText: event.questionText }),
+        ...withQuestionText(questionText?.(event)),
         ...(event.explanation === undefined ? {} : { explanation: event.explanation }),
       }
       : {

@@ -226,8 +226,9 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await page.getByLabel('Choices').fill('Organisation managed\nCloud final\nHybrid\nThird-party hosted');
   await page.getByRole('button', { name: 'Save question' }).click();
   await expect(page.getByText('Answers cleared by this revision'), 'CRITERION_5_CLEARED_ANSWER_REPORTED').toBeVisible();
-  // The key appears in the cleared-answer notice and again in the timeline entry.
-  await expect(page.getByText(/hosting-model/).first(), 'CRITERION_5_CLEARED_ANSWER_NAMES_QUESTION').toBeVisible();
+  // The notice and the timeline's edit and cleared-answer entries all name the question by its text (D-17).
+  await expect(timeline.getByText(hostingQuestion).first(), 'CRITERION_5_CLEARED_ANSWER_NAMES_QUESTION').toBeVisible();
+  await expect(timeline.getByText(/hosting-model/), 'UX06_TIMELINE_NEVER_SHOWS_A_QUESTION_KEY').toHaveCount(0);
   await returnedGovernance.getByRole('button', { name: 'Release questionnaire' }).click();
   await page.getByRole('alertdialog', { name: 'Release this questionnaire?' }).getByRole('button', { name: 'Release questionnaire' }).click();
 
