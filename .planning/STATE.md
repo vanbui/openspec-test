@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-08-PLAN.md
-last_updated: "2026-10-02T05:21:01.529Z"
+stopped_at: Completed 10-09-PLAN.md
+last_updated: "2026-10-02T06:05:28.631Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-08 complete (answers autosave through a Server Action that revalidates nothing, with the X-1 save status; every in-app link, the wordmark, the request link and Sign out ask Leave this questionnaire? while anything is unsaved; Back after an autosave shows the saved answers; UAT-021)
-state_head: aa24e7fe5663a8c441379bcd91b42ae2c4ebbf7d
+last_activity_desc: Plan 10-09 complete (an analyst adds a question to an existing or a new section of a generated questionnaire on the first try, placed from every question, removed ones included; question forms open where they were invoked with focus and in-form errors; the analyst sees a released questionnaire's questions and N of M answered; UAT-016, UAT-005, UAT-020)
+state_head: fcdc7c0bc64ce8f68261305d78c8e4ceabbf5244
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 9 of 23
+Plan: 10 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-08 complete: useAnswerAutosave (1,500 ms debounce, blur flush, one save in flight and one queued, blocked failures stop until Refresh page) drives autosaveQuestionnaireDraftAction, which calls no revalidatePath (the autosave response carries no x-action-revalidated); SaveStatus (X-1) ends the completion card; a session record keeps Back on the saved answers; NavigationGuardProvider in the shell makes the sidebar, the 375 sheet (kept open when blocked), the wordmark, the request link and Sign out ask first, with beforeunload; web 2,470/2,470, Playwright 86/86 (82 desktop, 4 mobile, 12.2 min), typecheck, lint and api:check clean
+Last activity: 2026-10-02 — Plan 10-09 complete: questionnaire-placement.ts places from the full question set (getQuestionnaireGovernanceQuestions parses the one questions read as the definition and as placements; the parser getQuestionnaireQuestionPlacements passes all five parity modes); the editor's Section select replaces the typed title; Edit opens in its row, each section has Add question to {section}, the editor-level add opens at the top; focus, in-form refusals with Reload questions, one form at a time, polite announcements; Released questions with the served progress; the released panel follows canReturnToAnalystReview; web 2,513/2,513, Strapi governance file 10/10, Playwright 86/86 (82 desktop, 4 mobile, 12.1 min), typecheck and api:check clean
 
 ## Milestone
 
@@ -116,6 +116,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-07: every failed saveQuestionnaireDraftAction returns failure: blocked on 403, 404 and every 409 (autosave stops until a refresh), retryable on 400, answer field errors, 5xx and transport failures. Answer-only validation failures read 'Some answers need attention before they can be saved.'; a malformed save is blocked. Plan 10-08's save status drives autosave from this field; plan 10-09 shows Reload questions from reason DEFINITION_CONFLICT or QUESTION_REMOVED.
 - [Phase 10]: 10-08: autosaveQuestionnaireDraftAction validates and maps failures like Save draft but calls no revalidatePath and writes no cookie (Next 16.3.6 re-renders the page being edited for any revalidation); useAnswerAutosave drives it (1,500 ms, blur flush, one in flight plus one queued, blocked stops until Refresh page re-seeds). A session record of the last save wins at mount only when later than the page's latest answer time (questionnaire.updatedAt does not move on answer saves), so Back after an autosave shows the saved answers.
 - [Phase 10]: 10-08: NavigationGuardProvider (shell, inside TimeZoneProvider) owns the controlled Leave this questionnaire? dialog and beforeunload; pages register with useLeaveGuard, single links use GuardedLink, link lists record the activated element in onClick and call guardLink from Link onNavigate. Sign out (OIDC) is guarded too, because the action ends the session before the browser leaves. Every overlay must use the radix-ui build: the mobile sheet moved off @radix-ui/react-dialog 1.1.15 so dialogs stack in one layer and focus stack (the old package is deferred for removal).
+- [Phase 10]: 10-09: the analyst questionnaire page reads getQuestionnaireGovernanceQuestions, one GET /questions parsed as the active definition and as placements (every question, removed ones included, through the bound-free getQuestionnaireQuestionPlacements parser). questionnaire-placement.ts (zod-free) sends a section's stored metadata unchanged, gives a new section an unused section-{slug} key within 120 characters at the next free section order, and places a question one past the highest order in its section. QuestionnaireGovernance requires placements; later plans that render it pass them.
+- [Phase 10]: 10-09: governance question forms open in place (Edit in its row, Add question to {section} after each section, the editor-level add at the top with the last section) and only one at a time. Focus is managed through a pending-focus ref that an every-render effect resolves once its element exists, so an added or removed question's focus waits for the reloaded questions. Save question is never disabled, so focus stays on it after a refusal; the form's single role=alert line carries the server reason, with Reload questions for DEFINITION_CONFLICT and QUESTION_REMOVED. The awaiting-submission view lists the released questions through ReleasedQuestionList with the served progress, and the released panel follows canReturnToAnalystReview.
 
 ## Risks and Open Decisions
 
@@ -186,11 +188,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P06 | 36 min | 3 tasks | 20 files |
 | Phase 10 P07 | 11 min | 2 tasks | 9 files |
 | Phase 10 P08 | 39 min | 3 tasks | 20 files |
+| Phase 10 P09 | 40 min | 3 tasks | 16 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T05:20:54.082Z
-**Stopped At:** Completed 10-08-PLAN.md
+**Last session:** 2026-10-02T06:05:21.344Z
+**Stopped At:** Completed 10-09-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.

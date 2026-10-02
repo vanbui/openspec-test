@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 8/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 9/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -101,7 +101,7 @@ Plans:
 - [x] 10-08-PLAN.md — Deliver D-11 and D-12: answers autosave with a visible save status, and leaving warns while anything is unsaved. `useAnswerAutosave` drives a new autosave Server Action variant that calls no `revalida
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 10-09-PLAN.md — Fix the governance editor (D-04 to D-06) and the analyst's view of a released questionnaire (D-07). Placement comes from the complete question set through a new registered placement parser; the form c
+- [x] 10-09-PLAN.md — Fix the governance editor (D-04 to D-06) and the analyst's view of a released questionnaire (D-07). Placement comes from the complete question set through a new registered placement parser; the form c
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 10-10-PLAN.md — Add D-03's third API change in part: question events store a bounded text snapshot (D-18), and the analyst timeline projects question text by snapshot or by the D-17 resolution rule, so no timeline sh
