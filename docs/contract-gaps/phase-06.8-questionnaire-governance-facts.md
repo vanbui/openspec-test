@@ -174,3 +174,17 @@ stored record changes. It is served on analyst paths only: the analyst questionn
 every governance result. The Requestor read omits it, which is why the field is optional, in the
 same way `questionKey` and `questionText` are analyst-only. The list reads and the release result
 do not carry it.
+
+### Approval of the Phase 10 amendments (G-6)
+
+**Approved** by the pilot under the operator's G-6 delegation, 2026-10-03, after review of both parts as implemented at `984b048`. Checked:
+
+- **JDL** (`docs/references/idambox-datamodel.jdl`): no attribute of `CsrmQuestionnaire` or `CsrmQuestion` changes. No file under `apps/backend/src/api/*/content-types/` changed since the Phase 10 baseline `5ea2b77` (10-CONTEXT D-01, D-49). The amendments extend only the JSON `governanceLog` envelope that this record already governs.
+- **`specification.json`:** `QuestionnaireGovernanceEvent` and `QuestionnaireRevisionTimelineEvent` declare the optional `questionText` (string, 1 to 500 characters) and the `regenerated` kind. `QuestionnaireRevision` declares the optional `analystChangesSinceGeneration` (integer, minimum 0), described as served on analyst reads only. No required field was added, and `api:check` is clean at `984b048`.
+- **Role-function catalogue:** these amendments add no operation and no grant. Plan 10-13's API-only generation-jobs Function is a separate catalogue change, enforced in Strapi.
+- **AGENTS.md:**
+  - Authorisation and projection stay server-side.
+  - The Requestor projection is unchanged and minimal: it carries no question text, no key, no actor, and no explanation for `regenerated`, because that explanation counts analyst work the Requestor never saw.
+  - Replacing a released questionnaire is refused before the job and again inside it, so no history describes a version the Requestor could see.
+  - The write discipline (append in the same transaction, refuse when the log cannot take the event) keeps the record complete for audit.
+- **10-CONTEXT:** D-01, D-09, D-10 and D-16 to D-18.
