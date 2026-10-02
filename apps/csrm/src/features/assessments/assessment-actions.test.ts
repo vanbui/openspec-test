@@ -272,3 +272,50 @@ describe('analyst editor validation copy', () => {
     expect(createControlImplementation).not.toHaveBeenCalled();
   });
 });
+
+describe('questionnaire generation refusals (UI-SPEC §10.2 I)', () => {
+  const conflict = (reason?: string) => ({ data: null, error: { message: 'raw internal detail', status: 409, ...(reason ? { reason } : {}) } });
+  const generation = [
+    { name: 'start', service: startQuestionnaireGeneration, run: () => actions.startQuestionnaireGenerationAction({ requestId: 'request-1', replaceUnansweredQuestionnaire: true }) },
+    { name: 'retry', service: retryQuestionnaireGenerationJob, run: () => actions.retryQuestionnaireGenerationJobAction({ jobId: 'job-1' }) },
+  ];
+
+  describe.each(generation)('$name', ({ service, run }) => {
+    it.each([
+      ['REQUEST_NOT_ELIGIBLE', 'A questionnaire can be generated only while the request is submitted, and this request has moved on.'],
+      ['QUESTIONNAIRE_RELEASED', 'This questionnaire has been released to the Requestor, so it can’t be replaced. Return it to analyst review first.'],
+    ])('%s reads its sentence and returns the reason', async (reason, formError) => {
+      service.mockResolvedValueOnce(conflict(reason));
+
+      await expect(run()).resolves.toEqual({ ok: false, formError, reason });
+      expect(revalidatePath).not.toHaveBeenCalled();
+    });
+
+    it('no reason, or one generation does not list, reads the fallback and never asks for a reload', async () => {
+      service.mockResolvedValueOnce(conflict()).mockResolvedValueOnce(conflict('QUESTION_REMOVED'));
+
+      await expect(run()).resolves.toEqual({ ok: false, formError: 'A questionnaire can’t be generated for this request in its current state.' });
+      await expect(run()).resolves.toEqual({
+        ok: false,
+        formError: 'A questionnaire can’t be generated for this request in its current state.',
+        reason: 'QUESTION_REMOVED',
+      });
+    });
+
+    it('keeps the permission and unavailable messages', async () => {
+      service.mockResolvedValueOnce(failure(403)).mockResolvedValueOnce(failure(503));
+
+      await expect(run()).resolves.toEqual({ ok: false, formError: 'You do not have permission to change this assessment.' });
+      await expect(run()).resolves.toEqual({ ok: false, formError: 'The assessment service is unavailable. Please try again later.' });
+    });
+  });
+
+  it('leaves every other assessment action’s conflict message as it was', async () => {
+    startAssessmentDraft.mockResolvedValueOnce(conflict('REQUEST_NOT_ELIGIBLE'));
+
+    await expect(actions.startAssessmentDraftAction({ questionnaireId: 'questionnaire-1' })).resolves.toEqual({
+      ok: false,
+      formError: 'This assessment changed. Reload and try again.',
+    });
+  });
+});
