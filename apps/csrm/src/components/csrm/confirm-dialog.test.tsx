@@ -30,3 +30,64 @@ describe('ConfirmDialog', () => {
     expect(within(dialog).getByRole('button', { name: 'Return request to draft' })).toBeDisabled();
   });
 });
+
+/* Controlled mode, for a dialog opened by something other than a trigger (the leave warning, UI-SPEC §6.3). */
+describe('ConfirmDialog in controlled mode', () => {
+  function controlled(open: boolean, onOpenChange = vi.fn(), onConfirm = vi.fn()) {
+    return (
+      <ConfirmDialog
+        cancelLabel="Keep answering"
+        confirmLabel="Leave questionnaire"
+        confirmVariant="destructive"
+        description="Your latest answers are still being saved. If you leave now, they may not be saved."
+        onConfirm={onConfirm}
+        onOpenChange={onOpenChange}
+        open={open}
+        pendingLabel="Leaving questionnaire…"
+        title="Leave this questionnaire?"
+      />
+    );
+  }
+
+  it('renders open with no trigger, with the dismiss control focused', () => {
+    render(controlled(true));
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Leave this questionnaire?' });
+    expect(dialog).toHaveClass('w-[min(480px,calc(100vw-32px))]');
+    expect(within(dialog).getByRole('button', { name: 'Keep answering' })).toHaveFocus();
+    expect(within(dialog).getByRole('button', { name: 'Leave questionnaire' })).toBeEnabled();
+  });
+
+  it('renders nothing while closed', () => {
+    render(controlled(false));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('asks its owner to close on dismiss and on Escape, and follows the open prop', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const view = render(controlled(true, onOpenChange));
+
+    await user.click(screen.getByRole('button', { name: 'Keep answering' }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    await user.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+
+    view.rerender(controlled(false, onOpenChange));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('confirms through onConfirm and leaves closing to its owner', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onConfirm = vi.fn();
+    render(controlled(true, onOpenChange, onConfirm));
+
+    await user.click(screen.getByRole('button', { name: 'Leave questionnaire' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+});
