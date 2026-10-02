@@ -43,6 +43,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  // IN-404: a spied getter (document.visibilityState) never outlives its test, even when an assertion fails.
+  vi.restoreAllMocks();
 });
 
 describe('useAnswerAutosave timing (UI-SPEC §6.2)', () => {
@@ -258,7 +260,6 @@ describe('useAnswerAutosave explicit saves, pauses and leaving the page', () => 
     act(() => leave());
     expect(save).toHaveBeenCalledTimes(1);
     await settle();
-    vi.restoreAllMocks();
   });
 
   it('sends a waiting save at once when the questionnaire unmounts', () => {
