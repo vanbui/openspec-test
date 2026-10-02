@@ -299,16 +299,34 @@ test("request revert returns only eligible submitted requests to draft with serv
   const maxLengthResult = await request(requestPath(rejectedRequest), harness.identities.owner, revertRequest({ reason: maxReason }));
   assert.equal(maxLengthResult.status, 200, "UNEXPECTED_500_CHARACTER_REVERT_STATUS");
 
+  // The request is a draft again, so a second return names the rule that refuses it and writes nothing.
+  const draftBefore = await harness.getRequest(rejectedRequest);
+  assert.equal(draftBefore?.requestStatus, "draft", "UNEXPECTED_DRAFT_FIXTURE_STATUS");
+  const draftResult = await request(requestPath(rejectedRequest), harness.identities.owner, revertRequest({ reason: "Already a draft" }));
+  assert.equal(draftResult.status, 409, "UNEXPECTED_DRAFT_REVERT_STATUS");
+  assert.deepEqual(await conflictDetails(draftResult), { reason: "REQUEST_NOT_SUBMITTED" }, "UNEXPECTED_DRAFT_REVERT_REASON");
+  assert.deepEqual(await harness.getRequest(rejectedRequest), draftBefore, "UNEXPECTED_DRAFT_REVERT_WRITE");
+
   const relationRequest = await createSubmitted("Relation guarded revert");
   // A questionnaire is linked from its own side, as generation writes it. No request write can link
   // one: the link is a server-owned fact of the request (T-08-A2).
   await harness.createQuestionnaireLifecycleFixture({ requestDocumentId: relationRequest, released: false, answerState: "none" });
   const relationBefore = await harness.getRequest(relationRequest);
   assert.ok(relationBefore?.questionnaire, "UNEXPECTED_QUESTIONNAIRE_FIXTURE_UNLINKED");
-  const relationResult = await request(requestPath(relationRequest), harness.identities.analyst, revertRequest({ reason: "Questionnaire exists" }));
-  assert.equal(relationResult.status, 409, "UNEXPECTED_QUESTIONNAIRE_GUARD_STATUS");
-  assert.deepEqual(await harness.getRequest(relationRequest), relationBefore, "UNEXPECTED_QUESTIONNAIRE_GUARD_WRITE");
+  for (const identity of [harness.identities.analyst, harness.identities.owner]) {
+    const relationResult = await request(requestPath(relationRequest), identity, revertRequest({ reason: "Questionnaire exists" }));
+    assert.equal(relationResult.status, 409, `UNEXPECTED_QUESTIONNAIRE_GUARD_STATUS_${identity}`);
+    // Actor-neutral: the code says work has started, never which work, so the owner learns nothing
+    // the request's relationship state does not already serve them.
+    assert.deepEqual(await conflictDetails(relationResult), { reason: "REQUEST_WORK_STARTED" }, `UNEXPECTED_QUESTIONNAIRE_GUARD_REASON_${identity}`);
+    assert.deepEqual(await harness.getRequest(relationRequest), relationBefore, `UNEXPECTED_QUESTIONNAIRE_GUARD_WRITE_${identity}`);
+  }
 });
+
+async function conflictDetails(response: Response): Promise<unknown> {
+  const body = await response.json() as { error?: { details?: unknown } };
+  return body.error?.details;
+}
 
 test("authorised request reads carry one lifecycle truth with actor-specific next actions", async () => {
   const harness = await harnessPromise;

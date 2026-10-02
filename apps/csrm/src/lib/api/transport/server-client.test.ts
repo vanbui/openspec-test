@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-import { createStrapiClient } from './server-client';
+import { createStrapiClient, normalizeTransportError } from './server-client';
 
 const originalBaseUrl = process.env.CSRM_API_BASE_URL;
 const originalDevelopmentIdentity = process.env.CSRM_DEV_IDENTITY;
@@ -233,5 +233,44 @@ describe('createStrapiClient', () => {
 
     await expect(createStrapiClient()).rejects.toThrow('CSRM API configuration is invalid.');
     await expect(createStrapiClient()).rejects.not.toThrow(String(baseUrl));
+  });
+});
+
+describe('normalizeTransportError', () => {
+  const genericMessage = 'The CSRM service is unavailable. Please try again later.';
+  const conflictBody = (details: unknown) => ({
+    data: null,
+    error: { status: 409, name: 'ConflictError', message: 'CSRM assessment request cannot be reverted to draft.', details },
+  });
+
+  it('keeps a served conflict reason from the closed list and nothing else from the body', () => {
+    const result = normalizeTransportError(conflictBody({ reason: 'REQUEST_WORK_STARTED', extra: 'internal' }), 409);
+
+    expect(result).toEqual({ data: null, error: { message: genericMessage, status: 409, reason: 'REQUEST_WORK_STARTED' } });
+  });
+
+  it.each([
+    ['a reason outside the list', { reason: 'QUESTIONNAIRE_EXISTS' }],
+    ['a reason in the wrong case', { reason: 'request_work_started' }],
+    ['a non-string reason', { reason: 409 }],
+    ['an array of reasons', { reason: ['REQUEST_WORK_STARTED'] }],
+    ['empty details', {}],
+    ['details that are not an object', 'REQUEST_WORK_STARTED'],
+  ])('drops %s', (_scenario, details) => {
+    expect(normalizeTransportError(conflictBody(details), 409)).toEqual({ data: null, error: { message: genericMessage, status: 409 } });
+  });
+
+  it.each([
+    ['a missing body', undefined],
+    ['a null body', null],
+    ['a body without an error', { data: null }],
+    ['a thrown error', new Error('REQUEST_WORK_STARTED')],
+  ])('yields no reason for %s', (_scenario, body) => {
+    expect(normalizeTransportError(body, 409)).toEqual({ data: null, error: { message: genericMessage, status: 409 } });
+  });
+
+  it('keeps a reason only on a conflict', () => {
+    expect(normalizeTransportError(conflictBody({ reason: 'REQUEST_WORK_STARTED' }), 400)).toEqual({ data: null, error: { message: genericMessage, status: 400 } });
+    expect(normalizeTransportError(conflictBody({ reason: 'REQUEST_WORK_STARTED' }))).toEqual({ data: null, error: { message: genericMessage } });
   });
 });
