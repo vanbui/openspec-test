@@ -9,8 +9,10 @@ import { QuestionnaireDetail } from './questionnaire-detail';
 import { QuestionnaireRenderer } from './questionnaire-renderer';
 
 const saveQuestionnaireDraftAction = vi.hoisted(() => vi.fn());
+const autosaveQuestionnaireDraftAction = vi.hoisted(() => vi.fn());
 const submitQuestionnaireAction = vi.hoisted(() => vi.fn());
 const revertQuestionnaireToDraftAction = vi.hoisted(() => vi.fn());
+const routerRefresh = vi.hoisted(() => vi.fn());
 
 vi.stubGlobal('ResizeObserver', class ResizeObserver {
   observe() {}
@@ -20,10 +22,11 @@ vi.stubGlobal('ResizeObserver', class ResizeObserver {
 
 vi.mock('./questionnaire-actions', () => ({
   saveQuestionnaireDraftAction,
+  autosaveQuestionnaireDraftAction,
   submitQuestionnaireAction,
   revertQuestionnaireToDraftAction,
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
 
 function question(
   questionKey: string,
@@ -115,9 +118,27 @@ const questionnaire: QuestionnaireSummary = {
   updatedAt: '2026-08-30T01:00:00.000Z',
 };
 
+/** A successful save as the Server Actions return it. */
+function savedResponse(answers: QuestionnaireDefinition, updatedAt = '2026-09-28T01:00:05.000Z') {
+  return { ok: true, data: { questionnaireId: 'questionnaire-1', state: 'draft', progress: { answered: 1, total: answers.length, percent: 14 }, answers, updatedAt } };
+}
+
+/*
+ * The session record of the last save lives in use-answer-autosave.ts. It is loaded through a specifier
+ * Vite cannot fold, so this file still loads while that module does not exist yet.
+ */
+const autosaveModule = ['.', 'use-answer-autosave'].join('/');
+type SessionRecord = {
+  rememberSavedQuestionnaire: (documentId: string, saved: { updatedAt: string; answers: QuestionnaireDefinition }) => void;
+  savedQuestionnaireAfter: (documentId: string, updatedAt: string | undefined) => { updatedAt: string; answers: QuestionnaireDefinition } | undefined;
+};
+const sessionRecord = () => import(/* @vite-ignore */ autosaveModule) as Promise<SessionRecord>;
+
 beforeEach(() => {
   saveQuestionnaireDraftAction.mockReset();
   submitQuestionnaireAction.mockReset();
+  autosaveQuestionnaireDraftAction.mockReset().mockResolvedValue(savedResponse(definition));
+  routerRefresh.mockReset();
 });
 
 describe('QuestionnaireRenderer', () => {
@@ -289,11 +310,14 @@ describe('QuestionnaireRenderer', () => {
     const serviceName = screen.getByRole('textbox', { name: /Service name/ });
     await user.type(serviceName, 'Customer portal');
     await user.click(screen.getByRole('button', { name: 'Save draft' }));
-    expect((await screen.findByText(/service is unavailable/i)).closest('[role="alert"]')).toHaveTextContent(/service is unavailable/i);
+    // UI-SPEC §5.4 and §6.1: a failed save shows in the save status, never in a form-level alert.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your latest answers weren’t saved.');
+    expect(screen.queryByText('Questionnaire not saved')).not.toBeInTheDocument();
     expect(serviceName).toHaveValue('Customer portal');
 
     await user.click(screen.getByRole('button', { name: 'Save draft' }));
-    expect(await screen.findByRole('status')).toHaveTextContent(/Draft saved/i);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Saved at/));
+    expect(screen.queryByText(/Draft saved/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Submitted$/)).not.toBeInTheDocument();
   });
 
@@ -414,5 +438,119 @@ describe('QuestionnaireRenderer', () => {
     expect(route).not.toMatch(/\bfetch\s*\(/);
     expect(testSource).not.toContain(['PHASE3', 'RED', 'W0_04', 'RENDERER_ABSENT'].join('_'));
     expect(testSource).not.toContain(['exists', 'Sync'].join(''));
+  });
+});
+
+describe('QuestionnaireRenderer autosave and save status (D-11, UI-SPEC §6.1 and §6.2)', () => {
+  const editable = definition.filter((item) => item.questionKey !== 'evidence');
+
+  it('saves typed answers on its own after a pause, showing Saving… then Saved at in the completion card', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" />);
+    const completion = screen.getByRole('region', { name: 'Questionnaire completion' });
+
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Customer portal');
+    expect(within(completion).getByText('Saving…')).toBeInTheDocument();
+    await waitFor(() => expect(within(completion).getByRole('status').textContent?.replace(/\s+/g, ' ')).toMatch(/^Saved at \d{1,2}:\d{2} [ap]m UTC$/), { timeout: 4_000 });
+
+    expect(autosaveQuestionnaireDraftAction).toHaveBeenCalledTimes(1);
+    expect(autosaveQuestionnaireDraftAction).toHaveBeenCalledWith({
+      documentId: 'questionnaire-1',
+      answers: expect.arrayContaining([{ questionKey: 'service_name', value: 'Customer portal' }]),
+    });
+    expect(saveQuestionnaireDraftAction).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Draft saved/)).not.toBeInTheDocument();
+  });
+
+  it('saves at once when an answer loses focus', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" />);
+
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Customer portal');
+    await user.tab();
+    await waitFor(() => expect(autosaveQuestionnaireDraftAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Saved at/));
+  });
+
+  it('a blocked save states its reason with Refresh page, and no form-level alert remains', async () => {
+    const user = userEvent.setup();
+    const message = 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.';
+    autosaveQuestionnaireDraftAction.mockResolvedValue({ ok: false, formError: message, failure: 'blocked', reason: 'QUESTIONNAIRE_NOT_ANSWERABLE' });
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" />);
+
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Customer portal');
+    await user.tab();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    expect(screen.queryByText('Questionnaire not saved')).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: /Additional details/ }), 'More');
+    await user.tab();
+    expect(autosaveQuestionnaireDraftAction).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Refresh page' }));
+    expect(routerRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('a retryable save failure offers Retry save, which saves again', async () => {
+    const user = userEvent.setup();
+    autosaveQuestionnaireDraftAction
+      .mockResolvedValueOnce({ ok: false, formError: 'The questionnaire service is unavailable. Please try again later.', failure: 'retryable' })
+      .mockResolvedValueOnce(savedResponse(editable));
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" />);
+
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Customer portal');
+    await user.tab();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your latest answers weren’t saved.');
+
+    await user.click(screen.getByRole('button', { name: 'Retry save' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Saved at/));
+    expect(autosaveQuestionnaireDraftAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('Save draft saves at once through the explicit action and echoes the status beside the button, unannounced', async () => {
+    const user = userEvent.setup();
+    saveQuestionnaireDraftAction.mockResolvedValue(savedResponse(editable));
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" />);
+
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Saved at/));
+    expect(saveQuestionnaireDraftAction).toHaveBeenCalledTimes(1);
+    expect(autosaveQuestionnaireDraftAction).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    const echo = screen.getByRole('button', { name: 'Save draft' }).parentElement?.querySelector('[aria-hidden="true"]');
+    expect(echo).toHaveTextContent(/Saved at/);
+  });
+
+  it('remembers each successful save for this questionnaire in the tab', async () => {
+    const user = userEvent.setup();
+    const { savedQuestionnaireAfter } = await sessionRecord();
+    const served = editable.map((item) => item.questionKey === 'service_name' ? { ...item, answer: { schemaVersion: 1, value: 'Customer portal', state: 'draft', updatedAt: '2026-09-28T01:00:05.000Z' } } : item) as QuestionnaireDefinition;
+    autosaveQuestionnaireDraftAction.mockResolvedValue(savedResponse(served));
+    render(<QuestionnaireRenderer definition={editable} documentId="q-remembered-after-save" mode="edit" serverUpdatedAt="2026-09-28T00:00:00.000Z" />);
+
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Customer portal');
+    await user.tab();
+    await waitFor(() => expect(savedQuestionnaireAfter('q-remembered-after-save', '2026-09-28T00:00:00.000Z')).toEqual({ updatedAt: '2026-09-28T01:00:05.000Z', answers: served }));
+  });
+
+  /* Back and Forward reuse the page as it was last rendered, so a remembered newer save wins at mount. */
+  const pageAnswers = editable.map((item) => item.questionKey === 'service_name' ? { ...item, answer: { schemaVersion: 1, value: 'Page portal', state: 'draft', updatedAt: '2026-09-28T01:00:00.000Z' } } : item) as QuestionnaireDefinition;
+  const rememberedAnswers = editable.map((item) => item.questionKey === 'service_name' ? { ...item, answer: { schemaVersion: 1, value: 'Remembered portal', state: 'draft', updatedAt: '2026-09-28T01:00:05.000Z' } } : item) as QuestionnaireDefinition;
+
+  it('mounts with the remembered answers when they are newer than the page', async () => {
+    const { rememberSavedQuestionnaire } = await sessionRecord();
+    rememberSavedQuestionnaire('q-back', { updatedAt: '2026-09-28T01:00:05.000Z', answers: rememberedAnswers });
+    render(<QuestionnaireRenderer definition={pageAnswers} documentId="q-back" mode="edit" serverUpdatedAt="2026-09-28T01:00:00.000Z" />);
+
+    expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('Remembered portal');
+  });
+
+  it.each(['2026-09-28T01:00:05.000Z', '2026-09-28T01:00:09.000Z'])('mounts with the page answers when the page is as new or newer (%s)', async (serverUpdatedAt) => {
+    const { rememberSavedQuestionnaire } = await sessionRecord();
+    rememberSavedQuestionnaire(`q-fresh-${serverUpdatedAt}`, { updatedAt: '2026-09-28T01:00:05.000Z', answers: rememberedAnswers });
+    render(<QuestionnaireRenderer definition={pageAnswers} documentId={`q-fresh-${serverUpdatedAt}`} mode="edit" serverUpdatedAt={serverUpdatedAt} />);
+
+    expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('Page portal');
   });
 });

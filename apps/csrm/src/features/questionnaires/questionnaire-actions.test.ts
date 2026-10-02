@@ -220,6 +220,75 @@ describe('answer save refusals tell autosave whether to stop (UI-SPEC §10.2 C, 
   });
 });
 
+/*
+ * D-11, research Pitfall 8: in Next 16.3.6 any revalidatePath call re-renders the page being edited into the
+ * action's response, whatever path it names. The autosave variant revalidates nothing, on success or failure,
+ * and otherwise validates and maps failures exactly as Save draft does.
+ */
+describe('the autosave Server Action revalidates nothing (D-11)', () => {
+  const values = { documentId: 'questionnaire-1', answers: [{ questionKey: 'internet-facing', value: true }] };
+  const savedResult = {
+    questionnaireId: 'questionnaire-1',
+    state: 'draft',
+    progress: { answered: 1, total: 1, percent: 100 },
+    answers: [],
+    updatedAt: '2026-09-28T01:00:05.000Z',
+  };
+
+  it('is exported beside the explicit save', () => {
+    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
+  });
+
+  it('saves only documentId plus questionKey and value, and calls revalidatePath zero times', async () => {
+    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
+    saveQuestionnaireDraft.mockResolvedValueOnce({ data: savedResult, error: null });
+
+    await expect(actions.autosaveQuestionnaireDraftAction({
+      ...values,
+      answers: [{ questionKey: 'internet-facing', value: true, state: 'submitted', requestor: 'forged-requestor' }],
+      identity: 'forged-identity',
+    })).resolves.toEqual({ ok: true, data: savedResult });
+    expect(saveQuestionnaireDraft).toHaveBeenCalledWith('questionnaire-1', [{ questionKey: 'internet-facing', value: true }]);
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('maps a refusal like Save draft, says whether to stop, and still revalidates nothing', async () => {
+    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
+    saveQuestionnaireDraft
+      .mockResolvedValueOnce(conflict('QUESTIONNAIRE_NOT_ANSWERABLE'))
+      .mockResolvedValueOnce(failure(403))
+      .mockResolvedValueOnce(failure(503));
+
+    await expect(actions.autosaveQuestionnaireDraftAction(values)).resolves.toEqual({
+      ok: false,
+      values,
+      formError: 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.',
+      failure: 'blocked',
+      reason: 'QUESTIONNAIRE_NOT_ANSWERABLE',
+    });
+    await expect(actions.autosaveQuestionnaireDraftAction(values)).resolves.toMatchObject({ ok: false, failure: 'blocked' });
+    await expect(actions.autosaveQuestionnaireDraftAction(values)).resolves.toMatchObject({ ok: false, failure: 'retryable' });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('validates its input before any service call, like Save draft', async () => {
+    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
+
+    await expect(actions.autosaveQuestionnaireDraftAction({
+      documentId: 'questionnaire-1',
+      answers: [{ questionKey: 'launch_date', value: { invalid: true } }],
+    })).resolves.toMatchObject({
+      ok: false,
+      formError: 'Some answers need attention before they can be saved.',
+      failure: 'retryable',
+      fieldErrors: { 'answers.launch_date': expect.any(Array) },
+    });
+    await expect(actions.autosaveQuestionnaireDraftAction({ documentId: '', answers: [] })).resolves.toMatchObject({ ok: false, failure: 'blocked' });
+    expect(saveQuestionnaireDraft).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
 describe('questionnaire submit refusals (UI-SPEC §10.2 D)', () => {
   const values = { documentId: 'questionnaire-1', answers: [{ questionKey: 'internet-facing', value: true }] };
 
