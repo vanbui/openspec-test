@@ -342,6 +342,12 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   const controlNumberPattern = reusableControlNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   await expect(releasedMitigation.getByText(new RegExp(`^${controlNumberPattern} · \\S`)), 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE Jane sees the persisted control by its label').toBeVisible();
   await expect(releasedMitigation, 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE the control id never shows').not.toContainText(reusableControlValue!);
+  // ASSESS-07 (D-34): Jane reads each Risk's treatment, owners and target date as the analyst recorded them.
+  const releasedRisks = page.getByRole('region', { name: 'Identified risks' });
+  await expect(releasedRisks.getByText('Implement and verify the selected reusable mitigation control.', { exact: true }), 'ASSESS07_TREATMENT_AND_OWNERS_VISIBLE the treatment plan').toBeVisible();
+  await expect(releasedRisks.locator('dt:text-is("Risk owner") + dd').first(), 'ASSESS07_TREATMENT_AND_OWNERS_VISIBLE the risk owner').toHaveText('Jane Doe');
+  await expect(releasedRisks.locator('dt:text-is("Treatment owner") + dd').first(), 'ASSESS07_TREATMENT_AND_OWNERS_VISIBLE the treatment owner').toHaveText('Jane Doe');
+  await expect(releasedRisks.locator('dt:text-is("Target date") + dd').first(), 'ASSESS07_TREATMENT_AND_OWNERS_VISIBLE the target date').toHaveText('30 August 2027');
   const releasedMain = page.getByRole('main');
   await expect(releasedMain.getByRole('form')).toHaveCount(0);
   await expect(releasedMain.getByRole('textbox')).toHaveCount(0);

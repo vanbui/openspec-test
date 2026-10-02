@@ -58,7 +58,12 @@ export default async function ReleasedAssessmentPage({ params }: ReleasedAssessm
   const { documentId } = await params;
   const assessmentResult = await readReleasedAssessment(documentId);
   if (assessmentResult.error?.status === 404) notFound();
-  if (assessmentResult.error) return <ReleasedAssessmentDetailView diagnosticOperation={assessmentResult.error.operation} state={assessmentResult.error.kind === 'response-contract-mismatch' ? 'contract-mismatch' : stateForStatus(assessmentResult.error.status ?? 500)} />;
+  if (assessmentResult.error?.kind === 'response-contract-mismatch') {
+    // UI-SPEC §15.3: the reader sees the ordinary error state; the failing operation stays in the server log.
+    console.error(`[csrm-contract] response contract mismatch: ${assessmentResult.error.operation ?? 'unknown operation'}`);
+    return <ReleasedAssessmentDetailView state="contract-mismatch" />;
+  }
+  if (assessmentResult.error) return <ReleasedAssessmentDetailView state={stateForStatus(assessmentResult.error.status ?? 500)} />;
   if (!assessmentResult.data) notFound();
 
   const risksResult = await listReleasedAssessmentRisks(documentId);
