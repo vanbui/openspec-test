@@ -1,10 +1,11 @@
 import '@testing-library/jest-dom/vitest';
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RiskDetail } from './risk-schema';
 import { RiskDetails, type RiskDetailsOptions } from './risk-details';
@@ -16,8 +17,49 @@ const actionMocks = vi.hoisted(() => ({
   updateRiskDetailAction: vi.fn(),
 }));
 
+/* The Risk detail route's reads, so its request-first suggestions can be proved without Strapi. */
+const pageMocks = vi.hoisted(() => ({
+  current: vi.fn(),
+  granted: vi.fn(),
+  getRiskDetail: vi.fn(),
+  getAnalystAssessment: vi.fn(),
+  getRequest: vi.fn(),
+  listRiskTypes: vi.fn(),
+  searchActiveUsersAction: vi.fn(),
+  searchControlsAction: vi.fn(),
+  searchInformationSystemsAction: vi.fn(),
+  searchInformationAssetsAction: vi.fn(),
+}));
+
 vi.mock('server-only', () => ({}));
 vi.mock('./risk-actions', () => actionMocks);
+vi.mock('@/lib/auth/development-session-adapter', () => ({
+  getSessionAdapter: () => ({ current: pageMocks.current, capabilitiesFor: () => ({ granted: pageMocks.granted }) }),
+}));
+vi.mock('@/features/risks/risk-service', () => ({ getRiskDetail: pageMocks.getRiskDetail }));
+vi.mock('@/features/assessments/assessment-service', () => ({
+  getAnalystAssessment: pageMocks.getAnalystAssessment,
+  listRiskTypes: pageMocks.listRiskTypes,
+}));
+vi.mock('@/features/requests/request-service', () => ({ getRequest: pageMocks.getRequest }));
+vi.mock('@/features/assessments/assessment-actions', () => ({
+  searchActiveUsersAction: pageMocks.searchActiveUsersAction,
+  searchControlsAction: pageMocks.searchControlsAction,
+}));
+vi.mock('@/features/requests/request-actions', () => ({
+  searchInformationSystemsAction: pageMocks.searchInformationSystemsAction,
+  searchInformationAssetsAction: pageMocks.searchInformationAssetsAction,
+}));
+
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+vi.stubGlobal('ResizeObserver', TestResizeObserver);
+Element.prototype.scrollIntoView ??= () => {};
+
+import { RiskDetailsContent } from '../../../app/(app)/app/risks/[documentId]/page';
 
 const detail: RiskDetail = {
   documentId: 'risk-alpha',
@@ -71,25 +113,68 @@ const detail: RiskDetail = {
   }],
 };
 
+type PickerRecord = { documentId: string; name: string; detail?: string };
+type PickerSearchResult = { ok: true; data: readonly PickerRecord[] } | { ok: false; formError: string };
+const pickerSearch = () => vi.fn(async (_input: { search: string }): Promise<PickerSearchResult> => ({ ok: true, data: [] }));
+const searchControls = pickerSearch();
+const searchSystems = pickerSearch();
+const searchAssets = pickerSearch();
+
+const nist = 'NIST SP 800-53';
 const options: RiskDetailsOptions = {
-  assets: [{ documentId: 'asset-identity', name: 'Identity records' }],
-  controls: [{ documentId: 'control-1', controlNumber: 'AC-02', name: 'Account management' }],
-  riskTypes: [{ documentId: 'risk-type-1', name: 'Credential compromise' }],
-  systems: [{ documentId: 'system-portal', name: 'Customer portal' }],
+  riskTypes: [{
+    documentId: 'risk-type-1',
+    name: 'Credential compromise',
+    description: 'Compromise of reusable credentials.',
+    applicableControls: [
+      { documentId: 'control-1', controlNumber: 'AC-02', name: 'Account management', framework: nist },
+      { documentId: 'control-7', controlNumber: 'IA-05', name: 'Authenticator management', framework: nist },
+    ],
+  }],
   users: [detail.riskOwner!, detail.treatmentOwner!],
+  // The originating request's selections, read by the page for a mutable Risk (D-30).
+  requestSystems: [{ documentId: 'system-portal', name: 'Customer portal' }, { documentId: 'system-billing', name: 'Billing service' }],
+  requestAssets: [{ documentId: 'asset-identity', name: 'Identity records' }],
+  searchControls,
+  searchSystems,
+  searchAssets,
 };
 
 const searchOwners = vi.fn(async () => ({ ok: true as const, data: options.users }));
+
+/** A control implementation as the create and update actions return it: the control's id and its served summary. */
+function implementationResponse(control: { documentId: string; controlNumber: string; name: string } | null, documentId = 'implementation-1') {
+  return {
+    documentId,
+    control: control?.documentId ?? 'control-1',
+    controlSummary: control ? { ...control, framework: nist } : null,
+    controlOwner: null,
+    controlStatus: null,
+    effectivenessRating: null,
+    evidence: null,
+    implementationDueDate: null,
+    implementedDate: null,
+    reviewDate: null,
+  };
+}
+
+function definitionValue(term: string): HTMLElement {
+  const terms = screen.getAllByText(term, { selector: 'dt' });
+  expect(terms, `exactly one ${term} row`).toHaveLength(1);
+  return terms[0]!.nextElementSibling as HTMLElement;
+}
 
 function renderDetails(overrides: Partial<React.ComponentProps<typeof RiskDetails>> = {}) {
   return render(<RiskDetails detail={detail} options={options} searchOwners={searchOwners} {...overrides} />);
 }
 
+afterEach(() => vi.useRealTimers());
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const search of [searchControls, searchSystems, searchAssets]) search.mockResolvedValue({ ok: true, data: [] });
   actionMocks.updateRiskDetailAction.mockResolvedValue({ ok: true, data: {} });
-  actionMocks.createMitigationControlAction.mockResolvedValue({ ok: true, data: detail.controlImplementations[0] });
-  actionMocks.updateMitigationControlAction.mockResolvedValue({ ok: true, data: detail.controlImplementations[0] });
+  actionMocks.createMitigationControlAction.mockResolvedValue({ ok: true, data: implementationResponse(detail.controlImplementations[0]!.control) });
+  actionMocks.updateMitigationControlAction.mockResolvedValue({ ok: true, data: implementationResponse(detail.controlImplementations[0]!.control) });
   actionMocks.deleteMitigationControlAction.mockResolvedValue({ ok: true, data: undefined });
 });
 
@@ -122,10 +207,14 @@ describe('RiskDetails', () => {
       'Residual likelihood', 'Highest residual consequence', 'Residual rating', 'Residual rating rationale', 'Control effectiveness',
       'Risk owner', 'Treatment owner', 'Treatment action', 'Treatment plan', 'Treatment status', 'Identified date', 'Target date',
       'Treatment resolve date', 'Closure date', 'Risk communication date', 'Exempted', 'Exemption review date', 'Escalation details', 'Comments',
-      'Reusable control', 'Control owner', 'Control status', 'Effectiveness rating', 'Evidence', 'Implementation due date', 'Implemented date', 'Review date',
+      'Control', 'Control owner', 'Control status', 'Effectiveness rating', 'Evidence', 'Implementation due date', 'Implemented date', 'Review date',
       'Related assessment', 'Impacted Information system', 'Impacted Information asset',
     ]) expect(screen.getAllByText(value).length).toBeGreaterThan(0);
 
+    expect(screen.queryByText('Reusable control')).not.toBeInTheDocument();
+    // D-36: the card heading and Control row name the control by its label, never `{number} — {name}`.
+    expect(screen.getByRole('heading', { level: 3, name: 'AC-02 · Account management' })).toBeInTheDocument();
+    expect(screen.queryByText('AC-02 — Account management')).not.toBeInTheDocument();
     expect(screen.getByText('1 Aug 2026')).toBeInTheDocument();
     expect(screen.getByText('15 Oct 2026')).toBeInTheDocument();
     expect(screen.getAllByText('Not provided').length).toBeGreaterThan(0);
@@ -221,11 +310,15 @@ describe('RiskDetails', () => {
     const user = userEvent.setup();
     const view = renderDetails({ detail: { ...detail, controlImplementations: [] } });
     expect(screen.getByText('No mitigation controls added')).toBeInTheDocument();
-    expect(screen.getByText('Add a reusable Control implementation to record how this Risk is mitigated.')).toBeInTheDocument();
+    expect(screen.getByText('Add a control from the library to record how this Risk is mitigated.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add mitigation control' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Reusable control' }), 'control-1');
+    // The picker searches; there is no separate search box and no native select (UI-SPEC §13.5).
+    expect(screen.queryByRole('textbox', { name: 'Search reusable Controls' })).not.toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Add mitigation control' }).querySelector('select[name="control"]')).toBeNull();
+    fireEvent.click(screen.getByRole('combobox', { name: 'Control' }));
+    fireEvent.click(screen.getByRole('option', { name: 'AC-02 · Account management' }));
     await user.click(screen.getByRole('button', { name: 'Save mitigation control' }));
-    await waitFor(() => expect(actionMocks.createMitigationControlAction).toHaveBeenCalled());
+    await waitFor(() => expect(actionMocks.createMitigationControlAction).toHaveBeenCalledWith({ riskId: 'risk-alpha', values: expect.objectContaining({ control: 'control-1' }) }));
     expect(screen.getByRole('status')).toHaveTextContent('Mitigation control added.');
 
     view.rerender(<RiskDetails detail={detail} options={options} searchOwners={searchOwners} />);
@@ -240,15 +333,116 @@ describe('RiskDetails', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Mitigation control changes saved.');
 
     await user.click(screen.getByRole('button', { name: 'Remove mitigation control' }));
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('This removes the contextual implementation from this Risk. The reusable Control remains in the library.');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('This removes the control from this Risk. The control stays in the library.');
     actionMocks.deleteMitigationControlAction.mockResolvedValueOnce({ ok: false, formError: 'Removal failed safely.' });
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove mitigation control' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Removal failed safely.');
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     actionMocks.deleteMitigationControlAction.mockResolvedValueOnce({ ok: true, data: undefined });
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove mitigation control' }));
-    await waitFor(() => expect(screen.queryByText('AC-02 — Account management')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('AC-02 · Account management')).not.toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent('Mitigation control removed.');
+  });
+
+  it('opens the mitigation form on its Control picker with the Risk Type’s applicable controls first (D-31, UI-SPEC §13.1)', async () => {
+    const user = userEvent.setup();
+    renderDetails({ detail: { ...detail, controlImplementations: [] } });
+    await user.click(screen.getByRole('button', { name: 'Add mitigation control' }));
+
+    const picker = screen.getByRole('combobox', { name: 'Control' });
+    await waitFor(() => expect(picker).toHaveFocus());
+    expect(picker).toHaveAccessibleDescription('Search by control number, name or framework. Controls that apply to the Risk Type come first.');
+    fireEvent.click(picker);
+    const group = screen.getByRole('group', { name: 'Applicable to Credential compromise' });
+    expect(within(group).getAllByRole('option').map((option) => option.getAttribute('aria-label'))).toEqual([
+      'AC-02 · Account management',
+      'IA-05 · Authenticator management',
+    ]);
+  });
+
+  it('searches the whole control library and names the new card from the served summary (D-29, D-36)', async () => {
+    vi.useFakeTimers();
+    searchControls.mockResolvedValue({ ok: true, data: [{ documentId: 'control-90', name: 'SC-07 · Boundary protection', detail: nist }] });
+    actionMocks.createMitigationControlAction.mockResolvedValue({ ok: true, data: implementationResponse({ documentId: 'control-90', controlNumber: 'SC-07', name: 'SC-07 — Boundary protection' }, 'implementation-90') });
+    renderDetails({ detail: { ...detail, controlImplementations: [] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add mitigation control' }));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Control' }), { target: { value: 'SC-07' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(searchControls).toHaveBeenCalledWith({ search: 'SC-07' });
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'SC-07 · Boundary protection' }));
+    vi.useRealTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Save mitigation control' }));
+
+    await waitFor(() => expect(actionMocks.createMitigationControlAction).toHaveBeenCalledWith({ riskId: 'risk-alpha', values: expect.objectContaining({ control: 'control-90' }) }));
+    expect(await screen.findByRole('heading', { level: 3, name: 'SC-07 · Boundary protection' })).toBeInTheDocument();
+    expect(definitionValue('Control')).toHaveTextContent(/^SC-07 · Boundary protection$/);
+  });
+
+  it('asks for a control before saving a mitigation control (UI-SPEC §13.1)', async () => {
+    const user = userEvent.setup();
+    renderDetails({ detail: { ...detail, controlImplementations: [] } });
+    await user.click(screen.getByRole('button', { name: 'Add mitigation control' }));
+    await user.click(screen.getByRole('button', { name: 'Save mitigation control' }));
+
+    const message = await screen.findByText('Choose a control.');
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription(expect.stringContaining('Choose a control.'));
+    expect(message).toBeInTheDocument();
+    expect(actionMocks.createMitigationControlAction).not.toHaveBeenCalled();
+  });
+
+  it('says when a saved control can no longer be named (UI-SPEC §13.5)', async () => {
+    const user = userEvent.setup();
+    actionMocks.createMitigationControlAction.mockResolvedValue({ ok: true, data: implementationResponse(null, 'implementation-unnamed') });
+    renderDetails({ detail: { ...detail, controlImplementations: [] } });
+    await user.click(screen.getByRole('button', { name: 'Add mitigation control' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Control' }));
+    fireEvent.click(screen.getByRole('option', { name: 'IA-05 · Authenticator management' }));
+    await user.click(screen.getByRole('button', { name: 'Save mitigation control' }));
+
+    expect(await screen.findByText('The selected control is no longer available. Choose another control.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('implementation-unnamed');
+  });
+
+  it('picks the impacted system and asset from the request first, labelled by the Risk’s served relations (D-28, D-30)', async () => {
+    const user = userEvent.setup();
+    renderDetails();
+    await user.click(screen.getByRole('button', { name: 'Edit risk' }));
+
+    const systemPicker = screen.getByRole('combobox', { name: 'Information system impacted' });
+    expect(systemPicker).toHaveAccessibleDescription('Search by name. Systems selected on the request come first.');
+    expect(screen.getByText('Selected system: Customer portal')).toBeInTheDocument();
+    expect(screen.getByText('Selected asset: Identity records')).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Edit Risk' }).querySelector('select[name="informationSystemImpacted"], select[name="informationAssetImpacted"]')).toBeNull();
+
+    fireEvent.click(systemPicker);
+    expect(within(screen.getByRole('group', { name: 'On this request' })).getAllByRole('option').map((option) => option.getAttribute('aria-label'))).toEqual(['Customer portal', 'Billing service']);
+    fireEvent.click(screen.getByRole('option', { name: 'Billing service' }));
+    await user.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskDetailAction).toHaveBeenCalledWith({ riskId: 'risk-alpha', values: { informationSystemImpacted: 'system-billing' } }));
+    expect(screen.getByRole('status')).toHaveTextContent('Risk changes saved.');
+    expect(screen.getByText('Billing service')).toBeInTheDocument();
+  });
+
+  it('searches only, with no group label, when the request’s selections could not be read (research Open Question 2)', async () => {
+    vi.useFakeTimers();
+    searchSystems.mockResolvedValue({ ok: true, data: [{ documentId: 'system-26', name: 'Picker proof 26' }] });
+    renderDetails({ options: { ...options, requestSystems: [], requestAssets: [] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit risk' }));
+
+    const systemPicker = screen.getByRole('combobox', { name: 'Information system impacted' });
+    fireEvent.click(systemPicker);
+    expect(screen.getByText('Type to search information systems.')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'On this request' })).not.toBeInTheDocument();
+
+    fireEvent.change(systemPicker, { target: { value: 'Picker proof 26' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(searchSystems).toHaveBeenCalledWith({ search: 'Picker proof 26' });
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('option', { name: 'Picker proof 26' }));
+    expect(screen.getByText('Selected system: Picker proof 26')).toBeInTheDocument();
   });
 
   it('renders released detail semantically with no mutation or prefetch affordance', () => {
@@ -327,5 +521,70 @@ describe('RiskDetails', () => {
     expect(page).toContain('<Suspense');
     expect(page).not.toContain("'use client'");
     expect(page).not.toMatch(/\bfetch\s*\(/);
+  });
+});
+
+describe('the Risk detail route’s pickers (D-28, D-30)', () => {
+  const routeProps = () => ({ params: Promise.resolve({ documentId: 'risk-alpha' }) });
+  const request = {
+    informationSystems: [{ documentId: 'system-portal', name: 'Customer portal' }],
+    informationAssets: [{ documentId: 'asset-identity', name: 'Identity records' }],
+  };
+
+  async function routeOptions(): Promise<RiskDetailsOptions | undefined> {
+    const element = await RiskDetailsContent(routeProps()) as ReactElement<React.ComponentProps<typeof RiskDetails>>;
+    expect(element.props.state ?? 'ready').toBe('ready');
+    return element.props.options;
+  }
+
+  beforeEach(() => {
+    pageMocks.current.mockResolvedValue({ displayName: 'Bob Doe' });
+    pageMocks.granted.mockResolvedValue(new Set(['risk:manage', 'assessment:review']));
+    pageMocks.getRiskDetail.mockResolvedValue({ data: detail, error: null });
+    pageMocks.listRiskTypes.mockResolvedValue({ data: options.riskTypes, error: null });
+    pageMocks.getAnalystAssessment.mockResolvedValue({ data: { assessmentRequest: { documentId: 'request-alpha' } }, error: null });
+    pageMocks.getRequest.mockResolvedValue({ data: request, error: null });
+  });
+
+  it('offers the originating request’s systems and assets first, read through the Risk’s assessment', async () => {
+    const routeOptionsResult = await routeOptions();
+    expect(pageMocks.getAnalystAssessment).toHaveBeenCalledWith('assessment-alpha');
+    expect(pageMocks.getRequest).toHaveBeenCalledWith('request-alpha');
+    expect(routeOptionsResult?.requestSystems).toEqual(request.informationSystems);
+    expect(routeOptionsResult?.requestAssets).toEqual(request.informationAssets);
+    expect(routeOptionsResult?.riskTypes).toEqual(options.riskTypes);
+    expect(routeOptionsResult?.searchControls).toBe(pageMocks.searchControlsAction);
+    expect(routeOptionsResult?.searchSystems).toBe(pageMocks.searchInformationSystemsAction);
+    expect(routeOptionsResult?.searchAssets).toBe(pageMocks.searchInformationAssetsAction);
+  });
+
+  it('degrades to search alone when the assessment or the request cannot be read', async () => {
+    pageMocks.getAnalystAssessment.mockResolvedValueOnce({ data: null, error: { status: 403 } });
+    expect((await routeOptions())?.requestSystems).toEqual([]);
+    expect(pageMocks.getRequest).not.toHaveBeenCalled();
+
+    pageMocks.getRequest.mockResolvedValueOnce({ data: null, error: { status: 500 } });
+    const afterRequestFailure = await routeOptions();
+    expect(afterRequestFailure?.requestSystems).toEqual([]);
+    expect(afterRequestFailure?.requestAssets).toEqual([]);
+
+    pageMocks.getRequest.mockRejectedValueOnce(new Error('network'));
+    expect((await routeOptions())?.requestAssets).toEqual([]);
+  });
+
+  it('reads no assessment or request for a released Risk', async () => {
+    pageMocks.getRiskDetail.mockResolvedValue({ data: { ...detail, parentLock: 'released' }, error: null });
+    await RiskDetailsContent(routeProps());
+    expect(pageMocks.getAnalystAssessment).not.toHaveBeenCalled();
+    expect(pageMocks.getRequest).not.toHaveBeenCalled();
+  });
+
+  it('never loads the control library or an inventory page as options', () => {
+    const page = readFileSync(resolve(process.cwd(), 'app/(app)/app/risks/[documentId]/page.tsx'), 'utf8');
+    expect(page).not.toMatch(/listControls|listInformationSystems|listInformationAssets/);
+    expect(page).toContain('getRequest(');
+    expect(page).toContain('searchControlsAction');
+    expect(page).toContain('searchInformationSystemsAction');
+    expect(page).toContain('searchInformationAssetsAction');
   });
 });
