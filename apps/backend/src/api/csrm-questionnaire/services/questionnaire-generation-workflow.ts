@@ -5,6 +5,7 @@ import { createQuestionnaireGenerationRegistry, QuestionnaireGenerationJobFailur
 import { validatedGenerationQuestions } from "./questionnaire-generation-provider";
 import { activeQuestionnaireDefinition, parseQuestionnaireDefinition, QuestionnaireDefinitionError } from "./questionnaire-definition";
 import { appendGovernanceEvent, countAnalystChangesSinceGeneration, GovernanceLogError } from "./questionnaire-governance-log";
+import { lockRequestAndQuestionnaire } from "./questionnaire-row-locks";
 import { CSRM_AI_PROVIDER_MODE } from "../../../csrm/ai-provider-selection";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 import { latestAssessmentDraftJobForQuestionnaire } from "../../csrm-assessment/services/assessment-workflow";
@@ -62,7 +63,6 @@ function appendRegeneratedEvent(existing: RecordValue, at: string, by: string) {
     throw error;
   }
 }
-async function lock(strapi: Strapi, documentId: string, trx: unknown) { const query = strapi.db.queryBuilder("api::csrm-assessment-request.csrm-assessment-request"); query.select(["id"]); query.where({ documentId }); query.forUpdate(); query.transacting(trx); await query.execute(); }
 export async function persistGeneratedQuestionnaire(strapi: Strapi, requestId: string, analystId: string, replaceUnansweredQuestionnaire: boolean): Promise<{ questionnaireId: string }> {
   const requests = strapi.documents("api::csrm-assessment-request.csrm-assessment-request"); const questionnaires = strapi.documents("api::csrm-questionnaire.csrm-questionnaire"); const questions = strapi.documents("api::csrm-question.csrm-question");
   const request = await requests.findOne({ documentId: requestId, populate: { questionnaire: { populate: { questions: true } } } });
@@ -70,8 +70,20 @@ export async function persistGeneratedQuestionnaire(strapi: Strapi, requestId: s
   if (request.requestStatus !== "submitted") throw new QuestionnaireGenerationJobFailure("REQUEST_NOT_ELIGIBLE", "Assessment request is not eligible for questionnaire generation.");
   const proposal = await activeQuestionnaireGenerationProvider.generate({ title: String(request.title ?? "Assessment request"), description: typeof request.description === "string" ? request.description : null, assessmentType: typeof request.assessmentType === "string" ? request.assessmentType : null, businessPurpose: typeof request.businessPurpose === "string" ? request.businessPurpose : null, businessCriticality: typeof request.businessCriticality === "string" ? request.businessCriticality : null, thirdPartyInvolvement: request.thirdPartyInvolvement === true, thirdPartyDetails: typeof request.thirdPartyDetails === "string" ? request.thirdPartyDetails : null });
   const definition = validatedGenerationQuestions(proposal); const generatedDate = new Date().toISOString();
-  return strapi.db.transaction(async ({ trx }) => { await lock(strapi, requestId, trx); const current = await requests.findOne({ documentId: requestId, populate: { questionnaire: { populate: { questions: true } } } }); if (!current || current.requestStatus !== "submitted") throw new QuestionnaireGenerationJobFailure("REQUEST_NOT_ELIGIBLE", "Assessment request is not eligible for questionnaire generation."); const existing = record(current.questionnaire) ? current.questionnaire : null; if (existing && !replaceUnansweredQuestionnaire) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED", "Unanswered questionnaire replacement requires acknowledgement."); if (existing && hasQuestionnaireAnswerEvidence(existing.questions)) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_ANSWERED", "Answered questionnaires cannot be regenerated.");
-    // D-09: a release that landed while this job waited is seen here, under the request row lock (06.8 D-15: no implicit backward transition).
+  return strapi.db.transaction(async ({ trx }) => {
+    /*
+     * CR-101: the request row, then its questionnaire's row, the order every questionnaire mutation takes
+     * (questionnaire-row-locks.ts). The questionnaire, its questions and its governance log are read only once
+     * both are held, so no release, return to review or question change can commit between this read and the
+     * writes below, and none that read before this job can write a stale log over its regenerated event.
+     */
+    await lockRequestAndQuestionnaire(strapi, requestId, trx);
+    const current = await requests.findOne({ documentId: requestId, populate: { questionnaire: { populate: { questions: true } } } });
+    if (!current || current.requestStatus !== "submitted") throw new QuestionnaireGenerationJobFailure("REQUEST_NOT_ELIGIBLE", "Assessment request is not eligible for questionnaire generation.");
+    const existing = record(current.questionnaire) ? current.questionnaire : null;
+    if (existing && !replaceUnansweredQuestionnaire) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED", "Unanswered questionnaire replacement requires acknowledgement.");
+    if (existing && hasQuestionnaireAnswerEvidence(existing.questions)) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_ANSWERED", "Answered questionnaires cannot be regenerated.");
+    // D-09, re-checked under both locks: a release commits only while it holds the questionnaire row, so one that landed while this job waited is seen here (06.8 D-15: no implicit backward transition).
     if (existing && isReleased(existing)) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_RELEASED", RELEASED_REPLACEMENT_MESSAGE);
     let questionnaireId: string; if (existing && typeof existing.documentId === "string") {
       questionnaireId = existing.documentId;

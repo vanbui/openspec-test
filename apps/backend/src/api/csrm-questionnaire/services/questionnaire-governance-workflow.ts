@@ -3,9 +3,12 @@
  *
  * The transaction shape is deliberately identical to
  * `questionnaire-workflow.ts`: a per-documentId promise-tail queue serialises
- * mutations inside this process, a `db.transaction` wraps the work, and a
- * `forUpdate()` row lock is taken before any read so two concurrent releases
- * cannot both observe an absent release fact.
+ * mutations inside this process, a `db.transaction` wraps the work, and
+ * `forUpdate()` row locks are taken before any read so two concurrent releases
+ * cannot both observe an absent release fact. The locks are the request's row
+ * and then the questionnaire's row, the order a replacement takes them too, so
+ * a governance mutation and a replacement never interleave (CR-101,
+ * questionnaire-row-locks.ts).
  *
  * The release fact and its governance event are written by a single update
  * inside that one locked transaction, so an authorised reader can never observe
@@ -25,6 +28,7 @@ import { appendGovernanceEvent, GovernanceLogError, questionTextSnapshot } from 
 import { parseRevertReason } from "../../csrm-assessment-request/services/revert-reason";
 import { ASSESSMENT_STAGE_REQUEST_STATUSES, parseAnswerEnvelope, type AnswerEnvelope } from "./questionnaire-workflow";
 import { projectAnalystRevision, projectQuestionnaire } from "./questionnaire-scope";
+import { lockQuestionnaireAndRequest } from "./questionnaire-row-locks";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 
 type RecordValue = Record<string, unknown>;
@@ -190,19 +194,6 @@ async function serializeGovernanceMutation<T>(documentId: string, work: () => Pr
   }
 }
 
-async function lockQuestionnaire(
-  strapi: GovernanceStrapi,
-  documentId: string,
-  transaction: unknown,
-): Promise<void> {
-  const query = strapi.db.queryBuilder(QUESTIONNAIRE_UID);
-  query.select(["id"]);
-  query.where({ documentId });
-  query.forUpdate();
-  query.transacting(transaction);
-  await query.execute<unknown>();
-}
-
 async function runGovernanceMutation<T>(input: GovernanceWorkflowInput, work: () => Promise<T>): Promise<T> {
   assertAnalystGovernanceActor(input);
   if (typeof input.questionnaireDocumentId !== "string" || input.questionnaireDocumentId.length === 0) {
@@ -210,7 +201,8 @@ async function runGovernanceMutation<T>(input: GovernanceWorkflowInput, work: ()
   }
   return serializeGovernanceMutation(input.questionnaireDocumentId, () =>
     input.strapi.db.transaction(async ({ trx }) => {
-      await lockQuestionnaire(input.strapi, input.questionnaireDocumentId, trx);
+      // CR-101: the request row, then the questionnaire row, before the work reads anything.
+      await lockQuestionnaireAndRequest(input.strapi, input.questionnaireDocumentId, trx);
       return work();
     }));
 }

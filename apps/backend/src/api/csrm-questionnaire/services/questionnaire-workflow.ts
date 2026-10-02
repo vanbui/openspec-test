@@ -9,6 +9,7 @@ import {
 } from "./questionnaire-definition";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 import { parseRevertReason } from "../../csrm-assessment-request/services/revert-reason";
+import { lockQuestionnaireAndRequest } from "./questionnaire-row-locks";
 
 type RecordValue = Record<string, unknown>;
 export type AnswerEnvelope = {
@@ -200,13 +201,13 @@ async function serializeQuestionnaireMutation<T>(documentId: string, work: () =>
   }
 }
 
+/*
+ * An answer save writes the questions and then the request's status, so it takes the request row and then
+ * the questionnaire row up front: the one order a replacement and every governance mutation take (CR-101),
+ * so none of them can deadlock with it.
+ */
 async function lockQuestionnaire(strapi: WorkflowStrapi, documentId: string, transaction: unknown): Promise<void> {
-  const query = strapi.db.queryBuilder("api::csrm-questionnaire.csrm-questionnaire");
-  query.select(["id"]);
-  query.where({ documentId });
-  query.forUpdate();
-  query.transacting(transaction);
-  await query.execute<unknown>();
+  await lockQuestionnaireAndRequest(strapi, documentId, transaction);
 }
 
 async function runQuestionnaireMutation<T>(input: WorkflowInput, work: () => Promise<T>): Promise<T> {
