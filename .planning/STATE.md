@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-06-PLAN.md
-last_updated: "2026-10-02T04:20:23.370Z"
+stopped_at: Completed 10-07-PLAN.md
+last_updated: "2026-10-02T04:34:20.175Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-06 complete (closed conflict reason codes on every 409 the UAT met, in Strapi, the spec and the web transport; UAT-036, UAT-016)
-state_head: 51f97c3280f1db59c471c32732de6b008fe98f50
+last_activity_desc: Plan 10-07 complete (every request, questionnaire, governance and generation refusal reads UI-SPEC 10.2's sentence for its served reason; a failed answer save says blocked or retryable; UAT-036)
+state_head: 5c32221fc6ac5c70cf94d127622199f8c35e2915
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 7 of 23
+Plan: 8 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-06 complete: every 409 the UAT met names its rule in error.details.reason from one closed 18-code list, shared by Strapi, both conflict response schemas and the web (equality tests on both sides); the transport keeps only a closed-list reason on a 409 (TransportError.reason); a placement clash is DEFINITION_CONFLICT (UAT-016, D-06); each refusal proven to write nothing (UAT-036); Strapi 581/581 (11 min 29 s), web 2,267/2,267, api:check clean
+Last activity: 2026-10-02 — Plan 10-07 complete: one zod-free copy module (src/lib/api/refusal-copy.ts) maps each served conflict reason to UI-SPEC §10.2's sentence for families A to I, with fallbacks that never ask for a reload; the request, questionnaire, governance and generation Server Actions return that sentence and the reason; every failed answer save returns failure blocked or retryable (D-11); no action says "Reload and try again" (UAT-036); web 2,403/2,403, typecheck, lint and api:check clean
 
 ## Milestone
 
@@ -112,6 +112,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-05: The attention list shows only after a submit attempt or a server field error, in orderQuestionnaire's form order; server field errors carry type 'server' so a lingering client required error never keeps an answered question listed. The introduction's 'Your answers save automatically' (UI-SPEC 5.2 verbatim) is untrue until plan 10-07's autosave lands, which must precede shipping.
 - [Phase 10]: 10-06: Every 409 the UAT met carries error.details.reason from one closed 18-code list (apps/backend/src/csrm/conflict-reasons.ts, both conflict response schemas, apps/csrm/src/lib/api/conflict-reasons.ts; equality tests on both sides). The web transport keeps a reason only on a 409 and only when isConflictReason accepts it (TransportError.reason). Plan 10-07 maps each code to its copy; DEFINITION_CONFLICT tells the analyst to reload (D-06).
 - [Phase 10]: 10-06: ASSESSMENT_STARTED means an assessment exists or the request is at risk-assessment-drafted, under-review, approved or closed (ASSESSMENT_STAGE_REQUEST_STATUSES in questionnaire-workflow.ts); any other non-releasable stage, or no request, is REQUEST_NOT_ELIGIBLE. Governance log appends run before any write through appendOrConflict, so HISTORY_UNAVAILABLE never leaves a partial write. New workflow refusals add their code to all three lists in one change.
+- [Phase 10]: 10-07: refusal-copy.ts (zod-free, imports only the ConflictReason type) holds UI-SPEC 10.2 families A to I with fallbacks and the 10.3 request sentence; each Server Action names its family, maps a 409 through refusalMessage(family, reason) and returns the served reason, never Strapi's message. No action says 'Reload and try again'. A new refusal adds its sentence to its family and its row to refusal-copy.test.ts.
+- [Phase 10]: 10-07: every failed saveQuestionnaireDraftAction returns failure: blocked on 403, 404 and every 409 (autosave stops until a refresh), retryable on 400, answer field errors, 5xx and transport failures. Answer-only validation failures read 'Some answers need attention before they can be saved.'; a malformed save is blocked. Plan 10-08's save status drives autosave from this field; plan 10-09 shows Reload questions from reason DEFINITION_CONFLICT or QUESTION_REMOVED.
 
 ## Risks and Open Decisions
 
@@ -180,11 +182,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P04 | 15 min | 3 tasks | 15 files |
 | Phase 10 P05 | 13 min | 3 tasks | 16 files |
 | Phase 10 P06 | 36 min | 3 tasks | 20 files |
+| Phase 10 P07 | 11 min | 2 tasks | 9 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T04:20:15.137Z
-**Stopped At:** Completed 10-06-PLAN.md
+**Last session:** 2026-10-02T04:34:11.870Z
+**Stopped At:** Completed 10-07-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
