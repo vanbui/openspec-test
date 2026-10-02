@@ -1414,3 +1414,18 @@ describe('each save compares with the latest saved values (CR-201)', () => {
     expect(screen.queryByText('AC-1 · Access control')).not.toBeInTheDocument();
   });
 });
+
+/* IN-206: the analyst's read-only details format the next review date as the Requestor's released view does (D-34). */
+describe('the read-only assessment details', () => {
+  it('shows the next review date as a calendar date, never the raw ISO value', () => {
+    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} />);
+
+    expect(definitionValue('Next review date')).toHaveTextContent(/^1 December 2026$/);
+  });
+
+  it('says Not provided when no next review date is stored', () => {
+    render(<AssessmentEditor {...editorProps} assessment={{ ...releasedAssessment, nextReviewDate: null }} />);
+
+    expect(definitionValue('Next review date')).toHaveTextContent(/^Not provided$/);
+  });
+});
