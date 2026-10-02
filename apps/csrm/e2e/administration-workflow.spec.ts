@@ -149,6 +149,12 @@ test.describe.serial('@administration-risk-types Risk Type administration', () =
     await expect(selectedControls.getByText('Control not found', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /delete/i })).toHaveCount(0);
     await page.getByRole('button', { name: 'Edit Risk Type' }).click();
+    // ADMIN05_PICKER_FINDS_APP13 (10-23 walkthrough fix 2): the control picker's server search finds APP-13,
+    // whose over-long description used to fail every picker page holding it.
+    await page.getByRole('combobox', { name: /Applicable Controls/i }).fill('APP-13');
+    await page.getByRole('button', { name: 'Search Controls' }).click();
+    await expect(page.getByRole('option', { name: 'APP-13 · Correction of personal information', exact: true }),
+      'ADMIN05_PICKER_FINDS_APP13: the picker search loads APP-13').toBeVisible();
     await page.getByLabel('Description').fill('Unsaved dialog evidence');
     await page.getByRole('link', { name: 'Return to Risk Types' }).click();
     await expect(page.getByRole('alertdialog', { name: 'Discard unsaved changes?' })).toBeVisible();
@@ -221,6 +227,14 @@ test.describe.serial('@administration-controls Control administration', () => {
       await expect(titledName, `ADMIN05_CONTROL_TITLES_LOADED: ${titledNumber} is not Not provided`).not.toHaveText('Not provided');
       await expect(titledName, `ADMIN05_CONTROL_TITLES_LOADED: ${titledNumber} is not named by its number`).not.toHaveText(new RegExp(`^\\s*${titledNumber}`));
     }
+
+    // ADMIN05_APP13_LOADS (10-23 walkthrough fix 2): APP-13's seeded description was 100,973 characters against
+    // the contract's 10,000, so every Controls page holding it failed to load. Searching APP-13 now loads it.
+    await page.goto('/app/admin/controls?q=APP-13');
+    const app13Row = controlRow('APP-13');
+    await expect(app13Row, 'ADMIN05_APP13_LOADS: APP-13 is found').toHaveCount(1);
+    await expect(app13Row.getByRole('cell').nth(1), 'ADMIN05_APP13_LOADS: APP-13 reads its title').toHaveText('Correction of personal information');
+    await expect(page.getByText('We couldn’t load Controls'), 'ADMIN05_APP13_LOADS: the Controls list loads').toHaveCount(0);
 
     const controlNumber = `ZZ-${suffix}`;
     await page.getByRole('link', { name: 'Create Control' }).click();

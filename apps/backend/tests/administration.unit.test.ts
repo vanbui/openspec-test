@@ -201,6 +201,62 @@ test("ADMIN-02 accepts exact frozen Control field caps and rejects cap plus one"
   }
 });
 
+/*
+ * No valid write stores control text beyond its contract bound, so a longer stored value is a data defect.
+ * A read never serves it whole (the web's closed parser would refuse the whole page) and never shortens it
+ * silently: it is cut at a word boundary inside the bound, closed with an ellipsis, and the server logs a
+ * warning naming the control, never its text.
+ */
+test("ADMIN-05 a Control record and a CSV change never serve stored text beyond its bound", () => {
+  const contract = loadQueryModule();
+  const csv = loadCsvModule();
+  const stored = Array.from({ length: 1_500 }, (_, index) => `clause${index}`).join(" ");
+  const control = { documentId: "over-long-control", controlNumber: "OVER-1", name: "OVER-1 — Over-long", framework: "CSRM acceptance" };
+  const warnings: string[] = [];
+  const originalStrapi = globalThis.strapi;
+  globalThis.strapi = { log: { warn: (message: string) => { warnings.push(message); } } } as never;
+  try {
+    const record = contract.projectAdministrationRecord("controls", {
+      ...control, description: stored,
+      controlReference: "ref ".repeat(150), frameworkVersion: "ver ".repeat(70), frameworkSource: "src ".repeat(550),
+    });
+    for (const [field, maxLength, original] of [
+      ["description", 10_000, stored],
+      ["controlReference", 500, "ref ".repeat(150)],
+      ["frameworkVersion", 255, "ver ".repeat(70)],
+      ["frameworkSource", 2_000, "src ".repeat(550)],
+    ] as const) {
+      const served = String(record[field]);
+      assert.ok(served.length <= maxLength, `${field} serves ${served.length} characters`);
+      assert.ok(served.endsWith("…"), `${field} marks the shortening`);
+      assert.ok(original.startsWith(served.slice(0, -1)), `${field} serves the start of the stored text`);
+      assert.match(original.slice(served.length - 1), /^\s/, `${field} is cut at a word boundary`);
+    }
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0] ?? "", /over-long-control/);
+    assert.match(warnings[0] ?? "", /OVER-1/);
+    assert.equal((warnings[0] ?? "").includes("clause1 "), false, "the warning never carries the text");
+
+    const atBound = contract.projectAdministrationRecord("controls", { ...control, description: "d".repeat(10_000) });
+    assert.equal(atBound.description, "d".repeat(10_000), "a description at the bound is served whole");
+    assert.equal(warnings.length, 1, "a record within its bounds logs nothing");
+
+    const parsed = csv.parseAdministrationCsv({
+      kind: "controls",
+      bytes: Buffer.from(["controlNumber,name,framework,description", "OVER-1,OVER-1 — Over-long,CSRM acceptance,Replacement description"].join("\r\n")),
+      existing: [{ ...control, description: stored }],
+    }) as unknown as { rows: Array<{ state: CsvRowState; changes: Array<{ field: string; before: unknown; after: unknown }> }> };
+    assert.equal(parsed.rows[0]?.state, "update");
+    const before = String(parsed.rows[0]?.changes.find(({ field }) => field === "description")?.before);
+    assert.ok(before.length <= 10_000 && before.endsWith("…"), `the change shows the stored text shortened, visibly: ${before.length}`);
+    assert.ok(stored.startsWith(before.slice(0, -1)));
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[1] ?? "", /over-long-control/);
+  } finally {
+    globalThis.strapi = originalStrapi;
+  }
+});
+
 test("ADMIN-01 ADMIN-03 accepts nullable Risk Type descriptions and exact 500-character location fields", () => {
   const contract = loadQueryModule();
   assert.deepEqual(contract.parseAdministrationMutation("risk-types", { name: "Nullable", description: null }), {

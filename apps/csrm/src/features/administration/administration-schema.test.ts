@@ -116,6 +116,18 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 Administration canonical schemas', () => {
       })).toThrow();
     }
   });
+
+  // The contract bounds a served description at 10,000 characters, so a longer one is a server defect
+  // (Strapi bounds its reads): the closed record parser keeps refusing it rather than accepting it.
+  it('keeps the Control record parser strict on the 10,000-character description bound', async () => {
+    const schema = await loadSchema();
+    const record = {
+      documentId: 'boundary-control', controlNumber: 'BOUNDARY-001', name: 'Boundary Control', framework: 'Boundary Framework',
+      controlType: null, controlReference: null, frameworkVersion: null, frameworkSource: null,
+    };
+    expect(schema.controlAdministrationRecordSchema.parse({ ...record, description: 'd'.repeat(10_000) })).toMatchObject({ description: 'd'.repeat(10_000) });
+    expect(() => schema.controlAdministrationRecordSchema.parse({ ...record, description: 'd'.repeat(10_001) })).toThrow();
+  });
 });
 
 /*

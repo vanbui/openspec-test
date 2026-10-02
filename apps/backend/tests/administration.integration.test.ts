@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test, { after } from "node:test";
 
 import { startAuthorizationHttpHarness, type AdministrationFixtureKind } from "./helpers/strapi-http-harness";
@@ -318,6 +320,142 @@ test("ADMIN-05 D-46 the control search finds an Annex A control by a word from i
     body.data.filter((record) => record.controlNumber === "8.11").map((record) => record.name),
     ["8.11 — Data masking"],
   );
+});
+
+/*
+ * The Controls contract (ControlsAdministrationRecord) bounds every text field a control record serves, and
+ * the web's closed parser enforces each bound, so a single control beyond one fails the whole list page and
+ * every picker page that holds it. The walkthrough's searches all reached APP-13, whose seeded description
+ * was 100,973 characters against a bound of 10,000; each now returns contract-valid records only.
+ */
+type ControlStringBound = { field: string; minLength?: number; maxLength?: number };
+
+function controlRecordStringBounds(): ControlStringBound[] {
+  const specificationPath = path.resolve(__dirname, "..", "..", "..", "..", "..", "docs", "references", "specification.json");
+  const specification = JSON.parse(readFileSync(specificationPath, "utf8")) as {
+    components: { schemas: Record<string, { properties: Record<string, { type: string | string[]; minLength?: number; maxLength?: number }> }> };
+  };
+  return Object.entries(specification.components.schemas.ControlsAdministrationRecord.properties)
+    .filter(([, schema]) => [schema.type].flat().includes("string") && (schema.minLength !== undefined || schema.maxLength !== undefined))
+    .map(([field, schema]) => ({ field, minLength: schema.minLength, maxLength: schema.maxLength }));
+}
+
+function controlBoundBreaches(records: ReadonlyArray<Record<string, unknown>>, bounds: readonly ControlStringBound[]): string[] {
+  const breaches: string[] = [];
+  for (const record of records) {
+    for (const { field, minLength, maxLength } of bounds) {
+      const value = record[field];
+      if (value === null || value === undefined) continue;
+      const length = String(value).length;
+      if (maxLength !== undefined && length > maxLength) breaches.push(`${String(record.controlNumber)} ${field} ${length} > ${maxLength}`);
+      if (minLength !== undefined && length < minLength) breaches.push(`${String(record.controlNumber)} ${field} ${length} < ${minLength}`);
+    }
+  }
+  return breaches;
+}
+
+test("ADMIN-05 the walkthrough's control searches return contract-valid records on every page", async () => {
+  const harness = await harnessPromise;
+  const bounds = controlRecordStringBounds();
+  assert.ok(bounds.some(({ field, maxLength }) => field === "description" && maxLength === 10_000));
+  for (const search of ["APP", "APP-13", "Privacy Act", "data", "personal"]) {
+    const controlNumbers: string[] = [];
+    for (let page = 1; ; page += 1) {
+      const response = await harness.request({
+        path: `/api/v1/controls?q=${encodeURIComponent(search)}&sort=controlNumber%3Aasc&page=${page}&pageSize=100`,
+        identity: harness.identities.analyst,
+      });
+      assert.equal(response.status, 200, `${search} page ${page}: ${await response.clone().text()}`);
+      const body = await responseJson(response) as { data: Array<Record<string, unknown>>; meta: { pagination: { pageCount: number } } };
+      assert.deepEqual(controlBoundBreaches(body.data, bounds), [], `${search} page ${page} serves only contract-valid records`);
+      controlNumbers.push(...body.data.map((record) => String(record.controlNumber)));
+      if (page >= body.meta.pagination.pageCount) break;
+    }
+    assert.ok(controlNumbers.includes("APP-13"), `${search} finds APP-13`);
+  }
+});
+
+test("ADMIN-05 a stored control description beyond the bound is served shortened, visibly, with a warning that names the control", async () => {
+  const harness = await harnessPromise;
+  const controlNumber = `OVER-LONG-${process.pid}`;
+  const stored = Array.from({ length: 1_500 }, (_, index) => `clause${index}`).join(" ");
+  assert.ok(stored.length > 10_000);
+  const documentId = await harness.createFixtureDocument("api::csrm-control.csrm-control", {
+    controlNumber, name: `${controlNumber} — Over-long description fixture`, framework: "CSRM acceptance", description: stored,
+  });
+  const log = (globalThis as unknown as { strapi: { log: { warn: (...args: unknown[]) => unknown } } }).strapi.log;
+  const originalWarn = log.warn;
+  const warnings: string[] = [];
+  log.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(" "));
+    return originalWarn.apply(log, args);
+  };
+  try {
+    for (const requestPath of [
+      `/api/v1/controls/${documentId}`,
+      `/api/v1/controls?q=${controlNumber}&sort=controlNumber%3Aasc&page=1&pageSize=25`,
+    ]) {
+      const response = await harness.request({ path: requestPath, identity: harness.identities.analyst });
+      assert.equal(response.status, 200, `${requestPath}: ${await response.clone().text()}`);
+      const body = await responseJson(response) as { data: Record<string, unknown> | Array<Record<string, unknown>> };
+      const record = [body.data].flat().find((candidate) => candidate.documentId === documentId);
+      assert.ok(record, `${requestPath} serves the fixture`);
+      const served = String(record.description);
+      assert.ok(served.length <= 10_000, `${requestPath} serves ${served.length} characters`);
+      assert.ok(served.endsWith("…"), `${requestPath} marks the shortening with an ellipsis`);
+      const kept = served.slice(0, -1);
+      assert.ok(stored.startsWith(kept), `${requestPath} serves the start of the stored text`);
+      assert.match(stored.slice(kept.length), /^\s/, `${requestPath} cuts at a word boundary`);
+      assert.ok(kept.length > 9_000, `${requestPath} keeps most of the text`);
+    }
+  } finally {
+    log.warn = originalWarn;
+  }
+  const named = warnings.filter((warning) => warning.includes(documentId));
+  assert.equal(named.length, 2, `one warning per read names the control: ${JSON.stringify(warnings)}`);
+  assert.ok(named.every((warning) => warning.includes(controlNumber) && !warning.includes("clause1 ")), "the warning names the control, never its text");
+  assert.equal(String((await harness.getAdministrationRecord("controls", documentId))?.description), stored, "a read never rewrites the stored text");
+});
+
+test("ADMIN-05 control writes refuse a description beyond the bound and never shorten it", async () => {
+  const harness = await harnessPromise;
+  const countBefore = await harness.countAdministrationRecords("controls");
+  const controlNumber = `DESCRIPTION-BOUND-${process.pid}`;
+  const tooLong = "d".repeat(10_001);
+  const refusedCreate = await harness.request({
+    path: "/api/v1/controls", identity: harness.identities.analyst,
+    init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ controlNumber, name: "Description bound", framework: "CSRM acceptance", description: tooLong }) },
+  });
+  assert.equal(refusedCreate.status, 400);
+  assert.equal(((await responseJson(refusedCreate)).error as { code: string }).code, "INVALID_ADMINISTRATION_DATA");
+  assert.equal(await harness.countAdministrationRecords("controls"), countBefore);
+
+  const created = await harness.request({
+    path: "/api/v1/controls", identity: harness.identities.analyst,
+    init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ controlNumber, name: "Description bound", framework: "CSRM acceptance", description: "d".repeat(10_000) }) },
+  });
+  assert.equal(created.status, 201, await created.clone().text());
+  const createdBody = await responseJson(created) as { data: { documentId: string; description: string } };
+  assert.equal(createdBody.data.description, "d".repeat(10_000), "a description at the bound is served whole");
+
+  const refusedUpdate = await harness.request({
+    path: `/api/v1/controls/${createdBody.data.documentId}`, identity: harness.identities.analyst,
+    init: { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ description: tooLong }) },
+  });
+  assert.equal(refusedUpdate.status, 400);
+  assert.equal(((await responseJson(refusedUpdate)).error as { code: string }).code, "INVALID_ADMINISTRATION_DATA");
+  assert.equal(String((await harness.getAdministrationRecord("controls", createdBody.data.documentId))?.description), "d".repeat(10_000));
+
+  const bytes = Buffer.from(["controlNumber,name,framework,description", `${controlNumber}-CSV,Description bound CSV,CSRM acceptance,${tooLong}`].join("\r\n"));
+  const preview = await harness.request({
+    path: "/api/v1/controls/import/preview", identity: harness.identities.analyst,
+    init: { method: "POST", body: harness.createCsvMultipart({ filename: "control-description-over.csv", bytes }) },
+  });
+  assert.equal(preview.status, 200, await preview.clone().text());
+  const previewBody = await responseJson(preview) as { data: { summary: Record<string, number>; rows: Array<{ issues: Array<{ code: string; field: string | null }> }> } };
+  assert.deepEqual(previewBody.data.summary, { create: 0, update: 0, unchanged: 0, rejected: 1, ambiguous: 0 });
+  assert.deepEqual(previewBody.data.rows[0]?.issues.map(({ code, field }) => ({ code, field })), [{ code: "VALUE_TOO_LONG", field: "description" }]);
+  assert.equal(await harness.countAdministrationRecords("controls"), countBefore + 1, "the refused rows write nothing");
 });
 
 test("ADMIN-03 Systems and Assets preserve exact fields, owner scope, and normalized concurrency", async () => {

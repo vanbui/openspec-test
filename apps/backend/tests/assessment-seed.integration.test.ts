@@ -119,17 +119,93 @@ test("ADMIN-05 the seeded Privacy Principles carry their complete titles and leg
   assert.ok(String((await seededControl("APP-7")).description).startsWith("Direct marketing 7.1"));
 });
 
+/*
+ * An earlier seed stored the catalogue entry it read in sourceData beside the description it derived from
+ * it, so a value the seed wrote is recognisable: the stored description is the one the stored sourceData
+ * gives. These fixtures store both halves of what that earlier seed wrote.
+ */
+async function storeEarlierSeed(control: Document, entry: Record<string, unknown>, description: string): Promise<void> {
+  const sourceData = control.sourceData as { control: Record<string, unknown> } & Record<string, unknown>;
+  assert.ok(sourceData?.control, `${String(control.controlNumber)} stores its catalogue entry`);
+  await strapi.documents("api::csrm-control.csrm-control").update({
+    documentId: control.documentId,
+    data: { description, sourceData: { ...sourceData, control: { ...sourceData.control, ...entry } } },
+  });
+}
+
 test("ADMIN-05 a seeded start corrects a Privacy Principle an earlier seed stored truncated", async () => {
   const app11 = await seededControl("APP-11");
+  const truncated = "information 11.1 If an APP entity holds personal information";
+  await storeEarlierSeed(app11, { title: "security of personal", legalText: truncated }, truncated);
   await strapi.documents("api::csrm-control.csrm-control").update({
     documentId: app11.documentId,
-    data: { name: "APP-11 — security of personal", description: "information 11.1 If an APP entity holds personal information" },
+    data: { name: "APP-11 — security of personal" },
   });
   await seedCsrmData(strapi as never);
   const corrected = await seededControl("APP-11");
   assert.equal(corrected.documentId, app11.documentId);
   assert.equal(corrected.name, "APP-11 — Security of personal information");
   assert.ok(String(corrected.description).startsWith("11.1 If an APP entity holds"));
+  assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
+});
+
+/*
+ * The Controls contract bounds a control description at 10,000 characters. An earlier seed stored APP-13's
+ * catalogue text with Schedule 2 and the compilation's endnotes appended (100,973 characters), and every
+ * list or picker page holding APP-13 failed the web's closed parser. The seed wrote that value, so the next
+ * seeded start replaces it with APP 13's own paragraphs. An operator's own description of a seeded control
+ * is never overwritten, unless it is beyond the bound, which no valid write can store.
+ */
+const APP_13_END = "for associating the statement with the personal information (as the case may be).";
+
+function assertCuratedApp13(description: unknown): void {
+  const text = String(description);
+  assert.ok(text.length <= 10_000, `APP-13 is within the 10,000-character bound: ${text.length}`);
+  assert.ok(text.startsWith("Correction 13.1 If:"), text.slice(0, 60));
+  assert.ok(text.endsWith(APP_13_END), text.slice(-90));
+}
+
+test("ADMIN-05 a seeded start replaces the over-long APP-13 text an earlier seed stored", async () => {
+  const app13 = await seededControl("APP-13");
+  assertCuratedApp13(app13.description);
+  const overLong = `${String(app13.description)} Statutory Tort for Serious Invasions of Privacy Schedule 2 ${"Endnotes Endnote 4—Amendment history ".repeat(2_700)}`.trim();
+  assert.ok(overLong.length > 100_000);
+  await storeEarlierSeed(app13, { legalText: overLong }, overLong);
+  assert.equal(String((await seededControl("APP-13")).description).length, overLong.length);
+
+  await seedCsrmData(strapi as never);
+  const corrected = await seededControl("APP-13");
+  assert.equal(corrected.documentId, app13.documentId);
+  assertCuratedApp13(corrected.description);
+  assert.equal(corrected.description, app13.description);
+  assert.equal((corrected.sourceData as { control: { legalText: string } }).control.legalText, app13.description);
+  assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
+});
+
+test("ADMIN-05 a seeded start keeps an operator's own description of a seeded control, then changes nothing", async () => {
+  const app13 = await seededControl("APP-13");
+  const operatorDescription = "Our reading of APP 13: correct personal information on request, within 30 days for an agency.";
+  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: app13.documentId, data: { description: operatorDescription } });
+
+  await seedCsrmData(strapi as never);
+  const kept = await seededControl("APP-13");
+  assert.equal(kept.description, operatorDescription, "the seed never overwrites an operator's description");
+  await seedCsrmData(strapi as never);
+  const unchanged = await seededControl("APP-13");
+  assert.equal(unchanged.description, operatorDescription);
+  assert.equal(String(unchanged.updatedAt), String(kept.updatedAt), "a further seeded start leaves APP-13 untouched");
+});
+
+test("ADMIN-05 a seeded start replaces a stored description beyond the bound, whoever stored it", async () => {
+  const app13 = await seededControl("APP-13");
+  const beyondBound = "word ".repeat(2_001).trim();
+  assert.ok(beyondBound.length > 10_000);
+  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: app13.documentId, data: { description: beyondBound } });
+
+  await seedCsrmData(strapi as never);
+  const replaced = await seededControl("APP-13");
+  assertCuratedApp13(replaced.description);
+  assert.equal(replaced.description, (replaced.sourceData as { control: { legalText: string } }).control.legalText);
   assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
 });
 
