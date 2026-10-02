@@ -15,6 +15,7 @@ import {
   startAssessmentDraftAction,
 } from './assessment-actions';
 import type { AssessmentDraftJob as AssessmentDraftJobRecord, RequestGenerationJobs } from './assessment-schema';
+import { settleGenerationAction } from './generation-failure-copy';
 
 /** The request's assessment draft job as the jobs read serves it: the job and whether this viewer may retry it. */
 export type SeededAssessmentDraftJob = NonNullable<RequestGenerationJobs['assessmentDraft']>;
@@ -69,10 +70,10 @@ type PollResult = { ok: true; entry: SeededAssessmentDraftJob | null } | { ok: f
  */
 async function pollJob(requestId: string, jobId: string, byRequest: boolean): Promise<PollResult> {
   if (byRequest) {
-    const result = await getRequestGenerationJobsAction({ requestId });
+    const result = await settleGenerationAction('generationJobs', () => getRequestGenerationJobsAction({ requestId }));
     return result.ok ? { ok: true, entry: result.data.assessmentDraft } : { ok: false, formError: result.formError };
   }
-  const result = await getAssessmentDraftJobAction({ jobId });
+  const result = await settleGenerationAction('assessmentDraft', () => getAssessmentDraftJobAction({ jobId }));
   return result.ok ? { ok: true, entry: { job: result.data, canRetry: true } } : { ok: false, formError: result.formError };
 }
 
@@ -246,7 +247,7 @@ export function AssessmentDraftJob({
     setPending(true);
     setFormError(null);
     setStartError(null);
-    const result = await startAssessmentDraftAction({ questionnaireId });
+    const result = await settleGenerationAction('assessmentDraft', () => startAssessmentDraftAction({ questionnaireId }));
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);
@@ -270,7 +271,7 @@ export function AssessmentDraftJob({
     setPending(true);
     setFormError(null);
     setStartError(null);
-    const result = await retryAssessmentDraftJobAction({ jobId: job.jobId });
+    const result = await settleGenerationAction('assessmentDraft', () => retryAssessmentDraftJobAction({ jobId: job.jobId }));
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);

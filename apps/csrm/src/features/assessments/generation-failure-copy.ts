@@ -5,8 +5,8 @@
  * retry that finds no job. None names an assessment, which may not exist yet. A refusal (409) reads its family in
  * refusal-copy.ts instead.
  *
- * Plain and zod-free, so the Server Actions and the generation cards share it: a card that cannot reach its
- * Server Action at all reads the operation's unavailable sentence (WR-203).
+ * Plain and zod-free, so the Server Actions and the generation cards share it: a card whose Server Action throws
+ * reads the operation's unavailable sentence through `settleGenerationAction` (WR-203).
  */
 
 /** The generation operations a card runs. */
@@ -54,4 +54,22 @@ export function generationFailureMessage(operation: GenerationOperation, status:
 /** The sentence for an operation whose Server Action could not be reached or did not answer (WR-203). */
 export function generationUnavailableMessage(operation: GenerationOperation): string {
   return generationFailureCopy[operation].unavailable;
+}
+
+type GenerationActionResult = { ok: true; data: unknown } | { ok: false; formError: string };
+
+/**
+ * Runs a generation Server Action and always settles with a result (WR-203). A call that throws or rejects (a
+ * network failure, a deployment that no longer knows the action, a server crash) reads as the operation's
+ * unavailable sentence, so a card never stays pending and a rejected status check is never unhandled.
+ */
+export async function settleGenerationAction<R extends GenerationActionResult>(
+  operation: GenerationOperation,
+  run: () => Promise<R>,
+): Promise<R | { ok: false; formError: string }> {
+  try {
+    return await run();
+  } catch {
+    return { ok: false, formError: generationUnavailableMessage(operation) };
+  }
 }

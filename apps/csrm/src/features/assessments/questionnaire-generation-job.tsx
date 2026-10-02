@@ -18,6 +18,7 @@ import {
   startQuestionnaireGenerationAction,
 } from './assessment-actions';
 import type { QuestionnaireGenerationJob, RequestGenerationJobs } from './assessment-schema';
+import { settleGenerationAction } from './generation-failure-copy';
 
 /** The request's questionnaire generation job as the jobs read serves it: the job and whether this viewer may retry it. */
 export type SeededQuestionnaireGenerationJob = NonNullable<RequestGenerationJobs['questionnaireGeneration']>;
@@ -83,10 +84,10 @@ type PollResult = { ok: true; entry: SeededQuestionnaireGenerationJob | null } |
  */
 async function pollJob(requestId: string, jobId: string, byRequest: boolean): Promise<PollResult> {
   if (byRequest) {
-    const result = await getRequestGenerationJobsAction({ requestId });
+    const result = await settleGenerationAction('generationJobs', () => getRequestGenerationJobsAction({ requestId }));
     return result.ok ? { ok: true, entry: result.data.questionnaireGeneration } : { ok: false, formError: result.formError };
   }
-  const result = await getQuestionnaireGenerationJobAction({ jobId });
+  const result = await settleGenerationAction('questionnaireGeneration', () => getQuestionnaireGenerationJobAction({ jobId }));
   return result.ok ? { ok: true, entry: { job: result.data, canRetry: true } } : { ok: false, formError: result.formError };
 }
 
@@ -235,7 +236,7 @@ export function QuestionnaireGenerationJob({
     setFormError(null);
     setStartError(null);
     setReplacementError(null);
-    const result = await startQuestionnaireGenerationAction({ requestId, replaceUnansweredQuestionnaire });
+    const result = await settleGenerationAction('questionnaireGeneration', () => startQuestionnaireGenerationAction({ requestId, replaceUnansweredQuestionnaire }));
     requestInFlightRef.current = false;
     if (!mountedRef.current) return false;
     setPending(false);
@@ -266,7 +267,7 @@ export function QuestionnaireGenerationJob({
     setPending(true);
     setFormError(null);
     setStartError(null);
-    const result = await retryQuestionnaireGenerationJobAction({ jobId: job.jobId });
+    const result = await settleGenerationAction('questionnaireGeneration', () => retryQuestionnaireGenerationJobAction({ jobId: job.jobId }));
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);
