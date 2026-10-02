@@ -79,6 +79,7 @@ test("mounted questionnaire generation keeps completed relations populated and j
 test("mounted questionnaire generation refuses non-submitted requests", async () => {
   const harness = await harnessPromise;
   const requestFixtures = await harness.seedRequestWorkflowFixtures();
+  const before = await harness.getRequest(requestFixtures.requests.editable);
 
   const nonSubmitted = await request(
     `/api/v1/assessment_requests/${encodeURIComponent(requestFixtures.requests.editable)}/generate_questionnaire`,
@@ -86,4 +87,12 @@ test("mounted questionnaire generation refuses non-submitted requests", async ()
     { method: "POST" },
   );
   assert.equal(nonSubmitted.status, 409, "QUESTIONNAIRE_GENERATION_NON_SUBMITTED_REQUEST_NOT_REFUSED");
+  // D-22: the refusal names its rule, and nothing is queued or written.
+  assert.deepEqual((await body(nonSubmitted)).error, {
+    status: 409,
+    name: "ConflictError",
+    message: "Assessment request is not eligible for questionnaire generation.",
+    details: { reason: "REQUEST_NOT_ELIGIBLE" },
+  }, "QUESTIONNAIRE_GENERATION_NON_SUBMITTED_REASON");
+  assert.deepEqual(await harness.getRequest(requestFixtures.requests.editable), before, "QUESTIONNAIRE_GENERATION_NON_SUBMITTED_WRITE");
 });

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test, { after } from "node:test";
 
+import {
+  assertConflictReason,
+  createConflictReasonFixture,
+  draftAnswer,
+  submittedAnswer,
+  type ConflictReasonFixtureInput,
+} from "./helpers/conflict-reason-fixtures";
 import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
 
 const harnessPromise = startAuthorizationHttpHarness();
@@ -416,4 +423,45 @@ test("questionnaire reversal preserves values, audit facts, and refusal persiste
     assert.deepEqual(await harness.getQuestionnaire(fixtures.questionnaires.otherDraft), deniedBefore, "UNEXPECTED_REVERT_DENIAL_QUESTIONNAIRE_WRITE");
     assert.deepEqual(await harness.getQuestion(fixtures.questions.otherDraft), deniedQuestionBefore, "UNEXPECTED_REVERT_DENIAL_ANSWER_WRITE");
   }
+});
+
+/*
+ * D-22: every refusal of a Requestor's save, submit or return to draft names the one rule that
+ * refused it in error.details.reason, and writes nothing. Each case runs on its own fixture.
+ */
+test("mounted questionnaire answer and reversal conflicts name their reason and write nothing", async () => {
+  const harness = await harnessPromise;
+  const owner = harness.identities.owner;
+  const fixture = (input: Omit<ConflictReasonFixtureInput, "label" | "released">) => createConflictReasonFixture(harness, { label: "QWF", released: true, ...input });
+  const save = (questionnaireId: string) => () => request(`/api/v1/questionnaires/${questionnaireId}/answers`, owner, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ answers: [{ questionKey: "service", value: "A new answer" }] }),
+  });
+  const submit = (questionnaireId: string) => () => request(`/api/v1/questionnaires/${questionnaireId}/submit`, owner, { method: "POST" });
+  const revert = (questionnaireId: string) => () => request(`/api/v1/questionnaires/${questionnaireId}/revert_to_draft`, owner, revertRequest({ reason: "Correct an answer." }));
+
+  const submitted = await fixture({ requestStatus: "questionnaire-in-progress", questions: [{ key: "service", order: 1, answer: submittedAnswer("Submitted answer") }] });
+  await assertConflictReason(harness, submitted, save(submitted.questionnaireId), "QUESTIONNAIRE_ALREADY_SUBMITTED", "SAVE_SUBMITTED");
+  await assertConflictReason(harness, submitted, submit(submitted.questionnaireId), "QUESTIONNAIRE_ALREADY_SUBMITTED", "SUBMIT_TWICE");
+
+  const pastAnswering = await fixture({ requestStatus: "under-review", questions: [{ key: "service", order: 1, answer: draftAnswer("Draft answer") }] });
+  await assertConflictReason(harness, pastAnswering, save(pastAnswering.questionnaireId), "QUESTIONNAIRE_NOT_ANSWERABLE", "SAVE_NOT_ANSWERABLE");
+  await assertConflictReason(harness, pastAnswering, submit(pastAnswering.questionnaireId), "QUESTIONNAIRE_NOT_ANSWERABLE", "SUBMIT_NOT_ANSWERABLE");
+
+  const incomplete = await fixture({ requestStatus: "questionnaire-in-progress", questions: [{ key: "service", order: 1 }] });
+  await assertConflictReason(harness, incomplete, submit(incomplete.questionnaireId), "QUESTIONNAIRE_INCOMPLETE", "SUBMIT_INCOMPLETE");
+
+  const noActiveQuestion = await fixture({ requestStatus: "questionnaire-in-progress", questions: [{ key: "removed", order: 1, deleted: true }] });
+  await assertConflictReason(harness, noActiveQuestion, submit(noActiveQuestion.questionnaireId), "QUESTIONNAIRE_HAS_NO_QUESTIONS", "SUBMIT_WITHOUT_ACTIVE_QUESTION");
+
+  const drafting = await fixture({ requestStatus: "questionnaire-in-progress", questions: [{ key: "service", order: 1, answer: draftAnswer("Draft answer") }] });
+  await assertConflictReason(harness, drafting, revert(drafting.questionnaireId), "QUESTIONNAIRE_NOT_SUBMITTED", "REVERT_NOT_SUBMITTED");
+
+  const assessed = await fixture({ requestStatus: "risk-assessment-drafted", questions: [{ key: "service", order: 1, answer: submittedAnswer("Submitted answer") }], assessment: true });
+  await assertConflictReason(harness, assessed, revert(assessed.questionnaireId), "ASSESSMENT_STARTED", "REVERT_AFTER_ASSESSMENT");
+  const assessedInProgress = await fixture({ requestStatus: "questionnaire-in-progress", questions: [{ key: "service", order: 1, answer: submittedAnswer("Submitted answer") }], assessment: true });
+  await assertConflictReason(harness, assessedInProgress, revert(assessedInProgress.questionnaireId), "ASSESSMENT_STARTED", "REVERT_WITH_ASSESSMENT");
+  const notEligible = await fixture({ requestStatus: "submitted", questions: [{ key: "service", order: 1, answer: submittedAnswer("Submitted answer") }] });
+  await assertConflictReason(harness, notEligible, revert(notEligible.questionnaireId), "REQUEST_NOT_ELIGIBLE", "REVERT_NOT_ELIGIBLE");
 });

@@ -3,6 +3,13 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test, { after } from "node:test";
 
+import {
+  assertConflictReason,
+  createConflictReasonFixture,
+  fullGovernanceLog,
+  type ConflictReasonFixture,
+  type ConflictReasonFixtureInput,
+} from "./helpers/conflict-reason-fixtures";
 import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
 
 // Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend,
@@ -553,4 +560,83 @@ test("mounted release and governance responses satisfy their published closed sc
   const returned = await request(returnPath(questionnaireId), harness.identities.analyst, post({ reason: "Validate the governance response shape." }));
   assert.equal(returned.status, 200, "SCHEMA_FIXTURE_RETURN_FAILED");
   assertMatchesClosedSchema("QuestionnaireGovernanceResult", record((await payload(returned)).data, "GOVERNANCE_RESULT"), "GOVERNANCE");
+});
+
+/*
+ * D-22: every governance refusal names the one rule that refused it in error.details.reason, and
+ * writes nothing. Each case runs on its own fixture, built to the exact stored state the rule reads.
+ */
+test("mounted governance conflicts name their reason and leave the questionnaire unchanged", async () => {
+  const harness = await harnessPromise;
+  const analyst = harness.identities.analyst;
+  const fixture = (input: Omit<ConflictReasonFixtureInput, "label">) => createConflictReasonFixture(harness, { label: "GOV", ...input });
+  const single = [{ key: "service", order: 1 }];
+  const questionPath = (target: ConflictReasonFixture, key: string) => `${questionsPath(target.questionnaireId)}/${encodeURIComponent(target.questionIds[key])}`;
+  const patch = (body: unknown): RequestInit => ({ method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const addBody = (section: { key: string; title: string; order: number }, order: number) => ({
+    questionText: "Which hosting region applies?", answerType: "Text", required: true, section, order,
+  });
+
+  // Release.
+  const released = await fixture({ requestStatus: "questionnaire-in-progress", released: true, questions: single });
+  await assertConflictReason(harness, released, () => request(releasePath(released.questionnaireId), analyst, post()), "QUESTIONNAIRE_RELEASED", "RELEASE_TWICE");
+  const draftRequest = await fixture({ requestStatus: "draft", released: false, questions: single });
+  await assertConflictReason(harness, draftRequest, () => request(releasePath(draftRequest.questionnaireId), analyst, post()), "REQUEST_NOT_ELIGIBLE", "RELEASE_DRAFT_REQUEST");
+  const assessed = await fixture({ requestStatus: "questionnaire-in-progress", released: false, questions: single, assessment: true });
+  await assertConflictReason(harness, assessed, () => request(releasePath(assessed.questionnaireId), analyst, post()), "ASSESSMENT_STARTED", "RELEASE_AFTER_ASSESSMENT");
+  const drafted = await fixture({ requestStatus: "risk-assessment-drafted", released: false, questions: single });
+  await assertConflictReason(harness, drafted, () => request(releasePath(drafted.questionnaireId), analyst, post()), "ASSESSMENT_STARTED", "RELEASE_AFTER_DRAFT_STAGE");
+  const allRemoved = await fixture({ requestStatus: "questionnaire-in-progress", released: false, questions: [{ key: "removed", order: 1, deleted: true }] });
+  await assertConflictReason(harness, allRemoved, () => request(releasePath(allRemoved.questionnaireId), analyst, post()), "QUESTIONNAIRE_HAS_NO_QUESTIONS", "RELEASE_WITHOUT_ACTIVE_QUESTION");
+  const invalidDefinition = await fixture({
+    requestStatus: "questionnaire-in-progress", released: false,
+    questions: [{ key: "first", order: 1 }, { key: "second", order: 1 }],
+  });
+  await assertConflictReason(harness, invalidDefinition, () => request(releasePath(invalidDefinition.questionnaireId), analyst, post()), "DEFINITION_INVALID", "RELEASE_INVALID_DEFINITION");
+  const fullOnRelease = await fixture({ requestStatus: "questionnaire-in-progress", released: false, questions: single, governanceLog: fullGovernanceLog(harness.users.analyst) });
+  await assertConflictReason(harness, fullOnRelease, () => request(releasePath(fullOnRelease.questionnaireId), analyst, post()), "HISTORY_UNAVAILABLE", "RELEASE_FULL_HISTORY");
+
+  // Return to analyst review.
+  const inReview = await fixture({ requestStatus: "questionnaire-in-progress", released: false, questions: single });
+  await assertConflictReason(harness, inReview, () => request(returnPath(inReview.questionnaireId), analyst, post({ reason: "Again." })), "ALREADY_IN_ANALYST_REVIEW", "RETURN_IN_REVIEW");
+  const returnAssessed = await fixture({ requestStatus: "risk-assessment-drafted", released: true, questions: single, assessment: true });
+  await assertConflictReason(harness, returnAssessed, () => request(returnPath(returnAssessed.questionnaireId), analyst, post({ reason: "Too late." })), "ASSESSMENT_STARTED", "RETURN_AFTER_ASSESSMENT");
+  const returnDraftRequest = await fixture({ requestStatus: "draft", released: true, questions: single });
+  await assertConflictReason(harness, returnDraftRequest, () => request(returnPath(returnDraftRequest.questionnaireId), analyst, post({ reason: "Draft request." })), "REQUEST_NOT_ELIGIBLE", "RETURN_DRAFT_REQUEST");
+  const invalidAnswer = await fixture({ requestStatus: "questionnaire-in-progress", released: true, questions: [{ key: "service", order: 1, answer: { value: "not an envelope" } }] });
+  await assertConflictReason(harness, invalidAnswer, () => request(returnPath(invalidAnswer.questionnaireId), analyst, post({ reason: "Malformed answer." })), "ANSWER_DATA_INVALID", "RETURN_INVALID_ANSWER");
+  const fullOnReturn = await fixture({
+    requestStatus: "questionnaire-in-progress", released: true, questions: single, governanceLog: fullGovernanceLog(harness.users.analyst),
+  });
+  await assertConflictReason(harness, fullOnReturn, () => request(returnPath(fullOnReturn.questionnaireId), analyst, post({ reason: "Full history." })), "HISTORY_UNAVAILABLE", "RETURN_FULL_HISTORY");
+
+  // Question changes.
+  await assertConflictReason(harness, released, () => request(questionPath(released, "service"), analyst, patch({ helpText: "Edited while released." })), "QUESTIONNAIRE_RELEASED", "EDIT_WHILE_RELEASED");
+  await assertConflictReason(harness, released, () => request(questionsPath(released.questionnaireId), analyst, post(addBody({ key: "context", title: "Context", order: 1 }, 2))), "QUESTIONNAIRE_RELEASED", "ADD_WHILE_RELEASED");
+  await assertConflictReason(harness, assessed, () => request(questionPath(assessed, "service"), analyst, { method: "DELETE" }), "ASSESSMENT_STARTED", "DELETE_AFTER_ASSESSMENT");
+  await assertConflictReason(harness, draftRequest, () => request(questionPath(draftRequest, "service"), analyst, patch({ helpText: "Draft request." })), "REQUEST_NOT_ELIGIBLE", "EDIT_DRAFT_REQUEST");
+  await assertConflictReason(harness, inReview, () => request(questionPath(inReview, "service"), analyst, { method: "DELETE" }), "LAST_ACTIVE_QUESTION", "DELETE_LAST_ACTIVE");
+  const dependent = await fixture({
+    requestStatus: "questionnaire-in-progress", released: false,
+    questions: [
+      { key: "internet-facing", order: 1, answerType: "Boolean" },
+      { key: "exposure", order: 2, visibility: { questionKey: "internet-facing", operator: "equals", value: true } },
+    ],
+  });
+  await assertConflictReason(harness, dependent, () => request(questionPath(dependent, "internet-facing"), analyst, { method: "DELETE" }), "QUESTION_HAS_DEPENDENTS", "DELETE_WITH_DEPENDENT");
+  const removed = await fixture({ requestStatus: "questionnaire-in-progress", released: false, questions: [{ key: "kept", order: 1 }, { key: "removed", order: 2, deleted: true }] });
+  await assertConflictReason(harness, removed, () => request(questionPath(removed, "removed"), analyst, patch({ helpText: "Edit a removed question." })), "QUESTION_REMOVED", "EDIT_REMOVED");
+  await assertConflictReason(harness, removed, () => request(questionPath(removed, "removed"), analyst, { method: "DELETE" }), "QUESTION_REMOVED", "DELETE_REMOVED");
+  // D-06: another key already holds section order 1, so the add is a placement clash.
+  await assertConflictReason(harness, inReview, () => request(questionsPath(inReview.questionnaireId), analyst, post(addBody({ key: "general", title: "General", order: 1 }, 1))), "DEFINITION_CONFLICT", "ADD_PLACEMENT_CLASH");
+  await assertConflictReason(harness, removed, () => request(questionPath(removed, "kept"), analyst, patch({ section: { key: "general", title: "General", order: 1 } })), "DEFINITION_CONFLICT", "EDIT_PLACEMENT_CLASH");
+  const invalidStoredAnswer = await fixture({ requestStatus: "questionnaire-in-progress", released: false, questions: [{ key: "service", order: 1, answer: { value: "not an envelope" } }] });
+  await assertConflictReason(harness, invalidStoredAnswer, () => request(questionPath(invalidStoredAnswer, "service"), analyst, patch({ helpText: "Edit a question with a malformed answer." })), "ANSWER_DATA_INVALID", "EDIT_INVALID_ANSWER");
+  const fullOnChange = await fixture({
+    requestStatus: "questionnaire-in-progress", released: false,
+    questions: [{ key: "first", order: 1 }, { key: "second", order: 2 }], governanceLog: fullGovernanceLog(harness.users.analyst),
+  });
+  await assertConflictReason(harness, fullOnChange, () => request(questionsPath(fullOnChange.questionnaireId), analyst, post(addBody({ key: "context", title: "Context", order: 1 }, 3))), "HISTORY_UNAVAILABLE", "ADD_FULL_HISTORY");
+  await assertConflictReason(harness, fullOnChange, () => request(questionPath(fullOnChange, "first"), analyst, patch({ helpText: "Full history." })), "HISTORY_UNAVAILABLE", "EDIT_FULL_HISTORY");
+  await assertConflictReason(harness, fullOnChange, () => request(questionPath(fullOnChange, "second"), analyst, { method: "DELETE" }), "HISTORY_UNAVAILABLE", "DELETE_FULL_HISTORY");
 });
