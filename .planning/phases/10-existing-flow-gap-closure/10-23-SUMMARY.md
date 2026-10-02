@@ -41,6 +41,12 @@ key-files:
     - apps/backend/tests/assessment-seed.integration.test.ts
     - apps/csrm/src/features/administration/administration-schema.test.ts
     - apps/csrm/e2e/administration-workflow.spec.ts
+    - apps/backend/src/bootstrap/controls/csrm-control-titles.json
+    - apps/backend/tests/control-titles.unit.test.ts
+    - scripts/csrm-seed-control-files.mjs
+    - scripts/verify-csrm-seed.mjs
+    - scripts/verify-csrm-seed-runtime.mjs
+    - package.json
 
 key-decisions:
   - "10-23: the CSRM_AI_ source check failed on a read-only assertion 10-09 added; it was replaced by a comment naming the deterministic-shape proof the test already makes, rather than widening the check (fix eed7ed0)"
@@ -48,6 +54,10 @@ key-decisions:
   - "10-23 fix 2: APP-13 is curated at the source to its own five subclauses (2,558 characters); Schedule 2 and endnotes 1 to 5 (98,415 characters) are cut. The over-long text dates from d7fd4a0 (2026-08-08), before Phase 10"
   - "10-23 fix 2: a seeded start replaces a control description the seed wrote (the one its stored sourceData gives) or one beyond the 10,000 bound, and keeps an operator's own; other seeded fields keep the existing reconciliation"
   - "10-23 fix 2: the Controls projection and the CSV change preview bound every text field they serve, cut at a word boundary with an ellipsis, and log a warning naming the control, never its text; the web's closed parser stays strict"
+  - "10-23 fix 3: 72 of 114 audited descriptive titles (41 of 51 CPS 230, 10 of 24 CPS 234, 21 of 39 PSPF) narrowed or misstated their paragraph and are corrected; the voice cap widens to 12 words and 100 characters so a title can cover every limb"
+  - "10-23 fix 3: a seeded start replaces a name the seed wrote (the bare number, its stored catalogue label, or a title in the title file's supersededTitles) and keeps an operator's own, replacing 10-22's accepted overwrite (T-10-64)"
+  - "10-23 fix 3: both seed verifiers read the seed's own catalogue list and title file; their stale pre-Phase 10 assumptions are fixed (root Strapi resolution, the Function map, agent grants as a subset of the analyst's), and the root verify:csrm-seed script is restored"
+  - "10-23 fix 3: the 179 PSPF titles outside the audited 39 are deferred to a full audit (sample failure rate 21 of 38)"
 
 requirements-completed: []
 
@@ -210,6 +220,257 @@ Runs (logs in the session scratchpad, `p10-23-f2-*.log`):
 - The specification's `ControlsAdministrationRecord` requires an `updatedAt` that neither the server nor the web serves.
 
 **Open for the pilot:** APP-13 against Schedule 1 stays in Task 3's Manual-Only list. The development database picks up the curated APP-13 on the next seeded Strapi start.
+
+### Fix 3: descriptive control titles
+
+**Defect.** The pilot's sample found two of five CPS 230 titles narrowing their paragraph:
+- CPS-230-34 dropped "or its role in the financial system".
+- CPS-230-57 dropped "or is not documented in a formal agreement".
+
+The titles are 10-22's (D-46), in `apps/backend/src/bootstrap/controls/csrm-control-titles.json`.
+
+**Rule applied (the pilot's).** A title is short and in CSRM's own words, and it never misstates or narrows its paragraph.
+- **Narrowing:** dropping a limb, a party, a condition, a threshold or a qualifier that changes what the requirement covers.
+- **Misstating:** adding an obligation, party or qualifier the paragraph does not have, or naming the wrong actor (for example "APRA power to classify" where APRA requires the entity to classify).
+- **Umbrella titles are fine.** A title that names the requirement's whole subject without listing its parts, such as "Contents of the BCP" or "Elements of the operational risk management framework", drops nothing. A title that lists some limbs and not others narrows the paragraph.
+- **Length:** a slightly longer title that covers every limb is preferred over a shorter one that narrows.
+- **10-22's checks still hold:** every title shares a specific word with its own paragraph, no title repeats its paragraph's opening words, titles are unique within their framework, and no title uses an em or en dash, "must" or "shall".
+
+**Audited set (114 titles).**
+
+| Framework | Reviewed | Changed | Kept |
+|---|---|---|---|
+| APRA CPS 230 | all 51 | 41 | 10 |
+| APRA CPS 234 | all 24 | 10 | 14 |
+| PSPF | 39 | 21 | 18 |
+| **Total** | **114** | **72** | **42** |
+
+The 39 PSPF titles are:
+- **30 spread evenly across the 218:** catalogue positions `round(i × 217 / 29)` for i = 0 to 29. That gives PSPF-001, 008, 016, 023, 031, 038, 046, 053, 061, 068, 076, 083, 091, 098, 106, 114, 122, 129, 137, 144, 152, 159, 167, 174, 182, 189, 197, 204, 212 and 219.
+- **Eight more whose paragraph has several limbs:** an `unless`, `only … if`, `or otherwise` or bulleted exception. They are PSPF-048, 077, 080, 081, 139, 149, 151 and 158.
+- **PSPF-011,** read as PSPF-008's neighbour so that both stay distinct.
+
+The worksheet is `p10-23-f3-title-review.md` in the session scratchpad. It holds each reviewed paragraph, the 10-22 title, the verdict and the limb restored or the reason kept. It is not in the repository.
+
+**Every changed title (72).** The two the pilot found come first.
+
+| Control | 10-22 title | Corrected title | Limb or qualifier restored |
+|---|---|---|---|
+| CPS-230-34 | Critical operations defined by adverse customer impact | Critical operations defined by material harm to customers or the financial system | the second limb 'or its role in the financial system', and 'material' |
+| CPS-230-57 | Relief for listed providers on standardised terms | Partial relief for listed providers on standardised terms or no formal agreement | the alternative 'or is not documented in a formal agreement', and 'partial' (only paragraphs 53, 54, 55(d), 59(a) and 59(c)) |
+| CPS-230-11 | Operational risk, critical operations and service provider risks | Operational risk, conduct and compliance standards, critical operations and providers | limb (a)'s standards for conduct and compliance |
+| CPS-230-13 | Preventing and recovering from disruption to critical operations | Preventing, withstanding and recovering from critical operation disruption where practicable | the limb that keeps operating within tolerance during a disruption, and the qualifier 'to the extent practicable' |
+| CPS-230-14 | Service provider reliance within prudential obligations | Service provider reliance only with obligations met and risks managed | the second condition: the associated risks are effectively managed |
+| CPS-230-16 | Periodic review of operational risk management | Operational risk management within the required framework reviews | removes 'periodic', which the paragraph does not say; the review is part of the CPS 220 and SPS 220 framework reviews |
+| CPS-230-17 | Integrating operational risk into overall risk management | Operational risk integration and BCP consistency with recovery and exit plans | the paragraph's second sentence: business continuity planning consistent with recovery and exit planning |
+| CPS-230-18 | APRA actions on operational risk weaknesses | APRA actions on material operational risk weaknesses | the threshold 'material' |
+| CPS-230-19 | Board accountability for operational risk oversight | Board accountability for overseeing operational risk, continuity and providers | business continuity and service provider arrangements, which the paragraph includes |
+| CPS-230-20 | Senior manager roles for operational risk | Board-ensured senior manager roles for operational risk, continuity and providers | the Board's duty to ensure the roles, and business continuity and service provider arrangements |
+| CPS-230-21 | Board approval of BCP, tolerances and provider policy | Board oversight and approval for operational risk, BCP, tolerances and providers | limb (a), Board oversight of operational risk and key controls, and the reviews in (b) and (c) |
+| CPS-230-22 | Briefing the Board on impacts to critical operations | Senior management briefing the Board on decisions affecting critical operations | the party (senior management) and the condition: decisions that could affect critical operations' resilience |
+| CPS-230-23 | Managing the full range of operational risks | Full range of operational risks, with end-to-end senior management responsibility | the second sentence: senior management responsibility across the end-to-end process |
+| CPS-230-24 | IT capability and information asset health | IT capability, information asset age and health, and CPS 234 security | 'age' of information assets and the CPS 234 information security limb |
+| CPS-230-25 | Operational risk impact of business decisions | Business and strategic decision impacts on operational risk and resilience | strategic decisions and operational resilience |
+| CPS-230-27 | Risk assessment before providing a material service | Risk assessment before providing a material service, and APRA-required stronger controls | the second sentence: APRA may require stronger controls or processes |
+| CPS-230-28 | Designing and embedding operational risk controls | Operational risk controls designed and embedded within appetite and compliance obligations | 'in line with its risk appetite' and the purpose of meeting compliance obligations |
+| CPS-230-29 | Monitoring and testing control effectiveness | Risk-based control monitoring and testing, senior management reporting and timely rectification | monitoring and review, frequency by materiality, reporting to senior management and timely rectification |
+| CPS-230-30 | Remediating control gaps and weaknesses | Timely root-cause remediation of material weaknesses, tracked in the risk profile | 'material', failures, root causes and timeliness, and the limb keeping weaknesses in the risk profile until remediated |
+| CPS-230-31 | Recording and addressing incidents and near misses | Timely incident and near miss handling, reflected in risk and control assessments | the second sentence: incidents and near misses taken into the risk profile and control effectiveness assessments |
+| CPS-230-32 | Notifying APRA of operational incidents within 72 hours | Notifying APRA within 72 hours of material operational risk incidents | the materiality threshold (material financial impact or material impact on critical operations) |
+| CPS-230-35 | Minimum critical operations by entity type | Minimum critical operations by entity type, unless justified otherwise | the qualifier 'unless it can justify otherwise' |
+| CPS-230-36 | APRA power to classify critical operations | APRA power to require critical operation classification | corrects the actor: APRA requires the entity to classify; it does not classify |
+| CPS-230-38 | APRA review and setting of tolerance levels | APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness | corrects the actor (APRA requires the entity to review) and adds the condition for APRA-set tolerances |
+| CPS-230-40 | BCP capabilities and tolerance level monitoring | BCP capabilities, tolerance monitoring and Board reporting of failures with remediation | the limb reporting tolerance failures, with a remediation plan, to the Board |
+| CPS-230-41 | Notifying APRA of critical disruptions within 24 hours | Notifying APRA within 24 hours of a critical operation disruption beyond tolerance | corrects 'critical disruptions' to a disruption to a critical operation outside tolerance |
+| CPS-230-43 | Severe but plausible test scenarios | Tailored severe but plausible test scenarios, including any APRA-determined scenario | tailoring to material risks and the APRA-determined scenario limb |
+| CPS-230-44 | Annual update of the BCP | Annual BCP update as needed for changes and review or testing shortcomings | the qualifier 'as necessary' and what the update reflects |
+| CPS-230-45 | Internal audit review of the BCP | Internal audit review and Board assurance on the BCP and its testing | the assurance to the Board, which covers the BCP's credibility and the testing procedures |
+| CPS-230-47 | Provider policy on agreements, exits and fourth parties | Provider policy on agreement lifecycle, material provider risks and fourth parties | limb (b), managing material service provider risks, and monitoring and substituting in (a) |
+| CPS-230-48 | Register of material service providers | Register of material service providers and management of their risks | the limb managing the material risks of using these providers |
+| CPS-230-49 | Minimum material service providers by entity type | Minimum material service providers by entity type, unless justified otherwise | the qualifier 'unless it can justify otherwise' |
+| CPS-230-50 | Annual submission of the provider register | Annual submission of the material provider register to APRA | the recipient (APRA) and 'material' |
+| CPS-230-51 | APRA power to classify providers as material | APRA power to require providers or arrangements to be classified material | corrects the actor and adds service provider arrangements |
+| CPS-230-52 | Due diligence before a material arrangement | Due diligence and risk assessment before a material arrangement or material change | materially modifying an arrangement, and limb (b), the reliance risk assessment |
+| CPS-230-54 | APRA access rights in provider agreements | APRA access and non-obstruction terms in provider agreements | limb (c): the provider agrees not to impede APRA |
+| CPS-230-56 | APRA-directed changes to provider arrangements | APRA-required review and change of provider arrangements on prudential concerns | the review, and the condition 'heightened prudential concerns' |
+| CPS-230-58 | APRA written exemption for unlisted arrangements | APRA written exemption for arrangements outside the paragraph 57 relief | arrangements failing either paragraph 57 condition, not only unlisted providers |
+| CPS-230-59 | Monitoring material arrangements and provider performance | Monitoring and senior management reporting on material arrangements | senior management reporting, and control effectiveness and compliance beside performance |
+| CPS-230-60 | Notifying APRA of critical and offshoring arrangements | Notifying APRA of critical service agreements and material offshoring, including changes | material changes to agreements and significant offshoring changes; 'material' offshoring |
+| CPS-230-61 | Internal audit of critical outsourcing arrangements | Internal audit review of proposed critical outsourcing and Board compliance reporting | 'proposed' arrangements and the regular compliance reporting to the Board |
+| CPS-234-15 | Information security capability proportionate to threats | Information security capability proportionate to threats and supporting sound operation | the second limb: a capability that enables the entity's continued sound operation |
+| CPS-234-16 | Third-party information security capability assessment | Proportionate assessment of related and third-party information security capability | related parties beside third parties, and 'commensurate with the potential consequences' |
+| CPS-234-17 | Keeping capability current with changing threats | Keeping capability current with changing vulnerabilities and threats | vulnerabilities beside threats |
+| CPS-234-22 | Third-party control design evaluation | Evaluating the design of related and third-party security controls | related parties beside third parties |
+| CPS-234-28 | Reliance on third-party control testing | Assessing reliance on related or third-party control testing | related parties, and the assessment the paragraph requires |
+| CPS-234-29 | Escalating unremediated control deficiencies | Escalating control deficiencies that cannot be remediated in time | corrects 'unremediated' to deficiencies that cannot be remediated in a timely manner |
+| CPS-234-31 | Annual review of testing program sufficiency | Reviewing testing program sufficiency annually and on material change | the second trigger: a material change to information assets or the business environment |
+| CPS-234-34 | Internal audit of third-party control assurance | Internal audit of related or third-party assurance it relies on, where material | related parties and both conditions: material potential impact and internal audit's reliance |
+| CPS-234-35 | Notifying APRA of material incidents within 72 hours | Notifying APRA within 72 hours of material or regulator-notified incidents | limb (b): incidents notified to other regulators |
+| CPS-234-36 | Notifying APRA of material control weaknesses | Notifying APRA of material control weaknesses not remediable in time | the condition: weaknesses the entity expects it cannot remediate in a timely manner |
+| PSPF-008 | Appointing a Chief Security Officer | Appointing and empowering a Chief Security Officer | 'empowered' to oversee protective security |
+| PSPF-016 | Approved security governance arrangements | Accountable Authority approval of tailored security governance arrangements | the approving party and the qualifier 'tailored to the entity's size, complexity and risk environment' |
+| PSPF-038 | Impact of risk decisions on other entities | Considering risk decision impacts on other entities and sharing risk information | the second limb: sharing risk information where appropriate |
+| PSPF-046 | Foreign ownership, control or influence in procurement | Foreign ownership, control or influence risks in procurement and contracts | the limb covering developments during the contract period |
+| PSPF-048 | Use of secure, verifiable third-party vendors | Use of secure, verifiable third parties, with CISO-approved business exceptions | the exception: other use where business operations require it and the CISO approves the residual risk |
+| PSPF-053 | Documenting decisions to vary requirements | Documenting exceptional-circumstance variations in the security plan | the condition 'due to exceptional circumstances' and where they are documented |
+| PSPF-077 | Agreement before sharing outside government | Agreement before sharing outside government, except returned external information | the exception for returning or responding to information an outside party provided |
+| PSPF-080 | AUSTEO information withheld from non-citizens | AUSTEO information withheld from non-citizens unless exempted | the exception 'unless an exemption is granted' |
+| PSPF-091 | TikTok removal from government devices | Blocking and removing TikTok on government devices without a legitimate business reason | preventing installation, and the legitimate business reason exception |
+| PSPF-098 | Maintaining a cyber security strategy and uplift plan | ISM-aligned cyber security strategy and uplift plan with Zero Trust culture | 'in accordance with the Information Security Manual and the Zero Trust guiding principles', and develop and implement beside maintain |
+| PSPF-114 | IRAP-assessed gateway capabilities | Gateways with an IRAP or ASD assessment in the last 24 months | the 24-month recency and the ASD assessment for TOP SECRET gateways |
+| PSPF-137 | ASD approval for overseas TOP SECRET remote access | ASD approval for overseas TOP SECRET remote access outside PSPF facilities | the condition 'outside of facilities meeting PSPF requirements' |
+| PSPF-144 | Clearances issued only with sponsorship | Clearances issued only when sponsored or authorised by government | the alternative 'or otherwise authorised by the Australian Government' |
+| PSPF-149 | Approving citizenship eligibility waivers | Approving and recording citizenship eligibility waivers | the limb keeping a record of every waiver approved |
+| PSPF-151 | Approving checkable background eligibility waivers | Approving and recording checkable background eligibility waivers | the limb keeping a record of every waiver approved |
+| PSPF-152 | Vetting agency advice on uncheckable backgrounds | Uncheckable backgrounds: vetting agency advice and Accountable Authority waiver | the second limb: a clearance issues only on the Accountable Authority's waiver |
+| PSPF-167 | Sponsoring entity sharing of relevant concerns | Sponsoring Entity sharing of relevant concerns where appropriate | the qualifier 'where appropriate' |
+| PSPF-189 | Security integrated into facility planning | Security integrated into facility planning, selection, design and modification | selecting, designing and modifying facilities beside planning |
+| PSPF-204 | Construction and securing of perimeter doors | Construction and securing of perimeter doors and hardware | perimeter hardware beside doors |
+| PSPF-212 | Post-quantum cryptography on new equipment | Post-quantum cryptography on newly procured equipment and software | software beside equipment, and 'newly procured' |
+| PSPF-219 | Training on foreign interference and espionage | Training on foreign interference, espionage, cultivation and exploitation | cultivation and exploitation by foreign powers |
+
+All 72 titles stay within 10-22's anchor, opening-copy, uniqueness and form checks. They run to at most 12 words and 95 characters (CPS-230-29 is the longest), so a stored name `{number} — {title}` is at most 108 characters against the contract's 255.
+
+**Titles reviewed and kept (42).**
+
+| Control | Title kept | Why it does not narrow |
+|---|---|---|
+| CPS-230-12 | Identifying, assessing and managing operational risks | names the whole obligation: identify, assess and manage operational risks from every listed source |
+| CPS-230-15 | Elements of the operational risk management framework | an umbrella for limbs (a) to (f); it names no limb, so it drops none |
+| CPS-230-26 | Comprehensive operational risk profile assessment | an umbrella for the comprehensive assessment and its parts (a) to (c) |
+| CPS-230-33 | Critical operations register and business continuity | register (a) plus 'business continuity' as an umbrella for (b) to (e) |
+| CPS-230-37 | Tolerance levels for each critical operation | an umbrella for the three tolerance levels (a) to (c) |
+| CPS-230-39 | Contents of the BCP, including triggers and communications | 'Contents of the BCP' covers (a) to (e); 'including' marks the named items as examples |
+| CPS-230-42 | BCP testing program and annual exercise | the program, covering all critical operations, and the annual exercise; scenarios are the program's content |
+| CPS-230-46 | Service provider management policy | an umbrella for the policy and what it must cover |
+| CPS-230-53 | Formal agreement for material arrangements | an umbrella for the formal agreement and its minimum terms (a) to (g) |
+| CPS-230-55 | Arrangement risks, continuity and orderly exit | 'arrangement risks' covers (a) and (b); continuity is (c) and orderly exit (d) |
+| CPS-234-13 | Board responsibility for information security | Board responsibility for information security is the paragraph's whole subject; the second sentence says how the Board discharges it |
+| CPS-234-14 | Defined information security roles and responsibilities | an umbrella for the defined roles of every party listed |
+| CPS-234-18 | Information security policy framework | an umbrella; the paragraph sets one framework commensurate with exposures |
+| CPS-234-19 | Policy direction on security responsibilities | the policy direction on responsibilities of all parties |
+| CPS-234-20 | Classification of information assets by criticality and sensitivity | names the classification and its two axes; third-party-managed assets are information assets the title does not exclude |
+| CPS-234-21 | Timely, proportionate information security controls | timely and proportionate are the paragraph's two qualifiers; (a) to (d) are what proportionate is measured against |
+| CPS-234-23 | Incident detection and response mechanisms | detection and response mechanisms, as the paragraph requires |
+| CPS-234-24 | Information security response plans | the plans the paragraph defines |
+| CPS-234-25 | Response plan stages and incident escalation | stages (a) and escalation (b), which includes reporting |
+| CPS-234-26 | Annual review and testing of response plans | annual review and testing, as required |
+| CPS-234-27 | Systematic control testing program | an umbrella for the systematic program and its proportionality factors |
+| CPS-234-30 | Skilled, independent testing specialists | skilled and independent, as required |
+| CPS-234-32 | Internal audit of information security controls | internal audit review of security controls; the related and third-party controls are included, not excluded |
+| CPS-234-33 | Skilled personnel for control assurance | skilled personnel providing control assurance |
+| PSPF-001 | Portfolio security advice from the Department of State | the Department of State's advice and guidance to portfolio entities |
+| PSPF-011 | Appointing a Chief Information Security Officer | (neighbour of PSPF-008) appointing a CISO is the whole requirement; it has no 'empowered' |
+| PSPF-023 | Positive security culture program | the program and its purpose; the parties are the entity's own leadership |
+| PSPF-031 | Annual protective security report to the Minister | the report to the Minister |
+| PSPF-061 | Marking security classified information | an umbrella for the marking rule and its exception |
+| PSPF-068 | Security classification metadata on technology systems | the metadata on the systems the paragraph names; the caveat is 'where relevant' |
+| PSPF-076 | Sharing with state and territory government agencies | names the sharing the MOU governs |
+| PSPF-083 | Sharing with foreign non-government stakeholders | names the sharing the protections govern |
+| PSPF-081 | AGAO information withheld from most non-citizens | 'most non-citizens' already carries the National Intelligence Community and listed-department exception |
+| PSPF-106 | Maturity Level Two: regular back-ups | the Essential Eight strategy at Maturity Level Two |
+| PSPF-122 | Risk assessment for temporary access | the risk assessment for temporary access |
+| PSPF-129 | Facilitating access to official information | facilitated access to official information |
+| PSPF-139 | Remote work exposed to foreign government direction | names the subject (remote work exposed to foreign direction) without stating the rule, so it narrows nothing |
+| PSPF-158 | Conditional clearances for manageable concerns | an umbrella for the three conditional-clearance steps and the delegation |
+| PSPF-159 | Concerns shared with the vetting outcome | the concerns shared with the vetting outcome |
+| PSPF-174 | Resolving doubt in the national interest on reassessment | resolving doubt in the national interest on reassessment |
+| PSPF-182 | Security obligations and debriefing at separation | obligations for all separating personnel and debriefing for clearance holders; the title names both |
+| PSPF-197 | ASIO-T4 certification of Zone Five areas | Zone Five areas hold TOP SECRET or catastrophic-impact information by definition; the clause describes them rather than restricting which areas |
+
+**Voice rule widened.** 10-22's unit test capped a descriptive title at 8 words and 80 characters. 55 of the corrected titles need more, because covering every limb takes words. The cap is now 12 words and 100 characters, which is the title file's own `CONTROL_TITLE_MAX_LENGTH`.
+
+**Reconciling the development database.** The pilot's development database holds 10-22's titles. Before this fix, a seeded start overwrote every seeded name, so it would also have overwritten an operator's own edit (10-22 accepted that as T-10-64). The seeded start now decides a name by ownership, the same way fix 2 decides a description.
+
+A stored name counts as one the seed wrote when it is any of:
+- the bare control number (a database seeded before D-46);
+- `{number} — {label}`, where the label comes from the catalogue entry stored in `sourceData` (for example 10-17's earlier APP titles);
+- `{number} — {title}`, for a title listed under the title file's new `supersededTitles`.
+
+`supersededTitles` keeps, per catalogue and control, every title an earlier seed stored. It now lists each of the 72 titles 10-22 seeded. A seeded start replaces a seed-written name with the current name. It keeps any other non-blank name, which is an operator's own.
+
+`parseControlTitles` validates the list and refuses the file, naming the file and the control, when:
+- the list is not an object;
+- it names a catalogue the file does not title, or a control the file does not title;
+- a control's titles are not a non-empty list;
+- a superseded title breaks the form rules;
+- a control's current title is listed as superseded.
+
+The rule needs no new state and no content-type change (D-01). In the pilot's database, the 72 controls stored under 10-22's titles are renamed on the next seeded start, keeping their documentIds and relations. Every other control is unchanged, and an operator-edited name is kept.
+
+The other seeded fields keep the existing reconciliation (T-10-42). `readControlLibrary` now also returns `supersededTitles`, and `seedCsrmControls` takes it as a third argument.
+
+**Mounted reconcile proof** (`assessment-seed.integration.test.ts`):
+- CPS-230-34 stored as `CPS-230-34 — Critical operations defined by adverse customer impact` becomes `CPS-230-34 — Critical operations defined by material harm to customers or the financial system` on a seeded start. It keeps its documentId and its paragraph, a further start leaves its `updatedAt` unchanged, and the library stays at 2,646.
+- CPS-230-57 renamed by an operator to `CPS-230-57 — Our reading: relief for exchanges and clearing houses` keeps that name through two seeded starts, with `updatedAt` unchanged after the second.
+- The existing proofs still pass: 10-22's bare-number rename of 5.1 and 10-17's APP-11 correction (its stored entry gives the old label).
+
+**Seed verification (the 10-22 regression in `deferred-items.md`, now resolved).**
+
+*Root cause.* `scripts/verify-csrm-seed.mjs` counted every JSON file in the controls folder against a hard-coded 12, so 10-22's title file made 13 (before: exit 1, `Expected exactly 12 control reference files, found 13`).
+
+*Fix.* A new helper, `scripts/csrm-seed-control-files.mjs`, reads the seed's own `CONTROL_CATALOGUE_FILES` and `CONTROL_TITLE_FILE` declarations from `seed-csrm-data.ts`. Both verifiers now use it instead of a second list. The folder must hold exactly those catalogues plus the title file, and the title file may title only those catalogues.
+
+Running the script and its runtime partner to a pass turned up five more stale assumptions. Each is fixed in the same commit:
+
+| Stale assumption | Origin | Fix |
+|---|---|---|
+| The ordering check looked for `await loadControlCatalogues(strapi)` | Phase 10 (10-22) | Follows `readControlLibrary(strapi.dirs.app.root)`, and `seedCsrmControls(strapi, controlSeeds` as a prefix |
+| The runtime check expected untitled names and modelled a stale control as `sourceData: { stale: true }`, a shape no seed writes, so fixes 2 and 3 rightly treat its values as an operator's | Phase 10 (10-22, fixes 2 and 3) | Applies the D-46 titles, and stores the stale control the way an earlier seed did: an older entry in `sourceData` with the name and description derived from it |
+| The runtime check resolved `@strapi/strapi` from `scripts/`, which finds a stale yarn-era install in the root `node_modules` (dated 2026-07-25), and its TypeScript compile failed | Before Phase 10 (pnpm migration) | Resolves Strapi from `apps/backend/package.json`. `node_modules` was not touched |
+| The runtime check keyed Functions by menu path, so the API-only Functions, which have no menu path, collided | Before Phase 10 (23 API-only Functions at `5ea2b77`, 24 now) | Keys them by name and menu path, as the seed does |
+| Both checks required the Security Analyst Agent's grants to equal the Security Analyst's | Before Phase 10. The agent lacked 23 of the analyst's Functions at `5ea2b77`: administration, release, generation, dashboard, alerts and reports. 10-13 added a 24th, the human-only job read (D-47) | Both now assert the safety invariant the catalogue actually holds: the agent has no Function the analyst lacks. The catalogue is authoritative and frozen in Phase 10 (D-02); no authorisation behaviour changed |
+
+The static script also asserts a root `verify:csrm-seed` package script. The 2026-09-25 overlay (`8495a37`) dropped it, so it is restored as `node scripts/verify-csrm-seed.mjs && node scripts/verify-csrm-seed-runtime.mjs`. The overlay's other dropped scripts (`verify:schema`, `verify:csrm-model`, `verify:keycloak-*`) are outside this fix and stay unregistered.
+
+*After the fix:*
+- `node scripts/verify-csrm-seed.mjs` prints `IdamBox CSRM seed catalogue verification passed` (exit 0).
+- `node scripts/verify-csrm-seed-runtime.mjs` prints `IdamBox CSRM runtime seed verification passed` (exit 0, 30 s, two boots on a disposable SQLite under `apps/backend/.tmp`, removed afterwards).
+- `pnpm verify:csrm-seed` runs both and exits 0 (31 s).
+
+**Tests.**
+
+| File | Test | Before the fix (`ee24167`) | After (`0797c33`) |
+|---|---|---|---|
+| `apps/backend/tests/control-titles.unit.test.ts` | fix 3: a corrected title covers every limb of its paragraph (all 72 pinned, CPS-230-34 and CPS-230-57 first) | fail: 72 controls still under their 10-22 titles | pass |
+| same | fix 3: each title an earlier seed wrote stays listed as superseded | fail: none listed | pass |
+| same | fix 3: a well-formed superseded title list is accepted | pass (the parser ignored the key) | pass |
+| same | fix 3: the seed refuses a malformed superseded title list (7 cases) | fail: `Missing expected rejection` | pass |
+| same | descriptive titles are short noun phrases in the CSRM voice (cap widened to 12 words, 100 characters) | pass | pass |
+| `apps/backend/tests/assessment-seed.integration.test.ts` | fix 3: a seeded start renames a control stored under its earlier seeded title, then changes nothing | fail: name stayed `… adverse customer impact` | pass |
+| same | fix 3: a seeded start keeps an operator's own name for a seeded control, then changes nothing | fail: the seed overwrote it with `… on standardised terms` | pass |
+| `scripts/verify-csrm-seed.mjs` | the static seed verification | fail: `found 13` | pass |
+| `scripts/verify-csrm-seed-runtime.mjs` | the runtime seed verification | fail: compile errors, then untitled names and the Function map | pass |
+
+Runs (logs in the session scratchpad, `p10-23-f3-*.log`):
+- **RED,** `control-titles.unit` and `assessment-seed.integration`: 36 tests, 31 passed, 5 failed, all on assertions (48 s). `check tdd-red-evidence` returned RED_EVIDENCE_OK for the unit and mounted targets.
+- **GREEN,** the same two files with `control-library-bounds.unit`: 38/38 (49 s).
+- **Cross-checks:**
+  - `administration.integration` (control search pages, the `masking` proof, fix 2's walkthrough searches): 23/23 (35 s).
+  - The other four seed files (`questionnaire-seed`, `risk-register-seed`, `analyst-insights-seed`, `analyst-insight-catalogue-seed`): 16/16 (122 s).
+- `pnpm --dir apps/csrm api:check`: exit 0, then `git update-index --refresh` on `schema.d.ts`. That command exits 1 only for the operator's two `types/generated` files, as in note 5b.
+- **No journey run.** No e2e assertion names a changed title: `ADMIN05_CONTROL_TITLES_LOADED` checks only that CPS-234-15 and PSPF-001 have a non-numeric name. No web file changed.
+- **Static checks since `5ea2b77`:**
+  - no content type changed;
+  - the four vendored catalogues 10-22 guards are unchanged;
+  - both role-function catalogue copies are untouched and byte-identical;
+  - the specification is untouched.
+
+**Commits.**
+- `ee24167` test(10-23): expect descriptive titles that cover every limb and keep operator names
+- `0797c33` fix(10-23): correct descriptive titles that narrow their paragraph and keep operator names
+- `ac34d19` fix(10-23): verify the seed against the seed's own control files
+- the docs commit that records this fix
+
+**Decisions.**
+- The pilot's no-narrowing rule outranks 10-22's 8-word voice cap. The cap is now 12 words and 100 characters.
+- Names follow the same ownership rule as descriptions (fix 2). The title history lives in the CSRM title file (`supersededTitles`), because `sourceData` holds only the vendored entry, never a CSRM title. This replaces 10-22's accepted overwrite of an operator's name (T-10-64). The other seeded fields still reconcile as before.
+- A future change to a descriptive title must add the old title to `supersededTitles`. The parser refuses a list that names the current title, and the unit test pins this round's 72.
+- The seed verifiers derive their file list from the seed. The agent-grant equality became the subset invariant the catalogue actually holds.
+
+**Deferred.** The remaining 179 PSPF titles were not audited. The sample failure rate (16 of 30 spread titles, 5 of 8 multi-limb) suggests many of them narrow their paragraph in the same ways. This is logged in `deferred-items.md` for the pilot to schedule.
+
+**Open for the pilot:** the descriptive-title Manual-Only row. Re-walk CPS-230-34, CPS-230-57 and a few of the corrected titles on the development database after the next seeded Strapi start, which renames the 72.
 
 ## Task Commits
 

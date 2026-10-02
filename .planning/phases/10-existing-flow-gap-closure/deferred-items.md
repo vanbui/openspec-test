@@ -14,7 +14,8 @@
   **Where to resolve:** plan 10-14, which rebuilds the card's states and adds the file to the copy guard; give a refused start its own title (for example `Questionnaire generation couldn’t start`) once the copy is fixed in the UI-SPEC.
 
 - `scripts/verify-csrm-seed.mjs` fails: `Expected exactly 12 control reference files, found 13`
-  status: open
+  status: resolved
+  **Resolved in:** plan 10-23 walkthrough fix 3 (`ac34d19`). Both seed verifiers now read the catalogue list and the title file from the seed's own declarations (`scripts/csrm-seed-control-files.mjs`). The runtime verifier's stale assumptions are fixed too (titles, the stale-control fixture, Strapi resolution, the Function map, agent grants as a subset of the analyst's), and the root `verify:csrm-seed` script the 2026-09-25 overlay dropped is restored. `pnpm verify:csrm-seed` passes (both scripts, exit 0). Details are in `10-23-SUMMARY.md`, Fix 3.
   **What:** found in plan 10-23 (walkthrough fix 2). The static seed check counts every JSON file in `apps/backend/src/bootstrap/controls/` and expects 12 catalogues. Plan 10-22 added the CSRM title file `csrm-control-titles.json` beside them (`2e76a2d`), so the count is 13. No gate or package script runs this file, so the phase gate stays green. Fix 2's one-line curation of `privacy-act-app-ndb-2026-06-04.json` does not change the count.
   **Where to resolve:** a seed-tooling change that excludes `csrm-control-titles.json` from the catalogue count (or validates it as the title file), with `scripts/verify-csrm-seed-runtime.mjs` checked the same way.
 
@@ -22,3 +23,8 @@
   status: open
   **What:** found in plan 10-23 (walkthrough fix 2) while checking every bound the Controls contract declares. The server and the web agree with each other, so nothing fails; the specification says more than either serves. Adding the field is an API change outside Phase 10's seven (D-03), and fix 2 checks only the string bounds.
   **Where to resolve:** an API-alignment change that either serves `updatedAt` on the Controls record (and adds it to the web parser and the contract parity guard, D-02) or drops it from the record's `required` list, with `api:check`.
+
+- The 179 PSPF descriptive titles outside plan 10-23 fix 3's audited 39 have not been checked against the no-narrowing rule
+  status: open
+  **What:** found in plan 10-23 (walkthrough fix 3). The pilot scoped the audit to every CPS 230 and CPS 234 title and 30 PSPF titles spread across the catalogue. Fix 3 audited those 30, eight multi-limb PSPF paragraphs and PSPF-011, and corrected 21 of the 38 PSPF sample titles. Most corrections restore a dropped limb, exception or qualifier: 16 of the 30 spread titles and 5 of the 8 multi-limb ones. That rate suggests many of the remaining 179 narrow their paragraph in the same ways.
+  **Where to resolve:** a content pass over the rest of `pspf-release-2026.json`'s titles in `csrm-control-titles.json`, applying the same rule. List each replaced title under `supersededTitles`, so that a seeded start renames it and keeps an operator's edit, and pin the corrections in `control-titles.unit.test.ts`. The worksheet format is `p10-23-f3-title-review.md` (session scratchpad).
