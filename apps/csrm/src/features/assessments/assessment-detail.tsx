@@ -163,6 +163,12 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
   );
   const awaitingRefresh = requestBeforeCompletion !== null && requestBeforeCompletion === request;
   const lifecycle = hubLifecycle(analystRequestLifecycle(request), awaitingRefresh);
+  /*
+   * IN-207: Strapi would return the request to draft while a questionnaire is being generated, and the job would
+   * then fail, so the revert is not offered beside a running job, nor before the page has caught up with one
+   * that completed. It returns when the job fails.
+   */
+  const offersRevert = canRevertRequestToDraft(request) && !isInProgress(shownQuestionnaireJobStatus) && !awaitingRefresh;
 
   return (
     <>
@@ -171,7 +177,7 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
         <RequestLifecycleStepper lifecycle={request.lifecycle} />
         <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={lifecycle} nextActionOverride={nextActionOverride} request={request} />
         {/* Offered only while Strapi's rule allows it: submitted, with no questionnaire and no assessment (D-22). */}
-        {canRevertRequestToDraft(request) ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
+        {offersRevert ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <RequestContextDetails request={request} />
         {/* Generate, Replace or neither, from the served questionnaire relation (D-08, D-09, UI-SPEC §3.1). */}
         {showsQuestionnaireCard ? <QuestionnaireGenerationJob action={questionnaireGenerationAction(questionnaire)} analystChangesSinceGeneration={analystChangesSinceGeneration ?? null} jobsReadFailed={jobsReadFailed} onJobStatusChange={onQuestionnaireJobStatus} questionnaireHref={resolvedQuestionnaireHref} questionnaireNumber={questionnaire.availability === 'available' ? questionnaire.questionnaireNumber : null} requestId={request.documentId} seededJob={seededQuestionnaireJob} /> : null}
