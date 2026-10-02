@@ -114,7 +114,7 @@ const KEY_ROUTES: readonly KeyRouteEntry[] = [
      * the questionnaire, which then renders read-only.
      */
     populated: (page) => page.getByRole('region', { name: 'Questionnaire completion' })
-      .or(main(page).getByText('Questionnaire submitted. This questionnaire is read-only and can no longer be edited.')),
+      .or(main(page).getByText('Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.')),
   },
   {
     route: '/app/review', actor: 'Security Analyst', title: 'Analyst Dashboard | IdamBox CSRM', heading: 'Analyst dashboard',

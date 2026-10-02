@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { availableAssessmentRequest } from './questionnaire-domain';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
+import { canRevertQuestionnaireToDraft, submittedNoticeVariant } from './questionnaire-workflow-rules';
 
 export type QuestionnaireDetailState = 'ready' | 'empty' | 'error' | 'permission' | 'submitted';
 
@@ -43,11 +44,11 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
         title={questionnaire.title}
       />
       <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} />
-      {submitted ? <QuestionnaireRevertControl documentId={questionnaire.documentId} /> : null}
+      {submitted && canRevertQuestionnaireToDraft({ ...questionnaire, state: 'submitted' }) ? <QuestionnaireRevertControl documentId={questionnaire.documentId} /> : null}
       {questionnaire.description ? <p className="mb-6 max-w-3xl text-sm text-muted-foreground">{questionnaire.description}</p> : null}
       <RevertAuditSummary className="mb-6" facts={questionnaire} />
       <QuestionnaireRevisionTimeline depth="summary" questionnaire={questionnaire} />
-      <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} />
+      <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} submittedNotice={submittedNoticeVariant('requestor', questionnaire)} />
     </>
   );
 }
@@ -74,5 +75,5 @@ function QuestionnaireRequestRelationship({ assessmentRequestHref, questionnaire
 function QuestionnaireRevertControl({ documentId }: { documentId: string }) {
   const router = useRouter(); const [error, setError] = useState<string | null>(null);
   async function revert(reason?: string) { const result = await revertQuestionnaireToDraftAction({ documentId, reason }); if (!result.ok) { setError(result.formError ?? 'The questionnaire could not be reverted.'); throw new Error('Questionnaire revert failed'); } router.refresh(); }
-  return <div className="mb-4"><ConfirmDialog confirmLabel="Return questionnaire to draft" confirmVariant="destructive" description="This returns the submitted answer batch to draft while preserving its values." errorMessage={error} onConfirm={revert} pendingLabel="Returning questionnaire to draft…" reasonRequired title="Return this questionnaire to draft?" trigger={<Button type="button">Return to draft</Button>} /></div>;
+  return <div className="mb-4"><ConfirmDialog confirmLabel="Return questionnaire to draft" confirmVariant="destructive" description="Your answers go back to draft so you can change them. Submit the questionnaire again when you’re ready." errorMessage={error} onConfirm={revert} pendingLabel="Returning questionnaire to draft…" reasonRequired title="Return this questionnaire to draft?" trigger={<Button type="button">Return to draft</Button>} /></div>;
 }

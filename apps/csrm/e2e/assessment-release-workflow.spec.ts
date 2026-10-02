@@ -248,6 +248,11 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(prereleasePage.getByRole('link', { name: 'Go to My Questionnaires' }), 'UX06_REQUESTOR_ON_ANALYST_QUESTIONNAIRE_ROUTE').toHaveAttribute('href', '/app/questionnaires');
   await expect(prereleasePage.getByText('Contact details')).toHaveCount(0);
   await expect(prereleasePage.getByRole('heading', { name: 'Customer portal cyber risk questionnaire' })).toHaveCount(0);
+  // D-22, UI-SPEC §8.2 and §10.1: the assessment draft exists, so the Requestor's own questionnaire offers no return to draft and says why.
+  await prereleasePage.goto(`/app/questionnaires/${questionnaireHref.slice('/app/review/questionnaires/'.length)}`);
+  await expect(prereleasePage.getByRole('heading', { name: 'Customer portal cyber risk questionnaire' }), 'UX06_QUESTIONNAIRE_REVERT_HIDDEN_AFTER_DRAFT').toBeVisible();
+  await expect(prereleasePage.getByText('Questionnaire submitted. The Security Analyst has started the assessment, so your answers can no longer change.'), 'UX06_QUESTIONNAIRE_REVERT_HIDDEN_AFTER_DRAFT').toBeVisible();
+  await expect(prereleasePage.getByRole('button', { name: 'Return to draft' }), 'UX06_QUESTIONNAIRE_REVERT_HIDDEN_AFTER_DRAFT').toHaveCount(0);
   await prereleasePage.goto(crossOwnerHref!);
   await expect(prereleasePage.getByText('You don’t have permission to review this request'), 'ASSESS-05 cross-owner assessment is denied').toBeVisible();
   // Jane's own request on the analyst route: the gate refuses her before the read and points to her own list (D-23).

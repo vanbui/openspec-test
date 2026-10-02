@@ -265,7 +265,9 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
 
   await page.getByRole('button', { name: 'Submit questionnaire' }).click();
   const confirmation = page.getByRole('alertdialog', { name: 'Submit this questionnaire?' });
-  await expect(confirmation).toContainText(/cannot be undone|irreversible/i);
+  // UI-SPEC §8.2 (E4): the dialog says what happens next; nothing calls the step irreversible.
+  await expect(confirmation).toContainText('The Security Analyst will review your answers');
+  await expect(confirmation).not.toContainText(/cannot be undone|irreversible/i);
   await confirmation.getByRole('button', { name: 'Submit questionnaire' }).focus();
   await page.keyboard.press('Enter');
 

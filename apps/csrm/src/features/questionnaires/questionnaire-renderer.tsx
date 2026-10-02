@@ -32,6 +32,7 @@ import type {
   QuestionnaireDefinition,
   QuestionnaireQuestion,
 } from './questionnaire-schema';
+import type { SubmittedNoticeVariant } from './questionnaire-workflow-rules';
 
 type AnswerValue = QuestionnaireAnswerInput['value'];
 type FormValues = { answers: Record<string, AnswerValue> };
@@ -40,6 +41,15 @@ export type QuestionnaireRendererProps = {
   definition: QuestionnaireDefinition;
   documentId: string;
   mode: 'edit' | 'read-only';
+  /** Which submitted notice to show (UI-SPEC §8.2), chosen by the page from the served questionnaire and request. */
+  submittedNotice?: SubmittedNoticeVariant;
+};
+
+/* Every variant begins `Questionnaire submitted.` (UI-SPEC UI-D12). */
+const submittedNoticeText: Record<SubmittedNoticeVariant, string> = {
+  'requestor-revertible': 'Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.',
+  'requestor-locked': 'Questionnaire submitted. The Security Analyst has started the assessment, so your answers can no longer change.',
+  analyst: 'Questionnaire submitted. These are the Requestor’s submitted answers.',
 };
 
 const answerValueSchema = z.union([
@@ -232,7 +242,7 @@ function applyFailure(result: Extract<QuestionnaireActionResult, { ok: false }>,
   return result.formError ?? 'Check the highlighted answers and try again.';
 }
 
-export function QuestionnaireRenderer({ definition: initialDefinition, documentId, mode }: QuestionnaireRendererProps) {
+export function QuestionnaireRenderer({ definition: initialDefinition, documentId, mode, submittedNotice = 'requestor-revertible' }: QuestionnaireRendererProps) {
   const [definition, setDefinition] = useState(initialDefinition);
   const [submitted, setSubmitted] = useState(mode === 'read-only');
   /*
@@ -333,7 +343,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     const readOnlyVisible = new Set(getVisibleQuestionKeys(definition, readOnlyAnswers));
     return (
       <div className="grid w-full max-w-3xl gap-8">
-        <Alert><CheckCircle2 aria-hidden="true" /><AlertTitle>Submitted</AlertTitle><AlertDescription>Questionnaire submitted. This questionnaire is read-only and can no longer be edited.</AlertDescription></Alert>
+        <Alert><CheckCircle2 aria-hidden="true" /><AlertTitle>Submitted</AlertTitle><AlertDescription>{submittedNoticeText[submittedNotice]}</AlertDescription></Alert>
         {sections.map((section) => <FormSection description={section.description} headingId={`section-${section.key}`} key={section.key} title={section.title}>{section.questions.filter((question) => readOnlyVisible.has(question.questionKey)).map((question) => <ReadOnlyQuestion key={question.questionKey} question={question} />)}</FormSection>)}
       </div>
     );
@@ -384,7 +394,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
         <ConfirmDialog
           confirmLabel="Submit questionnaire"
           confirmVariant="default"
-          description="Submission is irreversible. This questionnaire cannot be edited after submission."
+          description="The Security Analyst will review your answers and use them to assess the request’s risk. Until they start the assessment, you can return the questionnaire to draft to change your answers."
           errorMessage={formError}
           onBeforeOpen={prepareSubmission}
           onConfirm={submitCurrent}
