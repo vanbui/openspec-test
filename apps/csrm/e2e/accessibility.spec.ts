@@ -391,8 +391,14 @@ async function firstAdministrationRecord(page: Page, collection: typeof administ
   const href = await link.getAttribute('href');
   expect(href, `${collection.plural} link to their records`).toMatch(new RegExp(`^/app/admin/${collection.collection}/[^/?#]+$`));
   const linkText = (await link.textContent())?.trim() ?? '';
-  // A Control's page is headed with its number and its name; every other record with its name.
-  const heading = collection.collection === 'controls' ? `${linkText} · ${(await row.locator('td').nth(1).textContent())?.trim() ?? ''}` : linkText;
+  // A Control's page is headed with its control label (D-36): its number, then its title, or its framework when the
+  // Name column says it has no title. Every other record is headed with its name.
+  let heading = linkText;
+  if (collection.collection === 'controls') {
+    const title = (await row.locator('td').nth(1).textContent())?.trim() ?? '';
+    const framework = (await row.locator('td').nth(2).textContent())?.trim() ?? '';
+    heading = `${linkText} · ${title === 'Not provided' ? framework : title}`;
+  }
   return { href: href!, heading };
 }
 
