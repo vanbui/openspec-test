@@ -388,7 +388,16 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expect(page.getByText('Awaiting questionnaire submission')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Last returned to draft' })).toBeVisible();
   await expect(page.getByText('x'.repeat(500))).toBeVisible();
-  await expect(page.getByText(dependentAnswer)).toHaveCount(0);
+  /*
+   * E3 (D-07): the released questions now list every question with its choices, so the dependent question's
+   * choice label is shown as a choice. What must not appear is an answer: the section shows the questions and
+   * the Requestor's answered count, with no checked control to read an answer from.
+   */
+  const releasedQuestions = page.getByRole('region', { name: 'Released questions' });
+  await expect(releasedQuestions, 'QUES08_RELEASED_QUESTIONS_AFTER_REVERT').toBeVisible();
+  await expect(releasedQuestions.getByText(/^\d+ of \d+ answered$/), 'QUES08_RELEASED_QUESTIONS_SHOW_PROGRESS').toBeVisible();
+  await expect(releasedQuestions.getByRole('checkbox'), 'QUES08_RELEASED_QUESTIONS_NO_CHECKBOX').toHaveCount(0);
+  await expect(releasedQuestions.getByRole('radio'), 'QUES08_RELEASED_QUESTIONS_NO_RADIO').toHaveCount(0);
   await expect(page.getByRole('button', { name: /save draft|submit questionnaire/i })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Return to draft' }), 'QUESTIONNAIRE_AWAITING_SUBMISSION_REVERSAL_OMITTED').toHaveCount(0);
 

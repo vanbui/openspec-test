@@ -162,6 +162,13 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   // The timeline records the action; the governance panel names the current
   // state. They read differently so one screen never says the same thing twice.
   await expect(timeline.getByText('Released', { exact: true }), 'CRITERION_1_RELEASE_IS_DATED_TIMELINE_EVENT').toBeVisible();
+  // QUES08_RELEASED_QUESTIONS_WITH_PROGRESS (UAT-020, D-07): the analyst reads what was released and how far the Requestor has got.
+  const releasedQuestions = page.getByRole('region', { name: 'Released questions' });
+  await expect(releasedQuestions, 'QUES08_RELEASED_QUESTIONS_WITH_PROGRESS').toBeVisible();
+  await expect(releasedQuestions.getByText(/^0 of \d+ answered$/), 'QUES08_RELEASED_QUESTIONS_WITH_PROGRESS_COUNT').toBeVisible();
+  await expect(releasedQuestions.getByText(addedQuestion, { exact: true }), 'QUES08_RELEASED_QUESTIONS_WITH_PROGRESS_LISTS_QUESTIONS').toBeVisible();
+  await expect(releasedQuestions.getByText(deletedQuestion, { exact: true }), 'QUES08_RELEASED_QUESTIONS_WITH_PROGRESS_OMITS_REMOVED').toHaveCount(0);
+  await expect(releasedQuestions.getByRole('button'), 'QUES08_RELEASED_QUESTIONS_WITH_PROGRESS_READ_ONLY').toHaveCount(0);
   /*
    * D-19, UI-SPEC §4.5. With only the zone cookie cleared, the reloaded page does not know the
    * viewer's zone, so it first labels its times UTC. The shell then sends the browser's zone and the

@@ -4,12 +4,13 @@ import { AlertCircle, Clock3 } from 'lucide-react';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { RecordLink } from '@/components/csrm/record-link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { PageHeader } from '@/components/csrm/page-header';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import type { QuestionPlacement } from './questionnaire-placement';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
@@ -18,7 +19,7 @@ import { QuestionnaireRenderer } from './questionnaire-renderer';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { revertQuestionnaireToDraftAction } from './questionnaire-actions';
 import { availableAssessmentRequest } from './questionnaire-domain';
-import { QuestionnaireGovernance } from './questionnaire-governance';
+import { QuestionnaireGovernance, ReleasedQuestionList } from './questionnaire-governance';
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
 import type { AnalystRefusal } from '@/features/assessments/assessment-detail';
 import { canRevertQuestionnaireToDraft } from './questionnaire-workflow-rules';
@@ -49,7 +50,7 @@ function SafeReviewState({ assessmentRequestHref, definition = [], placements = 
     return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>We couldn’t load this questionnaire review</AlertTitle><AlertDescription>Try again. If the problem continues, contact your administrator.</AlertDescription></Alert>;
   }
   if (state === 'awaiting-submission') {
-    return <Alert><Clock3 aria-hidden="true" /><AlertTitle>Awaiting questionnaire submission</AlertTitle><AlertDescription>Draft answers remain private until the Requestor submits one complete answer batch.</AlertDescription></Alert>;
+    return <Alert><Clock3 aria-hidden="true" /><AlertTitle>Awaiting questionnaire submission</AlertTitle><AlertDescription>The Requestor’s answers stay private until they submit the questionnaire. Their progress is shown below.</AlertDescription></Alert>;
   }
   return <Alert><AlertCircle aria-hidden="true" /><AlertTitle>No submitted answers are available</AlertTitle><AlertDescription>This questionnaire does not contain a complete submitted response.</AlertDescription></Alert>;
   })();
@@ -71,7 +72,7 @@ function SafeReviewState({ assessmentRequestHref, definition = [], placements = 
   const heading = identify
     ? { title: questionnaire.title, description: `${questionnaire.questionnaireNumber} · ${availableAssessmentRequest(questionnaire.assessmentRequest)?.requestNumber ?? ''}` }
     : { title: 'Questionnaire review', description: 'Review an authorised questionnaire submission.' };
-  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} placements={placements} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}{roleRefusal ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/questionnaires">Go to My Questionnaires</Link> : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link>}</>;
+  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} placements={placements} questionnaire={governable} /> : null}{content}{governable ? <ReleasedQuestions definition={definition} progress={governable.progress} /> : null}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}{roleRefusal ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/questionnaires">Go to My Questionnaires</Link> : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link>}</>;
 }
 
 export function QuestionnaireReview({ assessmentRequestHref, definition = [], placements = [], questionnaire, refusal, state }: QuestionnaireReviewProps) {
@@ -110,6 +111,25 @@ export function QuestionnaireReview({ assessmentRequestHref, definition = [], pl
       <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} />
       <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode="read-only" submittedNotice="analyst" />
     </>
+  );
+}
+
+/*
+ * What the analyst sees while the Requestor answers (D-07, UI-SPEC §2): the released questions and the served
+ * answered count. Only that aggregate crosses before submission; no answer, checked state or per-question count.
+ */
+function ReleasedQuestions({ definition, progress }: { definition: QuestionnaireDefinition; progress: QuestionnaireSummary['progress'] }) {
+  const headingId = useId();
+  const answered = `${progress.answered} of ${progress.total}`;
+  return (
+    <section aria-labelledby={headingId} className="mt-6 grid gap-4 rounded-xl border border-border bg-card p-4">
+      <h2 className="text-heading-sm text-foreground" id={headingId}>Released questions</h2>
+      <div className="grid gap-2">
+        <p className="text-sm font-medium tabular-nums text-foreground">{`${answered} answered`}</p>
+        <Progress aria-label={`${answered} questions answered by the Requestor`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={progress.percent} value={progress.percent} />
+      </div>
+      <ReleasedQuestionList definition={definition} />
+    </section>
   );
 }
 

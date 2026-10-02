@@ -19,6 +19,7 @@ import { orderQuestionnaire } from './questionnaire-domain';
 import { placeInNewSection, placeInSection, sectionChoices, type QuestionPlacement, type SectionChoice } from './questionnaire-placement';
 import type { QuestionnaireDefinition, QuestionnaireQuestion } from './questionnaire-schema';
 import type { QuestionnaireSummary } from './questionnaire-service';
+import { canReturnToAnalystReview } from './questionnaire-workflow-rules';
 
 /*
  * File upload is deliberately absent: no authorised upload, storage, scanning
@@ -119,6 +120,25 @@ function QuestionSummary({ question, focusable = false }: { question: Questionna
   </div>;
 }
 
+/**
+ * The released questions as the analyst reads them while the Requestor answers (D-07): the governance rows
+ * without Edit, Delete or any answer, grouped under a heading per section in definition order.
+ */
+export function ReleasedQuestionList({ definition }: { definition: QuestionnaireDefinition }) {
+  const sectionIdPrefix = useId();
+  return <div className="grid gap-4">
+    {orderQuestionnaire(definition).map((section, sectionIndex) => {
+      const headingId = `${sectionIdPrefix}-released-section-${sectionIndex}`;
+      return <div className="grid gap-2" key={section.key}>
+        <h3 className="micro-label text-muted-foreground" id={headingId}>{section.title}</h3>
+        <ul aria-labelledby={headingId} className="grid gap-2">
+          {section.questions.map((question) => <li className="rounded-lg border border-border p-3" key={questionId(question)}><QuestionSummary question={question} /></li>)}
+        </ul>
+      </div>;
+    })}
+  </div>;
+}
+
 export function QuestionnaireGovernance({ questionnaire, definition, placements }: { questionnaire: QuestionnaireSummary; definition: QuestionnaireDefinition; placements: readonly QuestionPlacement[] }) {
   const router = useRouter();
   const sectionIdPrefix = useId();
@@ -134,6 +154,13 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
   const [saving, setSaving] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const inAnalystReview = questionnaire.release === null || questionnaire.release === undefined;
+  // A released questionnaire returns to analyst review only before an assessment exists (D-22, UI-SPEC §2.3).
+  const returnable = !inAnalystReview && canReturnToAnalystReview(questionnaire);
+  const panelDescription = inAnalystReview
+    ? 'This questionnaire is visible to Analysts only until it is released.'
+    : returnable
+      ? 'Return it to analyst review before changing its questions.'
+      : 'An assessment has been drafted from the Requestor’s answers, so these questions can no longer change.';
   const sections = sectionChoices(placements);
   // An edited question the reloaded questions no longer hold has no row left to edit in.
   const activeForm = openForm?.kind === 'edit' && !definition.some((question) => questionId(question) === openForm.questionId) ? null : openForm;
@@ -259,7 +286,7 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
   }
 
   return <section aria-label="Questionnaire governance" className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4" ref={containerRef}>
-    <div className="flex items-start gap-3"><ClipboardPenLine aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" /><div><h2 className="text-heading-sm text-foreground">{inAnalystReview ? 'Analyst review' : 'Released to Requestor'}</h2><p className="text-sm text-muted-foreground">{inAnalystReview ? 'This questionnaire is visible to Analysts only until it is released.' : 'Return it to analyst review before changing its questions.'}</p></div></div>
+    <div className="flex items-start gap-3"><ClipboardPenLine aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" /><div><h2 className="text-heading-sm text-foreground">{inAnalystReview ? 'Analyst review' : 'Released to Requestor'}</h2><p className="text-sm text-muted-foreground">{panelDescription}</p></div></div>
     {/* Release and return only: a question form shows its own errors beside Save question (D-06). */}
     {editorError ? <p className="text-sm text-destructive" role="alert">{editorError}</p> : null}
     {cleared.length ? <div aria-live="polite" className="rounded-lg border border-border p-3"><p className="font-medium">Answers cleared by this revision</p><ul className="mt-2 list-disc pl-5 text-sm">{cleared.map((answer) => <li key={`${answer.questionKey}-${answer.explanation}`}><span className="font-medium">{questionTextFor(answer.questionKey)}</span>: {answer.explanation}</li>)}</ul><Button className="mt-2" data-print="hidden" onClick={() => setCleared([])} size="sm" type="button" variant="outline">Dismiss notice</Button></div> : null}
@@ -302,7 +329,7 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
           </div>;
         })}
       </div>
-    </> : <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={editorError} onConfirm={returnToReview} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} />}
+    </> : returnable ? <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={editorError} onConfirm={returnToReview} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} /> : null}
     <p aria-live="polite" className="sr-only">{announcement}</p>
   </section>;
 }
