@@ -472,6 +472,9 @@ describe('the questionnaire generation action the hub offers', () => {
     expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
+    // D-09 (UI-SPEC §3.3): the hint names the questionnaire to return to analyst review, linked.
+    expect(screen.getByText(/To replace it, return/)).toHaveTextContent('This questionnaire has been released to the Requestor. To replace it, return QNR-2026-KX2AHV to analyst review first.');
+    expect(within(screen.getByText(/To replace it, return/)).getByRole('link', { name: 'QNR-2026-KX2AHV' })).toHaveAttribute('href', '/app/review/questionnaires/questionnaire%2Fid');
   });
 });
 

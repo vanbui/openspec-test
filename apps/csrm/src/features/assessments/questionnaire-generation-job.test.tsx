@@ -256,3 +256,76 @@ describe('replacing a questionnaire in analyst review', () => {
     expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledOnce();
   });
 });
+
+/*
+ * D-09 (UI-SPEC §3.3): a released questionnaire cannot be replaced, so the card offers nothing and says how
+ * to get there, linking the questionnaire to return to analyst review.
+ */
+const releasedHint = 'This questionnaire has been released to the Requestor. To replace it, return QNR-2026-KX2AHV to analyst review first.';
+
+describe('a questionnaire released to the Requestor', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('offers no action and says to return the questionnaire to analyst review first', () => {
+    render(<QuestionnaireGenerationJob action="released" questionnaireHref="/app/review/questionnaires/questionnaire-one" questionnaireNumber="QNR-2026-KX2AHV" requestId="request-one" />);
+
+    expect(screen.getByText((_content, element) => element?.tagName === 'P' && element.textContent === releasedHint)).toHaveClass('text-sm', 'text-foreground-secondary');
+    expect(screen.getByRole('link', { name: 'QNR-2026-KX2AHV' })).toHaveAttribute('href', '/app/review/questionnaires/questionnaire-one');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('offers no replacement after a not-acknowledged failure once the questionnaire is released', () => {
+    const notAcknowledged = { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED' };
+    render(<QuestionnaireGenerationJob action="released" initialJob={notAcknowledged} questionnaireHref="/app/review/questionnaires/questionnaire-one" questionnaireNumber="QNR-2026-KX2AHV" requestId="request-one" />);
+
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    expect(screen.getByText((_content, element) => element?.tagName === 'P' && element.textContent === releasedHint)).toBeInTheDocument();
+  });
+});
+
+/*
+ * UI-SPEC §12.4: a failed job's code reads as a sentence about the request, and any other code shows the
+ * server's message unchanged. A missing acknowledgement can only be fixed by replacing, so that failure
+ * offers the §3.2 confirmation instead of a retry that would fail the same way.
+ */
+describe('a failed questionnaire generation job', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    ['REQUEST_NOT_ELIGIBLE', 'The request is no longer submitted, so a questionnaire can’t be generated for it.'],
+    ['QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED', 'A questionnaire already exists for this request. Replace it to generate a new one.'],
+    ['QUESTIONNAIRE_ANSWERED', 'The Requestor has started answering this questionnaire, so it can’t be replaced.'],
+    ['QUESTIONNAIRE_RELEASED', 'The questionnaire was released before generation finished, so it wasn’t replaced. Return it to analyst review to replace it.'],
+    ['provider-failed', 'The provider could not prepare a questionnaire.'],
+  ])('words a %s failure for the analyst', (failureCode, copy) => {
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} initialJob={{ ...failedJob, failureCode }} requestId="request-one" />);
+
+    // One alert: the failure. The polite live region repeats the title, so the title alone is not unique.
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Questionnaire generation failed');
+    expect(alert).toHaveTextContent(copy);
+    if (failureCode !== 'provider-failed') expect(alert).not.toHaveTextContent('The provider could not prepare a questionnaire.');
+  });
+
+  it('offers Replace questionnaire through the confirmation when the replacement was not acknowledged', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: queuedJob });
+    const notAcknowledged = { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED' };
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={1} initialJob={notAcknowledged} requestId="request-one" />);
+
+    expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Replace and generate again' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
+    expect(dialog).toHaveTextContent('discarding the 1 change an analyst made to its questions since it was generated');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Replace questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledOnce();
+    expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledWith({ requestId: 'request-one', replaceUnansweredQuestionnaire: true });
+  });
+});
