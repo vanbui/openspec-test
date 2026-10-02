@@ -6,10 +6,10 @@ current_phase: 10
 current_phase_name: "post-demo Stage 3: G-10 done; the typography follow-up quick task, then Phase 10"
 status: planning
 stopped_at: "post-demo Stage 3 started: the G-10 fonts quick task 261002-2y8 is done and accepted (gate green at e3d805d); next: the typography follow-up quick task, then Phase 10."
-last_updated: "2026-10-01T17:24:08.918Z"
+last_updated: "2026-10-02T01:05:14.831Z"
 last_activity: 2026-10-02
-last_activity_desc: "Completed quick task 261002-2y8: Self-host the three BProton font families through next/font/local (G-10, R-08-24)"
-state_head: e3d805de9ebfc4780dc52f23cc24689085050ba5
+last_activity_desc: "Completed quick task 261002-drq: Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10)"
+state_head: c8d164d7dd044772778b86db9ad76f11b9e146ef
 progress:
   total_phases: 16
   completed_phases: 0
@@ -39,7 +39,7 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 
 Plan: —
 Status: Stage 3 in progress: G-10 done; the typography follow-up quick task, then Phase 10, are next (the pilot drives every transition, and auto-advance is off)
-Last activity: 2026-10-02 - Completed quick task 261002-2y8: Self-host the three BProton font families through next/font/local (G-10, R-08-24)
+Last activity: 2026-10-02 - Completed quick task 261002-drq: Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10)
 
 ## Milestone
 
@@ -118,6 +118,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 | 261001-kxa | Make the Request context card span the full content width in the Analyst request detail view, matching the Requestor view | 2026-10-01 | a11d51b | [261001-kxa-update-the-analyst-request-detail-view-a](./quick/261001-kxa-update-the-analyst-request-detail-view-a/) |
 | 261001-le4 | Add the missing gap after the Request relationships card in the Analyst request detail view, matching the Requestor view | 2026-10-01 | e10a1a1 | [261001-le4-add-the-missing-gap-between-the-request-](./quick/261001-le4-add-the-missing-gap-between-the-request-/) |
 | 261002-2y8 | Self-host the three BProton font families through next/font/local (G-10, R-08-24) | 2026-10-02 | e3d805d | [261002-2y8-self-host-the-three-bproton-font-familie](./quick/261002-2y8-self-host-the-three-bproton-font-familie/) |
+| 261002-drq | Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10) | 2026-10-02 | c8d164d | [261002-drq-restore-vietnamese-glyphs-and-the-500-bu](./quick/261002-drq-restore-vietnamese-glyphs-and-the-500-bu/) |
 
 ## Deferred Items
 
