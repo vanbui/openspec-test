@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-10-02T03:03:50.353Z"
+stopped_at: Completed 10-04-PLAN.md
+last_updated: "2026-10-02T03:22:51.212Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-03 complete (arrow keys select in radio groups and the segmented control; UAT-064)
-state_head: 86196b3ae36e65991462008b7ac8603cd7314aa8
+last_activity_desc: Plan 10-04 complete (both actors read the whole request; actions from server state; one revert rule; UAT-015, UAT-037)
+state_head: b8f4632e22856c47ed867651c1ad5f3a7db95772
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 4 of 23
+Plan: 5 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-03 complete: one quick arrow press moves focus and checks the next radio in the shared wrapper and the segmented control, one change per press (UAT-064); web 2,139/2,139, Playwright 86/86 (82 desktop, 4 mobile, 11.5 min)
+Last activity: 2026-10-02 — Plan 10-04 complete: one shared request context shows both actors every submitted field in the form's groups (UAT-015); the Requestor's actions come only from the refreshed request (UAT-037); canRevertRequestToDraft gates Return to draft on both pages; submission copy no longer says irreversible; web 2,171/2,171, request and relationship journeys 10/10 (9 desktop, 1 mobile, 2.3 min)
 
 ## Milestone
 
@@ -106,6 +106,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-02: canViewerReviewAssessments() (server-only, React cache) runs first in the three analyst detail routes and their generateMetadata; a refused viewer gets the static title, no read, and the role variant (Go to My Requests / Questionnaires / Risk Assessments). Later plans that edit these routes keep the gate first.
 - [Phase 10]: 10-02: The D-38 copy guard (src/lib/performance/interface-copy-guard.test.ts) starts with twelve clean files; each later Phase 10 plan appends, in sorted order, the files it cleans (10-05, 10-09, 10-15, 10-17 and 10-21 are named in the plan).
 - [Phase 10]: 10-03: selectAdjacentRadio (components/ui/radio-group.tsx) owns radio arrow keys: it prevents default at once, then in a microtask focuses the next enabled radio (wrapping) and checks it through its own click, clicking only when Radix's onFocus did not, so one change per press. A synchronous click nested in the keydown stalled a Suspense transition under testing-library's act. Any component rendering RadioGroupPrimitive.Item directly passes onKeyDown={selectAdjacentRadio}.
+- [Phase 10]: 10-04: RequestWorkflowActions takes its actions only from the served request; a transition refreshes the route and moves focus once to the first new control or #request-actions. canRevertRequestToDraft (zod-free request-domain.ts) reads only served relationships and fails closed; both the Requestor's actions and the analyst hub use it. Plan 10-05's questionnaire predicates should follow the same shape.
+- [Phase 10]: 10-04: RequestContextDetails is the one read-only request context for both actors (Request overview, Business context, Scope and timing). The Requestor's 'Submitted {date}' is one string through formatInstant with useViewerTimeZone, so the status badge stays the only element whose text is Submitted. Later plans editing assessment-detail.tsx (10-09, 10-10, 10-12, 10-14) keep it full width in the grid gap-6 container.
 
 ## Risks and Open Decisions
 
@@ -171,11 +173,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P01 | 32 min | 3 tasks | 16 files |
 | Phase 10 P02 | 41 min | 3 tasks | 20 files |
 | Phase 10 P03 | 23 min | 2 tasks | 4 files |
+| Phase 10 P04 | 15 min | 3 tasks | 15 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T03:03:45.368Z
-**Stopped At:** Completed 10-03-PLAN.md
+**Last session:** 2026-10-02T03:22:43.455Z
+**Stopped At:** Completed 10-04-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
