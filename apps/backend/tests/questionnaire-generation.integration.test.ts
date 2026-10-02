@@ -51,6 +51,17 @@ function generatePath(requestId: string): string {
   return `/api/v1/assessment_requests/${encodeURIComponent(requestId)}/generate_questionnaire`;
 }
 
+function generationJobsPath(requestId: string): string {
+  return `/api/v1/assessment_requests/${encodeURIComponent(requestId)}/generation_jobs`;
+}
+
+/** The analyst-facing read of a request's current generation jobs (D-25), as `identity` sees it. */
+async function requestGenerationJobs(requestId: string, identity: string): Promise<Record<string, unknown>> {
+  const response = await request(generationJobsPath(requestId), identity);
+  assert.equal(response.status, 200, `REQUEST_GENERATION_JOBS_NOT_READ_${identity}`);
+  return (await body(response)).data as Record<string, unknown>;
+}
+
 /** Queues generation (a replacement when asked) as the analyst and follows the job to its end. */
 async function generate(requestId: string, replace: boolean): Promise<Record<string, unknown>> {
   const harness = await harnessPromise;
@@ -334,6 +345,30 @@ test("mounted questionnaire generation keeps completed relations populated and j
     const denied = await request(`/api/v1/questionnaire_generation_jobs/${encodeURIComponent(String(queued.jobId))}`, identity);
     assert.equal(denied.status, 403, `QUESTIONNAIRE_GENERATION_JOB_READ_DENIED_${identity}`);
   }
+});
+
+/*
+ * D-25, UAT-041: an analyst who leaves the request page while a generation runs, or opens a request someone
+ * else is generating on, reads the job back by request instead of being invited to start a second one. The
+ * job keeps its existing closed shape; only whether this viewer may retry it is added beside it.
+ */
+test("mounted analyst reads the running questionnaire generation job of a request", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("JOBS-HELD");
+
+  await harness.withHeldQuestionnaireGeneration(requestId, async (jobId) => {
+    const data = await requestGenerationJobs(requestId, harness.identities.analyst);
+    assert.deepEqual(Object.keys(data).sort(), ["assessmentDraft", "questionnaireGeneration"], "REQUEST_GENERATION_JOBS_ENVELOPE");
+    const questionnaireGeneration = data.questionnaireGeneration as Record<string, unknown>;
+    assert.deepEqual(Object.keys(questionnaireGeneration).sort(), ["canRetry", "job"], "REQUEST_GENERATION_JOBS_QUESTIONNAIRE_ENTRY");
+    const job = questionnaireGeneration.job as Record<string, unknown>;
+    assert.equal(job.jobId, jobId, "REQUEST_GENERATION_JOBS_WRONG_JOB");
+    assert.equal(job.requestId, requestId, "REQUEST_GENERATION_JOBS_WRONG_REQUEST");
+    assert.ok(job.status === "queued" || job.status === "running", `REQUEST_GENERATION_JOBS_NOT_ACTIVE_${String(job.status)}`);
+    assert.ok(!("initiatingAnalystDocumentId" in job), "REQUEST_GENERATION_JOBS_DISCLOSED_THE_INITIATOR");
+    assert.equal(questionnaireGeneration.canRetry, true, "REQUEST_GENERATION_JOBS_INITIATOR_CANNOT_RETRY");
+    assert.equal(data.assessmentDraft, null, "REQUEST_GENERATION_JOBS_INVENTED_A_DRAFT_JOB");
+  });
 });
 
 test("mounted questionnaire generation refuses non-submitted requests", async () => {
