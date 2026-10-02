@@ -1431,3 +1431,24 @@ All in `deferred-items.md`, none blocking: the Phase 7 fixtures' unreachable sta
 ---
 *Phase: 10-existing-flow-gap-closure*
 *Gate recorded: 2026-10-02; walk approved and plan completed: 2026-10-03*
+
+## Phase gate (final run, after the code review)
+
+Run by the orchestrator at `00306ac`, after Fix 3d and the Fix 8 addendum, the code review gate (56 findings: 52 fixed test-first, 1 skipped with evidence, 3 deferred with routes; `10-REVIEW-DISPOSITION.md`), the regression gate, the `verify:post` steps (`10-SECURITY.md` SECURED with 87/87 threats closed; `10-VALIDATION.md` validated and Nyquist-compliant; `10-UI-REVIEW.md` 20/24 with its disposition) and the verifier (`10-VERIFICATION.md`: 6/6 success criteria, no gaps). No dev server ran; no fix was needed during the run.
+
+| # | Command | Result | Duration | Exit |
+|---|---|---|---|---|
+| 1 | `pnpm --dir apps/csrm api:check` | no diff in `schema.d.ts` | 1 s | 0 |
+| 1b | `git update-index --refresh -- apps/csrm/src/lib/api/generated/schema.d.ts` | exits 1 only for the two operator `types/generated` files (as in every run) | under 1 s | 1 |
+| 2 | `pnpm --dir apps/csrm typecheck` | clean | 3 s | 0 |
+| 3 | `pnpm --dir apps/csrm lint` | clean | 3 s | 0 |
+| 4 | `pnpm --dir apps/csrm test` | 2,862 passed in 134 files, 0 failed, no `EPERM` rerun | 29 s | 0 |
+| 5 | `pnpm --dir apps/backend test` | 660 passed, 0 failed, 0 skipped, 0 cancelled | 650 s | 0 |
+| 6 | `pnpm --dir apps/csrm test:e2e` | 88 passed: desktop 84, mobile 4; 0 failed, 0 flaky, 0 skipped (the Next server logged "The destination stream closed early" 32 times; no test asserts on it) | 12.3 min | 0 |
+| 7 | `pnpm verify:csrm-seed` | the catalogue and runtime verifications both pass | 25 s | 0 |
+
+Against the third run (`4c10b43`): Strapi 649 → 660 (+11, the code review fixes' mounted proofs), web 2,777 → 2,862 (+85), Playwright 87 → 88 (+1, the overflowing-picker proof of the Fix 8 addendum).
+
+**Static checks since `5ea2b77`:** (1) no content-type file changed; (2) `cmp` of the two role-function catalogue copies is silent (exit 0); (3) no Keycloak path among the 254 changed files; (4) no `CSRM_AI_` source line added or removed; (5) the four vendored catalogues 10-22 guards are byte-identical.
+
+**`git status --short` after the run:** only the three operator items (` M apps/backend/types/generated/components.d.ts`, ` M apps/backend/types/generated/contentTypes.d.ts`, `?? example-risk-assessment-questions/`).
