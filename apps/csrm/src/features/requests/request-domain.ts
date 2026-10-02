@@ -156,6 +156,28 @@ export function questionnaireGenerationAction(relation: RequestQuestionnaireRela
   return relation.availability === 'available' && relation.state === 'analyst-review' ? 'replace' : 'released';
 }
 
+/**
+ * Whether the analyst's request page offers questionnaire generation (Generate or Replace, D-08, D-09):
+ * Strapi generates a questionnaire only for a submitted request, so the page offers the card only then.
+ */
+export function offersQuestionnaireGeneration(request: Pick<CsrmAssessmentRequest, 'requestStatus'>): boolean {
+  return request.requestStatus === 'submitted';
+}
+
+/**
+ * The served lifecycle as the analyst's request page shows it (UX-06; walkthrough fix 4). Strapi derives the
+ * lifecycle step from the request's relations alone, so a request past `submitted` that holds no questionnaire
+ * still reads as the Submitted step, whose analyst action is "Generate the questionnaire.". The page offers
+ * generation only on the fact Strapi's generation rule uses, so the Next action follows that same fact: on any
+ * other request it names no action, never one the page does not offer. The steps are served unchanged.
+ */
+export function analystRequestLifecycle(request: Pick<CsrmAssessmentRequest, 'requestStatus' | 'lifecycle'>): RequestLifecycle | undefined {
+  const lifecycle = request.lifecycle;
+  if (!lifecycle?.nextAction) return lifecycle;
+  const namesGeneration = lifecycle.currentKey === 'submitted' && lifecycle.nextAction.actor === 'analyst';
+  return namesGeneration && !offersQuestionnaireGeneration(request) ? { ...lifecycle, nextAction: null } : lifecycle;
+}
+
 export interface RequestPagination {
   page: number;
   pageSize: number;

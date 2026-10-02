@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { canRevertRequestToDraft, questionnaireGenerationAction, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
+import { analystRequestLifecycle, canRevertRequestToDraft, offersQuestionnaireGeneration, questionnaireGenerationAction, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
 import { RequestContextDetails } from '@/features/requests/request-context-details';
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
 import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
@@ -113,7 +113,7 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
    * that generated the draft keeps its card when revalidation re-renders the page.
    */
   const assessmentExists = request.relationships?.assessment.availability === 'available' || request.relationships?.assessment.availability === 'unavailable';
-  const showsQuestionnaireCard = request.requestStatus === 'submitted';
+  const showsQuestionnaireCard = offersQuestionnaireGeneration(request);
   const seededQuestionnaireJob = showsQuestionnaireCard ? seedable(generationJobs?.questionnaireGeneration) : undefined;
   const seededDraftJob = questionnaire.availability === 'available' ? seedable(generationJobs?.assessmentDraft) : undefined;
   const nextActionOverride = generationNextAction(
@@ -126,7 +126,7 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
       <PageHeader description={request.requestNumber} status={<StatusBadge status={request.requestStatus} />} title={request.title} />
       <div className="grid gap-6">
         <RequestLifecycleStepper lifecycle={request.lifecycle} />
-        <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} nextActionOverride={nextActionOverride} request={request} />
+        <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={analystRequestLifecycle(request)} nextActionOverride={nextActionOverride} request={request} />
         {/* Offered only while Strapi's rule allows it: submitted, with no questionnaire and no assessment (D-22). */}
         {canRevertRequestToDraft(request) ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <RequestContextDetails request={request} />
