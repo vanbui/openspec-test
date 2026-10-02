@@ -70,6 +70,14 @@ key-files:
     - apps/csrm/src/features/risks/mitigation-control-list.tsx
     - apps/csrm/e2e/risk-register-workflow.spec.ts
     - .planning/phases/10-existing-flow-gap-closure/deferred-items.md
+    - apps/csrm/src/features/administration/administration-workspace.tsx
+    - apps/csrm/src/components/csrm/relation-picker.tsx
+    - apps/csrm/src/components/csrm/relation-picker.test.tsx
+    - apps/csrm/src/features/assessments/owner-combobox.tsx
+    - apps/csrm/src/features/assessments/owner-combobox.test.tsx
+    - apps/csrm/src/features/risks/risk-register-filters.tsx
+    - apps/csrm/src/features/risks/risk-register.test.tsx
+    - apps/csrm/e2e/accessibility.spec.ts
 
 key-decisions:
   - "10-23: the CSRM_AI_ source check failed on a read-only assertion 10-09 added; it was replaced by a comment naming the deterministic-shape proof the test already makes, rather than widening the check (fix eed7ed0)"
@@ -85,6 +93,9 @@ key-decisions:
   - "10-23 fix 4: the analyst page's Next action follows the fact its generation card uses (a submitted request); the Phase 7 fixtures' unreachable state is left as seeded and deferred, because a consistent fixture breaks its pinned invariants"
   - "10-23 fix 5: each Administration kind has a running-text noun (control, information system, information asset; Risk Type keeps its capitals) used in the CSV import's running sentences"
   - "10-23 fix 6: discarding a mitigation form returns focus to its Edit or Add control (X-5)"
+  - "10-23 fix 7: the controls Name and Framework columns and the Risk Type Description column use the DataTable long-text option (wrap within 14rem to 28rem, clamp to two lines); system and asset names, types and references stay on one line"
+  - "10-23 fix 8: every picker popup is an APG listbox popup (focus stays in the input, options through aria-activedescendant), so the Popover wrapper carries no dialog role; More filters, which takes focus, stays a dialog named by its title"
+  - "10-23 fix 8: two Label in Name defects the open-list scan found are fixed with it: a Control option's framework line is its description and leaves the label text, and a readiness Risk row separates its number from its count"
 
 requirements-completed: []
 
@@ -784,6 +795,119 @@ All runs had no dev server running (`netstat` printed nothing). Logs are in the 
 - the Controls CSV guidance.
 
 The full gate reruns in the next agent.
+
+### Fix 7: Control titles wrap at 1440 (B3)
+
+Walkthrough round 2 (2026-10-03). The pilot's re-walk confirmed fixes 1, 2, 4, 5 and 6 at 375 and 1440 with no data change, and found two code defects: this one and fix 8. Both are GSD Rule 1 deviation fixes, failing test first. No control title changed; the pilot sends a further title pass, and the full gate runs once after it.
+
+**Root cause.** The controls `Name` column in `administration-workspace.tsx` did not use the DataTable long-text option (`wrap`, direction §4 DataTable, X-3). Its cell kept the table primitive's `whitespace-nowrap`, so a long title set the column's width. On the CPS 230 page at 1440 the table was 1232px wide in a 1102px region (the pilot measured Name at 623px), so Type was clipped and Reference was out of view.
+
+**Change.**
+- The controls `Name` and `Framework` columns and the Risk Type `Description` column set `wrap: true`. Each cell then wraps within 14rem to 28rem, and its content clamps to two lines (`line-clamp-2`). The full text stays in the DOM and prints whole (the existing print rule).
+- Framework is included because framework names are long titles too. The Privacy Act framework name is 85 characters and would hold a 1440 page wide on its own.
+- No new styling: the change uses the table component's own option and the clamp the Risk Register statement already uses.
+
+**Other lists checked.**
+- Information Systems and Information Assets: names, types, owners, locations and flags are short record names or closed values. They stay on one line, and the systems list keeps its own backstop (ADMIN05_SYSTEM_OWNER_COLUMNS, still passing).
+- The other DataTables with long free text are not Phase 10 surfaces: `Title` on the request, assessment and questionnaire lists, and `Summary` on the assessment and released-assessment lists. An overflowing table there scrolls inside its labelled region (D-29). They are logged in `deferred-items.md`.
+
+**Tests.**
+
+| File | Test | Before (`15b08f7`) | After (`ee7c673`) |
+|---|---|---|---|
+| `administration-workflow.test.tsx` | B3 wraps long control titles, framework names and Risk Type descriptions within the long-text bounds (the cells carry `whitespace-normal min-w-56 max-w-md` and the text `line-clamp-2`; number, type and reference stay on one line) | fail: the title was bare text in a `whitespace-nowrap` cell | pass |
+| `e2e/administration-workflow.spec.ts` | `ADMIN05_CONTROL_TITLES_WRAP`: at 1440, on `?q=CPS-230` and `?q=APP-1`, the table is no wider than its region after `settleElementWidth`, `data-overflow` is `false`, and Name, Type and Reference sit inside the region; the longest CPS 230 title on the page spans more than one line | fail: `CPS-230` table 1232px > region 1102px | pass |
+
+- **RED:** `administration-workflow.test.tsx` 43 tests, 42 passed and 1 failed on its assertion. `check tdd-red-evidence` returned RED_EVIDENCE_OK (`p10-23-f7-red.json`). The Controls journey (desktop, `@administration-controls`) failed on the width assertion: `Expected: <= 1102, Received: 1232`.
+- **GREEN:** `src/features/administration` and `data-table.test.tsx`, 4 files, 71/71. The Controls journey passed, 1 of 1, in 57.8 s.
+- **D-29 region helper:** no step pinned the Controls table as overflowing at 1440, so no expectation changed. The helper follows the measured width, and it now records `data-overflow` `true` at 768, `false` at 1280 and `false` at 1440.
+
+**Browser measurements at 1440 (production harness, `p10-23-f78-e2e.json`).**
+
+| Page | Table width | Region width | Longest title's Name cell |
+|---|---|---|---|
+| `/app/admin/controls?q=CPS-230`, before | 1232px | 1102px | one line, column 623px (pilot) |
+| `/app/admin/controls?q=CPS-230`, after | 1102px | 1102px | `Risk-based control monitoring and testing, senior management reporting and timely rectification`: 2 lines, cell 464 × 44px, text 36px tall (one line 16px) |
+| `/app/admin/controls?q=APP-1`, after | 1102px | 1102px | (framework column wraps) |
+
+**Commits.** `15b08f7` test(10-23): expect long control titles to wrap at 1440 (B3); `ee7c673` fix(10-23): wrap long control titles in the Controls list at 1440 (B3).
+
+### Fix 8: named picker popovers (aria-dialog-name)
+
+**Root cause.** Every picker draws its list in a Radix `PopoverContent`, and Radix gives that element `role="dialog"`. The pickers never name it, so axe reports `aria-dialog-name` (serious) whenever a list is open.
+- The affected pickers: `RelationPicker` (Control, system and asset), `OwnerCombobox` (risk, treatment and control owners), `RelationMultiSelect` (the request's systems and assets) and the Risk Register's relation filters.
+- The route sweep never caught it, for two reasons: `aria-dialog-name` is an axe best-practice rule, which the WCAG tags never run, and no sweep scanned a list while it was open.
+
+**Which APG variant, and why.** I read each component's focus and key handling first.
+- Each opens with `onOpenAutoFocus` prevented.
+- Its options are `tabIndex={-1}` buttons that prevent `mousedown`.
+- Arrow keys move `aria-activedescendant` while focus stays in the input.
+- Choosing returns focus to the input, or keeps it there.
+
+That is the ARIA APG combobox with a **listbox popup**, not a dialog popup. So the popup must not be a dialog:
+- The `PopoverContent` passes `role={undefined}`. That overrides Radix's default, so the positioning wrapper is a plain element with no role. `role="presentation"` was not used: Radix makes the element focusable (`tabIndex=-1`), and a presentational role on a focusable element is a role conflict.
+- Each input keeps `role="combobox"` and `aria-expanded`, and adds `aria-haspopup="listbox"`.
+- Each input sets `aria-controls` to the listbox while the listbox is shown. `OwnerCombobox`, `RelationMultiSelect` and the filters had pointed at a missing id while the list was loading.
+- The status lines (`role="status"`) and failures with Retry (`role="alert"`) are announced through their own live roles. Retry is reached as before.
+- **More filters** on the Risk Register is different: it moves focus into its fields, so it is a genuine dialog. It is now named by its title (`aria-labelledby` to the `PopoverTitle`, which gains an id).
+
+Every keyboard behaviour is unchanged, and the existing unit tests still pass: the list opens on typing, ArrowDown or a press, never on Tab, and Enter never submits the form.
+
+**Two more serious findings from the new open-list scan.** That scan runs this spec's Label in Name rule, and with a list open it found two serious `label-content-name-mismatch` defects in Phase 10 components. Fix 8's criterion is no serious violation with the list open, so both are fixed here, test first.
+- **A Control option** was named by its title line (`aria-label`), but its framework line was part of its visible text. The two lines read together as `…informationPrivacy Act…`, which the name did not contain. The framework line is now `aria-hidden`. It is still the option's description through `aria-describedby`, so a screen reader still hears it, and the option keeps its title-line name, so `Selected control: {label}` is unchanged.
+- **A readiness Risk row** (10-21) is named `{risk number}: {n} outstanding`. Its number and its count were adjacent elements with no space, so the visible text ran together as `RSK-…-0011 outstanding`. A space now separates them.
+
+**Other pickers checked.**
+- The Administration form's `Applicable Controls` search renders its listbox inline, with no popover, so it is unaffected.
+- The Risk Register's relation filters had the same defect and are fixed in the same way. Its More filters popover was the one genuine dialog, and it is now named.
+- The only other `PopoverContent` in `src` is More filters itself.
+
+**Tests.**
+
+| File | Test | Before | After (`d6e29c5`) |
+|---|---|---|---|
+| `relation-picker.test.tsx` | opens a listbox popup that the combobox controls, with focus kept in the input and no dialog; announces its status line and a failed search with Retry search, without a dialog | fail (`ba1d9bb`): no `aria-haspopup`, a `dialog` rendered | pass |
+| same | names an option by its title line and describes it with the framework line, which is not part of its label text | fail (`d045322`): the framework line was label text | pass |
+| `owner-combobox.test.tsx` | `OwnerCombobox` opens a listbox popup it controls (and no `aria-controls` while only the status shows); announces a failed search with Retry owner search, without a dialog; `RelationMultiSelect` opens a listbox popup it controls | fail (`ba1d9bb`) | pass |
+| `risk-register.test.tsx` | names the More filters dialog by its title and opens each relation filter as a listbox, not a dialog | fail (`ba1d9bb`): More filters had no name | pass |
+| `assessment-editor.test.tsx` | keeps a Risk row’s visible words the words of its name (Label in Name) | fail (`ba1d9bb`): `RSK-00422 outstanding` | pass |
+| `e2e/accessibility.spec.ts` | picker lists pass axe while open at 1440 and 375 (below) | fail (`ba1d9bb`): `aria-dialog-name` on the open Control picker's popover, and `label-content-name-mismatch` | pass |
+
+- **The browser proof.** The new test signs in as Bob and opens every picker list by typing a search, without choosing. It runs at 1440 and at 375:
+  - the assessment editor of `ASM-E2E-P7-MUTABLE-001` (in review): Information system impacted, Information asset impacted, Risk owner, Control and Control owner;
+  - the Risk Register detail of `RSK-DEV-MUTABLE-001`: Edit risk's system, asset, Risk owner and Treatment owner, then a new mitigation control's Control and Control owner;
+  - the Risk Register's Risk owner filter, in More filters at 1440 and in the Filters sheet at 375;
+  - a new request's two relation searches.
+- **Each scan.** With the list open, the test scans with the WCAG tags, Label in Name and best practice, and the result's record proves `aria-dialog-name` ran. It asserts no serious or critical violation, that the listbox popup is not a dialog, `aria-haspopup="listbox"`, `aria-controls` equal to the listbox id, and focus still in the input. Escape then closes the list. Nothing is chosen, saved or submitted: Edit risk is left by navigation and the mitigation form is discarded.
+- **Result.** 28 scans (14 per width), with 0 serious or critical violations. Each scan reports one moderate best-practice finding, `region`: the popup is portalled to the end of `body`, outside the landmarks. That is how every Radix popover renders, and it is not a WCAG rule.
+- **RED:**
+  - The three picker files: 42 tests, 36 passed and 6 failed on their assertions. RED_EVIDENCE_OK (`p10-23-f8-red.json`).
+  - The readiness test: 60 tests, 59 passed and 1 failed. RED_EVIDENCE_OK (`p10-23-f8b-red.json`).
+  - The option test: 21 tests, 20 passed and 1 failed. RED_EVIDENCE_OK (`p10-23-f8c-red.json`).
+  - The e2e test failed on its first scan with `aria-dialog-name` (the Radix `role="dialog"` popover) and the readiness `label-content-name-mismatch`. A first RED run with the WCAG tags alone showed only the readiness defect, which is how I found that `aria-dialog-name` is a best-practice rule. The scan was widened before the RED commit.
+- **GREEN:** the picker, assessment, risk and request feature files, 24 files, 477/477.
+- **One test correction in the fix commit.** The first GREEN run stopped at the Risk Register filter because the scan looked for the first `option` in any open popover, and More filters holds native selects whose options are never visible. The locator now looks inside the listbox. The product passed that step on the rerun, unchanged.
+
+**Commits.** `ba1d9bb` test(10-23): expect picker popups to be listboxes, not unnamed dialogs; `d045322` test(10-23): expect a control option's framework line to describe it, not name it; `d6e29c5` fix(10-23): make picker popups listboxes and name the More filters dialog.
+
+### Fixes 7 and 8: runs
+
+All runs had no dev server running (`netstat` printed nothing before each Playwright run). Logs are in the session scratchpad (`p10-23-f7-*`, `p10-23-f8*` and `p10-23-f78-*`).
+- **Affected Playwright specs** (`administration-workflow`, `accessibility`, `assessment-release-workflow`, `risk-register-workflow`, both projects, production harness): 20 passed (desktop 18, mobile 2), 0 failed, 0 flaky, 0 skipped, in 5.1 min. Next logged the known `destination stream closed early` 15 times. `settleElementWidth` was kept everywhere it was called, and the run left the tree unchanged.
+- **Full web suite:** 130 files, 2,777/2,777, in 30.2 s. That is 9 more than the second gate: 1 for fix 7 and 8 for fix 8.
+- **`typecheck` and `lint`:** clean.
+- **Not run, as instructed:** the full Strapi suite, the full Playwright suite and the full phase gate. The gate runs once, after the pilot's title pass.
+- **Not changed:** no Strapi source, contract, catalogue, content type or control title.
+- **Housekeeping:** the failed RED and first-GREEN runs kept their harness database and Next build under the ignored `apps/backend/.tmp` and `apps/csrm/.tmp`, and their `apps/csrm/test-results`. I removed only those run-scoped paths. Older kept runs from earlier sessions were left alone.
+
+**Deferred** (in `deferred-items.md`, commit `c9122fe`):
+- the CPS 230 and CPS 234 PDF-extraction leftovers, routed to Phase 22 or a quick task;
+- the pilot's agreement to defer the two RAR-E2E-P7 fixtures;
+- the non-Phase 10 list columns without the long-text option.
+
+**Open for the pilot.** Re-walk two things:
+- B3 at 1440 on the CPS 230 controls page;
+- each picker with its list open, under the pilot's own axe scan.
 
 ## Phase gate (second run, after the walkthrough fixes)
 
