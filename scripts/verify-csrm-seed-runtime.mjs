@@ -161,8 +161,9 @@ const prepareUpdateVerification = async (strapi) => {
       name: VERIFIER_RISK_TYPE_NAME,
     },
   });
-  // What an earlier seed wrote from an older catalogue entry: the entry in sourceData beside the name and
-  // description derived from it. The seed recognises both as its own and replaces them (fix 2, fix 3).
+  // What an earlier seed wrote from an older catalogue: the entry and framework in sourceData beside the name,
+  // description and framework derived from them. The seed recognises them as its own and replaces them
+  // (fix 2, fix 3, WR-101); a value without that stored evidence would be an operator's, and kept.
   await controlService.update({
     documentId: staleControl.documentId,
     data: {
@@ -171,6 +172,13 @@ const prepareUpdateVerification = async (strapi) => {
       name: `${STALE_CONTROL_NUMBER} — Stale verifier name`,
       sourceData: {
         ...staleControl.sourceData,
+        catalogue: {
+          ...staleControl.sourceData.catalogue,
+          framework: {
+            ...staleControl.sourceData.catalogue.framework,
+            name: "Stale verifier framework",
+          },
+        },
         control: {
           ...staleControl.sourceData.control,
           statement: "Stale verifier value",

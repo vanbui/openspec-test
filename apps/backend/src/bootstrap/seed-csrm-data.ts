@@ -70,8 +70,17 @@ export type ControlSeed = {
   sourceData: JsonObject;
 };
 
-type ExistingControl = Partial<ControlSeed> & {
+// A stored control: any field an operator cleared reads as null.
+type ExistingControl = { [Field in keyof ControlSeed]?: ControlSeed[Field] | null } & {
   documentId: string;
+};
+
+// The optional control fields, which an operator may clear.
+type ClearableControlField = "controlReference" | "description" | "frameworkSource" | "frameworkVersion";
+
+// What a seeded start writes over a stored control: the seed, with each value an operator owns kept as stored.
+type ReconciledControlSeed = Omit<ControlSeed, ClearableControlField> & {
+  [Field in ClearableControlField]: string | null | undefined;
 };
 
 const CONTROL_SEED_FIELDS = [
@@ -539,16 +548,22 @@ function controlDescription(control: JsonObject): string | undefined {
   return firstString(control.statement, control.legalText, control.title);
 }
 
+// The framework facts the seed derives from a catalogue's framework block, likewise.
+function catalogueFrameworkVersion(framework: JsonObject): string | undefined {
+  return firstString(framework.version, framework.release);
+}
+
+function catalogueFrameworkSource(framework: JsonObject): string | undefined {
+  return firstString(framework.source);
+}
+
 export function createControlSeeds(
   catalogues: ControlCatalogue[],
   titles: Map<string, string>,
 ): ControlSeed[] {
   return catalogues.flatMap((catalogue) => {
-    const frameworkVersion = firstString(
-      catalogue.framework.version,
-      catalogue.framework.release,
-    );
-    const frameworkSource = firstString(catalogue.framework.source);
+    const frameworkVersion = catalogueFrameworkVersion(catalogue.framework);
+    const frameworkSource = catalogueFrameworkSource(catalogue.framework);
 
     return catalogue.controls.map((control) => ({
       controlNumber: control.id,
@@ -583,10 +598,14 @@ function stableJson(value: unknown): string {
 }
 
 /*
- * A stored description the seed wrote is the one its stored catalogue entry gives: the seed keeps that entry
- * in sourceData, which no Administration write can change. Any other stored description is an operator's own,
- * and a seeded start keeps it, unless it is beyond the Controls contract bound, which no valid write can
- * store. A seed-written description is replaced by the current seed's (APP-13's over-long text, for one).
+ * The seed-owned-value rule (10-23 walkthrough fixes 2 and 3; WR-101). The seed keeps the catalogue entry and
+ * catalogue block it read in sourceData, which no Administration write can change, so the value it wrote for a
+ * field is the one that stored entry gives. A seeded start replaces only a stored value equal to that
+ * (APP-13's over-long text, for one, or a reference from an earlier catalogue). Any other stored value is an
+ * operator's own, and a seeded start keeps it: an edited reference or framework fact, and a cleared (null)
+ * description, reference, version or source the seed would have filled. Two exceptions: a description beyond
+ * the Controls contract bound is replaced whoever stored it, because no valid write can store one; and where
+ * no stored entry says what the seed wrote, a blank value is filled and any other value kept.
  */
 function storedCatalogueEntry(existingControl: ExistingControl): JsonObject | undefined {
   const sourceData: unknown = existingControl.sourceData;
@@ -596,22 +615,80 @@ function storedCatalogueEntry(existingControl: ExistingControl): JsonObject | un
     : undefined;
 }
 
-function operatorDescription(existingControl: ExistingControl): string | undefined {
-  const stored: unknown = existingControl.description;
+function storedCatalogueFramework(existingControl: ExistingControl): JsonObject | undefined {
+  const sourceData: unknown = existingControl.sourceData;
 
-  if (typeof stored !== "string" || stored.trim().length === 0) {
+  return isJsonObject(sourceData) &&
+    isJsonObject(sourceData.catalogue) &&
+    isJsonObject(sourceData.catalogue.framework)
+    ? sourceData.catalogue.framework
+    : undefined;
+}
+
+const OPERATOR_OWNABLE_CONTROL_FIELDS = [
+  "controlReference",
+  "description",
+  "framework",
+  "frameworkSource",
+  "frameworkVersion",
+] as const;
+
+type OperatorOwnableControlField = (typeof OPERATOR_OWNABLE_CONTROL_FIELDS)[number];
+
+// The value the seed wrote for a field, from the stored entry; undefined when no stored entry says.
+const SEED_WRITTEN_VALUE: Record<
+  OperatorOwnableControlField,
+  (existingControl: ExistingControl) => { value: string | undefined } | undefined
+> = {
+  controlReference: (existingControl) => {
+    const entry = storedCatalogueEntry(existingControl);
+    return entry ? { value: controlReference(entry) } : undefined;
+  },
+  description: (existingControl) => {
+    const entry = storedCatalogueEntry(existingControl);
+    return entry ? { value: controlDescription(entry) } : undefined;
+  },
+  framework: (existingControl) => {
+    const framework = storedCatalogueFramework(existingControl);
+    return framework ? { value: nonBlankString(framework.name) } : undefined;
+  },
+  frameworkSource: (existingControl) => {
+    const framework = storedCatalogueFramework(existingControl);
+    return framework ? { value: catalogueFrameworkSource(framework) } : undefined;
+  },
+  frameworkVersion: (existingControl) => {
+    const framework = storedCatalogueFramework(existingControl);
+    return framework ? { value: catalogueFrameworkVersion(framework) } : undefined;
+  },
+};
+
+// The operator's own stored value for a field, or undefined when the seed's current value replaces it.
+function operatorValue(
+  existingControl: ExistingControl,
+  field: OperatorOwnableControlField,
+): { value: string | null } | undefined {
+  const stored: unknown = existingControl[field];
+  const storedValue = typeof stored === "string" ? stored : null;
+
+  if (
+    field === "description" &&
+    storedValue !== null &&
+    storedValue.length > CONTROL_DESCRIPTION_MAX_LENGTH
+  ) {
     return undefined;
   }
 
-  if (stored.length > CONTROL_DESCRIPTION_MAX_LENGTH) {
-    return undefined;
+  const seedWritten = SEED_WRITTEN_VALUE[field](existingControl);
+
+  if (!seedWritten) {
+    return storedValue === null || storedValue.trim().length === 0
+      ? undefined
+      : { value: storedValue };
   }
 
-  const seededEntry = storedCatalogueEntry(existingControl);
-
-  return seededEntry && stored === controlDescription(seededEntry)
+  return storedValue === (seedWritten.value ?? null)
     ? undefined
-    : stored;
+    : { value: storedValue };
 }
 
 /*
@@ -651,20 +728,34 @@ function reconciledControlSeed(
   existingControl: ExistingControl,
   controlSeed: ControlSeed,
   supersededTitles: Map<string, string[]>,
-): ControlSeed {
-  const description = operatorDescription(existingControl);
+): ReconciledControlSeed {
+  const reconciled: ReconciledControlSeed = { ...controlSeed };
+
+  for (const field of OPERATOR_OWNABLE_CONTROL_FIELDS) {
+    const kept = operatorValue(existingControl, field);
+
+    if (!kept) {
+      continue;
+    }
+
+    if (field === "framework") {
+      // A required field is never stored cleared; a stored framework name the seed did not write is kept.
+      if (kept.value !== null) {
+        reconciled.framework = kept.value;
+      }
+    } else {
+      reconciled[field] = kept.value;
+    }
+  }
+
   const name = operatorName(existingControl, supersededTitles);
 
-  return {
-    ...controlSeed,
-    ...(description === undefined ? {} : { description }),
-    ...(name === undefined ? {} : { name }),
-  };
+  return name === undefined ? reconciled : { ...reconciled, name };
 }
 
 function controlNeedsUpdate(
   existingControl: ExistingControl,
-  controlSeed: ControlSeed,
+  controlSeed: ReconciledControlSeed,
 ): boolean {
   return CONTROL_SEED_FIELDS.some(
     (field) =>
@@ -729,7 +820,8 @@ async function seedCsrmControls(
     if (controlNeedsUpdate(existingControl, reconciledSeed)) {
       await controlService.update({
         documentId: existingControl.documentId,
-        data: reconciledSeed,
+        // The generated input type omits null, which these optional attributes store when cleared.
+        data: reconciledSeed as Parameters<typeof controlService.update>[0]["data"],
       });
       updated += 1;
     }
