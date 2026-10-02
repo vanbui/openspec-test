@@ -76,6 +76,11 @@ async function completeRiskForRelease(
     response.request().method() === 'POST' && response.url().includes('/app/review/assessments/'));
   await riskForm.getByRole('button', { name: 'Save risk' }).click();
   expect((await saveResponse).ok(), `ASSESS-03 risk ${index + 1} persisted`).toBe(true);
+  // D-33, UI-SPEC §13.4: the save confirms beside Save risk with the local time, in its polite region.
+  await expect(
+    riskForm.getByRole('status').filter({ hasText: /^Risk saved at / }),
+    `ASSESS06_RISK_SAVE_CONFIRMED risk ${index + 1} confirms the save with its time`,
+  ).toBeVisible();
   await page.reload();
   await expect(riskForm.getByRole('combobox', { name: 'Treatment action' })).toHaveValue(treatmentAction);
   await expect(page.getByRole('list', { name: 'Release requirements' }), `ASSESS-03 risk ${index + 1} retains the complete readiness checklist`).toBeVisible();
@@ -215,7 +220,9 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   expect(controlLabel, 'ASSESS06_CONTROL_PICKED_BY_TYPING the control reads by its number and title').toMatch(/^APP-11 · \S/);
   await controlOption.click();
   await expect(controlForm.getByText(`Selected control: ${controlLabel}`, { exact: true }), 'ASSESS06_CONTROL_PICKED_BY_TYPING the choice shows below the field').toBeVisible();
-  await controlForm.getByRole('combobox', { name: 'Control owner' }).selectOption({ label: 'Jane Doe' });
+  // E11 (D-28): the control owner is found with the active-user search, not chosen from names already on the Risk.
+  await selectOwner(controlForm.getByRole('combobox', { name: 'Control owner' }));
+  await expect(controlForm.getByText('Selected owner: Jane Doe', { exact: true })).toBeVisible();
   await controlForm.getByRole('combobox', { name: 'Control status' }).selectOption('Planned');
   await controlForm.getByRole('combobox', { name: 'Effectiveness rating' }).selectOption('Partially Effective');
   await controlForm.getByRole('textbox', { name: 'Evidence' }).fill('Control selected from the reusable catalogue and scheduled for verification.');
@@ -226,9 +233,19 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
     response.request().method() === 'POST' && response.url().includes('/app/review/assessments/'));
   await controlForm.getByRole('button', { name: 'Add mitigation control' }).click();
   expect((await controlSaveResponse).ok(), 'ASSESS-03 ControlImplementation persisted').toBe(true);
+  // UI-SPEC §13.4: the new control's form confirms the create, and focus returns to that Risk's add control.
+  await expect(
+    firstControlRegion.getByRole('status').filter({ hasText: /^Mitigation control added at / }),
+    'ASSESS06_CONTROL_ADD_CONFIRMED the new control confirms when it was added',
+  ).toBeVisible();
+  await expect(
+    firstControlRegion.getByRole('button', { name: 'Add mitigation control' }),
+    'ASSESS06_CONTROL_ADD_CONFIRMED focus returns to Add mitigation control',
+  ).toBeFocused();
   await page.reload();
   const persistedControl = firstControlRegion.locator('form').filter({ has: page.getByRole('button', { name: 'Save mitigation control' }) });
   await expect(persistedControl.getByText(`Selected control: ${controlLabel}`, { exact: true }), 'ASSESS06_CONTROL_PICKED_BY_TYPING the chosen control is saved and read back by its label').toBeVisible();
+  await expect(persistedControl.getByText('Selected owner: Jane Doe', { exact: true }), 'E11 the searched control owner is saved and read back by name').toBeVisible();
   await expect(persistedControl.getByRole('textbox', { name: 'Evidence' })).toHaveValue('Control selected from the reusable catalogue and scheduled for verification.');
   await expect(page.getByText('All release requirements are met'), 'ASSESS-03 persisted edits satisfy release readiness').toBeVisible();
   await expect(readinessRequirements, 'ASSESS-03 retains met requirements').toBeVisible();
