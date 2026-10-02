@@ -301,6 +301,44 @@ describe('RelationPicker search (UI-SPEC §13.1)', () => {
     expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
   });
 
+  it('retries a failed search with Enter from the combobox, says so, and never submits the form (WR-302)', async () => {
+    vi.useFakeTimers();
+    const submit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    const search = vi.fn()
+      .mockResolvedValueOnce({ ok: false, formError: 'The selection service is unavailable. Please try again later.' })
+      .mockResolvedValueOnce({ ok: true, data: [iso51] });
+    render(<form onSubmit={submit}><Harness search={search} /></form>);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    input.focus();
+    fireEvent.change(input, { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Press Enter to retry.');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await act(async () => {});
+    expect(submit).not.toHaveBeenCalled();
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(search).toHaveBeenLastCalledWith({ search: '5.1' });
+    expect(input).toHaveFocus();
+    expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
+  });
+
+  it('chooses an active suggestion on Enter even while a search error shows (WR-302)', async () => {
+    vi.useFakeTimers();
+    const change = vi.fn();
+    const search = vi.fn(async () => ({ ok: false as const, formError: 'The selection service is unavailable. Please try again later.' }));
+    render(<Harness onChange={change} search={search} suggested={applicable} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    fireEvent.change(input, { target: { value: 'APP' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(change).toHaveBeenLastCalledWith(app11);
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
   it('ignores a response a later keystroke superseded', async () => {
     vi.useFakeTimers();
     let resolveFirst!: (value: RelationPickerSearchResult) => void;
