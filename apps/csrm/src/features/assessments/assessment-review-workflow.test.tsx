@@ -423,9 +423,10 @@ describe('the questionnaire generation action the hub offers', () => {
     ['absent', { availability: 'absent' as const }, 'generate'],
     ['in analyst review', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'analyst-review' }, 'replace'],
     ['released', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'released' }, 'released'],
-    ['submitted', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'submitted' }, 'released'],
-    ['available with no served state', { availability: 'available' as const, documentId: 'q', questionnaireNumber: null, title: 'Q', state: null }, 'released'],
-    ['not open to the analyst', { availability: 'unavailable' as const }, 'released'],
+    // IN-201: only a questionnaire served as released is called released; any other that exists is not.
+    ['submitted', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'submitted' }, 'exists'],
+    ['available with no served state', { availability: 'available' as const, documentId: 'q', questionnaireNumber: null, title: 'Q', state: null }, 'exists'],
+    ['not open to the analyst', { availability: 'unavailable' as const }, 'exists'],
   ] as const)('a questionnaire relation that is %s gives %s', (_label, relation, expected) => {
     expect(questionnaireGenerationAction(relation)).toBe(expected);
   });

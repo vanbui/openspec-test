@@ -284,6 +284,27 @@ describe('replacing a questionnaire in analyst review', () => {
  */
 const releasedHint = 'This questionnaire has been released to the Requestor. To replace it, return QNR-2026-KX2AHV to analyst review first.';
 
+/* IN-201: a questionnaire that exists but is not served as released gets a neutral line, never the released hint. */
+describe('a questionnaire that exists but is not served as released', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('offers no action and says only that a questionnaire exists', () => {
+    render(<QuestionnaireGenerationJob action="exists" questionnaireHref="/app/review/questionnaires/questionnaire-one" questionnaireNumber="QNR-2026-KX2AHV" requestId="request-one" />);
+
+    expect(screen.getByText('A questionnaire already exists for this request.')).toHaveClass('text-sm', 'text-foreground-secondary');
+    expect(screen.queryByText(/released to the Requestor/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('offers no replacement after a not-acknowledged failure', () => {
+    const notAcknowledged = { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED', failureMessage: 'Replacement was not acknowledged.' };
+    render(<QuestionnaireGenerationJob action="exists" requestId="request-one" seededJob={{ job: notAcknowledged, canRetry: true }} />);
+
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    expect(screen.getByText('A questionnaire already exists for this request.')).toBeInTheDocument();
+  });
+});
+
 describe('a questionnaire released to the Requestor', () => {
   beforeEach(() => vi.clearAllMocks());
 
