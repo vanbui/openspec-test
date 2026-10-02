@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PageHeader } from '@/components/shell/app-shell';
 import type { RiskPickerOption, RiskRegisterItem, RiskRegisterPayload, RiskRegisterQuery } from './risk-schema';
 import { RiskRegisterTable } from './risk-register';
+import { RiskRegisterFilters } from './risk-register-filters';
 
 const replace = vi.fn();
 let search = '';
@@ -451,6 +452,61 @@ describe('RiskRegisterTable', () => {
     expect(combobox).toHaveFocus();
     // The one dialog is More filters; the listbox's own popup adds none.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  /*
+   * IN-307: a new query starts with no active option, so aria-activedescendant never names an option that is not
+   * shown and Enter never chooses a stale one; a rejected search ends its Searching… line.
+   */
+  it('names no active option while a new search loads and chooses nothing stale on Enter (IN-307)', async () => {
+    vi.useFakeTimers();
+    try {
+      const onChange = vi.fn();
+      const searchRelations = vi.fn()
+        .mockResolvedValueOnce({ ok: true, data: [{ documentId: 'user-bob', label: 'Bob Doe' }, { documentId: 'user-bobby', label: 'Bobby Tables' }] })
+        .mockResolvedValueOnce({ ok: true, data: [] });
+      render(<RiskRegisterFilters activeCount={0} disabled={false} onChange={onChange} pickerOptions={options} query={query} searchRelations={searchRelations} />);
+      fireEvent.click(screen.getByRole('button', { name: 'More filters' }));
+      const combobox = screen.getByRole('combobox', { name: 'Risk owner' });
+
+      fireEvent.change(combobox, { target: { value: 'Bob' } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      fireEvent.keyDown(combobox, { key: 'ArrowDown' });
+      expect(combobox).toHaveAttribute('aria-activedescendant');
+
+      fireEvent.change(combobox, { target: { value: 'Bobbyx' } });
+      expect(screen.getByRole('status')).toHaveTextContent('Searching…');
+      expect(combobox).not.toHaveAttribute('aria-activedescendant');
+      fireEvent.keyDown(combobox, { key: 'Enter' });
+      expect(onChange).not.toHaveBeenCalled();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(screen.getByRole('status')).toHaveTextContent('No matching options.');
+      expect(combobox).not.toHaveAttribute('aria-activedescendant');
+      fireEvent.keyDown(combobox, { key: 'Enter' });
+      expect(onChange).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ends Searching… when the relation search is rejected (IN-307)', async () => {
+    vi.useFakeTimers();
+    try {
+      const searchRelations = vi.fn().mockRejectedValueOnce(new Error('network'));
+      render(<RiskRegisterFilters activeCount={0} disabled={false} onChange={vi.fn()} pickerOptions={options} query={query} searchRelations={searchRelations} />);
+      fireEvent.click(screen.getByRole('button', { name: 'More filters' }));
+      const combobox = screen.getByRole('combobox', { name: 'Risk owner' });
+
+      fireEvent.change(combobox, { target: { value: 'Bob' } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+      expect(screen.queryByText('Searching…')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('No matching options.');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('offers the closed Risk state filter in More filters, as a chip and in the mobile Sheet (D-36)', async () => {
