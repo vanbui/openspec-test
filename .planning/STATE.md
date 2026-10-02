@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-12-PLAN.md
-last_updated: "2026-10-02T07:34:54.106Z"
+stopped_at: Completed 10-13-PLAN.md
+last_updated: "2026-10-02T08:12:00.786Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-12 complete (the analyst hub replaces a questionnaire in analyst review only through Replace this questionnaire?, which states the analyst changes it discards from the served count; a released questionnaire offers no action and links the way back; failed jobs read by code; no request revert once a questionnaire exists; UAT-019 hub half, QUES-08, UX-06)
-state_head: fa7dc072205d9ffc854cdbd867574b9f6aad4561
+last_activity_desc: Plan 10-13 complete (a human-analyst read of a request's current generation jobs, GET /api/v1/assessment_requests/{requestId}/generation_jobs, with the viewer's retry right, through every link of D-02's chain; UAT-041 server half, UX-06)
+state_head: 947be085d8639b383652ee440e1fb005e6d9c32f
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 13 of 23
+Plan: 14 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-12 complete: questionnaireGenerationAction (generate, replace or released) over the served relation; the analyst request page reads analystChangesSinceGeneration from the questionnaire summary on the server; Replace questionnaire (outline) opens Replace this questionnaire? with the 0, 1, n or unknown description, Keep this questionnaire and refusals inside the dialog; the released hint links the questionnaire; failure copy by code; generation journey E7 and UX06_NO_REQUEST_REVERT_ONCE_QUESTIONNAIRE_EXISTS pass (desktop 1/1); web 2,549/2,549, typecheck, lint and api:check clean
+Last activity: 2026-10-02 — Plan 10-13 complete: GET /api/v1/assessment_requests/{requestId}/generation_jobs returns the request's questionnaire generation job and its questionnaire's draft job, each { job, canRetry } or null, for role.security_analyst only (new API-only Function, both catalogue copies byte-identical, HUMAN_ANALYST_ONLY_OPERATIONS); spec, regenerated client, registered parser (11 narrowed paths, grandfather count 43), getRequestGenerationJobsAction, matrix row and served-operations inventory; web 2,553/2,553, Strapi 600/600 (756 s), typecheck, lint and api:check clean
 
 ## Milestone
 
@@ -123,6 +123,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-11: D-09 refuses generation for a released questionnaire (releasedAt, never the log) with 409 QUESTIONNAIRE_RELEASED before queueing, acknowledged or not, and the job re-checks under the request row lock and fails with the same code. revision.analystChangesSinceGeneration (question added, edited, removed at or after generatedDate; all of them when the date is absent or unreadable) is served by projectAnalystRevision on the analyst questionnaire read and every governance result only; plan 10-12's Replace confirmation reads it.
 - [Phase 10]: 10-12: questionnaireGenerationAction offers Replace only for a questionnaire served in analyst-review; released, submitted, unavailable and state-less relations give released, so the hub never offers a replacement Strapi would refuse (D-22). The analyst request page reads the questionnaire summary on the server only when it will show the count (submitted request, replace action); a failed read or missing count gives the count-unavailable sentence (D-16).
 - [Phase 10]: 10-12: a not-acknowledged generation failure offers the Replace this questionnaire? confirmation only while the questionnaire is not released (then the released hint shows); other failures keep Retry questionnaire generation (UI-SPEC 12.1). ConfirmDialog's description accepts a ReactNode so the served count renders in tabular figures (UI-SPEC 3.2).
+- [Phase 10]: 10-13: GET /api/v1/assessment_requests/{requestId}/generation_jobs is human-analyst only (function.questionnaire_generation.request_jobs_read_api, role.security_analyst only, plus the HUMAN_ANALYST_ONLY_OPERATIONS literal). It returns { questionnaireGeneration, assessmentDraft }, each { job, canRetry } or null: the active job, else the retained job queued last, in the existing closed projections, with canRetry true only for the initiator. The registry reads neither authorise nor touch lastAccess; the by-id get and retry stay initiator-only and still answer another analyst 403 (D-27, not the 404 the plan named). Plan 10-14 seeds the hub from getRequestGenerationJobs and polls getRequestGenerationJobsAction.
+- [Phase 10]: 10-13: a completed questionnaire job whose questionnaire can no longer be loaded reads as null on the request read instead of failing it. The harness has a second active human analyst (identities.secondAnalyst, users.secondAnalyst), and the matrix keeps six actors.
 
 ## Risks and Open Decisions
 
@@ -197,11 +199,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P10 | 25 min | 2 tasks | 13 files |
 | Phase 10 P11 | 40 min | 3 tasks | 17 files |
 | Phase 10 P12 | 13 min | 2 tasks | 10 files |
+| Phase 10 P13 | 33 min | 3 tasks | 23 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T07:34:37.768Z
-**Stopped At:** Completed 10-12-PLAN.md
+**Last session:** 2026-10-02T08:11:52.752Z
+**Stopped At:** Completed 10-13-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
