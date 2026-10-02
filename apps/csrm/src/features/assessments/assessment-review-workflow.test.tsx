@@ -659,7 +659,7 @@ describe('bounded assessment draft generation job', () => {
     ['running', runningJob, 'Draft generation is running', 'A reviewable draft is being prepared from the questionnaire answers.'],
     ['completed', completedJob, 'Draft generation is ready for Security Analyst review', 'The generated draft is advisory and has not been released.'],
   ] as const)('keeps the %s state advisory and provider-neutral', (_status, job, title, body) => {
-    const { container } = render(<AssessmentDraftJob initialJob={job} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    const { container } = render(<AssessmentDraftJob seededJob={{ job: job, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     expect(screen.getByRole('status')).toHaveTextContent(title);
     expect(screen.getByText(title, { selector: 'p' })).toBeInTheDocument();
@@ -669,7 +669,7 @@ describe('bounded assessment draft generation job', () => {
   });
 
   it('names a failed generation without claiming a provider, passing the server message through', () => {
-    const { container } = render(<AssessmentDraftJob initialJob={failedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    const { container } = render(<AssessmentDraftJob seededJob={{ job: failedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     expect(screen.getByRole('status')).toHaveTextContent('Draft generation failed');
     expect(screen.getByText('Draft generation failed', { selector: '[data-slot="alert-title"]' })).toBeInTheDocument();
@@ -687,14 +687,14 @@ describe('bounded assessment draft generation job', () => {
     idle.unmount();
 
     actionMocks.getAssessmentDraftJobAction.mockResolvedValueOnce({ ok: false, formError: 'The assessment service is unavailable.' });
-    const polling = render(<AssessmentDraftJob initialJob={queuedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    const polling = render(<AssessmentDraftJob seededJob={{ job: queuedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     expect(screen.getByRole('status')).toHaveTextContent('Draft generation status could not be checked');
     polling.unmount();
 
     const pendingRetry = deferred<{ ok: false; formError: string }>();
     actionMocks.retryAssessmentDraftJobAction.mockReturnValueOnce(pendingRetry.promise);
-    const { container } = render(<AssessmentDraftJob initialJob={failedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    const { container } = render(<AssessmentDraftJob seededJob={{ job: failedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
     fireEvent.click(screen.getByRole('button', { name: 'Retry draft generation' }));
     expect(screen.getByRole('button', { name: 'Retrying draft generation…' })).toBeDisabled();
     await act(async () => { pendingRetry.resolve({ ok: false, formError: 'The assessment service is unavailable.' }); await vi.advanceTimersByTimeAsync(0); });
@@ -705,7 +705,7 @@ describe('bounded assessment draft generation job', () => {
   it('keeps one poll in flight and cleans up on unmount', async () => {
     const pending = deferred<never>();
     actionMocks.getAssessmentDraftJobAction.mockReturnValue(pending.promise);
-    const { unmount } = render(<AssessmentDraftJob initialJob={queuedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    const { unmount } = render(<AssessmentDraftJob seededJob={{ job: queuedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
@@ -720,7 +720,7 @@ describe('bounded assessment draft generation job', () => {
     actionMocks.getAssessmentDraftJobAction
       .mockResolvedValueOnce({ ok: true, data: runningJob })
       .mockResolvedValueOnce({ ok: true, data: completedJob });
-    render(<AssessmentDraftJob initialJob={queuedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    render(<AssessmentDraftJob seededJob={{ job: queuedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
@@ -740,10 +740,10 @@ describe('bounded assessment draft generation job', () => {
 
   it('offers retry only for failed jobs and resumes the same bounded lifecycle', async () => {
     actionMocks.retryAssessmentDraftJobAction.mockResolvedValue({ ok: true, data: queuedJob });
-    const { rerender } = render(<AssessmentDraftJob initialJob={runningJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    const { rerender } = render(<AssessmentDraftJob seededJob={{ job: runningJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
     expect(screen.queryByRole('button', { name: 'Retry draft generation' })).not.toBeInTheDocument();
 
-    rerender(<AssessmentDraftJob initialJob={failedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    rerender(<AssessmentDraftJob seededJob={{ job: failedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
     fireEvent.click(screen.getByRole('button', { name: 'Retry draft generation' }));
     await vi.runAllTicks();
     expect(actionMocks.retryAssessmentDraftJobAction).toHaveBeenCalledWith({ jobId: 'job/id' });
@@ -751,7 +751,7 @@ describe('bounded assessment draft generation job', () => {
 
   it('stops after the 30-second budget with recoverable timeout guidance', async () => {
     actionMocks.getAssessmentDraftJobAction.mockResolvedValue({ ok: true, data: queuedJob });
-    render(<AssessmentDraftJob initialJob={queuedJob} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    render(<AssessmentDraftJob seededJob={{ job: queuedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(screen.getByText('Taking longer than expected')).toBeInTheDocument();

@@ -68,7 +68,12 @@ function replacementDescription(analystChanges: number | null | undefined): Reac
  * server's own message unchanged. A Map, so a served code can never reach an inherited property.
  */
 const leaveAndReturn = 'You can leave this page. The status shows here when you come back.';
-const startedByAnother = 'Started by another Security Analyst.';
+/* UI-SPEC §12.1, §12.2 and §12.5; the draft card states the same copy. */
+const startedByAnotherAnalyst = 'Started by another Security Analyst.';
+const retryRestrictedToInitiator = 'Only the Security Analyst who started it can retry it.';
+const automaticChecksStopped = 'Automatic checks stopped after 30 seconds. Generation may still be running.';
+/* True because each registry hands back the request's active job instead of starting a second one (§12.5). */
+const jobsReadFailedNotice = 'We couldn’t check whether a generation is already running. If one is, starting generation shows its progress instead of starting another.';
 
 type PollResult = { ok: true; entry: SeededQuestionnaireGenerationJob | null } | { ok: false; formError: string };
 
@@ -99,6 +104,8 @@ export function QuestionnaireGenerationJob({
   questionnaireHref: existingQuestionnaireHref,
   questionnaireNumber,
   seededJob,
+  jobsReadFailed = false,
+  onJobStatusChange,
   timing = defaultTiming,
 }: {
   requestId: string;
@@ -114,13 +121,20 @@ export function QuestionnaireGenerationJob({
    * seeded, so the card then offers its normal action.
    */
   seededJob?: SeededQuestionnaireGenerationJob;
+  /** The page's jobs read failed, so nothing could be seeded (UI-SPEC §12.5). */
+  jobsReadFailed?: boolean;
+  /** Reports the shown job's status, or `null` for none, so the hub can say generation is in progress (§12.3). */
+  onJobStatusChange?: (status: QuestionnaireGenerationJob['status'] | null) => void;
   timing?: QuestionnaireGenerationJobTiming;
 }) {
   const [job, setJob] = useState<QuestionnaireGenerationJob | null>(seededJob?.job ?? null);
   /* `null`: not yet known, as after a start, which may hand back a job another analyst started. */
   const [canRetry, setCanRetry] = useState<boolean | null>(seededJob ? seededJob.canRetry : null);
   const [announcement, setAnnouncement] = useState(seededJob ? statusCopy[seededJob.job.status] : '');
+  /* A status check that failed (UI-SPEC §12.1 `Status unavailable`). */
   const [formError, setFormError] = useState<string | null>(null);
+  /* A start or retry Strapi refused: not a status check, so it has its own title. */
+  const [startError, setStartError] = useState<string | null>(null);
   /* A refused replacement is shown inside its confirmation, which stays open (UI-SPEC §3.2, §10.2 I). */
   const [replacementError, setReplacementError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -136,6 +150,9 @@ export function QuestionnaireGenerationJob({
     return () => { mountedRef.current = false; };
   }, []);
 
+  const shownStatus = job?.status ?? null;
+  useEffect(() => { onJobStatusChange?.(shownStatus); }, [onJobStatusChange, shownStatus]);
+
   /*
    * `router.refresh()` and revalidation hand the card a new seed object with the same content, so the card
    * resets only when the seeded job, its status or the viewer's retry right changes. A seed that disappears
@@ -149,6 +166,7 @@ export function QuestionnaireGenerationJob({
     activeJobIdRef.current = seededJob.job.jobId;
     setTimedOut(false);
     setFormError(null);
+    setStartError(null);
     pollingStartedAtRef.current = timing.now();
     setAnnouncement(statusCopy[seededJob.job.status]);
     // Keyed on the seed's content, not on the object (see above); `seededJob` is this render's seed.
@@ -212,6 +230,7 @@ export function QuestionnaireGenerationJob({
     requestInFlightRef.current = true;
     setPending(true);
     setFormError(null);
+    setStartError(null);
     setReplacementError(null);
     const result = await startQuestionnaireGenerationAction({ requestId, replaceUnansweredQuestionnaire });
     requestInFlightRef.current = false;
@@ -219,7 +238,7 @@ export function QuestionnaireGenerationJob({
     setPending(false);
     if (!result.ok) {
       if (replaceUnansweredQuestionnaire) setReplacementError(result.formError);
-      else setFormError(result.formError);
+      else setStartError(result.formError);
       setAnnouncement('Questionnaire generation could not be started');
       return false;
     }
@@ -243,12 +262,13 @@ export function QuestionnaireGenerationJob({
     requestInFlightRef.current = true;
     setPending(true);
     setFormError(null);
+    setStartError(null);
     const result = await retryQuestionnaireGenerationJobAction({ jobId: job.jobId });
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);
     if (!result.ok) {
-      setFormError(result.formError);
+      setStartError(result.formError);
       setAnnouncement('Questionnaire generation could not be retried');
       return;
     }
@@ -280,9 +300,12 @@ export function QuestionnaireGenerationJob({
   const replace = <ConfirmDialog cancelLabel="Keep this questionnaire" confirmLabel="Replace questionnaire" confirmVariant="destructive" description={replacementDescription(analystChangesSinceGeneration)} errorMessage={replacementError} onConfirm={confirmReplacement} onDismiss={() => setReplacementError(null)} pendingLabel="Replacing questionnaire…" title="Replace this questionnaire?" trigger={replacementTrigger} />;
   const questionnaireLabel = questionnaireNumber && existingQuestionnaireHref ? <RecordLink href={existingQuestionnaireHref}>{questionnaireNumber}</RecordLink> : (questionnaireNumber ?? 'the questionnaire');
   const releasedHint = <p className="text-sm text-foreground-secondary">This questionnaire has been released to the Requestor. To replace it, return {questionnaireLabel} to analyst review first.</p>;
-  const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{failureCopy.get(job.failureCode) ?? job.failureMessage}</AlertDescription></Alert>
+  /* What the card offers with no job on it, per the served questionnaire relation (UI-SPEC §3.1). */
+  const idleAction = action === 'generate' ? generate : action === 'replace' ? replace : null;
+  const retryButton = <Button disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying questionnaire generation…' : 'Retry questionnaire generation'}</Button>;
+  const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription><p>{failureCopy.get(job.failureCode) ?? job.failureMessage}</p>{canRetry === false ? <p>{retryRestrictedToInitiator}</p> : null}</AlertDescription></Alert>
     : job?.status === 'completed' ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">Provider: {job.providerName} ({job.providerVersion}). Review the generated questionnaire before use.</p></div></div>
-      : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">{leaveAndReturn}</p>{canRetry === false ? <p className="text-sm text-muted-foreground">{startedByAnother}</p> : null}</div></div> : null;
+      : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">{leaveAndReturn}</p>{canRetry === false ? <p className="text-sm text-muted-foreground">{startedByAnotherAnalyst}</p> : null}</div></div> : null;
 
   return <Card>
     <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -293,19 +316,21 @@ export function QuestionnaireGenerationJob({
       {job ? <Badge variant="outline">Attempt {job.attempt}</Badge> : null}
     </CardHeader>
     <CardContent className="space-y-4"><div aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</div>
-      {!job && action === 'generate' ? generate : null}
-      {!job && action === 'replace' ? replace : null}
-      {state}{formError ? <Alert role="alert" variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>Status unavailable</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
-      {timedOut ? <div className="grid gap-3 rounded-lg border border-border p-4"><div className="flex items-center gap-2"><Clock3 aria-hidden="true" /><p className="font-medium">Taking longer than expected</p></div><p className="text-sm text-muted-foreground">Automatic checks stopped after 30 seconds. The server-owned job remains authoritative.</p><Button className="w-fit" onClick={checkAgain} type="button" variant="outline">Check again</Button></div> : null}
+      {!job && jobsReadFailed && idleAction ? <p className="text-sm text-foreground-secondary">{jobsReadFailedNotice}</p> : null}
+      {!job ? idleAction : null}
+      {state}{startError ? <Alert role="alert" variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>Questionnaire generation couldn’t start</AlertTitle><AlertDescription>{startError}</AlertDescription></Alert> : null}
+      {formError ? <Alert role="alert" variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>Status unavailable</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
+      {timedOut ? <div className="grid gap-3 rounded-lg border border-border p-4"><div className="flex items-center gap-2"><Clock3 aria-hidden="true" /><p className="font-medium">Taking longer than expected</p></div><p className="text-sm text-muted-foreground">{automaticChecksStopped}</p><Button className="w-fit" onClick={checkAgain} type="button" variant="outline">Check again</Button></div> : null}
       {/*
         * Retrying re-runs the job exactly as it was, so a refusal for a missing
         * replacement acknowledgement would fail the same way forever. Offer the
         * acknowledged replacement instead (UI-SPEC §12.1), the only route out of
         * that state, unless the questionnaire has since been released.
         */}
+      {/* D-26: Retry stays with the analyst who started the job; anyone else may start a new one. */}
       {job?.status === 'failed' && job.failureCode === 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED'
         ? (action === 'released' ? null : replace)
-        : job?.status === 'failed' ? <Button disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying questionnaire generation…' : 'Retry questionnaire generation'}</Button> : null}
+        : job?.status === 'failed' ? (canRetry === false ? idleAction : retryButton) : null}
       {/* D-09 (UI-SPEC §3.3): a released questionnaire is never offered for replacement; say how to get there. */}
       {action === 'released' && (!job || job.status === 'failed') ? releasedHint : null}
       {job?.status === 'completed' ? <Link className={buttonVariants()} href={questionnaireHref(job.questionnaire.documentId)}>Review generated questionnaire</Link> : null}

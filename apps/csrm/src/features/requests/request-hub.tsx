@@ -25,6 +25,8 @@ type RequestHubProps = {
   lifecycle?: RequestLifecycle;
   hrefs: RequestHubHrefs;
   governanceDetail?: boolean;
+  /** Plain text that takes the place of the served next action while a generation job runs (UI-SPEC §12.3). */
+  nextActionOverride?: string;
 };
 
 const ratings = ['Low', 'Moderate', 'High', 'Critical'] as const;
@@ -63,7 +65,7 @@ function questionnaireState(state: string | null, governanceDetail: boolean): st
   return 'Governance state: analyst review.';
 }
 
-export function RequestHub({ governanceDetail = false, hrefs, lifecycle, request }: RequestHubProps) {
+export function RequestHub({ governanceDetail = false, hrefs, lifecycle, nextActionOverride, request }: RequestHubProps) {
   const relationships = request.relationships;
   if (!relationships) return null;
   const { assessment, questionnaire } = relationships;
@@ -80,7 +82,8 @@ export function RequestHub({ governanceDetail = false, hrefs, lifecycle, request
           {request.submittedDate ? <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Submitted date</dt><dd className="text-sm text-foreground"><LocalInstant style="date" value={request.submittedDate} /></dd></div> : null}
           <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Owner</dt><dd className="text-sm text-foreground">{request.requestorName ?? 'Not provided'}</dd></div>
         </dl>
-        {nextAction ? <p className="mt-5 text-sm text-foreground"><span className="font-medium">Next action: </span>{hrefs.nextAction || nextAction.href ? <RelationLink href={hrefs.nextAction ?? nextAction.href}>{nextAction.summary}</RelationLink> : nextAction.summary}</p> : null}
+        {nextActionOverride ? <p className="mt-5 text-sm text-foreground"><span className="font-medium">Next action: </span>{nextActionOverride}</p>
+          : nextAction ? <p className="mt-5 text-sm text-foreground"><span className="font-medium">Next action: </span>{hrefs.nextAction || nextAction.href ? <RelationLink href={hrefs.nextAction ?? nextAction.href}>{nextAction.summary}</RelationLink> : nextAction.summary}</p> : null}
       </DetailSection>
 
       <DetailSection description="Related records are shown only when they are authorised for this request." title="Request relationships">
