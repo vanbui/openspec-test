@@ -3,6 +3,7 @@ import { cache, Suspense } from 'react';
 import { notFound } from 'next/navigation';
 
 import { AssessmentDetail, AssessmentDetailSkeleton } from '@/features/assessments/assessment-detail';
+import { getRequestGenerationJobs } from '@/features/assessments/assessment-service';
 import { getQuestionnaire } from '@/features/questionnaires/questionnaire-service';
 import { questionnaireGenerationAction, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
 import { getRequest } from '@/features/requests/request-service';
@@ -41,7 +42,14 @@ export async function AssessmentRequestDetailContent({ params }: AssessmentReque
     ? `/app/review/questionnaires/${encodeURIComponent(relationships.questionnaire.documentId)}` : undefined;
   const assessmentHref = relationships?.assessment.availability === 'available'
     ? `/app/review/assessments/${encodeURIComponent(relationships.assessment.documentId)}` : undefined;
-  const analystChangesSinceGeneration = await readAnalystChangesSinceGeneration(request);
+  /*
+   * D-26: the request's current generation jobs seed the hub's two cards, so an analyst who comes back
+   * mid-generation sees the job instead of a second Generate. The read follows the gate and the request read.
+   */
+  const [analystChangesSinceGeneration, generationJobs] = await Promise.all([
+    readAnalystChangesSinceGeneration(request),
+    getRequestGenerationJobs(request.documentId),
+  ]);
   /*
    * A request with no linked questionnaire is still a request the analyst is
    * authorised to review and, while it is submitted, to return to draft — it is
@@ -49,7 +57,7 @@ export async function AssessmentRequestDetailContent({ params }: AssessmentReque
    * deliberate treatment for the missing questionnaire, so the empty state here
    * is reserved for a missing request rather than a missing questionnaire.
    */
-  return <AssessmentDetail analystChangesSinceGeneration={analystChangesSinceGeneration} assessmentHref={assessmentHref} questionnaireHref={questionnaireHref} request={request} state="populated" />;
+  return <AssessmentDetail analystChangesSinceGeneration={analystChangesSinceGeneration} assessmentHref={assessmentHref} generationJobs={generationJobs.data ?? null} jobsReadFailed={Boolean(generationJobs.error)} questionnaireHref={questionnaireHref} request={request} state="populated" />;
 }
 
 /*

@@ -179,11 +179,49 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
     const replacement = page.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
     await replacement.getByRole('button', { name: 'Replace questionnaire' }).press('Enter');
     try {
-      await expect(page.getByText('Questionnaire generation is ready for review').first()).toBeVisible({ timeout: 45_000 });
-      await expect(page.getByRole('link', { name: 'Review generated questionnaire' })).toHaveAttribute('href', /^\/app\/review\/questionnaires\/[^/]+$/);
+      // The confirmation closes once Strapi has accepted the replacement and a job exists.
+      await expect(replacement).toBeHidden({ timeout: 45_000 });
+      await expect(page.getByText(/Questionnaire generation is (queued|running|ready for review)/).first()).toBeVisible();
     } finally {
       await attachReplacementDiagnostic(page, testInfo, browserEvents);
     }
+  });
+
+  /*
+   * UX06_JOB_STATUS_ON_RETURN (UAT-041, D-26): the analyst leaves the request while the replacement runs and
+   * comes back. While the hub shows the job as queued or running, it offers neither Generate nor Replace, so
+   * nobody starts a second job. The deterministic provider can finish before the page loads, and a completed
+   * job is not seeded, so the step accepts either ending: the job's own review link, or the hub's Replace
+   * action for the new questionnaire in analyst review.
+   */
+  await test.step('UX06_JOB_STATUS_ON_RETURN', async () => {
+    await openFromNavigation(page, 'Assessment Requests', true);
+    await expect(page).toHaveURL(/\/app\/review\/requests(\?.*)?$/);
+    await page.goto(requestUrl);
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+    const inProgress = page.getByText(/^Questionnaire generation is (queued|running)$/);
+    const generateAction = page.getByRole('button', { name: 'Generate questionnaire' });
+    const replaceAction = page.getByRole('button', { name: 'Replace questionnaire' });
+    const reviewLink = page.getByRole('link', { name: 'Review generated questionnaire' });
+    let observed: 'a queued or running job' | 'a completed job' = 'a completed job';
+    try {
+      await expect(async () => {
+        if (await inProgress.count() > 0) {
+          observed = 'a queued or running job';
+          expect(await generateAction.count(), 'UX06_JOB_STATUS_ON_RETURN: no Generate questionnaire while a job runs').toBe(0);
+          expect(await replaceAction.count(), 'UX06_JOB_STATUS_ON_RETURN: no Replace questionnaire while a job runs').toBe(0);
+        }
+        expect(await reviewLink.count() + await replaceAction.count(), 'UX06_JOB_STATUS_ON_RETURN: the job ends in its review link or the hub offers Replace').toBeGreaterThan(0);
+      }).toPass({ timeout: 45_000 });
+    } finally {
+      await attachReplacementDiagnostic(page, testInfo, browserEvents);
+    }
+    test.info().annotations.push({ type: 'UX06_JOB_STATUS_ON_RETURN', description: `observed ${observed} on return` });
+    console.log(`UX06_JOB_STATUS_ON_RETURN: observed ${observed} on return`);
+    await expect(
+      page.getByRole('region', { name: 'Request relationships' }).getByRole('link', { name: /^QNR-/ }),
+      'UX06_JOB_STATUS_ON_RETURN: the hub links the questionnaire',
+    ).toHaveAttribute('href', /^\/app\/review\/questionnaires\/[^/]+$/);
   });
 
   await page.setViewportSize({ width: 1440, height: 900 });

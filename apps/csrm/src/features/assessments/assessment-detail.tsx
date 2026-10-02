@@ -19,6 +19,7 @@ import { RequestContextDetails } from '@/features/requests/request-context-detai
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
 import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
 import { QuestionnaireGenerationJob } from './questionnaire-generation-job';
+import type { RequestGenerationJobs } from './assessment-schema';
 import { RequestLifecycleStepper } from '@/features/requests/request-lifecycle-stepper';
 import { RequestHub } from '@/features/requests/request-hub';
 
@@ -63,11 +64,22 @@ function SafeDetailState({ refusal = 'record', state }: { refusal?: AnalystRefus
   );
 }
 
+/*
+ * D-26: a queued, running or failed job takes the place of its card's action when the analyst comes back.
+ * A completed job is not seeded, so the card offers its normal action (review, or replace).
+ */
+function seedable<Entry extends { job: { status: string } }>(entry: Entry | null | undefined): Entry | undefined {
+  return entry && entry.job.status !== 'completed' ? entry : undefined;
+}
+
 /**
+ * `generationJobs` is the request's jobs read (D-25), made by the page on the server; `null` or absent when
+ * there was none. `jobsReadFailed` says the read was refused or failed, so no job could be seeded.
+ *
  * `analystChangesSinceGeneration` is the served count from the analyst questionnaire summary (D-16), read by
  * the page on the server so this client view receives a number; `null` or absent when no count was served.
  */
-export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref, questionnaireHref, refusal, request, state }: { analystChangesSinceGeneration?: number | null; assessmentHref?: string; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
+export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref, generationJobs, questionnaireHref, refusal, request, state }: { analystChangesSinceGeneration?: number | null; assessmentHref?: string; generationJobs?: RequestGenerationJobs | null; jobsReadFailed?: boolean; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
   if (state !== 'populated' || !request) return <SafeDetailState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
   // Direct component callers from older route tests do not carry the server projection.
   // The production route always passes the discriminated relationship state.
@@ -92,7 +104,7 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
         {canRevertRequestToDraft(request) ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <RequestContextDetails request={request} />
         {/* Generate, Replace or neither, from the served questionnaire relation (D-08, D-09, UI-SPEC §3.1). */}
-        {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob action={questionnaireGenerationAction(questionnaire)} analystChangesSinceGeneration={analystChangesSinceGeneration ?? null} questionnaireHref={resolvedQuestionnaireHref} questionnaireNumber={questionnaire.availability === 'available' ? questionnaire.questionnaireNumber : null} requestId={request.documentId} /> : null}
+        {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob action={questionnaireGenerationAction(questionnaire)} analystChangesSinceGeneration={analystChangesSinceGeneration ?? null} questionnaireHref={resolvedQuestionnaireHref} questionnaireNumber={questionnaire.availability === 'available' ? questionnaire.questionnaireNumber : null} requestId={request.documentId} seededJob={seedable(generationJobs?.questionnaireGeneration)} /> : null}
         {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}
       </div>
     </>

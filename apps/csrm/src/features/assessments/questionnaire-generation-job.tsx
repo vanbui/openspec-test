@@ -13,10 +13,14 @@ import { RecordLink } from '@/components/csrm/record-link';
 import type { QuestionnaireGenerationAction } from '@/features/requests/request-domain';
 import {
   getQuestionnaireGenerationJobAction,
+  getRequestGenerationJobsAction,
   retryQuestionnaireGenerationJobAction,
   startQuestionnaireGenerationAction,
 } from './assessment-actions';
-import type { QuestionnaireGenerationJob } from './assessment-schema';
+import type { QuestionnaireGenerationJob, RequestGenerationJobs } from './assessment-schema';
+
+/** The request's questionnaire generation job as the jobs read serves it: the job and whether this viewer may retry it. */
+export type SeededQuestionnaireGenerationJob = NonNullable<RequestGenerationJobs['questionnaireGeneration']>;
 
 export interface QuestionnaireGenerationJobTiming {
   pollIntervalMs: number;
@@ -63,6 +67,24 @@ function replacementDescription(analystChanges: number | null | undefined): Reac
  * A failed job's code read as a sentence about the request (UI-SPEC §12.4). Any other code shows the
  * server's own message unchanged. A Map, so a served code can never reach an inherited property.
  */
+const leaveAndReturn = 'You can leave this page. The status shows here when you come back.';
+const startedByAnother = 'Started by another Security Analyst.';
+
+type PollResult = { ok: true; entry: SeededQuestionnaireGenerationJob | null } | { ok: false; formError: string };
+
+/*
+ * D-27: the by-id read and retry stay with the analyst who started the job, so a job this viewer may not
+ * retry, or one a start handed back without saying whose it is, is followed through the request's jobs read.
+ */
+async function pollJob(requestId: string, jobId: string, byRequest: boolean): Promise<PollResult> {
+  if (byRequest) {
+    const result = await getRequestGenerationJobsAction({ requestId });
+    return result.ok ? { ok: true, entry: result.data.questionnaireGeneration } : { ok: false, formError: result.formError };
+  }
+  const result = await getQuestionnaireGenerationJobAction({ jobId });
+  return result.ok ? { ok: true, entry: { job: result.data, canRetry: true } } : { ok: false, formError: result.formError };
+}
+
 const failureCopy = new Map<string, string>([
   ['REQUEST_NOT_ELIGIBLE', 'The request is no longer submitted, so a questionnaire can’t be generated for it.'],
   ['QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED', 'A questionnaire already exists for this request. Replace it to generate a new one.'],
@@ -76,7 +98,7 @@ export function QuestionnaireGenerationJob({
   analystChangesSinceGeneration,
   questionnaireHref: existingQuestionnaireHref,
   questionnaireNumber,
-  initialJob,
+  seededJob,
   timing = defaultTiming,
 }: {
   requestId: string;
@@ -87,11 +109,17 @@ export function QuestionnaireGenerationJob({
   questionnaireNumber?: string | null;
   /** The served count of analyst changes since the latest generation; `null` when the read served none. */
   analystChangesSinceGeneration?: number | null;
-  initialJob?: QuestionnaireGenerationJob;
+  /**
+   * The request's queued, running or failed job from the page's jobs read (D-26). A completed job is never
+   * seeded, so the card then offers its normal action.
+   */
+  seededJob?: SeededQuestionnaireGenerationJob;
   timing?: QuestionnaireGenerationJobTiming;
 }) {
-  const [job, setJob] = useState<QuestionnaireGenerationJob | null>(initialJob ?? null);
-  const [announcement, setAnnouncement] = useState(initialJob ? statusCopy[initialJob.status] : '');
+  const [job, setJob] = useState<QuestionnaireGenerationJob | null>(seededJob?.job ?? null);
+  /* `null`: not yet known, as after a start, which may hand back a job another analyst started. */
+  const [canRetry, setCanRetry] = useState<boolean | null>(seededJob ? seededJob.canRetry : null);
+  const [announcement, setAnnouncement] = useState(seededJob ? statusCopy[seededJob.job.status] : '');
   const [formError, setFormError] = useState<string | null>(null);
   /* A refused replacement is shown inside its confirmation, which stays open (UI-SPEC §3.2, §10.2 I). */
   const [replacementError, setReplacementError] = useState<string | null>(null);
@@ -100,22 +128,31 @@ export function QuestionnaireGenerationJob({
   const [pollCycle, setPollCycle] = useState(0);
   const mountedRef = useRef(true);
   const requestInFlightRef = useRef(false);
-  const activeJobIdRef = useRef<string | null>(initialJob?.jobId ?? null);
-  const pollingStartedAtRef = useRef<number | null>(initialJob ? timing.now() : null);
+  const activeJobIdRef = useRef<string | null>(seededJob?.job.jobId ?? null);
+  const pollingStartedAtRef = useRef<number | null>(seededJob ? timing.now() : null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
 
+  /*
+   * `router.refresh()` and revalidation hand the card a new seed object with the same content, so the card
+   * resets only when the seeded job, its status or the viewer's retry right changes. A seed that disappears
+   * (the job completed, so it is no longer seeded) leaves this session's job, and its review link, in place.
+   */
+  const seededKey = seededJob ? `${seededJob.job.jobId}:${seededJob.job.status}:${seededJob.canRetry}` : null;
   useEffect(() => {
-    setJob(initialJob ?? null);
-    activeJobIdRef.current = initialJob?.jobId ?? null;
+    if (!seededJob) return;
+    setJob(seededJob.job);
+    setCanRetry(seededJob.canRetry);
+    activeJobIdRef.current = seededJob.job.jobId;
     setTimedOut(false);
     setFormError(null);
-    pollingStartedAtRef.current = initialJob ? timing.now() : null;
-    if (initialJob) setAnnouncement(statusCopy[initialJob.status]);
-  }, [initialJob, requestId, timing]);
+    pollingStartedAtRef.current = timing.now();
+    setAnnouncement(statusCopy[seededJob.job.status]);
+    // Keyed on the seed's content, not on the object (see above); `seededJob` is this render's seed.
+  }, [seededKey]);
 
   useEffect(() => {
     if (!job || job.status === 'completed' || job.status === 'failed' || timedOut) return;
@@ -127,28 +164,43 @@ export function QuestionnaireGenerationJob({
       return;
     }
     const polledJobId = job.jobId;
+    const byRequest = canRetry !== true;
     const handle = timing.setTimeout(() => {
       if (!mountedRef.current || requestInFlightRef.current) return;
       requestInFlightRef.current = true;
-      void getQuestionnaireGenerationJobAction({ jobId: polledJobId }).then((result) => {
+      let followedJobId: string | null = polledJobId;
+      void pollJob(requestId, polledJobId, byRequest).then((result) => {
         if (!mountedRef.current || activeJobIdRef.current !== polledJobId) return;
-        if (result.ok) {
-          setJob((current) => {
-            if (current?.status !== result.data.status) setAnnouncement(statusCopy[result.data.status]);
-            return result.data;
-          });
-          setFormError(null);
-        } else {
+        if (!result.ok) {
           setFormError(result.formError);
           setAnnouncement('Questionnaire generation status could not be checked');
+          return;
         }
+        setFormError(null);
+        const { entry } = result;
+        if (!entry) {
+          /* The server no longer holds a job for this request (D-26: jobs stay in the server process). */
+          followedJobId = null;
+          activeJobIdRef.current = null;
+          setJob(null);
+          setCanRetry(null);
+          setAnnouncement('');
+          return;
+        }
+        followedJobId = entry.job.jobId;
+        activeJobIdRef.current = entry.job.jobId;
+        setCanRetry(entry.canRetry);
+        setJob((current) => {
+          if (current?.jobId !== entry.job.jobId || current.status !== entry.job.status) setAnnouncement(statusCopy[entry.job.status]);
+          return entry.job;
+        });
       }).finally(() => {
         requestInFlightRef.current = false;
-        if (mountedRef.current && activeJobIdRef.current === polledJobId) setPollCycle((current) => current + 1);
+        if (mountedRef.current && followedJobId !== null && activeJobIdRef.current === followedJobId) setPollCycle((current) => current + 1);
       });
     }, Math.min(timing.pollIntervalMs, remaining));
     return () => timing.clearTimeout(handle);
-  }, [job, pollCycle, timedOut, timing]);
+  }, [canRetry, job, pollCycle, requestId, timedOut, timing]);
 
   /** Starts generation; resolves `true` once a job exists, `false` when nothing started. */
   async function start(replaceUnansweredQuestionnaire: boolean): Promise<boolean> {
@@ -174,6 +226,8 @@ export function QuestionnaireGenerationJob({
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
     activeJobIdRef.current = result.data.jobId;
+    /* A start hands back the request's active job, which another analyst may have started (UI-SPEC §12.5). */
+    setCanRetry(null);
     setJob(result.data);
     setAnnouncement(statusCopy[result.data.status]);
     return true;
@@ -201,6 +255,8 @@ export function QuestionnaireGenerationJob({
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
     activeJobIdRef.current = result.data.jobId;
+    /* Strapi lets only the analyst who started a job retry it, so this viewer started it. */
+    setCanRetry(true);
     setJob(result.data);
     setAnnouncement(statusCopy[result.data.status]);
   }
@@ -226,7 +282,7 @@ export function QuestionnaireGenerationJob({
   const releasedHint = <p className="text-sm text-foreground-secondary">This questionnaire has been released to the Requestor. To replace it, return {questionnaireLabel} to analyst review first.</p>;
   const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{failureCopy.get(job.failureCode) ?? job.failureMessage}</AlertDescription></Alert>
     : job?.status === 'completed' ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">Provider: {job.providerName} ({job.providerVersion}). Review the generated questionnaire before use.</p></div></div>
-      : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">This page remains available while the server-owned job is checked.</p></div></div> : null;
+      : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">{leaveAndReturn}</p>{canRetry === false ? <p className="text-sm text-muted-foreground">{startedByAnother}</p> : null}</div></div> : null;
 
   return <Card>
     <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">

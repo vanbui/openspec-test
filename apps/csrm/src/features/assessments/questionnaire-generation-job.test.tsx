@@ -64,7 +64,7 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
   it('keeps one status request in flight and stops polling after unmount', async () => {
     const poll = deferred<{ ok: true; data: QuestionnaireGenerationJobRecord }>();
     actionMocks.getQuestionnaireGenerationJobAction.mockReturnValue(poll.promise);
-    const { unmount } = render(<QuestionnaireGenerationJob action="generate" initialJob={queuedJob} requestId="request-one" />);
+    const { unmount } = render(<QuestionnaireGenerationJob action="generate" seededJob={{ job: queuedJob, canRetry: true }} requestId="request-one" />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
@@ -78,7 +78,7 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
 
   it('stops polling once a terminal status is returned', async () => {
     actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: completedJob });
-    render(<QuestionnaireGenerationJob action="generate" initialJob={queuedJob} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="generate" seededJob={{ job: queuedJob, canRetry: true }} requestId="request-one" />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     expect(screen.getByRole('link', { name: 'Review generated questionnaire' })).toHaveAttribute('href', '/app/review/questionnaires/questionnaire-one');
@@ -91,7 +91,7 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
     render(
       <QuestionnaireGenerationJob
         action="generate"
-        initialJob={queuedJob}
+        seededJob={{ job: queuedJob, canRetry: true }}
         requestId="request-one"
         timing={{ pollIntervalMs: 1_000, timeoutMs: 1_000, now: () => Date.now(), setTimeout, clearTimeout }}
       />,
@@ -110,10 +110,10 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
 
   it('cancels the replaced job schedule before polling the replacement', async () => {
     actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: queuedJob });
-    const { rerender } = render(<QuestionnaireGenerationJob action="generate" initialJob={queuedJob} requestId="request-one" />);
+    const { rerender } = render(<QuestionnaireGenerationJob action="generate" seededJob={{ job: queuedJob, canRetry: true }} requestId="request-one" />);
     const replacement = { ...queuedJob, jobId: 'job-two', requestId: 'request-two', attempt: 2 };
 
-    rerender(<QuestionnaireGenerationJob action="generate" initialJob={replacement} requestId="request-two" />);
+    rerender(<QuestionnaireGenerationJob action="generate" seededJob={{ job: replacement, canRetry: true }} requestId="request-two" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledTimes(1);
     expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledWith({ jobId: 'job-two' });
@@ -122,11 +122,11 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
   it('does not let an obsolete status response replace a newer authoritative job', async () => {
     const poll = deferred<{ ok: true; data: QuestionnaireGenerationJobRecord }>();
     actionMocks.getQuestionnaireGenerationJobAction.mockReturnValue(poll.promise);
-    const { rerender } = render(<QuestionnaireGenerationJob action="generate" initialJob={queuedJob} requestId="request-one" />);
+    const { rerender } = render(<QuestionnaireGenerationJob action="generate" seededJob={{ job: queuedJob, canRetry: true }} requestId="request-one" />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     const replacement = { ...queuedJob, jobId: 'job-two', requestId: 'request-two', attempt: 2 };
-    rerender(<QuestionnaireGenerationJob action="generate" initialJob={replacement} requestId="request-two" />);
+    rerender(<QuestionnaireGenerationJob action="generate" seededJob={{ job: replacement, canRetry: true }} requestId="request-two" />);
 
     await act(async () => { poll.resolve({ ok: true, data: completedJob }); await poll.promise; });
     expect(screen.getAllByText('Questionnaire generation is queued')).not.toHaveLength(0);
@@ -135,7 +135,7 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
 
   it('offers a usable retry after failure', async () => {
     actionMocks.retryQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: queuedJob });
-    render(<QuestionnaireGenerationJob action="generate" initialJob={failedJob} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="generate" seededJob={{ job: failedJob, canRetry: true }} requestId="request-one" />);
 
     const retry = screen.getByRole('button', { name: 'Retry questionnaire generation' });
     expect(retry).toBeEnabled();
@@ -153,7 +153,7 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
 
   it('sends replacement acknowledgement only after the explicit confirmation', async () => {
     actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: queuedJob });
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} initialJob={undefined} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} seededJob={undefined} requestId="request-one" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     expect(actionMocks.startQuestionnaireGenerationAction).not.toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe('a questionnaire released to the Requestor', () => {
 
   it('offers no replacement after a not-acknowledged failure once the questionnaire is released', () => {
     const notAcknowledged = { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED' };
-    render(<QuestionnaireGenerationJob action="released" initialJob={notAcknowledged} questionnaireHref="/app/review/questionnaires/questionnaire-one" questionnaireNumber="QNR-2026-KX2AHV" requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="released" seededJob={{ job: notAcknowledged, canRetry: true }} questionnaireHref="/app/review/questionnaires/questionnaire-one" questionnaireNumber="QNR-2026-KX2AHV" requestId="request-one" />);
 
     expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
     expect(screen.getByText((_content, element) => element?.tagName === 'P' && element.textContent === releasedHint)).toBeInTheDocument();
@@ -304,7 +304,7 @@ describe('a failed questionnaire generation job', () => {
     ['QUESTIONNAIRE_RELEASED', 'The questionnaire was released before generation finished, so it wasn’t replaced. Return it to analyst review to replace it.'],
     ['provider-failed', 'The provider could not prepare a questionnaire.'],
   ])('words a %s failure for the analyst', (failureCode, copy) => {
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} initialJob={{ ...failedJob, failureCode }} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} seededJob={{ job: { ...failedJob, failureCode }, canRetry: true }} requestId="request-one" />);
 
     // One alert: the failure. The polite live region repeats the title, so the title alone is not unique.
     const alert = screen.getByRole('alert');
@@ -316,7 +316,7 @@ describe('a failed questionnaire generation job', () => {
   it('offers Replace questionnaire through the confirmation when the replacement was not acknowledged', async () => {
     actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: queuedJob });
     const notAcknowledged = { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED' };
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={1} initialJob={notAcknowledged} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={1} seededJob={{ job: notAcknowledged, canRetry: true }} requestId="request-one" />);
 
     expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Replace and generate again' })).not.toBeInTheDocument();
