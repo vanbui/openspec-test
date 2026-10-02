@@ -407,7 +407,16 @@ test("mounted CR-101 every questionnaire mutation locks the request row before t
   const { locks } = await harness.recordRowLocks(async () => {
     const replaced = await generate(requestId, true);
     assert.equal(replaced.status, "completed", `LOCK_ORDER_REPLACEMENT_FAILED_${String(replaced.failureCode)}`);
-    const [edited, deleted] = questionIds(await harness.getQuestionnaire(questionnaireId));
+    // Delete a question no other question's visibility depends on: Strapi rightly refuses the others with
+    // QUESTION_HAS_DEPENDENTS, and the documentIds are random, so picking by sorted id made this test flaky.
+    const replacedQuestions = ((await harness.getQuestionnaire(questionnaireId))?.questions ?? []) as Array<Record<string, unknown>>;
+    const optionsOf = (question: Record<string, unknown>) => (question.options ?? {}) as { questionKey?: unknown; visibility?: { questionKey?: unknown } | null };
+    const dependedOn = new Set<unknown>(replacedQuestions.map((question) => optionsOf(question).visibility?.questionKey).filter((key) => typeof key === "string"));
+    assert.ok(dependedOn.size > 0, "LOCK_ORDER_FIXTURE_HAS_NO_CONDITIONAL_QUESTION");
+    const deletable = replacedQuestions.filter((question) => !dependedOn.has(optionsOf(question).questionKey)).map((question) => String(question.documentId)).sort();
+    const deleted = deletable[0];
+    const edited = replacedQuestions.map((question) => String(question.documentId)).sort().find((id) => id !== deleted);
+    assert.ok(deleted && edited, "LOCK_ORDER_FIXTURE_HAS_NO_DELETABLE_QUESTION");
     await expectOk(request(`${questionnairePath}/questions/${encodeURIComponent(String(edited))}`, analyst, json("PATCH", { questionText: "Which business service does this cover?" })), "LOCK_ORDER_EDIT_FAILED");
     await expectOk(request(`${questionnairePath}/questions`, analyst, json("POST", windowQuestion)), "LOCK_ORDER_ADD_FAILED");
     await expectOk(request(`${questionnairePath}/questions/${encodeURIComponent(String(deleted))}`, analyst, json("DELETE")), "LOCK_ORDER_DELETE_FAILED");
