@@ -302,3 +302,43 @@ describe('RelationPicker search (UI-SPEC §13.1)', () => {
     expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
   });
 });
+
+/*
+ * 10-23 walkthrough fix 8 (axe aria-dialog-name): focus never leaves the input and the options are reached
+ * through aria-activedescendant, so the popup is a listbox (ARIA APG combobox, listbox popup). The Popover
+ * that positions it is a plain wrapper, never an unnamed dialog; its status lines and Retry search are
+ * announced through their own live roles.
+ */
+describe('RelationPicker popup (APG combobox with a listbox popup)', () => {
+  it('opens a listbox popup that the combobox controls, with focus kept in the input and no dialog', () => {
+    render(<Harness suggested={applicable} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    expect(input).toHaveAttribute('aria-haspopup', 'listbox');
+    input.focus();
+
+    fireEvent.click(input);
+
+    const listbox = screen.getByRole('listbox', { name: 'Control options' });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="popover-content"]')).not.toHaveAttribute('role');
+  });
+
+  it('announces its status line and a failed search with Retry search, without a dialog', async () => {
+    vi.useFakeTimers();
+    render(<Harness search={async () => ({ ok: false, formError: 'The selection service is unavailable. Please try again later.' })} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    fireEvent.click(input);
+    expect(screen.getByRole('status')).toHaveTextContent('Type to search controls.');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The selection service is unavailable. Please try again later.');
+    expect(screen.getByRole('button', { name: 'Retry search' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});

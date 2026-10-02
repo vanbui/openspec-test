@@ -124,3 +124,67 @@ describe('RelationMultiSelect', () => {
     expect(change).toHaveBeenLastCalledWith([]);
   });
 });
+
+/*
+ * 10-23 walkthrough fix 8 (axe aria-dialog-name): both comboboxes keep focus in the input and reach their
+ * options through aria-activedescendant, so each popup is a listbox (ARIA APG combobox, listbox popup), never
+ * an unnamed dialog. The combobox controls the listbox while it is shown.
+ */
+describe('combobox popups (APG combobox with a listbox popup)', () => {
+  it('OwnerCombobox opens a listbox popup it controls, with focus kept in the input and no dialog', async () => {
+    vi.useFakeTimers();
+    const searchOwners = vi.fn().mockResolvedValue({ ok: true, data: [alex] });
+    render(<OwnerCombobox label="Control owner" value={null} onValueChange={vi.fn()} searchOwners={searchOwners} />);
+    const input = screen.getByRole('combobox', { name: 'Control owner' });
+    expect(input).toHaveAttribute('aria-haspopup', 'listbox');
+    input.focus();
+
+    fireEvent.change(input, { target: { value: 'Alex' } });
+    expect(screen.getByRole('status')).toHaveTextContent('Searching owners…');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-controls');
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    await act(async () => {});
+
+    const listbox = screen.getByRole('listbox', { name: 'Control owner results' });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="popover-content"]')).not.toHaveAttribute('role');
+  });
+
+  it('OwnerCombobox announces a failed search with Retry owner search, without a dialog', async () => {
+    vi.useFakeTimers();
+    const searchOwners = vi.fn().mockResolvedValue({ ok: false, formError: 'The owner search is unavailable.' });
+    render(<OwnerCombobox label="Risk owner" value={null} onValueChange={vi.fn()} searchOwners={searchOwners} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Risk owner' }), { target: { value: 'Alex' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    await act(async () => {});
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The owner search is unavailable.');
+    expect(screen.getByRole('button', { name: 'Retry owner search' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('RelationMultiSelect opens a listbox popup it controls, with focus kept in the input and no dialog', async () => {
+    vi.useFakeTimers();
+    const searchRelations = vi.fn().mockResolvedValue({ ok: true, data: [{ documentId: 'system-2', name: 'Identity platform' }] });
+    render(<RelationMultiSelect label="Information systems" value={[]} onValueChange={vi.fn()} searchRelations={searchRelations} />);
+    const input = screen.getByRole('combobox', { name: 'Information systems' });
+    expect(input).toHaveAttribute('aria-haspopup', 'listbox');
+    input.focus();
+
+    fireEvent.change(input, { target: { value: 'identity' } });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-controls');
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    await act(async () => {});
+
+    const listbox = screen.getByRole('listbox', { name: 'Information systems results' });
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="popover-content"]')).not.toHaveAttribute('role');
+  });
+});

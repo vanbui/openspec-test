@@ -729,3 +729,111 @@ test('focus is never obscured and text reflows', async ({ page }) => {
   console.log(`accessibility: ${measured.join('; ')}`);
   await expectNoCspViolations(page, 'the focus, reflow and text-spacing proofs');
 });
+
+/*
+ * 10-23 walkthrough fix 8 (axe aria-dialog-name, serious): every record picker, owner combobox and relation
+ * search keeps focus in its input and reaches its options through aria-activedescendant, so its popup is a
+ * listbox (ARIA APG combobox pattern), never an unnamed dialog. Each list is opened by typing a search, scanned
+ * open at 1440 and 375 (WCAG tags, Label in Name and best practice, failing on any serious or critical
+ * violation), and closed with Escape without choosing, so no record changes. More filters, which does take
+ * focus, is a dialog named by its title.
+ */
+const openPopups = (page: Page) => page.locator('[data-slot="popover-content"][data-state="open"]');
+
+/*
+ * The route scan plus axe's best-practice rules. `aria-dialog-name`, which the pilot's scan reported, is a
+ * best-practice rule, so the WCAG tags alone never run it; the result's record of what ran is checked.
+ */
+async function scanWithBestPractice(page: Page): Promise<AxeResults> {
+  const results = await new AxeBuilder({ page })
+    .options({ rules: { 'label-content-name-mismatch': { enabled: true } } })
+    .withTags([...wcagTags, 'best-practice'])
+    .analyze();
+  const ran = [...results.passes, ...results.violations, ...results.incomplete, ...results.inapplicable].map(({ id }) => id);
+  expect(ran, 'the scan runs aria-dialog-name').toContain('aria-dialog-name');
+  expect(ran, 'the scan runs Label in Name').toContain('label-content-name-mismatch');
+  return results;
+}
+
+async function expectOpenListAccessible(page: Page, combobox: Locator, search: string, label: string): Promise<string> {
+  await combobox.scrollIntoViewIfNeeded();
+  await combobox.fill(search);
+  const option = openPopups(page).getByRole('option').first();
+  await expect(option, `${label} lists options for "${search}"`).toBeVisible();
+  const { violations } = await scanWithBestPractice(page);
+  const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
+  expect(blocking, `${label} with its list open has no serious or critical axe violation (${summarise(violations)})`).toEqual([]);
+  const popup = openPopups(page).filter({ has: page.getByRole('listbox') });
+  await expect(popup, `${label} opens one listbox popup`).toHaveCount(1);
+  await expect(popup, `${label}: the popup that positions the listbox is not a dialog`).not.toHaveAttribute('role', 'dialog');
+  await expect(combobox, `${label}: the combobox declares a listbox popup`).toHaveAttribute('aria-haspopup', 'listbox');
+  await expect(combobox, `${label}: the combobox controls the open listbox`).toHaveAttribute('aria-controls', (await popup.getByRole('listbox').getAttribute('id'))!);
+  await expect(combobox, `${label}: focus stays in the input`).toBeFocused();
+  await combobox.press('Escape');
+  await expect(openPopups(page).getByRole('option'), `${label}: Escape closes the list without choosing`).toHaveCount(0);
+  return `${label}: ${violations.length === 0 ? 'no violations' : summarise(violations)}`;
+}
+
+test('picker lists pass axe while open at 1440 and 375', async ({ page }) => {
+  test.setTimeout(600_000);
+  await attachCspCollector(page);
+  await signInAs(page, 'Security Analyst');
+  const results: string[] = [];
+  const editableAssessment = await recordHref(page, '/app/review/assessments', 'ASM-E2E-P7-MUTABLE-001');
+  const risk = await recordHref(page, '/app/risks', mutableRiskNumber);
+
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+
+    // The assessment editor: the system, asset and owner pickers on a Risk, and the Control and Control owner pickers.
+    await page.goto(editableAssessment);
+    await expectSettled(page, { url: routeUrl(editableAssessment), title: 'Risk Assessment Review | IdamBox CSRM', heading: 'Risk assessment review' }, `the assessment editor at ${width}px`);
+    const identifiedRisks = page.getByRole('region', { name: 'Identified Risks' });
+    const riskForm = identifiedRisks.locator('form').first();
+    for (const [name, search] of [['Information system impacted', 'Customer'], ['Information asset impacted', 'Customer'], ['Risk owner', 'Bob']] as const) {
+      results.push(await expectOpenListAccessible(page, riskForm.getByRole('combobox', { name, exact: true }), search, `assessment editor ${name} at ${width}px`));
+    }
+    if (await identifiedRisks.getByRole('combobox', { name: 'Control', exact: true }).count() === 0) {
+      await identifiedRisks.getByRole('button', { name: 'Add mitigation control' }).first().click();
+    }
+    for (const [name, search] of [['Control', 'APP-11'], ['Control owner', 'Bob']] as const) {
+      results.push(await expectOpenListAccessible(page, identifiedRisks.getByRole('combobox', { name, exact: true }).first(), search, `assessment editor ${name} at ${width}px`));
+    }
+
+    // The Risk Register detail: the edit form's pickers, then a new mitigation control's, discarded.
+    await page.goto(risk);
+    await expectSettled(page, { url: routeUrl(risk), title: 'Risk Details | IdamBox CSRM', heading: mutableRiskNumber }, `the Risk details at ${width}px`);
+    await page.getByRole('button', { name: 'Edit risk' }).click();
+    const editRisk = page.getByRole('form', { name: 'Edit Risk' });
+    for (const [name, search] of [['Information system impacted', 'Customer'], ['Information asset impacted', 'Customer'], ['Risk owner', 'Bob'], ['Treatment owner', 'Bob']] as const) {
+      results.push(await expectOpenListAccessible(page, editRisk.getByRole('combobox', { name, exact: true }), search, `Risk details ${name} at ${width}px`));
+    }
+    await page.goto(risk);
+    await expectSettled(page, { url: routeUrl(risk), title: 'Risk Details | IdamBox CSRM', heading: mutableRiskNumber }, `the Risk details at ${width}px`);
+    await page.getByRole('button', { name: 'Add mitigation control' }).click();
+    const addForm = page.getByRole('region', { name: 'Mitigation controls' }).locator('form').last();
+    for (const [name, search] of [['Control', 'APP-11'], ['Control owner', 'Bob']] as const) {
+      results.push(await expectOpenListAccessible(page, addForm.getByRole('combobox', { name, exact: true }), search, `Risk details ${name} at ${width}px`));
+    }
+    await addForm.getByRole('button', { name: 'Discard mitigation changes' }).click();
+
+    // The Risk Register's relation filters: in More filters at 1440, in the Filters sheet at 375.
+    await page.goto('/app/risks');
+    await expectSettled(page, riskRegister, `the Risk Register at ${width}px`);
+    await page.getByRole('button', width === 375 ? { name: /^Filters \(\d+\)$/ } : { name: 'More filters' }).click();
+    const filters = page.getByRole('dialog', { name: width === 375 ? 'Risk Register filters' : 'More filters' });
+    await expect(filters, `the filters open as a named dialog at ${width}px`).toBeVisible();
+    results.push(await expectOpenListAccessible(page, filters.getByRole('combobox', { name: 'Risk owner', exact: true }), 'Bob', `Risk Register Risk owner filter at ${width}px`));
+    await page.keyboard.press('Escape');
+
+    // A new request's relation searches, never submitted.
+    await page.goto('/app/requests/new');
+    await expectSettled(page, newRequest, `the new request at ${width}px`);
+    for (const name of ['Search information systems', 'Search information assets']) {
+      results.push(await expectOpenListAccessible(page, page.getByRole('combobox', { name, exact: true }), 'Customer', `new request ${name} at ${width}px`));
+    }
+  }
+  test.info().annotations.push({ type: 'open picker scans', description: results.join('; ') });
+  console.log(`accessibility: open picker scans: ${results.join('; ')}`);
+  await expectNoCspViolations(page, 'the open picker scans');
+});

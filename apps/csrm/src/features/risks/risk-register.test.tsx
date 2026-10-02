@@ -430,6 +430,29 @@ describe('RiskRegisterTable', () => {
     expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=assessment%3Adesc&pageSize=50', { scroll: false });
   });
 
+  /*
+   * 10-23 walkthrough fix 8 (axe aria-dialog-name). More filters moves focus into its fields, so it is a dialog,
+   * named by its title. A relation filter keeps focus in its input and reaches options through
+   * aria-activedescendant, so its popup is a listbox the combobox controls (ARIA APG), never an unnamed dialog.
+   */
+  it('names the More filters dialog by its title and opens each relation filter as a listbox, not a dialog', async () => {
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    expect(screen.getByRole('dialog', { name: 'More filters' })).toBeInTheDocument();
+
+    const combobox = screen.getByRole('combobox', { name: 'Risk owner' });
+    expect(combobox).toHaveAttribute('aria-haspopup', 'listbox');
+    await user.type(combobox, 'Bob');
+    const listbox = await screen.findByRole('listbox', { name: 'Risk owner results' });
+    expect(within(listbox).getByRole('option', { name: 'Bob Doe' })).toBeInTheDocument();
+    expect(combobox).toHaveAttribute('aria-controls', listbox.id);
+    expect(combobox).toHaveFocus();
+    // The one dialog is More filters; the listbox's own popup adds none.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
   it('offers the closed Risk state filter in More filters, as a chip and in the mobile Sheet (D-36)', async () => {
     const user = userEvent.setup();
     const view = renderRegister();

@@ -1061,6 +1061,18 @@ describe('readiness-gated release', () => {
     expect(screen.queryByRole('button', { name: /approve|submit for approval/i })).not.toBeInTheDocument();
   });
 
+  /*
+   * Label in Name (WCAG 2.5.3; 10-23 walkthrough fix 8, found by the open-picker axe scan): the row's visible
+   * words are the words of its name, `{risk number}: {n} outstanding`. The number and the count were adjacent
+   * elements with no space between them, so the visible text ran together as `RSK-00422 outstanding`.
+   */
+  it('keeps a Risk row’s visible words the words of its name (Label in Name)', () => {
+    renderMixed();
+
+    const riskRow = within(screen.getByRole('list', { name: 'Release requirements' })).getByRole('link', { name: 'RSK-0042: 2 outstanding' });
+    expect(riskRow.textContent).toBe('RSK-0042 2 outstanding');
+  });
+
   it('shows met items only when the analyst asks, and hides them again (D-35)', async () => {
     const user = userEvent.setup();
     renderMixed();
