@@ -214,14 +214,17 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
       accessorKey: 'name', header: 'Name', enableSorting: true,
       cell: (_value, record) => <RecordLink href={config.detailPath(record.documentId)}>{record.name}</RecordLink>,
     },
-    { accessorKey: 'description', header: 'Description', cell: (value) => <span className="line-clamp-2">{String(value ?? 'Not provided')}</span> },
+    // Long text (direction §4 DataTable, X-3): wraps within the column bounds and clamps to two lines.
+    { accessorKey: 'description', header: 'Description', wrap: true, cell: (value) => <span className="line-clamp-2">{String(value ?? 'Not provided')}</span> },
     { accessorKey: 'applicableControls', header: 'Applicable controls', numeric: 'magnitude', cell: (value) => Array.isArray(value) ? value.length : 0 },
   ];
   const controlColumns: DataTableColumn<AdministrationWorkspaceRecord>[] = [
     { accessorKey: 'controlNumber', header: 'Control number', enableSorting: true, cell: (_value, record) => <RecordLink href={config.detailPath(record.documentId)}>{'controlNumber' in record ? record.controlNumber : ''}</RecordLink> },
-    // The number has its own column, so Name carries the title part only (D-36, UI-SPEC §16.2).
-    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (_value, record) => controlNameCell(record) },
-    { accessorKey: 'framework', header: 'Framework', cell: (value) => String(value) },
+    // The number has its own column, so Name carries the title part only (D-36, UI-SPEC §16.2). Titles and
+    // framework names are long text (direction §4 DataTable, X-3): they wrap within the column bounds and clamp
+    // to two lines, so a long title never pushes Type and Reference out of view at 1440 (B3).
+    { accessorKey: 'name', header: 'Name', enableSorting: true, wrap: true, cell: (_value, record) => <span className="line-clamp-2">{controlNameCell(record)}</span> },
+    { accessorKey: 'framework', header: 'Framework', wrap: true, cell: (value) => <span className="line-clamp-2">{String(value)}</span> },
     { accessorKey: 'controlType', header: 'Type', cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'controlReference', header: 'Reference', cell: (value) => String(value ?? 'Not provided') },
   ];
