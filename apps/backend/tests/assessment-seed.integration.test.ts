@@ -266,6 +266,47 @@ test("ADMIN-05 D-46 a titled APRA or PSPF requirement keeps its reference and it
   }
 });
 
+/*
+ * 10-23 walkthrough fix 3: the development database already holds 10-22's titles, some of which narrowed
+ * their paragraph. A seeded start replaces a name the seed wrote (an earlier seeded title, or the bare number)
+ * with the corrected title, and never an operator's own name for a seeded control.
+ */
+const CPS_230_34_EARLIER = "CPS-230-34 — Critical operations defined by adverse customer impact";
+const CPS_230_34_CORRECTED = "CPS-230-34 — Critical operations defined by material harm to customers or the financial system";
+
+test("ADMIN-05 D-46 fix 3: a seeded start renames a control stored under its earlier seeded title, then changes nothing", async () => {
+  const control = await seededControl("CPS-230-34");
+  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { name: CPS_230_34_EARLIER } });
+  assert.equal((await seededControl("CPS-230-34")).name, CPS_230_34_EARLIER);
+
+  await seedCsrmData(strapi as never);
+  const renamed = await seededControl("CPS-230-34");
+  assert.equal(renamed.documentId, control.documentId);
+  assert.equal(renamed.name, CPS_230_34_CORRECTED, "the seed replaces the title it wrote earlier");
+  assert.equal(renamed.description, control.description, "the paragraph stays the description");
+  await seedCsrmData(strapi as never);
+  const unchanged = await seededControl("CPS-230-34");
+  assert.equal(unchanged.name, CPS_230_34_CORRECTED);
+  assert.equal(String(unchanged.updatedAt), String(renamed.updatedAt), "a further seeded start leaves CPS-230-34 untouched");
+  assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
+});
+
+test("ADMIN-05 D-46 fix 3: a seeded start keeps an operator's own name for a seeded control, then changes nothing", async () => {
+  const control = await seededControl("CPS-230-57");
+  const operatorName = "CPS-230-57 — Our reading: relief for exchanges and clearing houses";
+  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { name: operatorName } });
+
+  await seedCsrmData(strapi as never);
+  const kept = await seededControl("CPS-230-57");
+  assert.equal(kept.name, operatorName, "the seed never overwrites an operator's name");
+  await seedCsrmData(strapi as never);
+  const unchanged = await seededControl("CPS-230-57");
+  assert.equal(unchanged.name, operatorName);
+  assert.equal(String(unchanged.updatedAt), String(kept.updatedAt), "a further seeded start leaves CPS-230-57 untouched");
+
+  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { name: control.name } });
+});
+
 test("assessment workflow RiskType seed requires every exact development gate", async () => {
   for (const values of [
     { nodeEnv: "production", environment: "development", identity: "true", seed: "true" },
