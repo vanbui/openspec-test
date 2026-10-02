@@ -200,8 +200,11 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
         pendingFocus.current = null;
         element.focus();
       }
-    } else if (openForm && !activeForm && (document.activeElement === null || document.activeElement === document.body)) {
-      control(EDITOR_ADD)?.focus();
+    } else if (openForm && !activeForm) {
+      // The edited question is gone: focus falls back to Add question once, then the stale form is cleared so a
+      // later render never pulls focus there (WR-307).
+      if (document.activeElement === null || document.activeElement === document.body) control(EDITOR_ADD)?.focus();
+      setOpenForm(null);
     }
   });
 
