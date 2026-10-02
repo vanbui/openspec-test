@@ -80,8 +80,9 @@ function isInProgress(status: GenerationJobStatus | null | undefined): boolean {
 
 /*
  * UI-SPEC §12.3: while a questionnaire or draft job is queued or running, the hub's Next action says so, as
- * plain text; once the job completes or fails, the served next action returns. A card reports its status as
- * it changes; until it has, the seeded status stands (the server render).
+ * plain text; once the job fails, the served next action returns, and once it completes, the refreshed request's
+ * does (WR-201, `hubLifecycle`). A card reports its status as it changes; until it has, the seeded status stands
+ * (the server render).
  */
 function generationNextAction(questionnaire: GenerationJobStatus | null | undefined, draft: GenerationJobStatus | null | undefined): string | undefined {
   if (isInProgress(questionnaire)) return 'Questionnaire generation is in progress. Review the questionnaire when it’s ready.';
