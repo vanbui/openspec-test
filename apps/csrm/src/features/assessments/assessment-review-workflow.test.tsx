@@ -237,6 +237,51 @@ describe('analyst review presentations', () => {
   });
 
   /*
+   * UAT-015 (D-20): the analyst reads everything the Requestor submitted, third-party involvement, its
+   * details and the regulatory requirements included, in the same groups the request form uses.
+   */
+  it('shows the analyst every submitted request field in the request form’s groups', () => {
+    const detail = {
+      documentId: 'request-8',
+      requestNumber: 'RAR-0048',
+      title: 'Third-party hosting review',
+      description: 'Move the portal to a hosting partner.',
+      assessmentType: 'Project' as const,
+      division: 'Digital Services',
+      businessUnit: 'Customer Platforms',
+      businessPurpose: 'Scale the portal.',
+      businessCriticality: 'High' as const,
+      thirdPartyInvolvement: true,
+      thirdPartyDetails: 'Acme Hosting runs the platform.',
+      regulatoryRequirements: 'Privacy Act 1988 and APP 11.',
+      requestStatus: 'submitted' as const,
+      submittedDate: '2026-08-30T01:00:00.000Z',
+      dueDate: null,
+      updatedAt: null,
+      dueDateLabel: null,
+      updatedDateLabel: null,
+      informationSystems: [],
+      informationAssets: [],
+      questionnaire: null,
+      assessment: null,
+      relationships: {
+        questionnaire: { availability: 'absent' as const },
+        assessment: { availability: 'absent' as const },
+      },
+    };
+    render(<AssessmentDetail request={detail} state="populated" />);
+
+    const context = screen.getByRole('region', { name: 'Request context' });
+    expect(context).toHaveAccessibleDescription('The details submitted with this request.');
+    expect(within(context).getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent))
+      .toEqual(['Request overview', 'Business context', 'Scope and timing']);
+    const business = within(context).getByRole('heading', { level: 3, name: 'Business context' }).parentElement as HTMLElement;
+    expect(within(business).getByText('Third-party involvement').nextElementSibling).toHaveTextContent('Yes');
+    expect(within(business).getByText('Acme Hosting runs the platform.')).toBeInTheDocument();
+    expect(within(business).getByText('Privacy Act 1988 and APP 11.')).toBeInTheDocument();
+  });
+
+  /*
    * jsdom computes no layout, so the class list stands in for it. A two-track column template around a
    * single child is what left the card at about two thirds of the row, with an empty track beside it.
    */
