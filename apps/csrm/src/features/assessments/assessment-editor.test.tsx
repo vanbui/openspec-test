@@ -1183,6 +1183,41 @@ describe('readiness-gated release', () => {
     expect(screen.getByRole('button', { name: 'Confirm release' })).toHaveFocus();
   });
 
+  it('says plainly what release means before the analyst confirms it (D-38, UI-SPEC §17.1)', async () => {
+    render(<AssessmentEditor {...editorProps} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Release assessment' }));
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Release this risk assessment?' });
+    expect(dialog).toHaveTextContent('Release can’t be undone. The Requestor will receive this assessment read-only, and no one can change it afterwards.');
+    expect(dialog).not.toHaveTextContent(/mutation control|irreversible/i);
+    expect(within(dialog).getByRole('button', { name: 'Confirm release' })).toBeInTheDocument();
+  });
+
+  it('describes the released, closed and otherwise read-only assessment without internal terms (D-38)', () => {
+    const view = render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} />);
+    let notice = screen.getByText('Assessment released').closest<HTMLElement>('[data-slot="alert"]')!;
+    expect(notice).toHaveTextContent('The Requestor can now read this assessment. It can no longer be changed.');
+    view.unmount();
+
+    const closed = render(<AssessmentEditor {...editorProps} assessment={{ ...releasedAssessment, assessmentStatus: 'closed' }} />);
+    notice = screen.getByText('Assessment is read-only').closest<HTMLElement>('[data-slot="alert"]')!;
+    expect(notice).toHaveTextContent('This assessment is closed, so it can no longer be changed.');
+    closed.unmount();
+
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, approvalDate: '2026-08-30T02:00:00.000Z' }} />);
+    notice = screen.getByText('Assessment is read-only').closest<HTMLElement>('[data-slot="alert"]')!;
+    expect(notice).toHaveTextContent('This assessment can no longer be changed in its current state.');
+    expect(document.body).not.toHaveTextContent(/release fact|mutation control|Strapi/i);
+  });
+
+  it('describes the assessment details and Identified Risks sections in plain words (D-38, UI-SPEC §17.1)', () => {
+    render(<AssessmentEditor {...editorProps} />);
+
+    expect(screen.getByRole('region', { name: 'Assessment details' })).toHaveAccessibleDescription('Record the assessment’s summary, overall rating and recommendations.');
+    expect(screen.getByRole('region', { name: 'Identified Risks' })).toHaveAccessibleDescription('Risks identified in this assessment, with their ratings, treatment and mitigation controls.');
+    expect(document.body).not.toHaveTextContent(/contextual|non-editable|server-owned|release facts/i);
+  });
+
   it('announces successful release and removes every mutation affordance', async () => {
     actionMocks.releaseAssessmentAction.mockResolvedValue({
       ok: true,

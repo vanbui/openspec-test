@@ -186,7 +186,9 @@ describe('RiskDetails', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'RSK-2026-001' })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByText(/Contextual Risk/)).toBeInTheDocument();
+    // D-38, UI-SPEC §17.1: the header describes the Risk by its statement alone.
+    expect(screen.getByRole('heading', { level: 1, name: 'RSK-2026-001' }).nextElementSibling).toHaveTextContent(/^Customer identity data may be disclosed through a compromised service account\.$/);
+    expect(screen.queryByText(/contextual/i)).not.toBeInTheDocument();
     expect(screen.getAllByLabelText('Severity: critical (4 of 4)')).not.toHaveLength(0);
     expect(screen.getAllByLabelText('Severity: high (3 of 4)')).not.toHaveLength(0);
 
@@ -223,6 +225,12 @@ describe('RiskDetails', () => {
     expect(container.querySelector('dl')).toHaveClass('md:grid-cols-2');
   });
 
+  it('says when a Risk has no statement recorded, in its header (UI-SPEC §17.1)', () => {
+    renderDetails({ detail: { ...detail, riskStatement: null } });
+
+    expect(screen.getByRole('heading', { level: 1, name: 'RSK-2026-001' }).nextElementSibling).toHaveTextContent(/^No risk statement recorded$/);
+  });
+
   it('anchors the Mitigation controls section so Control Implementation alerts can deep-link to it', () => {
     renderDetails();
 
@@ -231,7 +239,7 @@ describe('RiskDetails', () => {
     expect(document.querySelectorAll('#mitigation-controls')).toHaveLength(1);
     // The section is still one labelled region named by that heading.
     expect(screen.getByRole('region', { name: 'Mitigation controls' })).toHaveAttribute('aria-labelledby', 'mitigation-controls');
-    expect(screen.getByRole('region', { name: 'Mitigation controls' })).toHaveAccessibleDescription('Contextual Control implementations linked to reusable Controls.');
+    expect(screen.getByRole('region', { name: 'Mitigation controls' })).toHaveAccessibleDescription('Controls that mitigate this Risk, from the control library.');
   });
 
   it('brings the linked section into view once the streamed Risk renders', () => {
@@ -274,6 +282,7 @@ describe('RiskDetails', () => {
     await user.click(edit);
 
     const form = screen.getByRole('form', { name: 'Edit Risk' });
+    expect(screen.getByRole('region', { name: 'Risk statement and classification' })).toHaveAccessibleDescription('Edit this Risk’s details.');
     expect(form).toHaveClass('max-w-[640px]');
     expect(form.querySelector('.md\\:grid-cols-2')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save risk' }));
@@ -540,6 +549,8 @@ describe('RiskDetails', () => {
     for (const state of ['not-available', 'permission'] as const) {
       view.rerender(<RiskDetails detail={detail} state={state} />);
       expect(screen.getByRole('heading', { level: 1, name: 'Risk details' })).toBeInTheDocument();
+      // D-45: the safe-state header describes the page without internal terms.
+      expect(screen.getByText('View a Risk and the controls that mitigate it.')).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent(state === 'permission' ? 'You don’t have permission to view the Risk Register' : 'Risk not available');
       expect(screen.queryByText('RSK-2026-001')).not.toBeInTheDocument();
       expect(screen.queryByText(detail.riskStatement!)).not.toBeInTheDocument();
