@@ -303,12 +303,17 @@ test.describe('design-system type contract', () => {
  * Self-hosted type families (G-10, closes R-08-24). app/fonts.ts loads the three families through
  * next/font/local from the files committed in app/fonts. On the production build this proves that
  * the preloads are exactly the six committed latin files, that each family renders in its own face
- * at every weight in use, that latin-ext text renders in family and its files load only on demand,
- * and that neither the page, its HTML and stylesheets nor the build output reach a Google font host.
+ * at every weight in use, that latin-ext and, for Plus Jakarta Sans and IBM Plex Mono, vietnamese
+ * text render in family and their files load only on demand (quick task 261002-drq), that display
+ * text falls back for Vietnamese tone letters (Instrument Serif has no vietnamese subset), and that
+ * neither the page, its HTML and stylesheets nor the build output reach a Google font host.
  */
 /* Written with escaped dots so the pattern cannot match its own source text. */
 const googleFontHost = /fonts\.(?:googleapis|gstatic)\.com/;
 const latinExtSample = 'Łukasz Dvořák Māori Ştefan';
+/* Letters both latin-ext and vietnamese cover: latin-ext, listed first, must serve them. */
+const sharedLatinExtSample = 'Đorđević Bălan';
+const vietnameseSample = 'Nguyễn Văn Đức, Trần Thị Hồng';
 
 function sha256(bytes: Buffer | string): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -325,6 +330,8 @@ function committedFonts() {
     latin: names.filter((name) => /-latin-\d{3}-normal\.woff2$/.test(name)),
     latinExt400: names.filter((name) => name.endsWith('-latin-ext-400-normal.woff2')),
     latinExtHeavier: names.filter((name) => /-latin-ext-(?:500|600)-normal\.woff2$/.test(name)),
+    vietnamese400: names.filter((name) => name.endsWith('-vietnamese-400-normal.woff2')),
+    vietnameseHeavier: names.filter((name) => /-vietnamese-(?:500|600)-normal\.woff2$/.test(name)),
   };
 }
 
@@ -362,10 +369,12 @@ test.describe('self-hosted type families (G-10, R-08-24)', () => {
   test('serves, renders and loads the three families from the origin only', async ({ page }) => {
     test.setTimeout(120_000);
     const fonts = committedFonts();
-    expect(fonts.names, 'app/fonts holds the 12 committed woff2 files').toHaveLength(12);
+    expect(fonts.names, 'app/fonts holds the 17 committed woff2 files').toHaveLength(17);
     expect(fonts.latin, 'six latin files').toHaveLength(6);
     expect(fonts.latinExt400, 'three latin-ext 400 files').toHaveLength(3);
     expect(fonts.latinExtHeavier, 'three latin-ext 500 and 600 files').toHaveLength(3);
+    expect(fonts.vietnamese400, 'two vietnamese 400 files').toHaveLength(2);
+    expect(fonts.vietnameseHeavier, 'three vietnamese 500 and 600 files').toHaveLength(3);
 
     const requests: Array<{ url: string; resourceType: string }> = [];
     page.on('request', (request) => requests.push({ url: request.url(), resourceType: request.resourceType() }));
@@ -439,11 +448,41 @@ test.describe('self-hosted type families (G-10, R-08-24)', () => {
     await expectFace('[data-g10-probe="sans-latin-ext"]', 'PlusJakartaSans-Regular');
     await expectFace('[data-g10-probe="display-latin-ext"]', 'InstrumentSerif-Regular');
     await expectFace('[data-g10-probe="mono-latin-ext"]', 'IBMPlexMono-Regular');
+    await probe(page, 'sans-shared-latin-ext', 'font-family: var(--font-sans); font-weight: 400', sharedLatinExtSample);
+    await expectFace('[data-g10-probe="sans-shared-latin-ext"]', 'PlusJakartaSans-Regular');
     await expect.poll(fetchedFiles, { message: 'latin-ext text loads the latin-ext 400 file of each family' })
       .toEqual(expect.arrayContaining(fonts.latinExt400));
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
     const afterLatinExt = await fetchedFiles();
     expect(afterLatinExt.filter((file) => fonts.latinExtHeavier.includes(file)), '400-weight latin-ext text loads no latin-ext 500 or 600 file').toEqual([]);
+    expect(
+      afterLatinExt.filter((file) => fonts.vietnamese400.includes(file) || fonts.vietnameseHeavier.includes(file)),
+      'latin-ext text, including letters vietnamese also covers, loads no vietnamese file',
+    ).toEqual([]);
     expect(afterLatinExt.filter((file) => !fonts.names.includes(file)), 'every font response is a committed file').toEqual([]);
+
+    // Vietnamese renders in one face per family, and only the 400 vietnamese files load for 400-weight
+    // text. Display text falls back for the tone letters: Instrument Serif has no vietnamese subset.
+    await probe(page, 'sans-vietnamese', 'font-family: var(--font-sans); font-weight: 400', vietnameseSample);
+    await probe(page, 'mono-vietnamese', 'font-family: var(--font-mono); text-transform: uppercase', vietnameseSample);
+    await probe(page, 'display-vietnamese', 'font-family: var(--font-display); font-size: 28px', vietnameseSample);
+    await expectFace('[data-g10-probe="sans-vietnamese"]', 'PlusJakartaSans-Regular');
+    await expectFace('[data-g10-probe="mono-vietnamese"]', 'IBMPlexMono-Regular');
+    const displayFaces = async () => {
+      const used = await platformFonts(session, '[data-g10-probe="display-vietnamese"]');
+      return {
+        custom: used.filter(({ isCustomFont }) => isCustomFont).map(({ postScriptName }) => postScriptName).sort(),
+        platform: used.some(({ isCustomFont }) => !isCustomFont),
+      };
+    };
+    await expect.poll(displayFaces, { message: 'Vietnamese display text renders Instrument Serif plus a platform fallback' })
+      .toEqual({ custom: ['InstrumentSerif-Regular'], platform: true });
+    await expect.poll(fetchedFiles, { message: 'Vietnamese text loads the vietnamese 400 file of Plus Jakarta Sans and IBM Plex Mono' })
+      .toEqual(expect.arrayContaining(fonts.vietnamese400));
+    const afterVietnamese = await fetchedFiles();
+    expect(afterVietnamese.filter((file) => fonts.vietnameseHeavier.includes(file)), '400-weight Vietnamese text loads no vietnamese 500 or 600 file').toEqual([]);
+    expect(afterVietnamese.filter((file) => fonts.latinExtHeavier.includes(file)), '400-weight Vietnamese text loads no latin-ext 500 or 600 file').toEqual([]);
+    expect(afterVietnamese.filter((file) => !fonts.names.includes(file)), 'every font response is a committed file').toEqual([]);
 
     // No request leaves the origin, and every font comes from the build media.
     expect(requests.filter(({ url }) => googleFontHost.test(url)).map(({ url }) => url), 'no request reaches a Google font host').toEqual([]);

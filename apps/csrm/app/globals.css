@@ -184,17 +184,21 @@
 }
 
 @theme inline {
-  /* Each family's latin-ext companion comes first, so its unicode-range claims only
-     latin-ext characters and is downloaded only when a page renders one (G-10). */
+  /* Each family's companions come first, latin-ext then vietnamese (Plus Jakarta Sans
+     and IBM Plex Mono), then the latin face. Each companion's unicode-range claims
+     only its own characters, so its file downloads only when a page renders one
+     (G-10). Latin-ext comes before vietnamese because the two share letters such as
+     Ă, Đ, Ơ and Ư, so the vietnamese file then loads only for the Vietnamese tone
+     letters and combining marks no other subset covers. */
   --font-sans:
-    var(--font-jakarta-latin-ext), var(--font-jakarta), "Plus Jakarta Sans",
-    system-ui, sans-serif;
+    var(--font-jakarta-latin-ext), var(--font-jakarta-vietnamese),
+    var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
   --font-display:
     var(--font-instrument-latin-ext), var(--font-instrument), "Instrument Serif",
     "Plus Jakarta Sans", system-ui, serif;
   --font-mono:
-    var(--font-plex-mono-latin-ext), var(--font-plex-mono), "IBM Plex Mono",
-    ui-monospace, monospace;
+    var(--font-plex-mono-latin-ext), var(--font-plex-mono-vietnamese),
+    var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
 
   --color-background: var(--background);
   --color-overlay: var(--overlay-background);

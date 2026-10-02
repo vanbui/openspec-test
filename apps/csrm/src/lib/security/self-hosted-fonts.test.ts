@@ -5,15 +5,18 @@ import type localFont from 'next/font/local';
 import { describe, expect, it, vi } from 'vitest';
 
 /*
- * The self-hosted type families (G-10, closes R-08-24). The Google loader fetched the three families
- * from a third-party host on every build and dev compile; app/fonts.ts now loads byte-identical copies
- * of the @fontsource 5.3.0 files through next/font/local. This file guards:
- * - the loader options: six calls, a preloaded latin face and an on-demand latin-ext companion per
- *   family, each with its unicode-range, swap display and the Google-era fallback font;
+ * The self-hosted type families (G-10, closes R-08-24; vietnamese added by quick task 261002-drq). The
+ * Google loader fetched the three families from a third-party host on every build and dev compile;
+ * app/fonts.ts now loads byte-identical copies of the @fontsource 5.3.0 files through next/font/local.
+ * This file guards:
+ * - the loader options: eight calls, a preloaded latin face and an on-demand latin-ext companion per
+ *   family, and an on-demand vietnamese companion for Plus Jakarta Sans and IBM Plex Mono, each with
+ *   its unicode-range, swap display and the Google-era fallback font;
  * - the export contract the root layout and the global error UI read;
  * - the committed bytes: every font and licence file hashes to its row in app/fonts/README.md;
  * - that no code or CSS in apps/csrm imports the Google loader or names a Google font host;
- * - the order of the three font tokens in globals.css (each companion ahead of its family).
+ * - the order of the three font tokens in globals.css (the companions, latin-ext then vietnamese,
+ *   ahead of each family).
  * The browser proof on the production build is e2e/design-system-conformance.spec.ts.
  */
 
@@ -58,10 +61,13 @@ const latinRange =
   'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD';
 const latinExtRange =
   'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF';
+/* The vietnamese range both @fontsource packages give (261002-drq RESEARCH.md section 1). */
+const vietnameseRange =
+  'U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB';
 
 const face = (file: string, weight: string) => ({ path: `./fonts/${file}`, weight, style: 'normal' });
 
-/* The expected call per CSS variable: latin preloaded with the Google-era fallback, latin-ext on demand. */
+/* The expected call per CSS variable: latin preloaded with the Google-era fallback, latin-ext and vietnamese on demand. */
 const expectedCalls = {
   '--font-jakarta': {
     src: ['400', '500', '600'].map((weight) => face(`plus-jakarta-sans-latin-${weight}-normal.woff2`, weight)),
@@ -74,6 +80,12 @@ const expectedCalls = {
     preload: false,
     adjustFontFallback: false,
     range: latinExtRange,
+  },
+  '--font-jakarta-vietnamese': {
+    src: ['400', '500', '600'].map((weight) => face(`plus-jakarta-sans-vietnamese-${weight}-normal.woff2`, weight)),
+    preload: false,
+    adjustFontFallback: false,
+    range: vietnameseRange,
   },
   '--font-instrument': {
     src: [face('instrument-serif-latin-400-normal.woff2', '400')],
@@ -98,6 +110,12 @@ const expectedCalls = {
     preload: false,
     adjustFontFallback: false,
     range: latinExtRange,
+  },
+  '--font-plex-mono-vietnamese': {
+    src: ['400', '500'].map((weight) => face(`ibm-plex-mono-vietnamese-${weight}-normal.woff2`, weight)),
+    preload: false,
+    adjustFontFallback: false,
+    range: vietnameseRange,
   },
 } as const;
 
@@ -125,8 +143,8 @@ const googleLoaderSpecifier = /['"`](?:@?next)\/font\/google(?:\/[^'"`]*)?['"`]/
 const googleFontHost = /fonts\.(?:googleapis|gstatic)\.com/;
 
 describe('the self-hosted type families (G-10, R-08-24)', () => {
-  it('loads each family through next/font/local: latin preloaded, latin-ext on demand, swap display', () => {
-    expect(loaderCalls).toHaveLength(6);
+  it('loads each family through next/font/local: latin preloaded, latin-ext and vietnamese on demand, swap display', () => {
+    expect(loaderCalls).toHaveLength(8);
     expect(loaderCalls.map((call) => call.options.variable).sort()).toEqual(Object.keys(expectedCalls).sort());
 
     for (const [variable, expected] of Object.entries(expectedCalls)) {
@@ -141,18 +159,20 @@ describe('the self-hosted type families (G-10, R-08-24)', () => {
     }
   });
 
-  it('exports the three latin faces and the six variable classes for the html element, and nothing else', () => {
+  it('exports the three latin faces and the eight variable classes for the html element, and nothing else', () => {
     expect(Object.keys(fontsModule).sort()).toEqual(['fontVariableClassName', 'instrument', 'jakarta', 'plexMono']);
     expect(fontsModule.jakarta).toBe(callFor('--font-jakarta')?.result);
     expect(fontsModule.instrument).toBe(callFor('--font-instrument')?.result);
     expect(fontsModule.plexMono).toBe(callFor('--font-plex-mono')?.result);
     expect(fontsModule.fontVariableClassName).toBe(
-      'jakarta-variable jakarta-latin-ext-variable instrument-variable instrument-latin-ext-variable plex-mono-variable plex-mono-latin-ext-variable',
+      'jakarta-variable jakarta-latin-ext-variable jakarta-vietnamese-variable instrument-variable instrument-latin-ext-variable plex-mono-variable plex-mono-latin-ext-variable plex-mono-vietnamese-variable',
     );
   });
 
   it('serves only committed files that hash to their README rows, with the OFL text beside them', () => {
     const hashes = readmeHashes();
+    expect(filesIn('.woff2'), 'app/fonts holds 17 woff2 files').toHaveLength(17);
+    expect(filesIn('.txt'), 'app/fonts holds 3 licence files').toHaveLength(3);
     const committed = [...filesIn('.woff2'), ...filesIn('.txt')].sort();
     const listed = [...hashes.keys()].sort();
     expect(committed.filter((name) => !hashes.has(name)), 'files in app/fonts the README does not list').toEqual([]);
@@ -175,14 +195,25 @@ describe('the self-hosted type families (G-10, R-08-24)', () => {
     }
 
     const woff2 = filesIn('.woff2');
-    const subsetFile = /^([a-z-]+?)-latin(-ext)?-(\d{3})-normal\.woff2$/;
+    const subsetFile = /^([a-z-]+?)-(latin|latin-ext|vietnamese)-(\d{3})-normal\.woff2$/;
     for (const name of woff2) {
       const match = subsetFile.exec(name);
-      expect(match, `${name} is a latin or latin-ext file`).not.toBeNull();
-      const [, family, ext, weight] = match!;
-      const partner = ext ? `${family}-latin-${weight}-normal.woff2` : `${family}-latin-ext-${weight}-normal.woff2`;
+      expect(match, `${name} is a latin, latin-ext or vietnamese file`).not.toBeNull();
+      const [, family, subset, weight] = match!;
+      const partner = subset === 'latin' ? `${family}-latin-ext-${weight}-normal.woff2` : `${family}-latin-${weight}-normal.woff2`;
       expect(woff2, `${name} has its partner ${partner}`).toContain(partner);
     }
+
+    // Instrument Serif has no vietnamese subset (@fontsource ships only latin and latin-ext).
+    expect(woff2.filter((name) => name.includes('-vietnamese-')), 'the vietnamese files').toEqual(
+      [
+        'plus-jakarta-sans-vietnamese-400-normal.woff2',
+        'plus-jakarta-sans-vietnamese-500-normal.woff2',
+        'plus-jakarta-sans-vietnamese-600-normal.woff2',
+        'ibm-plex-mono-vietnamese-400-normal.woff2',
+        'ibm-plex-mono-vietnamese-500-normal.woff2',
+      ].sort(),
+    );
   });
 
   it('leaves no Google loader import or Google font host in apps/csrm code or CSS', () => {
@@ -207,7 +238,7 @@ describe('the self-hosted type families (G-10, R-08-24)', () => {
     expect(fontHosts, 'files that name a Google font host').toEqual([]);
   });
 
-  it('lists each latin-ext companion ahead of its family in the three font tokens', () => {
+  it('lists the companions (latin-ext, then vietnamese) ahead of each family in the three font tokens', () => {
     const css = readFileSync(join(appRoot, 'globals.css'), 'utf8');
     const token = (name: string) => {
       const matches = [...css.matchAll(new RegExp(`${name}:([^;]+);`, 'g'))];
@@ -215,10 +246,14 @@ describe('the self-hosted type families (G-10, R-08-24)', () => {
       return matches[0]![1]!.replace(/\s+/g, ' ').trim();
     };
 
-    expect(token('--font-sans')).toBe('var(--font-jakarta-latin-ext), var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif');
+    expect(token('--font-sans')).toBe(
+      'var(--font-jakarta-latin-ext), var(--font-jakarta-vietnamese), var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif',
+    );
     expect(token('--font-display')).toBe(
       'var(--font-instrument-latin-ext), var(--font-instrument), "Instrument Serif", "Plus Jakarta Sans", system-ui, serif',
     );
-    expect(token('--font-mono')).toBe('var(--font-plex-mono-latin-ext), var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace');
+    expect(token('--font-mono')).toBe(
+      'var(--font-plex-mono-latin-ext), var(--font-plex-mono-vietnamese), var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace',
+    );
   });
 });

@@ -90,7 +90,7 @@ describe('the global error', () => {
   it('renders its own document with the stylesheet fonts, the title and the locked copy', () => {
     const markup = renderToStaticMarkup(<GlobalError error={error} retry={() => undefined} />);
 
-    expect(markup).toContain('<html lang="en" class="jakarta-variable jakarta-latin-ext-variable instrument-variable instrument-latin-ext-variable plex-mono-variable plex-mono-latin-ext-variable"');
+    expect(markup).toContain('<html lang="en" class="jakarta-variable jakarta-latin-ext-variable jakarta-vietnamese-variable instrument-variable instrument-latin-ext-variable plex-mono-variable plex-mono-latin-ext-variable plex-mono-vietnamese-variable"');
     expect(markup).toContain('<body');
     expect(markup).toContain(`<title>${globalErrorCopy.title}</title>`);
     expect(markup).toContain(`<h1>${globalErrorCopy.heading}</h1>`);
