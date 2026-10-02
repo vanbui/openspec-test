@@ -15,7 +15,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { inventoryPickerPageSize, requestRelationGroup, riskWritableFields } from '@/features/assessments/assessment-domain';
+import {
+  exemptionReviewDateFormValue,
+  inventoryPickerPageSize,
+  requestRelationGroup,
+  riskWritableFields,
+  withExemptionReviewInstant,
+} from '@/features/assessments/assessment-domain';
 import type {
   ActiveUser,
   RiskType,
@@ -108,7 +114,8 @@ function initialValues(detail: RiskDetail): RiskUpdateInput {
     targetDate: detail.targetDate,
     closureDate: detail.closureDate,
     isExempted: detail.isExempted,
-    exemptionReviewDate: detail.exemptionReviewDate,
+    // The date field holds the stored instant's UTC date, so an untouched legacy value compares unchanged (D-32).
+    exemptionReviewDate: exemptionReviewDateFormValue(detail.exemptionReviewDate) || null,
     escalationDetails: detail.escalationDetails,
     comments: detail.comments,
     riskCommunicationDate: detail.riskCommunicationDate,
@@ -186,7 +193,7 @@ export function RiskDetailEditor({ detail, onCancel, onConflict, onNoChange, onS
 
   async function submit(raw: RiskUpdateInput) {
     setFormError(null);
-    const changed = delta(normalize(raw), initial);
+    const changed = withExemptionReviewInstant(delta(normalize(raw), initial));
     if (Object.keys(changed).length === 0) {
       onNoChange();
       return;
@@ -263,7 +270,7 @@ export function RiskDetailEditor({ detail, onCancel, onConflict, onNoChange, onS
         </div>
         {choiceFields.map(([name, label, choices]) => <SelectField error={form.formState.errors[name]?.message} key={name} label={label} name={name} options={choices.map((value) => ({ label: value, value }))} register={form.register} />)}
         {dateFields.map(([name, label]) => <DateField error={form.formState.errors[name]?.message} key={name} label={label} name={name} register={form.register} />)}
-        <label className="grid gap-2"><span className="text-sm font-medium">Exemption review date</span><Input aria-describedby="exemptionReviewDate-help exemptionReviewDate-error" aria-invalid={Boolean(form.formState.errors.exemptionReviewDate)} {...form.register('exemptionReviewDate')} /><span className="text-xs text-muted-foreground" id="exemptionReviewDate-help">Use UTC format YYYY-MM-DDTHH:mm:ssZ.</span><FieldError id="exemptionReviewDate-error" message={form.formState.errors.exemptionReviewDate?.message} /></label>
+        <DateField error={form.formState.errors.exemptionReviewDate?.message} label="Exemption review date" name="exemptionReviewDate" register={form.register} />
         <h2 className="pt-2 text-heading-md">Ownership and treatment</h2>
         <div><OwnerCombobox errorId="treatmentOwner-error" invalid={Boolean(form.formState.errors.treatmentOwner)} label="Treatment owner" onValueChange={(owner) => chooseOwner('treatmentOwner', owner)} searchOwners={searchOwners} value={selectedTreatmentOwner} /><FieldError id="treatmentOwner-error" message={form.formState.errors.treatmentOwner?.message} /></div>
         <label className="grid gap-2"><span className="text-sm font-medium">Exempted</span><select className="h-9 rounded-md border border-input bg-surface px-3 text-sm" {...form.register('isExempted', { setValueAs: (value) => value === '' ? null : value === 'true' })}><option value="">Not specified</option><option value="true">Yes</option><option value="false">No</option></select></label>
@@ -287,7 +294,7 @@ function SelectField({ error, label, name, options, register }: { error?: string
   return <label className="grid gap-2"><span className="text-sm font-medium">{label}</span><select aria-describedby={`${name}-error`} aria-invalid={Boolean(error)} className="h-9 rounded-md border border-input bg-surface px-3 text-sm" {...register(name)}><option value="">Not specified</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError id={`${name}-error`} message={error} /></label>;
 }
 
-type DateName = (typeof dateFields)[number][0];
+type DateName = (typeof dateFields)[number][0] | 'exemptionReviewDate';
 function DateField({ error, label, name, register }: { error?: string; label: string; name: DateName; register: ReturnType<typeof useForm<RiskUpdateInput>>['register'] }) {
   return <label className="grid gap-2"><span className="text-sm font-medium">{label}</span><Input aria-describedby={`${name}-error`} aria-invalid={Boolean(error)} type="date" {...register(name)} /><FieldError id={`${name}-error`} message={error} /></label>;
 }

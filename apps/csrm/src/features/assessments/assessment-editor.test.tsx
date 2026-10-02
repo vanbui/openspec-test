@@ -519,7 +519,8 @@ describe('analyst assessment editor contract', () => {
     expect(field).toHaveValue('2026-11-11');
     expect(field).not.toHaveAccessibleDescription();
     expect(screen.queryByText(/UTC format/)).not.toBeInTheDocument();
-    expect(document.body.textContent).not.toContain('YYYY-MM-DDTHH');
+    // The old hint spelled out an ISO timestamp pattern; nothing on the form asks for a time any more.
+    expect(document.body.textContent).not.toMatch(/HH:mm/);
   });
 
   it('keeps an untouched legacy exemption review date exactly as it was (D-32)', async () => {

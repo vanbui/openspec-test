@@ -16,7 +16,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createRiskAction, updateRiskAction } from './assessment-actions';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from './owner-combobox';
-import { inventoryPickerPageSize, requestRelationGroup, riskWritableFields, selectedRelationItem } from './assessment-domain';
+import {
+  exemptionReviewDateFormValue,
+  inventoryPickerPageSize,
+  requestRelationGroup,
+  riskWritableFields,
+  selectedRelationItem,
+  withExemptionReviewInstant,
+} from './assessment-domain';
 import type {
   ActiveUser,
   AnalystRisk,
@@ -132,7 +139,9 @@ const choiceFields = [
 
 function selectedValues(risk?: EditableRisk): RiskUpdateInput {
   if (!risk) return emptyRiskValues;
-  return Object.fromEntries(riskWritableFields.map((field) => [field, risk[field] ?? null])) as RiskUpdateInput;
+  const values = Object.fromEntries(riskWritableFields.map((field) => [field, risk[field] ?? null])) as RiskUpdateInput;
+  // The date field holds the stored instant's UTC date, so an untouched legacy value compares unchanged (D-32).
+  return { ...values, exemptionReviewDate: exemptionReviewDateFormValue(risk.exemptionReviewDate) || null };
 }
 
 function changedValues(values: RiskUpdateInput, initial: RiskUpdateInput): RiskUpdateInput {
@@ -179,8 +188,9 @@ export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, on
   async function submit(values: RiskUpdateInput) {
     setFormError(null);
     setStatusMessage(null);
-    const normalized = normalizeEmptyValues(values);
-    const submitted = mode === 'create' ? normalized : changedValues(normalized, initial);
+    const formValues = normalizeEmptyValues(values);
+    const normalized = withExemptionReviewInstant(formValues);
+    const submitted = mode === 'create' ? normalized : withExemptionReviewInstant(changedValues(formValues, initial));
     if (mode === 'edit' && Object.keys(submitted).length === 0) {
       setStatusMessage('No changes to save.');
       return;
@@ -261,7 +271,7 @@ export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, on
         {dateFields.map(([name, label]) => (
           <label className="grid gap-2" key={name}><span className="text-sm font-medium">{label}</span><Input aria-describedby={formState.errors[name] ? `${name}-error` : undefined} aria-invalid={Boolean(formState.errors[name])} type="date" {...register(name)} /><FieldError id={`${name}-error`} message={formState.errors[name]?.message} /></label>
         ))}
-        <label className="grid gap-2"><span className="text-sm font-medium">Exemption review date</span><Input aria-label="Exemption review date" aria-describedby={`exemptionReviewDate-help${formState.errors.exemptionReviewDate ? ' exemptionReviewDate-error' : ''}`} aria-invalid={Boolean(formState.errors.exemptionReviewDate)} {...register('exemptionReviewDate')} /><span className="text-xs text-muted-foreground" id="exemptionReviewDate-help">Use UTC format YYYY-MM-DDTHH:mm:ssZ.</span><FieldError id="exemptionReviewDate-error" message={formState.errors.exemptionReviewDate?.message} /></label>
+        <label className="grid gap-2"><span className="text-sm font-medium">Exemption review date</span><Input aria-describedby={formState.errors.exemptionReviewDate ? 'exemptionReviewDate-error' : undefined} aria-invalid={Boolean(formState.errors.exemptionReviewDate)} type="date" {...register('exemptionReviewDate')} /><FieldError id="exemptionReviewDate-error" message={formState.errors.exemptionReviewDate?.message} /></label>
         <div><OwnerCombobox errorId="treatmentOwner-error" invalid={Boolean(formState.errors.treatmentOwner)} label="Treatment owner" onValueChange={(owner) => chooseOwner('treatmentOwner', owner)} searchOwners={searchOwners} value={selectedTreatmentOwner} /><FieldError id="treatmentOwner-error" message={formState.errors.treatmentOwner?.message} /></div>
         <label className="grid gap-2"><span className="text-sm font-medium">Exempted</span><select aria-describedby={formState.errors.isExempted ? 'isExempted-error' : undefined} aria-invalid={Boolean(formState.errors.isExempted)} className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring" value={watch('isExempted') === null ? '' : String(watch('isExempted'))} onChange={(event) => setValue('isExempted', event.target.value === '' ? null : event.target.value === 'true', { shouldDirty: true })}><option value="">Not specified</option><option value="true">Yes</option><option value="false">No</option></select><FieldError id="isExempted-error" message={formState.errors.isExempted?.message} /></label>
       </div>

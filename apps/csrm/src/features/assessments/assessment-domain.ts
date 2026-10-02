@@ -183,6 +183,36 @@ export const controlImplementationWritableFields = [
 ] as const;
 
 /**
+ * The exemption review date as its date field shows it (D-32; UI-SPEC §13.3): the stored instant's UTC calendar
+ * date, or empty. The frozen schema stores the field as a datetime, so a legacy value with a time of day still
+ * reads as the date it falls on in UTC. A value that is not an instant reads as empty.
+ */
+export function exemptionReviewDateFormValue(stored: string | null | undefined): string {
+  if (!stored) return '';
+  const instant = new Date(stored);
+  return Number.isNaN(instant.getTime()) ? '' : instant.toISOString().slice(0, 10);
+}
+
+/**
+ * The exemption review date to save from its date field (D-32): the chosen calendar date at 00:00 UTC, or null
+ * when the field is empty. The Server Action's schema still requires an ISO datetime with an offset.
+ */
+export function exemptionReviewDateFromForm(value: string | null | undefined): string | null {
+  const date = value?.trim();
+  return date ? `${date}T00:00:00.000Z` : null;
+}
+
+/**
+ * Risk values ready to save: a submitted exemption review date becomes its 00:00 UTC instant (D-32). Values that
+ * do not carry the field are returned unchanged, so an untouched date is never sent.
+ */
+export function withExemptionReviewInstant<T extends { exemptionReviewDate?: string | null }>(values: T): T {
+  return 'exemptionReviewDate' in values
+    ? { ...values, exemptionReviewDate: exemptionReviewDateFromForm(values.exemptionReviewDate) }
+    : values;
+}
+
+/**
  * The controls the Control picker offers first for a Risk (D-31; UI-SPEC §13.1): those that apply to the Risk's
  * saved Risk Type, named by the control label. A Risk with no Risk Type, or one whose type lists no controls,
  * has no suggested group, so the picker asks the analyst to search.

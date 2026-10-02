@@ -260,8 +260,8 @@ const riskInputShape = {
   targetDate: optionalNullableDate,
   closureDate: optionalNullableDate,
   isExempted: z.boolean().nullable().optional(),
-  // Typed as text, so its format is the one message an analyst can meet here (the field's hint shows it).
-  exemptionReviewDate: z.iso.datetime({ offset: true, error: 'Enter the date and time as YYYY-MM-DDTHH:mm:ssZ.' }).nullable().optional(),
+  // Entered as a date and saved at 00:00 UTC (D-32), so a malformed value only arrives from outside the form.
+  exemptionReviewDate: z.iso.datetime({ offset: true, error: 'Enter a valid exemption review date.' }).nullable().optional(),
   escalationDetails: optionalNullableText,
   comments: optionalNullableText,
   riskCommunicationDate: optionalNullableDate,
