@@ -245,9 +245,15 @@ export function RelationPicker({
                 event.preventDefault();
                 setActiveIndex((index) => Math.max(index - 1, 0));
               }
-              // Enter always belongs to the picker, never to the surrounding form.
+              // Enter always belongs to the picker, never to the surrounding form. While a search error shows and no
+              // option is active, Enter retries it: Retry search sits in the popup, which focus never enters (APG listbox popup).
               if (event.key === 'Enter') {
                 event.preventDefault();
+                if (error && term && !active) {
+                  setIsOpen(true);
+                  void runSearch(term);
+                  return;
+                }
                 const chosen = isOpen ? active ?? options[0] : undefined;
                 if (chosen) choose(chosen);
               }
@@ -300,6 +306,7 @@ export function RelationPicker({
           {error ? (
             <div className="grid gap-2 px-2 py-3 text-sm" role="alert">
               <span>{error}</span>
+              <span className="text-muted-foreground">Press Enter to retry.</span>
               <button className="min-h-6 w-fit text-primary underline-offset-4 hover:underline" onClick={() => { void runSearch(term); }} onMouseDown={(event) => event.preventDefault()} type="button">Retry search</button>
             </div>
           ) : null}
