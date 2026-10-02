@@ -1,12 +1,10 @@
 'use client';
 
 import { AlertCircle } from 'lucide-react';
-import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { DetailSection } from '@/components/csrm/detail-section';
 import { PageHeader } from '@/components/csrm/page-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
@@ -17,6 +15,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CsrmAssessmentRequest } from '@/features/requests/request-domain';
+import { RequestContextDetails } from '@/features/requests/request-context-details';
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
 import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
 import { QuestionnaireGenerationJob } from './questionnaire-generation-job';
@@ -64,10 +63,6 @@ function SafeDetailState({ refusal = 'record', state }: { refusal?: AnalystRefus
   );
 }
 
-function DetailValue({ label, value }: { label: string; value: string | null | undefined }) {
-  return <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-foreground">{value || 'Not provided'}</dd></div>;
-}
-
 export function AssessmentDetail({ assessmentHref, questionnaireHref, refusal, request, state }: { assessmentHref?: string; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
   if (state !== 'populated' || !request) return <SafeDetailState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
   // Direct component callers from older route tests do not carry the server projection.
@@ -90,10 +85,7 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, refusal, r
         <RequestLifecycleStepper lifecycle={request.lifecycle} />
         <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} />
         {request.requestStatus === 'submitted' && request.relationships?.assessment.availability !== 'available' ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
-        <DetailSection description="Submitted business context for analyst review." title="Request context">
-          <dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Description" value={request.description} /><DetailValue label="Business purpose" value={request.businessPurpose} /><DetailValue label="Division" value={request.division} /><DetailValue label="Business unit" value={request.businessUnit} /><DetailValue label="Business criticality" value={request.businessCriticality} /><DetailValue label="Submitted date" value={request.submittedDate ? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(request.submittedDate)) : null} /></dl>
-          <RevertAuditSummary className="mt-6" facts={request} />
-        </DetailSection>
+        <RequestContextDetails request={request} />
         {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob hasExistingQuestionnaire={questionnaire.availability === 'available'} requestId={request.documentId} /> : null}
         {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}
       </div>

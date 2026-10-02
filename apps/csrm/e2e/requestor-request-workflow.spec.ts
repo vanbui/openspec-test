@@ -159,6 +159,9 @@ test('Requestor completes an authorised assessment request journey @journey', as
   const uniqueTitle = `E2E request ${requestorEmail} ${Date.now()}`;
   const originalDescription = 'Customer portal expansion requiring cyber risk review.';
   const editedDescription = 'Customer portal expansion with an updated external integration scope.';
+  // Unique to this run, so the analyst step proves it reads this request's own submitted values.
+  const thirdPartyDetails = `Hosting partner operates the platform for ${uniqueTitle}`;
+  const regulatoryRequirements = `Privacy Act 1988 obligations for ${uniqueTitle}`;
 
   await page.locator('.page-header').getByRole('link', { name: 'New request' }).click();
   await expect(page).toHaveURL(/\/app\/requests\/new$/);
@@ -169,6 +172,9 @@ test('Requestor completes an authorised assessment request journey @journey', as
   await page.getByRole('textbox', { name: 'Business unit' }).fill('Customer Platforms');
   await page.getByRole('textbox', { name: 'Business purpose' }).fill('Expand secure online customer services.');
   await page.getByRole('combobox', { name: 'Business criticality' }).selectOption('High');
+  await page.getByRole('checkbox', { name: 'Third-party involvement' }).check();
+  await page.getByRole('textbox', { name: 'Third-party details' }).fill(thirdPartyDetails);
+  await page.getByRole('textbox', { name: 'Regulatory requirements' }).fill(regulatoryRequirements);
   await chooseRelation(page, 'Information systems');
   await chooseRelation(page, 'Information assets');
   await page.getByRole('button', { name: 'Save draft' }).click();
@@ -244,6 +250,15 @@ test('Requestor completes an authorised assessment request journey @journey', as
     await page.goto(`/app/review/requests/${encodeURIComponent(requestDocumentId)}`);
     await expect(page.getByRole('heading', { name: uniqueTitle })).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 60_000 });
+  // UAT-015 (D-20): the analyst reads every field the Requestor submitted, in the request form's groups.
+  const analystContext = page.getByRole('region', { name: 'Request context' });
+  await expect(
+    analystContext.getByRole('heading', { level: 3 }),
+    'REQ07_ANALYST_SEES_SUBMITTED_FIELDS',
+  ).toHaveText(['Request overview', 'Business context', 'Scope and timing']);
+  const analystBusinessContext = analystContext.getByRole('heading', { level: 3, name: 'Business context' }).locator('..');
+  await expect(analystBusinessContext.getByText(thirdPartyDetails, { exact: true }), 'REQ07_ANALYST_SEES_SUBMITTED_FIELDS').toBeVisible();
+  await expect(analystBusinessContext.getByText(regulatoryRequirements, { exact: true }), 'REQ07_ANALYST_SEES_SUBMITTED_FIELDS').toBeVisible();
   for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
     await expectReturnToDraftConfirmation(page, page.getByRole('main'), viewport);
