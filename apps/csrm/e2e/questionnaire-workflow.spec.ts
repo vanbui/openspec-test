@@ -183,19 +183,17 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expect(page.getByRole('heading', { level: 1, name: 'Questionnaire review' }), 'UX06_REQUESTOR_ON_ANALYST_QUESTIONNAIRE_ROUTE').toBeVisible();
   await expect(page.getByText('You don’t have permission to review this questionnaire')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Go to My Questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
-  // Still signed in as the Requestor. The analyst review route offers an
-  // analyst-scoped link to the request, which this actor may not follow, so the
-  // link must be absent rather than present-and-denied. The Requestor reaches
+  // Still signed in as the Requestor. The refused page offers no analyst-scoped
+  // link to the request, which this actor may not follow. The Requestor reaches
   // the same request from their own questionnaire page, asserted below.
   await expect(
     page.getByRole('link', { name: /^Assessment request / }),
     'QUESTIONNAIRE_REVIEW_ROUTE_OFFERS_NO_ANALYST_BACKLINK_TO_REQUESTOR',
   ).toHaveCount(0);
-  // The analyst is told which questionnaire this is — the title, its number and
-  // its request are metadata the review list already shows. What stays private
-  // until a complete batch is submitted are the draft answers themselves.
+  // IN-403: the refusal comes before the questionnaire read (D-23), so the refused page carries none of the
+  // questionnaire: no title, number or request, and none of the draft questions or answers below.
   for (const draftContent of [dependentAnswer, dependentQuestion, serviceNameQuestion]) {
-    await expect(page.getByText(draftContent)).toHaveCount(0);
+    await expect(page.getByText(draftContent), 'UX06_REQUESTOR_ON_ANALYST_QUESTIONNAIRE_ROUTE the refused page shows no questionnaire content').toHaveCount(0);
   }
 
   await page.goto(questionnaireHref!);
