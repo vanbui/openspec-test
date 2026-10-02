@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
 import { openFromNavigation, signInAs } from './helpers/navigation';
 
@@ -176,12 +176,54 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
     await expect(replacement).toContainText('Requestor answers are never replaced.');
     await expect(replacement.getByRole('button', { name: 'Keep this questionnaire' })).toBeVisible();
   });
+  /*
+   * UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS (UAT-041, D-26; CR-401): while the card shows a queued or running
+   * job, the hub offers neither Generate nor Replace, so nobody starts a second job. Strapi answers the start with
+   * the job queued, and the card then follows it with status checks (Server Actions posted to this page). The
+   * deterministic provider finishes within the first check, so this step holds every status check in the browser
+   * while it looks: the card stays on the job Strapi started and cannot move on under the assertions. They run
+   * once, outside any retry, after the first check is held. The checks are then released and the job finishes.
+   */
   await test.step('confirm replacement and require a new reviewable completion', async () => {
     const replacement = page.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
+    const requestPath = new URL(requestUrl).pathname;
+    const isRequestPage = (url: URL) => url.pathname === requestPath;
+    let releaseStatusChecks: () => void = () => undefined;
+    const statusChecksReleased = new Promise<void>((resolve) => { releaseStatusChecks = resolve; });
+    let heldStatusChecks = 0;
+    const holdStatusChecks = async (route: Route) => {
+      const sent = route.request();
+      // The start itself goes through: it is the one action that acknowledges the replacement.
+      const isStatusCheck = sent.method() === 'POST' && sent.headers()['next-action'] !== undefined
+        && !(sent.postData() ?? '').includes('replaceUnansweredQuestionnaire');
+      if (isStatusCheck) {
+        heldStatusChecks += 1;
+        await statusChecksReleased;
+      }
+      await route.fallback();
+    };
+    await page.route(isRequestPage, holdStatusChecks);
     await replacement.getByRole('button', { name: 'Replace questionnaire' }).press('Enter');
     try {
       // The confirmation closes once Strapi has accepted the replacement and a job exists.
       await expect(replacement).toBeHidden({ timeout: 45_000 });
+      /*
+       * The status renders twice by design: in the panel and in the polite live region. The start revalidates this
+       * page, so a server render that read the job while it ran seeds it as running; either way a job runs.
+       */
+      const inProgress = page.getByText(/^Questionnaire generation is (queued|running)$/).first();
+      await expect(inProgress, 'UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS: the card shows the job Strapi started').toBeVisible();
+      await expect.poll(() => heldStatusChecks, { message: 'UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS: the card checks the job, and the check is held' }).toBeGreaterThan(0);
+      const shown = await inProgress.textContent();
+      expect(await inProgress.isVisible(), 'UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS: the job is still queued or running on the card').toBe(true);
+      expect(await page.getByRole('button', { name: 'Generate questionnaire' }).count(), 'UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS: no Generate questionnaire while a job runs').toBe(0);
+      expect(await page.getByRole('button', { name: 'Replace questionnaire' }).count(), 'UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS: no Replace questionnaire while a job runs').toBe(0);
+      test.info().annotations.push({ type: 'UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS', description: `the card showed "${shown}" with ${heldStatusChecks} status check held, and offered neither Generate nor Replace` });
+    } finally {
+      releaseStatusChecks();
+      await page.unroute(isRequestPage, holdStatusChecks);
+    }
+    try {
       await expect(page.getByText(/Questionnaire generation is (queued|running|ready for review)/).first()).toBeVisible();
     } finally {
       await attachReplacementDiagnostic(page, testInfo, browserEvents);
@@ -189,36 +231,33 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
   });
 
   /*
-   * UX06_JOB_STATUS_ON_RETURN (UAT-041, D-26): the analyst leaves the request while the replacement runs and
-   * comes back. While the hub shows the job as queued or running, it offers neither Generate nor Replace, so
-   * nobody starts a second job. The deterministic provider can finish before the page loads, and a completed
-   * job is not seeded, so the step accepts either ending: the job's own review link, or the hub's Replace
-   * action for the new questionnaire in analyst review.
+   * UX06_JOB_STATUS_ON_RETURN (UAT-041, D-26): the analyst leaves the request after the replacement and comes
+   * back. The page reads the jobs on the server, where the browser cannot hold them, and by then the deterministic
+   * job has finished; a completed job is not seeded. So this step proves the ending on return: the job's own review
+   * link, or the hub's Replace for the new questionnaire in analyst review, and the hub's link to it. That a queued
+   * or running job seeded on return shows in place of Generate and Replace is proved where the seed is held, by
+   * tests that fail when the card offers its action beside a running job (CR-401): questionnaire-generation-job.test.tsx
+   * "shows a queued (or running) job the viewer started in place of Generate and Replace, polled by id" and
+   * analyst-route-gate.test.tsx "reads the request generation jobs after the request and shows a running job in place
+   * of Generate". In the browser, UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS above proves it for a live job.
    */
   await test.step('UX06_JOB_STATUS_ON_RETURN', async () => {
     await openFromNavigation(page, 'Assessment Requests', true);
     await expect(page).toHaveURL(/\/app\/review\/requests(\?.*)?$/);
     await page.goto(requestUrl);
     await expect(page.getByRole('heading', { name: title })).toBeVisible();
-    const inProgress = page.getByText(/^Questionnaire generation is (queued|running)$/);
-    const generateAction = page.getByRole('button', { name: 'Generate questionnaire' });
     const replaceAction = page.getByRole('button', { name: 'Replace questionnaire' });
     const reviewLink = page.getByRole('link', { name: 'Review generated questionnaire' });
-    let observed: 'a queued or running job' | 'a completed job' = 'a completed job';
     try {
-      await expect(async () => {
-        if (await inProgress.count() > 0) {
-          observed = 'a queued or running job';
-          expect(await generateAction.count(), 'UX06_JOB_STATUS_ON_RETURN: no Generate questionnaire while a job runs').toBe(0);
-          expect(await replaceAction.count(), 'UX06_JOB_STATUS_ON_RETURN: no Replace questionnaire while a job runs').toBe(0);
-        }
-        expect(await reviewLink.count() + await replaceAction.count(), 'UX06_JOB_STATUS_ON_RETURN: the job ends in its review link or the hub offers Replace').toBeGreaterThan(0);
-      }).toPass({ timeout: 45_000 });
+      await expect.poll(
+        async () => await reviewLink.count() + await replaceAction.count(),
+        { message: 'UX06_JOB_STATUS_ON_RETURN: the job ends in its review link or the hub offers Replace', timeout: 45_000 },
+      ).toBeGreaterThan(0);
     } finally {
       await attachReplacementDiagnostic(page, testInfo, browserEvents);
     }
-    test.info().annotations.push({ type: 'UX06_JOB_STATUS_ON_RETURN', description: `observed ${observed} on return` });
-    console.log(`UX06_JOB_STATUS_ON_RETURN: observed ${observed} on return`);
+    // E7 (D-08): a questionnaire in analyst review is replaced, never generated over.
+    await expect(page.getByRole('button', { name: 'Generate questionnaire' }), 'UX06_JOB_STATUS_ON_RETURN: no Generate questionnaire over the new questionnaire').toHaveCount(0);
     await expect(
       page.getByRole('region', { name: 'Request relationships' }).getByRole('link', { name: /^QNR-/ }),
       'UX06_JOB_STATUS_ON_RETURN: the hub links the questionnaire',
