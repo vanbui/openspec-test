@@ -639,7 +639,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
    * IN-407: the search sends no sort, so which proof system misses the page is the server's choice. The page holds
    * exactly 25 of the 26, and the one it leaves out is found by typing its name.
    */
-  await expect(page.getByRole('option', { name: new RegExp(`^Picker proof ${pickerSuffix} \d{2}$`) }), 'the page holds 25 of the 26 proof systems').toHaveCount(25);
+  await expect(page.getByRole('option', { name: new RegExp(`^Picker proof ${pickerSuffix} [0-9]{2}$`) }), 'the page holds 25 of the 26 proof systems').toHaveCount(25);
   const pageMisses: string[] = [];
   for (let index = 1; index <= 26; index += 1) {
     if (await page.getByRole('option', { name: pickerSystemName(index), exact: true }).count() === 0) pageMisses.push(pickerSystemName(index));
