@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installTestResizeObserver } from '@/test/layout-stubs';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/app', useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/app' }));
 vi.mock('@/lib/time/time-zone-actions', () => ({ syncViewerTimeZoneAction: vi.fn(async () => ({ ok: false })) }));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,

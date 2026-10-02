@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 
 import { formatInstant, isValidTimeZone, type InstantStyle } from '@/lib/time/format-instant';
@@ -35,14 +34,15 @@ export function LocalInstant({ value, style, fallback = null }: {
 }
 
 /**
- * Sends the browser's zone to the server once per app load when it differs from the cookie, then
- * refreshes the route so the server renders local times (UI-SPEC §4.5). It renders nothing, moves
- * no focus and announces nothing. A failed or refused sync leaves times labelled UTC, which stays
- * truthful.
+ * Sends the browser's zone to the server once per app load when it differs from the cookie
+ * (UI-SPEC §4.5). The action sets the cookie, and a Server Action that sets a cookie makes Next
+ * re-render the current route and its layouts in the same round trip, so the page refreshes in
+ * place with local times. A second `router.refresh()` would only render the page again and abort
+ * the first response. It renders nothing, moves no focus and announces nothing. A failed or refused
+ * sync leaves times labelled UTC, which stays truthful.
  */
 export function ViewerTimeZoneSync() {
   const zone = useViewerTimeZone();
-  const router = useRouter();
   const attempted = useRef(false);
 
   useEffect(() => {
@@ -52,11 +52,8 @@ export function ViewerTimeZoneSync() {
     const browserZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!isValidTimeZone(browserZone) || browserZone === zone) return;
 
-    syncViewerTimeZoneAction(browserZone).then(
-      (result) => { if (result.ok) router.refresh(); },
-      () => undefined,
-    );
-  }, [router, zone]);
+    syncViewerTimeZoneAction(browserZone).catch(() => undefined);
+  }, [zone]);
 
   return null;
 }
