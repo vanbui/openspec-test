@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { TimeZoneProvider } from '@/components/csrm/local-time';
+
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
 import type { QuestionnaireSummary } from './questionnaire-service';
 
@@ -52,6 +54,17 @@ describe('QuestionnaireRevisionTimeline', () => {
     expect(screen.queryByText(/hosting-region/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Reason:/)).not.toBeInTheDocument();
     expect(screen.getByText('The available choices changed.')).toBeInTheDocument();
+  });
+
+  it('shows each detail entry’s time in the viewer’s zone', () => {
+    const local: QuestionnaireSummary = {
+      ...questionnaire,
+      events: [{ kind: 'question-edited', at: '2026-09-03T05:47:00.000Z', by: { documentId: 'analyst-1', displayName: 'Morgan Analyst' }, questionKey: 'hosting-region' }],
+    };
+    render(<TimeZoneProvider zone="Australia/Brisbane"><QuestionnaireRevisionTimeline depth="detail" questionnaire={local} /></TimeZoneProvider>);
+    const time = document.querySelector('time');
+    expect(time).toHaveAttribute('dateTime', '2026-09-03T05:47:00.000Z');
+    expect(time?.textContent?.replace(/\s/g, ' ')).toBe('3 Sept 2026, 3:47 pm');
   });
 
   it('renders the explicit empty state at both depths', () => {
