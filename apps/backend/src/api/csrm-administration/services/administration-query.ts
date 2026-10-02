@@ -226,6 +226,16 @@ function projectedControlIds(value: unknown): string[] | undefined {
   return ids as string[];
 }
 
+/**
+ * The Information System owner's display name (D-37): only the trimmed name crosses, bounded at 255.
+ * An owner whose name is blank or beyond the bound has no name to serve, so the record reads null.
+ */
+function projectedOwnerName(owner: unknown): string | null {
+  if (!isRecord(owner) || typeof owner.displayName !== "string") return null;
+  const displayName = owner.displayName.trim();
+  return displayName.length >= 1 && displayName.length <= 255 ? displayName : null;
+}
+
 export function projectAdministrationRecord(kind: AdministrationKind | string, input: RecordValue): RecordValue {
   if (typeof input.documentId !== "string" || typeof input.name !== "string") {
     throw new AdministrationValidationError("CSRM Administration record is invalid.");
@@ -255,6 +265,7 @@ export function projectAdministrationRecord(kind: AdministrationKind | string, i
       ...result,
       systemType: typeof input.systemType === "string" ? input.systemType : null,
       owner: typeof owner === "string" ? owner : null,
+      ownerName: typeof owner === "string" ? projectedOwnerName(input.owner) : null,
       environment: SYSTEM_ENVIRONMENTS.includes(input.environment as typeof SYSTEM_ENVIRONMENTS[number]) ? input.environment : null,
       deploymentModel: DEPLOYMENT_MODELS.includes(input.deploymentModel as typeof DEPLOYMENT_MODELS[number]) ? input.deploymentModel : null,
       businessCriticality: typeof input.businessCriticality === "string" ? input.businessCriticality : null,

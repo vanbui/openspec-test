@@ -54,7 +54,8 @@ export type AdministrationFormProps = {
   kind: AdministrationKind;
   mode: 'create' | 'edit';
   documentId?: string;
-  initialValues?: Partial<FormValues>;
+  /** `ownerName` is the Information System owner's served display name; it seeds the owner combobox and is never submitted. */
+  initialValues?: Partial<FormValues> & { ownerName?: string | null };
   createAction?: Action;
   updateAction?: Action;
   searchControls?: (input: unknown) => Promise<readonly ApplicableControlOption[]>;
@@ -84,7 +85,10 @@ export function AdministrationForm({ createAction, documentId, initialControlOpt
   const [formError, setFormError] = useState<string | null>(null);
   const [controlOptions, setControlOptions] = useState<readonly ApplicableControlOption[]>(initialControlOptions);
   const [selectedControlLabels, setSelectedControlLabels] = useState<Record<string, string>>({});
-  const [selectedOwner, setSelectedOwner] = useState<ActiveUser | null>(() => typeof initialValues?.owner === 'string' ? { documentId: initialValues.owner, displayName: initialValues.owner } : null);
+  // The owner shows by its served name, never its id (D-37, UI-SPEC §16.4).
+  const [selectedOwner, setSelectedOwner] = useState<ActiveUser | null>(() => typeof initialValues?.owner === 'string'
+    ? { documentId: initialValues.owner, displayName: initialValues.ownerName?.trim() || 'Name not available' }
+    : null);
   const controlSearchRef = useRef<HTMLInputElement>(null);
   const controlOptionsRef = useRef<HTMLDivElement>(null);
   const controlSearchTimerRef = useRef<number | null>(null);

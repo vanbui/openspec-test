@@ -4029,6 +4029,8 @@ export interface components {
             description?: string | null;
             systemType?: string | null;
             owner?: string | null;
+            /** @description The owner's display name, trimmed; null when there is no owner or the owner has no display name. */
+            ownerName?: string | null;
             /** @enum {string|null} */
             environment?: "Production" | "Non-production" | null;
             /** @enum {string|null} */

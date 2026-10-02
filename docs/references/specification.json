@@ -28678,6 +28678,14 @@
             "maxLength": 200,
             "pattern": "^[A-Za-z0-9_-]+$"
           },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "The owner's display name, trimmed; null when there is no owner or the owner has no display name."
+          },
           "environment": {
             "type": [
               "string",

@@ -199,6 +199,8 @@ export const informationSystemCreateInputSchema = z.object({
 export const informationSystemUpdateInputSchema = informationSystemCreateInputSchema.partial().strict().refine((values) => Object.keys(values).length > 0, 'Submit at least one changed Information System field.');
 export const informationSystemAdministrationRecordSchema = informationSystemCreateInputSchema.extend({
   documentId: administrationDocumentIdSchema, description: descriptionSchema, systemType: nullableShortText, owner: administrationDocumentIdSchema.nullable(),
+  // The owner's served display name (D-37): the contract's own bound, no trim; absent or null reads "Name not available".
+  ownerName: z.string().max(255).nullable().optional(),
   environment: z.enum(systemEnvironmentValues).nullable(), deploymentModel: z.enum(deploymentModelValues).nullable(), businessCriticality: nullableShortText,
   internetFacing: z.boolean(), externalAccessRequired: z.boolean(), hostingLocation: nullableLocation,
   lifecycleState: z.enum(lifecycleStateValues).nullable(), updatedAt: z.string().datetime(),

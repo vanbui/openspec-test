@@ -100,7 +100,7 @@ export function createStrapiAdministrationRepository(strapi: unknown, kind: Admi
         filters: { documentId: { $in: [...documentIds] } },
         fields: [...config.projectedFields],
         ...(kind === "risk-types" ? { populate: { applicableControls: { fields: ["documentId"] } } }
-          : kind === "information-systems" ? { populate: { owner: true } } : {}),
+          : kind === "information-systems" ? { populate: { owner: { fields: ["documentId", "displayName"] } } } : {}),
         limit: documentIds.length,
       });
     },
@@ -109,7 +109,7 @@ export function createStrapiAdministrationRepository(strapi: unknown, kind: Admi
         documentId,
         fields: [...config.projectedFields],
         ...(kind === "risk-types" ? { populate: { applicableControls: { fields: ["documentId"] } } }
-          : kind === "information-systems" ? { populate: { owner: true } } : {}),
+          : kind === "information-systems" ? { populate: { owner: { fields: ["documentId", "displayName"] } } } : {}),
       });
     },
     findNaturalKeyRecords() {
