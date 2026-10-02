@@ -43,7 +43,8 @@ async function attachReplacementDiagnostic(page: Page, testInfo: TestInfo, brows
     url: page.url(),
     lifecycleText: lifecycleText.map((text) => text.trim()).filter(Boolean),
     replacementDialogVisible: await replacementDialog.isVisible().catch(() => false),
-    reviewHref: await review.getAttribute('href').catch(() => null),
+    // A diagnostic never waits: the link is absent whenever the job is not on the card.
+    reviewHref: await review.getAttribute('href', { timeout: 1_000 }).catch(() => null),
     browserEvents: browserEvents.slice(-10),
   };
   await testInfo.attach('questionnaire-replacement-state.json', {
