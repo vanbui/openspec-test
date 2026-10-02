@@ -22,6 +22,12 @@ const CONTROL_CATALOGUE_FILES = [
   "pspf-release-2026.json",
   "soci-cirmp-2026-06-10.json",
 ] as const;
+// D-46: CSRM's titles for controls whose catalogue gives no label. It sits beside the vendored
+// catalogues and outside CONTROL_CATALOGUE_FILES, so the publishers' files stay as retrieved.
+const CONTROL_TITLE_FILE = "csrm-control-titles.json";
+const CONTROL_TITLE_BASES = ["framework", "descriptive"] as const;
+const CONTROL_TITLE_MIN_LENGTH = 3;
+const CONTROL_TITLE_MAX_LENGTH = 100;
 const CONTROL_QUERY_PAGE_SIZE = 1_000;
 const CSRM_APPLICATION = {
   name: "IdamBox CSRM",
@@ -44,14 +50,14 @@ type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
 
-type ControlCatalogue = {
+export type ControlCatalogue = {
   catalogueData: JsonObject;
   controls: Array<JsonObject & { id: string }>;
   framework: JsonObject & { name: string };
   sourceFile: string;
 };
 
-type ControlSeed = {
+export type ControlSeed = {
   controlNumber: string;
   controlReference: string | undefined;
   description: string | undefined;
@@ -193,11 +199,170 @@ function parseControlCatalogue(
   };
 }
 
-async function loadControlCatalogues(
-  strapi: Core.Strapi,
-): Promise<ControlCatalogue[]> {
+function controlTitleError(sourceFile: string, detail: string): Error {
+  return new Error(`Control title file ${sourceFile} ${detail}`);
+}
+
+function controlTitleProblem(controlId: string, title: unknown): string | undefined {
+  if (typeof title !== "string") {
+    return "is not a string";
+  }
+
+  if (title !== title.trim()) {
+    return "has leading or trailing spaces";
+  }
+
+  if (title.length < CONTROL_TITLE_MIN_LENGTH || title.length > CONTROL_TITLE_MAX_LENGTH) {
+    return `is not ${CONTROL_TITLE_MIN_LENGTH} to ${CONTROL_TITLE_MAX_LENGTH} characters long`;
+  }
+
+  if (/[\u2013\u2014]/.test(title)) {
+    return "contains an em dash or an en dash";
+  }
+
+  if (/[\r\n]/.test(title)) {
+    return "contains a line break";
+  }
+
+  if (title.endsWith(".")) {
+    return "ends with a full stop";
+  }
+
+  if (title.toLowerCase().startsWith(controlId.toLowerCase())) {
+    return "starts with its own control id";
+  }
+
+  return undefined;
+}
+
+/*
+ * Reads the CSRM title file (D-46) against the parsed catalogues and returns each titled control's
+ * title by control id. It refuses anything that could mislabel a control, naming the file and the
+ * control. Coverage is proved by the tests, not enforced here, so a later catalogue update cannot
+ * stop Strapi from starting.
+ */
+export function parseControlTitles(
+  sourceFile: string,
+  source: string,
+  catalogues: ControlCatalogue[],
+): Map<string, string> {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(source);
+  } catch (error) {
+    const detail = error instanceof Error ? ` ${error.message}` : "";
+
+    throw controlTitleError(sourceFile, `is not valid JSON.${detail}`);
+  }
+
+  if (!isJsonObject(parsed)) {
+    throw controlTitleError(sourceFile, "must contain an object.");
+  }
+
+  const { description, sources, titles } = parsed;
+
+  if (!nonBlankString(description)) {
+    throw controlTitleError(sourceFile, "must define description.");
+  }
+
+  if (!isJsonObject(sources) || !isJsonObject(titles)) {
+    throw controlTitleError(sourceFile, "must define sources and titles as objects.");
+  }
+
+  for (const catalogueFile of new Set([...Object.keys(sources), ...Object.keys(titles)])) {
+    if (!(catalogueFile in sources) || !(catalogueFile in titles)) {
+      throw controlTitleError(
+        sourceFile,
+        `must list ${catalogueFile} in both sources and titles.`,
+      );
+    }
+  }
+
+  const cataloguesByFile = new Map(
+    catalogues.map((catalogue) => [catalogue.sourceFile, catalogue]),
+  );
+  const result = new Map<string, string>();
+
+  for (const [catalogueFile, catalogueTitles] of Object.entries(titles)) {
+    const catalogue = cataloguesByFile.get(catalogueFile);
+
+    if (
+      !(CONTROL_CATALOGUE_FILES as readonly string[]).includes(catalogueFile) ||
+      !catalogue
+    ) {
+      throw controlTitleError(
+        sourceFile,
+        `names ${catalogueFile}, which is not a CSRM control catalogue.`,
+      );
+    }
+
+    const sourceEntry = sources[catalogueFile];
+
+    if (
+      !isJsonObject(sourceEntry) ||
+      !(CONTROL_TITLE_BASES as readonly unknown[]).includes(sourceEntry.basis) ||
+      !nonBlankString(sourceEntry.note)
+    ) {
+      throw controlTitleError(
+        sourceFile,
+        `must give ${catalogueFile} a basis of framework or descriptive and a note.`,
+      );
+    }
+
+    if (!isJsonObject(catalogueTitles)) {
+      throw controlTitleError(
+        sourceFile,
+        `must map ${catalogueFile} control ids to titles.`,
+      );
+    }
+
+    const controlsById = new Map(
+      catalogue.controls.map((control) => [control.id, control]),
+    );
+
+    for (const [controlId, title] of Object.entries(catalogueTitles)) {
+      const control = controlsById.get(controlId);
+
+      if (!control) {
+        throw controlTitleError(
+          sourceFile,
+          `titles ${controlId}, which ${catalogueFile} does not contain.`,
+        );
+      }
+
+      if (catalogueLabel(control)) {
+        throw controlTitleError(
+          sourceFile,
+          `titles ${controlId}, which ${catalogueFile} already labels.`,
+        );
+      }
+
+      const problem = controlTitleProblem(controlId, title);
+
+      if (problem) {
+        throw controlTitleError(
+          sourceFile,
+          `has a title for ${controlId} in ${catalogueFile} that ${problem}.`,
+        );
+      }
+
+      result.set(controlId, title as string);
+    }
+  }
+
+  return result;
+}
+
+/*
+ * Reads the twelve vendored catalogues and the CSRM title file from src/bootstrap/controls under the
+ * app root, refusing duplicate control ids across catalogues.
+ */
+export async function readControlLibrary(
+  appRoot: string,
+): Promise<{ catalogues: ControlCatalogue[]; titles: Map<string, string> }> {
   const catalogueDirectory = path.resolve(
-    strapi.dirs.app.root,
+    appRoot,
     "src",
     "bootstrap",
     "controls",
@@ -220,11 +385,19 @@ async function loadControlCatalogues(
     throw new Error("CSRM control catalogues contain duplicate control IDs.");
   }
 
-  return catalogues;
+  const titleSource = await readFile(
+    path.join(catalogueDirectory, CONTROL_TITLE_FILE),
+    "utf8",
+  );
+
+  return {
+    catalogues,
+    titles: parseControlTitles(CONTROL_TITLE_FILE, titleSource, catalogues),
+  };
 }
 
-function controlName(control: JsonObject): string {
-  const label = firstString(
+function catalogueLabel(control: JsonObject): string | undefined {
+  return firstString(
     control.title,
     control.objective,
     control.strategy,
@@ -232,8 +405,16 @@ function controlName(control: JsonObject): string {
     nestedString(control, "category", "title"),
     lastString(control.groupPath),
   );
+}
 
-  return label ? `${control.id} — ${label}` : (control.id as string);
+// The catalogue's own label comes first; a CSRM title applies only where the catalogue has none.
+function controlName(
+  control: JsonObject & { id: string },
+  titles: Map<string, string>,
+): string {
+  const label = catalogueLabel(control) ?? titles.get(control.id);
+
+  return label ? `${control.id} — ${label}` : control.id;
 }
 
 function controlReference(control: JsonObject): string | undefined {
@@ -257,7 +438,10 @@ function controlReference(control: JsonObject): string | undefined {
   );
 }
 
-function createControlSeeds(catalogues: ControlCatalogue[]): ControlSeed[] {
+export function createControlSeeds(
+  catalogues: ControlCatalogue[],
+  titles: Map<string, string>,
+): ControlSeed[] {
   return catalogues.flatMap((catalogue) => {
     const frameworkVersion = firstString(
       catalogue.framework.version,
@@ -276,7 +460,7 @@ function createControlSeeds(catalogues: ControlCatalogue[]): ControlSeed[] {
       framework: catalogue.framework.name,
       frameworkSource,
       frameworkVersion,
-      name: controlName(control),
+      name: controlName(control, titles),
       sourceData: {
         catalogue: catalogue.catalogueData,
         control,
@@ -396,8 +580,11 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     return;
   }
 
-  const controlCatalogues = await loadControlCatalogues(strapi);
-  const controlSeeds = createControlSeeds(controlCatalogues);
+  const controlLibrary = await readControlLibrary(strapi.dirs.app.root);
+  const controlSeeds = createControlSeeds(
+    controlLibrary.catalogues,
+    controlLibrary.titles,
+  );
   const applicationService = strapi.documents("api::application.application");
   const functionService = strapi.documents("api::function.function");
   const functionApiService = strapi.documents("api::function-api.function-api");
