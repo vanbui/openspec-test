@@ -33,8 +33,11 @@ export function createQuestionnaireGenerationRegistry(options: Options) {
   /*
    * D-25: the request's current job for any analyst who may review it — the
    * active job, else the retained terminal job queued last (a tie keeps the job
-   * registered last). Whether the viewer may retry it is the only actor fact
-   * returned; the by-id `get` and `retry` keep their initiator-only `authorize`
+   * registered last). Whether the viewer initiated it is the only actor fact
+   * returned, as `canRetry`: true for the initiator whatever the job's status,
+   * because `retry` itself refuses a job that has not failed (the web reads it
+   * as "started by another analyst" when false). The by-id `get` and `retry`
+   * keep their initiator-only `authorize`
    * (D-27), and this read neither authorises nor touches `lastAccess`, so a
    * status poll never keeps a job retained.
    */

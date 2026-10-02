@@ -1044,7 +1044,7 @@ export interface paths {
         };
         /**
          * Get a request's current generation jobs for a human Security Analyst
-         * @description Returns the request's questionnaire generation job (the active one, else the most recent retained) and the assessment draft job for its questionnaire, each with whether the viewing analyst may retry it. Jobs are process-local, so after a restart both entries are null.
+         * @description Returns the request's questionnaire generation job (the active one, else the most recent retained) and the assessment draft job for its questionnaire, each with whether the viewing analyst initiated it (only its initiator may retry it, once it has failed). Jobs are process-local, so after a restart both entries are null.
          */
         get: operations["questionnaire-generation/get-request-generation-jobs"];
         put?: never;
@@ -2996,12 +2996,12 @@ export interface components {
         };
         RequestQuestionnaireGenerationJob: {
             job: components["schemas"]["QuestionnaireGenerationJob"];
-            /** @description Whether the viewing analyst may retry the job: only its initiating analyst may. */
+            /** @description Whether the viewing analyst initiated the job, whatever its status. Only the initiating analyst may retry a job, and only once it has failed. */
             canRetry: boolean;
         };
         RequestAssessmentDraftJob: {
             job: components["schemas"]["AssessmentDraftJob"];
-            /** @description Whether the viewing analyst may retry the job: only its initiating analyst may. */
+            /** @description Whether the viewing analyst initiated the job, whatever its status. Only the initiating analyst may retry a job, and only once it has failed. */
             canRetry: boolean;
         };
         RequestGenerationJobs: {

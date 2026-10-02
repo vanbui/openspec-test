@@ -233,7 +233,9 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
   /*
    * D-25: the questionnaire's current draft job for any analyst who may review
    * its request — the job the questionnaire is mapped to (active or retained),
-   * else the retained job queued last — with whether the viewer may retry it.
+   * else the retained job queued last — with whether the viewer initiated it
+   * (`canRetry`: true for the initiator whatever the job's status; `retry`
+   * itself still refuses a job that has not failed).
    * Like the questionnaire registry's request read, it neither authorises nor
    * touches `lastAccess`; `get` and `retry` stay initiator-only (D-27).
    */

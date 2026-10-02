@@ -104,7 +104,7 @@ function registry(strapi: Strapi) { const existing = registryByStrapi.get(strapi
  * The initiating analyst is held in the registry for actor scoping and is not
  * projected, matching projectAssessmentDraftJob. Only that analyst can read the
  * job by id, and the request read (D-25) shows other analysts only whether they
- * may retry it, so the identifier never crosses the boundary and the closed
+ * initiated it, so the identifier never crosses the boundary and the closed
  * client schema rejects the unrecognised key.
  */
 export function projectQuestionnaireGenerationJob(job: QuestionnaireGenerationJobRecord, questionnaire?: RecordValue | null): RecordValue { return { jobId: job.jobId, requestId: job.requestId, providerName: job.providerName, providerVersion: job.providerVersion, status: job.status, attempt: job.attempt, queuedAt: job.queuedAt, ...(job.startedAt ? { startedAt: job.startedAt } : {}), ...(job.completedAt ? { completedAt: job.completedAt } : {}), ...(job.failure ? { failureCode: job.failure.code, failureMessage: job.failure.message } : {}), ...(job.status === "completed" && questionnaire ? { questionnaire: projectGeneratedQuestionnaire(questionnaire) } : {}) }; }
@@ -138,7 +138,7 @@ export const getQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: st
  * D-25: a request's current generation jobs, for any human analyst who may
  * review it (the route's grant and human-analyst guard decide who that is).
  * Each job keeps its closed projection, so the initiating analyst is never
- * disclosed; only whether this viewer may retry it is added beside it. Jobs
+ * disclosed; only whether this viewer initiated it (`canRetry`) is added beside it. Jobs
  * are process-local (R-08-36), so after a restart both entries are null. A
  * completed job whose questionnaire can no longer be loaded is no current job
  * at all, so it reads as null rather than failing the whole read.
