@@ -346,12 +346,17 @@ describe('analyst review presentations', () => {
     for (const child of Array.from(container.children)) expect(child.className).not.toMatch(verticalMargin);
   });
 
-  it('keeps the same gap around the analyst reversal and the generation cards', () => {
-    const detail = {
+  /*
+   * D-22: a reversal is offered only before any questionnaire exists, so it shares the page with the
+   * questionnaire generation card alone; once a questionnaire exists both generation cards show, and no
+   * reversal.
+   */
+  function submittedDetail(questionnaire: 'absent' | 'available') {
+    return {
       documentId: 'request-7',
       requestNumber: 'RAR-0047',
       title: 'Reversal gap review',
-      description: 'Submitted request with a submitted questionnaire.',
+      description: 'Submitted request.',
       requestStatus: 'submitted' as const,
       submittedDate: '2026-08-30T01:00:00.000Z',
       dueDate: null,
@@ -360,14 +365,19 @@ describe('analyst review presentations', () => {
       updatedDateLabel: null,
       informationSystems: [],
       informationAssets: [],
-      questionnaire: { documentId: 'questionnaire/id', title: 'Portal questionnaire' },
+      questionnaire: questionnaire === 'available' ? { documentId: 'questionnaire/id', title: 'Portal questionnaire' } : null,
       assessment: null,
       relationships: {
-        questionnaire: { availability: 'available' as const, documentId: 'questionnaire/id', questionnaireNumber: null, title: 'Portal questionnaire', state: 'submitted' },
+        questionnaire: questionnaire === 'available'
+          ? { availability: 'available' as const, documentId: 'questionnaire/id', questionnaireNumber: null, title: 'Portal questionnaire', state: 'submitted' }
+          : { availability: 'absent' as const },
         assessment: { availability: 'absent' as const },
       },
     };
-    render(<AssessmentDetail request={detail} state="populated" />);
+  }
+
+  it('keeps the same gap around the analyst reversal and the questionnaire generation card', () => {
+    render(<AssessmentDetail request={submittedDetail('absent')} state="populated" />);
 
     const container = screen.getByRole('region', { name: 'Request context' }).parentElement as HTMLElement;
     const reversal = screen.getByRole('button', { name: 'Return to draft' });
@@ -375,9 +385,25 @@ describe('analyst review presentations', () => {
     expect(container).toContainElement(screen.getByRole('region', { name: 'Request relationships' }));
     expect(container).toContainElement(reversal);
     expect(container).toContainElement(screen.getByText('Questionnaire generation'));
-    expect(container).toContainElement(screen.getByText('Assessment draft generation'));
     expect(reversal.parentElement).not.toBe(container);
     for (const child of Array.from(container.children)) expect(child.className).not.toMatch(verticalMargin);
+  });
+
+  it('withholds the analyst reversal once a questionnaire exists, keeping the gap around both generation cards', () => {
+    render(<AssessmentDetail request={submittedDetail('available')} state="populated" />);
+
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
+    const container = screen.getByRole('region', { name: 'Request context' }).parentElement as HTMLElement;
+    expect(container).toHaveClass('grid', 'gap-6');
+    expect(container).toContainElement(screen.getByText('Questionnaire generation'));
+    expect(container).toContainElement(screen.getByText('Assessment draft generation'));
+    for (const child of Array.from(container.children)) expect(child.className).not.toMatch(verticalMargin);
+  });
+
+  it('withholds the analyst reversal when the questionnaire exists but is not open to the analyst', () => {
+    const detail = submittedDetail('absent');
+    render(<AssessmentDetail request={{ ...detail, relationships: { ...detail.relationships, questionnaire: { availability: 'unavailable' as const } } }} state="populated" />);
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
   });
 });
 

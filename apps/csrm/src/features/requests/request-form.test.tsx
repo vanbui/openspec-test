@@ -109,6 +109,7 @@ describe('RequestForm', () => {
       submittedDate: '2026-08-29T00:00:00.000Z',
       questionnaire: null,
       assessment: null,
+      relationships: { questionnaire: { availability: 'absent' }, assessment: { availability: 'absent' } },
     } as CsrmAssessmentRequest;
     const view = render(<RequestWorkflowActions request={request} />);
     const trigger = screen.getByRole('button', { name: 'Return to draft' });
@@ -137,7 +138,7 @@ describe('RequestForm', () => {
     }
 
     expect(screen.queryByLabelText(/sponsor/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Sponsor selection is unavailable until a least-privilege directory contract exists/i)).toBeInTheDocument();
+    expect(screen.getByText('Sponsor selection is not available in CSRM.')).toBeInTheDocument();
   });
 
   it('validates the authoritative title on blur and preserves values after a draft error', async () => {
@@ -206,7 +207,7 @@ describe('RequestForm', () => {
     expect(screen.getByRole('button', { name: `Remove ${offPage.name}` })).toBeInTheDocument();
   });
 
-  it('preserves draft values and confirms irreversible submission', async () => {
+  it('preserves draft values and confirms submission, saying how to return to draft', async () => {
     const RequestForm = await loadRequestForm();
     const user = userEvent.setup();
     let resolveSubmission!: (value: { ok: true; data: RequestMutationResult }) => void;
@@ -227,7 +228,8 @@ describe('RequestForm', () => {
     expect(screen.getByRole('list', { name: 'Selected Information assets' })).toHaveTextContent('Customer records');
 
     await user.click(screen.getByRole('button', { name: 'Submit request' }));
-    expect(screen.getByRole('alertdialog')).toHaveTextContent(/cannot be edited after submission/i);
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('A Security Analyst will review your request and send you a questionnaire to answer. Until they start work on it, you can return the request to draft to make changes.');
+    expect(screen.getByRole('alertdialog')).not.toHaveTextContent(/irreversible|cannot be edited/i);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(submitRequestAction).not.toHaveBeenCalled();
 
@@ -242,6 +244,8 @@ describe('RequestForm', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(screen.getByText('Submitted')).toBeInTheDocument();
     expect(screen.getByText(/29 Aug 2026/)).toBeInTheDocument();
+    const notice = screen.getByText(/You can return it to draft from the request page/).closest('[data-slot="alert-description"]');
+    expect(notice?.textContent).toBe('Submitted 29 Aug 2026. You can return it to draft from the request page until a Security Analyst starts work on it.');
     expect(screen.queryByRole('button', { name: 'Submit request' })).not.toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Selected Information systems' })).toHaveTextContent('Customer portal');
     expect(screen.getByRole('list', { name: 'Selected Information assets' })).toHaveTextContent('Customer records');
