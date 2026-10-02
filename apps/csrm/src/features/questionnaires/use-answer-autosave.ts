@@ -11,6 +11,12 @@ import type { QuestionnaireDefinition } from './questionnaire-schema';
  * never loop (research Pitfall 7). When the page is hidden or the questionnaire unmounts, a waiting save is
  * sent at once.
  *
+ * A known limit (IN-304, beside UI-D11): on `pagehide` (reload, close, an external address) the save is a
+ * Server Action request, which the browser may cancel as the document unloads, so it may never arrive. A tab
+ * switch (`visibilitychange` to hidden) leaves the document alive and the save completes. A save that survives
+ * unload needs a `keepalive` or `sendBeacon` route, which would be a frontend API facade (AGENTS.md), so there
+ * is none: the leave guard's `beforeunload` warning is the protection for reload, close and external navigation.
+ *
  * This module has no directive: it is a hook the client renderer imports, and it imports no validation
  * library (the questionnaire route's delivered-JavaScript budget).
  */
