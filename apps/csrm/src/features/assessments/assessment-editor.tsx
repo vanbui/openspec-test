@@ -1,8 +1,8 @@
 'use client';
 
-import { AlertCircleIcon, CheckCircle2Icon, LockKeyholeIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
+import { AlertCircleIcon, CheckCircle2Icon, ChevronDownIcon, ChevronUpIcon, LockKeyholeIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
@@ -33,7 +33,8 @@ import type { RelationPickerItem, RelationPickerSearchInput, RelationPickerSearc
 import { ControlImplementationEditor, type ControlImplementationEditorOptions } from './control-implementation-editor';
 import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
-import { applicableControlGroup, assessmentRiskListItemFromAnalystRisk, canMutateAssessment, releaseReadinessPresentation } from './assessment-domain';
+import { applicableControlGroup, assessmentRiskListItemFromAnalystRisk, canMutateAssessment } from './assessment-domain';
+import { missingCaption, summarizeReleaseReadiness, type ReleaseReadinessSummary } from './release-readiness-summary';
 import { ReleasedRiskDetails } from './released-risk-details';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
@@ -250,31 +251,10 @@ export function AssessmentEditor({
         <Card>
           <CardHeader>
             <h2 className="text-heading-sm">Release readiness</h2>
-            <CardDescription>Strapi rechecks every item when release is requested.</CardDescription>
+            <CardDescription>Every requirement must be met before release. We check them all again when you release.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div aria-atomic="true" aria-live="polite">
-              <p className="flex items-center gap-2 text-sm text-foreground">
-                {readiness.ready ? <CheckCircle2Icon aria-hidden="true" className="size-4 shrink-0 text-success" /> : <AlertCircleIcon aria-hidden="true" className="size-4 shrink-0 text-warning" />}
-                {readiness.ready ? 'All release requirements are met' : `${readiness.requirements.filter((requirement) => requirement.state === 'met').length} of ${readiness.requirements.length} release requirements met`}
-              </p>
-              <ul aria-label="Release requirements" className="grid gap-2 text-sm">
-                {readiness.requirements.map((requirement) => {
-                  const item = releaseReadinessPresentation(requirement);
-                  const Icon = requirement.state === 'met' ? CheckCircle2Icon : AlertCircleIcon;
-                  const key = requirement.scope === 'risk'
-                    ? `${requirement.scope}-${requirement.riskNumber}-${requirement.key}`
-                    : `${requirement.scope}-${requirement.key}`;
-                  return <li className="grid min-w-0 gap-2 rounded-md border border-border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={key}>
-                    <a className="flex min-w-0 items-start gap-2 text-text-link underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" href={item.href}>
-                      <Icon aria-hidden="true" className={`mt-0.5 size-4 shrink-0 ${requirement.state === 'met' ? 'text-success' : 'text-warning'}`} />
-                      <span className="min-w-0 break-words">{item.label}</span>
-                    </a>
-                    <span className="flex items-center gap-1 text-xs font-medium text-foreground"><Icon aria-hidden="true" className={`size-4 shrink-0 ${requirement.state === 'met' ? 'text-success' : 'text-warning'}`} />{requirement.state === 'met' ? 'Met' : 'Outstanding'}</span>
-                  </li>;
-                })}
-              </ul>
-            </div>
+            <ReleaseReadinessRequirements summary={summarizeReleaseReadiness(readiness)} />
             {canOfferRelease ? (
               <ConfirmDialog
                 confirmLabel="Confirm release"
@@ -291,10 +271,10 @@ export function AssessmentEditor({
         </Card>
       </div>
 
-      <DetailSection description="Contextual Risks identified for this assessment. Risk Types remain reusable non-editable references." headingId="identified-risks" title="Identified Risks">
+      <DetailSection description="Contextual Risks identified for this assessment. Risk Types remain reusable non-editable references." headingFocusable headingId="identified-risks" title="Identified Risks">
         <div className="grid min-w-0 gap-5">
           {risks.length === 0 ? <p className="text-sm text-muted-foreground">No Risks have been identified.</p> : risks.map((risk) => (
-            <Card className="min-w-0" id={`risk-${encodeURIComponent(risk.documentId)}`} key={risk.documentId}>
+            <Card className="min-w-0" id={`risk-${encodeURIComponent(risk.documentId)}`} key={risk.documentId} tabIndex={-1}>
               <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>{risk.riskNumber}</CardTitle>{risk.residualRating ? <RiskRatingBadge rating={risk.residualRating} /> : null}</div>
                 <CardDescription>{risk.riskStatement || 'Risk statement not provided'}</CardDescription>
@@ -360,6 +340,98 @@ export function AssessmentEditor({
   );
 }
 
+const readinessLinkClass = 'min-w-0 break-words text-text-link underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+const readinessRowClass = 'grid min-w-0 gap-1 rounded-md border border-border p-3';
+
+/** The state a readiness row shows beside its label: words and an icon, never colour alone. */
+function ReadinessState({ children, met }: { children: ReactNode; met: boolean }) {
+  const Icon = met ? CheckCircle2Icon : AlertCircleIcon;
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium tabular-nums text-foreground">
+      <Icon aria-hidden="true" className={`size-4 shrink-0 ${met ? 'text-success' : 'text-warning'}`} />{children}
+    </span>
+  );
+}
+
+/**
+ * The Release readiness summary (D-35, UI-SPEC §14.1): the outstanding assessment items, then one row per Risk
+ * with what is missing, and the met items only when the analyst asks. Display only; the release control and the
+ * server's own check on release are unchanged. Control names avoid save, add, edit, remove and release (UI-D19).
+ */
+function ReleaseReadinessRequirements({ summary }: { summary: ReleaseReadinessSummary }) {
+  const [showMet, setShowMet] = useState(false);
+  const baseId = useId();
+  const metListId = `${baseId}-met`;
+  const hasOutstanding = summary.outstandingAssessment.length > 0 || summary.outstandingRisks.length > 0;
+  const hasMet = summary.met > 0;
+
+  return (
+    <>
+      <p aria-atomic="true" aria-live="polite" className="flex items-center gap-2 text-sm text-foreground">
+        {summary.ready ? <CheckCircle2Icon aria-hidden="true" className="size-4 shrink-0 text-success" /> : <AlertCircleIcon aria-hidden="true" className="size-4 shrink-0 text-warning" />}
+        {summary.ready ? 'All release requirements are met' : `${summary.met} of ${summary.total} release requirements met`}
+      </p>
+      {hasOutstanding ? (
+        <ul aria-label="Release requirements" className="grid gap-2 text-sm">
+          {summary.outstandingAssessment.map((item) => (
+            <li className={`${readinessRowClass} sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3`} key={`assessment-${item.key}`}>
+              <a className={readinessLinkClass} href={item.href}>{item.label}</a>
+              <ReadinessState met={false}>Outstanding</ReadinessState>
+            </li>
+          ))}
+          {summary.outstandingRisks.map((row, index) => {
+            const captionId = `${baseId}-missing-${index}`;
+            return (
+              <li className={readinessRowClass} key={`risk-${row.riskNumber}`}>
+                {/* The name reads `{risk number}: {n} outstanding`; what is missing is its description. */}
+                <a aria-describedby={captionId} aria-label={`${row.riskNumber}: ${row.outstanding} outstanding`} className={`${readinessLinkClass} flex flex-wrap items-center gap-x-3 gap-y-1`} href={row.href}>
+                  <span className="min-w-0 break-words">{row.riskNumber}</span>
+                  <ReadinessState met={false}>{row.outstanding} outstanding</ReadinessState>
+                </a>
+                <p className="break-words text-xs text-muted-foreground" id={captionId}>{missingCaption(row.missing)}</p>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {hasMet ? (
+        <>
+          <Button
+            aria-controls={metListId}
+            aria-expanded={showMet}
+            className="justify-self-start max-md:min-h-11"
+            data-print="hidden"
+            onClick={() => setShowMet((current) => !current)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {showMet
+              ? <><ChevronUpIcon aria-hidden="true" />Hide met requirements</>
+              : <><ChevronDownIcon aria-hidden="true" />Show met requirements ({summary.met})</>}
+          </Button>
+          <ul aria-label="Met release requirements" className="grid gap-2 text-sm" hidden={!showMet} id={metListId}>
+            {summary.metAssessment.map((item) => (
+              <li className={`${readinessRowClass} sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3`} key={`assessment-${item.key}`}>
+                <a className={readinessLinkClass} href={item.href}>{item.label}</a>
+                <ReadinessState met>Met</ReadinessState>
+              </li>
+            ))}
+            {summary.metRisks.map((row) => (
+              <li className={readinessRowClass} key={`risk-${row.riskNumber}`}>
+                <a aria-label={`${row.riskNumber}: ${row.met} met`} className={`${readinessLinkClass} flex flex-wrap items-center gap-x-3 gap-y-1`} href={row.href}>
+                  <span className="min-w-0 break-words">{row.riskNumber}</span>
+                  <ReadinessState met>{row.met} met</ReadinessState>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </>
+  );
+}
+
 function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: AnalystAssessmentDetail; mutable: boolean; onUpdated: () => void }) {
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<AssessmentUpdateInput>({ defaultValues: {
@@ -396,11 +468,11 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
   }
 
   if (!mutable) {
-    return <DetailSection description="Assessment context and analyst conclusion." headingId="assessment-details" title="Assessment details"><dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Summary" value={assessment.summary} /><DetailValue label="Overall rating" value={assessment.overallRating} /><DetailValue label="Overall control effectiveness" value={assessment.overallControlEffectiveness} /><DetailValue label="Overall risk rationale" value={assessment.overallRiskRationale} /><DetailValue label="Recommendations" value={assessment.recommendationsSummary} /><DetailValue label="Next review date" value={assessment.nextReviewDate} /></dl></DetailSection>;
+    return <DetailSection description="Assessment context and analyst conclusion." headingFocusable headingId="assessment-details" title="Assessment details"><dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Summary" value={assessment.summary} /><DetailValue label="Overall rating" value={assessment.overallRating} /><DetailValue label="Overall control effectiveness" value={assessment.overallControlEffectiveness} /><DetailValue label="Overall risk rationale" value={assessment.overallRiskRationale} /><DetailValue label="Recommendations" value={assessment.recommendationsSummary} /><DetailValue label="Next review date" value={assessment.nextReviewDate} /></dl></DetailSection>;
   }
 
   return (
-    <DetailSection description="Edit the analyst-owned assessment conclusion. Workflow and release facts are server-owned." headingId="assessment-details" title="Assessment details">
+    <DetailSection description="Edit the analyst-owned assessment conclusion. Workflow and release facts are server-owned." headingFocusable headingId="assessment-details" title="Assessment details">
       <form className="grid gap-5" noValidate onSubmit={form.handleSubmit(submit)}>
         {formError ? <Alert variant="destructive"><AlertTitle>Assessment not saved</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
         <MetadataFieldErrorInput error={form.formState.errors.summary?.message} label="Summary"><Textarea aria-describedby={form.formState.errors.summary ? 'summary-error' : undefined} aria-invalid={Boolean(form.formState.errors.summary)} {...form.register('summary')} /></MetadataFieldErrorInput>
