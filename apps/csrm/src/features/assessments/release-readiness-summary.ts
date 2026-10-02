@@ -1,5 +1,5 @@
 import type { ReleaseReadinessRequirement } from './assessment-schema';
-import { releaseReadinessPresentation } from './assessment-domain';
+import { releaseReadinessHref } from './assessment-domain';
 
 /*
  * The release readiness summary (10-CONTEXT D-35, UI-SPEC §14.1). It regroups the requirements the server
@@ -39,7 +39,7 @@ export function summarizeReleaseReadiness(readiness: {
 
   for (const requirement of readiness.requirements) {
     if (requirement.state === 'met') met += 1;
-    const { href } = releaseReadinessPresentation(requirement);
+    const href = releaseReadinessHref(requirement);
     if (requirement.scope === 'assessment') {
       const item = { key: requirement.key, label: requirement.label, href };
       (requirement.state === 'met' ? metAssessment : outstandingAssessment).push(item);

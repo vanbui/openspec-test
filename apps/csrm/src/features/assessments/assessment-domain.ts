@@ -109,14 +109,14 @@ export function assessmentRequestHref(actor: 'analyst' | 'requestor', documentId
   return `${prefix}/${encodeURIComponent(documentId)}`;
 }
 
-export function releaseReadinessPresentation(requirement: ReleaseReadinessRequirement): { href: string; label: string } {
-  if (requirement.scope === 'risk') {
-    return { href: `#${requirement.destination}`, label: `Risk ${requirement.riskNumber} — ${requirement.label}` };
-  }
-  return {
-    href: requirement.destination ? `#${requirement.destination}` : (requirement.key === 'risks' ? '#identified-risks' : '#assessment-details'),
-    label: requirement.label,
-  };
+/**
+ * Where a release readiness requirement is met on the page: its Risk, its served destination, the Identified
+ * Risks or the assessment details. The readiness summary builds its own row labels (D-35), so this gives only
+ * the link (IN-202).
+ */
+export function releaseReadinessHref(requirement: ReleaseReadinessRequirement): string {
+  if (requirement.scope === 'risk') return `#${requirement.destination}`;
+  return requirement.destination ? `#${requirement.destination}` : (requirement.key === 'risks' ? '#identified-risks' : '#assessment-details');
 }
 
 export const assessmentRatingPresentation = {
