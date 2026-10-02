@@ -78,13 +78,14 @@ function RelationCombobox({ kind, label, value, options, disabled, onChange, sea
     <div className="grid gap-1.5 text-sm font-medium text-foreground">
       <label htmlFor={`${listboxId}-input`}>{label}</label>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverAnchor asChild><input id={`${listboxId}-input`} className={selectClassName} disabled={disabled} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-activedescendant={active >= 0 ? `${listboxId}-${active}` : undefined} placeholder={selected?.label ?? 'Search…'} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+        <PopoverAnchor asChild><input id={`${listboxId}-input`} className={selectClassName} disabled={disabled} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-haspopup="listbox" aria-controls={open && !loading ? listboxId : undefined} aria-activedescendant={active >= 0 ? `${listboxId}-${active}` : undefined} placeholder={selected?.label ?? 'Search…'} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
           if (event.key === 'ArrowDown' && results.length) { event.preventDefault(); setActive((index) => Math.min(index + 1, results.length - 1)); }
           if (event.key === 'ArrowUp' && results.length) { event.preventDefault(); setActive((index) => Math.max(index - 1, 0)); }
           if (event.key === 'Enter' && results[active >= 0 ? active : 0]) { event.preventDefault(); choose(results[active >= 0 ? active : 0]); }
           if (event.key === 'Escape') setOpen(false);
         }} /></PopoverAnchor>
-        <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-1" onOpenAutoFocus={(event) => event.preventDefault()}>
+        {/* A listbox popup (ARIA APG combobox): focus stays in the input, so the Popover only positions it and carries no dialog role. */}
+        <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-1" onOpenAutoFocus={(event) => event.preventDefault()} role={undefined}>
           {loading ? <p className="p-2 text-muted-foreground" role="status">Searching…</p> : null}
           {!loading && results.length === 0 ? <p className="p-2 text-muted-foreground" role="status">No matching options.</p> : null}
           {!loading ? <div id={listboxId} role="listbox" aria-label={`${label} results`}>{results.map((option, index) => <button id={`${listboxId}-${index}`} role="option" aria-selected={option.documentId === value} className="block w-full rounded-md px-2 py-2 text-left hover:bg-muted" key={option.documentId} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}>{option.label}</button>)}</div> : null}
@@ -168,6 +169,7 @@ function CoreFilterFields({ disabled, labelClassName, onChange, query }: Pick<Ri
 }
 
 export function RiskRegisterFilters({ activeCount, disabled, onChange, pickerOptions, query, searchRelations }: RiskRegisterFiltersProps) {
+  const moreFiltersTitleId = useId();
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const value = new FormData(event.currentTarget).get('q');
@@ -197,8 +199,9 @@ export function RiskRegisterFilters({ activeCount, disabled, onChange, pickerOpt
       <div className="flex items-center gap-2">
         <Popover>
           <PopoverTrigger asChild><Button className="hidden md:inline-flex" disabled={disabled} type="button" variant="outline"><SlidersHorizontal aria-hidden="true" />More filters</Button></PopoverTrigger>
-          <PopoverContent align="start" className="w-80">
-            <PopoverTitle className="mb-3">More filters</PopoverTitle>
+          {/* More filters takes focus into its fields, so it is a dialog, named by its title. */}
+          <PopoverContent align="start" aria-labelledby={moreFiltersTitleId} className="w-80">
+            <PopoverTitle className="mb-3" id={moreFiltersTitleId}>More filters</PopoverTitle>
             <MoreFilterFields disabled={disabled} onChange={onChange} pickerOptions={pickerOptions} query={query} searchRelations={searchRelations} />
           </PopoverContent>
         </Popover>

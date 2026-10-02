@@ -387,9 +387,12 @@ function ReleaseReadinessRequirements({ summary }: { summary: ReleaseReadinessSu
             const captionId = `${baseId}-missing-${index}`;
             return (
               <li className={readinessRowClass} key={`risk-${row.riskNumber}`}>
-                {/* The name reads `{risk number}: {n} outstanding`; what is missing is its description. */}
+                {/*
+                  * The name reads `{risk number}: {n} outstanding`; what is missing is its description. The space
+                  * between the two parts keeps the visible words the words of the name (Label in Name, WCAG 2.5.3).
+                  */}
                 <a aria-describedby={captionId} aria-label={`${row.riskNumber}: ${row.outstanding} outstanding`} className={`${readinessLinkClass} flex flex-wrap items-center gap-x-3 gap-y-1`} href={row.href}>
-                  <span className="min-w-0 break-words">{row.riskNumber}</span>
+                  <span className="min-w-0 break-words">{row.riskNumber}</span>{' '}
                   <ReadinessState met={false}>{row.outstanding} outstanding</ReadinessState>
                 </a>
                 <p className="break-words text-xs text-muted-foreground" id={captionId}>{missingCaption(row.missing)}</p>

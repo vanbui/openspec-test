@@ -758,7 +758,8 @@ async function scanWithBestPractice(page: Page): Promise<AxeResults> {
 async function expectOpenListAccessible(page: Page, combobox: Locator, search: string, label: string): Promise<string> {
   await combobox.scrollIntoViewIfNeeded();
   await combobox.fill(search);
-  const option = openPopups(page).getByRole('option').first();
+  // Within the listbox: More filters holds native selects, whose options are never visible.
+  const option = openPopups(page).getByRole('listbox').getByRole('option').first();
   await expect(option, `${label} lists options for "${search}"`).toBeVisible();
   const { violations } = await scanWithBestPractice(page);
   const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
@@ -770,7 +771,7 @@ async function expectOpenListAccessible(page: Page, combobox: Locator, search: s
   await expect(combobox, `${label}: the combobox controls the open listbox`).toHaveAttribute('aria-controls', (await popup.getByRole('listbox').getAttribute('id'))!);
   await expect(combobox, `${label}: focus stays in the input`).toBeFocused();
   await combobox.press('Escape');
-  await expect(openPopups(page).getByRole('option'), `${label}: Escape closes the list without choosing`).toHaveCount(0);
+  await expect(openPopups(page).getByRole('listbox'), `${label}: Escape closes the list without choosing`).toHaveCount(0);
   return `${label}: ${violations.length === 0 ? 'no violations' : summarise(violations)}`;
 }
 

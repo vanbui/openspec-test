@@ -93,10 +93,11 @@ export function RelationMultiSelect({
     requestAnimationFrame(() => inputRef.current?.focus());
   };
   const active = activeIndex >= 0 ? results[activeIndex] : undefined;
+  const listboxShown = !isLoading && !error && results.length > 0;
 
   return <div className="grid min-w-0 gap-2">
     <label className="grid gap-2"><span className="text-sm font-medium">{inputLabel}</span>
-      <Popover open={isOpen} onOpenChange={setIsOpen}><PopoverAnchor asChild><input ref={inputRef} aria-label={inputLabel} className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-ring" role="combobox" aria-autocomplete="list" aria-controls={listboxId} aria-expanded={isOpen} aria-activedescendant={active ? `${listboxId}-${active.documentId}` : undefined} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+      <Popover open={isOpen} onOpenChange={setIsOpen}><PopoverAnchor asChild><input ref={inputRef} aria-label={inputLabel} className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-ring" role="combobox" aria-autocomplete="list" aria-controls={listboxShown ? listboxId : undefined} aria-expanded={isOpen} aria-haspopup="listbox" aria-activedescendant={active ? `${listboxId}-${active.documentId}` : undefined} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
         if (event.key === 'ArrowDown' && results.length) { event.preventDefault(); setActiveIndex((index) => Math.min(index + 1, results.length - 1)); }
         if (event.key === 'ArrowUp' && results.length) { event.preventDefault(); setActiveIndex((index) => Math.max(index - 1, 0)); }
         // Enter always belongs to the combobox, never to the surrounding form.
@@ -104,11 +105,13 @@ export function RelationMultiSelect({
         // submits the whole request.
         if (event.key === 'Enter') { event.preventDefault(); const chosen = active ?? results[0]; if (chosen) choose(chosen); }
         if (event.key === 'Escape') { setQuery(''); setIsOpen(false); }
-      }} /></PopoverAnchor><PopoverContent className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] p-1" align="start" onOpenAutoFocus={(event) => event.preventDefault()}>
+      }} /></PopoverAnchor>
+      {/* A listbox popup (ARIA APG combobox): focus stays in the input, so the Popover only positions it and carries no dialog role. */}
+      <PopoverContent className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] p-1" align="start" onOpenAutoFocus={(event) => event.preventDefault()} role={undefined}>
         {isLoading ? <p className="px-2 py-3 text-sm text-muted-foreground" role="status">Searching {label.toLowerCase()}…</p> : null}
         {error ? <div className="grid gap-2 px-2 py-3 text-sm" role="alert"><span>{error}</span><button className="w-fit text-primary underline-offset-4 hover:underline" type="button" onClick={() => { void search(query.trim()); }}>Retry search</button></div> : null}
         {!isLoading && !error && results.length === 0 ? <p className="px-2 py-3 text-sm text-muted-foreground" role="status">No matching records.</p> : null}
-        {!isLoading && !error && results.length ? <div id={listboxId} role="listbox" aria-label={`${label} results`}>{results.map((item, index) => <button className={`flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm ${index === activeIndex ? 'bg-muted text-foreground' : 'hover:bg-muted hover:text-foreground'}`} id={`${listboxId}-${item.documentId}`} key={item.documentId} type="button" role="option" aria-selected={index === activeIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}>{item.name}</button>)}</div> : null}
+        {listboxShown ? <div id={listboxId} role="listbox" aria-label={`${label} results`}>{results.map((item, index) => <button className={`flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm ${index === activeIndex ? 'bg-muted text-foreground' : 'hover:bg-muted hover:text-foreground'}`} id={`${listboxId}-${item.documentId}`} key={item.documentId} type="button" role="option" aria-selected={index === activeIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}>{item.name}</button>)}</div> : null}
       </PopoverContent></Popover>
     </label>
     <p className="text-sm text-muted-foreground" role="status">{value.length} selected</p>
@@ -178,6 +181,7 @@ export function OwnerCombobox({
   };
 
   const activeOwner = activeIndex >= 0 ? results[activeIndex] : undefined;
+  const listboxShown = !isLoading && !error && results.length > 0;
 
   return (
     <div className="grid min-w-0 gap-2">
@@ -189,8 +193,9 @@ export function OwnerCombobox({
               className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               role="combobox"
               aria-autocomplete="list"
-              aria-controls={listboxId}
+              aria-controls={listboxShown ? listboxId : undefined}
               aria-expanded={isOpen}
+              aria-haspopup="listbox"
               aria-activedescendant={activeOwner ? `${listboxId}-${activeOwner.documentId}` : undefined}
               aria-describedby={invalid ? errorId : undefined}
               aria-invalid={invalid}
@@ -225,11 +230,16 @@ export function OwnerCombobox({
               }}
             />
           </PopoverAnchor>
-          <PopoverContent className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] p-1" align="start" onOpenAutoFocus={(event) => event.preventDefault()}>
+          {/*
+            * A listbox popup (ARIA APG combobox): focus stays in the input and options are reached through
+            * aria-activedescendant, so the Popover only positions it and carries no dialog role (an unnamed dialog
+            * fails axe aria-dialog-name). The status lines and Retry owner search announce through their own roles.
+            */}
+          <PopoverContent className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] p-1" align="start" onOpenAutoFocus={(event) => event.preventDefault()} role={undefined}>
             {isLoading ? <p className="px-2 py-3 text-sm text-muted-foreground" role="status">Searching owners…</p> : null}
             {error ? <div className="grid gap-2 px-2 py-3 text-sm" role="alert"><span>{error}</span><button className="w-fit text-primary underline-offset-4 hover:underline" type="button" onClick={() => { void search(query.trim()); }}>Retry owner search</button></div> : null}
             {!isLoading && !error && results.length === 0 ? <p className="px-2 py-3 text-sm text-muted-foreground" role="status">No matching active owners.</p> : null}
-            {!isLoading && !error && results.length > 0 ? (
+            {listboxShown ? (
               <div id={listboxId} role="listbox" aria-label={`${label} results`}>
                 {results.map((owner, index) => (
                   <button

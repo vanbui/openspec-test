@@ -194,7 +194,11 @@ export function RelationPicker({
         type="button"
       >
         <span className="max-w-full break-words">{item.name}</span>
-        {item.detail ? <span className="max-w-full break-words text-xs text-muted-foreground" id={`${id}-detail`}>{item.detail}</span> : null}
+        {/*
+          * The option is named by its title line; the framework line is its description (aria-describedby), so it
+          * stays out of the label text a speech user matches against the name (Label in Name, WCAG 2.5.3).
+          */}
+        {item.detail ? <span aria-hidden="true" className="max-w-full break-words text-xs text-muted-foreground" id={`${id}-detail`}>{item.detail}</span> : null}
       </button>
     );
   };
@@ -212,6 +216,7 @@ export function RelationPicker({
             aria-controls={listboxShown ? listboxId : undefined}
             aria-describedby={describedBy}
             aria-expanded={isOpen}
+            aria-haspopup="listbox"
             aria-invalid={invalid}
             autoComplete="off"
             id={inputId}
@@ -249,6 +254,12 @@ export function RelationPicker({
             value={query}
           />
         </PopoverAnchor>
+        {/*
+          * The popup is a listbox (ARIA APG combobox): focus stays in the input and options are reached through
+          * aria-activedescendant, so the Popover only positions it. Its default dialog role would be an unnamed
+          * dialog (axe aria-dialog-name), so the wrapper carries no role; the status lines and Retry search
+          * announce through their own live roles.
+          */}
         <PopoverContent
           align="start"
           className="max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] overflow-y-auto p-1"
@@ -258,6 +269,7 @@ export function RelationPicker({
             if (event.target instanceof Node && localInput.current?.contains(event.target)) event.preventDefault();
           }}
           onOpenAutoFocus={(event) => event.preventDefault()}
+          role={undefined}
         >
           {listboxShown ? (
             <div aria-label={`${label} options`} id={listboxId} role="listbox">
