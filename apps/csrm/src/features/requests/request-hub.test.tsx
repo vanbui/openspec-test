@@ -1,6 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { TimeZoneProvider } from '@/components/csrm/local-time';
+
 import type { CsrmAssessmentRequest, RequestLifecycle } from './request-domain';
 import { requestLifecycleStepKeys } from './request-domain';
 import { RequestHub } from './request-hub';
@@ -44,15 +46,33 @@ describe('RequestHub', () => {
     expect(screen.getByRole('link', { name: 'Open identified risks' })).toHaveAttribute('href', '/app/assessments/a-1');
     expect(screen.getByRole('link', { name: 'Open controls' })).toHaveAttribute('href', '/app/assessments/a-1');
     // The tally names what it counts and labels every rating, zeros included.
-    expect(screen.getByText('Contextual Risks by residual rating.')).toBeInTheDocument();
+    expect(screen.getByText('Risks by residual rating.')).toBeInTheDocument();
     const counts = { Low: 1, Moderate: 2, High: 3, Critical: 4 } as const;
     for (const rating of ['Low', 'Moderate', 'High', 'Critical'] as const) {
       expect(screen.getByText(new RegExp(`^${rating}:`))).toBeInTheDocument();
-      expect(screen.getByLabelText(`${rating} residual contextual risks: ${counts[rating]}`)).toBeInTheDocument();
+      expect(screen.getByLabelText(`${rating} residual Risks: ${counts[rating]}`)).toBeInTheDocument();
     }
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('describes the summary in plain words and joins the number and title with a middle dot (D-38, D-43)', () => {
+    render(<RequestHub hrefs={hrefs} lifecycle={lifecycle} request={request()} />);
+    const summary = screen.getByRole('region', { name: 'Request summary' });
+    expect(summary).toHaveAccessibleDescription('Where this request stands and what happens next.');
+    expect(screen.getByText('Request').nextElementSibling?.textContent).toBe('RAR-001 · Portal assessment');
+  });
+
+  it('shows the submitted date as the viewer’s local date with no zone label, and the due date as chosen', () => {
+    render(
+      <TimeZoneProvider zone="Australia/Brisbane">
+        <RequestHub hrefs={hrefs} lifecycle={lifecycle} request={request({ submittedDate: '2026-09-27T20:00:00.000Z' })} />
+      </TimeZoneProvider>,
+    );
+    // 20:00 UTC on 27 September is the morning of 28 September in Brisbane.
+    expect(screen.getByText('Submitted date').nextElementSibling?.textContent).toBe('28 Sept 2026');
+    expect(screen.getByText('Due date').nextElementSibling?.textContent).toBe('1 Oct 2026');
   });
 
   it('labels the assessment tile status from the shared mapping, so a released assessment reads Released', () => {

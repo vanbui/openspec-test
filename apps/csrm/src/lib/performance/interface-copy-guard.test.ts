@@ -46,6 +46,7 @@ export const internalTerms = [
 
 /** Paths relative to apps/csrm, sorted and unique. */
 export const guardedFiles = [
+  'src/components/csrm/local-time.tsx',
   'src/components/csrm/revert-audit-summary.tsx',
   'src/components/states/states.tsx',
   'src/features/administration/administration-actions.ts',
@@ -56,8 +57,13 @@ export const guardedFiles = [
   'src/features/questionnaires/questionnaire-governance.tsx',
   'src/features/questionnaires/questionnaire-revision-timeline.tsx',
   'src/features/requests/request-actions.ts',
+  'src/features/requests/request-context-details.tsx',
+  'src/features/requests/request-domain.ts',
+  'src/features/requests/request-form.tsx',
+  'src/features/requests/request-hub.tsx',
   'src/features/requests/request-workflow-actions.tsx',
   'src/features/risks/risk-detail-editor.tsx',
+  'src/lib/time/format-instant.ts',
 ] as const;
 
 type VisibleString = { line: number; text: string };
