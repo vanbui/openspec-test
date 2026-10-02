@@ -1441,3 +1441,75 @@ No new dependency: the picker composes the installed `Popover`, the leave warnin
 **Checked:** 2026-09-27, gsd-ui-checker role, applied inline in two passes. Status: APPROVED. The first pass found no BLOCK. It raised FLAGs under Dimensions 1, 2 and 4, plus consistency defects: restated values, the released view's heading levels, a create and edit header, and list grammar. All were fixed and the second pass was clean. The UI-consideration probe ran afterwards (UI Considerations above).
 
 **Approval:** approved 2026-09-27. The orchestrator accepted X-1 to X-5 and settled the readings flagged in Notes carried on 2026-09-27 (`10-CONTEXT.md` D-41 to D-45): no theme for untitled controls (D-42), and the middle dot beside D-38's spaced hyphen (D-43).
+
+---
+
+## Addendum (2026-10-03): copy settled during execution
+
+The plans, the code review fixes (`10-REVIEW-DISPOSITION.md`) and the UI review fixes (`10-UI-REVIEW.md`, Disposition) added user-visible strings that the sections above do not list. They are recorded here verbatim so that this contract matches the code. Each string was found in `apps/csrm/src` (outside tests) on 2026-10-03. The other walkthrough fixes in `10-23-SUMMARY.md` (fixes 1 and 4 to 8) applied strings and rules this contract already holds (`No changes to save.`, the X-4 separators, the §13.1 labels, the §17.1 templates), so they add nothing here. The values in this addendum follow the Voice rules above. A string marked "existing sentence" was already in the product at `5ea2b77`; only its use on the named surface is new.
+
+### A.1 Record picker (§13.1)
+
+| String | Surface | Introduced by |
+|---|---|---|
+| `The selection service is unavailable. Please try again later.` | The picker's search error when a search is rejected or throws, with `Retry search` (existing sentence) | WR-301 (`5550fa5`) |
+| `Press Enter to retry.` | The second line of the picker's search error alert, between the error and `Retry search`. Enter in the input retries while no option is active, because focus never enters the popup | WR-302 (`4d964a4`) |
+
+### A.2 Leave warning (§6.3)
+
+| String | Surface | Introduced by |
+|---|---|---|
+| `Leaving questionnaire…` | Pending label of `Leave questionnaire` in the `Leave this questionnaire?` dialog | Plan 10-08 (`fae371d`) |
+
+### A.3 Questionnaire generation card (§3, §12.1, §12.4)
+
+| String | Surface | Introduced by |
+|---|---|---|
+| `A questionnaire already exists for this request.` | Hint in place of an action when the request holds a questionnaire that is not served as in analyst review or released (submitted, state-less or unopenable). No replacement is offered | IN-201 (`6e56c85`) |
+| `Questionnaire generation couldn’t start` | Alert title for a refused or failed start or retry. Its description is the §10.2 I sentence or an A.5 sentence. `Status unavailable` stays for a failed status check only | Plan 10-14 (`f865b2d`), resolving the 10-12 deferred item |
+| `This questionnaire’s change history can’t record more changes. Contact your administrator.` | Failed-job copy for `failureCode` `HISTORY_UNAVAILABLE`, a new §12.4 row. This is §10.2 G's sentence | WR-102 (`ee93a02`) |
+
+### A.4 Assessment draft card (§12.2)
+
+| String | Surface | Introduced by |
+|---|---|---|
+| `Draft generation couldn’t start` | Alert title for a refused or failed draft start or retry. `Status unavailable` stays for a failed status check only | Plan 10-14 (`f865b2d`) |
+| `Draft generation can begin only after the linked questionnaire is submitted.` | Draft refusal, reason `QUESTIONNAIRE_NOT_SUBMITTED` (the §12.2 precondition sentence, reused) | WR-205 (`aac23e7`) |
+| `An assessment already exists for this request, so a draft can’t be generated.` | Draft refusal, reason `ASSESSMENT_STARTED` (§10.2 E and F wording) | WR-205 (`aac23e7`) |
+| `An assessment draft can’t be generated for this questionnaire in its current state.` | Draft refusal fallback (none or unknown reason). Strapi serves no reason on a draft 409 today, so this is the sentence an analyst reads. It replaces `This assessment changed. Reload and try again.` | WR-205 (`aac23e7`) |
+
+These three form a draft refusal family (`assessmentDraft` in `refusal-copy.ts`) beside §10.2 A to I.
+
+### A.5 Generation failures other than a refusal (§12)
+
+These are shown in the card's start alert (A.3, A.4) or its `Status unavailable` alert. Each one names the record the operation acts on, never an assessment that may not exist (`generation-failure-copy.ts`, WR-205, `aac23e7`).
+
+| Operation | 403 | 404, the record | 404, the job | Other failure, or the Server Action throws |
+|---|---|---|---|---|
+| Questionnaire generation (start, retry, job read) | `You do not have permission to generate a questionnaire for this request.` | `This request is no longer available.` (existing sentence) | `This questionnaire generation is no longer available.` | `The questionnaire generation service is unavailable. Please try again later.` |
+| Assessment draft (start, retry, job read) | `You do not have permission to generate an assessment draft for this questionnaire.` | `This questionnaire is no longer available.` (existing sentence) | `This draft generation is no longer available.` | `The assessment service is unavailable. Please try again later.` (existing sentence) |
+| The request's generation jobs read | `You do not have permission to check generation for this request.` | `This request is no longer available.` (existing sentence) | `This request is no longer available.` (existing sentence) | `The request service is unavailable. Please try again later.` (existing sentence) |
+
+### A.6 Risk detail (§11.2, §17.1)
+
+| String | Surface | Introduced by |
+|---|---|---|
+| `View a Risk and the controls that mitigate it.` | `Risk details` page header description in the loading, not-available, error and permission states (it was `View a contextual Risk and its mitigation-control information.`) | Plan 10-21 (`1c037be`). `10-CONTEXT.md` D-45 accepted it |
+
+### A.7 Risk Type form, applicable controls field (§16.2, §17.1)
+
+These strings were written in Title Case and are now in sentence case, because "control" is not a capitalised record term (Voice).
+
+| String | Surface | Introduced by |
+|---|---|---|
+| `Applicable controls` | Section heading, field label and the combobox's accessible name (they were `Applicable Controls`) | UI review fix 2 (`76a8e7b`) |
+| `Search controls` | The field's search button (it was `Search Controls`) | UI review fix 2 (`76a8e7b`) |
+| `Selected applicable controls` | The selected-controls group's legend | UI review fix 2 (`76a8e7b`) |
+| `No applicable controls selected.` | The group's empty line | UI review fix 2 (`76a8e7b`) |
+| `{n} control options available.` | The visually hidden options count (`role="status"`) | UI review fix 2 (`76a8e7b`) |
+| `Select 1,000 applicable controls or fewer.` | The field's upper-bound error | UI review fix 2 (`76a8e7b`) |
+| `Applicable controls must be distinct.` | The field's duplicate error | UI review fix 2 (`76a8e7b`) |
+
+The Administration list's `Search {collection}` box (`Search Controls`) keeps the collection name, as walkthrough fix 5 decided for titles, buttons and links. It is not part of this field.
+
+**Count:** 28 strings (A.1 2, A.2 1, A.3 3, A.4 4, A.5 10, A.6 1, A.7 7). A.5 counts `This request is no longer available.` once, although it fills three cells.
