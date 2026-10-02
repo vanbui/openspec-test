@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 2/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 3/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -83,7 +83,7 @@ Plans:
 - [x] 10-02-PLAN.md — Gate the three analyst detail routes on `assessment:review` before any read, exactly as the analyst dashboard does (07 D-16), and rewrite every Phase 10 permission description in plain terms (D-24). C
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 10-03-PLAN.md — Make arrow keys select deterministically in the shared shadcn radio wrapper and in the segmented control (D-14), removing the Radix timing race behind UAT-064.
+- [x] 10-03-PLAN.md — Make arrow keys select deterministically in the shared shadcn radio wrapper and in the segmented control (D-14), removing the Radix timing race behind UAT-064.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 10-04-PLAN.md — Deliver REQ-07 on both request pages. One shared read-only request context shows every submitted field in the form's groups (D-20); the Requestor's actions derive from server state after every transit
