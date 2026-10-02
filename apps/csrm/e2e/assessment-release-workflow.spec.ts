@@ -202,13 +202,19 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await page.getByRole('button', { name: 'Add mitigation control' }).first().click();
   const firstControlRegion = page.getByRole('region', { name: /Mitigation controls for/ }).first();
   const controlForm = firstControlRegion.locator('form');
-  const reusableControl = controlForm.getByRole('combobox', { name: 'Reusable control' });
-  const reusableControlOption = reusableControl.locator('option').nth(1);
-  const reusableControlValue = await reusableControlOption.getAttribute('value');
-  const reusableControlLabel = await reusableControlOption.textContent();
-  expect(reusableControlValue, 'ASSESS-03 reusable Control has a selectable identifier').toBeTruthy();
-  expect(reusableControlLabel, 'ASSESS-03 reusable Control has an authoritative label').toBeTruthy();
-  await reusableControl.selectOption(reusableControlValue!);
+  // E11 (D-28, D-31): the Control field is a searchable picker. `exact` because Control owner and Control
+  // status share its prefix. The Risk Type's applicable controls come first; typing searches the library.
+  const controlPicker = controlForm.getByRole('combobox', { name: 'Control', exact: true });
+  await expect(controlPicker, 'ASSESS-06 the new form opens with focus in its Control picker').toBeFocused();
+  await controlPicker.click();
+  await expect(page.getByRole('group', { name: /^Applicable to / }), 'ASSESS06_APPLICABLE_CONTROLS_FIRST the Risk Type’s controls are offered first').toBeVisible();
+  await controlPicker.fill('APP-11');
+  const controlOption = page.getByRole('option', { name: /^APP-11 · / });
+  await expect(controlOption, 'ASSESS06_CONTROL_PICKED_BY_TYPING typing finds the control by its number').toBeVisible();
+  const controlLabel = await controlOption.getAttribute('aria-label');
+  expect(controlLabel, 'ASSESS06_CONTROL_PICKED_BY_TYPING the control reads by its number and title').toMatch(/^APP-11 · \S/);
+  await controlOption.click();
+  await expect(controlForm.getByText(`Selected control: ${controlLabel}`, { exact: true }), 'ASSESS06_CONTROL_PICKED_BY_TYPING the choice shows below the field').toBeVisible();
   await controlForm.getByRole('combobox', { name: 'Control owner' }).selectOption({ label: 'Jane Doe' });
   await controlForm.getByRole('combobox', { name: 'Control status' }).selectOption('Planned');
   await controlForm.getByRole('combobox', { name: 'Effectiveness rating' }).selectOption('Partially Effective');
@@ -222,7 +228,7 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   expect((await controlSaveResponse).ok(), 'ASSESS-03 ControlImplementation persisted').toBe(true);
   await page.reload();
   const persistedControl = firstControlRegion.locator('form').filter({ has: page.getByRole('button', { name: 'Save mitigation control' }) });
-  await expect(persistedControl.getByRole('combobox', { name: 'Reusable control' }), 'ASSESS-03 reusable Control becomes a contextual ControlImplementation').toHaveValue(reusableControlValue!);
+  await expect(persistedControl.getByText(`Selected control: ${controlLabel}`, { exact: true }), 'ASSESS06_CONTROL_PICKED_BY_TYPING the chosen control is saved and read back by its label').toBeVisible();
   await expect(persistedControl.getByRole('textbox', { name: 'Evidence' })).toHaveValue('Control selected from the reusable catalogue and scheduled for verification.');
   await expect(page.getByText('All release requirements are met'), 'ASSESS-03 persisted edits satisfy release readiness').toBeVisible();
   await expect(readinessRequirements, 'ASSESS-03 retains met requirements').toBeVisible();
@@ -335,13 +341,13 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   }
   await expect(page.getByRole('article', { name: /Released risk assessment ASM-/ })).toBeVisible();
   await expect(page.getByText(deterministicRiskStatement, { exact: true }), 'ASSESS-05 Jane sees the released risk').toBeVisible();
-  // E12 (D-34, D-36): Jane reads the control by its number and title, never by its internal id. The number is the
-  // option text the analyst chose, before its first separator.
+  // E12 (D-34, D-36): Jane reads the control the analyst picked by its number and title, never by its internal id.
   const releasedMitigation = page.getByRole('region', { name: 'Mitigation control implementations' }).first();
-  const reusableControlNumber = reusableControlLabel!.split(' — ')[0]!.trim();
-  const controlNumberPattern = reusableControlNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  await expect(releasedMitigation.getByText(new RegExp(`^${controlNumberPattern} · \\S`)), 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE Jane sees the persisted control by its label').toBeVisible();
-  await expect(releasedMitigation, 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE the control id never shows').not.toContainText(reusableControlValue!);
+  const [pickedControlNumber, pickedControlTitle] = controlLabel!.split(' · ');
+  await expect(releasedMitigation, 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE the control number shows').toContainText(pickedControlNumber!);
+  await expect(releasedMitigation, 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE the control title shows').toContainText(pickedControlTitle!);
+  await expect(releasedMitigation.getByText(controlLabel!, { exact: true }), 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE Jane sees the persisted control by its label').toBeVisible();
+  expect(await releasedMitigation.innerText(), 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE no document id shows').not.toMatch(/\b[a-z0-9]{24}\b/);
   // ASSESS-07 (D-34): Jane reads each Risk's treatment, owners and target date as the analyst recorded them.
   const releasedRisks = page.getByRole('region', { name: 'Identified risks' });
   await expect(releasedRisks.getByText('Implement and verify the selected reusable mitigation control.', { exact: true }), 'ASSESS07_TREATMENT_AND_OWNERS_VISIBLE the treatment plan').toBeVisible();
