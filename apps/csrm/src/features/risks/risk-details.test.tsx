@@ -685,6 +685,29 @@ describe('the Risk detail route’s pickers (D-28, D-30)', () => {
     expect((await routeOptions())?.requestAssets).toEqual([]);
   });
 
+  /* WR-404: the picker reads run only after the gate and the Risk read; a refused viewer reaches none of them. */
+  it('refuses a viewer without risk:manage before any read', async () => {
+    pageMocks.granted.mockResolvedValue(new Set(['assessment-request:read', 'assessment-request:create']));
+    const element = await RiskDetailsContent(routeProps()) as ReactElement<React.ComponentProps<typeof RiskDetails>>;
+    expect(element.props.state).toBe('permission');
+    for (const read of [pageMocks.getRiskDetail, pageMocks.getAnalystAssessment, pageMocks.getRequest, pageMocks.listRiskTypes]) {
+      expect(read).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([
+    [403, 'permission'],
+    [404, 'not-available'],
+  ] as const)('reads no assessment or request when Strapi answers the Risk read with %s', async (status, state) => {
+    pageMocks.getRiskDetail.mockResolvedValue({ data: null, error: { status } });
+    const element = await RiskDetailsContent(routeProps()) as ReactElement<React.ComponentProps<typeof RiskDetails>>;
+    expect(element.props.state).toBe(state);
+    expect(pageMocks.getRiskDetail).toHaveBeenCalledWith('risk-alpha');
+    for (const read of [pageMocks.getAnalystAssessment, pageMocks.getRequest, pageMocks.listRiskTypes]) {
+      expect(read).not.toHaveBeenCalled();
+    }
+  });
+
   it('reads no assessment or request for a released Risk', async () => {
     pageMocks.getRiskDetail.mockResolvedValue({ data: { ...detail, parentLock: 'released' }, error: null });
     await RiskDetailsContent(routeProps());
