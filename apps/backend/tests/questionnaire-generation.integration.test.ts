@@ -264,9 +264,10 @@ test("mounted generation refuses to replace a released questionnaire before queu
 });
 
 /*
- * D-09, the race: a release that lands while a replacement job waits for its provider makes the job fail
- * with QUESTIONNAIRE_RELEASED under the request row lock, and the released questionnaire keeps its
- * questions, generation facts, release facts and log.
+ * D-09, before the transaction: a release that commits while a replacement job waits for its provider (before
+ * the job's transaction opens) makes the job fail with QUESTIONNAIRE_RELEASED when it reads the questionnaire
+ * under its locks, and the released questionnaire keeps its questions, generation facts, release facts and log.
+ * A release reaching the window inside the transaction is the CR-101 test below.
  */
 test("mounted replacement job fails when the questionnaire is released while it runs", async () => {
   const harness = await harnessPromise;
@@ -289,6 +290,144 @@ test("mounted replacement job fails when the questionnaire is released while it 
   assert.equal(job.failureCode, "QUESTIONNAIRE_RELEASED", "RACE_JOB_FAILURE_CODE");
   assert.equal(job.failureMessage, "Released questionnaires cannot be replaced.", "RACE_JOB_FAILURE_MESSAGE");
   assert.deepEqual(await state(), released, "RACE_JOB_CHANGED_THE_RELEASED_QUESTIONNAIRE");
+});
+
+/*
+ * CR-101: a replacement and every governance mutation of the same questionnaire are serialised. Each takes the
+ * request row lock and then the questionnaire row lock before it reads, so a second mutation that reaches the
+ * window between the first one's reads and its writes waits for the first to commit, then reads what it wrote.
+ * Nothing is lost from the append-only log, and a release never publishes questions it did not see (D-09).
+ *
+ * SQLite gives Strapi one connection, so the harness emulates PostgreSQL's row locks to put the second mutation
+ * into that window (see interleaveInTransactionWindow). The tests prove the lock protocol; PostgreSQL's own
+ * blocking is not exercised here (R-08-37).
+ */
+const QUESTION_UID = "api::csrm-question.csrm-question";
+const REQUEST_UID = "api::csrm-assessment-request.csrm-assessment-request";
+const QUESTIONNAIRE_UID = "api::csrm-questionnaire.csrm-questionnaire";
+const windowQuestion = {
+  questionText: "Which data classification applies to this service?",
+  answerType: "Text",
+  required: false,
+  section: { key: "cr-101-window", title: "Window checks", order: 99 },
+  order: 1,
+};
+
+/** Runs again, after the operation committed, an intrusion that waited on its row lock, as PostgreSQL would. */
+async function runWaitingIntrusion(outcome: { outcome: string }, diagnostic: string, waited: () => Promise<Response | Record<string, unknown>>): Promise<void> {
+  if (outcome.outcome === "blocked") {
+    const result = await waited();
+    if (result instanceof Response) assert.equal(result.status, 200, `${diagnostic}_WAITING_MUTATION_FAILED`);
+    else assert.equal(result.status, "completed", `${diagnostic}_WAITING_REPLACEMENT_FAILED_${String(result.failureCode)}`);
+    return;
+  }
+  assert.equal(outcome.outcome, "committed", `${diagnostic}_INTRUSION_${outcome.outcome.toUpperCase()}`);
+}
+
+test("mounted CR-101 a release reaching a replacement's transaction window waits for it and loses no governance event", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("WINDOW-RELEASE");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "WINDOW_RELEASE_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+  const replacedQuestions = questionIds(await harness.getQuestionnaire(questionnaireId));
+
+  const { result: job, intrusion } = await harness.interleaveInTransactionWindow({
+    before: { uid: QUESTION_UID, action: "delete" },
+    operation: () => generate(requestId, true),
+    intrusion: (workflows) => workflows.release(questionnaireId),
+  });
+  assert.equal(job.status, "completed", `WINDOW_RELEASE_REPLACEMENT_FAILED_${String(job.failureCode)}`);
+  await runWaitingIntrusion(intrusion, "WINDOW_RELEASE", () => request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/release`, harness.identities.analyst, json("POST")));
+
+  const after = await harness.getQuestionnaire(questionnaireId);
+  assert.deepEqual(storedLog(after).map((event) => event.kind), ["regenerated", "released"], "WINDOW_RELEASE_LOST_A_GOVERNANCE_EVENT");
+  assert.ok(after?.releasedAt, "WINDOW_RELEASE_NOT_RELEASED");
+  // D-09: the released questions are the ones the release saw, the replacement's, never a mix.
+  assert.deepEqual(questionIds(after).filter((id) => replacedQuestions.includes(id)), [], "WINDOW_RELEASE_KEPT_A_REPLACED_QUESTION");
+});
+
+test("mounted CR-101 a question added in a replacement's transaction window waits for it and keeps its event", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("WINDOW-ADD");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "WINDOW_ADD_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+  const generatedCount = questionIds(await harness.getQuestionnaire(questionnaireId)).length;
+
+  const { result: job, intrusion } = await harness.interleaveInTransactionWindow({
+    before: { uid: QUESTION_UID, action: "delete" },
+    operation: () => generate(requestId, true),
+    intrusion: (workflows) => workflows.addQuestion(questionnaireId, windowQuestion),
+  });
+  assert.equal(job.status, "completed", `WINDOW_ADD_REPLACEMENT_FAILED_${String(job.failureCode)}`);
+  await runWaitingIntrusion(intrusion, "WINDOW_ADD", () => request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/questions`, harness.identities.analyst, json("POST", windowQuestion)));
+
+  const after = await harness.getQuestionnaire(questionnaireId);
+  assert.deepEqual(storedLog(after).map((event) => event.kind), ["regenerated", "question-added"], "WINDOW_ADD_LOST_A_GOVERNANCE_EVENT");
+  assert.equal(questionIds(after).length, generatedCount + 1, "WINDOW_ADD_QUESTION_COUNT");
+});
+
+test("mounted CR-101 a replacement reaching a question add's transaction window waits for it and keeps both events", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("WINDOW-REVERSE");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "WINDOW_REVERSE_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+
+  const { result: added, intrusion } = await harness.interleaveInTransactionWindow({
+    before: { uid: QUESTION_UID, action: "create" },
+    operation: () => request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/questions`, harness.identities.analyst, json("POST", windowQuestion)),
+    intrusion: (workflows) => workflows.replaceQuestionnaire(requestId),
+  });
+  assert.equal(added.status, 200, "WINDOW_REVERSE_ADD_FAILED");
+  await runWaitingIntrusion(intrusion, "WINDOW_REVERSE", () => generate(requestId, true));
+
+  const after = await harness.getQuestionnaire(questionnaireId);
+  const log = storedLog(after);
+  assert.deepEqual(log.map((event) => event.kind), ["question-added", "regenerated"], "WINDOW_REVERSE_LOST_A_GOVERNANCE_EVENT");
+  assert.equal(log[1]?.explanation, `A newly generated questionnaire replaced ${questionIds(after).length + 1} questions. 1 analyst change was discarded.`, "WINDOW_REVERSE_DID_NOT_SEE_THE_ADD");
+});
+
+/*
+ * CR-101: one lock order everywhere, so no two of these mutations can deadlock: each transaction locks the
+ * request row and then the questionnaire row, before anything else. That covers the replacement, release,
+ * return to review, question add, edit and delete, and the Requestor's answer save.
+ */
+test("mounted CR-101 every questionnaire mutation locks the request row before the questionnaire row", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("LOCK-ORDER");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "LOCK_ORDER_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+  const questionnairePath = `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`;
+  const analyst = harness.identities.analyst;
+  const expectOk = async (response: Promise<Response>, diagnostic: string) => assert.equal((await response).status, 200, diagnostic);
+
+  const { locks } = await harness.recordRowLocks(async () => {
+    const replaced = await generate(requestId, true);
+    assert.equal(replaced.status, "completed", `LOCK_ORDER_REPLACEMENT_FAILED_${String(replaced.failureCode)}`);
+    const [edited, deleted] = questionIds(await harness.getQuestionnaire(questionnaireId));
+    await expectOk(request(`${questionnairePath}/questions/${encodeURIComponent(String(edited))}`, analyst, json("PATCH", { questionText: "Which business service does this cover?" })), "LOCK_ORDER_EDIT_FAILED");
+    await expectOk(request(`${questionnairePath}/questions`, analyst, json("POST", windowQuestion)), "LOCK_ORDER_ADD_FAILED");
+    await expectOk(request(`${questionnairePath}/questions/${encodeURIComponent(String(deleted))}`, analyst, json("DELETE")), "LOCK_ORDER_DELETE_FAILED");
+    await expectOk(request(`${questionnairePath}/release`, analyst, json("POST")), "LOCK_ORDER_RELEASE_FAILED");
+    const answerKey = String(((await harness.getQuestionnaire(questionnaireId))?.questions as Array<Record<string, unknown>>)
+      .map((question) => question.options as Record<string, unknown>)
+      .find((options) => options.questionKey === "which-data-classification-applies-to-this-service")?.questionKey);
+    await expectOk(request(`${questionnairePath}/answers`, harness.identities.owner, json("PATCH", { answers: [{ questionKey: answerKey, value: "Official" }] })), "LOCK_ORDER_ANSWER_SAVE_FAILED");
+    await expectOk(request(`${questionnairePath}/return_to_review`, analyst, json("POST", { reason: "Check the lock order on the way back." })), "LOCK_ORDER_RETURN_FAILED");
+  });
+
+  const byTransaction = new Map<number, string[]>();
+  for (const lock of locks) {
+    assert.ok(lock.documentId === requestId || lock.documentId === questionnaireId, `LOCK_ORDER_UNEXPECTED_ROW_${lock.uid}`);
+    byTransaction.set(lock.transaction, [...(byTransaction.get(lock.transaction) ?? []), lock.uid]);
+  }
+  assert.equal(byTransaction.size, 7, `LOCK_ORDER_TRANSACTION_COUNT_${byTransaction.size}`);
+  for (const [transaction, uids] of byTransaction) {
+    assert.deepEqual(uids, [REQUEST_UID, QUESTIONNAIRE_UID], `LOCK_ORDER_TRANSACTION_${transaction}_LOCKED_${uids.join("_THEN_")}`);
+  }
 });
 
 /*

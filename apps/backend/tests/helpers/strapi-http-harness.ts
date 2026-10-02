@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
@@ -39,6 +40,24 @@ export type CsrmFixtureUid =
   | "api::csrm-control.csrm-control"
   | "api::csrm-information-system.csrm-information-system";
 export type QuestionnaireLifecycleAnswerState = "none" | "draft" | "submitted";
+/** The analyst questionnaire mutations a test can run inside another mutation's transaction window, as the analyst. */
+export type InterleavedQuestionnaireWorkflows = {
+  release: (questionnaireDocumentId: string) => Promise<unknown>;
+  addQuestion: (questionnaireDocumentId: string, body: Record<string, unknown>) => Promise<unknown>;
+  replaceQuestionnaire: (requestDocumentId: string) => Promise<unknown>;
+};
+/**
+ * What became of an intrusion: it ran to the end inside the window; it reached a row lock the operation holds,
+ * where PostgreSQL would make it wait, and stopped there before writing anything; it failed otherwise; or the
+ * operation never reached the window.
+ */
+export type InterleavedIntrusionOutcome =
+  | { outcome: "committed" }
+  | { outcome: "blocked"; lock: string }
+  | { outcome: "failed"; error: unknown }
+  | { outcome: "not-reached" };
+/** One FOR UPDATE row lock, numbered by the transaction that took it (in the order each first locked a row). */
+export type RecordedRowLock = { transaction: number; uid: string; documentId: string };
 export type ReviewQueueBucketFixture = "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "released";
 type StrapiDocumentService = {
   create: (input: { data: Record<string, unknown> }) => Promise<Document>;
@@ -369,6 +388,23 @@ export type AuthorizationHttpHarness = {
     action: (jobId: string) => Promise<T>,
     options?: { replaceUnansweredQuestionnaire?: boolean; expectedStatus?: "completed" | "failed" },
   ) => Promise<T>;
+  /**
+   * CR-101: runs `operation` and, the first time it reaches `before.action` on `before.uid`, runs `intrusion`
+   * inside the operation's open transaction as a second, separate transaction. SQLite gives Strapi a single
+   * connection, so two real transactions never overlap there; this seam is how a test puts a second mutation
+   * into the window between one mutation's reads and its writes. FOR UPDATE row locks are emulated across the
+   * two as PostgreSQL holds them (exclusive, until the holding transaction ends): an intrusion that reaches a
+   * row the operation has locked stops at that lock, before it writes anything, and is reported `blocked`,
+   * which is where PostgreSQL would make it wait for the operation to commit. The caller then runs it again, as
+   * the waiting transaction would. This proves the lock protocol; it does not exercise PostgreSQL itself.
+   */
+  interleaveInTransactionWindow: <T>(input: {
+    before: { uid: CsrmFixtureUid; action: "create" | "update" | "delete" };
+    operation: () => Promise<T>;
+    intrusion: (workflows: InterleavedQuestionnaireWorkflows) => Promise<unknown>;
+  }) => Promise<{ result: T; intrusion: InterleavedIntrusionOutcome }>;
+  /** CR-101: runs `work` and returns every FOR UPDATE row lock taken meanwhile, in the order taken. */
+  recordRowLocks: <T>(work: () => Promise<T>) => Promise<{ result: T; locks: RecordedRowLock[] }>;
   /** Counts a review queue through the running application's own shared bucket counter. */
   countReviewQueueBucketFixture: (bucket: ReviewQueueBucketFixture, activeIds: readonly string[]) => Promise<number>;
   createAssessmentFixture: (data: {
@@ -612,6 +648,72 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   let administrationFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedAdministrationFixtures"]>> | null = null;
   let lifecycleQuestionnaireSequence = 0;
   const jobObservations: AssessmentJobObservation[] = [];
+
+  /*
+   * CR-101 row-lock observation. The mounted Strapi query builder is wrapped once, on first use, so every
+   * FOR UPDATE lock a workflow takes (`where({ documentId })`, `forUpdate()`, `transacting(trx)`, `execute()`)
+   * is reported to the current observers with the transaction that holds it. A lock taken inside an
+   * intrusion is owned by that intrusion's logical transaction, not by the transaction it shares.
+   */
+  type RowLock = { uid: string; documentId: string; owner: object; transaction: { isCompleted?: () => boolean } };
+  const rowLockObservers = new Set<(lock: RowLock) => void>();
+  const logicalTransaction = new AsyncLocalStorage<object>();
+  let rowLocksObserved = false;
+  const observeRowLocks = (observer: (lock: RowLock) => void): (() => void) => {
+    if (!rowLocksObserved) {
+      rowLocksObserved = true;
+      const database = strapi.db as unknown as { queryBuilder: (uid: string) => Record<string, (...args: unknown[]) => unknown> };
+      const originalQueryBuilder = database.queryBuilder.bind(database);
+      database.queryBuilder = (uid: string) => {
+        const builder = originalQueryBuilder(uid);
+        if (rowLockObservers.size === 0) return builder;
+        let where: unknown;
+        let forUpdate = false;
+        let transaction: unknown;
+        const intercept = (name: string, record: (args: unknown[]) => void) => {
+          const original = builder[name];
+          builder[name] = (...args: unknown[]) => {
+            record(args);
+            return original.apply(builder, args);
+          };
+        };
+        intercept("where", ([value]) => { where = value; });
+        intercept("forUpdate", () => { forUpdate = true; });
+        intercept("transacting", ([value]) => { transaction = value; });
+        intercept("execute", () => {
+          const documentId = typeof where === "object" && where !== null ? (where as Record<string, unknown>).documentId : undefined;
+          // A knex transaction is a callable object.
+          if (!forUpdate || (typeof transaction !== "object" && typeof transaction !== "function") || transaction === null || typeof documentId !== "string") return;
+          const lock: RowLock = { uid, documentId, owner: logicalTransaction.getStore() ?? transaction, transaction: transaction as RowLock["transaction"] };
+          for (const notify of rowLockObservers) notify(lock);
+        });
+        return builder;
+      };
+    }
+    rowLockObservers.add(observer);
+    return () => { rowLockObservers.delete(observer); };
+  };
+  class EmulatedRowLockWait extends Error {
+    constructor(readonly lock: string) {
+      super(`The intrusion would wait for the row lock on ${lock}.`);
+    }
+  }
+  const interleavedQuestionnaireWorkflows = (): InterleavedQuestionnaireWorkflows => {
+    const servicesDir = path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services");
+    const governance = require(path.join(servicesDir, "questionnaire-governance-workflow.js")) as {
+      releaseQuestionnaire: (input: Record<string, unknown>) => Promise<unknown>;
+      addQuestionnaireQuestion: (input: Record<string, unknown>) => Promise<unknown>;
+    };
+    const generation = require(path.join(servicesDir, "questionnaire-generation-workflow.js")) as {
+      persistGeneratedQuestionnaire: (strapi: unknown, requestId: string, analystId: string, replace: boolean) => Promise<unknown>;
+    };
+    const asAnalyst = { strapi, actor: "analyst", actorDocumentId: analyst.documentId };
+    return {
+      release: (questionnaireDocumentId) => governance.releaseQuestionnaire({ ...asAnalyst, questionnaireDocumentId, body: undefined }),
+      addQuestion: (questionnaireDocumentId, body) => governance.addQuestionnaireQuestion({ ...asAnalyst, questionnaireDocumentId, body }),
+      replaceQuestionnaire: (requestDocumentId) => generation.persistGeneratedQuestionnaire(strapi, requestDocumentId, analyst.documentId, true),
+    };
+  };
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
@@ -1221,6 +1323,52 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
         } finally {
           provider.generate = originalGenerate;
         }
+      }
+    },
+    async interleaveInTransactionWindow({ before, operation, intrusion }) {
+      const held = new Map<string, RowLock>();
+      const stopObserving = observeRowLocks((lock) => {
+        const key = `${lock.uid}:${lock.documentId}`;
+        const holder = held.get(key);
+        if (holder && holder.owner !== lock.owner && !holder.transaction.isCompleted?.()) throw new EmulatedRowLockWait(key);
+        held.set(key, lock);
+      });
+      let outcome: InterleavedIntrusionOutcome = { outcome: "not-reached" };
+      let armed = true;
+      const documents = strapi.documents as unknown as {
+        use: (middleware: (context: { uid: string; action: string }, next: () => Promise<unknown>) => Promise<unknown>) => () => void;
+      };
+      const stopIntercepting = documents.use(async (context, next) => {
+        if (armed && context.uid === before.uid && context.action === before.action) {
+          armed = false;
+          try {
+            await logicalTransaction.run({ intrusion: before }, () => intrusion(interleavedQuestionnaireWorkflows()));
+            outcome = { outcome: "committed" };
+          } catch (error) {
+            outcome = error instanceof EmulatedRowLockWait ? { outcome: "blocked", lock: error.lock } : { outcome: "failed", error };
+          }
+        }
+        return next();
+      });
+      try {
+        const result = await operation();
+        return { result, intrusion: outcome };
+      } finally {
+        stopIntercepting();
+        stopObserving();
+      }
+    },
+    async recordRowLocks(work) {
+      const transactions = new Map<object, number>();
+      const locks: RecordedRowLock[] = [];
+      const stopObserving = observeRowLocks((lock) => {
+        if (!transactions.has(lock.owner)) transactions.set(lock.owner, transactions.size + 1);
+        locks.push({ transaction: transactions.get(lock.owner) as number, uid: lock.uid, documentId: lock.documentId });
+      });
+      try {
+        return { result: await work(), locks };
+      } finally {
+        stopObserving();
       }
     },
     async withProviderFailureCode(code, safeMessage, action) {
