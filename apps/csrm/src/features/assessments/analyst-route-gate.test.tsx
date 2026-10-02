@@ -179,8 +179,8 @@ describe('the analyst request route', () => {
 
     render(await AssessmentRequestDetailContent(props()));
 
-    expect(mocks.getRequest).not.toHaveBeenCalled();
-    expect(mocks.getRequestGenerationJobs).not.toHaveBeenCalled();
+    // IN-405: no record read at all, as on the questionnaire and assessment routes.
+    expectNoRecordRead();
     expect(screen.getByRole('heading', { level: 1, name: 'Assessment request review' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this request');
     expect(screen.getByRole('alert')).toHaveTextContent('Reviewing requests is for Security Analysts. Your own requests are in My Requests.');
