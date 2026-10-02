@@ -36,13 +36,18 @@ type WorkflowStrapi = {
   };
 };
 
+import type { ConflictReason } from "../../../csrm/conflict-reasons";
 import { REVERT_REASON_MAX_LENGTH, parseRevertReason as parseSharedRevertReason } from "./revert-reason";
 
 export { REVERT_REASON_MAX_LENGTH } from "./revert-reason";
 const requestRevertTails = new Map<string, Promise<void>>();
 
 export class AssessmentRequestWorkflowError extends Error {
-  constructor(message = "CSRM assessment request workflow is denied.", readonly status = 400) {
+  constructor(
+    message = "CSRM assessment request workflow is denied.",
+    readonly status = 400,
+    readonly reason?: ConflictReason,
+  ) {
     super(message);
     this.name = "AssessmentRequestWorkflowError";
   }
@@ -101,8 +106,11 @@ export async function revertRequestToDraft(input: {
       populate: { questionnaire: true, assessment: true },
     });
     if (!request) throw new AssessmentRequestWorkflowError("CSRM assessment request was not found.");
-    if (request.requestStatus !== "submitted" || request.questionnaire || request.assessment) {
-      throw new AssessmentRequestWorkflowError("CSRM assessment request cannot be reverted to draft.", 409);
+    if (request.requestStatus !== "submitted") {
+      throw new AssessmentRequestWorkflowError("CSRM assessment request cannot be reverted to draft.", 409, "REQUEST_NOT_SUBMITTED");
+    }
+    if (request.questionnaire || request.assessment) {
+      throw new AssessmentRequestWorkflowError("CSRM assessment request cannot be reverted to draft.", 409, "REQUEST_WORK_STARTED");
     }
     return requests.update({
       documentId: input.requestDocumentId,

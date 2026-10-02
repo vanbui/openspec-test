@@ -5,12 +5,15 @@ import {
   developmentFixtureIdentityForRole,
   getSessionAdapter,
 } from '@/lib/auth/development-session-adapter';
+import { isConflictReason, type ConflictReason } from '../conflict-reasons';
 import type { paths } from '../generated/schema';
 
 export type StrapiClient = Client<paths>;
 export type TransportError = {
   message: string;
   status?: number;
+  /** The closed-list rule a 409 named; absent for any other failure or an unknown value. */
+  reason?: ConflictReason;
   kind?: 'response-contract-mismatch';
   operation?: string;
 };
@@ -111,8 +114,32 @@ export async function createStrapiClient(): Promise<StrapiClient> {
   return createClient<paths>({ baseUrl, ...(headers ? { headers } : {}) });
 }
 
+/**
+ * The error body is untrusted: only a conflict's reason crosses, and only when it is in the closed
+ * list (D-22, T-10-14). The served message, name and every other detail stay behind, so the
+ * application shows its own copy.
+ */
 export function normalizeTransportError(error: unknown, status?: number): TransportResult<never> {
-  return { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', ...(status ? { status } : {}) } };
+  const reason = status === 409 ? servedConflictReason(error) : undefined;
+  return {
+    data: null,
+    error: {
+      message: 'The CSRM service is unavailable. Please try again later.',
+      ...(status ? { status } : {}),
+      ...(reason ? { reason } : {}),
+    },
+  };
+}
+
+function servedConflictReason(body: unknown): ConflictReason | undefined {
+  const error = isPlainObject(body) ? body.error : undefined;
+  const details = isPlainObject(error) ? error.details : undefined;
+  const reason = isPlainObject(details) ? details.reason : undefined;
+  return isConflictReason(reason) ? reason : undefined;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Deliberately exposes only a stable local diagnostic identifier, never parser input or internals. */

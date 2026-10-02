@@ -1881,7 +1881,13 @@ export interface components {
                 status: number;
                 name: string;
                 message: string;
-                details?: Record<string, never>;
+                details?: {
+                    /**
+                     * @description The one rule that refused a workflow conflict (409). Closed list; a client that does not know a value falls back to its generic message.
+                     * @enum {string}
+                     */
+                    reason?: "REQUEST_NOT_SUBMITTED" | "REQUEST_WORK_STARTED" | "REQUEST_NOT_ELIGIBLE" | "ASSESSMENT_STARTED" | "QUESTIONNAIRE_NOT_SUBMITTED" | "QUESTIONNAIRE_NOT_ANSWERABLE" | "QUESTIONNAIRE_ALREADY_SUBMITTED" | "QUESTIONNAIRE_INCOMPLETE" | "QUESTIONNAIRE_HAS_NO_QUESTIONS" | "QUESTIONNAIRE_RELEASED" | "ALREADY_IN_ANALYST_REVIEW" | "DEFINITION_INVALID" | "DEFINITION_CONFLICT" | "HISTORY_UNAVAILABLE" | "QUESTION_REMOVED" | "QUESTION_HAS_DEPENDENTS" | "LAST_ACTIVE_QUESTION" | "ANSWER_DATA_INVALID";
+                };
             };
         };
         /** @enum {string} */
@@ -2876,6 +2882,12 @@ export interface components {
                 name: string;
                 message: string;
                 details?: {
+                    /**
+                     * @description The one rule that refused a workflow conflict (409). Closed list; a client that does not know a value falls back to its generic message.
+                     * @enum {string}
+                     */
+                    reason?: "REQUEST_NOT_SUBMITTED" | "REQUEST_WORK_STARTED" | "REQUEST_NOT_ELIGIBLE" | "ASSESSMENT_STARTED" | "QUESTIONNAIRE_NOT_SUBMITTED" | "QUESTIONNAIRE_NOT_ANSWERABLE" | "QUESTIONNAIRE_ALREADY_SUBMITTED" | "QUESTIONNAIRE_INCOMPLETE" | "QUESTIONNAIRE_HAS_NO_QUESTIONS" | "QUESTIONNAIRE_RELEASED" | "ALREADY_IN_ANALYST_REVIEW" | "DEFINITION_INVALID" | "DEFINITION_CONFLICT" | "HISTORY_UNAVAILABLE" | "QUESTION_REMOVED" | "QUESTION_HAS_DEPENDENTS" | "LAST_ACTIVE_QUESTION" | "ANSWER_DATA_INVALID";
+                } & {
                     [key: string]: unknown;
                 };
             };

@@ -24937,7 +24937,17 @@
               "status": { "type": "integer" },
               "name": { "type": "string" },
               "message": { "type": "string" },
-              "details": { "type": "object", "additionalProperties": false }
+              "details": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "The one rule that refused a workflow conflict (409). Closed list; a client that does not know a value falls back to its generic message.",
+                    "enum": ["REQUEST_NOT_SUBMITTED", "REQUEST_WORK_STARTED", "REQUEST_NOT_ELIGIBLE", "ASSESSMENT_STARTED", "QUESTIONNAIRE_NOT_SUBMITTED", "QUESTIONNAIRE_NOT_ANSWERABLE", "QUESTIONNAIRE_ALREADY_SUBMITTED", "QUESTIONNAIRE_INCOMPLETE", "QUESTIONNAIRE_HAS_NO_QUESTIONS", "QUESTIONNAIRE_RELEASED", "ALREADY_IN_ANALYST_REVIEW", "DEFINITION_INVALID", "DEFINITION_CONFLICT", "HISTORY_UNAVAILABLE", "QUESTION_REMOVED", "QUESTION_HAS_DEPENDENTS", "LAST_ACTIVE_QUESTION", "ANSWER_DATA_INVALID"]
+                  }
+                },
+                "additionalProperties": false
+              }
             },
             "required": ["status", "name", "message"],
             "additionalProperties": false
@@ -25869,7 +25879,17 @@
               "status": { "type": "integer" },
               "name": { "type": "string" },
               "message": { "type": "string" },
-              "details": { "type": "object", "additionalProperties": true }
+              "details": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "The one rule that refused a workflow conflict (409). Closed list; a client that does not know a value falls back to its generic message.",
+                    "enum": ["REQUEST_NOT_SUBMITTED", "REQUEST_WORK_STARTED", "REQUEST_NOT_ELIGIBLE", "ASSESSMENT_STARTED", "QUESTIONNAIRE_NOT_SUBMITTED", "QUESTIONNAIRE_NOT_ANSWERABLE", "QUESTIONNAIRE_ALREADY_SUBMITTED", "QUESTIONNAIRE_INCOMPLETE", "QUESTIONNAIRE_HAS_NO_QUESTIONS", "QUESTIONNAIRE_RELEASED", "ALREADY_IN_ANALYST_REVIEW", "DEFINITION_INVALID", "DEFINITION_CONFLICT", "HISTORY_UNAVAILABLE", "QUESTION_REMOVED", "QUESTION_HAS_DEPENDENTS", "LAST_ACTIVE_QUESTION", "ANSWER_DATA_INVALID"]
+                  }
+                },
+                "additionalProperties": true
+              }
             },
             "required": ["status", "name", "message"],
             "additionalProperties": false

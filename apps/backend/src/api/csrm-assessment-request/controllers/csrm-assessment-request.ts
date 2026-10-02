@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
 
+import { conflictDetails, type ConflictReason } from "../../../csrm/conflict-reasons";
 import {
   AssessmentRequestQueryError,
   buildAssessmentRequestCollectionQuery,
@@ -28,7 +29,7 @@ const UID = "api::csrm-assessment-request.csrm-assessment-request" as const;
 
 type ErrorContext = {
   badRequest?: (message: string) => unknown;
-  conflict?: (message: string) => unknown;
+  conflict?: (message: string, details?: { reason: ConflictReason }) => unknown;
   status: number;
 };
 
@@ -46,10 +47,12 @@ function denyBadRequest(ctx: ErrorContext, message: string): unknown {
   return { data: null, error: { status: 400, name: "BadRequestError", message } };
 }
 
-function denyConflict(ctx: ErrorContext, message: string): unknown {
-  if (ctx.conflict) return ctx.conflict(message);
+/** A 409 that names the rule which refused the operation, when the workflow knows it (D-22). */
+function denyConflict(ctx: ErrorContext, message: string, reason?: ConflictReason): unknown {
+  const details = conflictDetails(reason);
+  if (ctx.conflict) return ctx.conflict(message, details);
   ctx.status = 409;
-  return { data: null, error: { status: 409, name: "ConflictError", message } };
+  return { data: null, error: { status: 409, name: "ConflictError", message, ...(details ? { details } : {}) } };
 }
 
 export default factories.createCoreController(
@@ -199,7 +202,7 @@ export default factories.createCoreController(
         return this.transformResponse ? this.transformResponse(sanitized) : { data: sanitized };
       } catch (error) {
         if (error instanceof AssessmentRequestWorkflowError) {
-          return error.status === 409 ? denyConflict(ctx, error.message) : denyBadRequest(ctx, error.message);
+          return error.status === 409 ? denyConflict(ctx, error.message, error.reason) : denyBadRequest(ctx, error.message);
         }
         throw error;
       }
