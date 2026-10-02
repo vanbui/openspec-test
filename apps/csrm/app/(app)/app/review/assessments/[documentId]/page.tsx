@@ -14,19 +14,29 @@ import {
 } from '@/features/assessments/assessment-service';
 import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
 import { listInformationAssets, listInformationSystems } from '@/features/requests/request-service';
+import { canViewerReviewAssessments } from '@/lib/capabilities/analyst-review-gate';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
 type AssessmentReviewPageProps = { params: Promise<{ documentId: string }> };
 
+const title = 'Risk Assessment Review | IdamBox CSRM';
+
 // One read per request, shared by the document title and the page.
 const readAnalystAssessment = cache(getAnalystAssessment);
 
-// An assessment id that does not exist takes the not-found's title; any other outcome keeps the route's.
+/*
+ * A viewer without assessment:review keeps the static title and the assessment is never read (D-23), so an
+ * existing id and a missing one look the same. For an analyst, an assessment id that does not exist takes the
+ * not-found's title; any other outcome keeps the route's.
+ */
 export async function generateMetadata({ params }: AssessmentReviewPageProps): Promise<Metadata> {
-  return recordRouteMetadata(readAnalystAssessment((await params).documentId), 'Risk Assessment Review | IdamBox CSRM');
+  if (!(await canViewerReviewAssessments())) return { title };
+  return recordRouteMetadata(readAnalystAssessment((await params).documentId), title);
 }
 
 export async function AssessmentEditorContent({ params }: AssessmentReviewPageProps) {
+  // The gate comes before any read (D-23). It is presentation only: Strapi authorises every read itself.
+  if (!(await canViewerReviewAssessments())) return <AssessmentEditor refusal="role" state="permission" />;
   const { documentId } = await params;
   const assessmentResult = await readAnalystAssessment(documentId);
   if (assessmentResult.error?.status === 404) notFound();

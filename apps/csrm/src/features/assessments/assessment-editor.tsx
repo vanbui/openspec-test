@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertCircleIcon, CheckCircle2Icon, LockKeyholeIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -10,7 +11,7 @@ import { PageHeader } from '@/components/csrm/page-header';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +34,7 @@ import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
 import { releaseReadinessPresentation } from './assessment-domain';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
+import type { AnalystRefusal } from './assessment-detail';
 
 export type AssessmentEditorState = 'populated' | 'empty' | 'error' | 'permission';
 
@@ -41,6 +43,8 @@ export type AssessmentEditorProps = {
   assets?: readonly RequestRelationSummary[];
   controlImplementations?: Readonly<Record<string, readonly ControlImplementation[]>>;
   controls?: readonly Control[];
+  /** Who a permission state is for: `role` when the route gate refused the viewer before any read (UI-SPEC §11.1). */
+  refusal?: AnalystRefusal;
   risks?: readonly AnalystRisk[];
   riskTypes?: readonly RiskType[];
   state?: AssessmentEditorState;
@@ -87,17 +91,26 @@ function SupersededReviewNotice({ reviewerName }: { reviewerName?: string }) {
   );
 }
 
-function SafeAssessmentState({ state }: { state: Exclude<AssessmentEditorState, 'populated'> }) {
+function SafeAssessmentState({ refusal = 'record', state }: { refusal?: AnalystRefusal; state: Exclude<AssessmentEditorState, 'populated'> }) {
   const permission = state === 'permission';
   const empty = state === 'empty';
+  const roleRefusal = permission && refusal === 'role';
+  const permissionDescription = roleRefusal
+    ? 'Reviewing assessments is for Security Analysts. Assessments released to you are in My Risk Assessments.'
+    : 'You can’t review this assessment with your current access. Choose another from the risk assessments.';
   return (
     <div className="grid gap-5">
       <PageHeader description="Review an authorised risk assessment." title="Risk assessment review" />
       <Alert role={permission || state === 'error' ? 'alert' : undefined} variant={permission || state === 'error' ? 'destructive' : 'default'}>
         <AlertCircleIcon aria-hidden="true" />
         <AlertTitle>{permission ? 'You don’t have permission to review this assessment' : empty ? 'No assessment details are available' : 'We couldn’t load this assessment'}</AlertTitle>
-        <AlertDescription>{permission ? 'Assessment access is enforced by your effective CSRM capabilities.' : empty ? 'Return to the assessment queue and choose another assessment.' : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
+        <AlertDescription>{permission ? permissionDescription : empty ? 'Return to the assessment queue and choose another assessment.' : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
       </Alert>
+      <div>
+        {roleRefusal
+          ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/assessments">Go to My Risk Assessments</Link>
+          : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/assessments">Back to risk assessments</Link>}
+      </div>
     </div>
   );
 }
@@ -118,6 +131,7 @@ export function AssessmentEditor({
   assets = [],
   controlImplementations = {},
   controls = [],
+  refusal,
   risks: initialRisks = [],
   riskTypes = [],
   state = 'populated',
@@ -132,7 +146,7 @@ export function AssessmentEditor({
   const [releaseError, setReleaseError] = useState<string | null>(null);
 
   if (state !== 'populated' || !currentAssessment) {
-    return <SafeAssessmentState state={state === 'populated' ? 'empty' : state} />;
+    return <SafeAssessmentState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
   }
 
   const mutable = canMutateAssessment(currentAssessment);

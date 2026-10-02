@@ -239,8 +239,15 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await attachCspCollector(prereleasePage);
   await signInAs(prereleasePage, 'Requestor');
   await prereleasePage.goto(prereleaseAssessmentUrl);
-  await expect(prereleasePage.getByRole('main').getByRole('heading', { level: 1, name: 'Page not found', exact: true }), 'ASSESS-05 prerelease assessment is secret').toBeVisible();
+  // The analyst route refuses the Requestor before any read (D-23), so the prerelease assessment stays secret.
+  await expect(prereleasePage.getByRole('main').getByRole('heading', { level: 1, name: 'Risk assessment review', exact: true }), 'ASSESS-05 prerelease assessment is secret').toBeVisible();
+  await expect(prereleasePage.getByText('You don’t have permission to review this assessment')).toBeVisible();
   await expect(prereleasePage.getByText(deterministicRiskStatement, { exact: true })).toHaveCount(0);
+  // The analyst questionnaire route refuses her the same way, and shows no question.
+  await prereleasePage.goto(questionnaireHref);
+  await expect(prereleasePage.getByRole('link', { name: 'Go to My Questionnaires' }), 'UX06_REQUESTOR_ON_ANALYST_QUESTIONNAIRE_ROUTE').toHaveAttribute('href', '/app/questionnaires');
+  await expect(prereleasePage.getByText('Contact details')).toHaveCount(0);
+  await expect(prereleasePage.getByRole('heading', { name: 'Customer portal cyber risk questionnaire' })).toHaveCount(0);
   await prereleasePage.goto(crossOwnerHref!);
   await expect(prereleasePage.getByText('You don’t have permission to review this request'), 'ASSESS-05 cross-owner assessment is denied').toBeVisible();
   // Jane's own request on the analyst route: the gate refuses her before the read and points to her own list (D-23).
@@ -331,5 +338,11 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(releasedMain.getByRole('button', { name: /save|add|edit|remove|release/i }), 'ASSESS-05 Requestor has no mutation controls').toHaveCount(0);
   await expectNoHorizontalOverflow(page, 'ASSESS-05 released assessment has no desktop overflow');
   await expectNoSeriousAxeViolations(page);
+
+  // Released or not, the analyst route still refuses Jane before any read: her copy is the released view.
+  await page.goto(prereleaseAssessmentUrl);
+  await expect(page.getByText('You don’t have permission to review this assessment'), 'UX06_REQUESTOR_ON_ANALYST_ASSESSMENT_ROUTE_AFTER_RELEASE').toBeVisible();
+  await expect(page.getByRole('link', { name: 'Go to My Risk Assessments' })).toHaveAttribute('href', '/app/assessments');
+  await expect(page.getByText(deterministicRiskStatement, { exact: true })).toHaveCount(0);
   await expectNoCspViolations(page, 'the release journey');
 });

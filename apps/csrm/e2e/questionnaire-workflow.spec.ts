@@ -179,7 +179,10 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expectNoSeriousAxeViolations(page);
 
   await page.goto(`/app/review/questionnaires/${documentId}`);
-  await expect(page.getByText('Awaiting questionnaire submission')).toBeVisible();
+  // The analyst route refuses the Requestor before it reads the questionnaire (D-23) and points to her own list.
+  await expect(page.getByRole('heading', { level: 1, name: 'Questionnaire review' }), 'UX06_REQUESTOR_ON_ANALYST_QUESTIONNAIRE_ROUTE').toBeVisible();
+  await expect(page.getByText('You don’t have permission to review this questionnaire')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Go to My Questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
   // Still signed in as the Requestor. The analyst review route offers an
   // analyst-scoped link to the request, which this actor may not follow, so the
   // link must be absent rather than present-and-denied. The Requestor reaches

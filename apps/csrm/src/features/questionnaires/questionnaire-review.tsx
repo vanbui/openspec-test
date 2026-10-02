@@ -19,6 +19,7 @@ import { revertQuestionnaireToDraftAction } from './questionnaire-actions';
 import { availableAssessmentRequest } from './questionnaire-domain';
 import { QuestionnaireGovernance } from './questionnaire-governance';
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
+import type { AnalystRefusal } from '@/features/assessments/assessment-detail';
 
 export type QuestionnaireReviewState = 'submitted' | 'analyst-review' | 'awaiting-submission' | 'empty' | 'error' | 'permission';
 
@@ -26,13 +27,19 @@ export interface QuestionnaireReviewProps {
   assessmentRequestHref?: string;
   definition?: QuestionnaireDefinition;
   questionnaire?: QuestionnaireSummary;
+  /** Who a permission state is for: `role` when the route gate refused the viewer before any read (UI-SPEC §11.1). */
+  refusal?: AnalystRefusal;
   state: QuestionnaireReviewState;
 }
 
-function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire, state }: Pick<QuestionnaireReviewProps, 'assessmentRequestHref'> & { definition?: QuestionnaireDefinition; questionnaire?: QuestionnaireSummary; state: Exclude<QuestionnaireReviewState, 'submitted' | 'analyst-review'> }) {
+function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire, refusal = 'record', state }: Pick<QuestionnaireReviewProps, 'assessmentRequestHref' | 'refusal'> & { definition?: QuestionnaireDefinition; questionnaire?: QuestionnaireSummary; state: Exclude<QuestionnaireReviewState, 'submitted' | 'analyst-review'> }) {
+  const roleRefusal = state === 'permission' && refusal === 'role';
   const content = (() => {
   if (state === 'permission') {
-    return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>You don’t have permission to review this questionnaire</AlertTitle><AlertDescription>Access is enforced by your effective CSRM capabilities.</AlertDescription></Alert>;
+    const description = roleRefusal
+      ? 'Reviewing questionnaires is for Security Analysts. To answer a questionnaire sent to you, open it from My Questionnaires.'
+      : 'You can’t review this questionnaire with your current access. Choose another from the questionnaire reviews.';
+    return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>You don’t have permission to review this questionnaire</AlertTitle><AlertDescription>{description}</AlertDescription></Alert>;
   }
   if (state === 'error') {
     return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>We couldn’t load this questionnaire review</AlertTitle><AlertDescription>Try again. If the problem continues, contact your administrator.</AlertDescription></Alert>;
@@ -60,10 +67,10 @@ function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire
   const heading = identify
     ? { title: questionnaire.title, description: `${questionnaire.questionnaireNumber} · ${availableAssessmentRequest(questionnaire.assessmentRequest)?.requestNumber ?? ''}` }
     : { title: 'Questionnaire review', description: 'Review an authorised questionnaire submission.' };
-  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}<Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link></>;
+  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}{roleRefusal ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/questionnaires">Go to My Questionnaires</Link> : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link>}</>;
 }
 
-export function QuestionnaireReview({ assessmentRequestHref, definition = [], questionnaire, state }: QuestionnaireReviewProps) {
+export function QuestionnaireReview({ assessmentRequestHref, definition = [], questionnaire, refusal, state }: QuestionnaireReviewProps) {
   if (state === 'analyst-review' && questionnaire) {
     if (definition.length === 0) return <SafeReviewState assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} state="empty" />;
     /*
@@ -74,7 +81,7 @@ export function QuestionnaireReview({ assessmentRequestHref, definition = [], qu
     return <><PageHeader status={<StatusBadge family="questionnaire" value="analyst-review" />} description={questionnaire.questionnaireNumber} title={questionnaire.title} /><QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} /><QuestionnaireGovernance definition={definition} questionnaire={questionnaire} /><QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /></>;
   }
   if (state !== 'submitted' || !questionnaire || questionnaire.state !== 'submitted') {
-    return <SafeReviewState assessmentRequestHref={assessmentRequestHref} definition={definition} questionnaire={questionnaire} state={state === 'submitted' || state === 'analyst-review' ? 'empty' : state} />;
+    return <SafeReviewState assessmentRequestHref={assessmentRequestHref} definition={definition} questionnaire={questionnaire} refusal={refusal} state={state === 'submitted' || state === 'analyst-review' ? 'empty' : state} />;
   }
   if (definition.length === 0) return <SafeReviewState assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} state="empty" />;
 
