@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { createAssessmentDraftRegistry, type AssessmentDraftJobRecord } from "../src/api/csrm-assessment/services/assessment-draft-registry";
 import { deterministicQuestionnaireGenerationProvider } from "../src/api/csrm-questionnaire/services/deterministic-questionnaire-generation-provider";
 import { createQuestionnaireGenerationRegistry, QuestionnaireGenerationRegistryError } from "../src/api/csrm-questionnaire/services/questionnaire-generation-registry";
 import { parseQuestionnaireGenerationProposal } from "../src/api/csrm-questionnaire/services/questionnaire-generation-provider";
@@ -73,6 +74,90 @@ test("the generation registry exposes a sorted snapshot of the requests with an 
   gates.get("req-b")?.fail();
   await settle();
   assert.deepEqual(registry.activeRequestIds(), [], "FAILED_JOB_STILL_ACTIVE");
+});
+
+/** A job execution held open until the test settles it. */
+type Gate = { succeed: () => void; fail: () => void };
+
+/*
+ * D-25: the request read selects the active job first, else the retained job queued last. Here the clock steps
+ * back between two jobs, so the failed job was queued later than the job now running, and the running one is
+ * still the request's current job. canRetry is the viewer's fact alone: true only for the job's initiator.
+ */
+test("latestForRequest returns the active job, else the latest retained job, with the viewer's retry right", async () => {
+  const gates = new Map<string, Gate>();
+  let next = 0;
+  let clock = Date.parse("2026-10-01T09:05:00.000Z");
+  const registry = createQuestionnaireGenerationRegistry({
+    createJobId: () => `job-${++next}`,
+    now: () => new Date(clock),
+    execute: (job) => new Promise((resolve, reject) => {
+      gates.set(job.jobId, { succeed: () => resolve({ questionnaireId: `questionnaire-${job.jobId}` }), fail: () => reject(new Error("provider failed")) });
+    }),
+  });
+  const input = (requestId: string, analyst: string) => ({ requestId, initiatingAnalystDocumentId: analyst, providerName: "provider", providerVersion: "1", replaceUnansweredQuestionnaire: false });
+
+  assert.equal(registry.latestForRequest("request-1", "analyst-1"), null, "UNKNOWN_REQUEST_HAS_A_JOB");
+  registry.enqueue(input("request-1", "analyst-1"));
+  await settle();
+  gates.get("job-1")?.fail();
+  await settle();
+
+  clock = Date.parse("2026-10-01T09:00:00.000Z");
+  registry.enqueue(input("request-1", "analyst-2"));
+  const active = registry.latestForRequest("request-1", "analyst-1");
+  assert.equal(active?.job.jobId, "job-2", "ACTIVE_JOB_NOT_PREFERRED");
+  assert.equal(active?.canRetry, false, "NON_INITIATOR_MAY_RETRY");
+  assert.equal(registry.latestForRequest("request-1", "analyst-2")?.canRetry, true, "INITIATOR_MAY_NOT_RETRY");
+  assert.equal(registry.latestForRequest("request-2", "analyst-1"), null, "ANOTHER_REQUESTS_JOB_LEAKED");
+
+  await settle();
+  gates.get("job-2")?.succeed();
+  await settle();
+  assert.equal(registry.latestForRequest("request-1", "analyst-1")?.job.jobId, "job-1", "RETAINED_JOB_NOT_THE_LATEST_QUEUED");
+
+  clock = Date.parse("2026-10-01T09:10:00.000Z");
+  registry.enqueue(input("request-1", "analyst-1"));
+  await settle();
+  gates.get("job-3")?.succeed();
+  await settle();
+  const latest = registry.latestForRequest("request-1", "analyst-1");
+  assert.equal(latest?.job.jobId, "job-3", "LATEST_RETAINED_JOB_NOT_RETURNED");
+  assert.equal(latest?.job.status, "completed", "LATEST_RETAINED_JOB_STATUS");
+  assert.equal(latest?.canRetry, true, "INITIATOR_MAY_NOT_RETRY_A_RETAINED_JOB");
+  assert.equal(registry.latestForRequest("request-1", ""), null, "BLANK_VIEWER_READ_A_JOB");
+});
+
+type LatestDraftJob = { job: AssessmentDraftJobRecord; canRetry: boolean } | null;
+
+/* D-25: the draft registry answers the same question by questionnaire, for the request's questionnaire. */
+test("latestForQuestionnaire returns the questionnaire's current draft job with the viewer's retry right", async () => {
+  const gates = new Map<string, Gate>();
+  let next = 0;
+  const registry = createAssessmentDraftRegistry({
+    createJobId: () => `draft-${++next}`,
+    execute: (job) => new Promise((resolve, reject) => {
+      gates.set(job.jobId, { succeed: () => resolve({ assessmentId: `assessment-${job.jobId}` }), fail: () => reject(new Error("provider failed")) });
+    }),
+  });
+  const latestForQuestionnaire = (registry as unknown as { latestForQuestionnaire?: (questionnaireId: string, viewerDocumentId: string) => LatestDraftJob }).latestForQuestionnaire;
+  assert.equal(typeof latestForQuestionnaire, "function", "DRAFT_REGISTRY_HAS_NO_LATEST_READ");
+  const read = (questionnaireId: string, viewer: string) => latestForQuestionnaire!(questionnaireId, viewer);
+
+  assert.equal(read("questionnaire-1", "analyst-1"), null, "UNKNOWN_QUESTIONNAIRE_HAS_A_JOB");
+  registry.enqueue({ questionnaireId: "questionnaire-1", initiatingAnalystDocumentId: "analyst-1", providerName: "provider", providerVersion: "1" });
+  assert.equal(read("questionnaire-1", "analyst-1")?.job.status, "queued", "ACTIVE_DRAFT_JOB_NOT_RETURNED");
+  assert.equal(read("questionnaire-1", "analyst-1")?.canRetry, true, "DRAFT_INITIATOR_MAY_NOT_RETRY");
+  assert.equal(read("questionnaire-1", "analyst-2")?.canRetry, false, "DRAFT_NON_INITIATOR_MAY_RETRY");
+  assert.equal(read("questionnaire-2", "analyst-1"), null, "ANOTHER_QUESTIONNAIRES_DRAFT_JOB_LEAKED");
+
+  await settle();
+  gates.get("draft-1")?.fail();
+  await settle();
+  const failed = read("questionnaire-1", "analyst-2");
+  assert.equal(failed?.job.jobId, "draft-1", "RETAINED_DRAFT_JOB_NOT_RETURNED");
+  assert.equal(failed?.job.status, "failed", "RETAINED_DRAFT_JOB_STATUS");
+  assert.equal(failed?.canRetry, false, "DRAFT_NON_INITIATOR_MAY_RETRY_A_FAILED_JOB");
 });
 
 /*

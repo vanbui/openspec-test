@@ -173,6 +173,7 @@ const questionnaireGenerationRoutes = [
   { method: "post", path: "/v1/assessment_requests/{requestId}/generate_questionnaire", operationId: "questionnaire-generation/generate-questionnaire", functionId: "function.questionnaire_generation.generate_api" },
   { method: "get", path: "/v1/questionnaire_generation_jobs/{jobId}", operationId: "questionnaire-generation/get-questionnaire-generation-job", functionId: "function.questionnaire_generation.job_read_api" },
   { method: "post", path: "/v1/questionnaire_generation_jobs/{jobId}/retry", operationId: "questionnaire-generation/retry-questionnaire-generation-job", functionId: "function.questionnaire_generation.retry_api" },
+  { method: "get", path: "/v1/assessment_requests/{requestId}/generation_jobs", operationId: "questionnaire-generation/get-request-generation-jobs", functionId: "function.questionnaire_generation.request_jobs_read_api" },
 ] as const;
 
 test("questionnaire generation routes have byte-identical catalogue and human-only effective grants", () => {

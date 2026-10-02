@@ -68,7 +68,8 @@ export function tokenFamilyOf(authStrategies: readonly string[] | null | undefin
 /*
  * The operations no automation identity may reach (csrm-authorization.ts
  * HUMAN_ANALYST_ONLY_OPERATIONS): the assessment release, the five questionnaire
- * governance operations and the five analyst insight operations. The matrix test
+ * governance operations, the read of a request's current generation jobs (Phase
+ * 10 D-25) and the five analyst insight operations. The matrix test
  * checks each literal is still in the policy source and that its row denies the
  * service agent, the owner and the other Requestor.
  */
@@ -79,6 +80,7 @@ export const HUMAN_ANALYST_ONLY_OPERATIONS: readonly string[] = [
   "POST:/api/v1/questionnaires/{questionnaireId}/questions",
   "PATCH:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
   "DELETE:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}",
+  "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
   ...Object.values(CSRM_ANALYST_INSIGHT_OPERATIONS),
 ];
 
@@ -900,6 +902,16 @@ export const matrixRows: readonly MatrixRow[] = [
     family: "questionnaires",
     request: () => ({ path: "/api/v1/questionnaire_generation_jobs/matrix-unknown-job/retry", init: { method: "POST" } }),
     expect: humanAnalystOnly(404),
+  },
+  {
+    operation: "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
+    family: "questionnaires",
+    request: (f) => ({ path: `/api/v1/assessment_requests/${encode(f.workflow.requests.submitted)}/generation_jobs` }),
+    // D-25, D-47: every human analyst reads a request's current generation jobs; nobody else does.
+    expect: humanAnalystOnly(200),
+    exercisesAllowed: true,
+    seeAlso: ["questionnaire-generation.integration.test.ts › mounted request generation read answers no jobs, an unknown request and every refused caller"],
+    mustNotDisclose: (f, actor) => (notHumanAnalyst(actor) ? [f.workflow.requests.submitted, "Submitted request"] : []),
   },
   {
     operation: "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",

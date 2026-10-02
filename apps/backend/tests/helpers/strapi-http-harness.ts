@@ -245,9 +245,9 @@ function releaseFacts(analystDocumentId: string, at = "2026-08-15T00:00:00.000Z"
 
 export type AuthorizationHttpHarness = {
   baseUrl: string;
-  identities: { owner: string; otherRequestor: string; analyst: string; analystAgent: string; serviceAnalystAgent: string; inactiveAnalyst: string };
+  identities: { owner: string; otherRequestor: string; analyst: string; secondAnalyst: string; analystAgent: string; serviceAnalystAgent: string; inactiveAnalyst: string };
   developmentEmails: { jane: string; bob: string; inactive: string; unknown: string };
-  users: { owner: string; otherRequestor: string; analyst: string; serviceAnalystAgent: string };
+  users: { owner: string; otherRequestor: string; analyst: string; secondAnalyst: string; serviceAnalystAgent: string };
   requests: { owner: string; otherRequestor: string };
   seedRequestWorkflowFixtures: () => Promise<{
     requests: { editable: string; submitted: string; transition: string; illegalTransition: string };
@@ -559,6 +559,9 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     roles: [analystAgentRole.documentId],
   });
   const inactiveAnalyst = await createDocument(strapi, "api::idambox-user.idambox-user", { email: "inactive@idambox.com", username: "inactive", displayName: "Inactive Analyst", accountStatus: "inactive", roles: [analystRole.documentId] });
+  // A second active human Security Analyst: every analyst reads a request's generation jobs (D-25, D-47), and only
+  // the one who started a job may retry it, so the shared read needs another analyst to prove the difference.
+  const secondAnalyst = await createDocument(strapi, "api::idambox-user.idambox-user", { email: "second.analyst@example.test", username: "second-analyst", displayName: "Second Analyst", accountStatus: "active", roles: [analystRole.documentId] });
 
   const ownerRequest = await createDocument(strapi, "api::csrm-assessment-request.csrm-assessment-request", {
     requestNumber: "AUTH-OWNER-001",
@@ -584,6 +587,7 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   testIdentities.set("owner", { documentId: owner.documentId });
   testIdentities.set("other", { documentId: otherRequestor.documentId });
   testIdentities.set("analyst", { documentId: analyst.documentId });
+  testIdentities.set("second-analyst", { documentId: secondAnalyst.documentId });
   testIdentities.set("agent", { documentId: analystAgent.documentId });
   testIdentities.set("service-agent", { documentId: serviceAnalystAgent.documentId });
   testIdentities.set("inactive", { documentId: inactiveAnalyst.documentId });
@@ -611,12 +615,13 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
-    identities: { owner: "owner", otherRequestor: "other", analyst: "analyst", analystAgent: "agent", serviceAnalystAgent: "service-agent", inactiveAnalyst: "inactive" },
+    identities: { owner: "owner", otherRequestor: "other", analyst: "analyst", secondAnalyst: "second-analyst", analystAgent: "agent", serviceAnalystAgent: "service-agent", inactiveAnalyst: "inactive" },
     developmentEmails: { jane: "jane.doe@idambox.com", bob: "bob.doe@idambox.com", inactive: "inactive@idambox.com", unknown: "unknown@idambox.com" },
     users: {
       owner: owner.documentId,
       otherRequestor: otherRequestor.documentId,
       analyst: analyst.documentId,
+      secondAnalyst: secondAnalyst.documentId,
       serviceAnalystAgent: serviceAnalystAgent.documentId,
     },
     requests: { owner: ownerRequest.documentId, otherRequestor: otherRequest.documentId },

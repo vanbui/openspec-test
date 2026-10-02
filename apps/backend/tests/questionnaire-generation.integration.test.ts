@@ -371,6 +371,88 @@ test("mounted analyst reads the running questionnaire generation job of a reques
   });
 });
 
+/*
+ * D-25, D-47: every human analyst sees the same current job, and only the analyst who started it may retry it
+ * (D-26). The by-id read and retry keep their initiator-only rule (D-27): the second analyst's by-id read is
+ * refused exactly as it was before the request read existed.
+ */
+test("mounted analysts share a request's running job and only its initiator may retry it", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("JOBS-SHARED");
+
+  await harness.withHeldQuestionnaireGeneration(requestId, async (jobId) => {
+    const initiator = await requestGenerationJobs(requestId, harness.identities.analyst);
+    const other = await requestGenerationJobs(requestId, harness.identities.secondAnalyst);
+    const otherEntry = other.questionnaireGeneration as Record<string, unknown>;
+    assert.deepEqual(otherEntry.job, (initiator.questionnaireGeneration as Record<string, unknown>).job, "SECOND_ANALYST_SAW_A_DIFFERENT_JOB");
+    assert.equal((otherEntry.job as Record<string, unknown>).jobId, jobId, "SECOND_ANALYST_WRONG_JOB");
+    assert.equal(otherEntry.canRetry, false, "SECOND_ANALYST_MAY_RETRY_ANOTHER_ANALYSTS_JOB");
+    assert.ok(!JSON.stringify(other).includes(harness.users.analyst), "REQUEST_GENERATION_JOBS_DISCLOSED_THE_INITIATOR");
+
+    const byId = await request(`/api/v1/questionnaire_generation_jobs/${encodeURIComponent(jobId)}`, harness.identities.secondAnalyst);
+    assert.equal(byId.status, 403, "SECOND_ANALYST_BY_ID_READ_WIDENED");
+    assert.equal((await body(byId)).data, null, "SECOND_ANALYST_BY_ID_READ_DISCLOSED_THE_JOB");
+  });
+});
+
+/** Follows an assessment draft job through its by-id read until it is completed or failed. */
+async function terminalDraftJob(jobId: string, identity: string): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const response = await request(`/api/v1/assessment_draft_jobs/${encodeURIComponent(jobId)}`, identity);
+    assert.equal(response.status, 200, "ASSESSMENT_DRAFT_JOB_UNREADABLE");
+    const data = (await body(response)).data as Record<string, unknown>;
+    if (data.status === "completed" || data.status === "failed") return data;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.fail("ASSESSMENT_DRAFT_JOB_DID_NOT_REACH_TERMINAL_STATE");
+}
+
+/*
+ * D-25: the read also carries the assessment draft job for the request's questionnaire, so the hub can seed its
+ * draft panel too (D-26). The entry is the job the by-id read returns, with the viewer's retry right beside it.
+ */
+test("mounted request generation read returns the draft job for the request's questionnaire", async () => {
+  const harness = await harnessPromise;
+  // The reference data and the answered, submitted questionnaire the mounted draft lifecycle test drafts from.
+  await harness.seedAssessmentWorkflowFixtures();
+  const questionnaireId = (await harness.seedConditionalQuestionnaireFixture()).questionnaire;
+  const questionnairePath = `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`;
+  assert.equal((await request(`${questionnairePath}/answers`, harness.identities.owner, json("PATCH", { answers: [{ questionKey: "internet-facing", value: true }] }))).status, 200, "DRAFT_FIXTURE_NOT_ANSWERED");
+  assert.equal((await request(`${questionnairePath}/submit`, harness.identities.owner, json("POST"))).status, 200, "DRAFT_FIXTURE_NOT_SUBMITTED");
+  const requestId = String(((await harness.getQuestionnaire(questionnaireId))?.assessmentRequest as Record<string, unknown> | undefined)?.documentId);
+  const queued = await request(`${questionnairePath}/generate_assessment`, harness.identities.analyst, json("POST"));
+  assert.equal(queued.status, 202, "DRAFT_FIXTURE_NOT_QUEUED");
+  const draftJob = await terminalDraftJob(String(((await body(queued)).data as Record<string, unknown>).jobId), harness.identities.analyst);
+  assert.equal(draftJob.status, "completed", `DRAFT_FIXTURE_DID_NOT_COMPLETE_${String(draftJob.failureCode)}`);
+
+  const initiator = await requestGenerationJobs(requestId, harness.identities.analyst);
+  assert.equal(initiator.questionnaireGeneration, null, "REQUEST_GENERATION_JOBS_INVENTED_A_QUESTIONNAIRE_JOB");
+  assert.deepEqual(initiator.assessmentDraft, { job: draftJob, canRetry: true }, "REQUEST_GENERATION_JOBS_DRAFT_JOB");
+  const other = await requestGenerationJobs(requestId, harness.identities.secondAnalyst);
+  assert.deepEqual(other.assessmentDraft, { job: draftJob, canRetry: false }, "REQUEST_GENERATION_JOBS_SECOND_ANALYST_DRAFT_JOB");
+});
+
+/*
+ * D-25, D-47, T-10-32: a request with no job reads as two nulls, an unknown request is 404, and nobody but a human
+ * Security Analyst reaches the read: not the owning Requestor, another Requestor, the role-less identity, the
+ * service agent or a caller with no identity.
+ */
+test("mounted request generation read answers no jobs, an unknown request and every refused caller", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("JOBS-NONE");
+  assert.deepEqual(await requestGenerationJobs(requestId, harness.identities.analyst), { questionnaireGeneration: null, assessmentDraft: null }, "REQUEST_WITHOUT_JOBS");
+
+  const unknown = await request(generationJobsPath("request-that-does-not-exist"), harness.identities.analyst);
+  assert.equal(unknown.status, 404, "UNKNOWN_REQUEST_NOT_404");
+  assert.equal((await body(unknown)).data, null, "UNKNOWN_REQUEST_DISCLOSED_DATA");
+
+  for (const identity of [harness.identities.owner, harness.identities.otherRequestor, harness.identities.analystAgent, harness.identities.serviceAnalystAgent, undefined]) {
+    const refused = await request(generationJobsPath(requestId), identity);
+    assert.equal(refused.status, 403, `REQUEST_GENERATION_JOBS_NOT_REFUSED_${identity ?? "no-identity"}`);
+    assert.equal((await body(refused)).data, null, `REQUEST_GENERATION_JOBS_REFUSAL_DISCLOSED_${identity ?? "no-identity"}`);
+  }
+});
+
 test("mounted questionnaire generation refuses non-submitted requests", async () => {
   const harness = await harnessPromise;
   const requestFixtures = await harness.seedRequestWorkflowFixtures();

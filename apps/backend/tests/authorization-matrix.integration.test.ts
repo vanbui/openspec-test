@@ -163,7 +163,7 @@ test("every human-analyst-only operation is served and its row denies the owner,
   const policySource = readFileSync(path.join(strapiDir, "src", "policies", "csrm-authorization.ts"), "utf8");
   assert.ok(policySource.includes("...ANALYST_INSIGHT_OPERATIONS,"), "HUMAN_ANALYST_GUARD_INSIGHTS_NOT_SPREAD");
   const insightOperations = new Set<string>(Object.values(CSRM_ANALYST_INSIGHT_OPERATIONS));
-  assert.equal(HUMAN_ANALYST_ONLY_OPERATIONS.length, 6 + insightOperations.size, "HUMAN_ANALYST_ONLY_COUNT");
+  assert.equal(HUMAN_ANALYST_ONLY_OPERATIONS.length, 7 + insightOperations.size, "HUMAN_ANALYST_ONLY_COUNT");
   for (const operation of HUMAN_ANALYST_ONLY_OPERATIONS) {
     if (!insightOperations.has(operation)) {
       assert.ok(policySource.includes(`"${operation}"`), `HUMAN_ANALYST_GUARD_LITERAL_MISSING_${operation}`);
