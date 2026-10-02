@@ -6,6 +6,12 @@ const actions = vi.hoisted(() => ({ releaseQuestionnaireAction: vi.fn(), returnQ
 vi.mock('./questionnaire-actions', () => actions);
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
+// The question form's Required checkbox measures itself; jsdom has no ResizeObserver.
+vi.stubGlobal('ResizeObserver', class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+});
 import { QuestionnaireGovernance } from './questionnaire-governance';
 import type { QuestionPlacement } from './questionnaire-placement';
 import type { QuestionnaireDefinition } from './questionnaire-schema';

@@ -117,7 +117,28 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await page.goto(analystQuestionnaireHref!);
 
   const governance = page.getByRole('region', { name: 'Questionnaire governance' });
-  await governance.getByRole('button', { name: 'Add question' }).click();
+  /*
+   * QUES08_FORM_OPENS_IN_VIEW (UAT-005, D-04): a question's Edit and a section's Add question open their form
+   * where they were clicked, with focus in Question text and the field on screen, at both widths; discarding
+   * returns focus to the control that opened the form.
+   */
+  for (const width of [1440, 375] as const) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await governance.getByText(hostingQuestion, { exact: true }).locator('xpath=../..').getByRole('button', { name: 'Edit' }).click();
+    const editText = governance.getByRole('form', { name: 'Edit question' }).getByLabel('Question text');
+    await expect(editText, `QUES08_FORM_OPENS_IN_VIEW_EDIT_FOCUSED_${width}`).toBeFocused();
+    await expect(editText, `QUES08_FORM_OPENS_IN_VIEW_EDIT_IN_VIEWPORT_${width}`).toBeInViewport();
+    await governance.getByRole('button', { name: 'Discard changes' }).click();
+    const addToHosting = governance.getByRole('button', { name: 'Add question to Hosting and access' });
+    await addToHosting.click();
+    const addText = governance.getByRole('form', { name: 'Add question to Hosting and access' }).getByLabel('Question text');
+    await expect(addText, `QUES08_FORM_OPENS_IN_VIEW_SECTION_ADD_FOCUSED_${width}`).toBeFocused();
+    await expect(addText, `QUES08_FORM_OPENS_IN_VIEW_SECTION_ADD_IN_VIEWPORT_${width}`).toBeInViewport();
+    await governance.getByRole('button', { name: 'Discard changes' }).click();
+    await expect(addToHosting, `QUES08_FORM_OPENS_IN_VIEW_DISCARD_RETURNS_FOCUS_${width}`).toBeFocused();
+  }
+  // E9: exact, because each section's own control is named Add question to {section}.
+  await governance.getByRole('button', { name: 'Add question', exact: true }).click();
   await page.getByLabel('Question text').fill(addedQuestion);
   await page.getByRole('button', { name: 'Save question' }).click();
   await expect(governance.getByText(addedQuestion, { exact: true }), 'CRITERION_1_ADDED_QUESTION_VISIBLE').toBeVisible();
