@@ -7,8 +7,7 @@ import { AdministrationAccessDenied, AdministrationBreadcrumbs } from '@/feature
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 import { listControls } from '@/features/assessments/assessment-service';
-import { listRiskTypes } from '@/features/administration/administration-service';
-import { parseAdministrationQuery } from '@/features/administration/administration-schema';
+import { applicableControlOptions } from '@/features/administration/applicable-controls';
 import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
 
 type Props = { params: Promise<{ collection: string }> };
@@ -36,16 +35,8 @@ export default async function NewAdministrationRecordPage({ params }: Props) {
   }
   if (kind === 'information-systems') return <><AdministrationBreadcrumbs kind={kind} current="New" /><AdministrationForm createAction={createInformationSystemAction} kind={kind} mode="create" searchOwners={searchActiveUsersAction} /></>;
   if (kind === 'information-assets') return <><AdministrationBreadcrumbs kind={kind} current="New" /><AdministrationForm createAction={createInformationAssetAction} kind={kind} mode="create" /></>;
-  const [controls, riskTypes] = await Promise.all([
-    listControls(),
-    listRiskTypes(parseAdministrationQuery(kind, {})),
-  ]);
-  const controlData = [...(controls.data ?? [])];
-  const fallbackControlIds = [...new Set((riskTypes.data?.data ?? []).flatMap((riskType) => 'applicableControls' in riskType ? riskType.applicableControls ?? [] : []))];
-  const initialControlOptions = (controlData.length > 0 ? controlData
-    .sort((left, right) => left.controlNumber.localeCompare(right.controlNumber, 'en-AU', { numeric: true }))
-    .slice(0, 100)
-    .map((control) => ({ documentId: control.documentId, label: `${control.controlNumber} · ${control.name}` }))
-    : fallbackControlIds.slice(0, 100).map((documentId, index) => ({ documentId, label: `Reusable Control ${index + 1}` })));
+  // The first options name each control by its label; searching reaches the rest of the library (D-29, D-36).
+  const controls = await listControls();
+  const initialControlOptions = applicableControlOptions(controls.data ?? []);
   return <><AdministrationBreadcrumbs kind={kind} current="New" /><AdministrationForm createAction={createRiskTypeAction} initialControlOptions={initialControlOptions} kind={kind} mode="create" searchControls={searchApplicableControlsAction} /></>;
 }

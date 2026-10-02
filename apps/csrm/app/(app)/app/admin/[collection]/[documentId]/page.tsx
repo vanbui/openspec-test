@@ -9,6 +9,8 @@ import { AdministrationAccessDenied, AdministrationBreadcrumbs, AdministrationUn
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 import { listControls } from '@/features/assessments/assessment-service';
+import { controlLabel } from '@/features/assessments/control-label';
+import { applicableControlOptions } from '@/features/administration/applicable-controls';
 import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
 
 type Props = { params: Promise<{ collection: string; documentId: string }> };
@@ -38,7 +40,7 @@ export default async function AdministrationRecordPage({ params }: Props) {
     if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
     if (result.error?.status === 404) return <AdministrationUnavailableState kind="controls" />;
     if (result.error || !result.data) return <AdministrationUnavailableState error kind="controls" />;
-    return <><AdministrationBreadcrumbs kind={kind} current={result.data.name} /><AdministrationForm documentId={documentId.data} initialValues={result.data} kind="controls" mode="edit" updateAction={updateControlAction} /></>;
+    return <><AdministrationBreadcrumbs kind={kind} current={controlLabel(result.data)} /><AdministrationForm documentId={documentId.data} initialValues={result.data} kind="controls" mode="edit" updateAction={updateControlAction} /></>;
   }
   if (kind === 'information-systems') {
     const result = await getInformationSystem(documentId.data);
@@ -58,11 +60,7 @@ export default async function AdministrationRecordPage({ params }: Props) {
   if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
   if (result.error?.status === 404) return <AdministrationUnavailableState />;
   if (result.error || !result.data) return <AdministrationUnavailableState error />;
-  const controlData = [...(controls.data ?? [])];
-  const initialControlOptions = (controlData.length > 0 ? controlData
-    .sort((left, right) => left.controlNumber.localeCompare(right.controlNumber, 'en-AU', { numeric: true }))
-    .slice(0, 100)
-    .map((control) => ({ documentId: control.documentId, label: `${control.controlNumber} · ${control.name}` }))
-    : (result.data?.applicableControls ?? []).slice(0, 100).map((controlId, index) => ({ documentId: controlId, label: `Reusable Control ${index + 1}` })));
+  // The saved selections join the first options so each reads by its label, wherever it sits in the library (D-36).
+  const initialControlOptions = applicableControlOptions(controls.data ?? [], result.data.applicableControls ?? []);
   return <><AdministrationBreadcrumbs kind={kind} current={result.data.name} /><AdministrationForm documentId={documentId.data} initialControlOptions={initialControlOptions} initialValues={result.data} kind={kind} mode="edit" searchControls={searchApplicableControlsAction} updateAction={updateRiskTypeAction} /></>;
 }

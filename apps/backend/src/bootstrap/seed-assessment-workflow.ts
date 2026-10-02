@@ -13,15 +13,15 @@ type RiskTypeSeed = {
 
 export const ASSESSMENT_RISK_TYPE_SEEDS: Readonly<Record<DeterministicAssessmentRiskTypeName, RiskTypeSeed>> = {
   "Internet Exposure": {
-    description: "Reusable deterministic draft mapping for internet-reachable and externally hosted services.",
+    description: "Risks from services that can be reached from the internet or are hosted by an external provider, such as exposed interfaces, unpatched software and weak authentication.",
     controlNumbers: ["E8-PATCH_APPLICATIONS-003", "V3.1.1"],
   },
   "Personal Information Handling": {
-    description: "Reusable deterministic draft mapping for services that handle personal information.",
+    description: "Risks from collecting, storing, using or sharing personal information, including privacy obligations, who can access the information and how long it is kept.",
     controlNumbers: ["APP-12", "GV.OC-03"],
   },
   "Third-Party Dependency": {
-    description: "Reusable deterministic draft mapping for external providers and service dependencies.",
+    description: "Risks from relying on an external provider for a service, such as the provider’s own security, its staff’s access to your systems and data, and the continuity of its service.",
     controlNumbers: ["CPS-234-16", "GV.SC-04"],
   },
 };

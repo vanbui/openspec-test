@@ -15,13 +15,14 @@ import {
   informationSystemUpdateInputSchema,
   type InformationAssetAdministrationRecord,
   type InformationSystemAdministrationRecord,
+  parseAdministrationQuery,
   riskTypeCreateInputSchema,
   riskTypeUpdateInputSchema,
   type RiskTypeAdministrationRecord,
 } from './administration-schema';
-import { commitAdministrationCsv, createAdministrationControl, createInformationAsset, createInformationSystem, createRiskType, previewAdministrationCsv, updateAdministrationControl, updateInformationAsset, updateInformationSystem, updateRiskType } from './administration-service';
+import { commitAdministrationCsv, createAdministrationControl, createInformationAsset, createInformationSystem, createRiskType, listAdministrationControls, previewAdministrationCsv, updateAdministrationControl, updateInformationAsset, updateInformationSystem, updateRiskType } from './administration-service';
+import { applicableControlSearchOptions, type ApplicableControlOption } from './applicable-controls';
 import type { CsvImportPreviewData, CsvImportResultData } from './csv-import-schema';
-import { listControls } from '@/features/assessments/assessment-service';
 
 export type AdministrationActionResult<T> =
   | { ok: true; data: T }
@@ -32,8 +33,10 @@ export type AdministrationActionResult<T> =
       formError: string;
     };
 
-export type ApplicableControlOption = { documentId: string; label: string };
+export type { ApplicableControlOption };
 const applicableControlSearchSchema = z.string().trim().min(1).max(200);
+/* One page of the Administration page sizes (10, 25, 50, 100): enough to choose from, never the whole library. */
+const applicableControlSearchPageSize = 25;
 
 export type CsvImportActionResult<T> =
   | { ok: true; data: T }
@@ -93,16 +96,18 @@ export async function commitAdministrationCsvAction(formData: FormData): Promise
   return { ok: true, data: result.data };
 }
 
+/*
+ * The Risk Type form's control search (D-29): Strapi matches the control number, name and framework under the
+ * analyst's own Administration grant and returns one bounded page, so the library is never read whole.
+ */
 export async function searchApplicableControlsAction(input: unknown): Promise<readonly ApplicableControlOption[]> {
   const search = applicableControlSearchSchema.safeParse(input);
   if (!search.success) return [];
-  const result = await listControls();
+  const result = await listAdministrationControls(parseAdministrationQuery('controls', {
+    q: search.data, page: 1, pageSize: applicableControlSearchPageSize,
+  }));
   if (result.error || !result.data) return [];
-  const needle = search.data.toLocaleLowerCase('en-AU');
-  return result.data
-    .filter((control) => `${control.controlNumber} ${control.name}`.toLocaleLowerCase('en-AU').includes(needle))
-    .slice(0, 20)
-    .map((control) => ({ documentId: control.documentId, label: `${control.controlNumber} · ${control.name}` }));
+  return applicableControlSearchOptions(result.data.data.flatMap((record) => 'controlNumber' in record ? [record] : []));
 }
 
 const createRiskTypeActionSchema = z.object({ values: riskTypeCreateInputSchema }).strict();
