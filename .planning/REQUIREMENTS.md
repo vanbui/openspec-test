@@ -14,7 +14,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Requests
 
-- [ ] **REQ-07**: A Security Analyst sees every field the Requestor submitted, and each actor's request actions refresh after every workflow transition.
+- [x] **REQ-07**: A Security Analyst sees every field the Requestor submitted, and each actor's request actions refresh after every workflow transition.
   - Acceptance: (1) the analyst's request page shows third-party involvement, third-party details and regulatory requirements, grouped as on the Requestor's form; (2) after a request returns to draft, both actors see the draft actions without reloading.
   - Trace: F1, F2 · UAT-015, UAT-037 · Phase 10
 - [ ] **REQ-08**: A Security Analyst can pick up a submitted request, assign or reassign it to a Security Analyst, or release it back to the queue, and every analyst on the request can follow its generation jobs.
@@ -36,10 +36,10 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Questionnaires
 
-- [ ] **QUES-08**: A Security Analyst can govern any questionnaire, including AI-generated ones, without errors or lost work.
+- [x] **QUES-08**: A Security Analyst can govern any questionnaire, including AI-generated ones, without errors or lost work.
   - Acceptance: (1) adding a question to an existing section or to a new named section succeeds on generated and seeded questionnaires; (2) Add and Edit open where invoked with focus in the first field, and errors show beside the form; (3) regenerating first states how many analyst edits it discards, and the timeline records a Regenerated event while earlier entries stay attached to their questions; (4) after release the analyst sees the released questions read-only and the Requestor's answered count, without answer content before submission (default).
   - Trace: F4, F5 · UAT-005, UAT-016, UAT-019, UAT-020 · Phase 10
-- [ ] **QUES-09**: A Requestor answers a questionnaire without losing work and with clear guidance.
+- [x] **QUES-09**: A Requestor answers a questionnaire without losing work and with clear guidance.
   - Acceptance: (1) answers autosave with a visible saved state, or leaving with unsaved answers warns first; (2) the questionnaire opens with an introduction and the first section, the unanswered-required list appears only after a submit attempt and in form order, and the history follows the questions; (3) radio groups follow the ARIA radio pattern, so arrow keys move and select; (4) submission dialogs say what happens next and how to change it, matching the actions the page then offers.
   - Trace: F5, Q5 · UAT-021, UAT-022, UAT-023, UAT-064 · Phase 10
 - [ ] **QUES-10**: Generated questionnaires suit a Requestor who is not a security expert.
@@ -55,10 +55,10 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Assessments
 
-- [ ] **ASSESS-06**: A Security Analyst edits risks and control implementations with fitting pickers and clear feedback.
+- [x] **ASSESS-06**: A Security Analyst edits risks and control implementations with fitting pickers and clear feedback.
   - Acceptance: (1) mitigation control, impacted system, impacted asset and control owner use server-backed searchable pickers, with the Risk Type's applicable controls first and the request's systems and assets first; (2) every date field, the exemption review date included, uses the shared date input; (3) saving a risk or a control implementation confirms inline; (4) release readiness is summarised per risk with its outstanding count and a link to the risk, and met items are hidden by default.
   - Trace: F7, F9, F10 · UAT-006, UAT-009, UAT-010, UAT-011, UAT-034 · Phase 10
-- [ ] **ASSESS-07**: The released assessment shows each risk's full treatment for both actors.
+- [x] **ASSESS-07**: The released assessment shows each risk's full treatment for both actors.
   - Acceptance: controls show by number and name, and each risk shows its treatment action and plan, owners and dates, read-only.
   - Trace: F10, O1 · UAT-033 · Phase 10
 - [ ] **ASSESS-08**: AI draft generation uses the organisation's Risk Type library and proposes controls and treatments for the analyst to accept.
@@ -163,7 +163,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Workflow Experience
 
-- [ ] **UX-06**: Actions, refusals, timestamps and copy tell each actor the truth in their own terms.
+- [x] **UX-06**: Actions, refusals, timestamps and copy tell each actor the truth in their own terms.
   - Acceptance: (1) offered actions match what Strapi allows, and a refusal states its real reason in plain words; (2) an in-flight or recent generation job shows when the analyst returns to the request, in place of a new Generate action; (3) revision timelines show the viewer's local time and name questions by their text; (4) interface copy avoids back-end and internal terms; (5) a Requestor who opens an analyst route sees the permission state, and analyst-only actions never show to a Requestor.
   - Trace: Q5, R3 · UAT-024, UAT-036, UAT-041, UAT-054, UAT-062 · Phase 10
 - [ ] **UX-07**: The sidebar is divided into sections named by job, with labels that match page headings and counts on items that hold work.
@@ -261,7 +261,8 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 | Requirement | Phase | Status |
 |---|---|---|
-| REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, ADMIN-05, UX-06 | Phase 10 | Pending |
+| REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, UX-06 | Phase 10 | Complete (plan 10-23, 2026-10-03; phase verification pending) |
+| ADMIN-05 | Phase 10; the Information Asset owner moves to Phase 22 (Remainder) | Pending |
 | UX-07, UX-08, UX-09, UX-10, DASH-03 | Phase 11 | Pending |
 | INT-05, INT-06, ASSESS-08, QUES-10 | Phase 12 | Pending |
 | REQ-08, COLLAB-01 | Phase 13 | Pending |

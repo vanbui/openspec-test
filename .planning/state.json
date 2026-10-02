@@ -5,8 +5,8 @@
   "phases": [],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 10 of 16 · 0% · executing"
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 10 of 16 · 0% · ready to verify"
   },
-  "updated_at": "2026-10-02T13:38:11.478Z"
+  "updated_at": "2026-10-02T19:21:22.001Z"
 }
