@@ -46,8 +46,11 @@ export const internalTerms = [
 
 /** Paths relative to apps/csrm, sorted and unique. */
 export const guardedFiles = [
+  'src/components/csrm/confirm-dialog.tsx',
   'src/components/csrm/local-time.tsx',
+  'src/components/csrm/navigation-guard.tsx',
   'src/components/csrm/revert-audit-summary.tsx',
+  'src/components/csrm/save-status.tsx',
   'src/components/states/states.tsx',
   'src/features/administration/administration-actions.ts',
   'src/features/assessments/assessment-actions.ts',
@@ -60,6 +63,7 @@ export const guardedFiles = [
   'src/features/questionnaires/questionnaire-renderer.tsx',
   'src/features/questionnaires/questionnaire-revision-timeline.tsx',
   'src/features/questionnaires/questionnaire-workflow-rules.ts',
+  'src/features/questionnaires/use-answer-autosave.ts',
   'src/features/requests/request-actions.ts',
   'src/features/requests/request-context-details.tsx',
   'src/features/requests/request-domain.ts',
