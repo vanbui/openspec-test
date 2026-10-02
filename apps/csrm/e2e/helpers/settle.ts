@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import { settleWidthInBrowser } from '../../src/lib/testing/settle-width';
+
 /** What a settled destination looks like: its URL, its exact document title and its level-one heading. */
 export type SettledExpectation = {
   url: RegExp;
@@ -32,14 +34,5 @@ export async function expectSettled(page: Page, expected: SettledExpectation, su
  * the previous width's layout and expect an overflow the settled page no longer has.
  */
 export async function settleElementWidth(element: Locator): Promise<void> {
-  await element.evaluate(async (node) => {
-    const read = () => `${node.scrollWidth}x${node.clientWidth}`;
-    let previous = read();
-    for (let stable = 0; stable < 3;) {
-      await new Promise<void>((resolve) => { requestAnimationFrame(() => resolve()); });
-      const current = read();
-      stable = current === previous ? stable + 1 : 0;
-      previous = current;
-    }
-  });
+  await element.evaluate(settleWidthInBrowser, { label: String(element), frameLimit: 120 });
 }
