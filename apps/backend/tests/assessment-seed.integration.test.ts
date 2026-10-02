@@ -210,6 +210,91 @@ test("ADMIN-05 a seeded start replaces a stored description beyond the bound, wh
 });
 
 /*
+ * WR-101: the seed replaces only a value it wrote itself, for every field it derives from the stored
+ * catalogue entry and framework, not just the name and description. An operator who clears a seeded
+ * control's description, or edits its reference or framework facts through Administration, keeps that
+ * edit on every seeded start; a value the seed wrote still follows the catalogue.
+ */
+const OPERATOR_EDITABLE_SEED_FIELDS = ["controlReference", "description", "framework", "frameworkSource", "frameworkVersion"] as const;
+
+async function restoreSeededFields(control: Document): Promise<void> {
+  await strapi.documents("api::csrm-control.csrm-control").update({
+    documentId: control.documentId,
+    data: Object.fromEntries(OPERATOR_EDITABLE_SEED_FIELDS.map((field) => [field, control[field] ?? null])),
+  });
+}
+
+test("ADMIN-05 WR-101 a seeded start keeps an operator's cleared description of a seeded control, then changes nothing", async () => {
+  const control = await seededControl("APP-5");
+  assert.ok(typeof control.description === "string" && control.description.length > 0, "APP-5 is seeded with a description");
+  try {
+    await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { description: null } });
+
+    await seedCsrmData(strapi as never);
+    const kept = await seededControl("APP-5");
+    assert.equal(kept.description, null, "the seed never restores a description an operator cleared");
+    await seedCsrmData(strapi as never);
+    const unchanged = await seededControl("APP-5");
+    assert.equal(unchanged.description, null);
+    assert.equal(String(unchanged.updatedAt), String(kept.updatedAt), "a further seeded start leaves APP-5 untouched");
+  } finally {
+    await restoreSeededFields(control);
+  }
+});
+
+test("ADMIN-05 WR-101 a seeded start keeps an operator's reference and framework edits of a seeded control, then changes nothing", async () => {
+  const control = await seededControl("APP-5");
+  for (const field of ["controlReference", "framework", "frameworkSource", "frameworkVersion"] as const) {
+    assert.ok(typeof control[field] === "string" && (control[field] as string).length > 0, `APP-5 is seeded with a ${field}`);
+  }
+  const operatorEdits = {
+    controlReference: "Our register: APP 5 notification",
+    framework: "Privacy Act 1988 (our reading)",
+    frameworkSource: "https://intranet.example/privacy/app-5",
+    frameworkVersion: null,
+  };
+  try {
+    await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: operatorEdits });
+
+    await seedCsrmData(strapi as never);
+    const kept = await seededControl("APP-5");
+    for (const [field, value] of Object.entries(operatorEdits)) {
+      assert.equal(kept[field], value, `the seed never overwrites an operator's ${field}`);
+    }
+    await seedCsrmData(strapi as never);
+    const unchanged = await seededControl("APP-5");
+    assert.equal(String(unchanged.updatedAt), String(kept.updatedAt), "a further seeded start leaves APP-5 untouched");
+  } finally {
+    await restoreSeededFields(control);
+  }
+});
+
+test("ADMIN-05 WR-101 a seeded start still replaces a reference and framework version an earlier seed wrote", async () => {
+  const control = await seededControl("APP-5");
+  const sourceData = control.sourceData as { control: Record<string, unknown>; catalogue: { framework: Record<string, unknown> } } & Record<string, unknown>;
+  assert.ok(sourceData?.control && sourceData.catalogue?.framework, "APP-5 stores its catalogue entry and framework");
+  // What an earlier seed wrote from an earlier catalogue: the stored entry and framework, and the values derived from them.
+  await strapi.documents("api::csrm-control.csrm-control").update({
+    documentId: control.documentId,
+    data: {
+      controlReference: "Schedule 1, APP 5 (earlier)",
+      frameworkVersion: "Compilation 41",
+      sourceData: {
+        ...sourceData,
+        catalogue: { ...sourceData.catalogue, framework: { ...sourceData.catalogue.framework, version: "Compilation 41" } },
+        control: { ...sourceData.control, sourceClause: "Schedule 1, APP 5 (earlier)" },
+      },
+    },
+  });
+
+  await seedCsrmData(strapi as never);
+  const replaced = await seededControl("APP-5");
+  assert.equal(replaced.controlReference, control.controlReference, "a seed-written reference follows the catalogue");
+  assert.equal(replaced.frameworkVersion, control.frameworkVersion, "a seed-written framework version follows the catalogue");
+  assert.deepEqual(replaced.sourceData, control.sourceData);
+});
+
+/*
  * D-46 (operator decision 15): an Annex A control carries the standard's control name from the CSRM
  * title file, and no ISO control text. A database seeded before the titles existed stores the bare
  * number; the next seeded start renames it, and a further seeded start changes nothing (D-36).
