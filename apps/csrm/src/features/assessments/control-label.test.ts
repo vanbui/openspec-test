@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { controlLabel, controlTitle } from './control-label';
+import { controlLabel, controlPickerItem, controlTitle } from './control-label';
 
 const isoFramework = 'ISO/IEC 27001 Information security management systems — Annex A';
 
@@ -64,5 +64,28 @@ describe('the control label rule (D-36, UI-SPEC §16.1)', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/assessments/control-label.ts'), 'utf8');
     expect(source).not.toMatch(/from ['"]zod['"]/);
     expect(source).not.toMatch(/from ['"]\.\/assessment-schema['"]/);
+  });
+});
+
+describe('a control as a record picker item (D-36, UI-SPEC §16.2)', () => {
+  const privacyFramework = 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme';
+
+  it('names a titled control by its label and puts the framework, as stored, on the second line', () => {
+    expect(controlPickerItem({
+      documentId: 'control-app-11',
+      controlNumber: 'APP-11',
+      name: 'APP-11 — Security of personal information',
+      framework: privacyFramework,
+    })).toEqual({
+      documentId: 'control-app-11',
+      name: 'APP-11 · Security of personal information',
+      detail: 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme',
+    });
+  });
+
+  it('names an untitled control by its number and framework, with no second line', () => {
+    const item = controlPickerItem({ documentId: 'control-5-1', controlNumber: '5.1', name: '5.1', framework: isoFramework });
+    expect(item).toEqual({ documentId: 'control-5-1', name: '5.1 · ISO/IEC 27001 Information security management systems — Annex A' });
+    expect(item).not.toHaveProperty('detail');
   });
 });

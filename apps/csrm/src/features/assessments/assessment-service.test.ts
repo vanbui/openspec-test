@@ -23,6 +23,7 @@ import {
 import {
   assessmentRatingPresentation,
 } from './assessment-domain';
+import { riskPickerContractParsers } from '../risks/risk-schema';
 
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
@@ -227,7 +228,7 @@ describe('assessment contract schemas', () => {
       expect(controlImplementationCreateInputSchema.safeParse({ ...controlInput, [forbidden]: 'forged' }).success).toBe(false);
     }
 
-    expect(riskTypeSchema.safeParse({ documentId: 'risk-type-1', name: 'Internet Exposure', description: null }).success).toBe(true);
+    expect(riskTypeSchema.safeParse({ documentId: 'risk-type-1', name: 'Internet Exposure', description: null, applicableControls: [] }).success).toBe(true);
     expect(riskSchema.safeParse({ documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: 'A risk.', inherentRating: 'High', residualRating: 'Moderate' }).success).toBe(true);
     expect(riskTypeSchema.safeParse({ documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: 'A risk.' }).success).toBe(false);
     expect(controlImplementationSchema.safeParse({ documentId: 'implementation-1', ...controlInput, controlSummary, controlOwner: analyst }).success).toBe(true);
@@ -380,7 +381,7 @@ describe('assessment generated-client service boundary', () => {
     get
       .mockResolvedValueOnce(response({ data: [riskListItem] }))
       .mockResolvedValueOnce(response({ data: [implementation] }))
-      .mockResolvedValueOnce(response({ data: [{ documentId: 'risk-type-1', name: 'Internet Exposure', description: null }] }))
+      .mockResolvedValueOnce(response({ data: [{ documentId: 'risk-type-1', name: 'Internet Exposure', description: null, applicableControls: [] }] }))
       .mockResolvedValueOnce(response({ data: [{ documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', description: null }] }))
       .mockResolvedValueOnce(response({ data: [analyst] }));
 
@@ -408,5 +409,43 @@ describe('assessment generated-client service boundary', () => {
     await expect(service.getAnalystAssessment('assessment-1')).resolves.toEqual(forbidden);
     await expect(service.listAssessmentRequests()).resolves.toEqual(unavailable);
     await expect(service.searchActiveUsers('Alex')).resolves.toEqual(unavailable);
+  });
+});
+
+describe('the picker Risk Type list carries bounded applicable controls (D-31, D-02)', () => {
+  const riskRegisterRiskTypes = riskPickerContractParsers.find(({ label }) => label === 'listRiskRegisterRiskTypes')!.parser;
+  const applicableControl = (overrides: Record<string, unknown> = {}) => ({
+    documentId: 'control-app-11',
+    controlNumber: 'APP-11',
+    name: 'APP-11 — Security of personal information',
+    framework: 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme',
+    ...overrides,
+  });
+  const riskType = (applicableControls: unknown) => ({ documentId: 'risk-type-1', name: 'Internet Exposure', description: null, applicableControls });
+  const parsers = [
+    ['the assessment editor picker (riskTypeSchema)', (value: unknown) => riskTypeSchema.safeParse(value).success],
+    ['the Risk Register picker (listRiskRegisterRiskTypes)', (value: unknown) => riskRegisterRiskTypes.safeParse({ data: [value] }).success],
+  ] as const;
+
+  it.each(parsers)('%s accepts strings of 1 and 255 characters and a list of 1,000', (_label, accepts) => {
+    for (const field of ['documentId', 'controlNumber', 'name', 'framework']) {
+      expect(accepts(riskType([applicableControl({ [field]: 'x' })])), `${field} of 1 character`).toBe(true);
+      expect(accepts(riskType([applicableControl({ [field]: 'x'.repeat(255) })])), `${field} of 255 characters`).toBe(true);
+    }
+    expect(accepts(riskType(Array.from({ length: 1_000 }, (_, index) => applicableControl({ documentId: `control-${index}` }))))).toBe(true);
+    expect(accepts(riskType([]))).toBe(true);
+  });
+
+  it.each(parsers)('%s rejects a 256-character name, an empty field and a list of 1,001', (_label, accepts) => {
+    expect(accepts(riskType([applicableControl({ name: 'x'.repeat(256) })]))).toBe(false);
+    expect(accepts(riskType([applicableControl({ framework: '' })]))).toBe(false);
+    expect(accepts(riskType(Array.from({ length: 1_001 }, (_, index) => applicableControl({ documentId: `control-${index}` }))))).toBe(false);
+  });
+
+  it.each(parsers)('%s requires the list and closes each control to its four fields', (_label, accepts) => {
+    expect(accepts({ documentId: 'risk-type-1', name: 'Internet Exposure', description: null })).toBe(false);
+    expect(accepts(riskType([applicableControl({ description: 'Not part of the summary' })]))).toBe(false);
+    const { framework: _framework, ...withoutFramework } = applicableControl();
+    expect(accepts(riskType([withoutFramework]))).toBe(false);
   });
 });

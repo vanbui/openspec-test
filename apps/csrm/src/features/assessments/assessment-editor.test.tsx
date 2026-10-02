@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Suspense, use, type ReactNode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -170,12 +170,34 @@ function definitionValue(term: string): HTMLElement {
   return terms[0]!.nextElementSibling as HTMLElement;
 }
 
+const applicableAc1 = { documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', framework: 'NIST SP 800-53' };
+const applicableApp11 = {
+  documentId: 'control-2',
+  controlNumber: 'APP-11',
+  name: 'APP-11 — Security of personal information',
+  framework: 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme',
+};
+
+const searchControls = vi.fn(async () => ({ ok: true as const, data: [] }));
+
+/** The control editor's options: the owners, the Risk Type's applicable controls first, and the control search. */
+const controlEditorOptions = {
+  users: [analyst],
+  suggestedControls: {
+    label: 'Applicable to Internet Exposure',
+    items: [
+      { documentId: 'control-1', name: 'AC-1 · Access control', detail: 'NIST SP 800-53' },
+      { documentId: 'control-2', name: 'APP-11 · Security of personal information', detail: applicableApp11.framework },
+    ],
+  },
+  searchControls,
+};
+
 const editorProps = {
   assessment,
   risks: [risk],
   controlImplementations: { 'risk-1': [implementation] },
-  riskTypes: [{ documentId: 'risk-type-1', name: 'Internet Exposure', description: null }],
-  controls: [{ documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', description: null }],
+  riskTypes: [{ documentId: 'risk-type-1', name: 'Internet Exposure', description: null, applicableControls: [applicableAc1, applicableApp11] }],
   users: [analyst],
   systems: [{ documentId: 'system-1', name: 'Customer portal' }],
   assets: [{ documentId: 'asset-1', name: 'Customer data' }],
@@ -198,7 +220,7 @@ const riskLabels = [
 const selectRiskLabels = riskLabels.filter((label) => label !== 'Risk owner' && label !== 'Treatment owner');
 
 const controlLabels = [
-  'Reusable control', 'Control owner', 'Control status', 'Effectiveness rating', 'Evidence',
+  'Control', 'Control owner', 'Control status', 'Effectiveness rating', 'Evidence',
   'Implementation due date', 'Implemented date', 'Review date',
 ];
 
@@ -369,13 +391,18 @@ describe('analyst assessment editor contract', () => {
   });
 
   it('exposes exactly the contextual ControlImplementation fields and add/update/remove actions', async () => {
-    const view = render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={editorProps} riskId="risk-1" />);
+    const view = render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
     for (const label of controlLabels) expect(screen.getByLabelText(label)).toBeInTheDocument();
     expect(screen.queryByLabelText('Control number')).not.toBeInTheDocument();
 
     for (const label of controlLabels) {
       const field = screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-      if (field instanceof HTMLSelectElement) {
+      if (label === 'Control') {
+        // The Control field is the record picker (D-28): choose another applicable control from it.
+        expect(field).toHaveAttribute('role', 'combobox');
+        fireEvent.click(field);
+        fireEvent.click(screen.getByRole('option', { name: 'APP-11 · Security of personal information' }));
+      } else if (field instanceof HTMLSelectElement) {
         const next = [...field.options].map((option) => option.value).find((value) => value !== field.value) ?? '';
         fireEvent.change(field, { target: { value: next } });
       } else if (field instanceof HTMLInputElement && field.type === 'date') fireEvent.change(field, { target: { value: '2026-11-11' } });
@@ -392,10 +419,12 @@ describe('analyst assessment editor contract', () => {
     }));
 
     view.unmount();
-    render(<ControlImplementationEditor assessmentId="assessment/id" mode="create" options={editorProps} riskId="risk-1" />);
-    fireEvent.change(screen.getByLabelText('Reusable control'), { target: { value: 'control-1' } });
+    render(<ControlImplementationEditor assessmentId="assessment/id" mode="create" options={controlEditorOptions} riskId="risk-1" />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Control' }));
+    fireEvent.click(screen.getByRole('option', { name: 'AC-1 · Access control' }));
     await userEvent.click(screen.getByRole('button', { name: 'Add mitigation control' }));
     await waitFor(() => expect(actionMocks.createControlImplementationAction).toHaveBeenCalledTimes(1));
+    expect(actionMocks.createControlImplementationAction.mock.calls[0]?.[0].values.control).toBe('control-1');
   });
 
   it('keeps unchanged Risk and ControlImplementation edits local while submitting changed fields only', async () => {
@@ -417,7 +446,7 @@ describe('analyst assessment editor contract', () => {
     });
 
     riskView.unmount();
-    render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={editorProps} riskId="risk-1" />);
+    render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
     const saveControl = screen.getByRole('button', { name: 'Save mitigation control' });
     await userEvent.click(saveControl);
     expect(actionMocks.updateControlImplementationAction).not.toHaveBeenCalled();
@@ -435,9 +464,40 @@ describe('analyst assessment editor contract', () => {
     });
   });
 
+  it('offers the Risk Type’s applicable controls first in a searchable Control picker, never a native select (D-28, D-31)', async () => {
+    render(<AssessmentEditor {...editorProps} />);
+    const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
+    expect(within(region).queryByText('Reusable control')).not.toBeInTheDocument();
+    expect(region.querySelector('select[name="control"]')).toBeNull();
+
+    await userEvent.click(within(region).getByRole('button', { name: 'Add mitigation control' }));
+    const pickers = within(region).getAllByRole('combobox', { name: 'Control' });
+    const created = pickers.at(-1)!;
+    // UI-SPEC §13.1: the new form opens with focus in its Control input.
+    await waitFor(() => expect(created).toHaveFocus());
+    expect(created).toHaveAccessibleDescription('Search by control number, name or framework. Controls that apply to the Risk Type come first.');
+
+    fireEvent.click(created);
+    const group = screen.getByRole('group', { name: 'Applicable to Internet Exposure' });
+    expect(within(group).getAllByRole('option').map((option) => option.getAttribute('aria-label'))).toEqual([
+      'AC-1 · Access control',
+      'APP-11 · Security of personal information',
+    ]);
+  });
+
+  it('reads an existing mitigation control’s choice from its served summary, or Control not found, never an id (D-30, D-36)', () => {
+    const view = render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
+    expect(screen.getByText('Selected control: AC-1 · Access control')).toBeInTheDocument();
+    view.unmount();
+
+    render(<ControlImplementationEditor assessmentId="assessment/id" implementation={{ ...implementation, control: 'control-gone', controlSummary: null }} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
+    expect(screen.getByText('Selected control: Control not found')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('control-gone');
+  });
+
   it('shows a released Risk through the shared read-only component with h3 groups (D-34, UI-SPEC §15.2)', () => {
     // No control library is loaded: the label comes from the served control summary (D-36).
-    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} controls={[]} riskListItems={[riskListItem]} />);
+    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} riskListItems={[riskListItem]} />);
 
     for (const group of ['Ratings', 'Ownership and treatment', 'Mitigation control implementations']) {
       expect(screen.getByRole('heading', { level: 3, name: group })).toBeInTheDocument();
@@ -455,7 +515,7 @@ describe('analyst assessment editor contract', () => {
   });
 
   it('names a released Risk’s owners, system and asset from the loaded labels when no list item is served', () => {
-    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} controls={[]} />);
+    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} />);
 
     expect(definitionValue('Information system impacted')).toHaveTextContent(/^Customer portal$/);
     expect(definitionValue('Information asset impacted')).toHaveTextContent(/^Customer data$/);
@@ -476,6 +536,9 @@ describe('analyst assessment editor contract', () => {
     expect(route).toContain('canMutateAssessment');
     expect(route).toContain('listAssessmentRisks');
     expect(route).toContain('riskListItems=');
+    // D-28: the page no longer loads the whole control library.
+    expect(route).not.toContain('listControls');
+    expect(route).not.toContain('controls=');
   });
 
   it('renders deliberate safe states and never mutates released or partial release facts', () => {

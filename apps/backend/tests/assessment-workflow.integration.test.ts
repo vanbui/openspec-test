@@ -651,7 +651,11 @@ test("mounted contextual Risk routes cover the frozen writable surface and bound
   assert.equal(riskTypesResponse.status, 200, "RISK_TYPE_REFERENCE_ROUTE_MISSING");
   const riskTypes = rows(await payload(riskTypesResponse));
   assert.ok(riskTypes.some((riskType) => riskType.documentId === fixtures.aggregate.riskType));
-  assert.ok(riskTypes.every((riskType) => Object.keys(riskType).sort().join(",") === "description,documentId,name"));
+  assert.ok(riskTypes.every((riskType) => Object.keys(riskType).sort().join(",") === "applicableControls,description,documentId,name"));
+  // D-31: each Risk Type carries its bounded applicable-control summary, exactly four fields per control.
+  assert.ok(riskTypes.every((riskType) => Array.isArray(riskType.applicableControls)
+    && (riskType.applicableControls as Array<Record<string, unknown>>).every((control) =>
+      Object.keys(control).sort().join(",") === "controlNumber,documentId,framework,name")));
 
   const controlsResponse = await request("/api/v1/controls", harness.identities.analyst);
   assert.equal(controlsResponse.status, 200, "CONTROL_REFERENCE_ROUTE_MISSING");
@@ -791,6 +795,42 @@ test("mounted contextual Risk routes cover the frozen writable surface and bound
   const persistedAssessmentAfter = await harness.getAssessment(generatedAssessmentId);
   const linkedRequestId = (persistedAssessmentAfter?.assessmentRequest as Record<string, unknown> | undefined)?.documentId;
   assert.equal((await harness.getRequest(String(linkedRequestId)))?.requestStatus, "under-review");
+});
+
+test("mounted picker Risk Type list names each Risk Type's applicable controls for the control picker (D-31)", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await harness.seedAssessmentWorkflowFixtures();
+  const name = `Mounted applicable picker ${process.pid}`;
+  const created = await request("/api/v1/risk_types", harness.identities.analyst, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, description: "Risk Type whose applicable control leads the control picker", applicableControls: [fixtures.aggregate.control] }),
+  });
+  assert.equal(created.status, 201, await created.clone().text());
+  const createdId = ((await payload(created)).data as Record<string, unknown>).documentId;
+  assert.equal(typeof createdId, "string", "APPLICABLE_PICKER_RISK_TYPE_NOT_CREATED");
+
+  const picker = await request("/api/v1/risk_types", harness.identities.analyst);
+  assert.equal(picker.status, 200);
+  const pickerBody = await payload(picker);
+  assert.equal(pickerBody.meta, undefined, "PICKER_RISK_TYPE_LIST_BECAME_A_PAGE");
+  const listed = rows(pickerBody).find((riskType) => riskType.documentId === createdId);
+  assert.ok(listed, "APPLICABLE_PICKER_RISK_TYPE_NOT_LISTED");
+  assert.deepEqual(Object.keys(listed).sort(), ["applicableControls", "description", "documentId", "name"]);
+  assert.deepEqual(listed.applicableControls, [{
+    documentId: fixtures.aggregate.control,
+    controlNumber: "MOUNTED-CTRL-001",
+    name: "Mounted boundary protection",
+    framework: "Mounted test framework",
+  }], "APPLICABLE_CONTROL_SUMMARY_NOT_SERVED");
+
+  // A query still serves the Administration page, which names applicable controls by id only.
+  const page = await request(`/api/v1/risk_types?q=${encodeURIComponent(name)}`, harness.identities.analyst);
+  assert.equal(page.status, 200);
+  const pageBody = await payload(page);
+  assert.ok(pageBody.meta && typeof pageBody.meta === "object" && "pagination" in pageBody.meta, "ADMINISTRATION_RISK_TYPE_PAGE_MISSING");
+  const pageRow = rows(pageBody).find((riskType) => riskType.documentId === createdId);
+  assert.deepEqual(pageRow?.applicableControls, [fixtures.aggregate.control]);
 });
 
 test("mounted contextual Risk routes reject hostile parents, fields, references, releases, and actors", async () => {
