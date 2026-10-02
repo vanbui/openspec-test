@@ -19,6 +19,7 @@ import {
   requestGenerationJobsResponseSchema,
   assessmentRatingSummarySchema,
   assessmentRequestQueueItemSchema,
+  assessmentRiskListResponseSchema,
   assessmentStatusSummarySchema,
   assessmentStatusSchema,
   assessmentSummarySchema,
@@ -45,6 +46,7 @@ import {
   type QuestionnaireGenerationJob,
   type RequestGenerationJobs,
   type AssessmentRating,
+  type AssessmentRiskListItem,
   type AssessmentSummary,
   type AssessmentUpdateInput,
   type Control,
@@ -84,7 +86,6 @@ const requestorReleasedAssessmentResponseSchema = responseOf(requestorReleasedAs
 const releasedAssessmentDetailGetResponseSchema = responseOf(releasedAssessmentDetailForActorSchema);
 const assessmentResponseSchema = responseOf(assessmentDetailSchema);
 const riskResponseSchema = responseOf(riskSchema);
-const riskListResponseSchema = listResponseOf(riskSchema);
 const controlImplementationResponseSchema = responseOf(controlImplementationSchema);
 const controlImplementationListResponseSchema = listResponseOf(controlImplementationSchema);
 const riskTypeListResponseSchema = listResponseOf(riskTypeSchema);
@@ -181,7 +182,9 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
     // offers them.
     narrowedPaths: ['data.assessmentStatus', 'data.assessmentDate', 'data.approvalDate', 'data.approvedBy'],
   },
-  { label: 'listAssessmentRisks', component: 'RiskListResponse', parser: riskListResponseSchema },
+  // D-34: the assessment's risk list carries the treatment and ownership facts both released views render.
+  // A Phase 10 parser: every bound is the contract's own, so it is never grandfathered.
+  { label: 'listAssessmentRiskItems', component: 'AssessmentRiskListResponse', parser: assessmentRiskListResponseSchema },
   { label: 'listControlImplementations', component: 'ControlImplementationListResponse', parser: controlImplementationListResponseSchema },
   { label: 'listRiskTypes', component: 'RiskTypeListResponse', parser: riskTypeListResponseSchema },
   { label: 'listControls', component: 'ControlListResponse', parser: controlListResponseSchema },
@@ -438,10 +441,10 @@ export async function updateAssessment(assessmentId: string, input: AssessmentUp
   }), (payload) => assessmentResponseSchema.parse(payload).data);
 }
 
-function readRisks(assessmentId: string): Promise<TransportResult<readonly Risk[]>> {
+function readRisks(assessmentId: string): Promise<TransportResult<readonly AssessmentRiskListItem[]>> {
   return request((client) => client.GET('/v1/risk_assessments/{assessmentId}/risks', {
     params: { path: { assessmentId: id(assessmentId) } },
-  }), (payload) => riskListResponseSchema.parse(payload).data);
+  }), (payload) => assessmentRiskListResponseSchema.parse(payload).data);
 }
 
 export const listAssessmentRisks = readRisks;

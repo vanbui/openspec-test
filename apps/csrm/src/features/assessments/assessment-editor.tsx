@@ -2,7 +2,7 @@
 
 import { AlertCircleIcon, CheckCircle2Icon, LockKeyholeIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
@@ -21,6 +21,7 @@ import { refreshAnalystAssessmentAction, releaseAssessmentAction, saveAssessment
 import {
   type ActiveUser,
   type AnalystAssessmentDetail,
+  type AssessmentRiskListItem,
   type AssessmentUpdateInput,
   type Control,
   type ControlImplementation,
@@ -31,7 +32,8 @@ import {
 import { ControlImplementationEditor } from './control-implementation-editor';
 import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
-import { releaseReadinessPresentation } from './assessment-domain';
+import { assessmentRiskListItemFromAnalystRisk, canMutateAssessment, releaseReadinessPresentation } from './assessment-domain';
+import { ReleasedRiskDetails } from './released-risk-details';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
 import type { AnalystRefusal } from './assessment-detail';
@@ -46,20 +48,13 @@ export type AssessmentEditorProps = {
   /** Who a permission state is for: `role` when the route gate refused the viewer before any read (UI-SPEC §11.1). */
   refusal?: AnalystRefusal;
   risks?: readonly AnalystRisk[];
+  /** The assessment's served risk list items, read by the page when the assessment can no longer change (D-34). */
+  riskListItems?: readonly AssessmentRiskListItem[];
   riskTypes?: readonly RiskType[];
   state?: AssessmentEditorState;
   systems?: readonly RequestRelationSummary[];
   searchOwners?: (input: OwnerSearchInput) => Promise<OwnerSearchResult>;
 };
-
-function hasAnyReleaseFact(assessment: AnalystAssessmentDetail): boolean {
-  return assessment.assessmentDate !== null || assessment.approvalDate !== null || assessment.approvedBy !== null;
-}
-
-function canMutateAssessment(assessment: AnalystAssessmentDetail): boolean {
-  return (assessment.assessmentStatus === 'draft' || assessment.assessmentStatus === 'in-review')
-    && !hasAnyReleaseFact(assessment);
-}
 
 /**
  * A drafted assessment that still carries a reviewer of record is a reviewed
@@ -133,6 +128,7 @@ export function AssessmentEditor({
   controls = [],
   refusal,
   risks: initialRisks = [],
+  riskListItems = [],
   riskTypes = [],
   state = 'populated',
   systems = [],
@@ -248,24 +244,37 @@ export function AssessmentEditor({
                 <CardDescription>{risk.riskStatement || 'Risk statement not provided'}</CardDescription>
               </CardHeader>
               <CardContent className="grid min-w-0 gap-6">
-                {mutable ? <RiskEditor assessmentId={currentAssessment.documentId} mode="edit" onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} /> : <RiskReadOnly risk={risk} />}
-                <section aria-label={`Mitigation controls for ${risk.riskNumber}`} className="grid gap-4">
-                  <h3 className="text-heading-sm">Mitigation controls</h3>
-                  {(implementations[risk.documentId] ?? []).map((implementation) => mutable ? (
-                    <ControlImplementationEditor
-                      assessmentId={currentAssessment.documentId}
-                      implementation={implementation}
-                      key={implementation.documentId}
-                      mode="edit"
-                      onUpdated={() => { void refreshAssessment(); }}
-                      onRemoved={(implementationId) => { setImplementations((current) => ({ ...current, [risk.documentId]: (current[risk.documentId] ?? []).filter((item) => item.documentId !== implementationId) })); void refreshAssessment(); }}
-                      options={options}
-                      riskId={risk.documentId}
-                    />
-                  ) : <ControlReadOnly implementation={implementation} key={implementation.documentId} controls={controls} />)}
-                  {mutable && addingControlTo === risk.documentId ? <ControlImplementationEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={(created) => { setImplementations((current) => ({ ...current, [risk.documentId]: [...(current[risk.documentId] ?? []), created] })); setAddingControlTo(null); void refreshAssessment(); }} options={options} riskId={risk.documentId} /> : null}
-                  {mutable && addingControlTo !== risk.documentId ? <Button className="justify-self-start" onClick={() => setAddingControlTo(risk.documentId)} type="button" variant="outline"><PlusIcon aria-hidden="true" />Add mitigation control</Button> : null}
-                </section>
+                {mutable ? (
+                  <>
+                    <RiskEditor assessmentId={currentAssessment.documentId} mode="edit" onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} />
+                    <section aria-label={`Mitigation controls for ${risk.riskNumber}`} className="grid gap-4">
+                      <h3 className="text-heading-sm">Mitigation controls</h3>
+                      {(implementations[risk.documentId] ?? []).map((implementation) => (
+                        <ControlImplementationEditor
+                          assessmentId={currentAssessment.documentId}
+                          implementation={implementation}
+                          key={implementation.documentId}
+                          mode="edit"
+                          onUpdated={() => { void refreshAssessment(); }}
+                          onRemoved={(implementationId) => { setImplementations((current) => ({ ...current, [risk.documentId]: (current[risk.documentId] ?? []).filter((item) => item.documentId !== implementationId) })); void refreshAssessment(); }}
+                          options={options}
+                          riskId={risk.documentId}
+                        />
+                      ))}
+                      {addingControlTo === risk.documentId ? <ControlImplementationEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={(created) => { setImplementations((current) => ({ ...current, [risk.documentId]: [...(current[risk.documentId] ?? []), created] })); setAddingControlTo(null); void refreshAssessment(); }} options={options} riskId={risk.documentId} /> : null}
+                      {addingControlTo !== risk.documentId ? <Button className="justify-self-start" onClick={() => setAddingControlTo(risk.documentId)} type="button" variant="outline"><PlusIcon aria-hidden="true" />Add mitigation control</Button> : null}
+                    </section>
+                  </>
+                ) : (
+                  // The released Risk reads as it does for the Requestor (D-34, UI-SPEC §15.2): one shared component,
+                  // its groups at h3 beside this page's h3 headings, each control named by its served summary.
+                  <ReleasedRiskDetails
+                    groupHeadingLevel={3}
+                    implementations={implementations[risk.documentId] ?? []}
+                    risk={riskListItems.find((item) => item.documentId === risk.documentId)
+                      ?? assessmentRiskListItemFromAnalystRisk(risk, { users: currentAssessment.ownerLabels, systems, assets })}
+                  />
+                )}
               </CardContent>
             </Card>
           ))}
@@ -337,19 +346,3 @@ function DetailValue({ label, value }: { label: string; value: string | null | u
   return <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 break-words text-sm">{value || 'Not provided'}</dd></div>;
 }
 
-function RiskReadOnly({ risk }: { risk: AnalystRisk }) {
-  const fields = useMemo(() => [
-    ['Risk statement', risk.riskStatement],
-    ['Inherent likelihood', risk.inherentLikelihood],
-    ['Highest inherent consequence', risk.highestInherentConsequence],
-    ['Residual likelihood', risk.residualLikelihood],
-    ['Highest residual consequence', risk.highestResidualConsequence],
-    ['Treatment plan', risk.treatmentPlan],
-  ] as const, [risk]);
-  return <dl className="grid gap-4 sm:grid-cols-2">{fields.map(([label, value]) => <DetailValue key={label} label={label} value={value} />)}</dl>;
-}
-
-function ControlReadOnly({ controls, implementation }: { controls: readonly Control[]; implementation: ControlImplementation }) {
-  const control = controls.find((item) => item.documentId === implementation.control);
-  return <dl className="grid gap-4 rounded-lg border border-border p-4 sm:grid-cols-2"><DetailValue label="Reusable control" value={control ? `${control.controlNumber} — ${control.name}` : implementation.control} /><DetailValue label="Control owner" value={implementation.controlOwner?.displayName} /><DetailValue label="Control status" value={implementation.controlStatus} /><DetailValue label="Effectiveness rating" value={implementation.effectivenessRating} /><DetailValue label="Evidence" value={implementation.evidence} /><DetailValue label="Review date" value={implementation.reviewDate} /></dl>;
-}

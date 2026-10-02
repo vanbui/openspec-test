@@ -1,4 +1,64 @@
-import type { AssessmentRating, AssessmentStatus, ReleaseReadinessRequirement } from './assessment-schema';
+import type {
+  ActiveUser,
+  AnalystAssessmentDetail,
+  AnalystRisk,
+  AssessmentRating,
+  AssessmentRiskListItem,
+  AssessmentStatus,
+  ReleaseReadinessRequirement,
+} from './assessment-schema';
+
+type ReleaseFacts = Pick<AnalystAssessmentDetail, 'assessmentStatus' | 'assessmentDate' | 'approvalDate' | 'approvedBy'>;
+
+/**
+ * Whether the analyst may still change an assessment: a draft or in-review assessment with no release fact.
+ * The review page and the editor share it, so the page reads the released list items exactly when the editor
+ * renders read-only. Presentation only: Strapi refuses every mutation of a released assessment itself.
+ */
+export function canMutateAssessment(assessment: ReleaseFacts): boolean {
+  const hasAnyReleaseFact = assessment.assessmentDate !== null || assessment.approvalDate !== null || assessment.approvedBy !== null;
+  return (assessment.assessmentStatus === 'draft' || assessment.assessmentStatus === 'in-review') && !hasAnyReleaseFact;
+}
+
+type NamedRecord = { readonly documentId: string; readonly name: string };
+
+/**
+ * The read-only Risk for the analyst's editor when the served list item is missing: the analyst detail's Risk,
+ * with each relation named from the labels the page already loaded. A relation whose label is unknown reads as
+ * not recorded, never as its id (D-34).
+ */
+export function assessmentRiskListItemFromAnalystRisk(
+  risk: AnalystRisk,
+  labels: { users: readonly ActiveUser[]; systems: readonly NamedRecord[]; assets: readonly NamedRecord[] },
+): AssessmentRiskListItem {
+  const person = (documentId: string | null) => {
+    const user = documentId ? labels.users.find((candidate) => candidate.documentId === documentId) : undefined;
+    return user ? { documentId: user.documentId, displayName: user.displayName } : null;
+  };
+  const record = (records: readonly NamedRecord[], documentId: string | null) => {
+    const found = documentId ? records.find((candidate) => candidate.documentId === documentId) : undefined;
+    return found ? { documentId: found.documentId, name: found.name } : null;
+  };
+  return {
+    documentId: risk.documentId,
+    riskNumber: risk.riskNumber,
+    riskStatement: risk.riskStatement,
+    informationSystemImpacted: record(labels.systems, risk.informationSystemImpacted),
+    informationAssetImpacted: record(labels.assets, risk.informationAssetImpacted),
+    inherentLikelihood: risk.inherentLikelihood,
+    highestInherentConsequence: risk.highestInherentConsequence,
+    inherentRating: risk.inherentRating,
+    residualLikelihood: risk.residualLikelihood,
+    highestResidualConsequence: risk.highestResidualConsequence,
+    residualRating: risk.residualRating,
+    treatmentAction: risk.treatmentAction,
+    treatmentPlan: risk.treatmentPlan,
+    treatmentStatus: risk.treatmentStatus,
+    riskOwner: person(risk.riskOwner),
+    treatmentOwner: person(risk.treatmentOwner),
+    targetDate: risk.targetDate,
+  };
+}
 
 export const assessmentLifecycleStepKeys = ['draft', 'in-review', 'approved', 'closed'] as const;
 export type AssessmentLifecycleStepKey = (typeof assessmentLifecycleStepKeys)[number];

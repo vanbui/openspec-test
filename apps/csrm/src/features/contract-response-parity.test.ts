@@ -109,8 +109,6 @@ const boundaryGrandfathered: Readonly<Record<string, string>> = {
     'Phase 4 released assessment detail: the assessment detail bounds on identifiers, actors, summaries and rationales; the contract bounds for the assessment family are a Phase 8 backlog item.',
   'getReleasedAssessment (analyst actor)':
     'Phase 06.4 analyst view of a released assessment: the assessment detail bounds plus min(1)/max on every risk row field, owner label and release-readiness requirement key, label and destination; the contract bounds for the assessment family are a Phase 8 backlog item.',
-  'listAssessmentRisks':
-    'Phase 4 assessment risk list: min(1)/max on the risk documentId and number and max on the risk statement; the contract bounds for the assessment family are a Phase 8 backlog item.',
   'listControlImplementations':
     'Phase 4 control implementation list: min(1)/max on the documentId, control, control owner documentId and display name and max on the evidence; the contract bounds for the assessment family are a Phase 8 backlog item.',
   'listRiskTypes':
@@ -683,7 +681,8 @@ describe('contract-to-client-schema parity', () => {
     // It rose from 33 to 43 with G1: the eight administration parsers and the
     // Risk Register parser had been hidden behind a root-reporting wrapper, and
     // the question list behind a registration that stopped at its envelope, so
-    // their bounds were already there, not new.
+    // their bounds were already there, not new. It fell from 43 to 42 in plan 10-15 (D-34): the assessment's
+    // risk list parser became listAssessmentRiskItems, whose bounds AssessmentRiskListResponse declares.
     expect(Object.keys(boundaryGrandfathered).length).toBe(42);
   });
 

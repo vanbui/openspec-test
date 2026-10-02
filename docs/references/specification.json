@@ -22702,7 +22702,7 @@
         "tags": ["assessment-workflow"],
         "parameters": [{ "$ref": "#/components/parameters/AssessmentId" }],
         "responses": {
-          "200": { "description": "Assessment risks", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RiskListResponse" } } } },
+          "200": { "description": "Assessment risks, each with its treatment and ownership facts (D-34)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssessmentRiskListResponse" } } } },
           "400": { "$ref": "#/components/responses/AssessmentBadRequest" },
           "403": { "$ref": "#/components/responses/AssessmentForbidden" },
           "404": { "$ref": "#/components/responses/AssessmentNotFound" }
@@ -25855,7 +25855,13 @@
         "required": ["documentId", "riskNumber", "riskStatement", "inherentRating", "residualRating"], "additionalProperties": false
       },
       "RiskResponse": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/RiskSummary" } }, "required": ["data"], "additionalProperties": false },
-      "RiskListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/RiskSummary" } } }, "required": ["data"], "additionalProperties": false },
+      "AssessmentRiskListItem": {
+        "type": "object",
+        "description": "D-34: one Risk in an assessment's risk list, the read both actors' released views render: the statement, the affected system and asset by name, the inherent and residual likelihood, consequence and rating, the treatment action, plan and status, and the risk owner, treatment owner and target date (brief section 8). The Risk create and update responses keep RiskSummary.",
+        "properties": { "documentId": { "type": "string", "minLength": 1, "maxLength": 255 }, "riskNumber": { "type": "string", "minLength": 1, "maxLength": 255 }, "riskStatement": { "type": ["string", "null"], "maxLength": 65535 }, "informationSystemImpacted": { "anyOf": [{ "type": "object", "properties": { "documentId": { "type": "string", "minLength": 1, "maxLength": 255 }, "name": { "type": "string", "minLength": 1, "maxLength": 255 } }, "required": ["documentId", "name"], "additionalProperties": false }, { "type": "null" }] }, "informationAssetImpacted": { "anyOf": [{ "type": "object", "properties": { "documentId": { "type": "string", "minLength": 1, "maxLength": 255 }, "name": { "type": "string", "minLength": 1, "maxLength": 255 } }, "required": ["documentId", "name"], "additionalProperties": false }, { "type": "null" }] }, "inherentLikelihood": { "type": ["string", "null"], "maxLength": 65535 }, "highestInherentConsequence": { "type": ["string", "null"], "maxLength": 65535 }, "inherentRating": { "anyOf": [{ "$ref": "#/components/schemas/AssessmentRating" }, { "type": "null" }] }, "residualLikelihood": { "type": ["string", "null"], "maxLength": 65535 }, "highestResidualConsequence": { "type": ["string", "null"], "maxLength": 65535 }, "residualRating": { "anyOf": [{ "$ref": "#/components/schemas/AssessmentRating" }, { "type": "null" }] }, "treatmentAction": { "type": ["string", "null"], "enum": ["Accept", "Treat", null] }, "treatmentPlan": { "type": ["string", "null"], "maxLength": 65535 }, "treatmentStatus": { "type": ["string", "null"], "enum": ["Not Started", "In Progress", "Overdue", "Complete", null] }, "riskOwner": { "anyOf": [{ "$ref": "#/components/schemas/ActiveUserSummary" }, { "type": "null" }] }, "treatmentOwner": { "anyOf": [{ "$ref": "#/components/schemas/ActiveUserSummary" }, { "type": "null" }] }, "targetDate": { "type": ["string", "null"], "format": "date" } },
+        "required": ["documentId", "riskNumber", "riskStatement", "informationSystemImpacted", "informationAssetImpacted", "inherentLikelihood", "highestInherentConsequence", "inherentRating", "residualLikelihood", "highestResidualConsequence", "residualRating", "treatmentAction", "treatmentPlan", "treatmentStatus", "riskOwner", "treatmentOwner", "targetDate"], "additionalProperties": false
+      },
+      "AssessmentRiskListResponse": { "type": "object", "properties": { "data": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/components/schemas/AssessmentRiskListItem" } } }, "required": ["data"], "additionalProperties": false },
       "ControlImplementationMutationRequest": {
         "type": "object",
         "properties": {

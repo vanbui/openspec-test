@@ -13,6 +13,7 @@ import {
 } from "../../csrm-risk/services/risk-workflow";
 import {
   ASSESSMENT_DETAIL_QUERY,
+  ASSESSMENT_RISK_LIST_POPULATE,
   assertAnalystAssessmentScope,
   assessmentOwnerCollectionDocumentId,
   assertClosedAssessmentQuery,
@@ -26,8 +27,8 @@ import {
   projectAssessmentRatingSummary,
   projectAssessmentStatusSummary,
   projectAssessmentSummary,
+  projectAssessmentRiskListItem,
   projectControlImplementationSummary,
-  projectRiskSummary,
   releasedAssessmentDetailQuery,
   releasedAssessmentQuery,
 } from "../services/assessment-scope";
@@ -262,8 +263,13 @@ export function assessmentControllerExtension({ strapi }: { strapi: unknown }) {
         if (actor(ctx) !== "requestor") assertAnalystAssessmentScope(ctx.state);
         const risks = await (strapi as { documents: (uid: string) => AssessmentDocuments })
           .documents("api::csrm-risk.csrm-risk")
-          .findMany({ filters: { assessment: { documentId: { $eq: documentId } } }, sort: ["riskNumber:asc"], limit: 1_000 });
-        return { data: risks.map(projectRiskSummary) };
+          .findMany({
+            filters: { assessment: { documentId: { $eq: documentId } } },
+            populate: ASSESSMENT_RISK_LIST_POPULATE,
+            sort: ["riskNumber:asc"],
+            limit: 1_000,
+          });
+        return { data: risks.map(projectAssessmentRiskListItem) };
       } catch (error) {
         if (error instanceof AssessmentScopeError) return safeError(ctx, error.status, error.message);
         throw error;

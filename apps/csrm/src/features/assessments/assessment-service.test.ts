@@ -280,6 +280,22 @@ describe('assessment generated-client service boundary', () => {
     documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: riskInput.riskStatement,
     inherentRating: 'High', residualRating: 'Moderate',
   };
+  // D-34: the assessment's risk list item, wider than the five-field create and update response.
+  const riskListItem = {
+    ...risk,
+    informationSystemImpacted: { documentId: 'system-1', name: 'Customer portal' },
+    informationAssetImpacted: null,
+    inherentLikelihood: 'Likely',
+    highestInherentConsequence: 'Major',
+    residualLikelihood: 'Possible',
+    highestResidualConsequence: 'Moderate',
+    treatmentAction: 'Treat',
+    treatmentPlan: 'Apply the control.',
+    treatmentStatus: 'In Progress',
+    riskOwner: analyst,
+    treatmentOwner: null,
+    targetDate: '2026-12-31',
+  };
   const implementation = {
     documentId: 'implementation-1',
     ...controlInput,
@@ -362,13 +378,13 @@ describe('assessment generated-client service boundary', () => {
 
   it('parses descendants and bounded reference pickers through their generated paths', async () => {
     get
-      .mockResolvedValueOnce(response({ data: [risk] }))
+      .mockResolvedValueOnce(response({ data: [riskListItem] }))
       .mockResolvedValueOnce(response({ data: [implementation] }))
       .mockResolvedValueOnce(response({ data: [{ documentId: 'risk-type-1', name: 'Internet Exposure', description: null }] }))
       .mockResolvedValueOnce(response({ data: [{ documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', description: null }] }))
       .mockResolvedValueOnce(response({ data: [analyst] }));
 
-    await expect(service.listAssessmentRisks('assessment-1')).resolves.toMatchObject({ data: [risk], error: null });
+    await expect(service.listAssessmentRisks('assessment-1')).resolves.toMatchObject({ data: [riskListItem], error: null });
     await expect(service.listControlImplementations('risk-1')).resolves.toMatchObject({ data: [implementation], error: null });
     await expect(service.listRiskTypes()).resolves.toMatchObject({ data: [{ name: 'Internet Exposure' }], error: null });
     await expect(service.listControls()).resolves.toMatchObject({ data: [{ controlNumber: 'AC-1' }], error: null });
@@ -383,7 +399,7 @@ describe('assessment generated-client service boundary', () => {
     const forbidden = { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', status: 403 } };
     normalizeTransportError.mockImplementation((_error: unknown, status?: number) => status === 403 ? forbidden : unavailable);
     get
-      .mockResolvedValueOnce(response({ data: [{ ...risk, assessment: { documentId: 'secret' } }] }))
+      .mockResolvedValueOnce(response({ data: [{ ...riskListItem, assessment: { documentId: 'secret' } }] }))
       .mockResolvedValueOnce({ error: { message: 'raw provider detail' }, response: { status: 403 } })
       .mockRejectedValueOnce(new Error('connection string'))
       .mockResolvedValueOnce(response({ data: Array.from({ length: 21 }, (_, index) => ({ documentId: `user-${index}`, displayName: `User ${index}` })) }));

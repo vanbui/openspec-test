@@ -317,6 +317,57 @@ export function projectRiskSummary(document: RecordValue): RecordValue {
   };
 }
 
+const RELATED_RECORD_MAX_LENGTH = 255;
+
+/** A populated system or asset as `{ documentId, name }` within the 1-255 bounds the contract declares, else null. */
+function projectRiskRelatedRecord(value: unknown): RecordValue | null {
+  if (!isRecord(value)) return null;
+  const { documentId, name } = value;
+  if (typeof documentId !== "string" || documentId.length === 0 || documentId.length > RELATED_RECORD_MAX_LENGTH) return null;
+  if (typeof name !== "string" || name.length === 0 || name.length > RELATED_RECORD_MAX_LENGTH) return null;
+  return { documentId, name };
+}
+
+/**
+ * The relations the assessment's risk list names (D-34). Owners cross as ActiveUserSummary (id and display
+ * name only), exactly as a released assessment already names its analysts.
+ */
+export const ASSESSMENT_RISK_LIST_POPULATE = {
+  informationSystemImpacted: true,
+  informationAssetImpacted: true,
+  riskOwner: true,
+  treatmentOwner: true,
+} as const;
+
+/**
+ * D-34: one Risk in the assessment's risk list (AssessmentRiskListItem), the read both actors' released views
+ * render: the statement, the affected system and asset, the inherent and residual likelihood, consequence and
+ * rating, the treatment action, plan and status, and the risk owner, treatment owner and target date (brief §8).
+ * Analyst working facts (issue, cause, rationales, escalation, comments, classification, exemption) never cross.
+ * The Risk create and update responses keep projectRiskSummary's five fields (research Pitfall 9).
+ */
+export function projectAssessmentRiskListItem(document: RecordValue): RecordValue {
+  return {
+    documentId: document.documentId,
+    riskNumber: document.riskNumber,
+    riskStatement: document.riskStatement ?? null,
+    informationSystemImpacted: projectRiskRelatedRecord(document.informationSystemImpacted),
+    informationAssetImpacted: projectRiskRelatedRecord(document.informationAssetImpacted),
+    inherentLikelihood: document.inherentLikelihood ?? null,
+    highestInherentConsequence: document.highestInherentConsequence ?? null,
+    inherentRating: document.inherentRating ?? null,
+    residualLikelihood: document.residualLikelihood ?? null,
+    highestResidualConsequence: document.highestResidualConsequence ?? null,
+    residualRating: document.residualRating ?? null,
+    treatmentAction: document.treatmentAction ?? null,
+    treatmentPlan: document.treatmentPlan ?? null,
+    treatmentStatus: document.treatmentStatus ?? null,
+    riskOwner: projectUser(document.riskOwner),
+    treatmentOwner: projectUser(document.treatmentOwner),
+    targetDate: document.targetDate ?? null,
+  };
+}
+
 export function projectRiskTypeSummary(document: RecordValue): RecordValue {
   return {
     documentId: document.documentId,

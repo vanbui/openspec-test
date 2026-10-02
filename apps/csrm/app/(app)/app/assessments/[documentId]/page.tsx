@@ -11,7 +11,7 @@ import {
   listReleasedAssessmentRisks,
   listReleasedControlImplementations,
 } from '@/features/assessments/assessment-service';
-import type { ControlImplementation, Risk } from '@/features/assessments/assessment-schema';
+import type { AssessmentRiskListItem, ControlImplementation } from '@/features/assessments/assessment-schema';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
 type ReleasedAssessmentPageProps = { params: Promise<{ documentId: string }> };
@@ -31,7 +31,7 @@ function stateForStatus(status: number): Extract<ReleasedAssessmentDetailState, 
   return status === 403 ? 'permission' : 'error';
 }
 
-async function loadReleasedDescendants(risks: readonly Risk[]) {
+async function loadReleasedDescendants(risks: readonly AssessmentRiskListItem[]) {
   const controlResults = await Promise.all(
     risks.map(async (risk) => ({
       result: await listReleasedControlImplementations(risk.documentId),

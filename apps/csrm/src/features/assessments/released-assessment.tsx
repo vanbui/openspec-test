@@ -16,14 +16,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type {
+  AssessmentRiskListItem,
   ControlImplementation,
   ReleasedAssessmentDetailForActor,
   ReleasedAssessmentSummary,
-  Risk,
 } from './assessment-schema';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
-import { controlLabel } from './control-label';
+import { ReleasedRiskDetails } from './released-risk-details';
 import type { AssessmentCollectionQuery, CollectionPagination } from './assessment-service';
 import { usePathname, useRouter } from 'next/navigation';
 import { type FormEvent, useMemo } from 'react';
@@ -126,43 +126,19 @@ function AssessmentUnavailableNotice({ state, operation }: { state: Exclude<Rele
   );
 }
 
-function ControlImplementationView({ implementation }: { implementation: ControlImplementation }) {
-  return (
-    <li className="rounded-lg border border-border bg-background p-4">
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Definition label="Control" value={implementation.controlSummary ? controlLabel(implementation.controlSummary) : 'Not recorded'} />
-        <Definition label="Control owner" value={implementation.controlOwner?.displayName ?? 'Not recorded'} />
-        <Definition label="Status" value={implementation.controlStatus ?? 'Not recorded'} />
-        <Definition label="Effectiveness" value={implementation.effectivenessRating ?? 'Not recorded'} />
-        <Definition label="Implementation due" value={formatDate(implementation.implementationDueDate)} />
-        <Definition label="Implemented" value={formatDate(implementation.implementedDate)} />
-        <Definition label="Review date" value={formatDate(implementation.reviewDate)} />
-        <div className="grid gap-1 sm:col-span-2 lg:col-span-3"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Evidence</dt><dd className="whitespace-pre-wrap text-sm text-foreground">{displayText(implementation.evidence)}</dd></div>
-      </dl>
-    </li>
-  );
-}
-
-function ReleasedRisk({ controls, risk }: { controls: readonly ControlImplementation[]; risk: Risk }) {
+function ReleasedRisk({ controls, risk }: { controls: readonly ControlImplementation[]; risk: AssessmentRiskListItem }) {
   return (
     <Card role="listitem">
       <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>{risk.riskNumber}</CardTitle><CheckCircle2 aria-label="Released risk" className="text-success" /></div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* UI-SPEC §15.2: the Risk number is an h3, so a screen reader can move between Risks by heading. */}
+          <CardTitle><h3 className="text-heading-sm text-foreground">{risk.riskNumber}</h3></CardTitle>
+          <CheckCircle2 aria-label="Released risk" className="text-success" />
+        </div>
         <p className="whitespace-pre-wrap text-sm text-foreground">{displayText(risk.riskStatement)}</p>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <Definition label="Inherent risk rating" value={risk.inherentRating ? <RiskRatingBadge rating={risk.inherentRating} /> : 'Not recorded'} />
-          <Definition label="Residual risk rating" value={risk.residualRating ? <RiskRatingBadge rating={risk.residualRating} /> : 'Not recorded'} />
-        </dl>
-        <section aria-labelledby={`${risk.documentId}-controls`} className="space-y-3">
-          <h3 className="text-heading-sm text-foreground" id={`${risk.documentId}-controls`}>
-            Mitigation control implementations
-          </h3>
-          {controls.length > 0
-            ? <ul className="space-y-3">{controls.map((implementation) => <ControlImplementationView implementation={implementation} key={implementation.documentId} />)}</ul>
-            : <p className="text-sm text-muted-foreground">No mitigation control implementations are recorded.</p>}
-        </section>
+      <CardContent>
+        <ReleasedRiskDetails groupHeadingLevel={4} implementations={controls} risk={risk} />
       </CardContent>
     </Card>
   );
@@ -177,7 +153,7 @@ export function ReleasedAssessmentDetailView({
 }: {
   assessment?: ReleasedAssessmentDetailForActor;
   controlsByRisk?: ControlsByRisk;
-  risks?: readonly Risk[];
+  risks?: readonly AssessmentRiskListItem[];
   state: ReleasedAssessmentDetailState;
   diagnosticOperation?: string;
 }) {

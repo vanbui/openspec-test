@@ -6,8 +6,11 @@ import {
   AssessmentEditor,
   AssessmentEditorSkeleton,
 } from '@/features/assessments/assessment-editor';
+import { canMutateAssessment } from '@/features/assessments/assessment-domain';
+import type { AssessmentRiskListItem } from '@/features/assessments/assessment-schema';
 import {
   getAnalystAssessment,
+  listAssessmentRisks,
   listControlImplementations,
   listControls,
   listRiskTypes,
@@ -62,6 +65,16 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
   if (implementationResults.some(({ result }) => result.error)) return <AssessmentEditor state="error" />;
   const controlImplementations = Object.fromEntries(implementationResults.map(({ result, riskId }) => [riskId, result.data ?? []]));
 
+  // A released or otherwise unchangeable assessment reads as it does for the Requestor (D-34): the served risk
+  // list names each Risk's system, asset and owners, so the read-only editor never shows an id.
+  let riskListItems: readonly AssessmentRiskListItem[] | undefined;
+  if (!canMutateAssessment(assessmentResult.data)) {
+    const riskListResult = await listAssessmentRisks(documentId);
+    if (riskListResult.error?.status === 403) return <AssessmentEditor state="permission" />;
+    if (riskListResult.error) return <AssessmentEditor state="error" />;
+    riskListItems = riskListResult.data ?? [];
+  }
+
   return (
     <AssessmentEditor
       assessment={assessmentResult.data}
@@ -69,6 +82,7 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
       controlImplementations={controlImplementations}
       controls={controlsResult.data ?? []}
       risks={risks}
+      riskListItems={riskListItems}
       riskTypes={riskTypesResult.data ?? []}
       systems={systemsResult.data ?? []}
       searchOwners={searchActiveUsersAction}

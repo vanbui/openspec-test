@@ -298,6 +298,43 @@ export const riskSchema = z.object({
 }).strict();
 export type Risk = z.infer<typeof riskSchema>;
 
+/*
+ * D-34: one Risk in the assessment's risk list (AssessmentRiskListItem), the read both actors' released views
+ * render. It carries the brief §8 treatment and ownership facts with each relation named; the Risk create and
+ * update responses keep the five fields of riskSchema (research Pitfall 9). Every bound mirrors the contract,
+ * and the owners mirror ActiveUserSummary, which declares none.
+ */
+const assessmentRiskRelatedRecordSchema = z.object({
+  documentId: z.string().min(1).max(255),
+  name: z.string().min(1).max(255),
+}).strict();
+const assessmentRiskPersonSchema = z.object({ documentId: z.string(), displayName: z.string() }).strict();
+const assessmentRiskTextSchema = z.string().max(65_535).nullable();
+
+export const assessmentRiskListItemSchema = z.object({
+  documentId: z.string().min(1).max(255),
+  riskNumber: z.string().min(1).max(255),
+  riskStatement: assessmentRiskTextSchema,
+  informationSystemImpacted: assessmentRiskRelatedRecordSchema.nullable(),
+  informationAssetImpacted: assessmentRiskRelatedRecordSchema.nullable(),
+  inherentLikelihood: assessmentRiskTextSchema,
+  highestInherentConsequence: assessmentRiskTextSchema,
+  inherentRating: assessmentRatingSchema.nullable(),
+  residualLikelihood: assessmentRiskTextSchema,
+  highestResidualConsequence: assessmentRiskTextSchema,
+  residualRating: assessmentRatingSchema.nullable(),
+  treatmentAction: z.enum(['Accept', 'Treat']).nullable(),
+  treatmentPlan: assessmentRiskTextSchema,
+  treatmentStatus: z.enum(['Not Started', 'In Progress', 'Overdue', 'Complete']).nullable(),
+  riskOwner: assessmentRiskPersonSchema.nullable(),
+  treatmentOwner: assessmentRiskPersonSchema.nullable(),
+  targetDate: nullableDateSchema,
+}).strict();
+export type AssessmentRiskListItem = z.infer<typeof assessmentRiskListItemSchema>;
+export const assessmentRiskListResponseSchema = z.object({
+  data: z.array(assessmentRiskListItemSchema).max(1_000),
+}).strict();
+
 const releaseReadinessRequirementBase = {
   key: z.string().trim().min(1).max(65_535),
   label: z.string().trim().min(1).max(65_535),

@@ -2830,8 +2830,37 @@ export interface components {
         RiskResponse: {
             data: components["schemas"]["RiskSummary"];
         };
-        RiskListResponse: {
-            data: components["schemas"]["RiskSummary"][];
+        /** @description D-34: one Risk in an assessment's risk list, the read both actors' released views render: the statement, the affected system and asset by name, the inherent and residual likelihood, consequence and rating, the treatment action, plan and status, and the risk owner, treatment owner and target date (brief section 8). The Risk create and update responses keep RiskSummary. */
+        AssessmentRiskListItem: {
+            documentId: string;
+            riskNumber: string;
+            riskStatement: string | null;
+            informationSystemImpacted: {
+                documentId: string;
+                name: string;
+            } | null;
+            informationAssetImpacted: {
+                documentId: string;
+                name: string;
+            } | null;
+            inherentLikelihood: string | null;
+            highestInherentConsequence: string | null;
+            inherentRating: components["schemas"]["AssessmentRating"] | null;
+            residualLikelihood: string | null;
+            highestResidualConsequence: string | null;
+            residualRating: components["schemas"]["AssessmentRating"] | null;
+            /** @enum {string|null} */
+            treatmentAction: "Accept" | "Treat" | null;
+            treatmentPlan: string | null;
+            /** @enum {string|null} */
+            treatmentStatus: "Not Started" | "In Progress" | "Overdue" | "Complete" | null;
+            riskOwner: components["schemas"]["ActiveUserSummary"] | null;
+            treatmentOwner: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date */
+            targetDate: string | null;
+        };
+        AssessmentRiskListResponse: {
+            data: components["schemas"]["AssessmentRiskListItem"][];
         };
         ControlImplementationMutationRequest: {
             control?: string | null;
@@ -14535,13 +14564,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Assessment risks */
+            /** @description Assessment risks, each with its treatment and ownership facts (D-34) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RiskListResponse"];
+                    "application/json": components["schemas"]["AssessmentRiskListResponse"];
                 };
             };
             400: components["responses"]["AssessmentBadRequest"];
