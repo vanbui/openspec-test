@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-16-PLAN.md
-last_updated: "2026-10-02T09:59:13.840Z"
+stopped_at: Completed 10-17-PLAN.md
+last_updated: "2026-10-02T10:38:41.502Z"
 last_activity: 2026-10-02
-last_activity_desc: "Plan 10-16 complete (the Information System owner reads by name: ownerName on the Administration record and list, the form names the owner, never by id, and the systems list shows Owner and Business criticality after Name on desktop and the mobile card; UAT-053 system half, ADMIN-05 except the asset owner)"
-state_head: 1d7adbc4e315867c56969a24839035cf82057d58
+last_activity_desc: "Plan 10-17 complete (the thirteen APP titles read as Schedule 1 titles them and the three Risk Types explain themselves, applied by the seed reconciliation; each control number shows once across Administration; the Risk Type control search runs on the server; the Administration and CSV copy speaks plainly in the web and Strapi; UAT-007, UAT-054 Administration and CSV parts)"
+state_head: 544f571fc2d5469ddda7bcca0f829eb3e47a569f
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 16
+  completed_plans: 17
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 17 of 23
+Plan: 18 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-16 complete: the Information System record and list serve ownerName (trimmed display name, 1-255, else null; owner populate narrowed to documentId and displayName; not writable); InformationSystemsAdministrationRecord.ownerName in the spec and schema.d.ts; the form reads Selected owner: {name} or Name not available; the systems list adds Owner and Business criticality after Name, unsortable, and the mobile card line; ADMIN-05 stays open for the Information Asset owner (Phase 22); web 2,613/2,613, Strapi 602/602 (1,282 s), administration journey 5/5, typecheck, lint and api:check clean
+Last activity: 2026-10-02 — Plan 10-17 complete: the thirteen APP titles complete and in sentence case with nine legalText fragments removed (D-44), and the three Risk Type descriptions, reach the dev database on the next seeded Strapi start (proven fresh and on an earlier-seeded row); the controls list Name column shows the title part or Not provided, the card, edit title and breadcrumb use controlLabel; searchApplicableControlsAction reads one page of 25 through listAdministrationControls; saved Risk Type controls read by label or Control not found; UI-SPEC §17.1 Administration and CSV copy in the web and Strapi's CSV messages; web 2,635/2,635, Strapi 607/607 (638 s), administration journey 5/5 on the second run (one desktop resize race on the first, recorded), typecheck, lint and api:check clean
 
 ## Milestone
 
@@ -131,6 +131,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-15: controlLabel/controlTitle (features/assessments/control-label.ts, zod-free) is the D-36 rule for every later plan. ReleasedRiskDetails is the one read-only Risk: h4 groups under the released view's h3 Risk number, h3 groups in the analyst's read-only editor, which now renders the whole shared Risk (mitigation group included) instead of RiskReadOnly/ControlReadOnly and the separate Mitigation controls section; the review page reads the list items when canMutateAssessment (now in assessment-domain.ts) is false. The released view's assessment and release dates use LocalInstant date-long; a contract mismatch shows the ordinary error state and the route logs [csrm-contract] response contract mismatch: {operation}.
 - [Phase 10]: 10-16: the Information System record and list serve ownerName, the owner's trimmed display name (1-255, else null), from an owner populate narrowed to documentId and displayName; the form reads Selected owner: {name} or Name not available, never the id; ownerName is served whatever the owner's account status and is not writable
 - [Phase 10]: 10-16: the systems list shows Owner and Business criticality after Name, unsortable, through systemOwnerLabel and systemCriticalityLabel (served name, Name not available, Not provided); ADMIN-05 stays open for the Information Asset owner (Phase 22). Plan 10-17's copy sweep keeps these columns
+- [Phase 10]: 10-17: the Risk Type form's applicable-control options come from applicable-controls.ts (zod-free): the first 100 controls by number plus each saved selection beyond them, labelled by controlLabel; searchApplicableControlsAction asks listAdministrationControls for one page of 25 (number, name, framework). A selection with no option reads Control not found, never an id.
+- [Phase 10]: 10-17: CSV messages name the matching column through keyLabel (Control number for Controls, else Name) in the web parser and Strapi's csv-import.ts alike; the APP titles and Risk Type descriptions reach the development database on the next seeded Strapi start (the control seed rewrites earlier-seeded rows, proven on a truncated APP-11).
 
 ## Risks and Open Decisions
 
@@ -209,11 +211,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P14 | 19 min | 3 tasks | 12 files |
 | Phase 10 P15 | 32 min | 3 tasks | 22 files |
 | Phase 10 P16 | 37 min | 2 tasks | 10 files |
+| Phase 10 P17 | 36 min | 3 tasks | 18 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T09:59:06.401Z
-**Stopped At:** Completed 10-16-PLAN.md
+**Last session:** 2026-10-02T10:38:34.084Z
+**Stopped At:** Completed 10-17-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
