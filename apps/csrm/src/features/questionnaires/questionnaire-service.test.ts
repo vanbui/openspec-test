@@ -257,4 +257,14 @@ describe('questionnaire service contract', () => {
     expect(parse('addQuestionnaireQuestion', governance('a'.repeat(500)))).toBe(true);
     expect(parse('addQuestionnaireQuestion', governance('a'.repeat(501)))).toBe(false);
   });
+
+  it('accepts a regenerated event on the timeline and in a governance result (D-10)', () => {
+    const parse = (label: string, data: unknown) => service.contractResponseParsers.find((entry) => entry.label === label)?.parser.safeParse({ data }).success;
+    const explanation = 'A newly generated questionnaire replaced 12 questions. No analyst changes were discarded.';
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ kind: 'regenerated', at: '2026-09-03T00:00:00.000Z', by: { documentId: 'analyst-1', displayName: 'Morgan Analyst' }, explanation }] })).toBe(true);
+    // The Requestor's projection of the same event carries no detail.
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ kind: 'regenerated', at: '2026-09-03T00:00:00.000Z' }] })).toBe(true);
+    const release = { releasedAt: '2026-09-01T00:00:00.000Z', releasedBy: { documentId: 'analyst-1', displayName: 'Morgan Analyst' } };
+    expect(parse('addQuestionnaireQuestion', { ...questionnaire, release, events: [{ schemaVersion: 1, kind: 'regenerated', at: '2026-09-03T00:00:00.000Z', by: 'analyst-1', explanation }] })).toBe(true);
+  });
 });

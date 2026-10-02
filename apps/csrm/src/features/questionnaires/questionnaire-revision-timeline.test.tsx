@@ -155,6 +155,54 @@ describe('QuestionnaireRevisionTimeline', () => {
     expect(screen.queryByText(/Question:/)).not.toBeInTheDocument();
   });
 
+  const replacedDetail = 'A newly generated questionnaire replaced 12 questions. 2 analyst changes were discarded.';
+
+  it('shows a replacement to the analyst as Questionnaire replaced with its detail (UI-SPEC §3.4)', () => {
+    const replaced: QuestionnaireSummary = {
+      ...questionnaire,
+      events: [{ kind: 'regenerated', at: '2026-09-03T00:00:00.000Z', by, explanation: replacedDetail }],
+    };
+    render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={replaced} />);
+    const label = screen.getByText('Questionnaire replaced');
+    const entry = label.closest('li');
+    expect(entry?.querySelector('svg')).toHaveClass('lucide-sparkles');
+    expect(entry?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(entry).toHaveTextContent(`Detail: ${replacedDetail}`);
+    expect(entry).toHaveTextContent(/by Morgan Analyst$/);
+    expect(screen.queryByText(/Question:/)).not.toBeInTheDocument();
+  });
+
+  it('shows the Requestor a replacement only after the first release, without detail, and restarts the round count (UI-SPEC §4.3)', () => {
+    const replacedRounds: QuestionnaireSummary = {
+      ...questionnaire,
+      events: [
+        // Before the first release the Requestor never saw the replaced version.
+        { kind: 'regenerated', at: '2026-08-30T00:00:00.000Z', by, explanation: replacedDetail },
+        { kind: 'released', at: '2026-09-01T00:00:00.000Z', by },
+        { kind: 'returned-to-review', at: '2026-09-02T00:00:00.000Z', by, reason: 'Generate it again.' },
+        // Discarded by the replacement that follows, so not counted.
+        { kind: 'question-edited', at: '2026-09-03T00:00:00.000Z', by, questionKey: 'hosting-region' },
+        { kind: 'question-deleted', at: '2026-09-03T01:00:00.000Z', by, questionKey: 'legacy-question' },
+        { kind: 'regenerated', at: '2026-09-04T00:00:00.000Z', by, explanation: replacedDetail },
+        { kind: 'question-added', at: '2026-09-05T00:00:00.000Z', by, questionKey: 'data-residency' },
+        { kind: 'released', at: '2026-09-06T00:00:00.000Z', by },
+      ],
+    };
+    render(<QuestionnaireRevisionTimeline depth="summary" questionnaire={replacedRounds} />);
+    expect(summaryItems()).toEqual([
+      'Questionnaire made available to you',
+      '1 change to the questions',
+      'Questionnaire replaced',
+      'Questionnaire taken back for analyst review',
+      'Questionnaire made available to you',
+    ]);
+    const replacedEntry = screen.getByText('Questionnaire replaced').closest('li');
+    expect(replacedEntry?.querySelector('svg')).toHaveClass('lucide-sparkles');
+    expect(replacedEntry?.querySelector('time')).toHaveAttribute('dateTime', '2026-09-04T00:00:00.000Z');
+    expect(screen.queryByText(/newly generated questionnaire/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Detail:/)).not.toBeInTheDocument();
+  });
+
   it('renders the explicit empty state at both depths', () => {
     const empty = { ...questionnaire, events: [] };
     const view = render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={empty} />);
