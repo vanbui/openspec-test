@@ -11,14 +11,16 @@ provides:
   - The Phase 10 gate on the production build at eed7ed0, all six brief commands green, with counts and durations
   - The four static boundary checks since 5ea2b77, each with empty output
   - A fix that keeps the source free of CSRM_AI_ lines changed since 5ea2b77
-affects: [10-23 Task 2 (the pilot's browser walk), 10-23 Task 3, gsd-verify-work 10]
+  - Walkthrough fixes 1 to 8, 3b, 3c and 3d, and the Fix 8 addendum, each test-first, with the gate rerun twice (green at 5ef0f88 and 4c10b43)
+  - The pilot's browser checks (51 rows, all pass), the requirement coverage and the Manual-Only results, recorded verbatim
+affects: [gsd-verify-work 10, Phase 10 code review and regression gates, the final Phase 10 gate, Phase 22 (the Information Asset owner)]
 
 actuals:
-  tokens: 4000
-  tasks: 1
-  commits: 1
+  tokens: 143980
+  tasks: 3
+  commits: 39
 plan_head_before: a2182e4b8b87e01b9c7e407c5598b3f0c694f429
-plan_head_after: eed7ed0
+plan_head_after: f51fe3dabc5dffb5b6acd79a3b5a10c5c94bc804
 
 tech-stack:
   added: []
@@ -99,8 +101,13 @@ key-decisions:
   - "10-23 fix 3c: the 18 titles an independent audit of all 386 found faulty (12) or ambiguous (6) are corrected within the 12-word, 100-character cap; each replaced title is listed last in supersededTitles, so 13 controls now list two earlier titles"
   - "10-23 fix 3c: every fix 3 and 3b 'restored' claim was checked mechanically against its delivered title; 9 overstated rows are annotated as completed in Fix 3c and 16 now say the limb is generalised, with no further retitle beyond the audit's 18"
   - "10-23 fix 3c: ISO Annex A 8.1 'User endpoint devices' versus 'User end point devices' is deferred to the operator, because there is no licensed copy to check against"
+  - "10-23 pilot ruling: PSPF-042 ('reasonable') and PSPF-095 ('accredited') keep their titles; dropping 'reasonable' generalises a degree, and 'Zone Five' already denotes the accredited area"
+  - "10-23 fix 3d: PSPF-130 reads 'Enabling appropriate access to official information and controlling supporting technology access', keeping the need-to-know 'appropriate' on 'access'; the pilot's example was not used verbatim because it opens with the paragraph's own opening phrase, which fix 3b's convention avoids"
+  - "10-23 fix 8 addendum: axe's scrollable-region-focusable on an overflowing picker popup is accepted as the APG activedescendant combobox false positive, set aside only for that rule on the open popover content holding the listbox, and only in the overflow test that proves the keyboard path; fix 8's 28 scans stay strict and the container stays untabbable"
+  - "10-23 Task 3: requirements-completed lists the six delivered requirements; ADMIN-05 stays open (requirements-partial) because the Information Asset owner moves to Phase 22"
 
-requirements-completed: []
+requirements-completed: [REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, UX-06]
+requirements-partial: [ADMIN-05]  # delivered except the Information Asset owner, which moves to Phase 22 (REQUIREMENTS.md, ADMIN-05 Remainder)
 
 coverage:
   - id: D1
@@ -128,28 +135,52 @@ coverage:
     human_judgment: false
   - id: D3
     description: "Both actors walk every Phase 10 surface at 375 and 1440 on the restarted dev servers (backstops B1 to B8)"
-    verification: []
+    verification:
+      - kind: manual_procedural
+        ref: "10-23-SUMMARY.md ## Browser checks (the pilot's 51 rows, B1 to B8 at 375 and 1440, W1 to W18, all pass; approved 2026-10-03)"
+        status: pass
     human_judgment: true
-    rationale: "Task 2 is the pilot's blocking-human browser walk; Task 3 records its table"
+    rationale: "The pilot's blocking-human browser walk is the human verification of record; the Manual-Only items it leaves open stay open"
+  - id: D4
+    description: "Fix 3d: PSPF-130 keeps 'appropriate', with fix 3b's title listed as superseded"
+    requirement: "ADMIN-05"
+    verification:
+      - kind: unit
+        ref: "apps/backend/tests/control-titles.unit.test.ts#ADMIN-05 D-46 fix 3d: PSPF-130 keeps 'appropriate', the need-to-know intent of its paragraph"
+        status: pass
+      - kind: other
+        ref: "pnpm verify:csrm-seed"
+        status: pass
+    human_judgment: false
+  - id: D5
+    description: "Fix 8 addendum: an overflowing picker list passes axe with only the scoped scrollable-region-focusable exception, and its keyboard path reaches the last option in view"
+    requirement: "ASSESS-06"
+    verification:
+      - kind: e2e
+        ref: "apps/csrm/e2e/accessibility.spec.ts#an overflowing picker list passes axe while open at 1440 and 375"
+        status: pass
+    human_judgment: false
 
-duration: 48min
-completed: 2026-10-02
-status: halted
+duration: 48min (Task 1) plus the walkthrough fixes and Task 3, 2026-10-02 to 2026-10-03
+completed: 2026-10-03
+status: complete
 ---
 
 # Phase 10 Plan 23: Phase gate and browser walk Summary
 
-**Phase 10 gate green on the production build at `eed7ed0`: Strapi 630/630, web 2,745/2,745, typecheck, lint and api:check clean, Playwright 86/86 (82 desktop, 4 mobile, 0 flaky), the four static boundary checks empty, after one fix that took a CSRM_AI_ assertion out of a 10-09 test.**
+**Phase 10 closed by evidence: the gate green three times on the production build (last at `4c10b43`: Strapi 649/649, web 2,777/2,777, Playwright 87/87 with 0 flaky, the seed verification and the four static boundary checks clean), eleven walkthrough fixes and the Fix 8 addendum, test-first (APP-13's over-long text, 166 title corrections over 152 descriptive controls across fixes 3 to 3d, unchanged saves, picker listbox popups, wrapping titles, focus and copy), and the pilot's approved walk of both actors at 375 and 1440: 51 browser rows, all pass. ADMIN-05 is delivered except the Information Asset owner, which moves to Phase 22.**
 
-Status: Task 1 is done and committed. The plan stops at Task 2, the pilot's blocking-human browser walk, and Task 3 records that walk. Until then the plan is not complete.
+Status: complete. Task 1 (the gate), Task 2 (the pilot's walk, approved 2026-10-03 with the Fix 3d and Fix 8 addendum rulings) and Task 3 (this record) are done. The orchestrator runs the code review, the regression gate, the verifier and one final full gate, because Fix 3d and the addendum change code after the third gate.
 
 ## Performance
 
-- **Duration (Task 1):** 48 min
+- **Duration:** Task 1 took 48 min; the walkthrough rounds, their fixes, two more gates and Task 3 ran across 2026-10-02 and 2026-10-03 (the final continuation took about 25 min)
 - **Started:** 2026-10-02T13:41:47Z
 - **Gate record written:** 2026-10-02T14:29Z
-- **Tasks:** 1 of 3 (Task 2 is the checkpoint; Task 3 follows it)
-- **Files modified:** 2 (this summary and one Strapi test)
+- **Task 2 approved:** 2026-10-03 (the pilot)
+- **Completed:** 2026-10-02T19:30Z (2026-10-03 local)
+- **Tasks:** 3 of 3
+- **Files modified:** 51 since `a2182e4` (49 outside `.planning/`), 39 commits before the Task 3 record
 
 ## Phase gate
 
@@ -186,6 +217,8 @@ The first run of check 4, at `a2182e4`, failed (`p10-23-gate-static-prefix.log`)
 ## Walkthrough fixes
 
 The pilot's Task 2 walk (2026-10-03) was not approved and listed six defects. Each is fixed as a GSD Rule 1 deviation inside this plan, failing test first, and recorded here. The full gate reruns after the last fix.
+
+Rounds 2 and 3 added fixes 7, 8, 3b and 3c. The pilot then approved Task 2 with two rulings, Fix 3d and the Fix 8 addendum, which are the last two sections below. The fix order in this section is the order of record, not of commit; every commit is listed under Task Commits.
 
 ### Fix 2: APP-13 and the control description bound
 
@@ -1215,24 +1248,143 @@ Notes:
 
 The gate is green on every command. No fix was needed in this run.
 
+## Browser checks
+
+The pilot's walk (Task 2, approved 2026-10-03), copied verbatim from the pilot's final table.
+
+Three passes, all with the Playwright MCP browser on the development servers (seeded start), changing no data except as noted:
+- Walk 1 at `984b048` (2026-10-03, independent agent for the pilot): B1–B8 at both widths and W1–W16.
+- Re-walk at `0b9557c` (after fixes 1–6): R1–R8, B3 and B8 again.
+- Pilot check at the third gate commit (after fixes 7, 8 and 3c): B3 at 1440 and the open-picker axe scans.
+
+Data note: walk 1 pressed Save assessment once on the unchanged In review ASM-E2E-P7-MUTABLE-001 (Fix 1's defect). The press re-saved identical values. The record stayed In review at 34 of 62, and only its timestamps may have moved.
+
+| Id | Backstop or surface | Actor | Width | Result | Evidence |
+|---|---|---|---|---|---|
+| B1 | Long questionnaire description: intro wraps, first question reachable | Jane | 375 | pass | QUES-DEV-DRAFT-001; with 1,440 characters placed in the page only: intro wraps at 294px, first question y=1742; scrollWidth 360/375; axe serious 0 |
+| B1 | same | Jane | 1440 | pass | Intro and completion card share one 768px column; first question y=822 on load; 1425/1440; axe 0 |
+| B2 | Systems list: Owner and Business criticality | Bob | 375 | pass | Cards show "Owner: Not provided · Business criticality: Not provided"; 360/375; axe 0 |
+| B2 | same | Bob | 1440 | pass | Name, Owner and Business criticality visible (x 297–802); overflow only inside the labelled scroll region; page 1425/1440 |
+| B3 | Long control titles wrap | Bob | 375 | pass | Re-walk: PSPF-188 (98 characters), CPS-230-29, CPS-230-13, PSPF-005 and CPS-234-15 wrap to 3 lines in 302px cards; 360/375 |
+| B3 | same | Bob | 1440 | pass | Pilot check after Fix 7 (`ee7c673`) at `d89f419`, page `q=CPS-230`, 25 rows: the Name cells are `white-space: normal`, and 15 of 25 wrap to two lines (40px), the longest being "Operational risk, conduct and compliance standards, critical operations and providers". The table is 1087px and its region 1087px, so nothing scrolls sideways, and Reference ends at x1384 inside the region. Page 1425/1440. CPS-230-34 reads its Fix 3c title |
+| B4 | Control picker | Bob | 375 | pass | Full form width; "8.11 · Data masking" wraps; list x 87–279, no overflow; 360/375 |
+| B4 | same | Bob | 1440 | pass | Control (x362) beside Control owner (x850) in the two-column grid; list matches the input width |
+| B5 | System and asset pickers | Bob | 375 | pass | Full form width (229px editor, 278px Risk Register); 44px options; lists inside the viewport |
+| B5 | same | Bob | 1440 | pass | Editor: system x346, asset x850; Risk Register keeps its one-column layout |
+| B6 | Save confirmations | Bob | 375 | pass | "No changes to save." below Save risk and Save mitigation control, with no request; a long message wraps inside the card. Re-walk: Save assessment unchanged sends no request and shows "No changes to save." at y464 below its button |
+| B6 | same | Bob | 1440 | pass | Status beside its button in the action row, for all three saves (Save assessment status at x475–608 beside the button); no requests |
+| B7 | Readiness links | Bob | 375 | pass | Largest seeded assessment ASM-E2E-P7-MUTABLE-001 (4 Risks, 34 of 62): 5 links; rows wrap; 44px toggle (the seed has no ten-Risk assessment) |
+| B7 | same | Bob | 1440 | pass | Same 5 links; the card keeps its right column; the met list is collapsed |
+| B8 | Titles for 5.1, CPS-234-15, PSPF-001; `masking` | Bob | 375 | pass | "5.1 · Policies for information security", "CPS-234-15 · Information security capability proportionate to threats and supporting sound operation", "PSPF-001 · Portfolio security advice from the Department of State"; `masking` lists "8.11 · Data masking" in both pickers |
+| B8 | same | Bob | 1440 | pass | Same in the Name column; 8.11 with its framework line in both pickers |
+| W1 | My Requests, My Questionnaires, My Risk Assessments | Jane | 375 | pass | 375/375; axe 0; no internal term; no raw ids |
+| W1 | same | Jane | 1440 | pass | 1440/1440; axe 0; only the development role switcher, which UI-SPEC §17.2 excludes |
+| W2 | Request RAR-DEV-QUES-001 | Jane | 375 | pass | Three context groups; Submitted 30 Aug 2026; actions match the state; axe 0 |
+| W2 | same | Jane | 1440 | pass | 1425/1440; axe 0 |
+| W3 | Questionnaire QUES-DEV-DRAFT-001 | Jane | 375 | pass | "About this questionnaire" first; "0 of 7 answered"; save status present and empty; nothing typed |
+| W3 | same | Jane | 1440 | pass | 1425/1440; axe 0 |
+| W4 | Released ASM-E2E-P7-RELEASED-001 and ASM-E2E-NAV-OWNER-001 | Jane | 375 | pass | Ratings, Ownership and treatment groups; owner Bob Doe; In Progress; target 20 September 2026 (no released assessment in the seed has a mitigation control; the label is covered by 10-15's automated proofs) |
+| W4 | same | Jane | 1440 | pass | 1425/1440; axe 0 |
+| W5 | Three analyst URLs as a Requestor | Jane | 375 | pass | Permission states per §11.1 with the right `Go to My …` link; no record facts |
+| W5 | same | Jane | 1440 | pass | Same; axe 0 |
+| W6 | Review lists | Bob | 375 | pass | 360/375; axe 0 ("contextual" in the Risk Register description is excluded by §17.2, Phase 11) |
+| W6 | same | Bob | 1440 | pass | Same |
+| W7 | Hubs RAR-DEV-QUES-001 and RAR-DEV-CROSS-001 | Bob | 375 | pass | Third-party details and regulatory requirements shown; generation cards idle; nothing pressed |
+| W7 | same | Bob | 1440 | pass | The jobs read worked (no "couldn't check" line); the D-47 line has no live job in the seed to show |
+| W8 | Governance editor QUES-DEV-UNRELEASED-001 | Bob | 375 | pass | Per-section add opens in place; Save question and Discard changes stacked at 44px; discard returns focus; no requests |
+| W8 | same | Bob | 1440 | pass | Form opens inside its section with focus on Question text; Release disabled with its caption |
+| W9 | Released questionnaire QUES-DEV-DRAFT-001 | Bob | 375 | pass | 360/375; axe 0 |
+| W9 | same | Bob | 1440 | pass | "0 of 7 answered"; progress bar labelled; no Edit or Delete |
+| W10 | Assessment editor ASM-E2E-P7-MUTABLE-001 | Bob | 375 | pass | Walk 1 issue (unchanged Save assessment wrote) fixed by Fix 1 (`de7ab44`, `d1c75b7`); re-walk R2: no request, "No changes to save." below the button |
+| W10 | same | Bob | 1440 | pass | Re-walk R2: no request, status beside the button; still In review, 34 of 62 |
+| W11 | Analyst read-only ASM-2026-33SAEN | Bob | 375 | pass | "The Requestor can now read this assessment. It can no longer be changed." |
+| W11 | same | Bob | 1440 | pass | 1425/1440; axe 0 |
+| W12 | Risk Register detail RSK-DEV-MUTABLE-001 | Bob | 375 | pass | Pickers searched, then discarded; names, not ids. Re-walk R6 and R7: "ASM-DEV-RISK-001 · …", "Information system impacted" and "Information asset impacted"; focus returns to Add or Edit mitigation control after a discard |
+| W12 | same | Bob | 1440 | pass | Same; "Selected system: Customer portal"; mitigation card "E8-PATCH_APPLICATIONS-003 · Patch applications" |
+| W13 | Control search: Administration list and Control picker | Bob | 375 | pass | Walk 1 issue (APP-13's 100,973-character description broke list and picker pages) fixed by Fix 2 (`7e07dba`, `a31ae03`, `f60fd2f`). Re-walk R3: `data` 118, `personal` 30, `APP` 538, `APP-1` 5, `APP-13` 1, `Privacy Act` 24, each loading, with APP-13 listed |
+| W13 | same | Bob | 1440 | pass | Re-walk R3: same counts; the APP-13 record holds 2,558 characters, 13.1 to 13.5 only; both pickers load all six searches; axe 0 |
+| W14 | Information Systems | Bob | 375 | pass | As B2 |
+| W14 | same | Bob | 1440 | pass | As B2 |
+| W15 | CSV import (Controls) | Bob | 375 | pass | Guidance, and Column, Required and Format headers. Re-walk R6: "matches an existing control updates it" in lower case |
+| W15 | same | Bob | 1440 | pass | 1425/1440; axe 0 |
+| W16 | Control detail pages and descriptive titles | Bob | 1440 | pass | Walk 1 found CPS-230-34 narrowing its paragraph, and the re-walk found 3 of 20 still faulty. An independent audit of all 386 titles found 12 faults and 6 ambiguous; all 18 were corrected in Fix 3c, and the earlier fixes were Fix 3 and 3b (147 titles). Headings use number · title |
+| W17 | Next action on RAR-E2E-P7-DUESOON-001 and -OVERDUE-001 | Bob | 375 | pass | Re-walk R5: neither shows a Next action line or a Generate control (Fix 4, `7c371d6`, `8c4e2a7`); the fixtures' unreachable states are deferred |
+| W17 | same | Bob | 1440 | pass | Same |
+| W18 | Pickers with their list open (axe) | Bob | 375 | pass | Pilot check: the same scan at 375. The popup is a listbox with `aria-haspopup=listbox`; the one serious finding is the same accepted `scrollable-region-focusable`; moderate `region` 1 (the portal sits outside the landmarks, as every Radix popover does); page 360/375 |
+| W18 | same | Bob | 1440 | pass | Pilot check: Risk Register RSK-DEV-MUTABLE-001, Control picker opened by typing `data` (10 options), nothing chosen. The popup is a listbox: the input has `aria-haspopup=listbox` and `aria-controls`, and `aria-dialog-name` is gone. axe serious: one `scrollable-region-focusable` on the popover container (content 552px in a 458px box). It is accepted as the APG false positive (Fix 8 addendum) after the keyboard path was verified: with focus on the combobox, ArrowDown moves `aria-activedescendant` through all 10 options, each scrolled into view; Escape closes the list; Discard returns focus to Add mitigation control. Page 1425/1440. Only picker-search Server Action POSTs were sent |
+
+## Requirement coverage
+
+Each requirement's delivering plans, its automated proofs (the gate runs above) and its browser rows (`## Browser checks`). The coverage reads against the plan's `requirements` and the Manual-Only items of `10-VALIDATION.md`.
+
+| Requirement | Coverage | Delivered by | Browser rows | Manual-Only |
+|---|---|---|---|---|
+| REQ-07 | delivered | 10-04; walkthrough fix 4 | W2, W7, W17 | none |
+| QUES-08 | delivered | 10-06, 10-09, 10-11, 10-12 | W8, W9 | the hosted-provider question add stays open (no hosted-provider questionnaire in the seed; adding a question writes data) |
+| QUES-09 | delivered | 10-03, 10-05, 10-08 | B1, W3 | the browser leave prompt on reload and screen-reader cadence stay open, as the pilot reports them |
+| ASSESS-06 | delivered | 10-18, 10-19, 10-20, 10-21; walkthrough fixes 1, 6 and 8 (with its addendum) | B4, B5, B6, B7, W10, W12, W18 | none |
+| ASSESS-07 | delivered | 10-15 | W4 | none |
+| ADMIN-05 | delivered except the Information Asset owner: moves to Phase 22 with a contract-gap record (REQUIREMENTS.md, ADMIN-05 Remainder; D-01, D-37) | 10-15, 10-16, 10-17, 10-22; walkthrough fixes 2, 3, 3b, 3c, 3d and 7 | B2, B3, B8, W13, W14, W16 | APP titles against Schedule 1: pass; descriptive control titles: pass after Fix 3c (the Annex A 8.1 spelling is open for the operator) |
+| UX-06 | delivered | 10-01, 10-02, 10-04, 10-05, 10-06, 10-07, 10-09, 10-10, 10-12, 10-13, 10-14, 10-15, 10-17, 10-18, 10-19, 10-21; walkthrough fix 5 | W1, W5, W6, W11, W15 | copy voice: pass after Fix 5 |
+
+**ADMIN-05 is not fully closed.** Its criterion 1 names asset owners, and `CsrmInformationAsset` has no owner field. Adding one needs a content-type change, which Phase 10 makes none of (D-01), so the Information Asset owner moves to Phase 22 with a contract-gap record (D-37; REQUIREMENTS.md, ADMIN-05 Remainder; ROADMAP Phase 22, "Carried from Phase 10"). Everything else in ADMIN-05 is delivered here: system owners by name and the owner and criticality columns (10-16), complete Privacy Principle titles and Risk Type descriptions (10-17), the label rule (10-15), and a title for every seeded control (10-22, corrected by walkthrough fixes 3, 3b, 3c and 3d).
+
+**UAT-053 is closed except its asset half.** The system owner and the list columns are delivered (B2, W14); the Information Asset owner is the part that moves to Phase 22 with ADMIN-05.
+
+## Manual-Only
+
+The pilot's results for the Manual-Only items of `10-VALIDATION.md`, copied verbatim.
+
+- Question add on a hosted-provider questionnaire: open. Adding a question writes data, and the seed has no hosted-provider questionnaire.
+- Browser leave prompt on reload: open. It needs a typed answer, which autosave would write, and there is no throwaway questionnaire.
+- Screen-reader cadence: open, because no screen reader was available. The save status is confirmed as a polite status region.
+- APP titles against Schedule 1 of the Privacy Act 1988 (Cth): pass. APP-1 to APP-12 match the Schedule 1 headings in sentence case (walk 1). APP-13 "Correction of personal information" matches, and its subclauses 13.1 to 13.5 are complete and in order (re-walk).
+- Copy voice: pass after Fix 5. The middle-dot joins and sentence-case labels were checked in the re-walk.
+- Descriptive control titles against their paragraphs: pass after Fix 3c. All 386 were audited independently, and the 18 faulty or ambiguous titles were corrected. The Annex A 8.1 spelling ("endpoint" or "end point") is open for the operator, who needs a licensed copy to check it.
+
 ## Task Commits
 
 1. **Task 1: run the phase gate and the static checks, then commit the gate record**
-   - `eed7ed0`: fix(10-23): stop the generated-section test naming the AI provider variable
-   - this record: docs(10-23): record the Phase 10 gate
-2. **Task 2:** the pilot's blocking-human browser walk (checkpoint).
-3. **Task 3:** after the walk.
+   - `eed7ed0` fix(10-23): stop the generated-section test naming the AI provider variable
+   - `984b048` docs(10-23): record the Phase 10 gate
+2. **Task 2: the pilot's blocking-human browser walk.** Not approved on rounds 1 to 3; each round's defects were fixed inside this plan, test-first (GSD Rule 1). Approved 2026-10-03 with the Fix 3d and Fix 8 addendum rulings.
+   - Fix 2: `7e07dba` (test), `a31ae03` (fix), `f60fd2f` (record)
+   - Fix 3: `ee24167` (test), `0797c33` (fix), `ac34d19` (fix: the seed verifiers), `5a4c544` (record)
+   - Fix 3b: `a99efae` (test), `feac941` (fix), `81b8343` (record)
+   - Fix 1: `de7ab44` (test), `d1c75b7` (fix)
+   - Fix 4: `7c371d6` (test), `8c4e2a7` (fix)
+   - Fix 5: `1fae217` (test), `f193a3d` (fix)
+   - Fix 6: `3786559` (test), `c5cdf00` (fix); fixes 1, 4, 5 and 6 recorded in `5ef0f88`
+   - Second gate: `0b9557c` (record)
+   - Fix 7: `15b08f7` (test), `ee7c673` (fix)
+   - Fix 8: `ba1d9bb` and `d045322` (tests), `d6e29c5` (fix); deferrals `c9122fe`; fixes 7 and 8 recorded in `c8508a6`
+   - Fix 3c: `be545dd` (test), `9306359` (fix), `4c10b43` (record)
+   - Third gate: `d89f419` (record)
+   - Fix 3d: `05b5482` (test), `7385b91` (fix)
+   - Fix 8 addendum: `67e7617` (test, RED), `fe7d6fb` (test, the scoped exception and the keyboard proof)
+   - Fix 3d and the addendum recorded in `f51fe3d`
+3. **Task 3: record the browser checks, the requirement coverage and the Manual-Only results:** docs(10-23): record the Phase 10 browser checks (this record).
+
+Also in the range, not this plan's: `ac5ad66` docs(contract-gaps): approve Phase 10's governance-log amendments (G-6), the orchestrator's commit. `commits: 39` in the frontmatter is `git rev-list --count a2182e4..f51fe3d` and includes it; the Task 3 record is the 40th.
 
 ## Files Created/Modified
 
-- `apps/backend/tests/questionnaire-governance.integration.test.ts`: the generated-section test no longer names the provider variable. It relies on the harness pin and its own `GENERATED_ADD_CONTEXT_SECTION` shape proof.
-- `.planning/phases/10-existing-flow-gap-closure/10-23-SUMMARY.md`: this gate record.
+Every file is listed under `key-files` in the frontmatter, and each fix section names its own. In summary:
+- **Strapi seed data and its guards:** APP-13's curated text (`privacy-act-app-ndb-2026-06-04.json`), the descriptive titles and their `supersededTitles` (`csrm-control-titles.json`), the description and name ownership rules (`seed-csrm-data.ts`), the served-text bound (`served-text.ts`, `administration-query.ts`, `csv-import.ts`), and the two seed verifiers with their shared file list (`scripts/`).
+- **Web:** the unchanged Save assessment (`assessment-domain.ts`, `assessment-editor.tsx`), the analyst Next action (`request-domain.ts`, `assessment-detail.tsx`), copy joins and labels (`risk-details.tsx`, `assessment-request-link.tsx`, `administration-config.ts`, `csv-import-flow.tsx`), discard focus (`mitigation-control-list.tsx`), wrapping titles (`administration-workspace.tsx`) and listbox popups (`relation-picker.tsx`, `owner-combobox.tsx`, `risk-register-filters.tsx`).
+- **Tests:** the unit, mounted and journey proofs each fix section lists, and `e2e/accessibility.spec.ts` (fix 8's open-list scans and the addendum's overflow test).
+- **Records:** this summary and `deferred-items.md`.
 
 ## Decisions Made
 
 - The `CSRM_AI_` check stays as the plan wrote it. Its failure was resolved in the source, never by narrowing the check: the assertion read a value and changed no configuration, but the gate's rule is literal, and the assertion added nothing the test does not already prove.
 - `api:check` and its refresh are recorded as separate steps, so each exit code means one thing (5a and 5b above).
 - The brief's six commands were used (`--dir` forms; `lint` added), which the rules file names as equivalent to the plan's five `--filter`/`--prefix` forms.
+- Each walkthrough fix records its own decisions in its section; the frontmatter's `key-decisions` lists them all.
+- **Fix 3d's wording.** The title keeps "appropriate" on "access" and keeps fix 3b's verb-first shape, rather than the pilot's example, which opens with the paragraph's own opening phrase.
+- **The addendum's scope.** The exception is a filter on one rule and one target, not an axe `exclude`, and it applies only in the overflow test that proves the keyboard path. Fix 8's 28 scans keep their strict rule.
+- **Requirement status.** `requirements-completed` lists the six delivered requirements. ADMIN-05 is `requirements-partial` and stays open in REQUIREMENTS.md with its Remainder, so nothing calls it fully closed.
+- **The browser and Manual-Only sections are the pilot's text,** copied by script from the pilot's final table and checked with `diff` against it; no row was added, edited or filled.
 
 ## Deviations from Plan
 
@@ -1246,21 +1398,36 @@ The gate is green on every command. No fix was needed in this run.
 - **Verification:** the failing proof was static check 4 itself. After the edit, check 4 printed nothing, and the file ran alone with 11/11 passing (34 s, `p10-23-fix-governance-file.log`). Then the whole gate reran (the table above).
 - **Committed in:** `eed7ed0`
 
+**2 to 12. [Rule 1 - Bug] The walkthrough fixes (Task 2).** Fixes 1 to 8, 3b, 3c and 3d, and the Fix 8 addendum, each found by the pilot's walk or its rulings and each fixed failing test first. Each has its own section under `## Walkthrough fixes` with the issue, the fix, the files, the RED and GREEN runs and the commits.
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 bug).
-**Impact on plan:** none on scope. No configuration, provider, Strapi source or contract changed.
+**Total deviations:** 12 auto-fixed (12 bugs: the gate's `CSRM_AI_` line and eleven walkthrough fixes, the addendum counted with Fix 8).
+**Impact on plan:** each fix stays inside Phase 10's scope. No content type, contract, specification, role-function catalogue or `CSRM_AI_` configuration changed (the static checks), and no Keycloak file changed.
 
 ## Issues Encountered
 
 - `git update-index --refresh -- <path>` exits 1 on this host while the operator's two `types/generated` files stay stat-dirty (note 5b). This is host-expected, not a defect.
 - The Next `destination stream closed early` server log noise is recorded under Phase gate notes.
+- `check tdd-red-evidence` reads TAP or JUnit, not Playwright's list reporter, so the addendum's RED was rerun with the JUnit reporter to be checked (Fix 8 addendum, Runs).
+
+## Deferred
+
+All in `deferred-items.md`, none blocking: the Phase 7 fixtures' unreachable state (fix 4), the CPS 230 and CPS 234 PDF-extraction leftovers, the non-Phase 10 list columns without the long-text option, the specification's unserved `updatedAt`, and the ISO Annex A 8.1 spelling for the operator. The Information Asset owner moves to Phase 22 (ADMIN-05 Remainder). The three Manual-Only items the pilot leaves open stay open.
 
 ## Next Phase Readiness
 
-- The gate is green. The pilot can restart the dev servers at this commit for Task 2. No dev server is running, and the executor started none.
-- Task 3 adds the browser check table, the requirement coverage (ADMIN-05 is delivered except the Information Asset owner, which moves to Phase 22) and the Manual-Only results.
+- Plan 10-23 is complete: Tasks 1 to 3 are done, and every Phase 10 plan has a summary.
+- Not run here, by instruction: the full phase gate. Fix 3d and the addendum change code after the third gate, so the orchestrator runs one final full gate (brief §5, `verify:csrm-seed` and the four static checks against `5ea2b77`) after the code review, the regression gate and `gsd-verifier`.
+- The phase is not marked complete here; the orchestrator does that after verification and the final gate.
+- No dev server is running, and the executor started none.
+
+## Self-Check: PASSED
+
+- Files found: `csrm-control-titles.json`, `control-titles.unit.test.ts`, `accessibility.spec.ts` and this summary.
+- Commits found: `eed7ed0`, `984b048`, `d89f419`, `05b5482`, `7385b91`, `67e7617`, `fe7d6fb` and `f51fe3d`.
+- `## Browser checks` and `## Manual-Only` match the pilot's final table line for line (`diff` printed nothing); 16 B-rows at 375 and 1440 read pass; no cell reads pending or issue.
 
 ---
 *Phase: 10-existing-flow-gap-closure*
-*Gate recorded: 2026-10-02*
+*Gate recorded: 2026-10-02; walk approved and plan completed: 2026-10-03*
