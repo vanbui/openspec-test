@@ -3,13 +3,19 @@ import '@testing-library/jest-dom/vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { installTestResizeObserver, stubHorizontalGeometry, TestResizeObserver } from '@/test/layout-stubs';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
+const get = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ usePathname: () => '/app/admin/risk-types', useRouter: () => router }));
 vi.mock('server-only', () => ({}));
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('../../lib/api/transport/server-client', () => ({
+  createStrapiClient: vi.fn(async () => ({ GET: get })),
+  normalizeTransportError: vi.fn((_error: unknown, status?: number) => ({ data: null, error: { status } })),
+}));
 
 type AdministrationItem = {
   documentId: string;
@@ -478,6 +484,56 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
   });
 
+  /*
+   * D-36 (UI-SPEC §16.2): a saved applicable control reads by its control label, never its id. The page supplies
+   * the labels of saved selections beyond the first 100 options; a selection with no known label reads
+   * `Control not found`.
+   */
+  it('UAT-007 labels each saved applicable control and never shows its id', async () => {
+    // Each selection renders a checkbox, which measures itself.
+    installTestResizeObserver();
+    onTestFinished(() => { vi.unstubAllGlobals(); });
+    const { AdministrationForm } = await loadWorkspace();
+    render(<AdministrationForm
+      documentId={item.documentId}
+      initialControlOptions={[
+        { documentId: 'control-near', label: '5.1' },
+        { documentId: 'control-far', label: 'V3.1.1 · Verify session management' },
+      ]}
+      initialValues={{ ...item, applicableControls: ['control-far', 'control-missing'] }}
+      kind="risk-types"
+      mode="edit"
+      updateAction={vi.fn()}
+    />);
+
+    const selected = screen.getByRole('group', { name: 'Selected applicable Controls' });
+    expect(within(selected).getByText('V3.1.1 · Verify session management')).toBeInTheDocument();
+    expect(within(selected).getByText('Control not found')).toBeInTheDocument();
+    expect(selected.textContent).not.toMatch(/control-far|control-missing/);
+  });
+
+  it('offers the first 100 controls by number and adds each saved selection beyond them, by its control label', async () => {
+    const optionsPath = './applicable-controls';
+    const { applicableControlOptions } = await import(optionsPath) as {
+      applicableControlOptions: (
+        controls: readonly { documentId: string; controlNumber: string; name: string; description: string | null }[],
+        selectedIds?: readonly string[],
+      ) => readonly { documentId: string; label: string }[];
+    };
+    const controls = Array.from({ length: 150 }, (_, index) => ({
+      documentId: `control-${index}`, controlNumber: `C-${index}`, name: `C-${index} — Control ${index}`, description: null,
+    })).reverse();
+
+    const options = applicableControlOptions(controls, ['control-140', 'control-2', 'control-unknown']);
+    expect(options).toHaveLength(101);
+    expect(options[0]).toEqual({ documentId: 'control-0', label: 'C-0 · Control 0' });
+    expect(options[99]).toEqual({ documentId: 'control-99', label: 'C-99 · Control 99' });
+    expect(options[100]).toEqual({ documentId: 'control-140', label: 'C-140 · Control 140' });
+    expect(applicableControlOptions([{ documentId: 'control-5-1', controlNumber: '5.1', name: '5.1', description: null }]))
+      .toEqual([{ documentId: 'control-5-1', label: '5.1' }]);
+    expect(applicableControlOptions([], ['control-1'])).toEqual([]);
+  });
+
   it('renders detail context and saves edited Risk Type values', async () => {
     const user = userEvent.setup();
     const { AdministrationForm } = await loadWorkspace();
@@ -701,6 +757,46 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     expect(screen.getByText(/Server validation changed the result for 1 row/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Risk Types' })).toHaveAttribute('href', '/app/admin/risk-types');
     expect(commitAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('D-29 Risk Type control search on the server', () => {
+  afterEach(() => get.mockReset());
+
+  const listed = (data: readonly Record<string, unknown>[]) => ({
+    data: { data, meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: data.length } } },
+    response: { status: 200 },
+  });
+  const controlRecord = (documentId: string, controlNumber: string, name: string, framework: string) => ({
+    documentId, controlNumber, name, framework, description: null, controlType: null,
+    controlReference: null, frameworkVersion: null, frameworkSource: null,
+  });
+
+  it('asks the Administration control list for one bounded page and labels each option', async () => {
+    get.mockResolvedValueOnce(listed([
+      controlRecord('control-app-11', 'APP-11', 'APP-11 — Security of personal information', 'Privacy Act 1988'),
+      controlRecord('control-5-1', '5.1', '5.1', 'ISO/IEC 27001 Information security management systems — Annex A'),
+    ]));
+    const { searchApplicableControlsAction } = await import('./administration-actions');
+
+    await expect(searchApplicableControlsAction('APP')).resolves.toEqual([
+      { documentId: 'control-app-11', label: 'APP-11 · Security of personal information' },
+      { documentId: 'control-5-1', label: '5.1 · ISO/IEC 27001 Information security management systems — Annex A' },
+    ]);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith('/v1/controls', { params: { query: { q: 'APP', sort: 'controlNumber:asc', page: 1, pageSize: 25 } } });
+  });
+
+  it.each(['', '   ', 42, 'x'.repeat(201)])('returns no options without a call for the search %j', async (search) => {
+    const { searchApplicableControlsAction } = await import('./administration-actions');
+    await expect(searchApplicableControlsAction(search)).resolves.toEqual([]);
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('returns no options when the control list is refused', async () => {
+    get.mockResolvedValueOnce({ data: undefined, error: { error: { status: 403 } }, response: { status: 403 } });
+    const { searchApplicableControlsAction } = await import('./administration-actions');
+    await expect(searchApplicableControlsAction('APP')).resolves.toEqual([]);
   });
 });
 

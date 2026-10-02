@@ -186,3 +186,22 @@ test("assessment workflow rerun repairs managed fields and applicable-Control re
   );
   assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
 });
+
+/* D-36 (UI-SPEC §16.3): each seeded Risk Type tells an analyst which risks it covers. */
+const RISK_TYPE_DESCRIPTIONS = {
+  "Internet Exposure": "Risks from services that can be reached from the internet or are hosted by an external provider, such as exposed interfaces, unpatched software and weak authentication.",
+  "Personal Information Handling": "Risks from collecting, storing, using or sharing personal information, including privacy obligations, who can access the information and how long it is kept.",
+  "Third-Party Dependency": "Risks from relying on an external provider for a service, such as the provider’s own security, its staff’s access to your systems and data, and the continuity of its service.",
+} as const;
+
+test("ADMIN-05 a seeded start gives each Risk Type its user-facing description", async () => {
+  await withSeedEnvironment(
+    { nodeEnv: "development", environment: "development", identity: "true", seed: "true" },
+    () => seedAssessmentWorkflow(strapi as never),
+  );
+  for (const [name, description] of Object.entries(RISK_TYPE_DESCRIPTIONS)) {
+    const [riskType] = await findBy("api::csrm-risk-type.csrm-risk-type", { name: { $eq: name } });
+    assert.ok(riskType, `${name} is seeded`);
+    assert.equal(riskType.description, description, name);
+  }
+});
