@@ -838,3 +838,55 @@ test('picker lists pass axe while open at 1440 and 375', async ({ page }) => {
   console.log(`accessibility: open picker scans: ${results.join('; ')}`);
   await expectNoCspViolations(page, 'the open picker scans');
 });
+
+/*
+ * 10-23 Fix 8 addendum: a picker list that overflows its popover. The scans above open short lists, which fit.
+ * The Risk Register's Control picker searched for `data` lists a full page of ten controls, each a title line and
+ * a framework line, with the "Showing the first 10 matches" status under them. With the field mid-viewport the
+ * popover has about half the viewport on either side, so at 1440x900 and 375x812 the list runs past the
+ * popover's available height and the popover content scrolls (the pilot measured 552px of content in a 458px box).
+ */
+const overflowSearch = 'data';
+
+test('an overflowing picker list passes axe while open at 1440 and 375', async ({ page }) => {
+  test.setTimeout(300_000);
+  await attachCspCollector(page);
+  await signInAs(page, 'Security Analyst');
+  const results: string[] = [];
+  const risk = await recordHref(page, '/app/risks', mutableRiskNumber);
+
+  for (const width of widths) {
+    const label = `Risk details Control searching "${overflowSearch}" at ${width}px`;
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await page.goto(risk);
+    await expectSettled(page, { url: routeUrl(risk), title: 'Risk Details | IdamBox CSRM', heading: mutableRiskNumber }, `the Risk details at ${width}px`);
+    await page.getByRole('button', { name: 'Add mitigation control' }).click();
+    const addForm = page.getByRole('region', { name: 'Mitigation controls' }).locator('form').last();
+    const combobox = addForm.getByRole('combobox', { name: 'Control', exact: true });
+    // Mid-viewport, so neither side of the field has room for the whole list.
+    await combobox.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await combobox.fill(overflowSearch);
+    const popup = openPopups(page).filter({ has: page.getByRole('listbox') });
+    await expect(popup.getByRole('status'), `${label} loads a full page of matches`).toContainText('Showing the first 10 matches');
+    const options = popup.getByRole('listbox').getByRole('option');
+    await expect(options, `${label} lists ten options`).toHaveCount(10);
+    const box = await popup.evaluate((element) => ({ content: element.scrollHeight, height: element.clientHeight }));
+    expect(box.content, `${label}: the list overflows its popover (${box.content}px in ${box.height}px)`).toBeGreaterThan(box.height);
+
+    const { violations } = await scanWithBestPractice(page);
+    const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
+    expect(blocking, `${label} with its list open has no serious or critical axe violation (${summarise(violations)})`).toEqual([]);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      `${label} has no horizontal page overflow`,
+    ).toBe(true);
+    results.push(`${label}: ${box.content}px in ${box.height}px; ${violations.length === 0 ? 'no violations' : summarise(violations)}`);
+
+    await combobox.press('Escape');
+    await expect(openPopups(page).getByRole('listbox'), `${label}: Escape closes the list without choosing`).toHaveCount(0);
+    await addForm.getByRole('button', { name: 'Discard mitigation changes' }).click();
+  }
+  test.info().annotations.push({ type: 'overflowing picker scans', description: results.join('; ') });
+  console.log(`accessibility: overflowing picker scans: ${results.join('; ')}`);
+  await expectNoCspViolations(page, 'the overflowing picker scans');
+});
