@@ -973,6 +973,20 @@ describe('the hub’s next action while a generation job runs', () => {
     expect(screen.queryByText('Draft the assessment.')).not.toBeInTheDocument();
   });
 
+  /* IN-207: returning the request to draft would make the running job fail, so it is not offered beside it. */
+  it('offers no Return to draft while questionnaire generation runs, and offers it again once the job fails', async () => {
+    actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: failedGeneration });
+    render(<AssessmentDetail generationJobs={{ questionnaireGeneration: { job: runningGeneration, canRetry: true }, assessmentDraft: null }} request={hubRequest()} state="populated" />);
+
+    expect(nextActionLine()).toHaveTextContent('Next action: Questionnaire generation is in progress.');
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Questionnaire generation failed');
+    expect(screen.getByRole('button', { name: 'Return to draft' })).toBeInTheDocument();
+    expect(routerMocks.refresh).not.toHaveBeenCalled();
+  });
+
   it('keeps the served next action when the seeded job failed', () => {
     render(<AssessmentDetail generationJobs={{ questionnaireGeneration: { job: failedGeneration, canRetry: false }, assessmentDraft: null }} request={hubRequest()} state="populated" />);
 
