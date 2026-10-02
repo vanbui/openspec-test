@@ -825,8 +825,8 @@ test("mounted picker Risk Type list names each Risk Type's applicable controls f
   }], "APPLICABLE_CONTROL_SUMMARY_NOT_SERVED");
 
   // A query still serves the Administration page, which names applicable controls by id only.
-  const page = await request(`/api/v1/risk_types?q=${encodeURIComponent(name)}`, harness.identities.analyst);
-  assert.equal(page.status, 200);
+  const page = await request(`/api/v1/risk_types?q=${encodeURIComponent(name)}&sort=name%3Aasc&page=1&pageSize=25`, harness.identities.analyst);
+  assert.equal(page.status, 200, await page.clone().text());
   const pageBody = await payload(page);
   assert.ok(pageBody.meta && typeof pageBody.meta === "object" && "pagination" in pageBody.meta, "ADMINISTRATION_RISK_TYPE_PAGE_MISSING");
   const pageRow = rows(pageBody).find((riskType) => riskType.documentId === createdId);

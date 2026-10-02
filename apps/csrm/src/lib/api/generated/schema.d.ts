@@ -2908,10 +2908,19 @@ export interface components {
         ControlImplementationListResponse: {
             data: components["schemas"]["ControlImplementationSummary"][];
         };
+        /** @description D-31: a control that applies to a Risk Type, summarised for the mitigation control picker with the Administration control record's bounds. */
+        RiskTypeApplicableControl: {
+            documentId: string;
+            controlNumber: string;
+            name: string;
+            framework: string;
+        };
         RiskTypeSummary: {
             documentId: string;
             name: string;
             description: string | null;
+            /** @description D-31: the controls that apply to this Risk Type, sorted by control number, so the control picker offers them first. */
+            applicableControls: components["schemas"]["RiskTypeApplicableControl"][];
         };
         RiskTypeListResponse: {
             data: components["schemas"]["RiskTypeSummary"][];

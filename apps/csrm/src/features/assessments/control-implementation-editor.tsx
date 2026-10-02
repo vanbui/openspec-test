@@ -1,10 +1,17 @@
 'use client';
 
 import { AlertCircleIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
+import {
+  RelationPicker,
+  type RelationPickerGroup,
+  type RelationPickerItem,
+  type RelationPickerSearchInput,
+  type RelationPickerSearchResult,
+} from '@/components/csrm/relation-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +22,7 @@ import {
   updateControlImplementationAction,
 } from './assessment-actions';
 import { controlImplementationWritableFields } from './assessment-domain';
+import { controlPickerItem } from './control-label';
 import type {
   ControlImplementation,
   ControlImplementationUpdateInput,
@@ -22,8 +30,14 @@ import type {
 import type { RiskEditorOptions } from './risk-editor';
 
 export type ControlImplementationEditorOptions = Pick<RiskEditorOptions, 'users'> & {
-  controls: readonly { documentId: string; controlNumber: string; name: string }[];
+  /** The Risk Type's applicable controls, offered first in the Control picker (D-31). */
+  suggestedControls?: RelationPickerGroup;
+  /** Searches the whole control library by number, name or framework (D-29). */
+  searchControls: (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
 };
+
+/** The control search's page size (Administration list sizes 10, 25, 50 and 100). */
+export const controlSearchPageSize = 10;
 
 export type ControlImplementationEditorProps = {
   assessmentId: string;
@@ -34,6 +48,8 @@ export type ControlImplementationEditorProps = {
   onCreated?: (implementation: ControlImplementation) => void;
   onUpdated?: () => void;
   onRemoved?: (implementationId: string) => void;
+  /** Moves focus to the Control input when the form opens (UI-SPEC §13.1). */
+  focusControlOnOpen?: boolean;
 };
 
 const emptyValues: ControlImplementationUpdateInput = {
@@ -61,6 +77,17 @@ function initialValues(implementation?: ControlImplementation): ControlImplement
   };
 }
 
+/**
+ * The chosen control as the picker shows it: named by its served summary (D-30, D-36), or `Control not found`
+ * when the library no longer holds it. Never its id.
+ */
+function initialControl(implementation?: ControlImplementation): RelationPickerItem | null {
+  if (!implementation?.control) return null;
+  return implementation.controlSummary
+    ? controlPickerItem(implementation.controlSummary)
+    : { documentId: implementation.control, name: 'Control not found' };
+}
+
 function normalizeEmptyValues(values: ControlImplementationUpdateInput): ControlImplementationUpdateInput {
   return Object.fromEntries(controlImplementationWritableFields.map((field) => [field, values[field] === '' ? null : values[field]])) as ControlImplementationUpdateInput;
 }
@@ -69,12 +96,25 @@ function changedValues(values: ControlImplementationUpdateInput, initial: Contro
   return Object.fromEntries(controlImplementationWritableFields.filter((field) => values[field] !== initial[field]).map((field) => [field, values[field]])) as ControlImplementationUpdateInput;
 }
 
-export function ControlImplementationEditor({ assessmentId, implementation, mode, onCreated, onRemoved, onUpdated, options, riskId }: ControlImplementationEditorProps) {
+export function ControlImplementationEditor({ assessmentId, focusControlOnOpen = false, implementation, mode, onCreated, onRemoved, onUpdated, options, riskId }: ControlImplementationEditorProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [selectedControl, setSelectedControl] = useState<RelationPickerItem | null>(() => initialControl(implementation));
+  const controlInput = useRef<HTMLInputElement>(null);
+  const controlErrorId = useId();
   const initial = initialValues(implementation);
   const form = useForm<ControlImplementationUpdateInput>({ defaultValues: initial });
+
+  useEffect(() => {
+    if (focusControlOnOpen) controlInput.current?.focus();
+  }, [focusControlOnOpen]);
+
+  function chooseControl(control: RelationPickerItem | null) {
+    setSelectedControl(control);
+    form.setValue('control', control?.documentId ?? null, { shouldDirty: true });
+    form.clearErrors('control');
+  }
 
   async function submit(values: ControlImplementationUpdateInput) {
     setFormError(null);
@@ -118,7 +158,25 @@ export function ControlImplementationEditor({ assessmentId, implementation, mode
       {formError ? <Alert variant="destructive"><AlertTitle>Mitigation control not changed</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
       <p aria-atomic="true" aria-live="polite" role="status">{statusMessage ?? ''}</p>
       <div className="grid gap-5 md:grid-cols-2">
-        <label className="grid gap-2"><span className="text-sm font-medium">Reusable control</span><select aria-describedby={form.formState.errors.control ? 'control-error' : undefined} aria-invalid={Boolean(form.formState.errors.control)} className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm" {...form.register('control')}><option value="">Select a control</option>{options.controls.map((control) => <option key={control.documentId} value={control.documentId}>{control.controlNumber} — {control.name}</option>)}</select><FieldError id="control-error" message={form.formState.errors.control?.message} /></label>
+        <div className="grid min-w-0 gap-2">
+          <RelationPicker
+            errorId={controlErrorId}
+            hint="Search by control number, name or framework. Controls that apply to the Risk Type come first."
+            inputRef={controlInput}
+            invalid={Boolean(form.formState.errors.control)}
+            label="Control"
+            noMatchText="No matching controls. Try a control number, name or framework."
+            noun="control"
+            onValueChange={chooseControl}
+            otherGroupLabel="Other controls"
+            pageSize={controlSearchPageSize}
+            search={options.searchControls}
+            searchingText="Searching controls…"
+            suggested={options.suggestedControls}
+            value={selectedControl}
+          />
+          <FieldError id={controlErrorId} message={form.formState.errors.control?.message} />
+        </div>
         <label className="grid gap-2"><span className="text-sm font-medium">Control owner</span><select aria-describedby={form.formState.errors.controlOwner ? 'controlOwner-error' : undefined} aria-invalid={Boolean(form.formState.errors.controlOwner)} className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm" {...form.register('controlOwner')}><option value="">Not specified</option>{options.users.map((user) => <option key={user.documentId} value={user.documentId}>{user.displayName}</option>)}</select><FieldError id="controlOwner-error" message={form.formState.errors.controlOwner?.message} /></label>
         <Choice error={form.formState.errors.controlStatus?.message} label="Control status" name="controlStatus" options={['Existing', 'Planned', 'Implemented', 'Retired']} register={form.register} />
         <Choice error={form.formState.errors.effectivenessRating?.message} label="Effectiveness rating" name="effectivenessRating" options={['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed']} register={form.register} />

@@ -10,6 +10,7 @@ import type {
   AssessmentRiskListItem,
   ControlImplementation,
   AnalystRisk,
+  RiskType,
   RiskUpdateInput,
 } from './assessment-schema';
 import { controlImplementationWritableFields, riskWritableFields } from './assessment-schema';
@@ -178,6 +179,8 @@ const applicableApp11 = {
   framework: 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme',
 };
 
+const internetExposure: RiskType = { documentId: 'risk-type-1', name: 'Internet Exposure', description: null, applicableControls: [applicableAc1, applicableApp11] };
+
 const searchControls = vi.fn(async () => ({ ok: true as const, data: [] }));
 
 /** The control editor's options: the owners, the Risk Type's applicable controls first, and the control search. */
@@ -197,7 +200,7 @@ const editorProps = {
   assessment,
   risks: [risk],
   controlImplementations: { 'risk-1': [implementation] },
-  riskTypes: [{ documentId: 'risk-type-1', name: 'Internet Exposure', description: null, applicableControls: [applicableAc1, applicableApp11] }],
+  riskTypes: [internetExposure],
   users: [analyst],
   systems: [{ documentId: 'system-1', name: 'Customer portal' }],
   assets: [{ documentId: 'asset-1', name: 'Customer data' }],

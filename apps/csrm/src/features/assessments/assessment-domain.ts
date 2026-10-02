@@ -6,7 +6,10 @@ import type {
   AssessmentRiskListItem,
   AssessmentStatus,
   ReleaseReadinessRequirement,
+  RiskType,
 } from './assessment-schema';
+import type { RelationPickerGroup } from '@/components/csrm/relation-picker';
+import { controlPickerItem } from './control-label';
 
 type ReleaseFacts = Pick<AnalystAssessmentDetail, 'assessmentStatus' | 'assessmentDate' | 'approvalDate' | 'approvedBy'>;
 
@@ -178,3 +181,17 @@ export const controlImplementationWritableFields = [
   'implementedDate',
   'reviewDate',
 ] as const;
+
+/**
+ * The controls the Control picker offers first for a Risk (D-31; UI-SPEC §13.1): those that apply to the Risk's
+ * saved Risk Type, named by the control label. A Risk with no Risk Type, or one whose type lists no controls,
+ * has no suggested group, so the picker asks the analyst to search.
+ */
+export function applicableControlGroup(
+  riskTypes: readonly Pick<RiskType, 'documentId' | 'name' | 'applicableControls'>[],
+  riskTypeId: string | null | undefined,
+): RelationPickerGroup | undefined {
+  const riskType = riskTypeId ? riskTypes.find((candidate) => candidate.documentId === riskTypeId) : undefined;
+  if (!riskType || riskType.applicableControls.length === 0) return undefined;
+  return { label: `Applicable to ${riskType.name}`, items: riskType.applicableControls.map(controlPickerItem) };
+}

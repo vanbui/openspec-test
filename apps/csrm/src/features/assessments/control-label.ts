@@ -10,6 +10,8 @@
  *    the served shape carries no framework.
  */
 
+import type { RelationPickerItem } from '@/components/csrm/relation-picker';
+
 export type ControlTitleSource = {
   readonly controlNumber: string;
   readonly name: string;
@@ -44,4 +46,21 @@ export function controlLabel(control: ControlLabelSource): string {
   if (title) return `${number}${SEPARATOR}${title}`;
   const framework = control.framework?.trim();
   return framework ? `${number}${SEPARATOR}${framework}` : number;
+}
+
+export type ControlPickerSource = ControlLabelSource & {
+  readonly documentId: string;
+  readonly framework: string;
+};
+
+/**
+ * A control as a record picker option or selection (UI-SPEC §13.1, §16.2): named by its label, with the
+ * framework, as stored, on a second line when the label shows the title rather than the framework.
+ */
+export function controlPickerItem(control: ControlPickerSource): RelationPickerItem {
+  const name = controlLabel(control);
+  const framework = control.framework.trim();
+  return controlTitle(control) && framework
+    ? { documentId: control.documentId, name, detail: framework }
+    : { documentId: control.documentId, name };
 }

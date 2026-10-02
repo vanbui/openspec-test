@@ -416,10 +416,31 @@ export const releasedAssessmentDetailForActorSchema = z
   });
 export type ReleasedAssessmentDetailForActor = z.infer<typeof releasedAssessmentDetailForActorSchema>;
 
+/*
+ * D-34: the control a mitigation control implements, named by the served summary so no screen falls back to
+ * its id. The bounds mirror ControlImplementationControlSummary in the contract (the Administration control
+ * record's), and the summary is null when the populated control lacks any of them.
+ */
+export const controlImplementationControlSummarySchema = z.object({
+  documentId: z.string().min(1).max(255),
+  controlNumber: z.string().min(1).max(255),
+  name: z.string().min(1).max(255),
+  framework: z.string().min(1).max(255),
+}).strict();
+export type ControlImplementationControlSummary = z.infer<typeof controlImplementationControlSummarySchema>;
+
+/*
+ * D-31: a control that applies to a Risk Type, as the picker's Risk Type list serves it (RiskTypeApplicableControl).
+ * It has the control summary's exact contract bounds, so it is the same object.
+ */
+export const riskTypeApplicableControlSchema = controlImplementationControlSummarySchema;
+export type RiskTypeApplicableControl = z.infer<typeof riskTypeApplicableControlSchema>;
+
 export const riskTypeSchema = z.object({
   documentId: documentIdSchema,
   name: z.string().trim().min(1).max(255),
   description: nullableString,
+  applicableControls: z.array(riskTypeApplicableControlSchema).max(1_000),
 }).strict();
 export type RiskType = z.infer<typeof riskTypeSchema>;
 
@@ -452,19 +473,6 @@ export const controlImplementationCreateInputSchema = controlImplementationUpdat
 }).strict();
 export type ControlImplementationCreateInput = z.infer<typeof controlImplementationCreateInputSchema>;
 export type ControlImplementationUpdateInput = z.infer<typeof controlImplementationUpdateInputSchema>;
-
-/*
- * D-34: the control a mitigation control implements, named by the served summary so no screen falls back to
- * its id. The bounds mirror ControlImplementationControlSummary in the contract (the Administration control
- * record's), and the summary is null when the populated control lacks any of them.
- */
-export const controlImplementationControlSummarySchema = z.object({
-  documentId: z.string().min(1).max(255),
-  controlNumber: z.string().min(1).max(255),
-  name: z.string().min(1).max(255),
-  framework: z.string().min(1).max(255),
-}).strict();
-export type ControlImplementationControlSummary = z.infer<typeof controlImplementationControlSummarySchema>;
 
 export const controlImplementationSchema = z.object({
   documentId: documentIdSchema,

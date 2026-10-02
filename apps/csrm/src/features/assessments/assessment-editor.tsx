@@ -23,16 +23,16 @@ import {
   type AnalystAssessmentDetail,
   type AssessmentRiskListItem,
   type AssessmentUpdateInput,
-  type Control,
   type ControlImplementation,
   type AnalystRisk,
   type RiskType,
   type RiskUpdateInput,
 } from './assessment-schema';
-import { ControlImplementationEditor } from './control-implementation-editor';
+import type { RelationPickerSearchInput, RelationPickerSearchResult } from '@/components/csrm/relation-picker';
+import { ControlImplementationEditor, type ControlImplementationEditorOptions } from './control-implementation-editor';
 import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
-import { assessmentRiskListItemFromAnalystRisk, canMutateAssessment, releaseReadinessPresentation } from './assessment-domain';
+import { applicableControlGroup, assessmentRiskListItemFromAnalystRisk, canMutateAssessment, releaseReadinessPresentation } from './assessment-domain';
 import { ReleasedRiskDetails } from './released-risk-details';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
@@ -44,7 +44,6 @@ export type AssessmentEditorProps = {
   assessment?: AnalystAssessmentDetail;
   assets?: readonly RequestRelationSummary[];
   controlImplementations?: Readonly<Record<string, readonly ControlImplementation[]>>;
-  controls?: readonly Control[];
   /** Who a permission state is for: `role` when the route gate refused the viewer before any read (UI-SPEC §11.1). */
   refusal?: AnalystRefusal;
   risks?: readonly AnalystRisk[];
@@ -54,7 +53,11 @@ export type AssessmentEditorProps = {
   state?: AssessmentEditorState;
   systems?: readonly RequestRelationSummary[];
   searchOwners?: (input: OwnerSearchInput) => Promise<OwnerSearchResult>;
+  /** Searches the control library for the Control picker (D-29); the page passes the Server Action. */
+  searchControls?: (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
 };
+
+const noControlSearch = async (): Promise<RelationPickerSearchResult> => ({ ok: true, data: [] });
 
 /**
  * A drafted assessment that still carries a reviewer of record is a reviewed
@@ -125,7 +128,6 @@ export function AssessmentEditor({
   assessment,
   assets = [],
   controlImplementations = {},
-  controls = [],
   refusal,
   risks: initialRisks = [],
   riskListItems = [],
@@ -133,6 +135,7 @@ export function AssessmentEditor({
   state = 'populated',
   systems = [],
   searchOwners = async () => ({ ok: false, formError: 'Owner search is unavailable. Please try again later.' }),
+  searchControls = noControlSearch,
 }: AssessmentEditorProps) {
   const [currentAssessment, setCurrentAssessment] = useState(assessment);
   const [risks, setRisks] = useState<readonly AnalystRisk[]>(initialRisks);
@@ -167,7 +170,13 @@ export function AssessmentEditor({
     setCurrentAssessment((current) => current ? { ...current, ...result.data } : current);
   }
 
-  const options = { assets, controls, riskTypes, systems, users: currentAssessment.ownerLabels };
+  const options = { assets, riskTypes, systems, users: currentAssessment.ownerLabels };
+  // Each Risk's Control picker offers its saved Risk Type's applicable controls first (D-31).
+  const controlOptionsFor = (risk: AnalystRisk): ControlImplementationEditorOptions => ({
+    users: currentAssessment.ownerLabels,
+    suggestedControls: applicableControlGroup(riskTypes, risk.riskType),
+    searchControls,
+  });
 
   return (
     <div className="grid min-w-0 gap-6">
@@ -257,11 +266,11 @@ export function AssessmentEditor({
                           mode="edit"
                           onUpdated={() => { void refreshAssessment(); }}
                           onRemoved={(implementationId) => { setImplementations((current) => ({ ...current, [risk.documentId]: (current[risk.documentId] ?? []).filter((item) => item.documentId !== implementationId) })); void refreshAssessment(); }}
-                          options={options}
+                          options={controlOptionsFor(risk)}
                           riskId={risk.documentId}
                         />
                       ))}
-                      {addingControlTo === risk.documentId ? <ControlImplementationEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={(created) => { setImplementations((current) => ({ ...current, [risk.documentId]: [...(current[risk.documentId] ?? []), created] })); setAddingControlTo(null); void refreshAssessment(); }} options={options} riskId={risk.documentId} /> : null}
+                      {addingControlTo === risk.documentId ? <ControlImplementationEditor assessmentId={currentAssessment.documentId} focusControlOnOpen mode="create" onCreated={(created) => { setImplementations((current) => ({ ...current, [risk.documentId]: [...(current[risk.documentId] ?? []), created] })); setAddingControlTo(null); void refreshAssessment(); }} options={controlOptionsFor(risk)} riskId={risk.documentId} /> : null}
                       {addingControlTo !== risk.documentId ? <Button className="justify-self-start" onClick={() => setAddingControlTo(risk.documentId)} type="button" variant="outline"><PlusIcon aria-hidden="true" />Add mitigation control</Button> : null}
                     </section>
                   </>

@@ -368,11 +368,30 @@ export function projectAssessmentRiskListItem(document: RecordValue): RecordValu
   };
 }
 
+/** D-31: at most this many applicable controls cross on one picker Risk Type (the Administration relation bound). */
+const RISK_TYPE_APPLICABLE_CONTROL_LIMIT = 1_000;
+
+/**
+ * D-31: the picker's Risk Type with its bounded applicable-control summary (RiskTypeApplicableControl), so the
+ * mitigation control picker offers the controls that apply to a Risk's type first. Each control is exactly its
+ * document id, number, name and framework within the Administration record's 1-255 bounds; a control outside
+ * them is left out rather than served partially. The controls stay sorted by control number.
+ */
 export function projectRiskTypeSummary(document: RecordValue): RecordValue {
+  const applicableControls = Array.isArray(document.applicableControls)
+    ? document.applicableControls
+      .flatMap((control) => {
+        const summary = projectControlImplementationControlSummary(control);
+        return summary ? [summary] : [];
+      })
+      .sort((left, right) => String(left.controlNumber).localeCompare(String(right.controlNumber)))
+      .slice(0, RISK_TYPE_APPLICABLE_CONTROL_LIMIT)
+    : [];
   return {
     documentId: document.documentId,
     name: document.name,
     description: document.description ?? null,
+    applicableControls,
   };
 }
 

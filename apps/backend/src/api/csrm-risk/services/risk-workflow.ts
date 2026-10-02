@@ -224,10 +224,20 @@ export async function updateRisk(input: {
   });
 }
 
+/**
+ * The picker's Risk Types (D-31): each carries the controls that apply to it, so the mitigation control picker
+ * can offer them first. Only the fields of the bounded applicable-control summary are loaded.
+ */
 export async function listRiskTypeDocuments(strapi: RiskWorkflowStrapi): Promise<RecordValue[]> {
   return strapi.documents("api::csrm-risk-type.csrm-risk-type").findMany({
     sort: ["name:asc"],
     limit: 1_000,
+    populate: {
+      applicableControls: {
+        fields: ["controlNumber", "name", "framework"],
+        sort: ["controlNumber:asc"],
+      },
+    },
   });
 }
 

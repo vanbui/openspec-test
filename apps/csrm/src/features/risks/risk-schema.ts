@@ -238,7 +238,17 @@ export function parseRiskDetailPayload(payload: unknown): RiskDetail {
 }
 
 const relationSchema = z.object({ documentId: documentIdSchema, name: z.string().trim().min(1).max(255) }).strict();
-const riskTypeSchema = relationSchema.extend({ description: boundedText.nullable() }).strict();
+/* D-31: the controls that apply to a Risk Type, with RiskTypeApplicableControl's exact bounds (no trim). */
+const riskTypeApplicableControlSchema = z.object({
+  documentId: z.string().min(1).max(255),
+  controlNumber: z.string().min(1).max(255),
+  name: z.string().min(1).max(255),
+  framework: z.string().min(1).max(255),
+}).strict();
+const riskTypeSchema = relationSchema.extend({
+  description: boundedText.nullable(),
+  applicableControls: z.array(riskTypeApplicableControlSchema).max(1_000),
+}).strict();
 const controlSchema = relationSchema.extend({
   controlNumber: z.string().trim().min(1).max(255),
   description: boundedText.nullable(),

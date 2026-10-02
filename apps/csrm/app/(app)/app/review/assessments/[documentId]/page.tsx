@@ -12,7 +12,6 @@ import {
   getAnalystAssessment,
   listAssessmentRisks,
   listControlImplementations,
-  listControls,
   listRiskTypes,
 } from '@/features/assessments/assessment-service';
 import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
@@ -46,13 +45,14 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
   if (assessmentResult.error) return <AssessmentEditor state={assessmentResult.error.status === 403 ? 'permission' : 'error'} />;
   if (!assessmentResult.data) notFound();
 
-  const [riskTypesResult, controlsResult, systemsResult, assetsResult] = await Promise.all([
+  // The control library is never loaded whole: the Control picker searches it (D-28, D-29), and each Risk
+  // Type carries its applicable controls for the picker's first group (D-31).
+  const [riskTypesResult, systemsResult, assetsResult] = await Promise.all([
     listRiskTypes(),
-    listControls(),
     listInformationSystems(),
     listInformationAssets(),
   ]);
-  const results = [riskTypesResult, controlsResult, systemsResult, assetsResult];
+  const results = [riskTypesResult, systemsResult, assetsResult];
   if (results.some((result) => result.error?.status === 403)) return <AssessmentEditor state="permission" />;
   if (results.some((result) => result.error)) return <AssessmentEditor state="error" />;
 
@@ -80,7 +80,6 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
       assessment={assessmentResult.data}
       assets={assetsResult.data ?? []}
       controlImplementations={controlImplementations}
-      controls={controlsResult.data ?? []}
       risks={risks}
       riskListItems={riskListItems}
       riskTypes={riskTypesResult.data ?? []}

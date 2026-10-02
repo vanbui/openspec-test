@@ -166,7 +166,7 @@ describe('Risk Register canonical schemas', () => {
     const cases = [
       ['owners', 20, (index: number) => ({ documentId: `user-${index}`, displayName: `User ${index}` })],
       ['assessments', 1_000, (index: number) => ({ documentId: `assessment-${index}`, assessmentNumber: `ASM-${index}`, assessmentStatus: 'draft', summary: null, overallRating: null, generatedDate: null, generatedBy: null, approvalDate: null })],
-      ['riskTypes', 1_000, (index: number) => ({ documentId: `type-${index}`, name: `Type ${index}`, description: null })],
+      ['riskTypes', 1_000, (index: number) => ({ documentId: `type-${index}`, name: `Type ${index}`, description: null, applicableControls: [] })],
       ['controls', 5_000, (index: number) => ({ documentId: `control-${index}`, controlNumber: `CTL-${index}`, name: `Control ${index}`, description: null })],
       ['systems', 100, (index: number) => ({
         documentId: `system-${index}`, name: `System ${index}`, description: null, systemType: null,
