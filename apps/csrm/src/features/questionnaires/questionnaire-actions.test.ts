@@ -240,7 +240,6 @@ describe('the autosave Server Action revalidates nothing (D-11)', () => {
   });
 
   it('saves only documentId plus questionKey and value, and calls revalidatePath zero times', async () => {
-    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
     saveQuestionnaireDraft.mockResolvedValueOnce({ data: savedResult, error: null });
 
     await expect(actions.autosaveQuestionnaireDraftAction({
@@ -253,7 +252,6 @@ describe('the autosave Server Action revalidates nothing (D-11)', () => {
   });
 
   it('maps a refusal like Save draft, says whether to stop, and still revalidates nothing', async () => {
-    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
     saveQuestionnaireDraft
       .mockResolvedValueOnce(conflict('QUESTIONNAIRE_NOT_ANSWERABLE'))
       .mockResolvedValueOnce(failure(403))
@@ -272,8 +270,6 @@ describe('the autosave Server Action revalidates nothing (D-11)', () => {
   });
 
   it('validates its input before any service call, like Save draft', async () => {
-    expect(actions.autosaveQuestionnaireDraftAction).toBeTypeOf('function');
-
     await expect(actions.autosaveQuestionnaireDraftAction({
       documentId: 'questionnaire-1',
       answers: [{ questionKey: 'launch_date', value: { invalid: true } }],

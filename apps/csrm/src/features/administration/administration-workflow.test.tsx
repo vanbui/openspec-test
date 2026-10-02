@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { installTestResizeObserver, stubHorizontalGeometry, TestResizeObserver } from '@/test/layout-stubs';
+import { applicableControlOptions } from './applicable-controls';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
 const get = vi.hoisted(() => vi.fn());
@@ -607,14 +608,7 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(selected.textContent).not.toMatch(/control-far|control-missing/);
   });
 
-  it('offers the first 100 controls by number and adds each saved selection beyond them, by its control label', async () => {
-    const optionsPath = './applicable-controls';
-    const { applicableControlOptions } = await import(optionsPath) as {
-      applicableControlOptions: (
-        controls: readonly { documentId: string; controlNumber: string; name: string; description: string | null }[],
-        selectedIds?: readonly string[],
-      ) => readonly { documentId: string; label: string }[];
-    };
+  it('offers the first 100 controls by number and adds each saved selection beyond them, by its control label', () => {
     const controls = Array.from({ length: 150 }, (_, index) => ({
       documentId: `control-${index}`, controlNumber: `C-${index}`, name: `C-${index} — Control ${index}`, description: null,
     })).reverse();
