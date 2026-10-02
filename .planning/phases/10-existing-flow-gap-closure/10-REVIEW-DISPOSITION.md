@@ -57,39 +57,39 @@ findings:
     title: "A failed control-library read on the Risk Type form shows every saved control as \"Control not found\""
   - id: WR-301
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A rejected record-picker search leaves the picker stuck on \"Searching…\" with no retry"
   - id: WR-302
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "\"Retry search\" cannot be reached from the keyboard"
   - id: WR-303
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The combobox does not expose the record already chosen"
   - id: WR-304
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`LocalInstant` server and client output can differ, causing a hydration mismatch on every page with a time"
   - id: WR-305
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The development role switcher bypasses the leave guard and loses or misroutes unsaved answers"
   - id: WR-306
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A mitigation-control save that succeeded is reported as \"not changed\", and Save again creates a duplicate"
   - id: WR-307
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A stale `openForm` lets the governance editor pull focus to \"Add question\" on later renders"
   - id: WR-308
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Release and Return-to-review errors persist after dismissal and are announced twice"
   - id: WR-309
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Administration list columns still force the table wide with unbounded long text"
   - id: WR-401
     severity: warning
@@ -165,31 +165,31 @@ findings:
     title: "\"Return to draft\" is offered beside \"Questionnaire generation is in progress\""
   - id: IN-301
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The picker reports `aria-expanded=\"true\"` while no listbox exists"
   - id: IN-302
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The introduction's question count can disagree with the completion card after Back or Forward"
   - id: IN-303
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The session-record comparison rule lives in a JSX module"
   - id: IN-304
     severity: info
-    disposition: open
+    disposition: deferred
     title: "The `pagehide` and unmount flush may never reach the server"
   - id: IN-305
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The Requestor's timeline summary can render an empty list"
   - id: IN-306
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Editing a select question re-derives every choice value from its label (pre-existing, unchanged in Phase 10)"
   - id: IN-307
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The Risk Register filter combobox keeps a stale active option and can hang on a rejected search"
   - id: IN-401
     severity: info
@@ -227,7 +227,7 @@ findings:
     severity: info
     disposition: open
     title: "`.first()` hides duplicate owner options"
-open: 31
+open: 15
 total: 56
 recorded: 2026-10-02T19:39:25.663Z
 ---
@@ -249,15 +249,15 @@ recorded: 2026-10-02T19:39:25.663Z
 | WR-205 | warning | fixed | 06c38e4 (test), aac23e7 (fix): a new assessmentDraft refusal family (QUESTIONNAIRE_NOT_SUBMITTED reads the 12.2 precondition, ASSESSMENT_STARTED the 10.2 E and F wording, fallback An assessment draft can't be generated for this questionnaire in its current state.) replaces This assessment changed. Reload and try again. for draft start and retry; questionnaire generation, both job reads and the request jobs read name the request, the questionnaire or the generation for 403, 404 and other failures (generation-failure-copy.ts, added to the interface copy guard). Decision: these sentences are not in 10-UI-SPEC. Strapi serves no reason on a draft 409 today, so the fallback shows; serving one is a lane 1 contract change, not made. |
 | WR-206 | warning | fixed | e4bcfb9 (test), 1515b41 (fix): the Risk Types read always blocks; the Risk list blocks for a read-only assessment and when Strapi refuses it (403, never hidden); a failed or refused request read leaves the editor with no suggestions, as the Risk page does; a failed Risk list read leaves saved systems and assets reading Name not available (16.4), never an id. New route test analyst-assessment-route.test.tsx. |
 | WR-207 | warning | fixed | c4beb33 (test), c570f0f (fix): a failed control library read shows We couldn't load this Risk Type. and no form, so no saved control reads Control not found and none can be removed on the failed read; a refused read shows the permission state. The whole-library read itself stays; a bounded hydrate read of the saved ids belongs with Phase 22 (Admin-owned reference data). |
-| WR-301 | warning | open | - |
-| WR-302 | warning | open | - |
-| WR-303 | warning | open | - |
-| WR-304 | warning | open | - |
-| WR-305 | warning | open | - |
-| WR-306 | warning | open | - |
-| WR-307 | warning | open | - |
-| WR-308 | warning | open | - |
-| WR-309 | warning | open | - |
+| WR-301 | warning | fixed | ac0cc7f (test), 5550fa5 (fix): a rejected record-picker search reads The selection service is unavailable. Please try again later. with Retry search, never Searching… forever. |
+| WR-302 | warning | fixed | 7176a79 (test), 4d964a4 (fix): while a search error shows and no option is active, Enter in the combobox retries (and reopens the list), so focus never leaves the input, the popup stays a listbox, Tab keeps its pattern behaviour and the accepted axe exception is unchanged; an active suggestion is still chosen on Enter. The alert adds Press Enter to retry. (decision: not in 10-UI-SPEC). |
+| WR-303 | warning | fixed | d197d5c (test), 05b8fc6 (fix), 544ad2f (two editor tests): the Selected {noun}: {name} line is part of the input description while a record is set; the name stays the label. |
+| WR-304 | warning | fixed | 33bb322 (test), 623bc31 (fix): the time element carries suppressHydrationWarning, so a server and browser ICU difference (Sep or Sept) keeps the server wording instead of client-rendering the page; dateTime stays machine-readable. Chosen over rendering after mount because the server-rendered time is the useful first paint. The unit test hydrates a server render whose wording differs and expects no recoverable error; no WebKit or Firefox run (the harness runs Chromium only). |
+| WR-305 | warning | fixed | 76159be (test), 2a88b82 (fix): while answers wait, the development role switcher asks first through the leave guard, keeps the select on the role in use, and switches only after Leave questionnaire; with nothing waiting it switches at once. |
+| WR-306 | warning | fixed | fa6d4ee (test), 634a800 (fix): a successful create or update with a null controlSummary shows the saved card, named from the analyst’s choice (Name not available if none, never an id), and closes the form, so no duplicate save; the 13.5 sentence used only on that path is removed. The earlier test expected the failure and is replaced. |
+| WR-307 | warning | fixed | 634fe3e (test), 9fb8b1a (fix): the focus fallback to Add question runs once when the edited question is gone, then the stale form is cleared, so a later render never pulls focus. |
+| WR-308 | warning | fixed | 3addbf3 (test), 55eaa58 (fix): the panel alert that repeated the dialog error is removed (D-06); both dialogs clear the error on dismiss, and each release or return attempt clears the previous one, so a reopened dialog starts clean and a success leaves none. |
+| WR-309 | warning | fixed | 2a63aab (test), 7e68c54 (fix), 365a938 (browser step): Reference, Location, Owner, Business criticality and the Risk Types, Systems and Assets Name links are capped at the long-text maximum (28rem) and clamp to two lines, full text in the DOM. Decision: not the wrap option, whose 14rem minimum is for statement and title columns and would force the Systems list wide for short values; Fix 7’s cells, unit test and ADMIN05_CONTROL_TITLES_WRAP stay as they were. New ADMIN05_LONG_TEXT_BOUNDED step: a 255-character criticality at 1440 is 213px wide and clamps to two 20px lines, Type stays in view and the table does not overflow; Fix 7's Controls table stays 1102px in 1102px. |
 | WR-401 | warning | fixed | 896e162 (test), 73369f4 (fix), with WR-201 (lane 2 fix, lane 4 test): the hub test that required the stale Generate the questionnaire. line now expects one refresh on completion, no Generate line or link beside Review generated questionnaire, and the served Review and release the questionnaire. once the refreshed request arrives; a draft twin expects no Draft the assessment. beside Open assessment draft. |
 | WR-402 | warning | open | - |
 | WR-403 | warning | open | - |
@@ -276,13 +276,13 @@ recorded: 2026-10-02T19:39:25.663Z
 | IN-205 | info | fixed | cec8389 (test), 4b31e72 (fix): readiness groups key on each Risk's destination and keep the number for display; the editor keys readiness rows on their link. |
 | IN-206 | info | fixed | ebd6349 (test), 59761bd (fix): the analyst's read-only Next review date uses formatCalendarDate (1 December 2026); none reads Not provided. |
 | IN-207 | info | fixed | 4da5a54 (test), 98da7ef (fix): the hub withholds Return to draft while questionnaire generation is queued or running, and until the page catches up with a job that completed; it is offered again once the job fails. |
-| IN-301 | info | open | - |
-| IN-302 | info | open | - |
-| IN-303 | info | open | - |
-| IN-304 | info | open | - |
-| IN-305 | info | open | - |
-| IN-306 | info | open | - |
-| IN-307 | info | open | - |
+| IN-301 | info | fixed | 7582070 (test), 05143f5 (fix): aria-expanded is true only while the listbox is shown; status lines and errors announce through their own roles. |
+| IN-302 | info | fixed | ca642e4 (test), 8a25c19 (fix): the introduction counts from the answers the renderer starts from (a newer remembered save wins at mount, a new page payload replaces it), so its count and the completion card agree after Back or Forward. |
+| IN-303 | info | fixed | 809ab18 (test), 8132452 (refactor): answersUpdatedAt sits beside savedQuestionnaireAfter and introductionFacts in questionnaire-domain.ts, each tested (offset instants, unreadable times). |
+| IN-304 | info | deferred | b7b4b3f: recorded as a known limit beside the hook and UI-D11 and in deferred-items.md. A save that survives unload needs a keepalive or beacon endpoint; a web route would be a frontend API facade (AGENTS.md), so it needs a Strapi API change the pilot schedules (no roadmap phase owns it yet); the beforeunload warning is the protection today. |
+| IN-305 | info | fixed | 67224d0 (test), 14cf85a (fix): the summary depth branches on its own entries, so a history of only pre-release changes reads No revisions have been recorded. |
+| IN-306 | info | deferred | Phase 15 (Steerable questionnaire AI, which reworks how question changes and choices are proposed and accepted): carry value and label pairs in the draft and send choices only when they change. Confirmed real and pre-existing (parseChoices and the label-only draftOf are unchanged since 5ea2b77); the fix changes the draft model and the choice diff, so it is not small. |
+| IN-307 | info | fixed | 0764671 (test), 232d41e (fix): a new query clears the active option, aria-activedescendant names an option only while it is shown, Enter chooses only from shown results, and a rejected search ends like a refused one (No matching options., as a served failure already reads). |
 | IN-401 | info | open | - |
 | IN-402 | info | open | - |
 | IN-403 | info | open | - |
