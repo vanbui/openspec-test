@@ -8,6 +8,7 @@ import {
   exemptionReviewDateFormValue,
   exemptionReviewDateFromForm,
   normalizeAssessmentDetails,
+  releaseReadinessHref,
 } from './assessment-domain';
 import { assessmentUpdateInputSchema } from './assessment-schema';
 
@@ -91,5 +92,18 @@ describe('what a save has to write (D-33, UI-SPEC §13.4)', () => {
 
   it('always writes a drafted assessment, because Strapi records the review on its save (D-13)', () => {
     expect(assessmentSaveWrites('draft', assessmentDetailsFormValues(stored), stored)).toBe(true);
+  });
+});
+
+/* IN-202: a readiness row links to where its requirement is met; the summary builds its own labels (D-35). */
+describe('where a release readiness requirement links', () => {
+  it('links a Risk requirement to its Risk', () => {
+    expect(releaseReadinessHref({ scope: 'risk', key: 'riskStatement', label: 'Risk statement', state: 'outstanding', riskNumber: 'RSK-0042', destination: 'risk-risk-1' })).toBe('#risk-risk-1');
+  });
+
+  it('links an assessment requirement to its destination, the Identified Risks or the details', () => {
+    expect(releaseReadinessHref({ scope: 'assessment', key: 'summary', label: 'Summary', state: 'outstanding', destination: 'summary-field' })).toBe('#summary-field');
+    expect(releaseReadinessHref({ scope: 'assessment', key: 'risks', label: 'At least one Risk', state: 'outstanding' })).toBe('#identified-risks');
+    expect(releaseReadinessHref({ scope: 'assessment', key: 'summary', label: 'Summary', state: 'outstanding' })).toBe('#assessment-details');
   });
 });
