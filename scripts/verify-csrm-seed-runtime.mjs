@@ -396,7 +396,7 @@ const loadAndAssert = async (
   );
 
   // The seed keys a Function by its name and menu path; an API-only Function stores no menu path.
-  const functionKey = ({ menuPath, name }) => `${name} ${menuPath ?? ""}`;
+  const functionKey = ({ menuPath, name }) => `${name}\u0000${menuPath ?? ""}`;
   const functionByKey = new Map(
     functions.map((platformFunction) => [
       functionKey(platformFunction),

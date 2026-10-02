@@ -4,3 +4,6 @@ apps/backend/types/generated/*.d.ts text eol=lf
 # Self-hosted fonts (G-10): keep them byte-identical to their npm packages so the README's SHA-256 values verify on every checkout
 apps/csrm/app/fonts/*.woff2 binary
 apps/csrm/app/fonts/*.txt -text
+
+# Scripts are always text, so a stray control character cannot make git store one with CRLF endings (WR-103)
+scripts/*.mjs text
