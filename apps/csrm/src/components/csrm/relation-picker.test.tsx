@@ -391,6 +391,22 @@ describe('RelationPicker popup (APG combobox with a listbox popup)', () => {
     expect(document.querySelector('[data-slot="popover-content"]')).not.toHaveAttribute('role');
   });
 
+  it('reports aria-expanded true only while a listbox is shown, not for a status line or an error (IN-301)', async () => {
+    vi.useFakeTimers();
+    render(<Harness search={async () => ({ ok: false, formError: 'The selection service is unavailable. Please try again later.' })} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    fireEvent.click(input);
+    expect(screen.getByRole('status')).toHaveTextContent('Type to search controls.');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.change(input, { target: { value: '5.1' } });
+    expect(screen.getByRole('status')).toHaveTextContent('Searching controls…');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('announces its status line and a failed search with Retry search, without a dialog', async () => {
     vi.useFakeTimers();
     render(<Harness search={async () => ({ ok: false, formError: 'The selection service is unavailable. Please try again later.' })} />);
