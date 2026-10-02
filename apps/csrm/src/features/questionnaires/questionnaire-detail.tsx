@@ -55,11 +55,22 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
           ? (questionnaire.description ? <p className="max-w-3xl text-sm text-muted-foreground">{questionnaire.description}</p> : null)
           : <QuestionnaireIntroduction description={questionnaire.description} {...introductionFacts(definition)} />}
         <RevertAuditSummary facts={questionnaire} />
-        <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} submittedNotice={submittedNoticeVariant('requestor', questionnaire)} />
+        <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} serverUpdatedAt={answersUpdatedAt(questionnaire, definition)} submittedNotice={submittedNoticeVariant('requestor', questionnaire)} />
         <QuestionnaireRevisionTimeline depth="summary" questionnaire={questionnaire} />
       </div>
     </>
   );
+}
+
+/*
+ * When this page's answers last changed. A save's time is its latest answer's time, and saving answers does
+ * not touch the questionnaire's own updatedAt, so the page compares with the later of the two (D-11).
+ */
+function answersUpdatedAt(questionnaire: QuestionnaireSummary, definition: QuestionnaireDefinition): string {
+  return definition.reduce((latest, question) => {
+    const answered = question.answer?.updatedAt;
+    return answered && Date.parse(answered) > Date.parse(latest) ? answered : latest;
+  }, questionnaire.updatedAt);
 }
 
 /** The count the completion card starts from: the questions shown for the answers the page loaded with. */

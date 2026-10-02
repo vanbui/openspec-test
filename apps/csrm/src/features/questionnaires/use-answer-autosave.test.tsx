@@ -7,6 +7,7 @@ import {
   savedQuestionnaireAfter,
   useAnswerAutosave,
   type AutosaveOutcome,
+  type AutosaveTrigger,
 } from './use-answer-autosave';
 
 /*
@@ -26,7 +27,7 @@ function deferred(): Deferred {
 
 const saved = (at = '2026-09-28T01:00:05.000Z'): AutosaveOutcome => ({ ok: true, savedAt: at });
 
-function setup(save: ReturnType<typeof vi.fn>, answers: { current: string } = { current: 'first' }) {
+function setup(save: (answers: string, trigger: AutosaveTrigger) => Promise<AutosaveOutcome>, answers: { current: string } = { current: 'first' }) {
   return renderHook(() => useAnswerAutosave({ save, getAnswers: () => answers.current }));
 }
 

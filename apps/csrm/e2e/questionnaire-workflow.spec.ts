@@ -241,8 +241,12 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expect(dependentGroup.getByRole('checkbox', { name: dependentAnswer })).toBeChecked();
   await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_FORM_DESKTOP_PAGE_OVERFLOW');
   await page.setViewportSize({ width: 375, height: 812 });
+
+  const completion = page.getByRole('region', { name: 'Questionnaire completion' });
   await page.getByRole('button', { name: 'Save draft' }).click();
-  await expect(page.getByText('Draft saved.')).toBeVisible();
+  // E2 (UI-SPEC §6.1): wait until nothing is waiting to be saved, so the reload is not held by the leave prompt.
+  await expect(completion.getByRole('status')).toContainText('Saved at');
+  await expect(page.getByRole('button', { name: 'Save draft' })).toBeEnabled();
 
   await page.reload();
   await expect(page.getByRole('radio', { name: 'Yes', exact: true })).toBeChecked();
@@ -250,6 +254,34 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
     page.getByRole('group', { name: dependentQuestion }).getByRole('checkbox', { name: dependentAnswer }),
     'QUES-03 saved draft answers resume after reload',
   ).toBeChecked();
+
+  /*
+   * QUES09_AUTOSAVE_PERSISTS (D-11): a change saves on its own, and the autosave response renders no page
+   * (no x-action-revalidated header). QUES09_AUTOSAVE_SURVIVES_BACK: Back shows the saved answer, not the
+   * older page the router kept.
+   */
+  const marker = `autosave-${Date.now()}`;
+  const autosavedDescription = `Customers use the portal to manage their accounts (${marker}).`;
+  const autosaveResponse = page.waitForResponse((response) => {
+    const sent = response.request();
+    return sent.method() === 'POST' && sent.headers()['next-action'] !== undefined && (sent.postData() ?? '').includes(marker);
+  });
+  await page.getByRole('textbox', { name: serviceDescriptionQuestion }).fill(autosavedDescription);
+  const autosaved = await autosaveResponse;
+  const revalidated = autosaved.headers()['x-action-revalidated'];
+  expect(revalidated === undefined || revalidated === '0', `QUES09_AUTOSAVE_PERSISTS x-action-revalidated=${revalidated}`).toBe(true);
+  await expect(completion.getByRole('status'), 'QUES09_AUTOSAVE_PERSISTS').toContainText('Saved at');
+
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name: 'My Questionnaires' }).click();
+  await expect(page).toHaveURL(/\/app\/questionnaires$/);
+  await expect(page.getByRole('heading', { name: 'My Questionnaires' })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('textbox', { name: serviceDescriptionQuestion }), 'QUES09_AUTOSAVE_SURVIVES_BACK').toHaveValue(autosavedDescription);
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name: 'My Questionnaires' }).click();
+  await page.getByRole('link', { name: seededQuestionnaireTitle }).click();
+  await expect(page.getByRole('textbox', { name: serviceDescriptionQuestion }), 'QUES09_AUTOSAVE_PERSISTS after reopening').toHaveValue(autosavedDescription);
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_TABLET_PAGE_OVERFLOW');

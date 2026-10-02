@@ -2,12 +2,14 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState, type FocusEvent } from 'react';
 import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { FormSection } from '@/components/csrm/form-section';
+import { SaveStatus } from '@/components/csrm/save-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +25,7 @@ import {
   type QuestionnaireAnswers,
 } from './questionnaire-domain';
 import {
+  autosaveQuestionnaireDraftAction,
   saveQuestionnaireDraftAction,
   submitQuestionnaireAction,
   type QuestionnaireActionResult,
@@ -33,6 +36,13 @@ import type {
   QuestionnaireQuestion,
 } from './questionnaire-schema';
 import type { SubmittedNoticeVariant } from './questionnaire-workflow-rules';
+import {
+  rememberSavedQuestionnaire,
+  savedQuestionnaireAfter,
+  useAnswerAutosave,
+  type AutosaveOutcome,
+  type AutosaveTrigger,
+} from './use-answer-autosave';
 
 type AnswerValue = QuestionnaireAnswerInput['value'];
 type FormValues = { answers: Record<string, AnswerValue> };
@@ -43,6 +53,11 @@ export type QuestionnaireRendererProps = {
   mode: 'edit' | 'read-only';
   /** Which submitted notice to show (UI-SPEC §8.2), chosen by the page from the served questionnaire and request. */
   submittedNotice?: SubmittedNoticeVariant;
+  /**
+   * When the page's answers were last changed on the server. A save this tab remembers that is later than
+   * this wins at mount, so a page restored by Back or Forward never shows answers older than the last save.
+   */
+  serverUpdatedAt?: string;
 };
 
 /* Every variant begins `Questionnaire submitted.` (UI-SPEC UI-D12). */
@@ -246,8 +261,19 @@ function applyFailure(result: Extract<QuestionnaireActionResult, { ok: false }>,
   return result.formError ?? 'Check the highlighted answers and try again.';
 }
 
-export function QuestionnaireRenderer({ definition: initialDefinition, documentId, mode, submittedNotice = 'requestor-revertible' }: QuestionnaireRendererProps) {
-  const [definition, setDefinition] = useState(initialDefinition);
+/** A save failure as the save status shows it (UI-SPEC §6.1): blocked carries its §10.2 C sentence. */
+function saveOutcome(result: Extract<QuestionnaireActionResult, { ok: false }>): AutosaveOutcome {
+  return result.failure === 'blocked'
+    ? { ok: false, failure: 'blocked', message: result.formError ?? 'Your answers can’t be saved in this questionnaire’s current state.' }
+    : { ok: false, failure: 'retryable' };
+}
+
+const retryableSaveMessage = 'Your latest answers weren’t saved.';
+
+export function QuestionnaireRenderer({ definition: initialDefinition, documentId, mode, submittedNotice = 'requestor-revertible', serverUpdatedAt }: QuestionnaireRendererProps) {
+  const router = useRouter();
+  /* A save this tab remembers wins at mount only when it is later than the page (Back and Forward, D-11). */
+  const [definition, setDefinition] = useState(() => (mode === 'edit' ? savedQuestionnaireAfter(documentId, serverUpdatedAt)?.answers : undefined) ?? initialDefinition);
   const [submitted, setSubmitted] = useState(mode === 'read-only');
   /*
    * Submitting in-page flips `submitted` locally without a server round trip, so
@@ -262,11 +288,26 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     setSubmitted(mode === 'read-only');
     setDefinition(initialDefinition);
   }
-  const [formError, setFormError] = useState<string | null>(null);
+  /*
+   * Refresh page after a blocked save is a soft refresh. When the refreshed page brings a new payload, the
+   * form starts again from it: what the server holds now, with autosave running again.
+   */
+  const [refreshFrom, setRefreshFrom] = useState<QuestionnaireDefinition | null>(null);
+  const [seedVersion, setSeedVersion] = useState(0);
+  /* A refused submit shows inside its dialog (UI-SPEC §5.4); save failures show in the save status. */
+  const [submitError, setSubmitError] = useState<string | null>(null);
   /* The attention list appears only after a submit attempt or a server field error (UI-SPEC §5.3). */
   const [attempted, setAttempted] = useState(false);
-  const [draftMessage, setDraftMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  if (refreshFrom !== null && initialDefinition !== refreshFrom) {
+    setRefreshFrom(null);
+    setDefinition(initialDefinition);
+    setAttempted(false);
+    setSubmitError(null);
+    setSeedVersion((version) => version + 1);
+  }
+  /* After Save draft the status is echoed beside the button until the next change (UI-SPEC §6.1). */
+  const [echo, setEcho] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const previousVisible = useRef<readonly string[]>([]);
   const formSchema = useMemo(() => createFormSchema(definition), [definition]);
   const form = useForm<FormValues>({
@@ -274,6 +315,52 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     mode: 'onBlur',
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
   });
+
+  /*
+   * Autosave (D-11): the debounced and blur saves use the action that revalidates nothing; Save draft and
+   * the save before submit keep the revalidating one. Each success is remembered for Back and Forward.
+   */
+  async function saveAnswers(answers: QuestionnaireAnswerInput[], trigger: AutosaveTrigger): Promise<AutosaveOutcome> {
+    const action = trigger === 'explicit' ? saveQuestionnaireDraftAction : autosaveQuestionnaireDraftAction;
+    const result = await action({ documentId, answers });
+    if (!result.ok) {
+      applyFailure(result, form.setError);
+      if (hasFieldErrors(result)) setAttempted(true);
+      return saveOutcome(result);
+    }
+    rememberSavedQuestionnaire(documentId, { updatedAt: result.data.updatedAt, answers: result.data.answers });
+    return { ok: true, savedAt: result.data.updatedAt };
+  }
+  const autosave = useAnswerAutosave({
+    save: saveAnswers,
+    getAnswers: () => activeAnswerInputs(definition, form.getValues('answers')),
+  });
+  const { schedule, flush, reset: resetAutosave } = autosave;
+
+  useEffect(() => {
+    const subscription = form.watch((_values, { type }) => {
+      if (type !== 'change') return;
+      setEcho(false);
+      schedule();
+    });
+    return () => subscription.unsubscribe();
+  }, [form, schedule]);
+
+  /* A new seed after Refresh page resets the form to it; the definition state already holds it. */
+  const seededDefinition = useRef(definition);
+  seededDefinition.current = definition;
+  useEffect(() => {
+    if (seedVersion === 0) return;
+    form.reset(initialValues(seededDefinition.current));
+    resetAutosave();
+  }, [form, resetAutosave, seedVersion]);
+
+  /* A field losing focus saves at once; moving between the choices of one group is not leaving it. */
+  function flushOnLeavingField(event: FocusEvent<HTMLFormElement>) {
+    const group = event.target instanceof Element ? event.target.closest('fieldset') : null;
+    if (group && event.relatedTarget instanceof Node && group.contains(event.relatedTarget)) return;
+    flush();
+  }
   const watchedAnswers = useWatch({ control: form.control, name: 'answers' }) ?? {};
   const domainAnswers = useMemo(() => toDomainAnswers(watchedAnswers), [watchedAnswers]);
   const visibleKeys = getVisibleQuestionKeys(definition, domainAnswers);
@@ -311,50 +398,54 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     || supportedUnansweredSet.has(question.questionKey)
     || (errors[question.questionKey] as { type?: string } | undefined)?.type === 'server');
 
-  async function saveCurrentDraft(): Promise<boolean> {
-    setSaving(true);
-    setFormError(null);
-    setDraftMessage(null);
+  /* Save draft saves now, cancelling the waiting autosave, and echoes the status beside the button. */
+  async function saveDraft() {
+    setEcho(true);
+    setSavingDraft(true);
     try {
-      const result = await saveQuestionnaireDraftAction({
-        documentId,
-        answers: activeAnswerInputs(definition, form.getValues('answers')),
-      });
-      if (!result.ok) {
-        setFormError(applyFailure(result, form.setError));
-        if (hasFieldErrors(result)) setAttempted(true);
-        return false;
-      }
-      setDraftMessage('Draft saved. Your answers remain editable.');
-      return true;
+      await autosave.saveNow();
     } finally {
-      setSaving(false);
+      setSavingDraft(false);
     }
   }
 
   async function prepareSubmission(): Promise<boolean> {
-    setFormError(null);
+    setSubmitError(null);
     const valid = await form.trigger();
-    if (valid) return true;
-    /* The attention list is the one list of what to fix (UI-D29); the form-level alert keeps only failures. */
+    if (valid) {
+      /* Autosave waits while the submit dialog confirms (UI-SPEC §6.2). */
+      autosave.pause();
+      return true;
+    }
+    /* The attention list is the one list of what to fix (UI-D29). */
     setAttempted(true);
     const firstInvalid = formOrder.find((question) => form.getFieldState(`answers.${question.questionKey}`).invalid || unsupportedSet.has(question.questionKey));
     if (firstInvalid) setTimeout(() => document.getElementById(fieldId(firstInvalid.questionKey))?.focus(), 0);
     return false;
   }
 
+  /* Submitting saves first, then submits (unchanged). A failure stays in the open dialog. */
   async function submitCurrent() {
-    setFormError(null);
-    if (!(await saveCurrentDraft())) throw new Error('Draft save failed');
+    setSubmitError(null);
+    const saved = await autosave.saveNow();
+    if (!saved.ok) {
+      setSubmitError(saved.failure === 'blocked' ? saved.message : retryableSaveMessage);
+      throw new Error('Draft save failed');
+    }
     const result = await submitQuestionnaireAction({ documentId, answers: activeAnswerInputs(definition, form.getValues('answers')) });
     if (!result.ok) {
-      setFormError(applyFailure(result, form.setError));
+      setSubmitError(applyFailure(result, form.setError));
       if (hasFieldErrors(result)) setAttempted(true);
       throw new Error('Questionnaire submission failed');
     }
     setDefinition(result.data.answers);
     setSubmitted(true);
-    setDraftMessage(null);
+    setEcho(false);
+  }
+
+  function refreshPage() {
+    setRefreshFrom(initialDefinition);
+    router.refresh();
   }
 
   if (submitted) {
@@ -369,21 +460,12 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
   }
 
   return (
-    <form className="grid w-full max-w-3xl grid-cols-1 gap-8" noValidate onSubmit={(event) => { event.preventDefault(); void saveCurrentDraft(); }}>
-      {formError ? (
-        <Alert variant="destructive">
-          <AlertCircle aria-hidden="true" />
-          <AlertTitle>Questionnaire not saved</AlertTitle>
-          <AlertDescription>
-            <p>{formError}</p>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      <p className="flex min-h-5 items-center gap-2 text-sm text-success" role="status">{draftMessage ? <><CheckCircle2 aria-hidden="true" className="size-4" />{draftMessage}</> : null}</p>
+    <form className="grid w-full max-w-3xl grid-cols-1 gap-8" noValidate onBlur={flushOnLeavingField} onSubmit={(event) => { event.preventDefault(); void saveDraft(); }}>
       <section aria-label="Questionnaire completion" className="grid gap-3 rounded-lg border border-border bg-card p-4">
         <p className="text-sm font-medium tabular-nums">{progress.answered} of {progress.total} answered</p>
         <Progress aria-label={`${progress.answered} of ${progress.total} questionnaire questions answered`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={progress.percent} value={progress.percent} />
         <p className="text-sm text-muted-foreground">{supportedUnanswered.length} required {supportedUnanswered.length === 1 ? 'question' : 'questions'} unanswered</p>
+        <SaveStatus onRefresh={refreshPage} onRetry={autosave.retry} status={autosave.status} />
       </section>
       {attempted && attention.length > 0 ? (
         <section aria-label="Questionnaire validation guidance" className="grid gap-2 rounded-lg border border-warning-border bg-warning-subtle p-4">
@@ -403,19 +485,21 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
           ))}
         </FormSection>
       ))}
-      <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row">
-        <Button className="w-full sm:w-auto" disabled={saving} type="submit">{saving ? <><Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />Saving draft…</> : 'Save draft'}</Button>
+      <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center">
+        <Button className="w-full sm:w-auto" disabled={savingDraft} type="submit">{savingDraft ? <><Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />Saving draft…</> : 'Save draft'}</Button>
         <ConfirmDialog
           confirmLabel="Submit questionnaire"
           confirmVariant="default"
           description="The Security Analyst will review your answers and use them to assess the request’s risk. Until they start the assessment, you can return the questionnaire to draft to change your answers."
-          errorMessage={formError}
+          errorMessage={submitError}
           onBeforeOpen={prepareSubmission}
           onConfirm={submitCurrent}
+          onDismiss={autosave.resume}
           pendingLabel="Submitting questionnaire…"
           title="Submit this questionnaire?"
           trigger={<Button className="w-full sm:w-auto" type="button" variant="outline">Submit questionnaire</Button>}
         />
+        {echo ? <SaveStatus announce={false} status={autosave.status} /> : null}
       </div>
     </form>
   );

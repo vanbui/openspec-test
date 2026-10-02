@@ -210,15 +210,32 @@ export async function revertQuestionnaireToDraftAction(input: unknown): Promise<
   return { ok: true, data: result.data };
 }
 
-export async function saveQuestionnaireDraftAction(input: unknown): Promise<QuestionnaireActionResult> {
+/** Validates and saves the Requestor's answers; the callers decide what, if anything, to revalidate. */
+async function saveAnswers(input: unknown): Promise<QuestionnaireActionResult> {
   const parsed = questionnaireActionSchema.safeParse(input);
   if (!parsed.success) return saveValidationFailure(parsed.error, input);
 
   const result = await saveQuestionnaireDraft(parsed.data.documentId, parsed.data.answers);
   if (result.error !== null) return saveFailure(parsed.data, result.error);
-
-  revalidateQuestionnairePages(result.data.questionnaireId, false);
   return { ok: true, data: result.data };
+}
+
+/** Save draft: saves now and revalidates the questionnaire pages, as before autosave. */
+export async function saveQuestionnaireDraftAction(input: unknown): Promise<QuestionnaireActionResult> {
+  const result = await saveAnswers(input);
+  if (result.ok) revalidateQuestionnairePages(result.data.questionnaireId, false);
+  return result;
+}
+
+/*
+ * Autosave (D-11, research Pitfall 8). In Next 16.3.6 any revalidatePath call marks the whole action as
+ * revalidated whatever path it names, and so does a cookie write; a revalidated action renders the page
+ * being edited into its response and the client applies it. So this variant calls none of Next's
+ * cache-invalidation or router-refresh functions and writes no cookie: its response is the action result
+ * alone. The lists need nothing: the app layout is force-dynamic, so a link navigation reads them fresh.
+ */
+export async function autosaveQuestionnaireDraftAction(input: unknown): Promise<QuestionnaireActionResult> {
+  return saveAnswers(input);
 }
 
 export async function submitQuestionnaireAction(input: unknown): Promise<QuestionnaireActionResult> {
