@@ -604,6 +604,61 @@ describe('Security Analyst questionnaire review', () => {
     expect(questionnaireRenderer).not.toHaveBeenCalled();
   });
 
+  it('shows the analyst a released questionnaire’s questions and the Requestor’s progress, with no answer (D-07)', () => {
+    questionnaireRenderer.mockClear();
+    const release = { releasedAt: '2026-08-29T09:00:00.000Z', releasedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' } };
+    const hosting = { key: 'hosting', title: 'Hosting', order: 2 };
+    const released: QuestionnaireDefinition = [
+      // A draft answer the analyst is never shown before submission, even if one were served.
+      { ...submittedDefinition[0]!, answer: { schemaVersion: 1, value: 'Atlas draft', state: 'draft', updatedAt: '2026-08-29T10:00:00.000Z' } },
+      { ...submittedDefinition[0]!, documentId: 'question-two', questionKey: 'hosting_model', questionText: 'Where is it hosted?', answerType: 'Single select', choices: [{ value: 'cloud', label: 'Cloud' }, { value: 'on-premises', label: 'On premises' }], section: hosting, order: 1, required: false, answer: null },
+      { ...submittedDefinition[0]!, documentId: 'question-three', questionKey: 'internet_facing', questionText: 'Is it internet facing?', answerType: 'Boolean', section: hosting, order: 2, answer: null },
+    ];
+    render(<QuestionnaireReview definition={released} placements={[]} questionnaire={{ ...questionnaire, release }} state="awaiting-submission" />);
+
+    const awaiting = screen.getByRole('alert');
+    expect(awaiting).toHaveTextContent('Awaiting questionnaire submission');
+    expect(awaiting).toHaveTextContent('The Requestor’s answers stay private until they submit the questionnaire. Their progress is shown below.');
+    const section = screen.getByRole('region', { name: 'Released questions' });
+    expect(within(section).getByRole('heading', { level: 2, name: 'Released questions' })).toBeInTheDocument();
+    expect(within(section).getByText('3 of 5 answered')).toHaveClass('tabular-nums');
+    expect(within(section).getByRole('progressbar', { name: '3 of 5 questions answered by the Requestor' })).toBeInTheDocument();
+    expect(within(section).getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(['Overview', 'Hosting']);
+    expect(within(within(section).getByRole('list', { name: 'Hosting' })).getAllByRole('listitem').map((item) => item.querySelector('p')?.textContent)).toEqual(['Where is it hosted?', 'Is it internet facing?']);
+    expect(within(section).getByText('Text · Required')).toBeInTheDocument();
+    expect(within(section).getByText('Single select · Optional')).toBeInTheDocument();
+    expect(within(section).getByText('Choices: Cloud, On premises')).toBeInTheDocument();
+    // No answer content crosses before submission: no value, no checked state, no control to answer or edit with.
+    expect(screen.queryByText(/Atlas/)).not.toBeInTheDocument();
+    for (const role of ['checkbox', 'radio', 'textbox', 'button'] as const) expect(within(section).queryAllByRole(role), role).toHaveLength(0);
+    expect(questionnaireRenderer).not.toHaveBeenCalled();
+    // The governance panel still comes first, then the awaiting alert, then the released questions (UI-SPEC §2.1).
+    const governance = screen.getByRole('region', { name: 'Questionnaire governance' });
+    expect(governance.compareDocumentPosition(awaiting) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(awaiting.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('offers Return to analyst review only before an assessment exists (D-22, UI-SPEC §2.3)', () => {
+    const release = { releasedAt: '2026-08-29T09:00:00.000Z', releasedBy: null };
+    const atStatus = (requestStatus: 'questionnaire-in-progress' | 'risk-assessment-drafted'): QuestionnaireSummary => ({
+      ...submittedQuestionnaire,
+      release,
+      assessmentRequest: { ...(submittedQuestionnaire.assessmentRequest as Extract<QuestionnaireSummary['assessmentRequest'], { availability: 'available' }>), requestStatus },
+    });
+    const view = render(<QuestionnaireReview definition={submittedDefinition} placements={[]} questionnaire={atStatus('questionnaire-in-progress')} state="submitted" />);
+    let governance = screen.getByRole('region', { name: 'Questionnaire governance' });
+    expect(within(governance).getByRole('heading', { name: 'Released to Requestor' })).toBeInTheDocument();
+    expect(within(governance).getByText('Return it to analyst review before changing its questions.')).toBeInTheDocument();
+    expect(within(governance).getByRole('button', { name: 'Return to analyst review' })).toBeInTheDocument();
+
+    view.rerender(<QuestionnaireReview definition={submittedDefinition} placements={[]} questionnaire={atStatus('risk-assessment-drafted')} state="submitted" />);
+    governance = screen.getByRole('region', { name: 'Questionnaire governance' });
+    expect(within(governance).getByRole('heading', { name: 'Released to Requestor' })).toBeInTheDocument();
+    expect(within(governance).getByText('An assessment has been drafted from the Requestor’s answers, so these questions can no longer change.')).toBeInTheDocument();
+    expect(within(governance).queryByText('Return it to analyst review before changing its questions.')).not.toBeInTheDocument();
+    expect(within(governance).queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('discards supplied questionnaire and answer content in safe detail states', () => {
     questionnaireRenderer.mockClear();
     const view = render(
