@@ -210,4 +210,23 @@ describe('QuestionnaireRevisionTimeline', () => {
     view.rerender(<QuestionnaireRevisionTimeline depth="summary" questionnaire={empty} />);
     expect(screen.getByText('No revisions have been recorded.')).toBeInTheDocument();
   });
+
+  /*
+   * IN-305: the Requestor's summary leaves out question changes and replacements made before the first release, so
+   * a history holding only those has nothing to show: it reads the empty state, never an empty list.
+   */
+  it('shows the empty state, not an empty list, when the summary leaves out every event (IN-305)', () => {
+    const by = { documentId: 'analyst-1', displayName: 'Morgan Analyst' };
+    const preRelease: QuestionnaireSummary = {
+      ...questionnaire,
+      release: null,
+      events: [
+        { kind: 'regenerated', at: '2026-08-30T00:00:00.000Z', by, explanation: 'Replaced before release.' },
+        { kind: 'question-edited', at: '2026-08-31T00:00:00.000Z', by, questionKey: 'hosting-region' },
+      ],
+    };
+    render(<QuestionnaireRevisionTimeline depth="summary" questionnaire={preRelease} />);
+    expect(screen.getByText('No revisions have been recorded.')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
 });
