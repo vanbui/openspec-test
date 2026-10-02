@@ -142,10 +142,11 @@ describe('assessment Server Action boundary', () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it('refuses a request generation poll the server refuses, without disclosing why', async () => {
-    getRequestGenerationJobs.mockResolvedValueOnce(failure(403));
+  it('refuses a request generation poll the server refuses, without disclosing why or naming an assessment', async () => {
+    getRequestGenerationJobs.mockResolvedValueOnce(failure(403)).mockResolvedValueOnce(failure(404));
 
-    await expect(actions.getRequestGenerationJobsAction({ requestId: 'request-1' })).resolves.toEqual({ ok: false, formError: 'You do not have permission to change this assessment.' });
+    await expect(actions.getRequestGenerationJobsAction({ requestId: 'request-1' })).resolves.toEqual({ ok: false, formError: 'You do not have permission to check generation for this request.' });
+    await expect(actions.getRequestGenerationJobsAction({ requestId: 'request-1' })).resolves.toEqual({ ok: false, formError: 'This request is no longer available.' });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
@@ -333,21 +334,72 @@ describe('questionnaire generation refusals (UI-SPEC §10.2 I)', () => {
       });
     });
 
-    it('keeps the permission and unavailable messages', async () => {
+    /* WR-205: a generation that failed for another reason names the request, never an assessment. */
+    it('words a refused or unavailable generation about the request, never an assessment', async () => {
       service.mockResolvedValueOnce(failure(403)).mockResolvedValueOnce(failure(503));
 
-      await expect(run()).resolves.toEqual({ ok: false, formError: 'You do not have permission to change this assessment.' });
+      await expect(run()).resolves.toEqual({ ok: false, formError: 'You do not have permission to generate a questionnaire for this request.' });
+      await expect(run()).resolves.toEqual({ ok: false, formError: 'The questionnaire generation service is unavailable. Please try again later.' });
+    });
+  });
+
+  it('says the request is gone when a start finds no request, and the generation is gone when a retry finds no job', async () => {
+    startQuestionnaireGeneration.mockResolvedValueOnce(failure(404));
+    retryQuestionnaireGenerationJob.mockResolvedValueOnce(failure(404));
+    getQuestionnaireGenerationJob.mockResolvedValueOnce(failure(404)).mockResolvedValueOnce(failure(403));
+
+    await expect(actions.startQuestionnaireGenerationAction({ requestId: 'request-1', replaceUnansweredQuestionnaire: false })).resolves.toEqual({ ok: false, formError: 'This request is no longer available.' });
+    await expect(actions.retryQuestionnaireGenerationJobAction({ jobId: 'job-1' })).resolves.toEqual({ ok: false, formError: 'This questionnaire generation is no longer available.' });
+    await expect(actions.getQuestionnaireGenerationJobAction({ jobId: 'job-1' })).resolves.toEqual({ ok: false, formError: 'This questionnaire generation is no longer available.' });
+    await expect(actions.getQuestionnaireGenerationJobAction({ jobId: 'job-1' })).resolves.toEqual({ ok: false, formError: 'You do not have permission to generate a questionnaire for this request.' });
+  });
+});
+
+/*
+ * WR-205 (D-22): an assessment draft refusal reads its reason, or a fallback that says the draft can't be
+ * generated in the current state; never "This assessment changed. Reload and try again.", because nothing changed
+ * and no assessment may exist yet. Its other failures name the questionnaire or the draft generation.
+ */
+describe('assessment draft generation refusals', () => {
+  const conflict = (reason?: string) => ({ data: null, error: { message: 'raw internal detail', status: 409, ...(reason ? { reason } : {}) } });
+  const drafts = [
+    { name: 'start', service: startAssessmentDraft, run: () => actions.startAssessmentDraftAction({ questionnaireId: 'questionnaire-1' }) },
+    { name: 'retry', service: retryAssessmentDraftJob, run: () => actions.retryAssessmentDraftJobAction({ jobId: 'job-1' }) },
+  ];
+
+  describe.each(drafts)('$name', ({ service, run }) => {
+    it('reads the fallback for a conflict with no reason, never the changed-reload message', async () => {
+      service.mockResolvedValueOnce(conflict());
+
+      const result = await run();
+      expect(result).toEqual({ ok: false, formError: 'An assessment draft can’t be generated for this questionnaire in its current state.' });
+      expect(JSON.stringify(result)).not.toMatch(/changed|Reload/);
+    });
+
+    it.each([
+      ['QUESTIONNAIRE_NOT_SUBMITTED', 'Draft generation can begin only after the linked questionnaire is submitted.'],
+      ['ASSESSMENT_STARTED', 'An assessment already exists for this request, so a draft can’t be generated.'],
+    ])('%s reads its sentence and returns the reason', async (reason, formError) => {
+      service.mockResolvedValueOnce(conflict(reason));
+
+      await expect(run()).resolves.toEqual({ ok: false, formError, reason });
+      expect(revalidatePath).not.toHaveBeenCalled();
+    });
+
+    it('words a refused or unavailable draft generation without naming an assessment that may not exist', async () => {
+      service.mockResolvedValueOnce(failure(403)).mockResolvedValueOnce(failure(503));
+
+      await expect(run()).resolves.toEqual({ ok: false, formError: 'You do not have permission to generate an assessment draft for this questionnaire.' });
       await expect(run()).resolves.toEqual({ ok: false, formError: 'The assessment service is unavailable. Please try again later.' });
     });
   });
 
-  it('leaves every other assessment action’s conflict message as it was', async () => {
-    startAssessmentDraft.mockResolvedValueOnce(conflict('REQUEST_NOT_ELIGIBLE'));
+  it('says the questionnaire is gone when a start finds none, and the draft generation is gone when a job read finds none', async () => {
+    startAssessmentDraft.mockResolvedValueOnce(failure(404));
+    getAssessmentDraftJob.mockResolvedValueOnce(failure(404));
 
-    await expect(actions.startAssessmentDraftAction({ questionnaireId: 'questionnaire-1' })).resolves.toEqual({
-      ok: false,
-      formError: 'This assessment changed. Reload and try again.',
-    });
+    await expect(actions.startAssessmentDraftAction({ questionnaireId: 'questionnaire-1' })).resolves.toEqual({ ok: false, formError: 'This questionnaire is no longer available.' });
+    await expect(actions.getAssessmentDraftJobAction({ jobId: 'job-1' })).resolves.toEqual({ ok: false, formError: 'This draft generation is no longer available.' });
   });
 });
 

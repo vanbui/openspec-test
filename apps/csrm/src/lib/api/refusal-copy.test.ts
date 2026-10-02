@@ -92,6 +92,18 @@ const families: Record<RefusalFamily, { rows: Partial<Record<ConflictReason, str
     },
     fallback: 'A questionnaire can’t be generated for this request in its current state.',
   },
+  /*
+   * WR-205: generating an assessment draft (start or retry). Not a UI-SPEC §10.2 family: its refusals read the
+   * card's own precondition (§12.2) and the §10.2 E and F wording for an assessment that already exists, and the
+   * fallback follows §10.2's pattern, so a draft refusal never says the assessment changed (D-22).
+   */
+  assessmentDraft: {
+    rows: {
+      QUESTIONNAIRE_NOT_SUBMITTED: 'Draft generation can begin only after the linked questionnaire is submitted.',
+      ASSESSMENT_STARTED: 'An assessment already exists for this request, so a draft can’t be generated.',
+    },
+    fallback: 'An assessment draft can’t be generated for this questionnaire in its current state.',
+  },
 };
 
 const familyNames = Object.keys(families) as RefusalFamily[];
