@@ -206,3 +206,99 @@ describe('RelationPicker typing', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(300); });
   });
 });
+
+describe('RelationPicker search (UI-SPEC §13.1)', () => {
+  const page = (count: number): RelationPickerItem[] => Array.from({ length: count }, (_, index) => ({
+    documentId: `control-${index}`,
+    name: `CTL-${index} · Control ${index}`,
+  }));
+
+  it('searches as the person types, then lists the matching suggestions before the server results, each once', async () => {
+    vi.useFakeTimers();
+    const search = vi.fn(async () => ({ ok: true as const, data: [app11, iso51] }));
+    render(<Harness search={search} suggested={applicable} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+
+    fireEvent.change(input, { target: { value: 'a' } });
+    expect(screen.getByRole('status')).toHaveTextContent('Searching controls…');
+    await act(async () => { await vi.advanceTimersByTimeAsync(299); });
+    expect(search).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(search).toHaveBeenCalledWith({ search: 'a' });
+
+    const groups = screen.getAllByRole('group');
+    expect(groups.map((group) => group.getAttribute('aria-labelledby') && document.getElementById(group.getAttribute('aria-labelledby')!)?.textContent))
+      .toEqual(['Applicable to Internet Exposure', 'Other controls']);
+    expect(within(groups[0]!).getAllByRole('option').map((option) => option.getAttribute('aria-label'))).toEqual([app11.name, ac1.name]);
+    expect(within(groups[1]!).getAllByRole('option').map((option) => option.getAttribute('aria-label'))).toEqual([iso51.name]);
+    expect(screen.getAllByRole('option', { name: app11.name })).toHaveLength(1);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('gives the search results no group label when there is no suggested group', async () => {
+    vi.useFakeTimers();
+    render(<Harness search={async () => ({ ok: true, data: [iso51] })} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Control' }), { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other controls')).not.toBeInTheDocument();
+  });
+
+  it('says a full page is only the first matches', async () => {
+    vi.useFakeTimers();
+    render(<Harness search={async () => ({ ok: true, data: page(10) })} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Control' }), { target: { value: 'CTL' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.getAllByRole('option')).toHaveLength(10);
+    expect(screen.getByRole('status')).toHaveTextContent('Showing the first 10 matches. Keep typing to narrow the list.');
+  });
+
+  it('says when nothing matches', async () => {
+    vi.useFakeTimers();
+    render(<Harness search={async () => ({ ok: true, data: [] })} suggested={applicable} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Control' }), { target: { value: 'zzz' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No matching controls. Try a control number, name or framework.');
+  });
+
+  it('shows a failed search with Retry search, which searches again', async () => {
+    vi.useFakeTimers();
+    const search = vi.fn()
+      .mockResolvedValueOnce({ ok: false, formError: 'The selection service is unavailable. Please try again later.' })
+      .mockResolvedValueOnce({ ok: true, data: [iso51] });
+    render(<Harness search={search} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Control' }), { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The selection service is unavailable. Please try again later.');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry search' }));
+    await act(async () => {});
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(search).toHaveBeenLastCalledWith({ search: '5.1' });
+    expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('ignores a response a later keystroke superseded', async () => {
+    vi.useFakeTimers();
+    let resolveFirst!: (value: RelationPickerSearchResult) => void;
+    const search = vi.fn()
+      .mockImplementationOnce(() => new Promise<RelationPickerSearchResult>((resolve) => { resolveFirst = resolve; }))
+      .mockResolvedValueOnce({ ok: true, data: [iso51] });
+    render(<Harness search={search} />);
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    fireEvent.change(input, { target: { value: 'APP' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    fireEvent.change(input, { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    await act(async () => { resolveFirst({ ok: true, data: [app11] }); });
+
+    expect(screen.queryByRole('option', { name: app11.name })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
+  });
+});

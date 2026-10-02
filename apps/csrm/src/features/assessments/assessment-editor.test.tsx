@@ -488,6 +488,39 @@ describe('analyst assessment editor contract', () => {
     ]);
   });
 
+  it('shows the required control message under the picker, named by the input (UI-SPEC §13.1)', async () => {
+    actionMocks.createControlImplementationAction.mockResolvedValueOnce({
+      ok: false,
+      fieldErrors: { control: ['Choose a control.'] },
+      formError: 'Check the assessment details and try again.',
+    });
+    render(<ControlImplementationEditor assessmentId="assessment/id" mode="create" options={controlEditorOptions} riskId="risk-1" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add mitigation control' }));
+
+    const message = await screen.findByText('Choose a control.');
+    const input = screen.getByRole('combobox', { name: 'Control' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(message.closest('[id]')!.id);
+    expect(input).toHaveAccessibleDescription(expect.stringContaining('Choose a control.'));
+  });
+
+  it('says removing a mitigation control keeps the control in the library (UI-SPEC §13.5)', async () => {
+    render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove mitigation control' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('This removes the control from this Risk. The control stays in the library.');
+  });
+
+  it('hands the page’s control search to each Control picker', async () => {
+    vi.useFakeTimers();
+    const search = vi.fn(async () => ({ ok: true as const, data: [{ documentId: 'control-9', name: '5.1 · ISO/IEC 27001' }] }));
+    render(<AssessmentEditor {...editorProps} searchControls={search} />);
+    const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
+    fireEvent.change(within(region).getByRole('combobox', { name: 'Control' }), { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(search).toHaveBeenCalledWith({ search: '5.1' });
+    expect(screen.getByRole('option', { name: '5.1 · ISO/IEC 27001' })).toBeInTheDocument();
+  });
+
   it('reads an existing mitigation control’s choice from its served summary, or Control not found, never an id (D-30, D-36)', () => {
     const view = render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
     expect(screen.getByText('Selected control: AC-1 · Access control')).toBeInTheDocument();
@@ -569,6 +602,7 @@ describe('analyst assessment editor contract', () => {
     expect(route).toContain('getAnalystAssessment');
     expect(route).toContain('searchActiveUsersAction');
     expect(route).toContain('searchOwners={searchActiveUsersAction}');
+    expect(route).toContain('searchControls={searchControlsAction}');
     expect(route).toContain('notFound()');
     expect(route).toMatch(/export default function/);
     expect(route).not.toMatch(/export default async function/);

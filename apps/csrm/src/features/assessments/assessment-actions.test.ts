@@ -18,6 +18,7 @@ const deleteControlImplementation = vi.hoisted(() => vi.fn());
 const releaseAssessment = vi.hoisted(() => vi.fn());
 const searchActiveUsers = vi.hoisted(() => vi.fn());
 const revalidatePath = vi.hoisted(() => vi.fn());
+const listAdministrationControls = vi.hoisted(() => vi.fn());
 
 vi.mock('./assessment-service', () => ({
   startAssessmentDraft,
@@ -37,6 +38,7 @@ vi.mock('./assessment-service', () => ({
   searchActiveUsers,
 }));
 vi.mock('next/cache', () => ({ revalidatePath }));
+vi.mock('@/features/administration/administration-service', () => ({ listAdministrationControls }));
 
 afterEach(() => {
   for (const mock of [
@@ -56,6 +58,7 @@ afterEach(() => {
     releaseAssessment,
     searchActiveUsers,
     revalidatePath,
+    listAdministrationControls,
   ]) mock.mockReset();
 });
 
@@ -287,11 +290,11 @@ describe('analyst editor validation copy', () => {
     expect(createRisk).not.toHaveBeenCalled();
   });
 
-  it('asks for a reusable Control when Add mitigation control has none, and states the evidence limit', async () => {
+  it('asks for a control when Add mitigation control has none, and states the evidence limit', async () => {
     for (const control of [null, '', '  ']) {
       await expect(actions.createControlImplementationAction({ assessmentId: 'assessment-1', riskId: 'risk-1', values: { control } })).resolves.toMatchObject({
         ok: false,
-        fieldErrors: { control: ['Select a reusable Control.'] },
+        fieldErrors: { control: ['Choose a control.'] },
       });
     }
     await expect(actions.createControlImplementationAction({
@@ -345,5 +348,55 @@ describe('questionnaire generation refusals (UI-SPEC §10.2 I)', () => {
       ok: false,
       formError: 'This assessment changed. Reload and try again.',
     });
+  });
+});
+
+describe('control search for the Control picker (D-29, UI-SPEC §13.1)', () => {
+  const page = (data: unknown[]) => ({ data: { data, meta: { pagination: { page: 1, pageSize: 10, pageCount: 1, total: data.length } } }, error: null });
+  const app11 = {
+    documentId: 'control-app-11',
+    controlNumber: 'APP-11',
+    name: 'APP-11 — Security of personal information',
+    description: null,
+    controlType: null,
+    framework: 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme',
+    frameworkVersion: null,
+  };
+  const iso51 = { ...app11, documentId: 'control-5-1', controlNumber: '5.1', name: '5.1', framework: 'ISO/IEC 27001 Information security management systems — Annex A' };
+
+  it('searches the library once by number, name or framework, one page of 10, and names each control by its label', async () => {
+    listAdministrationControls.mockResolvedValueOnce(page([app11, iso51]));
+
+    await expect(actions.searchControlsAction({ search: '  APP  ' })).resolves.toEqual({
+      ok: true,
+      data: [
+        { documentId: 'control-app-11', name: 'APP-11 · Security of personal information', detail: app11.framework },
+        { documentId: 'control-5-1', name: '5.1 · ISO/IEC 27001 Information security management systems — Annex A' },
+      ],
+    });
+    expect(listAdministrationControls).toHaveBeenCalledTimes(1);
+    expect(listAdministrationControls).toHaveBeenCalledWith(expect.objectContaining({ q: 'APP', page: 1, pageSize: 10 }));
+  });
+
+  it.each([
+    ['a blank search', { search: '   ' }],
+    ['an over-long search', { search: 'x'.repeat(201) }],
+    ['an unknown field', { search: 'APP', pageSize: 100 }],
+    ['no input', undefined],
+  ])('refuses %s without a call', async (_case, input) => {
+    await expect(actions.searchControlsAction(input)).resolves.toMatchObject({ ok: false });
+    expect(listAdministrationControls).not.toHaveBeenCalled();
+  });
+
+  it('accepts a search of exactly 200 characters', async () => {
+    listAdministrationControls.mockResolvedValueOnce(page([]));
+    await expect(actions.searchControlsAction({ search: 'x'.repeat(200) })).resolves.toEqual({ ok: true, data: [] });
+  });
+
+  it('says plainly when the analyst may not search, and otherwise that the service is unavailable', async () => {
+    listAdministrationControls.mockResolvedValueOnce(failure(403));
+    await expect(actions.searchControlsAction({ search: 'APP' })).resolves.toEqual({ ok: false, formError: 'You do not have permission to search these records.' });
+    listAdministrationControls.mockResolvedValueOnce(failure(503));
+    await expect(actions.searchControlsAction({ search: 'APP' })).resolves.toEqual({ ok: false, formError: 'The selection service is unavailable. Please try again later.' });
   });
 });
