@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 17/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 18/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -128,7 +128,7 @@ Plans:
 - [x] 10-17-PLAN.md — Finish D-36's content and label work in Administration: correct the public APP titles and the three Risk Type descriptions in the seed data, apply the control label rule to the Administration controls
 
 **Wave 18** *(blocked on Wave 17 completion)*
-- [ ] 10-18-PLAN.md — Deliver D-28's shared record picker and use it first for the assessment editor's mitigation control (D-29, D-31), with D-03's seventh API change: bounded applicable-control summaries on the picker's R
+- [x] 10-18-PLAN.md — Deliver D-28's shared record picker and use it first for the assessment editor's mitigation control (D-29, D-31), with D-03's seventh API change: bounded applicable-control summaries on the picker's R
 
 **Wave 19** *(blocked on Wave 18 completion)*
 - [ ] 10-19-PLAN.md — Finish D-28's picker rollout: the impacted system and asset fields in both editors (D-30), and the Risk Register's mitigation control (D-29, D-31), reusing plan 10-18's `RelationPicker`, `searchContro
