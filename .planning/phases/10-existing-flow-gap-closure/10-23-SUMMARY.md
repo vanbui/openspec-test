@@ -561,7 +561,7 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-039 | Accountability for procurement security risks | Procurement security risk accountability, keeping contract decisions within acceptable risk | the second limb: procurement and contract decisions do not expose the entity or government to unacceptable risk |
 | PSPF-040 | Security terms in procurement and contracts | Proportionate security terms in procurement, contracts and outsourced arrangements | third-party outsourced arrangements and the qualifier 'proportionate' |
 | PSPF-041 | Provider compliance with PSPF requirements | Provider, contractor and subcontractor compliance with entity-specified PSPF requirements | contractors and subcontractors beside providers, and 'relevant ... as detailed by the entity' |
-| PSPF-042 | Provider incident reporting in contract terms | Contract terms for provider incident reporting and following investigation directions | the second limb: following direction arising from incident investigations ('reasonable' is not carried) |
+| PSPF-042 | Provider incident reporting in contract terms | Contract terms for provider incident reporting and following investigation directions | the second limb: following direction arising from incident investigations ('reasonable' is not carried; kept by the pilot's ruling, see Fix 3c) |
 | PSPF-043 | IRAP reports for consuming entities | IRAP reports for current and prospective consuming entities | entities 'looking to consume' the services |
 | PSPF-044 | Monitoring contract security terms over the contract life | Monitoring and reviewing contract security terms over the contract life | review beside monitoring |
 | PSPF-047 | Reassessing contractual security risks over time | Managing, reassessing and adjusting contractual security risks over the contract life | managing and adjusting beside reassessing, over the life of the contract |
@@ -584,7 +584,7 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-087 | Risk-based decisions to authorise systems | ISM risk-based decisions to authorise new or changed systems | changes to existing systems and the ISM basis (reauthorisation is generalised under 'authorise') |
 | PSPF-090 | Reassessing authorisation after significant change | Reassessing authorisation after significant system or security environment change | the second trigger: a considerable change to the system's security environment |
 | PSPF-094 | Security Zone storage for SECRET technology assets | Security Zone storage for technology assets at SECRET or below | 'or below' (10-22 read SECRET only) |
-| PSPF-095 | Rack storage for TOP SECRET technology assets | SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets | compartments, SCEC endorsement and the Zone Five area ('accredited' is not carried) |
+| PSPF-095 | Rack storage for TOP SECRET technology assets | SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets | compartments, SCEC endorsement and the Zone Five area ('accredited' is not carried; kept by the pilot's ruling, see Fix 3c) |
 | PSPF-096 | Certified outsourced facilities for catastrophic-impact assets | ASIO-T4 certified and ASD accredited outsourced facilities for catastrophic-impact assets | the ASD accreditation beside the ASIO-T4 certification |
 | PSPF-108 | Blocking connections to malicious endpoints | Blocking connections to and from known malicious endpoints | connections from malicious endpoints, and 'known' |
 | PSPF-109 | IRAP-assessed cloud service providers | Using only cloud providers IRAP-assessed in the last 24 months | the 24-month recency (as PSPF-114) |
@@ -595,7 +595,7 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-119 | Confirming eligibility to work for the government | Confirming eligibility to work in Australia and for the government | eligibility to work in Australia |
 | PSPF-121 | Checks before granting temporary access | Checks before temporary access, and Negative Vetting 1 for TOP SECRET | the second limb: an existing Negative Vetting 1 clearance before TOP SECRET temporary access |
 | PSPF-128 | Third-party agreement before temporary access | Agreement of other information owners before temporary access | other entities and third parties, generalised as 'other information owners' |
-| PSPF-130 | Controlling access to supporting technology | Enabling official information access and controlling access to supporting technology | the main limb: enabling access to official information ('appropriate' is not carried) |
+| PSPF-130 | Controlling access to supporting technology | Enabling official information access and controlling access to supporting technology | the main limb: enabling access to official information ('appropriate' is not carried) (completed in Fix 3d: 'appropriate', the need-to-know qualifier, is restored) |
 | PSPF-133 | Clearance requirements for caveated information | Clearance and suitability requirements for caveated information access | suitability requirements beside clearance |
 | PSPF-134 | Individual user identification for classified systems | Per-user identification, authentication and authorisation for classified system access | authentication and authorisation beside identification |
 | PSPF-140 | Use of authorised security vetting agencies | Security vetting by authorised vetting agencies or, where authorised, the entity | the alternative: authorised entities conducting their own vetting |
@@ -1009,7 +1009,7 @@ The corrections:
   Each row now ends "(completed in Fix 3c: …)", saying what that title lacked.
 - **Generalised (16 rows).** Each claim now says the limb is generalised, or that a qualifier is not carried. No title changed: the independent audit judged each of these titles fair, and none is among its 18.
   - Fix 3: CPS-230-13 ('within tolerance'), CPS-230-21 (key controls and the (b) and (c) reviews), CPS-230-27 (processes), CPS-230-29 (review), CPS-230-30 (failures), CPS-230-47 (monitoring and substituting) and CPS-230-59 (performance, control effectiveness and compliance). Also PSPF-016 (the basis of tailoring), PSPF-046 (developments during the contract), PSPF-048 (the residual risk) and PSPF-098 (develop, implement and maintain).
-  - Fix 3b: PSPF-042 ('reasonable'), PSPF-087 (reauthorisation), PSPF-095 ('accredited'), PSPF-128 (other entities and third parties) and PSPF-130 ('appropriate').
+  - Fix 3b: PSPF-042 ('reasonable'), PSPF-087 (reauthorisation), PSPF-095 ('accredited'), PSPF-128 (other entities and third parties) and PSPF-130 ('appropriate', since restored in Fix 3d).
 - **Revised in Fix 3c, claim already true (4 rows).** CPS-230-21 (also generalised above), CPS-230-57, CPS-230-58 and PSPF-212 end "(revised in Fix 3c: …)", so the tables point to the later title.
 - **Kept titles.** Two "kept" entries were also overstated:
   - fix 3's PSPF-139 ("narrows nothing");
@@ -1032,6 +1032,84 @@ In all, 28 claim cells and 2 kept entries changed. The audit's two optional tidy
 **Deferred.** One open question for the operator is in `deferred-items.md`. The audit says ISO/IEC 27001:2022's Annex A table may print 8.1 as "User end point devices", where the file has "User endpoint devices" (ISO/IEC 27002:2022's spelling). It is unchanged, because there is no licensed copy to check against.
 
 **Open for the pilot:** the descriptive-title Manual-Only row. After the next seeded Strapi start, re-walk a few of the 18 (for example CPS-230-34, CPS-230-57, PSPF-077 and PSPF-213). The development database picks up fix 3c only on a seeded start, and operator renames survive it.
+
+**The pilot's rulings on the generalised claims (2026-10-03).** The pilot read the three PSPF titles whose claim says a qualifier is not carried:
+- **PSPF-042 is kept** ("Contract terms for provider incident reporting and following investigation directions"). Dropping "reasonable" generalises a degree, and the title still names the obligation to follow directions.
+- **PSPF-095 is kept** ("SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets"). "Zone Five" already denotes the accredited Security Zone Five area, so "accredited" adds nothing.
+- **PSPF-130 is retitled** (Fix 3d, below). "Appropriate" carries the requirement's need-to-know intent, and the title without it reads as broadening access.
+
+### Fix 3d: PSPF-130 keeps "appropriate"
+
+The pilot approved Task 2 on 2026-10-03 with two rulings, this one and the Fix 8 addendum below. Both are GSD Rule 1 deviation fixes, failing test first.
+
+**Paragraph.** PSPF-130: "Appropriate access to official information is enabled, including controlling access (including remote access) to supporting technology systems, networks, infrastructure, devices and applications."
+
+| | Title |
+|---|---|
+| 10-22 (first seeded) | Controlling access to supporting technology |
+| Fix 3b (replaced) | Enabling official information access and controlling access to supporting technology |
+| Fix 3d (current) | Enabling appropriate access to official information and controlling supporting technology access |
+
+**Intent restored.** "Appropriate" is the need-to-know limit on the access the paragraph enables. Fix 3b's title said only "enabling official information access", which reads as broadening access. The new title puts "appropriate" directly on "access", so it cannot be read as "appropriate information". It keeps fix 3b's second limb (controlling access to supporting technology, with remote access generalised under "access").
+
+**Wording.** The pilot's example, "Appropriate access to official information and control of supporting technology access", opens with the paragraph's own opening phrase. Fix 3b reworded five drafts for that reason (the title convention: a title never repeats its paragraph's opening words), so this title keeps fix 3b's verb-first shape instead. It has 11 words and 96 characters, within the 12-word and 100-character cap. It passes the form rules (no em or en dash, no full stop, no control-id prefix, no "must" or "shall"), the anchor, opening-copy and uniqueness checks, and the stored name `PSPF-130 — {title}` is 107 characters against the contract's 255.
+
+**Data.** `supersededTitles` lists PSPF-130's 10-22 title, then fix 3b's title last. A guarded scratch script (`p10-23-f3d-apply.mjs` in the session scratchpad) changed only the title and that list, and checked that nothing else in the parsed file changed (key order kept, LF endings). On the next seeded Strapi start, a PSPF-130 stored under either earlier title is renamed, keeping its documentId and relations, and an operator's own name is kept.
+
+**Tests.**
+
+| File | Test | Before the fix (`05b5482`) | After (`7385b91`) |
+|---|---|---|---|
+| `apps/backend/tests/control-titles.unit.test.ts` | fix 3d: PSPF-130 keeps 'appropriate', the need-to-know intent of its paragraph (fix 3d replaces fix 3b's title; the title says "appropriate access"; the seed stores it) | fail: seeded under fix 3b's title | pass |
+| same | fix 3d: the title fix 3d replaces stays listed as superseded, after any earlier one | fail: fix 3b's title not listed | pass |
+| same | fix 3b: every corrected PSPF title covers every limb of its paragraph (its PSPF-130 pin now follows `currentTitle`, which reads fix 3d's title) | fail: PSPF-130 under fix 3b's title | pass |
+
+Runs (logs in the session scratchpad, `p10-23-f3d-*`):
+- **RED:** `control-titles.unit` alone, 27 tests: 24 passed and 3 failed, all on assertions (`p10-23-f3d-red-unit.tap`). `check tdd-red-evidence` returned RED_EVIDENCE_OK for the fix 3d target test.
+- **GREEN:** four files, 67 of 67, in 70 s: `control-titles.unit` (27), `control-library-bounds.unit` (2), `assessment-seed.integration` (15, including the mounted reconcile proofs) and `administration.integration` (23).
+- **`pnpm verify:csrm-seed`:** exit 0 in 26 s. Both the static and the runtime seed verifications passed.
+- **No journey run.** No web, e2e or Strapi source file names PSPF-130's replaced title; only the title file's `supersededTitles` and the unit test do. No web file changed.
+
+**Commits.** `05b5482` test(10-23): expect PSPF-130 to keep 'appropriate' access (fix 3d); `7385b91` fix(10-23): retitle PSPF-130 to keep 'appropriate' access (fix 3d).
+
+### Fix 8 addendum: the accepted axe exception
+
+**What the pilot found.** Fix 8's 28 open-list scans passed because none of their lists overflowed. When a list overflows its popover, axe reports one serious `scrollable-region-focusable` on the popover CONTAINER, the element that scrolls. The pilot reproduced it at 1440x900 and at 375x812 on the Risk Register's Control picker, searching `data`: 552px of content in a 458px box.
+
+**Why it is accepted.** The picker is the ARIA APG combobox with a listbox popup: focus stays on the combobox and the options are reached with `aria-activedescendant`, each scrolled into view as it becomes active (`scrollIntoView({ block: 'nearest' })` in `relation-picker.tsx`). The scrolled content is therefore keyboard operable without the container taking focus. Making the container tabbable would add a Tab stop the pattern does not have and break its Tab behaviour, so it is not done. The pilot checked WCAG 2.1.1 directly: with focus on the combobox, ArrowDown moves `aria-activedescendant` through all 10 options, each scrolled into view; Escape closes the list; Discard returns focus to Add mitigation control. This is axe's known heuristic false positive for an activedescendant combobox whose popup scrolls. No product code changed.
+
+**The honest browser proof.** A new test in `apps/csrm/e2e/accessibility.spec.ts`, `an overflowing picker list passes axe while open at 1440 and 375`:
+- **Forces the overflow.** As Bob, on the Risk details of `RSK-DEV-MUTABLE-001`, it opens a new mitigation control, scrolls the Control field to mid-viewport, and types `data`. It waits for the "Showing the first 10 matches" status, asserts ten options, and asserts the popover content's `scrollHeight` is greater than its `clientHeight`.
+- **Scans it open** with the WCAG tags, Label in Name and best practice (fix 8's `scanWithBestPractice`).
+- **Sets aside one finding only.** `withoutAcceptedPopupScroll` removes a `scrollable-region-focusable` node only when its single axe target resolves to the open popover content (`[data-slot="popover-content"][data-state="open"]`) that holds the listbox. Any other node that rule reports, and every other rule, still counts. It is a filter on that rule and that target, not an axe `exclude`, which would hide the whole popup from every rule. The comment above it cites the APG combobox pattern and the pilot's WCAG 2.1.1 check.
+- **Asserts 0 serious and 0 critical** for everything else, at most one accepted node, and no horizontal page overflow.
+- **Proves the keyboard path.** Focus is on the combobox. ArrowDown, pressed once per option, makes the last option the `aria-activedescendant` (and `aria-selected`). Focus stays on the combobox. The last option's box lies inside the scroller's box, and the scroller has scrolled (`scrollTop` above 0).
+- **Leaves no data changed.** Escape closes the list without choosing, then Discard mitigation changes returns focus to Add mitigation control.
+
+Fix 8's other scans are unchanged and keep their strict rule: no exception applies to them, because their lists do not overflow and their keyboard path is not the one this test proves.
+
+**Measurements** (the GREEN run's annotation, `p10-23-f8a-e2e-green.log`):
+
+| Width | Popover content | Popover box | After ArrowDown x10 | Accepted findings | Other findings |
+|---|---|---|---|---|---|
+| 1440x900 | 552px | 394px | option 10 active and in view, scrolled 110px (its bottom at y899, the scroller's at y900) | 1: `scrollable-region-focusable` on the open popover content | moderate `region` 1 (the portalled popup sits outside the landmarks, as in fix 8's scans); 0 serious, 0 critical |
+| 375x812 | 1040px | 354px | option 10 active and in view, scrolled 618px (its bottom at y811, the scroller's at y812) | 1, as above | moderate `region` 1; 0 serious, 0 critical |
+
+The pilot measured a 458px box at 1440; the test's box is 394px because it places the field mid-viewport, which leaves less room on either side. The content height, 552px, matches the pilot's. At 375 the options wrap, so the content is taller.
+
+**Tests.**
+
+| File | Test | Before (`67e7617`) | After (`fe7d6fb`) |
+|---|---|---|---|
+| `apps/csrm/e2e/accessibility.spec.ts` | an overflowing picker list passes axe while open at 1440 and 375 | fail: at 1440, serious `scrollable-region-focusable` on `#radix-_r_7_`, the open popover content (the overflow precondition passed first) | pass |
+
+Runs (no dev server running; logs in the session scratchpad, `p10-23-f8a-*`):
+- **RED:** the new test alone, desktop project: 1 failed on the axe assertion, in 48 s (`p10-23-f8a-e2e-red.log`). Rerun with the JUnit reporter so `check tdd-red-evidence` could read it: the same failure, RED_EVIDENCE_OK (`p10-23-f8a-red-junit.xml`, `p10-23-f8a-red.json`). The first, list-reporter evidence returned INVALID_RED (`zero_tests_discovered`) only because the checker reads TAP or JUnit, not Playwright's list output.
+- **GREEN:** the whole of `accessibility.spec.ts`, production harness: 13 passed (all desktop, the project that runs this file), 0 failed, 0 flaky, 0 skipped, in 3.2 min (`p10-23-f8a-e2e-green.log`). That includes fix 8's 28 strict open-list scans (`picker lists pass axe while open at 1440 and 375`) and the new test. Next logged the known `destination stream closed early` 8 times. `settleElementWidth` is not called in this file, so none was touched, and the run left the tree unchanged.
+- **`typecheck` and `lint`:** clean.
+- **Housekeeping:** each failed RED run kept its harness database and Next build under the ignored `apps/backend/.tmp` and `apps/csrm/.tmp`, and its `apps/csrm/test-results` folder. I removed only those run-scoped paths.
+
+**Commits.** `67e7617` test(10-23): expect an overflowing picker list to pass axe while open (fix 8 addendum); `fe7d6fb` test(10-23): accept only the open popup's scroll finding and prove the keyboard path (fix 8 addendum).
 
 ## Phase gate (second run, after the walkthrough fixes)
 
