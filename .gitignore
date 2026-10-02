@@ -32,8 +32,9 @@ apps/backend/.git/
 apps/backend/package-lock.json
 apps/backend/yarn.lock
 
-# GSD workflow runtime state (per-run dispatch sentinel)
+# GSD workflow runtime state (per-run dispatch sentinel and the per-session milestone lock)
 .gsd/
+.planning/milestone.lock
 
 # Browser automation output
 .playwright-mcp/
