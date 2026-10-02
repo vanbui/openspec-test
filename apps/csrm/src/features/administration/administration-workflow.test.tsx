@@ -226,6 +226,46 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
   });
 
   /*
+   * B3 (10-23 walkthrough fix 7): a long-text column wraps within 14rem to 28rem and clamps to two lines
+   * (direction §4 DataTable, X-3), so a long control title never forces the controls table wide at 1440.
+   * The control title and framework name and the Risk Type description are the long text; identifiers,
+   * types and references stay on one line.
+   */
+  it('B3 wraps long control titles, framework names and Risk Type descriptions within the long-text bounds', async () => {
+    const { AdministrationWorkspace } = await loadWorkspace();
+    const title = 'Preventing, withstanding and recovering from critical operation disruption where practicable';
+    const framework = 'Privacy Act 1988 — Australian Privacy Principles and Notifiable Data Breaches scheme';
+    const control = {
+      documentId: 'control-cps-230-13', controlNumber: 'CPS-230-13', name: `CPS-230-13 — ${title}`,
+      description: 'An APRA-regulated entity must…', framework, controlType: 'Preventive' as const, controlReference: 'Clause 13',
+    };
+    const controlsView = render(<AdministrationWorkspace
+      {...baseWorkspaceProps}
+      kind="controls"
+      items={[control]}
+      query={{ q: '', framework: '', controlType: '', sort: 'controlNumber:asc', page: 1, pageSize: 25 }}
+    />);
+    const controlsTable = screen.getByRole('table', { name: 'Controls results' });
+    const longTextCell = (text: string) => within(controlsTable).getByText(text, { exact: true }).closest('td');
+    for (const text of [title, framework]) {
+      // The clamp is visual: the whole text stays in the DOM.
+      expect(within(controlsTable).getByText(text, { exact: true })).toHaveClass('line-clamp-2');
+      expect(longTextCell(text)).toHaveClass('whitespace-normal', 'min-w-56', 'max-w-md');
+    }
+    for (const text of ['CPS-230-13', 'Preventive', 'Clause 13']) {
+      expect(within(controlsTable).getByText(text, { exact: true }).closest('td')).not.toHaveClass('whitespace-normal');
+    }
+    expect(screen.getByRole('columnheader', { name: /Name/ })).not.toHaveClass('whitespace-normal');
+    controlsView.unmount();
+
+    const description = 'Credentials are misused through phishing, reuse or theft and grant access to customer records and administrative consoles.';
+    render(<AdministrationWorkspace {...baseWorkspaceProps} items={[{ ...item, description }]} />);
+    const riskTypesTable = screen.getByRole('table', { name: 'Risk Types results' });
+    expect(within(riskTypesTable).getByText(description, { exact: true }).closest('td')).toHaveClass('whitespace-normal', 'min-w-56', 'max-w-md');
+    expect(within(riskTypesTable).getByRole('link', { name: 'Credential misuse' }).closest('td')).not.toHaveClass('whitespace-normal');
+  });
+
+  /*
    * WR-04: a missing required field is asked for by its label in the product's words, never in a validation
    * library's default English, and an optional field holding only spaces is empty rather than an error.
    */

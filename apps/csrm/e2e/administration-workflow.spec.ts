@@ -236,6 +236,52 @@ test.describe.serial('@administration-controls Control administration', () => {
     await expect(app13Row.getByRole('cell').nth(1), 'ADMIN05_APP13_LOADS: APP-13 reads its title').toHaveText('Correction of personal information');
     await expect(page.getByText('We couldn’t load Controls'), 'ADMIN05_APP13_LOADS: the Controls list loads').toHaveCount(0);
 
+    /*
+     * ADMIN05_CONTROL_TITLES_WRAP (B3, 10-23 walkthrough fix 7): at 1440 a long control title wraps inside its
+     * Name cell instead of forcing the table wider than its scroller, so Name, Type and Reference are in view
+     * without scrolling. The CPS 230 page held the pilot's case; the Privacy Act page carries the longest
+     * framework name. The longest title on the page is measured, so the proof does not pin a title's wording.
+     */
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const search of ['CPS-230', 'APP-1']) {
+      await page.goto(`/app/admin/controls?q=${search}`);
+      const rows = controlsTable.locator('tbody tr');
+      await expect(rows.first(), `ADMIN05_CONTROL_TITLES_WRAP: ${search} lists controls`).toBeVisible();
+      const scroller = page.locator('[data-overflow]').filter({ has: controlsTable });
+      await settleElementWidth(scroller);
+      const fit = await scroller.evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }));
+      test.info().annotations.push({ type: 'ADMIN05_CONTROL_TITLES_WRAP widths', description: `${search} at 1440px: table ${fit.scrollWidth}px, region ${fit.clientWidth}px` });
+      expect(fit.scrollWidth, `ADMIN05_CONTROL_TITLES_WRAP: the ${search} table is no wider than its region at 1440px`).toBeLessThanOrEqual(fit.clientWidth);
+      await expect(scroller, `ADMIN05_CONTROL_TITLES_WRAP: the ${search} table does not scroll at 1440px`).toHaveAttribute('data-overflow', 'false');
+      const scrollerBox = await scroller.boundingBox();
+      const headers = controlsTable.getByRole('columnheader');
+      for (const [index, header] of [[1, 'Name'], [3, 'Type'], [4, 'Reference']] as const) {
+        const box = await headers.nth(index).boundingBox();
+        expect(box && scrollerBox && box.x + box.width <= scrollerBox.x + scrollerBox.width + 1,
+          `ADMIN05_CONTROL_TITLES_WRAP: ${header} is in view without scrolling on ${search} at 1440px`).toBe(true);
+      }
+      if (search !== 'CPS-230') continue;
+      const longest = await controlsTable.evaluate((table) => {
+        const cells = Array.from(table.querySelectorAll('tbody tr'), (row) => row.querySelectorAll('td')[1]!);
+        const cell = cells.reduce((a, b) => ((b.textContent ?? '').length > (a.textContent ?? '').length ? b : a));
+        const text = cell.firstElementChild ?? cell;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const lineRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+        return {
+          title: (cell.textContent ?? '').trim(),
+          lines: new Set(lineRects.map((rect) => Math.round(rect.top))).size,
+          lineHeight: lineRects[0]?.height ?? 0,
+          textHeight: range.getBoundingClientRect().height,
+          cellHeight: cell.getBoundingClientRect().height,
+          cellWidth: cell.getBoundingClientRect().width,
+        };
+      });
+      test.info().annotations.push({ type: 'ADMIN05_CONTROL_TITLES_WRAP longest title', description: `${longest.title}: ${longest.lines} lines, cell ${Math.round(longest.cellWidth)}x${Math.round(longest.cellHeight)}px, text ${Math.round(longest.textHeight)}px, line ${Math.round(longest.lineHeight)}px` });
+      expect(longest.lines, `ADMIN05_CONTROL_TITLES_WRAP: "${longest.title}" wraps at 1440px`).toBeGreaterThan(1);
+      expect(longest.textHeight, `ADMIN05_CONTROL_TITLES_WRAP: "${longest.title}" is taller than one line in its Name cell`).toBeGreaterThan(longest.lineHeight * 1.5);
+    }
+
     const controlNumber = `ZZ-${suffix}`;
     await page.getByRole('link', { name: 'Create Control' }).click();
     await expect(page).toHaveURL(/\/app\/admin\/controls\/new$/);
