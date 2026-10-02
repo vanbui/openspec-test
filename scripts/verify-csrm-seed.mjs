@@ -1,30 +1,17 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import {
+  CONTROL_DIRECTORY,
+  readSeedControlFiles,
+} from "./csrm-seed-control-files.mjs";
+
 const root = process.cwd();
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
-const CONTROL_REFERENCE_DIRECTORY = [
-  "apps",
-  "backend",
-  "src",
-  "bootstrap",
-  "controls",
-];
-const CONTROL_REFERENCE_FILES = [
-  "aescsf-v2-toolkit-1.1.json",
-  "apra-cps-230-2026.json",
-  "apra-cps-234-2019.json",
-  "asd-ism-controls-2026.06.18.json",
-  "cis-controls-v8.1.json",
-  "essential-eight-2023-11.json",
-  "iso-iec-27001-2022-annex-a.json",
-  "nist-csf-2.0.json",
-  "owasp-asvs-5.0.0.json",
-  "privacy-act-app-ndb-2026-06-04.json",
-  "pspf-release-2026.json",
-  "soci-cirmp-2026-06-10.json",
-];
-const EXPECTED_CONTROL_REFERENCE_FILE_COUNT = 12;
+// The catalogues the seed loads and its title file, from the seed's own declarations (no second list).
+const { catalogueFiles: CONTROL_REFERENCE_FILES, titleFile: CONTROL_TITLE_FILE } =
+  readSeedControlFiles(root);
+const CONTROL_REFERENCE_DIRECTORY = CONTROL_DIRECTORY;
 const EXPECTED_CONTROL_COUNT = 2_646;
 const assert = (condition, message) => {
   if (!condition) {
@@ -56,11 +43,6 @@ const seedSource = read(
 );
 const packageJson = JSON.parse(read("package.json"));
 
-assert(
-  CONTROL_REFERENCE_FILES.length === EXPECTED_CONTROL_REFERENCE_FILE_COUNT,
-  `Control reference manifest must list exactly ${EXPECTED_CONTROL_REFERENCE_FILE_COUNT} files`,
-);
-
 const actualControlReferenceFiles = readdirSync(
   join(root, ...CONTROL_REFERENCE_DIRECTORY),
   { withFileTypes: true },
@@ -68,16 +50,27 @@ const actualControlReferenceFiles = readdirSync(
   .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
   .map((entry) => entry.name)
   .sort();
-const expectedControlReferenceFiles = [...CONTROL_REFERENCE_FILES].sort();
+const expectedControlReferenceFiles = [
+  ...CONTROL_REFERENCE_FILES,
+  CONTROL_TITLE_FILE,
+].sort();
 
-assert(
-  actualControlReferenceFiles.length === EXPECTED_CONTROL_REFERENCE_FILE_COUNT,
-  `Expected exactly ${EXPECTED_CONTROL_REFERENCE_FILE_COUNT} control reference files, found ${actualControlReferenceFiles.length}`,
-);
 assert(
   JSON.stringify(actualControlReferenceFiles) ===
     JSON.stringify(expectedControlReferenceFiles),
-  "Control reference files must exactly match the verified manifest",
+  `Control files must be exactly the ${CONTROL_REFERENCE_FILES.length} catalogues the seed loads and its title file ${CONTROL_TITLE_FILE}, found: ${actualControlReferenceFiles.join(", ")}`,
+);
+
+const controlTitleFile = JSON.parse(
+  read(...CONTROL_REFERENCE_DIRECTORY, CONTROL_TITLE_FILE),
+);
+assert(
+  controlTitleFile &&
+    typeof controlTitleFile.titles === "object" &&
+    Object.keys(controlTitleFile.titles).every((referenceFile) =>
+      CONTROL_REFERENCE_FILES.includes(referenceFile),
+    ),
+  `${CONTROL_TITLE_FILE} must title only controls of the catalogues the seed loads`,
 );
 
 const allControlIds = [];
@@ -205,22 +198,19 @@ assert(
   securityAnalyst.functionIds.length > 0,
   "Security Analyst must have at least one Function grant",
 );
+// The agent holds a subset of the human analyst's grants by the catalogue's design (administration,
+// release and other human-only Functions are withheld; AI output is advisory), so it never holds more.
 assert(
-  JSON.stringify([...securityAnalyst.functionIds].sort()) ===
-    JSON.stringify([...securityAnalystAgent.functionIds].sort()),
-  "Security Analyst Agent Function grants must exactly match Security Analyst",
+  securityAnalystAgent.functionIds.every((functionId) =>
+    securityAnalyst.functionIds.includes(functionId),
+  ),
+  "Security Analyst Agent must hold no Function grant that Security Analyst lacks",
 );
 
 assert(
   seedSource.includes('process.env.IDAMBOX_SEED_CSRM !== "true"'),
   "CSRM seed must retain the independent IDAMBOX_SEED_CSRM guard",
 );
-for (const referenceFile of CONTROL_REFERENCE_FILES) {
-  assert(
-    seedSource.includes(referenceFile),
-    `CSRM seed must reference control catalogue ${referenceFile}`,
-  );
-}
 assert(
   /strapi\.documents\(\s*["']api::csrm-control\.csrm-control["']\s*\)/.test(
     seedSource,
@@ -235,10 +225,10 @@ const seedFunctionSource = seedSource.slice(
   seedSource.indexOf("export async function seedCsrmData"),
 );
 const loadControlCataloguesIndex = seedFunctionSource.indexOf(
-  "await loadControlCatalogues(strapi)",
+  "await readControlLibrary(strapi.dirs.app.root)",
 );
 const seedControlsIndex = seedFunctionSource.indexOf(
-  "await seedCsrmControls(strapi, controlSeeds)",
+  "await seedCsrmControls(strapi, controlSeeds",
 );
 assert(
   loadControlCataloguesIndex >= 0 &&

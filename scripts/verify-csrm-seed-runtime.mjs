@@ -9,6 +9,11 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  CONTROL_DIRECTORY,
+  readSeedControlFiles,
+} from "./csrm-seed-control-files.mjs";
+
 const root = await realpath(process.cwd());
 const backendRoot = await realpath(path.join(root, "apps", "backend"));
 const temporaryRoot = path.join(backendRoot, ".tmp");
@@ -36,34 +41,23 @@ const catalogue = createRequire(import.meta.url)(
     "idambox-csrm-role-function-api-catalogue.json",
   ),
 );
-const controlCatalogueFiles = [
-  "aescsf-v2-toolkit-1.1.json",
-  "apra-cps-230-2026.json",
-  "apra-cps-234-2019.json",
-  "asd-ism-controls-2026.06.18.json",
-  "cis-controls-v8.1.json",
-  "essential-eight-2023-11.json",
-  "iso-iec-27001-2022-annex-a.json",
-  "nist-csf-2.0.json",
-  "owasp-asvs-5.0.0.json",
-  "privacy-act-app-ndb-2026-06-04.json",
-  "pspf-release-2026.json",
-  "soci-cirmp-2026-06-10.json",
-];
+// The catalogues the seed loads and its title file, from the seed's own declarations (no second list).
+const { catalogueFiles: controlCatalogueFiles, titleFile: controlTitleFile } =
+  readSeedControlFiles(root);
 const controlCatalogues = controlCatalogueFiles.map((sourceFile) => ({
   catalogue: createRequire(import.meta.url)(
-    path.join(
-      root,
-      "apps",
-      "backend",
-      "src",
-      "bootstrap",
-      "controls",
-      sourceFile,
-    ),
+    path.join(root, ...CONTROL_DIRECTORY, sourceFile),
   ),
   sourceFile,
 }));
+// D-46: CSRM's title for each control whose catalogue gives no label.
+const controlTitles = new Map(
+  Object.values(
+    createRequire(import.meta.url)(
+      path.join(root, ...CONTROL_DIRECTORY, controlTitleFile),
+    ).titles,
+  ).flatMap((catalogueTitles) => Object.entries(catalogueTitles)),
+);
 const expectedControls = controlCatalogues.flatMap(
   ({ catalogue: controlCatalogue, sourceFile }) =>
     controlCatalogue.controls.map((control) => ({
@@ -95,7 +89,7 @@ const expectedControlName = (control) => {
     control.section?.name,
     control.category?.title,
     control.groupPath?.at(-1),
-  );
+  ) ?? controlTitles.get(control.id);
 
   return label ? `${control.id} — ${label}` : control.id;
 };
@@ -167,13 +161,22 @@ const prepareUpdateVerification = async (strapi) => {
       name: VERIFIER_RISK_TYPE_NAME,
     },
   });
+  // What an earlier seed wrote from an older catalogue entry: the entry in sourceData beside the name and
+  // description derived from it. The seed recognises both as its own and replaces them (fix 2, fix 3).
   await controlService.update({
     documentId: staleControl.documentId,
     data: {
       description: "Stale verifier value",
       framework: "Stale verifier framework",
-      name: "Stale verifier name",
-      sourceData: { stale: true },
+      name: `${STALE_CONTROL_NUMBER} — Stale verifier name`,
+      sourceData: {
+        ...staleControl.sourceData,
+        control: {
+          ...staleControl.sourceData.control,
+          statement: "Stale verifier value",
+          title: "Stale verifier name",
+        },
+      },
     },
   });
 };
@@ -392,14 +395,16 @@ const loadAndAssert = async (
     `Expected ${catalogue.functionApis.length} FunctionApis, found ${functionApis.length}`,
   );
 
-  const functionByMenuPath = new Map(
+  // The seed keys a Function by its name and menu path; an API-only Function stores no menu path.
+  const functionKey = ({ menuPath, name }) => `${name} ${menuPath ?? ""}`;
+  const functionByKey = new Map(
     functions.map((platformFunction) => [
-      platformFunction.menuPath,
+      functionKey(platformFunction),
       platformFunction,
     ]),
   );
   for (const functionSeed of catalogue.functions) {
-    const seededFunction = functionByMenuPath.get(functionSeed.menuPath);
+    const seededFunction = functionByKey.get(functionKey(functionSeed));
     assert(
       seededFunction?.name === functionSeed.name,
       `Function ${functionSeed.id} must be persisted with its canonical name and menu path`,
@@ -434,7 +439,7 @@ const loadAndAssert = async (
         const functionSeed = catalogue.functions.find(
           (item) => item.id === functionId,
         );
-        return functionByMenuPath.get(functionSeed.menuPath)?.documentId;
+        return functionByKey.get(functionKey(functionSeed))?.documentId;
       })
       .sort();
     const actualFunctionDocumentIds = seededRole.functions
@@ -460,9 +465,12 @@ const loadAndAssert = async (
     analystFunctionIds.length > 0,
     "Security Analyst must have Function grants",
   );
+  // The agent holds a subset of the human analyst's grants by the catalogue's design, never more.
   assert(
-    JSON.stringify(agentFunctionIds) === JSON.stringify(analystFunctionIds),
-    "Security Analyst Agent must have exactly the Security Analyst Function grants",
+    agentFunctionIds.every((functionId) =>
+      analystFunctionIds.includes(functionId),
+    ),
+    "Security Analyst Agent must hold no Function grant that Security Analyst lacks",
   );
 
   const jane = users.find((user) => user.email === "jane.doe@idambox.com");
@@ -567,9 +575,10 @@ try {
     csrmAppIsEnabled: "false",
   });
 
-  const { compileStrapi, createStrapi } = createRequire(import.meta.url)(
-    "@strapi/strapi",
-  );
+  // Strapi is the backend's dependency, so resolve it from the backend package, not from this script.
+  const { compileStrapi, createStrapi } = createRequire(
+    path.join(backendRoot, "package.json"),
+  )("@strapi/strapi");
   const appContext = await compileStrapi({ appDir: backendRoot });
   const databaseConfig = createRequire(import.meta.url)(
     path.join(appContext.distDir, "config", "database.js"),
