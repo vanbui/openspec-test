@@ -12,6 +12,7 @@ import { QuestionnaireReviewList } from './questionnaire-review-list';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
 import type { QuestionnaireSummary } from './questionnaire-service';
 import { availableAssessmentRequest } from './questionnaire-domain';
+import { rememberSavedQuestionnaire } from './use-answer-autosave';
 
 vi.mock('./questionnaire-renderer', () => ({
   QuestionnaireRenderer: vi.fn(
@@ -147,6 +148,28 @@ describe('My Questionnaires discovery', () => {
     ];
     render(<QuestionnaireDetail definition={conditional} questionnaire={questionnaire} state="ready" />);
     expect(within(screen.getByRole('region', { name: 'About this questionnaire' })).getByText('A Security Analyst has sent you 2 questions about this request so they can assess its cyber risk. Depending on your answers, a few more may appear.')).toBeInTheDocument();
+  });
+
+  /*
+   * IN-302: after Back or Forward the renderer starts from the newer save this tab remembers (D-11), so the
+   * introduction counts from the same answers, and its count and the completion card's total agree (UI-SPEC §5.2).
+   */
+  it('counts from the newer save this tab remembers after Back or Forward, as the renderer does (IN-302)', () => {
+    const base = submittedDefinition[0]!;
+    const served: QuestionnaireDefinition = [
+      { ...base, answer: null },
+      { ...base, documentId: 'question-two', questionKey: 'stores_data', questionText: 'Does the service store customer data?', answerType: 'Boolean', order: 2, answer: null },
+      { ...base, documentId: 'question-three', questionKey: 'data_kinds', questionText: 'Which data does it store?', answerType: 'Long text', order: 3, answer: null, visibility: { questionKey: 'stores_data', operator: 'equals', value: true } },
+    ];
+    const remembered: QuestionnaireDefinition = served.map((question) => question.questionKey === 'stores_data'
+      ? { ...question, answer: { value: true, updatedAt: '2026-08-29T10:05:00.000Z' } }
+      : question);
+    const backForward = { ...questionnaire, documentId: 'questionnaire/back-forward' };
+    rememberSavedQuestionnaire(backForward.documentId, { updatedAt: '2026-08-29T10:05:00.000Z', answers: remembered });
+
+    render(<QuestionnaireDetail definition={served} questionnaire={backForward} state="ready" />);
+
+    expect(within(screen.getByRole('region', { name: 'About this questionnaire' })).getByText('A Security Analyst has sent you 3 questions about this request so they can assess its cyber risk. Depending on your answers, a few more may appear.')).toBeInTheDocument();
   });
 
   it('keeps the submitted order: Return to draft, the description, the revert summary, the answers, then the history', () => {
