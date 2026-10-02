@@ -8,7 +8,7 @@ import type {
   ReleaseReadinessRequirement,
   RiskType,
 } from './assessment-schema';
-import type { RelationPickerGroup } from '@/components/csrm/relation-picker';
+import type { RelationPickerGroup, RelationPickerItem } from '@/components/csrm/relation-picker';
 import { controlPickerItem } from './control-label';
 
 type ReleaseFacts = Pick<AnalystAssessmentDetail, 'assessmentStatus' | 'assessmentDate' | 'approvalDate' | 'approvedBy'>;
@@ -194,4 +194,48 @@ export function applicableControlGroup(
   const riskType = riskTypeId ? riskTypes.find((candidate) => candidate.documentId === riskTypeId) : undefined;
   if (!riskType || riskType.applicableControls.length === 0) return undefined;
   return { label: `Applicable to ${riskType.name}`, items: riskType.applicableControls.map(controlPickerItem) };
+}
+
+/**
+ * The page size of the system and asset searches: the request selector's bounded page (`selectorPageSize` in
+ * request-service.ts), so a full page tells the analyst to keep typing (UI-SPEC §13.1).
+ */
+export const inventoryPickerPageSize = 25;
+
+/** The wording for a chosen record whose name is not served (UI-SPEC §16.4); a picker never shows the id. */
+export const relationNameNotAvailable = 'Name not available';
+
+/**
+ * The originating request's selected systems or assets, offered first in their picker (D-30; UI-SPEC §13.1).
+ * A request with none has no suggested group, so the picker asks the analyst to search.
+ */
+export function requestRelationGroup(records: readonly NamedRecord[]): RelationPickerGroup | undefined {
+  if (records.length === 0) return undefined;
+  return { label: 'On this request', items: records.map(({ documentId, name }) => ({ documentId, name })) };
+}
+
+/**
+ * A Risk's chosen system or asset as its picker shows it (D-30): named by the request's selection, then by a
+ * served relation label, else `Name not available` for a record removed since. Never its id.
+ */
+export function selectedRelationItem(
+  documentId: string | null | undefined,
+  suggestions: readonly NamedRecord[],
+  labels: Readonly<Record<string, string>>,
+): RelationPickerItem | null {
+  if (!documentId) return null;
+  const suggested = suggestions.find((candidate) => candidate.documentId === documentId)?.name;
+  const served = Object.hasOwn(labels, documentId) ? labels[documentId] : undefined;
+  return { documentId, name: suggested || served || relationNameNotAvailable };
+}
+
+/** The served names of the systems and assets an assessment's Risks hold, keyed by id (D-30). */
+export function relationLabelsFromRiskList(items: readonly Pick<AssessmentRiskListItem, 'informationSystemImpacted' | 'informationAssetImpacted'>[]): Record<string, string> {
+  const labels: Record<string, string> = {};
+  for (const item of items) {
+    for (const relation of [item.informationSystemImpacted, item.informationAssetImpacted]) {
+      if (relation) labels[relation.documentId] = relation.name;
+    }
+  }
+  return labels;
 }

@@ -1,16 +1,22 @@
 'use client';
 
 import { AlertCircleIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import {
+  RelationPicker,
+  type RelationPickerItem,
+  type RelationPickerSearchInput,
+  type RelationPickerSearchResult,
+} from '@/components/csrm/relation-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createRiskAction, updateRiskAction } from './assessment-actions';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from './owner-combobox';
-import { riskWritableFields } from './assessment-domain';
+import { inventoryPickerPageSize, requestRelationGroup, riskWritableFields, selectedRelationItem } from './assessment-domain';
 import type {
   ActiveUser,
   AnalystRisk,
@@ -22,12 +28,22 @@ import type {
 export type AssessmentRelationOption = { documentId: string; name: string };
 export type EditableRisk = AnalystRisk;
 
+export type RelationSearch = (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
+
 export type RiskEditorOptions = {
-  assets: readonly AssessmentRelationOption[];
   riskTypes: readonly RiskType[];
-  systems: readonly AssessmentRelationOption[];
   users: readonly ActiveUser[];
+  /** The originating request's selected systems and assets, offered first in their pickers (D-30). */
+  requestSystems: readonly AssessmentRelationOption[];
+  requestAssets: readonly AssessmentRelationOption[];
+  /** Served names of the systems and assets the Risks already hold, keyed by id (D-30). */
+  relationLabels: Readonly<Record<string, string>>;
+  /** Search the whole inventory, one bounded page at a time (D-28); the page passes the Server Actions. */
+  searchSystems: RelationSearch;
+  searchAssets: RelationSearch;
 };
+
+type RelationField = 'informationSystemImpacted' | 'informationAssetImpacted';
 
 export type RiskEditorProps = {
   assessmentId: string;
@@ -37,6 +53,8 @@ export type RiskEditorProps = {
   searchOwners: (input: OwnerSearchInput) => Promise<OwnerSearchResult>;
   onCreated?: (risk: EditableRisk) => void;
   onUpdated?: (risk: EditableRisk) => void;
+  /** Tells the page the name of a record chosen by search, so a remounted editor keeps it (D-30). */
+  onRelationChosen?: (item: RelationPickerItem) => void;
 };
 
 const emptyRiskValues: RiskUpdateInput = {
@@ -129,12 +147,24 @@ function normalizeEmptyValues(values: RiskUpdateInput): RiskUpdateInput {
   ) as RiskUpdateInput;
 }
 
-export function RiskEditor({ assessmentId, mode, onCreated, onUpdated, options, risk, searchOwners }: RiskEditorProps) {
+export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, onUpdated, options, risk, searchOwners }: RiskEditorProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const initial = selectedValues(risk);
   const form = useForm<RiskUpdateInput>({ defaultValues: initial });
-  const { formState, handleSubmit, register, setError, setValue, watch } = form;
+  const { clearErrors, formState, handleSubmit, register, setError, setValue, watch } = form;
+  const systemErrorId = useId();
+  const assetErrorId = useId();
+  // The chosen system and asset keep their names when they are not on the current search page (D-30).
+  const [selectedSystem, setSelectedSystem] = useState<RelationPickerItem | null>(() => selectedRelationItem(risk?.informationSystemImpacted, options.requestSystems, options.relationLabels));
+  const [selectedAsset, setSelectedAsset] = useState<RelationPickerItem | null>(() => selectedRelationItem(risk?.informationAssetImpacted, options.requestAssets, options.relationLabels));
+  const chooseRelation = (field: RelationField, item: RelationPickerItem | null) => {
+    if (field === 'informationSystemImpacted') setSelectedSystem(item);
+    else setSelectedAsset(item);
+    setValue(field, item?.documentId ?? null, { shouldDirty: true });
+    clearErrors(field);
+    if (item) onRelationChosen?.(item);
+  };
   const [selectedOwners, setSelectedOwners] = useState<Record<string, ActiveUser>>(() => Object.fromEntries(options.users.map((owner) => [owner.documentId, owner])));
   useEffect(() => {
     setSelectedOwners((current) => ({ ...Object.fromEntries(options.users.map((owner) => [owner.documentId, owner])), ...current }));
@@ -189,8 +219,44 @@ export function RiskEditor({ assessmentId, mode, onCreated, onUpdated, options, 
         ))}
         <SelectField error={formState.errors.riskType?.message} label="Risk type" name="riskType" options={options.riskTypes.map((item) => ({ value: item.documentId, label: item.name }))} register={register} />
         <div><OwnerCombobox errorId="riskOwner-error" invalid={Boolean(formState.errors.riskOwner)} label="Risk owner" onValueChange={(owner) => chooseOwner('riskOwner', owner)} searchOwners={searchOwners} value={selectedRiskOwner} /><FieldError id="riskOwner-error" message={formState.errors.riskOwner?.message} /></div>
-        <SelectField error={formState.errors.informationSystemImpacted?.message} label="Information system impacted" name="informationSystemImpacted" options={options.systems.map((item) => ({ value: item.documentId, label: item.name }))} register={register} />
-        <SelectField error={formState.errors.informationAssetImpacted?.message} label="Information asset impacted" name="informationAssetImpacted" options={options.assets.map((item) => ({ value: item.documentId, label: item.name }))} register={register} />
+        <div className="grid min-w-0 gap-2">
+          <RelationPicker
+            errorId={systemErrorId}
+            hint="Search by name. Systems selected on the request come first."
+            invalid={Boolean(formState.errors.informationSystemImpacted)}
+            label="Information system impacted"
+            noMatchText="No matching information systems. Try another name."
+            noun="system"
+            nounPlural="information systems"
+            onValueChange={(item) => chooseRelation('informationSystemImpacted', item)}
+            otherGroupLabel="Other information systems"
+            pageSize={inventoryPickerPageSize}
+            search={options.searchSystems}
+            searchingText="Searching information systems…"
+            suggested={requestRelationGroup(options.requestSystems)}
+            value={selectedSystem}
+          />
+          <FieldError id={systemErrorId} message={formState.errors.informationSystemImpacted?.message} />
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <RelationPicker
+            errorId={assetErrorId}
+            hint="Search by name. Assets selected on the request come first."
+            invalid={Boolean(formState.errors.informationAssetImpacted)}
+            label="Information asset impacted"
+            noMatchText="No matching information assets. Try another name."
+            noun="asset"
+            nounPlural="information assets"
+            onValueChange={(item) => chooseRelation('informationAssetImpacted', item)}
+            otherGroupLabel="Other information assets"
+            pageSize={inventoryPickerPageSize}
+            search={options.searchAssets}
+            searchingText="Searching information assets…"
+            suggested={requestRelationGroup(options.requestAssets)}
+            value={selectedAsset}
+          />
+          <FieldError id={assetErrorId} message={formState.errors.informationAssetImpacted?.message} />
+        </div>
         {choiceFields.map(([name, label, values]) => <SelectField error={formState.errors[name]?.message} key={name} label={label} name={name} options={values.map((value) => ({ value, label: value }))} register={register} />)}
         {dateFields.map(([name, label]) => (
           <label className="grid gap-2" key={name}><span className="text-sm font-medium">{label}</span><Input aria-describedby={formState.errors[name] ? `${name}-error` : undefined} aria-invalid={Boolean(formState.errors[name])} type="date" {...register(name)} /><FieldError id={`${name}-error`} message={formState.errors[name]?.message} /></label>
@@ -204,8 +270,7 @@ export function RiskEditor({ assessmentId, mode, onCreated, onUpdated, options, 
   );
 }
 
-type SelectName = 'riskType' | 'informationSystemImpacted' | 'informationAssetImpacted'
-  | 'dataClassification' | 'inherentRating' | 'residualRating' | 'controlEffectiveness'
+type SelectName = 'riskType' | 'dataClassification' | 'inherentRating' | 'residualRating' | 'controlEffectiveness'
   | 'riskVelocity' | 'treatmentAction' | 'treatmentStatus';
 
 function SelectField({ error, label, name, options, register }: {

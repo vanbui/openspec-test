@@ -6,8 +6,7 @@ import {
   AssessmentEditor,
   AssessmentEditorSkeleton,
 } from '@/features/assessments/assessment-editor';
-import { canMutateAssessment } from '@/features/assessments/assessment-domain';
-import type { AssessmentRiskListItem } from '@/features/assessments/assessment-schema';
+import { canMutateAssessment, relationLabelsFromRiskList } from '@/features/assessments/assessment-domain';
 import {
   getAnalystAssessment,
   listAssessmentRisks,
@@ -15,7 +14,8 @@ import {
   listRiskTypes,
 } from '@/features/assessments/assessment-service';
 import { searchActiveUsersAction, searchControlsAction } from '@/features/assessments/assessment-actions';
-import { listInformationAssets, listInformationSystems } from '@/features/requests/request-service';
+import { searchInformationAssetsAction, searchInformationSystemsAction } from '@/features/requests/request-actions';
+import { getRequest } from '@/features/requests/request-service';
 import { canViewerReviewAssessments } from '@/lib/capabilities/analyst-review-gate';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
@@ -45,16 +45,20 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
   if (assessmentResult.error) return <AssessmentEditor state={assessmentResult.error.status === 403 ? 'permission' : 'error'} />;
   if (!assessmentResult.data) notFound();
 
-  // The control library is never loaded whole: the Control picker searches it (D-28, D-29), and each Risk
-  // Type carries its applicable controls for the picker's first group (D-31).
-  const [riskTypesResult, systemsResult, assetsResult] = await Promise.all([
+  // No option list is loaded whole (D-28): the Control picker searches the library (D-29) and each Risk Type
+  // carries its applicable controls (D-31); the system and asset pickers search the inventory and offer the
+  // originating request's selections first (D-30). The served Risk list names each Risk's system and asset, and
+  // a released assessment reads as it does for the Requestor (D-34), so no editor ever shows an id.
+  const mutable = canMutateAssessment(assessmentResult.data);
+  const [riskTypesResult, riskListResult, requestResult] = await Promise.all([
     listRiskTypes(),
-    listInformationSystems(),
-    listInformationAssets(),
+    listAssessmentRisks(documentId),
+    mutable ? getRequest(assessmentResult.data.assessmentRequest.documentId) : undefined,
   ]);
-  const results = [riskTypesResult, systemsResult, assetsResult];
+  const results = [riskTypesResult, riskListResult, ...(requestResult ? [requestResult] : [])];
   if (results.some((result) => result.error?.status === 403)) return <AssessmentEditor state="permission" />;
   if (results.some((result) => result.error)) return <AssessmentEditor state="error" />;
+  const riskListItems = riskListResult.data ?? [];
 
   const risks = assessmentResult.data.risks;
   const implementationResults = await Promise.all(risks.map(async (risk) => ({
@@ -65,27 +69,20 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
   if (implementationResults.some(({ result }) => result.error)) return <AssessmentEditor state="error" />;
   const controlImplementations = Object.fromEntries(implementationResults.map(({ result, riskId }) => [riskId, result.data ?? []]));
 
-  // A released or otherwise unchangeable assessment reads as it does for the Requestor (D-34): the served risk
-  // list names each Risk's system, asset and owners, so the read-only editor never shows an id.
-  let riskListItems: readonly AssessmentRiskListItem[] | undefined;
-  if (!canMutateAssessment(assessmentResult.data)) {
-    const riskListResult = await listAssessmentRisks(documentId);
-    if (riskListResult.error?.status === 403) return <AssessmentEditor state="permission" />;
-    if (riskListResult.error) return <AssessmentEditor state="error" />;
-    riskListItems = riskListResult.data ?? [];
-  }
-
   return (
     <AssessmentEditor
       assessment={assessmentResult.data}
-      assets={assetsResult.data ?? []}
       controlImplementations={controlImplementations}
+      relationLabels={relationLabelsFromRiskList(riskListItems)}
+      requestAssets={requestResult?.data?.informationAssets ?? []}
+      requestSystems={requestResult?.data?.informationSystems ?? []}
       risks={risks}
       riskListItems={riskListItems}
       riskTypes={riskTypesResult.data ?? []}
-      systems={systemsResult.data ?? []}
       searchOwners={searchActiveUsersAction}
       searchControls={searchControlsAction}
+      searchSystems={searchInformationSystemsAction}
+      searchAssets={searchInformationAssetsAction}
     />
   );
 }

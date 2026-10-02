@@ -28,7 +28,7 @@ import {
   type RiskType,
   type RiskUpdateInput,
 } from './assessment-schema';
-import type { RelationPickerSearchInput, RelationPickerSearchResult } from '@/components/csrm/relation-picker';
+import type { RelationPickerItem, RelationPickerSearchInput, RelationPickerSearchResult } from '@/components/csrm/relation-picker';
 import { ControlImplementationEditor, type ControlImplementationEditorOptions } from './control-implementation-editor';
 import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
@@ -42,7 +42,6 @@ export type AssessmentEditorState = 'populated' | 'empty' | 'error' | 'permissio
 
 export type AssessmentEditorProps = {
   assessment?: AnalystAssessmentDetail;
-  assets?: readonly RequestRelationSummary[];
   controlImplementations?: Readonly<Record<string, readonly ControlImplementation[]>>;
   /** Who a permission state is for: `role` when the route gate refused the viewer before any read (UI-SPEC §11.1). */
   refusal?: AnalystRefusal;
@@ -51,13 +50,22 @@ export type AssessmentEditorProps = {
   riskListItems?: readonly AssessmentRiskListItem[];
   riskTypes?: readonly RiskType[];
   state?: AssessmentEditorState;
-  systems?: readonly RequestRelationSummary[];
+  /** The originating request's selected systems and assets, offered first in their pickers (D-30). */
+  requestSystems?: readonly RequestRelationSummary[];
+  requestAssets?: readonly RequestRelationSummary[];
+  /** Served names of the systems and assets the Risks hold, keyed by id, from the Risk list read (D-30). */
+  relationLabels?: Readonly<Record<string, string>>;
   searchOwners?: (input: OwnerSearchInput) => Promise<OwnerSearchResult>;
   /** Searches the control library for the Control picker (D-29); the page passes the Server Action. */
   searchControls?: (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
+  /** Search the whole system and asset inventories for their pickers (D-28); the page passes the Server Actions. */
+  searchSystems?: (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
+  searchAssets?: (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
 };
 
-const noControlSearch = async (): Promise<RelationPickerSearchResult> => ({ ok: false, formError: 'The selection service is unavailable. Please try again later.' });
+/** A picker with no search from the page says the service is unavailable; it never pretends nothing matches. */
+const unavailableSearch = async (): Promise<RelationPickerSearchResult> => ({ ok: false, formError: 'The selection service is unavailable. Please try again later.' });
+const noRelationLabels: Readonly<Record<string, string>> = {};
 
 /**
  * A drafted assessment that still carries a reviewer of record is a reviewed
@@ -126,16 +134,19 @@ export function AssessmentEditorSkeleton() {
 
 export function AssessmentEditor({
   assessment,
-  assets = [],
   controlImplementations = {},
   refusal,
   risks: initialRisks = [],
   riskListItems = [],
   riskTypes = [],
   state = 'populated',
-  systems = [],
+  requestSystems = [],
+  requestAssets = [],
+  relationLabels = noRelationLabels,
   searchOwners = async () => ({ ok: false, formError: 'Owner search is unavailable. Please try again later.' }),
-  searchControls = noControlSearch,
+  searchControls = unavailableSearch,
+  searchSystems = unavailableSearch,
+  searchAssets = unavailableSearch,
 }: AssessmentEditorProps) {
   const [currentAssessment, setCurrentAssessment] = useState(assessment);
   const [risks, setRisks] = useState<readonly AnalystRisk[]>(initialRisks);
@@ -143,6 +154,11 @@ export function AssessmentEditor({
   const [addingRisk, setAddingRisk] = useState(false);
   const [addingControlTo, setAddingControlTo] = useState<string | null>(null);
   const [releaseError, setReleaseError] = useState<string | null>(null);
+  // Names of records chosen by search join the served labels, so an editor remounted after a save keeps them.
+  const [knownRelationLabels, setKnownRelationLabels] = useState<Readonly<Record<string, string>>>(relationLabels);
+  const rememberRelation = (item: RelationPickerItem) => setKnownRelationLabels((current) => (
+    current[item.documentId] === item.name ? current : { ...current, [item.documentId]: item.name }
+  ));
 
   if (state !== 'populated' || !currentAssessment) {
     return <SafeAssessmentState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
@@ -170,7 +186,16 @@ export function AssessmentEditor({
     setCurrentAssessment((current) => current ? { ...current, ...result.data } : current);
   }
 
-  const options = { assets, riskTypes, systems, users: currentAssessment.ownerLabels };
+  const options = {
+    riskTypes,
+    users: currentAssessment.ownerLabels,
+    requestSystems,
+    requestAssets,
+    relationLabels: knownRelationLabels,
+    searchSystems,
+    searchAssets,
+  };
+  const labelledRecords = Object.entries(knownRelationLabels).map(([documentId, name]) => ({ documentId, name }));
   // Each Risk's Control picker offers its saved Risk Type's applicable controls first (D-31).
   const controlOptionsFor = (risk: AnalystRisk): ControlImplementationEditorOptions => ({
     users: currentAssessment.ownerLabels,
@@ -255,7 +280,7 @@ export function AssessmentEditor({
               <CardContent className="grid min-w-0 gap-6">
                 {mutable ? (
                   <>
-                    <RiskEditor assessmentId={currentAssessment.documentId} mode="edit" onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} />
+                    <RiskEditor assessmentId={currentAssessment.documentId} mode="edit" onRelationChosen={rememberRelation} onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} />
                     <section aria-label={`Mitigation controls for ${risk.riskNumber}`} className="grid gap-4">
                       <h3 className="text-heading-sm">Mitigation controls</h3>
                       {(implementations[risk.documentId] ?? []).map((implementation) => (
@@ -281,13 +306,17 @@ export function AssessmentEditor({
                     groupHeadingLevel={3}
                     implementations={implementations[risk.documentId] ?? []}
                     risk={riskListItems.find((item) => item.documentId === risk.documentId)
-                      ?? assessmentRiskListItemFromAnalystRisk(risk, { users: currentAssessment.ownerLabels, systems, assets })}
+                      ?? assessmentRiskListItemFromAnalystRisk(risk, {
+                        users: currentAssessment.ownerLabels,
+                        systems: [...requestSystems, ...labelledRecords],
+                        assets: [...requestAssets, ...labelledRecords],
+                      })}
                   />
                 )}
               </CardContent>
             </Card>
           ))}
-          {mutable && addingRisk ? <Card><CardHeader><CardTitle>Add Risk</CardTitle></CardHeader><CardContent><RiskEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={() => { setAddingRisk(false); void refreshAssessment(); }} options={options} searchOwners={searchOwners} /></CardContent></Card> : null}
+          {mutable && addingRisk ? <Card><CardHeader><CardTitle>Add Risk</CardTitle></CardHeader><CardContent><RiskEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={() => { setAddingRisk(false); void refreshAssessment(); }} onRelationChosen={rememberRelation} options={options} searchOwners={searchOwners} /></CardContent></Card> : null}
           {mutable && !addingRisk ? <Button className="justify-self-start" onClick={() => setAddingRisk(true)} type="button"><PlusIcon aria-hidden="true" />Add Risk</Button> : null}
         </div>
       </DetailSection>
