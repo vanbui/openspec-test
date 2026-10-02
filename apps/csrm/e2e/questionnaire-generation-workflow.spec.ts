@@ -110,6 +110,36 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
   await expect(page.getByText(/QNR-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}/).first()).toBeVisible();
   await expectNoSeriousAxeViolations(page);
 
+  /*
+   * QUES08_ADD_TO_GENERATED_SECTIONS (UAT-016, D-05): the deterministic provider opens its first section,
+   * Request context, at order 0. A question added to it, and one added to a new section, each save on the
+   * first try and appear under their sections.
+   */
+  await test.step('QUES08_ADD_TO_GENERATED_SECTIONS', async () => {
+    const governance = page.getByRole('region', { name: 'Questionnaire governance' });
+    const addedToContext = 'Who owns the service day to day?';
+    await governance.getByRole('button', { name: 'Add question', exact: true }).click();
+    await governance.getByLabel('Question text').fill(addedToContext);
+    await governance.getByLabel('Section', { exact: true }).selectOption({ label: 'Request context' });
+    await governance.getByRole('button', { name: 'Save question' }).click();
+    await expect(
+      governance.getByRole('list', { name: 'Request context' }).getByText(addedToContext, { exact: true }),
+      'QUES08_ADD_TO_GENERATED_SECTIONS: a question added to a generated section appears under it',
+    ).toBeVisible();
+
+    const addedToNewSection = 'Which offshore teams support the service?';
+    await governance.getByRole('button', { name: 'Add question', exact: true }).click();
+    await governance.getByLabel('Question text').fill(addedToNewSection);
+    await governance.getByLabel('Section', { exact: true }).selectOption({ label: 'New section' });
+    await governance.getByLabel('New section title').fill('Offshore support');
+    await governance.getByRole('button', { name: 'Save question' }).click();
+    await expect(
+      governance.getByRole('list', { name: 'Offshore support' }).getByText(addedToNewSection, { exact: true }),
+      'QUES08_ADD_TO_GENERATED_SECTIONS: a question added to a new section appears under it',
+    ).toBeVisible();
+    await expect(governance.getByRole('alert'), 'QUES08_ADD_TO_GENERATED_SECTIONS: neither save is refused').toHaveCount(0);
+  });
+
   const browserEvents: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error' || message.type() === 'warning') browserEvents.push(`console:${message.type()}:${message.text()}`);

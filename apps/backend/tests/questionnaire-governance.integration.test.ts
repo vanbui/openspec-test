@@ -640,3 +640,84 @@ test("mounted governance conflicts name their reason and leave the questionnaire
   await assertConflictReason(harness, fullOnChange, () => request(questionPath(fullOnChange, "first"), analyst, patch({ helpText: "Full history." })), "HISTORY_UNAVAILABLE", "EDIT_FULL_HISTORY");
   await assertConflictReason(harness, fullOnChange, () => request(questionPath(fullOnChange, "second"), analyst, { method: "DELETE" }), "HISTORY_UNAVAILABLE", "DELETE_FULL_HISTORY");
 });
+
+/*
+ * UAT-016 (D-05): an analyst adds a question to an existing section and to a new section of an AI-generated
+ * questionnaire on the first try. The web places a question from every question the analyst read serves,
+ * removed ones included: an existing section keeps its stored metadata and the question goes one past the
+ * highest order in it; a new section gets an unused key and the next free section order. The deterministic
+ * provider opens its first section, `context`, at order 0, which is where the editor's old `general` section
+ * at order 0 clashed.
+ */
+test("mounted analyst adds to an existing and a new section of a generated questionnaire", async () => {
+  const harness = await harnessPromise;
+  const analyst = harness.identities.analyst;
+  assert.equal(process.env.CSRM_AI_PROVIDER, "deterministic");
+  const workflow = await harness.seedRequestWorkflowFixtures();
+
+  const queued = await request(`/api/v1/assessment_requests/${encodeURIComponent(workflow.requests.submitted)}/generate_questionnaire`, analyst, post());
+  assert.equal(queued.status, 202, "GENERATED_ADD_GENERATION_NOT_QUEUED");
+  const jobId = String(record((await payload(queued)).data, "GENERATED_ADD_JOB").jobId);
+  let questionnaireId: string | null = null;
+  for (let attempt = 0; attempt < 25 && !questionnaireId; attempt += 1) {
+    const job = record((await payload(await request(`/api/v1/questionnaire_generation_jobs/${encodeURIComponent(jobId)}`, analyst))).data, "GENERATED_ADD_JOB_READ");
+    if (job.status === "failed") assert.fail(`GENERATED_ADD_GENERATION_FAILED:${String(job.failureCode)}`);
+    if (job.status === "completed") questionnaireId = String(record(job.questionnaire, "GENERATED_ADD_JOB_QUESTIONNAIRE").documentId);
+    else await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.ok(questionnaireId, "GENERATED_ADD_GENERATION_DID_NOT_COMPLETE");
+
+  type Served = { documentId: string; deleted?: unknown; options: { questionKey: string; section: { key: string; title: string; description?: string; order: number }; order: number } };
+  const served = async (): Promise<Served[]> => {
+    const response = await request(questionsPath(questionnaireId!), analyst);
+    assert.equal(response.status, 200, "GENERATED_ADD_QUESTIONS_READ");
+    return (await payload(response)).data as Served[];
+  };
+  const add = (section: Served["options"]["section"], order: number, questionText: string) =>
+    request(questionsPath(questionnaireId!), analyst, post({ questionText, answerType: "Text", required: true, section, order }));
+  const refusalReason = async (response: Response) => ((await response.json()) as { error?: { details?: { reason?: string } } }).error?.details?.reason;
+
+  // The last question in Request context is removed, so the next free order must count it.
+  const generated = await served();
+  const criticality = generated.find((question) => question.options.questionKey === "business-criticality");
+  assert.ok(criticality, "GENERATED_ADD_FIXTURE_QUESTION_MISSING");
+  const removed = await request(`${questionsPath(questionnaireId)}/${encodeURIComponent(criticality.documentId)}`, analyst, { method: "DELETE" });
+  assert.equal(removed.status, 200, "GENERATED_ADD_REMOVE_FAILED");
+
+  const placements = await served();
+  assert.ok(placements.some((question) => question.options.questionKey === "business-criticality" && question.deleted !== undefined), "GENERATED_ADD_REMOVED_QUESTION_NOT_SERVED");
+  const contextQuestions = placements.filter((question) => question.options.section.key === "context");
+  const context = contextQuestions[0]!.options.section;
+  assert.deepEqual(context, { key: "context", title: "Request context", order: 0 }, "GENERATED_ADD_CONTEXT_SECTION");
+  const nextContextOrder = Math.max(...contextQuestions.map((question) => question.options.order)) + 1;
+  assert.equal(nextContextOrder, 2, "GENERATED_ADD_NEXT_ORDER_COUNTS_THE_REMOVED_QUESTION");
+
+  // What the editor sent before the fix, and an order the removed question still holds, both clash.
+  const legacy = await add({ key: "general", title: "General", order: 0 }, 0, "Who owns the service?");
+  assert.equal(legacy.status, 409, "GENERATED_ADD_LEGACY_PLACEMENT_STATUS");
+  assert.equal(await refusalReason(legacy), "DEFINITION_CONFLICT", "GENERATED_ADD_LEGACY_PLACEMENT_REASON");
+  const onRemoved = await add(context, 1, "Who owns the service?");
+  assert.equal(onRemoved.status, 409, "GENERATED_ADD_REMOVED_ORDER_STATUS");
+  assert.equal(await refusalReason(onRemoved), "DEFINITION_CONFLICT", "GENERATED_ADD_REMOVED_ORDER_REASON");
+
+  const toContext = await add(context, nextContextOrder, "Who owns the service?");
+  assert.equal(toContext.status, 200, "GENERATED_ADD_TO_EXISTING_SECTION");
+
+  const nextSectionOrder = Math.max(...placements.map((question) => question.options.section.order)) + 1;
+  assert.equal(nextSectionOrder, 2, "GENERATED_ADD_NEXT_SECTION_ORDER");
+  const offshore = { key: "section-offshore-support", title: "Offshore support", order: nextSectionOrder };
+  const toNewSection = await add(offshore, 0, "Which offshore teams support the service?");
+  assert.equal(toNewSection.status, 200, "GENERATED_ADD_TO_NEW_SECTION");
+
+  // The analyst read projects nothing for an invalid definition, so a full list proves it stayed valid.
+  const after = await served();
+  assert.equal(after.length, 6, "GENERATED_ADD_DEFINITION_STAYS_VALID");
+  const placed = (questionText: string) => {
+    const question = after.find((candidate) => (candidate as unknown as { questionText: string }).questionText === questionText);
+    assert.ok(question, `GENERATED_ADD_NOT_PERSISTED_${questionText}`);
+    return { section: question.options.section, order: question.options.order };
+  };
+  assert.deepEqual(placed("Who owns the service?"), { section: context, order: 2 }, "GENERATED_ADD_EXISTING_SECTION_PLACEMENT");
+  assert.deepEqual(placed("Which offshore teams support the service?"), { section: offshore, order: 0 }, "GENERATED_ADD_NEW_SECTION_PLACEMENT");
+  assert.equal((await request(releasePath(questionnaireId), analyst, post())).status, 200, "GENERATED_ADD_RELEASES_WITH_A_VALID_DEFINITION");
+});
