@@ -3,9 +3,9 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 current_phase: 10
-current_phase_name: "post-demo Stage 3: G-10 done; the typography follow-up quick task, then Phase 10"
-status: planning
-stopped_at: "post-demo Stage 3 started: the G-10 fonts quick task 261002-2y8 is done and accepted (gate green at e3d805d); next: the typography follow-up quick task, then Phase 10."
+current_phase_name: "Existing-flow gap closure (post-demo Stage 3)"
+status: executing
+stopped_at: "post-demo Stage 3: quick tasks 261002-2y8 and 261002-drq accepted (gate green at c8d164d); Phase 10's fresh plan check passed after the pilot's baseline revision; Phase 10 execution next."
 last_updated: "2026-10-02T01:05:14.831Z"
 last_activity: 2026-10-02
 last_activity_desc: "Completed quick task 261002-drq: Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10)"
@@ -34,11 +34,14 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 
 - **Planned, with a passing plan check:** 290 plans. Phase 10 has 23 (its 2026-09-27 check is resolved, and it gets a fresh check before it is built). Then 11 (21), 12 (19), 13 (19), 14 (17), 15 (14), 16 (15), 19 (15), 19.1 (10), 17 (19), 17.1 (18), 17.2 (15), 18 (19), 20 (23, kept whole by the pilot, with a named seam), 21 (18) and 22 (25). Each phase's verdict is in its `NN-PLAN-CHECK.md`.
 - **UI-SPECs:** approved for Phases 10 to 22, with milestone-wide extensions X-1 to X-80, each recorded in the design direction by a plan task before it is used.
-- **Done in Stage 3:** the G-10 fonts quick task 261002-2y8 (`4913c90` to `6ae258b`), accepted by the pilot with the gate green: web 2,053/2,053, Strapi 578/578, Playwright 85/85.
-- **Next:** the typography follow-up quick task (Session Continuity, step 3), then Phase 10, opening with a fresh plan check. No phase is built yet.
+- **Done in Stage 3:**
+  - the G-10 fonts quick task 261002-2y8 (`4913c90` to `6ae258b`), accepted by the pilot with the gate green: web 2,053/2,053, Strapi 578/578, Playwright 85/85;
+  - the typography follow-up quick task 261002-drq (`ff61dbf` to `5ea2b77`): Vietnamese subsets for Plus Jakarta Sans and IBM Plex Mono on demand, and Buttons at the direction's weight 500. The pilot accepted it with the gate green: web 2,055/2,055, Strapi 578/578, Playwright 86/86.
+- **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
+- **Next:** execute Phase 10 through the worker. No phase is built yet.
 
 Plan: —
-Status: Stage 3 in progress: G-10 done; the typography follow-up quick task, then Phase 10, are next (the pilot drives every transition, and auto-advance is off)
+Status: Stage 3 in progress: Phase 10 execution next (the pilot drives every transition, and auto-advance is off)
 Last activity: 2026-10-02 - Completed quick task 261002-drq: Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10)
 
 ## Milestone
@@ -96,6 +99,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Post-demo G-17, 2026-10-01]: First-line users find people through the already-granted `GET /api/v1/users?search=`, hardened (two characters, active human users only, `documentId` and `displayName` only, every search logged): control owners in Phase 17, then treatment owners in 17.1 (settles Phase 2's deferred directory contract; sponsor selection stays off).
 - [Post-demo G-18, 2026-10-01]: Risk owners and executive approvers receive in-app notifications at each stage (Phases 17 and 17.1, and NOTIFY-04 for contest points in 17.2), and decisions left waiting get email reminders from Phase 20.
 - [Post-demo G-19, 2026-10-01]: The in-app notification centre moves from Phase 17 into the inserted Phase 19.1 (after 19, before 17), keeping Phase 17 within L; NOTIFY-01 moves with it, its first kinds are the events that exist before Phase 17, and Phase 17 adds its response kinds through the same service (reverses only decision 18's placement of the centre in Phase 17).
+- [Phase 10 baseline, 2026-10-02]: Phase 10's static guards (content-type freeze, Keycloak, `CSRM_AI_`, vendored catalogues) diff from `5ea2b77`, the last `post-demo` commit before any Phase 10 code. The plans' `uat-trial` baseline `98fe99c` is not in this repository (10-CONTEXT D-49).
 - [Post-demo G-20, 2026-10-01]: When the AI data policy refuses generation, Phase 22 adds a manual start (an empty questionnaire or assessment draft); until then Phase 12's refusal names the classification, the ceiling and the administrator who sets `CSRM_AI_DATA_CLASSIFICATION_CEILING` (named in the `.example` with a safe default). Offering the deterministic provider as a template was rejected as a governance risk.
 
 ## Risks and Open Decisions
@@ -152,12 +156,14 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 **Post-demo gate after G-10** (2026-10-02, `e3d805d`): Playwright 85/85 (81 desktop, 4 mobile); Strapi 578/578; web 2,053/2,053; typecheck, lint and `api:check` clean.
 
+**Post-demo gate after 261002-drq** (2026-10-02, `c8d164d`): Playwright 86/86 (82 desktop, 4 mobile, 10.9 min); Strapi 578/578 (676 s); web 2,055/2,055; typecheck, lint and `api:check` clean; the tree was clean afterwards.
+
 Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Session Continuity
 
 **Last session:** 2026-10-02
-**Stopped At:** post-demo Stage 3 started (2026-10-02): the G-10 fonts quick task 261002-2y8 is done and accepted by the pilot, with the gate green at `e3d805d`. Everything is committed and pushed to `origin/post-demo`. Weekly usage reached 89%, so this session ends at this clean boundary.
+**Stopped At:** post-demo Stage 3 (2026-10-02): quick tasks 261002-2y8 (G-10 fonts) and 261002-drq (Vietnamese subsets and the 500 Button weight) are done and accepted by the pilot, with the gate green at `c8d164d`. Phase 10 passed its fresh plan check after the pilot moved its guard baseline to `5ea2b77` (D-49), and its execution is next.
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
@@ -170,16 +176,13 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
 2. Stage 2 is complete and its planning gate passed: every phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) has its CONTEXT, an approved UI-SPEC, research, a pattern map, plans and a passing plan check.
-3. Quick task, before Phase 10: the typography follow-ups from 261002-2y8 (its `deferred-items.md`).
-   - **Vietnamese glyphs:** restore Vietnamese coverage for Plus Jakarta Sans and IBM Plex Mono. The Google-era build served it in the family, and Vietnamese-Australian names such as "Nguyễn" now mix faces. Use a lazy-loaded subset, about 24 KB; Instrument Serif has no Vietnamese subset.
-   - **Button weight:** buttons render at weight 400, not the direction's 500. The cause is the unlayered `button, select, input, textarea { font: inherit; }` reset in `apps/csrm/app/globals.css` (from `8495a37`). Move it into `@layer base`, and extend the conformance spec to assert the button weight.
-   - Run the full gate afterwards.
-4. Stage 3: build each phase in execution order, from Phase 10. Each phase opens with a fresh plan check, then `/gsd-execute-phase`, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
+3. Both quick tasks before Phase 10 are done (261002-2y8 and 261002-drq). Deferred from 261002-drq, for a later task: a tailwind-merge configuration that knows the theme's custom text sizes, which would retire the `!text-*` Button inks; the unused `.button-primary` and `.button-secondary` CSS; and whether 14px inputs should become 16px on phones to stop iOS zooming on focus, a question for the design direction (`261002-drq-deferred-items.md`).
+4. Stage 3: build each phase in execution order, from Phase 10, whose plan check is done (`10-PLAN-CHECK.md`, fresh check of 2026-10-02). Each phase opens with a fresh plan check, then `/gsd-execute-phase` through the worker, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). Plan 10-23 Task 2 is a blocking checkpoint where the pilot walks both actors on the dev servers at 375 and 1440. The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
 5. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
 
 ## Next Action
 
-**Post-demo Stage 3 on branch `post-demo`:** the typography follow-up quick task, then Phase 10 (a fresh plan check, then execution), following Session Continuity above. No phase is built yet.
+**Post-demo Stage 3 on branch `post-demo`:** Phase 10 execution (its fresh plan check is done), following Session Continuity above. No phase is built yet.
 
 ## Accumulated Context
 

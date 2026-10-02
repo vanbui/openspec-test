@@ -484,3 +484,50 @@ Every reference below matched, except two harmless one-line offsets: the dashboa
 - **Warning 7:** the planner marks the research's Open Questions resolved, citing D-42 for the sixth.
 - **Execution note:** waves 1 and 2 run one plan at a time, because every plan in them runs Playwright on the same ports and build output.
 - **After the revision:** run a fresh plan check before execution.
+
+---
+
+## Fresh check before execution (2026-10-02, post-demo at 72e53a6)
+
+## ISSUES FOUND
+Plans checked: 23. Issues: 1 blocker, 1 warning, 0 info.
+
+### Spot-checks
+- 230 apps/csrm|apps/backend paths extracted from plans: no apps/strapi or apps/web paths remain; every non-existent path is a file the plans create (save-status, relation-picker, local-time, navigation-guard, control-label, conflict-reasons, etc.) or a parsing artefact (`</files>` suffix); the existing ones (e.g. e2e/administration-workflow.spec.ts, backend tests/administration.integration.test.ts, assessment-schema.ts) exist.
+- Requirements: REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, ADMIN-05, UX-06 all claimed (10-23 claims all seven).
+- Waves 1..23 serial, depends_on acyclic, all backward.
+- No plan edits content-type schemas; no plan touches fonts.ts/globals.css; 10-09 only asserts design-system-conformance.spec.ts:455-461 stays green.
+- X-1..X-5 acceptance recorded in 10-CONTEXT.md D-41 and STATE.md line 87.
+- Not done: line-by-line reading of every plan's symbol/line anchors (depth limited).
+
+### Blockers
+1. [verification_derivation] The baseline in every guard command resolves at HEAD and separates Phase 10 changes from earlier work.
+- Plans: 10-01 (l.281), 10-06 (l.283), 10-10 (l.232), 10-11 (l.249), 10-22 (l.191), 10-23 (l.68,127,129,130)
+- Evidence: `git cat-file -t 98fe99c` gives "Not a valid object name" on post-demo; each `git diff 98fe99c..HEAD` fails with "bad revision". Also, after re-basing, any baseline before d161fce would list every content-type file (the rename) and the 10-23 `grep -i keycloak` would match the OIDC/ADR-0004 work (260929-u0w, 260930-iei, b6000d0). Those checks would fail for reasons unrelated to Phase 10.
+- Example fix (non-binding): use the post-demo commit at which Phase 10 execution starts (for example 72e53a6 or the Stage-0 commit) and record it in CONTEXT/STATE.
+
+### Warnings
+1. [scope_sanity] Line anchors written against uat-trial still point at the same code.
+- Evidence: line-numbered anchors such as 10-09's design-system-conformance.spec.ts:455-461 were not re-checked here. That spec was edited by 261002-2y8 and is being edited by the concurrent typography task.
+- Example fix: cite anchors by test name rather than line number.
+
+### Pilot drift cross-reference (2026-10-02)
+
+The checker spot-checked rather than reading every plan line by line, so the pilot cross-referenced the code that changed after the plans were written. Every application file changed from the v1.0 overlay `130f34f` to HEAD was matched against the files the Phase 10 plans cite, and each match was sized (`git diff --stat 130f34f HEAD`):
+
+| Changed after planning (commit) | Plans that cite it | Size | Disposition |
+|---|---|---|---|
+| `assessment-detail.tsx`, analyst request detail (261001-kxa, 261001-le4) | 10-02, 10-04, 10-12, 10-14 | 16 lines | Executors re-read the live page; layout-only change |
+| `app-shell.tsx`, `(app)/layout.tsx`, `session-adapter.ts`, `development-session-adapter.ts` (260929-u0w, 260930-iei) | 10-01, 10-08 | 8–37 lines each | Flag-gated OIDC; dev-identity behaviour unchanged |
+| `server-client.ts` (b6000d0) | 10-06, 10-07 | 26 lines | Locate by symbol, not line |
+| Catalogue JSON, `csrm-authorization.ts`, `csrm-current-user/operations.ts`, authorization matrix, served-operations and harness tests (b6000d0) | 10-13 | 6–41 lines each | 10-13's new route merges into today's catalogue and matrix |
+| `seed-csrm-data.ts` (5ed5301) | 10-17, 10-22 | 5 lines | No conflict |
+| e2e specs repaired in `d161fce`; `design-system-conformance.spec.ts` (261002-2y8, 261002-drq) | 10-02, 10-04, 10-05, 10-08, 10-09, 10-10, 10-15, 10-18, 10-20 to 10-22 | 2–8 lines; conformance +189 and more | 10-09 finds its test by name, not by the `uat-trial` line anchor |
+
+No plan duplicates work that has already landed. No plan changes a content type. No plan touches the Keycloak code paths.
+
+### Resolution (pilot, 2026-10-02)
+
+- **Blocker (baseline):** resolved by a mechanical revision. Every guard that used `98fe99c` now uses `5ea2b77`, the last `post-demo` commit before any Phase 10 code. This covers plans 10-01, 10-06, 10-10, 10-11, 10-22 and 10-23, `10-RESEARCH.md` and `10-VALIDATION.md`. The baseline is recorded as D-49 in `10-CONTEXT.md` and in STATE.md. 10-23's walkthrough now runs on `post-demo`. A full planner pass was not needed: the change is one literal per guard, with no task, wave or scope change.
+- **Warning (line anchors):** executors locate code by symbol or test name. The worker brief names the drift hotspots above.
+- **Verdict:** the plans are ready to execute.

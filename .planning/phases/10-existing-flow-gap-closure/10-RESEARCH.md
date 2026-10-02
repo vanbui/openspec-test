@@ -1289,7 +1289,7 @@ Two claims were assumptions in the first draft and were then verified from the i
 - **Per wave merge:** the full web unit suite, typecheck and `api:check`. The full Strapi suite for waves that touch Strapi (dev servers stopped).
 - **Phase gate:** all five commands, with ports 1337 and 3000 free. That is web unit, web typecheck, `api:check`, the Strapi suite, and Playwright in both projects on the production build. Afterwards, before `/gsd-verify-work`:
   - `git status --porcelain` is empty;
-  - the schema freeze check prints nothing: `git diff --name-only 98fe99c..HEAD -- 'apps/backend/src/api/*/content-types/*'` (`98fe99c` is the CONTEXT commit, before any Phase 10 code);
+  - the schema freeze check prints nothing: `git diff --name-only 5ea2b77..HEAD -- 'apps/backend/src/api/*/content-types/*'` (`5ea2b77` is the post-demo baseline: the last commit before any Phase 10 code; the plans' original `uat-trial` baseline `98fe99c` is not in this repository);
   - `cmp` of the two catalogue copies is silent.
 
 ### Wave 0 Gaps

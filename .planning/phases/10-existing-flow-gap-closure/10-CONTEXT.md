@@ -267,6 +267,12 @@ The operator delegated the product decisions (`.planning/NEXT-WAVE-DECISIONS.md`
 - **D-47 (confirms D-25; G-6):** Every human Security Analyst sees a request's generation-job status, and research assumption A4 is closed. Requestors never see the job.
 - **D-48 (G-6):** The Playwright rule follows Phase 8 D-12: a run leaves the tree clean, and a dirty tree afterwards is a harness defect to log, not something to restore. The plans drop the `git checkout -- apps/csrm/next-env.d.ts apps/csrm/tsconfig.json` step and assert a clean tree instead.
 
+### Pilot Decision Before Execution (2026-10-02)
+
+The fresh plan check before execution (`10-PLAN-CHECK.md`) found one blocker: the static guards diffed from a commit that is not in this repository.
+
+- **D-49 (post-demo baseline, 2026-10-02, pilot):** The static guards that diffed from `98fe99c` (the CONTEXT commit on `uat-trial`, which is not in this repository) diff from `5ea2b77` instead: the last `post-demo` commit before any Phase 10 code, after quick tasks 261002-2y8 and 261002-drq. A baseline before `d161fce` would fail the guards, because the rename lists every content type and the flag-gated Keycloak work (ADRs 0003 and 0004) names Keycloak. Plans 10-01, 10-06, 10-10, 10-11, 10-22 and 10-23, `10-RESEARCH.md` and `10-VALIDATION.md` carry the new baseline, and 10-23's walkthrough runs on `post-demo` (fresh plan check, `10-PLAN-CHECK.md`).
+
 The operator decisions this phase listed as open are settled: decision 15 by D-46, and the answered-count rule (D-07) stands as decided.
 
 </decisions>
