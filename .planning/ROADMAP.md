@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 20/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 21/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -137,7 +137,7 @@ Plans:
 - [x] 10-20-PLAN.md — Deliver D-32 (the exemption review date as a date input in both editors), the control owner part of D-28 (`OwnerCombobox` in both editors) and D-33 (save confirmations in the assessment editor, using 
 
 **Wave 21** *(blocked on Wave 20 completion)*
-- [ ] 10-21-PLAN.md — Deliver D-35's release readiness summary (web only; the served requirements already carry scope, Risk number, state and destination) and the remaining D-38 copy on the assessment editor and the Risk R
+- [x] 10-21-PLAN.md — Deliver D-35's release readiness summary (web only; the served requirements already carry scope, Risk number, state and destination) and the remaining D-38 copy on the assessment editor and the Risk R
 
 **Wave 22** *(blocked on Wave 21 completion)*
 - [ ] 10-22-PLAN.md — Deliver D-46 (operator decision 15): load a title for every seeded control whose catalogue gives none, as seed data. The ISO/IEC 27001:2022 Annex A controls take the standard's own control names; the 

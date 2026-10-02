@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-20-PLAN.md
-last_updated: "2026-10-02T12:31:43.671Z"
+stopped_at: Completed 10-21-PLAN.md
+last_updated: "2026-10-02T12:51:17.349Z"
 last_activity: 2026-10-02
-last_activity_desc: "Plan 10-20 complete (the exemption review date is a date input in both editors, saved at 00:00 UTC and never resent untouched; the control owner is chosen with the active-user search in both editors; each assessment-editor save confirms beside its Save button with the local time, and a create confirms on the new record with focus returned; UAT-009, UAT-034)"
-state_head: e8d1c83b9cadde76670ece27d7cc5ede4c188c27
+last_activity_desc: "Plan 10-21 complete (release readiness lists outstanding assessment items, then one row per Risk with what is missing, met items on demand, and focusable destinations; the assessment editor and Risk Register detail copy is plain and under the copy guard; UAT-011, UAT-054 editor and Risk detail parts)"
+state_head: a5bf00e3db0c4a8cf530a103291494284efabeac
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 20
+  completed_plans: 21
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 21 of 23
+Plan: 22 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-20 complete: the exemption review date is a date input in both editors (the UTC date of the stored instant, saved at 00:00 UTC, an untouched legacy value never resent, Enter a valid exemption review date.); Control owner is an OwnerCombobox over the active-user search in both editors, and the Risk Register card names the owner from the response; useRecordSaveStatus confirms Risk saved at, Mitigation control saved at and Assessment details saved at beside Save (SaveStatus note for No changes to save.), clears on change and failure, and a create confirms {Record} added at on the new record with focus back on Add Risk or Add mitigation control; ASSESS06_RISK_SAVE_CONFIRMED and ASSESS06_CONTROL_ADD_CONFIRMED in the release journey; web 2,720/2,720, release journey desktop 1/1 and Risk Register journey desktop and mobile 2/2, typecheck clean
+Last activity: 2026-10-02 — Plan 10-21 complete: summarizeReleaseReadiness (zod-free release-readiness-summary.ts) groups the served readiness; the Release readiness card lists outstanding assessment items, then one row per Risk named {risk number}: {n} outstanding with a Missing: caption, and Show met requirements reveals Met release requirements; DetailSection headingFocusable and tabIndex=-1 Risk cards make every destination focusable; the editor alerts, release dialog and section descriptions and the Risk detail header, edit and mitigation descriptions follow UI-SPEC 17.1 and D-45, and the copy guard covers assessment-editor.tsx, risk-details.tsx and release-readiness-summary.ts; ASSESS06_READINESS_BY_RISK in the release journey; web 2,745/2,745, release journey desktop 1/1, typecheck clean
 
 ## Milestone
 
@@ -141,6 +141,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-20: the exemption review date is a date input in both editors; the form holds the stored instant's UTC date (exemptionReviewDateFormValue), compares date parts so an untouched legacy value is never resent, and saves a chosen date at 00:00 UTC (exemptionReviewDateFromForm, withExemptionReviewInstant); the schema message is Enter a valid exemption review date.
 - [Phase 10]: 10-20: Control owner is an OwnerCombobox over searchActiveUsersAction in both editors (no new grant); ControlImplementationEditorOptions carries searchOwners instead of users; the Risk Register card takes its owner from the saved control implementation's controlOwner, and editing needs both options and searchOwners
 - [Phase 10]: 10-20: useRecordSaveStatus (features/assessments) confirms a form's save in its data-slot=form-actions row only after an ok result, notes No changes to save. in the same region (SaveStatus note), and clears on any change and on failure; a new Risk or control confirms {Record} added at once its form mounts, and focus returns to Add Risk or that Risk's Add mitigation control
+- [Phase 10]: [10-21] Release readiness Risk rows take their exact name {risk number}: {n} outstanding from aria-label, not a visually hidden colon (accessible-name computation pads the absolutely positioned sr-only span with spaces); the Missing caption is the link description, the met list is always rendered behind hidden, and focus moves by native fragment navigation to tabIndex=-1 destinations (DetailSection headingFocusable, Risk cards).
 
 ## Risks and Open Decisions
 
@@ -223,11 +224,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P18 | 47 min | 3 tasks | 24 files |
 | Phase 10 P19 | 24 min | 3 tasks | 13 files |
 | Phase 10 P20 | 22 min | 3 tasks | 16 files |
+| Phase 10 P21 | 12 min | 3 tasks | 10 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T12:31:43.462Z
-**Stopped At:** Completed 10-20-PLAN.md
+**Last session:** 2026-10-02T12:51:08.989Z
+**Stopped At:** Completed 10-21-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
