@@ -31,7 +31,8 @@ export async function expectSettled(page: Page, expected: SettledExpectation, su
 /*
  * Waits until an element's scroll and client widths hold for three consecutive animation frames.
  * Right after a viewport change the layout can still be settling, so a single early reading can see
- * the previous width's layout and expect an overflow the settled page no longer has.
+ * the previous width's layout and expect an overflow the settled page no longer has. A layout that never
+ * settles fails after 120 frames (about two seconds), naming the element and its last widths (WR-403).
  */
 export async function settleElementWidth(element: Locator): Promise<void> {
   await element.evaluate(settleWidthInBrowser, { label: String(element), frameLimit: 120 });
