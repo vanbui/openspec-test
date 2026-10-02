@@ -1446,6 +1446,8 @@ No new dependency: the picker composes the installed `Popover`, the leave warnin
 
 ## Addendum (2026-10-03): copy settled during execution
 
+**Accepted by the pilot, 2026-10-03.**
+
 The plans, the code review fixes (`10-REVIEW-DISPOSITION.md`) and the UI review fixes (`10-UI-REVIEW.md`, Disposition) added user-visible strings that the sections above do not list. They are recorded here verbatim so that this contract matches the code. Each string was found in `apps/csrm/src` (outside tests) on 2026-10-03. The other walkthrough fixes in `10-23-SUMMARY.md` (fixes 1 and 4 to 8) applied strings and rules this contract already holds (`No changes to save.`, the X-4 separators, the §13.1 labels, the §17.1 templates), so they add nothing here. The values in this addendum follow the Voice rules above. A string marked "existing sentence" was already in the product at `5ea2b77`; only its use on the named surface is new.
 
 ### A.1 Record picker (§13.1)
