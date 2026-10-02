@@ -1,6 +1,8 @@
 /** @vitest-environment jsdom */
 
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -54,6 +56,33 @@ describe('LocalInstant', () => {
     const invalid = render(<LocalInstant style="date" value="not a date" />);
     expect(invalid.container.querySelector('time')).toBeNull();
     expect(invalid.container).toBeEmptyDOMElement();
+  });
+});
+
+/*
+ * WR-304: the server (Node's ICU) and the browser (its own ICU and CLDR) can word the same instant differently,
+ * for example Sep or Sept, or a narrow no-break space before pm. The text is the same instant in the same zone, so
+ * a difference must not raise a hydration error and client-render the page; the server's wording stays.
+ */
+describe('LocalInstant hydration (WR-304)', () => {
+  it('hydrates without a recoverable error when the browser words the instant differently from the server', async () => {
+    const tree = <TimeZoneProvider zone="Australia/Brisbane"><p>Saved <LocalInstant style="date-time" value={instant} /></p></TimeZoneProvider>;
+    const host = document.createElement('div');
+    document.body.append(host);
+    // The server's ICU wrote another CLDR wording of the same instant.
+    host.innerHTML = renderToString(tree).replace('Sept', 'Sep');
+    expect(host.querySelector('time')?.textContent).toContain('Sep ');
+    const recoverable = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const root = await act(async () => hydrateRoot(host, tree, { onRecoverableError: recoverable }));
+
+    expect(recoverable).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(host.querySelector('time')).toHaveAttribute('dateTime', instant);
+    expect(normalised(host.querySelector('time')?.textContent)).toBe('27 Sep 2026, 3:47 pm');
+    act(() => root.unmount());
+    host.remove();
   });
 });
 
