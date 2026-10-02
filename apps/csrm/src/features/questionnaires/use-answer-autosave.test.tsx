@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { QuestionnaireDefinition } from './questionnaire-schema';
 import {
+  answersUpdatedAt,
   rememberSavedQuestionnaire,
   savedQuestionnaireAfter,
   useAnswerAutosave,
@@ -294,5 +295,30 @@ describe('the session record of the last save (Back and Forward after an autosav
 
     expect(savedQuestionnaireAfter('q-4', undefined)).toBeUndefined();
     expect(savedQuestionnaireAfter('q-4', 'not a time')).toBeUndefined();
+  });
+});
+
+/*
+ * IN-303: the page's own time for the session-record comparison is the later of the questionnaire's updatedAt and
+ * its latest answer's (saving answers does not touch the questionnaire's updatedAt). It sits beside
+ * savedQuestionnaireAfter, out of the JSX module, and compares instants, never text.
+ */
+describe('answersUpdatedAt (the page time the session record is compared with)', () => {
+  const question = (updatedAt: string | null) => ({ questionKey: 'q', answer: updatedAt === null ? null : { value: 'yes', updatedAt } }) as unknown as QuestionnaireDefinition[number];
+
+  it('is the latest answer time when that is later than the questionnaire', () => {
+    expect(answersUpdatedAt({ updatedAt: '2026-09-28T00:30:00.000Z' }, [question('2026-09-28T01:00:00.000Z'), question('2026-09-28T00:45:00.000Z'), question(null)]))
+      .toBe('2026-09-28T01:00:00.000Z');
+  });
+
+  it('compares offset times as instants, not as text', () => {
+    // 11:00+10:00 is 01:00Z, earlier than 01:30Z, although its text sorts later.
+    expect(answersUpdatedAt({ updatedAt: '2026-09-28T01:30:00.000Z' }, [question('2026-09-28T11:00:00.000+10:00')])).toBe('2026-09-28T01:30:00.000Z');
+    expect(answersUpdatedAt({ updatedAt: '2026-09-28T00:30:00.000Z' }, [question('2026-09-28T11:00:00.000+10:00')])).toBe('2026-09-28T11:00:00.000+10:00');
+  });
+
+  it('ignores an unreadable answer time, and prefers a readable answer time to an unreadable questionnaire time', () => {
+    expect(answersUpdatedAt({ updatedAt: '2026-09-28T00:30:00.000Z' }, [question('not a time')])).toBe('2026-09-28T00:30:00.000Z');
+    expect(answersUpdatedAt({ updatedAt: 'not a time' }, [question('2026-09-28T01:00:00.000Z')])).toBe('2026-09-28T01:00:00.000Z');
   });
 });
