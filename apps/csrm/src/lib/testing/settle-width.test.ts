@@ -36,7 +36,7 @@ describe('settleWidthInBrowser (WR-403)', () => {
   });
 
   it('fails within the frame limit, naming the element and its last widths, when the layout never settles', async () => {
-    const oscillating = Array.from({ length: 400 }, (_, index) => (index % 2 === 0 ? [900, 880] : [1200, 880]) as const);
+    const oscillating = Array.from({ length: 400 }, (_, index): readonly [number, number] => (index % 2 === 0 ? [900, 880] : [1200, 880]));
     const { node, readings } = elementReading(oscillating);
 
     const settled = settleWidthInBrowser(node, { label, frameLimit: 120 });
