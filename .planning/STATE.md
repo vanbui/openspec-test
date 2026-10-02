@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-11-PLAN.md
-last_updated: "2026-10-02T07:18:16.152Z"
+stopped_at: Completed 10-12-PLAN.md
+last_updated: "2026-10-02T07:34:54.106Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-11 complete (every questionnaire replacement records a regenerated event with what it replaced and discarded; a released questionnaire is refused for replacement before the job and inside it; analyst reads carry the count of question changes since the latest generation, Requestor reads never do; 06.8 amendment part two; UAT-019 server and contract half, QUES-08)
-state_head: 2c21f838311947243cc0b0f3511125ca7f52bf79
+last_activity_desc: Plan 10-12 complete (the analyst hub replaces a questionnaire in analyst review only through Replace this questionnaire?, which states the analyst changes it discards from the served count; a released questionnaire offers no action and links the way back; failed jobs read by code; no request revert once a questionnaire exists; UAT-019 hub half, QUES-08, UX-06)
+state_head: fa7dc072205d9ffc854cdbd867574b9f6aad4561
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 12 of 23
+Plan: 13 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-11 complete: persistGeneratedQuestionnaire appends one regenerated event (analyst, new generatedDate, replaced and discarded counts) before any write, so a full log fails the job and writes nothing; generation answers 409 QUESTIONNAIRE_RELEASED for a released questionnaire and the job re-checks under the row lock; revision.analystChangesSinceGeneration on the analyst read and governance results only; spec, schema.d.ts and both closed web enums carry regenerated and the optional count; Questionnaire replaced in both timelines; 06.8 amendment part two; Strapi 593/593 (735 s), web 2,521/2,521, typecheck, lint and api:check clean
+Last activity: 2026-10-02 — Plan 10-12 complete: questionnaireGenerationAction (generate, replace or released) over the served relation; the analyst request page reads analystChangesSinceGeneration from the questionnaire summary on the server; Replace questionnaire (outline) opens Replace this questionnaire? with the 0, 1, n or unknown description, Keep this questionnaire and refusals inside the dialog; the released hint links the questionnaire; failure copy by code; generation journey E7 and UX06_NO_REQUEST_REVERT_ONCE_QUESTIONNAIRE_EXISTS pass (desktop 1/1); web 2,549/2,549, typecheck, lint and api:check clean
 
 ## Milestone
 
@@ -121,6 +121,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-10: question events (added, edited, removed, answer cleared) store a questionText snapshot in the governance log (trimmed, cut to 499 characters and an ellipsis above 500), appended before any write. The analyst projection prefers the snapshot, else resolves the key against every populated question (removed included) only when the event is not before generatedDate (none: always); an older event, an unknown key or an unreadable generatedDate names no question and the web reads 'A question from an earlier version'. Resolved text is bounded like a snapshot. Plan 10-11's regenerated event extends the same envelope and amendment and must keep generatedDate moving on replacement.
 - [Phase 10]: 10-11: replacing a questionnaire appends one regenerated event (initiating analyst, new generatedDate, replaced and discarded counts in the UI-SPEC 3.4 sentence) built in memory before any question is deleted, so a full log fails the job and writes nothing; the Requestor projection keeps only kind and at, and the Requestor summary lists it only after the first release, restarting that round's count.
 - [Phase 10]: 10-11: D-09 refuses generation for a released questionnaire (releasedAt, never the log) with 409 QUESTIONNAIRE_RELEASED before queueing, acknowledged or not, and the job re-checks under the request row lock and fails with the same code. revision.analystChangesSinceGeneration (question added, edited, removed at or after generatedDate; all of them when the date is absent or unreadable) is served by projectAnalystRevision on the analyst questionnaire read and every governance result only; plan 10-12's Replace confirmation reads it.
+- [Phase 10]: 10-12: questionnaireGenerationAction offers Replace only for a questionnaire served in analyst-review; released, submitted, unavailable and state-less relations give released, so the hub never offers a replacement Strapi would refuse (D-22). The analyst request page reads the questionnaire summary on the server only when it will show the count (submitted request, replace action); a failed read or missing count gives the count-unavailable sentence (D-16).
+- [Phase 10]: 10-12: a not-acknowledged generation failure offers the Replace this questionnaire? confirmation only while the questionnaire is not released (then the released hint shows); other failures keep Retry questionnaire generation (UI-SPEC 12.1). ConfirmDialog's description accepts a ReactNode so the served count renders in tabular figures (UI-SPEC 3.2).
 
 ## Risks and Open Decisions
 
@@ -194,11 +196,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P09 | 40 min | 3 tasks | 16 files |
 | Phase 10 P10 | 25 min | 2 tasks | 13 files |
 | Phase 10 P11 | 40 min | 3 tasks | 17 files |
+| Phase 10 P12 | 13 min | 2 tasks | 10 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T07:17:46.124Z
-**Stopped At:** Completed 10-11-PLAN.md
+**Last session:** 2026-10-02T07:34:37.768Z
+**Stopped At:** Completed 10-12-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
