@@ -3,6 +3,8 @@ import { deterministicQuestionnaireGenerationProvider } from "./deterministic-qu
 import { openaiCompatibleQuestionnaireGenerationProvider } from "./openai-compatible-questionnaire-generation-provider";
 import { createQuestionnaireGenerationRegistry, QuestionnaireGenerationJobFailure, QuestionnaireGenerationRegistryError, type QuestionnaireGenerationJobActor, type QuestionnaireGenerationJobRecord } from "./questionnaire-generation-registry";
 import { validatedGenerationQuestions } from "./questionnaire-generation-provider";
+import { activeQuestionnaireDefinition, parseQuestionnaireDefinition, QuestionnaireDefinitionError } from "./questionnaire-definition";
+import { appendGovernanceEvent, countAnalystChangesSinceGeneration } from "./questionnaire-governance-log";
 import { CSRM_AI_PROVIDER_MODE } from "../../../csrm/ai-provider-selection";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 
@@ -24,6 +26,22 @@ function hasAnswerEvidence(answer: unknown): boolean {
   return answer.state === "draft" || answer.state === "submitted";
 }
 export function hasQuestionnaireAnswerEvidence(questions: unknown): boolean { return Array.isArray(questions) && questions.some((question) => record(question) && hasAnswerEvidence(question.answer)); }
+/* The questions a replacement discards: every question not already removed. */
+function replacedQuestionCount(questions: unknown): number {
+  try {
+    return activeQuestionnaireDefinition(parseQuestionnaireDefinition(questions)).length;
+  } catch (error) {
+    if (!(error instanceof QuestionnaireDefinitionError)) throw error;
+    return Array.isArray(questions) ? questions.filter((row) => record(row) && !(record(row.options) && row.options.deleted !== undefined)).length : 0;
+  }
+}
+/* The regenerated event's explanation, fixed by UI-SPEC §3.4 because the analyst timeline shows it verbatim. */
+function replacementExplanation(existing: RecordValue): string {
+  const replaced = replacedQuestionCount(existing.questions);
+  const discarded = countAnalystChangesSinceGeneration(existing.governanceLog, existing.generatedDate as string | Date | null | undefined);
+  const discardedSentence = discarded === 0 ? "No analyst changes were discarded." : discarded === 1 ? "1 analyst change was discarded." : `${discarded} analyst changes were discarded.`;
+  return `A newly generated questionnaire replaced ${replaced} ${replaced === 1 ? "question" : "questions"}. ${discardedSentence}`;
+}
 async function lock(strapi: Strapi, documentId: string, trx: unknown) { const query = strapi.db.queryBuilder("api::csrm-assessment-request.csrm-assessment-request"); query.select(["id"]); query.where({ documentId }); query.forUpdate(); query.transacting(trx); await query.execute(); }
 export async function persistGeneratedQuestionnaire(strapi: Strapi, requestId: string, analystId: string, replaceUnansweredQuestionnaire: boolean): Promise<{ questionnaireId: string }> {
   const requests = strapi.documents("api::csrm-assessment-request.csrm-assessment-request"); const questionnaires = strapi.documents("api::csrm-questionnaire.csrm-questionnaire"); const questions = strapi.documents("api::csrm-question.csrm-question");
@@ -33,7 +51,18 @@ export async function persistGeneratedQuestionnaire(strapi: Strapi, requestId: s
   const proposal = await activeQuestionnaireGenerationProvider.generate({ title: String(request.title ?? "Assessment request"), description: typeof request.description === "string" ? request.description : null, assessmentType: typeof request.assessmentType === "string" ? request.assessmentType : null, businessPurpose: typeof request.businessPurpose === "string" ? request.businessPurpose : null, businessCriticality: typeof request.businessCriticality === "string" ? request.businessCriticality : null, thirdPartyInvolvement: request.thirdPartyInvolvement === true, thirdPartyDetails: typeof request.thirdPartyDetails === "string" ? request.thirdPartyDetails : null });
   const definition = validatedGenerationQuestions(proposal); const generatedDate = new Date().toISOString();
   return strapi.db.transaction(async ({ trx }) => { await lock(strapi, requestId, trx); const current = await requests.findOne({ documentId: requestId, populate: { questionnaire: { populate: { questions: true } } } }); if (!current || current.requestStatus !== "submitted") throw new QuestionnaireGenerationJobFailure("REQUEST_NOT_ELIGIBLE", "Assessment request is not eligible for questionnaire generation."); const existing = record(current.questionnaire) ? current.questionnaire : null; if (existing && !replaceUnansweredQuestionnaire) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED", "Unanswered questionnaire replacement requires acknowledgement."); if (existing && hasQuestionnaireAnswerEvidence(existing.questions)) throw new QuestionnaireGenerationJobFailure("QUESTIONNAIRE_ANSWERED", "Answered questionnaires cannot be regenerated.");
-    let questionnaireId: string; if (existing && typeof existing.documentId === "string") { questionnaireId = existing.documentId; for (const row of Array.isArray(existing.questions) ? existing.questions : []) if (record(row) && typeof row.documentId === "string") await questions.delete({ documentId: row.documentId }); await questionnaires.update({ documentId: questionnaireId, data: { title: proposal.title, ...(proposal.description ? { description: proposal.description } : {}), generatedDate, generatedBy: analystId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version } }); } else { const created = await createWithQuestionnaireNumber((questionnaireNumber) => questionnaires.create({ data: { questionnaireNumber, title: proposal.title, ...(proposal.description ? { description: proposal.description } : {}), assessmentRequest: requestId, generatedDate, generatedBy: analystId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version } })); if (typeof created.documentId !== "string") throw new Error("Questionnaire persistence failed."); questionnaireId = created.documentId; }
+    let questionnaireId: string; if (existing && typeof existing.documentId === "string") {
+      questionnaireId = existing.documentId;
+      /*
+       * D-10: the replacement's record is appended in memory before anything is written (10-06's
+       * log-first rule), so a full or unreadable log fails the job and leaves every question in place.
+       * It is dated by the new generation, which also moves generatedDate: the D-17 resolution window
+       * and the D-16 change count both start again from here.
+       */
+      const governanceLog = appendGovernanceEvent(existing.governanceLog, { schemaVersion: 1, kind: "regenerated", at: generatedDate, by: analystId, explanation: replacementExplanation(existing) });
+      for (const row of Array.isArray(existing.questions) ? existing.questions : []) if (record(row) && typeof row.documentId === "string") await questions.delete({ documentId: row.documentId });
+      await questionnaires.update({ documentId: questionnaireId, data: { title: proposal.title, ...(proposal.description ? { description: proposal.description } : {}), generatedDate, generatedBy: analystId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version, governanceLog } });
+    } else { const created = await createWithQuestionnaireNumber((questionnaireNumber) => questionnaires.create({ data: { questionnaireNumber, title: proposal.title, ...(proposal.description ? { description: proposal.description } : {}), assessmentRequest: requestId, generatedDate, generatedBy: analystId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version } })); if (typeof created.documentId !== "string") throw new Error("Questionnaire persistence failed."); questionnaireId = created.documentId; }
     for (const question of definition) await questions.create({ data: { questionnaire: questionnaireId, questionText: question.questionText, answerType: question.answerType, options: { schemaVersion: 1, questionKey: question.questionKey, section: question.section, order: question.order, required: question.required, ...(question.visibility ? { visibility: question.visibility } : {}), ...(question.choices ? { choices: question.choices } : {}) }, answer: null } }); return { questionnaireId }; });
 }
 function registry(strapi: Strapi) { const existing = registryByStrapi.get(strapi as object); if (existing) return existing; const created = createQuestionnaireGenerationRegistry({ execute: ({ requestId, initiatingAnalystDocumentId, replaceUnansweredQuestionnaire }) => persistGeneratedQuestionnaire(strapi, requestId, initiatingAnalystDocumentId, replaceUnansweredQuestionnaire) }); registryByStrapi.set(strapi as object, created); return created; }

@@ -126,3 +126,37 @@ resolved text is bounded exactly like a snapshot.
 already carried. The Requestor projection is unchanged: `kind`, `at` and `explanation`, never a
 question's text, key or actor. The published schemas `QuestionnaireGovernanceEvent` and
 `QuestionnaireRevisionTimelineEvent` declare the key with the same bounds.
+
+## Phase 10 amendment (2026-09-27), part two: the `regenerated` event
+
+Decided in Phase 10 (10-CONTEXT D-01, D-09 and D-10) and recorded on 2026-10-02 with the change
+that implements it (plan 10-11). Like part one, it extends the `governanceLog` event envelope and
+the published contract; it is not a content-type change, and no attribute of `CsrmQuestionnaire`
+or `CsrmQuestion` changes.
+
+**The added kind.** The closed event vocabulary gains one kind, `regenerated`: a newly generated
+questionnaire replaced this questionnaire's questions. The event stays at `schemaVersion` 1 and
+carries `by` (the analyst who started the generation), `at` and `explanation`, never a reason or
+a question key. The published schemas `QuestionnaireGovernanceEvent` and
+`QuestionnaireRevisionTimelineEvent` list the kind, and so do the web's closed parsers.
+
+**When it is written.** Only by the generation job that replaces an existing questionnaire, in the
+transaction that deletes the replaced questions and stamps the new generation. Its `at` is the new
+`generatedDate`, so the part-one resolution window and the change count below restart from the
+replacement. A first generation writes no event. Under "Write Discipline" above, the event is
+appended in memory before any write: a log that cannot take it fails the job with the registry's
+safe generic failure (`QUESTIONNAIRE_GENERATION_FAILED`), and the questionnaire keeps its
+questions, generation facts and log.
+
+**Its explanation.** The server writes it, because the analyst timeline shows it verbatim
+(UI-SPEC §3.4): `A newly generated questionnaire replaced {n} {question|questions}. {m} analyst
+{change was|changes were} discarded.`, or, when `m` is 0, `… No analyst changes were discarded.`
+`n` counts the replaced questionnaire's questions that were not already removed; `m` is the number
+of `question-added`, `question-edited` and `question-deleted` events at or after the replaced
+generation's `generatedDate` (every one of them when it has none), counted before the event is
+appended.
+
+**Who reads it.** The analyst projection carries the event like any other: kind, time, the named
+analyst and the explanation. The Requestor projection carries only `kind` and `at`: the
+explanation counts analyst work the Requestor never saw. The Requestor's history lists a
+replacement only after the questionnaire was first released (UI-SPEC §4.3).

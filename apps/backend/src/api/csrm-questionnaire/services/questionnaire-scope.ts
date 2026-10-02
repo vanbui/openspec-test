@@ -376,7 +376,11 @@ export function projectGovernanceEvents(
       : {
         kind: event.kind,
         at: event.at,
-        ...(event.explanation === undefined ? {} : { explanation: event.explanation }),
+        /*
+         * A replacement's explanation counts analyst work the Requestor never saw (UI-SPEC §4.3), so the
+         * Requestor learns only that the questionnaire was replaced, and when.
+         */
+        ...(event.explanation === undefined || event.kind === "regenerated" ? {} : { explanation: event.explanation }),
       });
 }
 

@@ -1787,7 +1787,7 @@ export interface components {
             /** @constant */
             schemaVersion: 1;
             /** @enum {string} */
-            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared";
+            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared" | "regenerated";
             /** Format: date-time */
             at: string;
             by: string;
@@ -2977,7 +2977,7 @@ export interface components {
         };
         QuestionnaireRevisionTimelineEvent: {
             /** @enum {string} */
-            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared";
+            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared" | "regenerated";
             /** Format: date-time */
             at: string;
             by?: components["schemas"]["QuestionnaireReleaseActor"] | null;

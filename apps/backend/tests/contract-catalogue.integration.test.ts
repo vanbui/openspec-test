@@ -989,7 +989,8 @@ test("Phase 06.8 questionnaire governance surface is published and human-analyst
 
   assert.deepEqual(
     specification.components.schemas.QuestionnaireGovernanceEvent.properties.kind.enum,
-    ["released", "returned-to-review", "question-added", "question-edited", "question-deleted", "answer-cleared"],
+    // Phase 10 D-10 adds `regenerated` (the 06.8 record's Phase 10 amendment, part two).
+    ["released", "returned-to-review", "question-added", "question-edited", "question-deleted", "answer-cleared", "regenerated"],
     "PHASE68_GOVERNANCE_EVENT_KINDS",
   );
   assert.deepEqual(

@@ -168,7 +168,7 @@ describe('QuestionnaireRevisionTimeline', () => {
     expect(entry?.querySelector('svg')).toHaveClass('lucide-sparkles');
     expect(entry?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(entry).toHaveTextContent(`Detail: ${replacedDetail}`);
-    expect(entry).toHaveTextContent(/by Morgan Analyst$/);
+    expect(screen.getByText(/by Morgan Analyst$/).closest('li')).toBe(entry);
     expect(screen.queryByText(/Question:/)).not.toBeInTheDocument();
   });
 

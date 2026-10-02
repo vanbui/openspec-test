@@ -30,7 +30,16 @@ export const GOVERNANCE_EVENT_KINDS = Object.freeze([
   "question-edited",
   "question-deleted",
   "answer-cleared",
+  /*
+   * Phase 10 D-10: a newly generated questionnaire replaced this one's questions. Written in the
+   * transaction that replaces them, at the new generation's time, with an explanation counting the
+   * questions replaced and the analyst changes discarded.
+   */
+  "regenerated",
 ] as const);
+
+/* The analyst question changes a replacement discards (D-16): the cleared answers they caused are not counted. */
+const ANALYST_QUESTION_CHANGE_KINDS: ReadonlySet<GovernanceEventKind> = new Set(["question-added", "question-edited", "question-deleted"]);
 
 export type GovernanceEventKind = (typeof GOVERNANCE_EVENT_KINDS)[number];
 
@@ -179,4 +188,23 @@ export function summariseGovernanceLog(value: unknown): { eventCount: number; la
     throw error;
   }
   return { eventCount: events.length, lastEventAt: events.at(-1)?.at ?? null };
+}
+
+/**
+ * How many analyst question changes (added, edited, removed) the log records at or after the
+ * questionnaire's latest generation (D-16): what replacing it now would discard. Without a generation
+ * date every change counts, and so does every change when the date cannot be read, because a
+ * confirmation that undercounts discarded work is the worse error. A malformed log counts nothing;
+ * like the summary, this never throws out of a read.
+ */
+export function countAnalystChangesSinceGeneration(log: unknown, generatedDate: string | Date | null | undefined): number {
+  let events: GovernanceEvent[];
+  try {
+    events = parseGovernanceLog(log);
+  } catch (error) {
+    if (error instanceof GovernanceLogError) return 0;
+    throw error;
+  }
+  const since = generatedDate instanceof Date ? generatedDate.getTime() : typeof generatedDate === "string" ? Date.parse(generatedDate) : Number.NaN;
+  return events.filter((event) => ANALYST_QUESTION_CHANGE_KINDS.has(event.kind) && (Number.isNaN(since) || Date.parse(event.at) >= since)).length;
 }

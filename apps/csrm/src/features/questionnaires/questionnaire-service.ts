@@ -27,7 +27,7 @@ const progressSchema = z.object({
 });
 const assessmentRequestSummarySchema = assessmentRequestRelationshipSchema;
 const questionnaireTimelineEventSchema = z.object({
-  kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared']),
+  kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared', 'regenerated']),
   at: timestampSchema,
   by: z.object({ documentId: documentIdSchema, displayName: z.string().max(255).nullable() }).nullable().optional(),
   reason: z.string().max(500).optional(),
@@ -149,7 +149,7 @@ const questionPlacementListSchema = z.array(z.object({
 })));
 const questionnaireQuestionPlacementsResponseSchema = z.object({ data: questionPlacementListSchema });
 const governanceEventSchema = z.object({
-  schemaVersion: z.literal(1), kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared']), at: timestampSchema, by: documentIdSchema,
+  schemaVersion: z.literal(1), kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared', 'regenerated']), at: timestampSchema, by: documentIdSchema,
   reason: z.string().max(500).optional(), questionKey: z.string().max(120).optional(), questionText: z.string().min(1).max(500).optional(), explanation: z.string().max(2_000).optional(),
 }).strict();
 const clearedAnswerSchema = z.object({ questionKey: z.string().trim().min(1).max(120), explanation: z.string().trim().min(1).max(2_000) }).strict();

@@ -1,5 +1,5 @@
 import {
-  CircleCheck, ClipboardPenLine, FilePenLine, RotateCcw, Trash2, UndoDot,
+  CircleCheck, ClipboardPenLine, FilePenLine, RotateCcw, Sparkles, Trash2, UndoDot,
 } from 'lucide-react';
 
 import { LocalInstant } from '@/components/csrm/local-time';
@@ -15,6 +15,7 @@ const eventPresentation = {
   'question-edited': { icon: FilePenLine, label: 'Question edited' },
   'question-deleted': { icon: Trash2, label: 'Question removed' },
   'answer-cleared': { icon: UndoDot, label: 'Answer cleared' },
+  regenerated: { icon: Sparkles, label: 'Questionnaire replaced' },
 } as const;
 
 /* A document id is an opaque identifier, not a person; never show one as a name. */
@@ -71,6 +72,12 @@ function summarise(events: readonly TimelineEvent[]): SummaryItem[] {
       if (released && round) round = { at: event.at, count: round.count + 1 };
       continue;
     }
+    if (event.kind === 'regenerated') {
+      // Before the first release the Requestor never saw what was replaced. After it, the replacement discards
+      // the round's earlier changes, so the round counts again from here.
+      if (!released) continue;
+      if (round) round = { at: event.at, count: 0 };
+    }
     if (event.kind === 'released') {
       closeRound();
       released = true;
@@ -91,7 +98,8 @@ function SummaryEntry({ item }: { item: SummaryItem }) {
   const label = item.type === 'round'
     ? `${item.count} ${item.count === 1 ? 'change' : 'changes'} to the questions`
     : summaryLabels[item.event.kind] ?? eventPresentation[item.event.kind].label;
-  const explanation = item.type === 'event' ? item.event.explanation : null;
+  // Only a cleared answer carries its explanation to the Requestor; a replacement's detail is analyst work (§4.3).
+  const explanation = item.type === 'event' && item.event.kind === 'answer-cleared' ? item.event.explanation : null;
   return <li className="grid min-w-0 gap-1 rounded-lg border border-border bg-card p-3"><div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{label}</p><p className="text-sm text-muted-foreground"><LocalInstant style="date-time" value={item.at} /></p></div></div>{explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground">{explanation}</p> : null}</li>;
 }
 

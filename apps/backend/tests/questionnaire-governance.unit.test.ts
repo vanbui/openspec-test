@@ -74,6 +74,7 @@ test("the governance event kinds are a frozen closed vocabulary", () => {
     "question-edited",
     "question-deleted",
     "answer-cleared",
+    "regenerated",
   ]);
   assert.equal(Object.isFrozen(GOVERNANCE_EVENT_KINDS), true, "GOVERNANCE_EVENT_KINDS_MUTABLE");
 });
