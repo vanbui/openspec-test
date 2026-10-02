@@ -195,6 +195,9 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   page.on('request', recordWrite);
   await saveAssessment.click();
   await expect(detailsStatus, 'ASSESS06_UNCHANGED_SAVE_NOTED an unchanged save says so in the same region').toHaveText('No changes to save.');
+  // IN-408: keep listening after the note renders, so a write sent after it (a note shown first, then a Server
+  // Action) is caught. The wait ends early, and the expectation below fails, on the first such request.
+  await page.waitForRequest((sent) => sent.method() !== 'GET', { timeout: 2_000 }).catch(() => undefined);
   page.off('request', recordWrite);
   expect(unchangedSaveWrites, 'ASSESS06_UNCHANGED_SAVE_WRITES_NOTHING an unchanged save sends no request').toEqual([]);
   await expect(page.getByText('In review', { exact: true }).first(), 'ASSESS06_UNCHANGED_SAVE_WRITES_NOTHING the review stands').toBeVisible();
