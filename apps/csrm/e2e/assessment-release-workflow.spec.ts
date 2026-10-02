@@ -209,7 +209,11 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
     expect(href, 'ASSESS-03 Risk requirement uses a same-page anchor').toMatch(/^#risk-/);
     await expect(page.locator(href!), `ASSESS-03 Risk destination ${href} exists`).toBeVisible();
   }
-  await expect(readinessRequirements.getByText(/^Missing: /).first(), 'ASSESS06_READINESS_BY_RISK each Risk row says what is missing').toBeVisible();
+  // WR-406: every Risk row, not only the first, carries its `Missing:` caption as its accessible description.
+  for (const [index, row] of (await outstandingRiskLinks.all()).entries()) {
+    await expect(row, `ASSESS06_READINESS_BY_RISK Risk row ${index + 1} says what is missing`).toHaveAccessibleDescription(/^Missing: /);
+  }
+  await expect(readinessRequirements.getByText(/^Missing: /), 'ASSESS06_READINESS_BY_RISK one caption per Risk row').toHaveCount(outstandingRiskHrefs.length);
   for (const width of [375, 1440] as const) {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
     await expect(readinessRequirements, `ASSESS-03 readiness requirements are visible at ${width}px`).toBeVisible();
