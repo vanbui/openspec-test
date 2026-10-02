@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
+import { RecordLink } from '@/components/csrm/record-link';
 import type { QuestionnaireGenerationAction } from '@/features/requests/request-domain';
 import {
   getQuestionnaireGenerationJobAction,
@@ -58,16 +59,32 @@ function replacementDescription(analystChanges: number | null | undefined): Reac
   return `${replacementOpening}, discarding any changes analysts made to its questions since it was generated.${replacementClosing}`;
 }
 
+/**
+ * A failed job's code read as a sentence about the request (UI-SPEC §12.4). Any other code shows the
+ * server's own message unchanged. A Map, so a served code can never reach an inherited property.
+ */
+const failureCopy = new Map<string, string>([
+  ['REQUEST_NOT_ELIGIBLE', 'The request is no longer submitted, so a questionnaire can’t be generated for it.'],
+  ['QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED', 'A questionnaire already exists for this request. Replace it to generate a new one.'],
+  ['QUESTIONNAIRE_ANSWERED', 'The Requestor has started answering this questionnaire, so it can’t be replaced.'],
+  ['QUESTIONNAIRE_RELEASED', 'The questionnaire was released before generation finished, so it wasn’t replaced. Return it to analyst review to replace it.'],
+]);
+
 export function QuestionnaireGenerationJob({
   requestId,
   action,
   analystChangesSinceGeneration,
+  questionnaireHref: existingQuestionnaireHref,
+  questionnaireNumber,
   initialJob,
   timing = defaultTiming,
 }: {
   requestId: string;
   /** What the served questionnaire relation allows: `questionnaireGenerationAction` in request-domain. */
   action: QuestionnaireGenerationAction;
+  /** The existing questionnaire's analyst route, linked from the released hint (UI-SPEC §3.3). */
+  questionnaireHref?: string;
+  questionnaireNumber?: string | null;
   /** The served count of analyst changes since the latest generation; `null` when the read served none. */
   analystChangesSinceGeneration?: number | null;
   initialJob?: QuestionnaireGenerationJob;
@@ -205,7 +222,9 @@ export function QuestionnaireGenerationJob({
    */
   const replacementTrigger = <Button disabled={pending} type="button" variant="outline"><Sparkles aria-hidden="true" />Replace questionnaire</Button>;
   const replace = <ConfirmDialog cancelLabel="Keep this questionnaire" confirmLabel="Replace questionnaire" confirmVariant="destructive" description={replacementDescription(analystChangesSinceGeneration)} errorMessage={replacementError} onConfirm={confirmReplacement} onDismiss={() => setReplacementError(null)} pendingLabel="Replacing questionnaire…" title="Replace this questionnaire?" trigger={replacementTrigger} />;
-  const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{job.failureMessage}</AlertDescription></Alert>
+  const questionnaireLabel = questionnaireNumber && existingQuestionnaireHref ? <RecordLink href={existingQuestionnaireHref}>{questionnaireNumber}</RecordLink> : (questionnaireNumber ?? 'the questionnaire');
+  const releasedHint = <p className="text-sm text-foreground-secondary">This questionnaire has been released to the Requestor. To replace it, return {questionnaireLabel} to analyst review first.</p>;
+  const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{failureCopy.get(job.failureCode) ?? job.failureMessage}</AlertDescription></Alert>
     : job?.status === 'completed' ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">Provider: {job.providerName} ({job.providerVersion}). Review the generated questionnaire before use.</p></div></div>
       : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">This page remains available while the server-owned job is checked.</p></div></div> : null;
 
@@ -225,11 +244,14 @@ export function QuestionnaireGenerationJob({
       {/*
         * Retrying re-runs the job exactly as it was, so a refusal for a missing
         * replacement acknowledgement would fail the same way forever. Offer the
-        * acknowledgement instead, which is the only route out of that state.
+        * acknowledged replacement instead (UI-SPEC §12.1), the only route out of
+        * that state, unless the questionnaire has since been released.
         */}
       {job?.status === 'failed' && job.failureCode === 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED'
-        ? <ConfirmDialog confirmLabel="Replace unanswered questionnaire" confirmVariant="destructive" description="This replaces the existing questionnaire only when it has no Requestor answers. Answered questionnaires are protected." onConfirm={async () => { await start(true); }} pendingLabel="Starting questionnaire generation…" title="Replace the unanswered questionnaire?" trigger={<Button disabled={pending} type="button" variant="outline"><RotateCcw aria-hidden="true" />Replace and generate again</Button>} />
+        ? (action === 'released' ? null : replace)
         : job?.status === 'failed' ? <Button disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying questionnaire generation…' : 'Retry questionnaire generation'}</Button> : null}
+      {/* D-09 (UI-SPEC §3.3): a released questionnaire is never offered for replacement; say how to get there. */}
+      {action === 'released' && (!job || job.status === 'failed') ? releasedHint : null}
       {job?.status === 'completed' ? <Link className={buttonVariants()} href={questionnaireHref(job.questionnaire.documentId)}>Review generated questionnaire</Link> : null}
     </CardContent>
   </Card>;

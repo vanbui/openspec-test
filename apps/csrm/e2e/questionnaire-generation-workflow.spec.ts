@@ -159,6 +159,11 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
     // WR-06: the generated questionnaire is still in analyst review, so the draft card offers no action yet.
     await expect(page.getByText('Draft generation can begin only after the linked questionnaire is submitted.', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Generate assessment draft' })).toHaveCount(0);
+    // UX-06 (D-22): Strapi refuses to return a request to draft once a questionnaire exists, so the rendered hub never offers it.
+    await expect(
+      page.getByRole('button', { name: 'Return to draft', exact: true }),
+      'UX06_NO_REQUEST_REVERT_ONCE_QUESTIONNAIRE_EXISTS: the analyst hub offers no request revert once a questionnaire exists',
+    ).toHaveCount(0);
     await dismissToasts(page);
     // E7 (D-08): a questionnaire in analyst review is replaced, never generated over.
     await expect(page.getByRole('button', { name: 'Generate questionnaire' })).toHaveCount(0);
