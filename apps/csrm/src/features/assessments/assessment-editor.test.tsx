@@ -986,8 +986,9 @@ describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 a
       return element!;
     });
     await waitFor(() => expect(within(card).getByRole('status')).toHaveTextContent(/^Risk added at 11:00 am$/));
-    // The Risk that was already there shows no confirmation.
-    expect(within(document.getElementById('risk-risk-1')!).getAllByRole('status').every((region) => region.textContent === '')).toBe(true);
+    // The Risk that was already there shows no confirmation in its own save status (WR-405).
+    const existingSave = within(document.getElementById('risk-risk-1')!).getByRole('button', { name: 'Save risk' });
+    expect(within(actionRow(existingSave)).getByRole('status')).toBeEmptyDOMElement();
   });
 
   it('confirms an added mitigation control on its form and returns focus to that Risk’s Add mitigation control', async () => {
