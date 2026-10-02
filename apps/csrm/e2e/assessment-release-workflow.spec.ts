@@ -184,18 +184,25 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(page.getByText('In review', { exact: true }).first()).toBeVisible();
 
   const readinessRequirements = page.getByRole('list', { name: 'Release requirements' });
-  const outstandingRiskLinks = readinessRequirements.getByRole('link', { name: /^Risk .+ — / });
+  // E10 (D-35, UI-SPEC §14.1): one row per Risk, named `{risk number}: {n} outstanding`, saying what is missing.
+  const outstandingRiskLinks = readinessRequirements.getByRole('link', { name: /^RSK-\S+: \d+ outstanding$/ });
   const outstandingRiskHrefs = await outstandingRiskLinks.evaluateAll((links) => links.map((link) => link.getAttribute('href')));
   expect(new Set(outstandingRiskHrefs).size, 'ASSESS-03 named Risk requirements keep distinct record destinations').toBeGreaterThanOrEqual(3);
+  expect(outstandingRiskHrefs.length, 'ASSESS06_READINESS_BY_RISK one readiness row per Risk, never one per requirement').toBe(new Set(outstandingRiskHrefs).size);
   for (const href of new Set(outstandingRiskHrefs)) {
     expect(href, 'ASSESS-03 Risk requirement uses a same-page anchor').toMatch(/^#risk-/);
     await expect(page.locator(href!), `ASSESS-03 Risk destination ${href} exists`).toBeVisible();
   }
+  await expect(readinessRequirements.getByText(/^Missing: /).first(), 'ASSESS06_READINESS_BY_RISK each Risk row says what is missing').toBeVisible();
   for (const width of [375, 1440] as const) {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
     await expect(readinessRequirements, `ASSESS-03 readiness requirements are visible at ${width}px`).toBeVisible();
     await expectNoHorizontalOverflow(page, `ASSESS-03 readiness requirements have no overflow at ${width}px`);
   }
+  // UI-D27: following a readiness link moves focus to its Risk card.
+  const followedRiskHref = outstandingRiskHrefs[0]!;
+  await outstandingRiskLinks.first().click();
+  await expect(page.locator(followedRiskHref), 'ASSESS06_READINESS_BY_RISK following a Risk row moves focus to its Risk').toBeFocused();
 
   const rating = page.getByRole('combobox', { name: 'Residual rating' }).first();
   await rating.selectOption('Moderate');
@@ -248,8 +255,14 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(persistedControl.getByText('Selected owner: Jane Doe', { exact: true }), 'E11 the searched control owner is saved and read back by name').toBeVisible();
   await expect(persistedControl.getByRole('textbox', { name: 'Evidence' })).toHaveValue('Control selected from the reusable catalogue and scheduled for verification.');
   await expect(page.getByText('All release requirements are met'), 'ASSESS-03 persisted edits satisfy release readiness').toBeVisible();
-  await expect(readinessRequirements, 'ASSESS-03 retains met requirements').toBeVisible();
-  await expect(readinessRequirements.getByText('Met').first(), 'ASSESS-03 readiness state is explicit').toBeVisible();
+  await expect(readinessRequirements, 'ASSESS06_READINESS_BY_RISK nothing outstanding is listed once all are met').toHaveCount(0);
+  // D-35: met items show only when the analyst asks.
+  const metRequirements = page.getByRole('list', { name: 'Met release requirements' });
+  await expect(metRequirements, 'ASSESS06_READINESS_BY_RISK met items stay hidden until asked for').toBeHidden();
+  await page.getByRole('button', { name: /^Show met requirements \(\d+\)$/ }).click();
+  await expect(metRequirements, 'ASSESS06_READINESS_BY_RISK the met requirements show on demand').toBeVisible();
+  await expect(metRequirements, 'ASSESS-03 readiness state is explicit').toContainText('Met');
+  await expect(page.getByRole('button', { name: 'Hide met requirements' })).toHaveAttribute('aria-expanded', 'true');
 
   await expect(page.getByText(deterministicRiskStatement, { exact: true }), 'ASSESS-02 deterministic semantic risk is present').toBeVisible();
   const prereleaseAssessmentUrl = page.url();
