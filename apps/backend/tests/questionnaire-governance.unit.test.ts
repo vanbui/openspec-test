@@ -16,6 +16,7 @@ import {
 import {
   buildQuestionnaireCollectionQuery,
   governanceActorIds,
+  projectAnalystRevision,
   projectGovernanceEvents,
   questionnaireState,
   projectQuestionnaire,
@@ -221,9 +222,28 @@ test("countAnalystChangesSinceGeneration counts question changes at or after the
     event({ kind: "answer-cleared", at: "2026-09-11T00:00:00.000Z", questionKey: "added", explanation: "The choices changed." }),
     event({ kind: "regenerated", at: "2026-09-11T00:00:01.000Z", explanation: "A newly generated questionnaire replaced 1 question. No analyst changes were discarded." }),
   ], T), 0, "NON_CHANGE_EVENTS_COUNTED");
-  assert.equal(countAnalystChangesSinceGeneration("not a log", T), 0, "MALFORMED_LOG_COUNTED");
-  assert.equal(countAnalystChangesSinceGeneration([{ kind: "question-edited" }], T), 0, "INVALID_EVENT_COUNTED");
   assert.equal(countAnalystChangesSinceGeneration(null, T), 0, "ABSENT_LOG_COUNTED");
+});
+
+/*
+ * WR-102: a log that cannot be read says nothing about what a replacement would discard, so the count is
+ * unknown (null) rather than 0. A confirmation reading 0 would tell the analyst nothing is discarded, the
+ * undercount the D-16 rule calls the worse error; the analyst read omits the count, and the web says so.
+ */
+test("countAnalystChangesSinceGeneration fails closed on a log it cannot read (WR-102)", () => {
+  const T = "2026-09-10T00:00:00.000Z";
+  assert.equal(countAnalystChangesSinceGeneration("not a log", T), null, "MALFORMED_LOG_COUNTED_AS_ZERO");
+  assert.equal(countAnalystChangesSinceGeneration([{ kind: "question-edited" }], T), null, "INVALID_EVENT_COUNTED_AS_ZERO");
+  assert.deepEqual(
+    projectAnalystRevision(questionnaire({ governanceLog: [{ kind: "question-edited" }], generatedDate: T })),
+    { eventCount: 0, lastEventAt: null },
+    "ANALYST_REVISION_CARRIED_A_COUNT_FOR_AN_UNREADABLE_LOG",
+  );
+  assert.deepEqual(
+    projectAnalystRevision(questionnaire({ governanceLog: [], generatedDate: T })),
+    { eventCount: 0, lastEventAt: null, analystChangesSinceGeneration: 0 },
+    "ANALYST_REVISION_LOST_THE_COUNT_FOR_A_READABLE_LOG",
+  );
 });
 
 test("projectGovernanceEvents preserves analyst detail and narrows requestor history", () => {

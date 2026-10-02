@@ -304,6 +304,8 @@ describe('a failed questionnaire generation job', () => {
     ['QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED', 'A questionnaire already exists for this request. Replace it to generate a new one.'],
     ['QUESTIONNAIRE_ANSWERED', 'The Requestor has started answering this questionnaire, so it can’t be replaced.'],
     ['QUESTIONNAIRE_RELEASED', 'The questionnaire was released before generation finished, so it wasn’t replaced. Return it to analyst review to replace it.'],
+    // WR-102: a replacement the governance log refuses names the history, as every governance refusal does (UI-SPEC G).
+    ['HISTORY_UNAVAILABLE', 'This questionnaire’s change history can’t record more changes. Contact your administrator.'],
     ['provider-failed', 'The provider could not prepare a questionnaire.'],
   ])('words a %s failure for the analyst', (failureCode, copy) => {
     render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} seededJob={{ job: { ...failedJob, failureCode }, canRetry: true }} requestId="request-one" />);

@@ -170,6 +170,8 @@ test("mounted replacement records one regenerated event naming the analyst and w
 /*
  * 10-06's log-first property holds for the regenerated event too: a log that cannot take one more event fails
  * the job before anything is written, so the questionnaire keeps its questions, generation facts and log.
+ * The job names why (WR-102, D-22): HISTORY_UNAVAILABLE, the reason every governance path gives for the same
+ * condition, so the analyst is not told only that generation failed and left retrying a job that cannot pass.
  */
 test("mounted replacement with a full governance log fails and changes nothing", async () => {
   const harness = await harnessPromise;
@@ -192,8 +194,43 @@ test("mounted replacement with a full governance log fails and changes nothing",
 
   const job = await generate(requestId, true);
   assert.equal(job.status, "failed", "FULL_LOG_REPLACEMENT_COMPLETED");
-  assert.equal(job.failureCode, "QUESTIONNAIRE_GENERATION_FAILED", "FULL_LOG_REPLACEMENT_FAILURE_CODE");
+  assert.equal(job.failureCode, "HISTORY_UNAVAILABLE", "FULL_LOG_REPLACEMENT_FAILURE_CODE");
+  assert.equal(job.failureMessage, "The questionnaire’s change history cannot record a replacement.", "FULL_LOG_REPLACEMENT_FAILURE_MESSAGE");
   assert.deepEqual(await harness.snapshot([() => harness.getQuestionnaire(questionnaireId), () => harness.getRequest(requestId)]), before, "FULL_LOG_REPLACEMENT_WROTE");
+});
+
+/*
+ * WR-102: an unreadable log refuses a replacement the same way, and the analyst read never claims nothing
+ * would be discarded: it serves no change count, which the web words as "any" changes (fail closed).
+ */
+test("mounted replacement with an unreadable governance log fails with HISTORY_UNAVAILABLE and serves no change count", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("UNREADABLE-LOG");
+  const questionnaireId = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: "QUES-GENERATION-UNREADABLE-LOG",
+    title: "Generation unreadable log questionnaire",
+    assessmentRequest: requestId,
+    generatedDate: "2026-09-01T00:00:00.000Z",
+    governanceLog: [{ kind: "question-edited" }],
+  });
+  await harness.createFixtureDocument("api::csrm-question.csrm-question", {
+    questionText: "Which service does this request cover?",
+    answerType: "Text",
+    options: { schemaVersion: 1, questionKey: "unreadable-log-service", section: { key: "context", title: "Context", order: 1 }, order: 1, required: true },
+    answer: null,
+    questionnaire: questionnaireId,
+  });
+
+  const analystRead = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`, harness.identities.analyst);
+  assert.equal(analystRead.status, 200, "UNREADABLE_LOG_ANALYST_READ_FAILED");
+  const revision = ((await body(analystRead)).data as Record<string, unknown>).revision as Record<string, unknown>;
+  assert.equal("analystChangesSinceGeneration" in revision, false, `UNREADABLE_LOG_SERVED_A_CHANGE_COUNT_${String(revision.analystChangesSinceGeneration)}`);
+
+  const before = await harness.snapshot([() => harness.getQuestionnaire(questionnaireId), () => harness.getRequest(requestId)]);
+  const job = await generate(requestId, true);
+  assert.equal(job.status, "failed", "UNREADABLE_LOG_REPLACEMENT_COMPLETED");
+  assert.equal(job.failureCode, "HISTORY_UNAVAILABLE", "UNREADABLE_LOG_REPLACEMENT_FAILURE_CODE");
+  assert.deepEqual(await harness.snapshot([() => harness.getQuestionnaire(questionnaireId), () => harness.getRequest(requestId)]), before, "UNREADABLE_LOG_REPLACEMENT_WROTE");
 });
 
 /*
