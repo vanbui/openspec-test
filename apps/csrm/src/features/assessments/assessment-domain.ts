@@ -202,6 +202,9 @@ export function applicableControlGroup(
  */
 export const inventoryPickerPageSize = 25;
 
+/** The page size of the control search (searchControlsAction), in both editors' Control pickers (D-29). */
+export const controlPickerPageSize = 10;
+
 /** The wording for a chosen record whose name is not served (UI-SPEC §16.4); a picker never shows the id. */
 export const relationNameNotAvailable = 'Name not available';
 

@@ -1,10 +1,12 @@
 import { Suspense } from 'react';
 
-import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
+import { searchActiveUsersAction, searchControlsAction } from '@/features/assessments/assessment-actions';
 import { documentIdSchema } from '@/features/assessments/assessment-schema';
-import { listControls, listRiskTypes } from '@/features/assessments/assessment-service';
+import { getAnalystAssessment, listRiskTypes } from '@/features/assessments/assessment-service';
 import { RiskDetails, RiskDetailsSkeleton } from '@/features/risks/risk-details';
-import { listInformationAssets, listInformationSystems } from '@/features/requests/request-service';
+import { searchInformationAssetsAction, searchInformationSystemsAction } from '@/features/requests/request-actions';
+import type { RequestRelationSummary } from '@/features/requests/request-domain';
+import { getRequest } from '@/features/requests/request-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 
@@ -12,7 +14,28 @@ type RiskDetailsPageProps = { params: Promise<{ documentId: string }> };
 
 export const metadata = { title: 'Risk Details | IdamBox CSRM' };
 
-async function RiskDetailsContent({ params }: RiskDetailsPageProps) {
+type RequestSelections = { systems: readonly RequestRelationSummary[]; assets: readonly RequestRelationSummary[] };
+const noRequestSelections: RequestSelections = { systems: [], assets: [] };
+
+/**
+ * The originating request's selected systems and assets, offered first in the pickers (D-30). The Risk names its
+ * assessment and the assessment names its request; both reads run under the viewer's own grants, so Strapi
+ * authorises each one. Either read failing leaves no suggestions and the editor searches only (research Open
+ * Question 2); the failure shows nothing and never blocks the Risk.
+ */
+async function readRequestSelections(assessmentId: string): Promise<RequestSelections> {
+  try {
+    const assessment = await getAnalystAssessment(assessmentId);
+    if (assessment.error || !assessment.data) return noRequestSelections;
+    const request = await getRequest(assessment.data.assessmentRequest.documentId);
+    if (request.error || !request.data) return noRequestSelections;
+    return { systems: request.data.informationSystems ?? [], assets: request.data.informationAssets ?? [] };
+  } catch {
+    return noRequestSelections;
+  }
+}
+
+export async function RiskDetailsContent({ params }: RiskDetailsPageProps) {
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
@@ -28,12 +51,14 @@ async function RiskDetailsContent({ params }: RiskDetailsPageProps) {
   if (result.error) return <RiskDetails state="error" />;
   if (result.data.parentLock === 'released') return <RiskDetails detail={result.data} />;
 
-  const [riskTypes, controls, systems, assets] = await Promise.all([
-    listRiskTypes(), listControls(), listInformationSystems(), listInformationAssets(),
+  // No option list is loaded whole (D-28): the pickers search the control library and the inventories, the Risk
+  // Types carry their applicable controls (D-31), and the Risk's own relations name its system and asset (D-30).
+  const [riskTypes, requestSelections] = await Promise.all([
+    listRiskTypes(),
+    readRequestSelections(result.data.assessment.documentId),
   ]);
-  const inventories = [riskTypes, controls, systems, assets];
-  if (inventories.some((inventory) => inventory.error?.status === 403)) return <RiskDetails state="permission" />;
-  if (inventories.some((inventory) => inventory.error)) return <RiskDetails state="error" />;
+  if (riskTypes.error?.status === 403) return <RiskDetails state="permission" />;
+  if (riskTypes.error) return <RiskDetails state="error" />;
   const relatedUsers = [
     result.data.riskOwner,
     result.data.treatmentOwner,
@@ -41,14 +66,21 @@ async function RiskDetailsContent({ params }: RiskDetailsPageProps) {
   ].filter((user): user is NonNullable<typeof user> => user !== null);
   const users = [...new Map(relatedUsers.map((user) => [user.documentId, user])).values()];
 
-  const mergedSystems = result.data.informationSystemImpacted
-    ? [result.data.informationSystemImpacted, ...(systems.data ?? []).filter((item) => item.documentId !== result.data.informationSystemImpacted?.documentId)]
-    : systems.data ?? [];
-  const mergedAssets = result.data.informationAssetImpacted
-    ? [result.data.informationAssetImpacted, ...(assets.data ?? []).filter((item) => item.documentId !== result.data.informationAssetImpacted?.documentId)]
-    : assets.data ?? [];
-
-  return <RiskDetails detail={result.data} options={{ riskTypes: riskTypes.data ?? [], controls: controls.data ?? [], systems: mergedSystems, assets: mergedAssets, users }} searchOwners={searchActiveUsersAction} />;
+  return (
+    <RiskDetails
+      detail={result.data}
+      options={{
+        riskTypes: riskTypes.data ?? [],
+        users,
+        requestSystems: requestSelections.systems,
+        requestAssets: requestSelections.assets,
+        searchControls: searchControlsAction,
+        searchSystems: searchInformationSystemsAction,
+        searchAssets: searchInformationAssetsAction,
+      }}
+      searchOwners={searchActiveUsersAction}
+    />
+  );
 }
 
 export default function RiskDetailsPage({ params }: RiskDetailsPageProps) {

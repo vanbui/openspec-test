@@ -1,30 +1,48 @@
 'use client';
 
 import { AlertCircleIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
+import {
+  RelationPicker,
+  type RelationPickerItem,
+  type RelationPickerSearchInput,
+  type RelationPickerSearchResult,
+} from '@/components/csrm/relation-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { riskWritableFields } from '@/features/assessments/assessment-domain';
+import { inventoryPickerPageSize, requestRelationGroup, riskWritableFields } from '@/features/assessments/assessment-domain';
 import type {
   ActiveUser,
+  RiskType,
   RiskUpdateInput,
 } from '@/features/assessments/assessment-schema';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from '@/features/assessments/owner-combobox';
 import { updateRiskDetailAction, type RiskDetailServerActionResult } from './risk-actions';
 import type { RiskDetail } from './risk-schema';
 
+type NamedRecord = { documentId: string; name: string };
+export type RiskRelationSearch = (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
+
 export type RiskDetailsOptions = {
-  assets: readonly { documentId: string; name: string }[];
-  controls: readonly { documentId: string; controlNumber: string; name: string }[];
-  riskTypes: readonly { documentId: string; name: string }[];
-  systems: readonly { documentId: string; name: string }[];
+  /** The picker Risk Type list: each type carries its applicable controls for the Control picker (D-31). */
+  riskTypes: readonly Pick<RiskType, 'documentId' | 'name' | 'description' | 'applicableControls'>[];
   users: readonly ActiveUser[];
+  /** The originating request's selected systems and assets, offered first; empty when they could not be read (D-30). */
+  requestSystems: readonly NamedRecord[];
+  requestAssets: readonly NamedRecord[];
+  /** Search the whole control library and inventories, one bounded page at a time (D-28, D-29). */
+  searchControls: RiskRelationSearch;
+  searchSystems: RiskRelationSearch;
+  searchAssets: RiskRelationSearch;
 };
+
+type RelationField = 'informationSystemImpacted' | 'informationAssetImpacted';
+type SelectedRelations = Record<RelationField, RelationPickerItem | null>;
 
 export type RiskOwnerSearch = (input: OwnerSearchInput) => Promise<OwnerSearchResult>;
 
@@ -114,7 +132,17 @@ function relation<T extends { documentId: string }>(items: readonly T[], id: unk
   return typeof id === 'string' ? items.find((item) => item.documentId === id) ?? null : null;
 }
 
-function mergeDetail(detail: RiskDetail, values: RiskUpdateInput, result: Record<string, unknown>, options: RiskDetailsOptions, selectedOwners: Record<string, ActiveUser>): RiskDetail {
+/** The saved system or asset, named by the record the analyst chose in its picker (D-30). */
+function chosenRelation(item: RelationPickerItem | null, id: unknown): NamedRecord | null {
+  return item && typeof id === 'string' && item.documentId === id ? { documentId: item.documentId, name: item.name } : null;
+}
+
+function riskTypeRelation(options: RiskDetailsOptions, id: unknown): RiskDetail['riskType'] {
+  const riskType = relation(options.riskTypes, id);
+  return riskType ? { documentId: riskType.documentId, name: riskType.name, description: riskType.description } : null;
+}
+
+function mergeDetail(detail: RiskDetail, values: RiskUpdateInput, result: Record<string, unknown>, options: RiskDetailsOptions, selectedOwners: Record<string, ActiveUser>, selected: SelectedRelations): RiskDetail {
   const scalar = { ...values, ...result };
   return {
     ...detail,
@@ -122,11 +150,11 @@ function mergeDetail(detail: RiskDetail, values: RiskUpdateInput, result: Record
     documentId: detail.documentId,
     riskNumber: typeof result.riskNumber === 'string' ? result.riskNumber : detail.riskNumber,
     parentLock: detail.parentLock,
-    riskType: 'riskType' in values ? relation(options.riskTypes, values.riskType) as RiskDetail['riskType'] : detail.riskType,
+    riskType: 'riskType' in values ? riskTypeRelation(options, values.riskType) : detail.riskType,
     riskOwner: 'riskOwner' in values ? relation(Object.values(selectedOwners), values.riskOwner) : detail.riskOwner,
     treatmentOwner: 'treatmentOwner' in values ? relation(Object.values(selectedOwners), values.treatmentOwner) : detail.treatmentOwner,
-    informationSystemImpacted: 'informationSystemImpacted' in values ? relation(options.systems, values.informationSystemImpacted) : detail.informationSystemImpacted,
-    informationAssetImpacted: 'informationAssetImpacted' in values ? relation(options.assets, values.informationAssetImpacted) : detail.informationAssetImpacted,
+    informationSystemImpacted: 'informationSystemImpacted' in values ? chosenRelation(selected.informationSystemImpacted, values.informationSystemImpacted) : detail.informationSystemImpacted,
+    informationAssetImpacted: 'informationAssetImpacted' in values ? chosenRelation(selected.informationAssetImpacted, values.informationAssetImpacted) : detail.informationAssetImpacted,
   } as RiskDetail;
 }
 
@@ -138,6 +166,18 @@ export function RiskDetailEditor({ detail, onCancel, onConflict, onNoChange, onS
   const values = form.watch();
   const selectedRiskOwner = selectedOwners[values.riskOwner ?? ''] ?? null;
   const selectedTreatmentOwner = selectedOwners[values.treatmentOwner ?? ''] ?? null;
+  const systemErrorId = useId();
+  const assetErrorId = useId();
+  // The Risk's served relations name its system and asset until the analyst chooses another (D-30).
+  const [selectedRelations, setSelectedRelations] = useState<SelectedRelations>(() => ({
+    informationSystemImpacted: detail.informationSystemImpacted ? { ...detail.informationSystemImpacted } : null,
+    informationAssetImpacted: detail.informationAssetImpacted ? { ...detail.informationAssetImpacted } : null,
+  }));
+
+  function chooseRelation(field: RelationField, item: RelationPickerItem | null) {
+    setSelectedRelations((current) => ({ ...current, [field]: item }));
+    form.setValue(field, item?.documentId ?? null, { shouldDirty: true, shouldValidate: true });
+  }
 
   function chooseOwner(field: 'riskOwner' | 'treatmentOwner', owner: ActiveUser | null) {
     if (owner) setSelectedOwners((current) => ({ ...current, [owner.documentId]: owner }));
@@ -165,7 +205,7 @@ export function RiskDetailEditor({ detail, onCancel, onConflict, onNoChange, onS
       setFormError(result.formError);
       return;
     }
-    onSaved(mergeDetail(detail, changed, result.data as unknown as Record<string, unknown>, options, selectedOwners));
+    onSaved(mergeDetail(detail, changed, result.data as unknown as Record<string, unknown>, options, selectedOwners, selectedRelations));
   }
 
   function cancel() {
@@ -183,8 +223,44 @@ export function RiskDetailEditor({ detail, onCancel, onConflict, onNoChange, onS
         <h2 className="pt-2 text-heading-md">Ratings</h2>
         <SelectField error={form.formState.errors.riskType?.message} label="Risk type" name="riskType" options={options.riskTypes.map((item) => ({ label: item.name, value: item.documentId }))} register={form.register} />
         <div><OwnerCombobox errorId="riskOwner-error" invalid={Boolean(form.formState.errors.riskOwner)} label="Risk owner" onValueChange={(owner) => chooseOwner('riskOwner', owner)} searchOwners={searchOwners} value={selectedRiskOwner} /><FieldError id="riskOwner-error" message={form.formState.errors.riskOwner?.message} /></div>
-        <SelectField error={form.formState.errors.informationSystemImpacted?.message} label="Information system impacted" name="informationSystemImpacted" options={options.systems.map((item) => ({ label: item.name, value: item.documentId }))} register={form.register} />
-        <SelectField error={form.formState.errors.informationAssetImpacted?.message} label="Information asset impacted" name="informationAssetImpacted" options={options.assets.map((item) => ({ label: item.name, value: item.documentId }))} register={form.register} />
+        <div className="grid min-w-0 gap-2">
+          <RelationPicker
+            errorId={systemErrorId}
+            hint="Search by name. Systems selected on the request come first."
+            invalid={Boolean(form.formState.errors.informationSystemImpacted)}
+            label="Information system impacted"
+            noMatchText="No matching information systems. Try another name."
+            noun="system"
+            nounPlural="information systems"
+            onValueChange={(item) => chooseRelation('informationSystemImpacted', item)}
+            otherGroupLabel="Other information systems"
+            pageSize={inventoryPickerPageSize}
+            search={options.searchSystems}
+            searchingText="Searching information systems…"
+            suggested={requestRelationGroup(options.requestSystems)}
+            value={selectedRelations.informationSystemImpacted}
+          />
+          <FieldError id={systemErrorId} message={form.formState.errors.informationSystemImpacted?.message} />
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <RelationPicker
+            errorId={assetErrorId}
+            hint="Search by name. Assets selected on the request come first."
+            invalid={Boolean(form.formState.errors.informationAssetImpacted)}
+            label="Information asset impacted"
+            noMatchText="No matching information assets. Try another name."
+            noun="asset"
+            nounPlural="information assets"
+            onValueChange={(item) => chooseRelation('informationAssetImpacted', item)}
+            otherGroupLabel="Other information assets"
+            pageSize={inventoryPickerPageSize}
+            search={options.searchAssets}
+            searchingText="Searching information assets…"
+            suggested={requestRelationGroup(options.requestAssets)}
+            value={selectedRelations.informationAssetImpacted}
+          />
+          <FieldError id={assetErrorId} message={form.formState.errors.informationAssetImpacted?.message} />
+        </div>
         {choiceFields.map(([name, label, choices]) => <SelectField error={form.formState.errors[name]?.message} key={name} label={label} name={name} options={choices.map((value) => ({ label: value, value }))} register={form.register} />)}
         {dateFields.map(([name, label]) => <DateField error={form.formState.errors[name]?.message} key={name} label={label} name={name} register={form.register} />)}
         <label className="grid gap-2"><span className="text-sm font-medium">Exemption review date</span><Input aria-describedby="exemptionReviewDate-help exemptionReviewDate-error" aria-invalid={Boolean(form.formState.errors.exemptionReviewDate)} {...form.register('exemptionReviewDate')} /><span className="text-xs text-muted-foreground" id="exemptionReviewDate-help">Use UTC format YYYY-MM-DDTHH:mm:ssZ.</span><FieldError id="exemptionReviewDate-error" message={form.formState.errors.exemptionReviewDate?.message} /></label>
@@ -206,7 +282,7 @@ function TextField({ autoFocus, error, label, multiline, name, register }: { aut
   return <label className="grid gap-2"><span className="text-sm font-medium">{label}</span>{multiline ? <Textarea autoFocus={autoFocus} aria-describedby={`${name}-error`} aria-invalid={Boolean(error)} {...field} /> : <Input autoFocus={autoFocus} aria-describedby={`${name}-error`} aria-invalid={Boolean(error)} {...field} />}<FieldError id={`${name}-error`} message={error} /></label>;
 }
 
-type SelectName = 'riskType' | 'informationSystemImpacted' | 'informationAssetImpacted' | 'dataClassification' | 'inherentRating' | 'residualRating' | 'controlEffectiveness' | 'riskVelocity' | 'treatmentAction' | 'treatmentStatus';
+type SelectName = 'riskType' | 'dataClassification' | 'inherentRating' | 'residualRating' | 'controlEffectiveness' | 'riskVelocity' | 'treatmentAction' | 'treatmentStatus';
 function SelectField({ error, label, name, options, register }: { error?: string; label: string; name: SelectName; options: readonly { label: string; value: string }[]; register: ReturnType<typeof useForm<RiskUpdateInput>>['register'] }) {
   return <label className="grid gap-2"><span className="text-sm font-medium">{label}</span><select aria-describedby={`${name}-error`} aria-invalid={Boolean(error)} className="h-9 rounded-md border border-input bg-surface px-3 text-sm" {...register(name)}><option value="">Not specified</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError id={`${name}-error`} message={error} /></label>;
 }

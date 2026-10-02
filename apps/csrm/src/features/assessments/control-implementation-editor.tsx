@@ -21,7 +21,7 @@ import {
   deleteControlImplementationAction,
   updateControlImplementationAction,
 } from './assessment-actions';
-import { controlImplementationWritableFields } from './assessment-domain';
+import { controlImplementationWritableFields, controlPickerPageSize } from './assessment-domain';
 import { controlPickerItem } from './control-label';
 import type {
   ControlImplementation,
@@ -37,7 +37,7 @@ export type ControlImplementationEditorOptions = Pick<RiskEditorOptions, 'users'
 };
 
 /** The control search's page size (Administration list sizes 10, 25, 50 and 100). */
-export const controlSearchPageSize = 10;
+export const controlSearchPageSize = controlPickerPageSize;
 
 export type ControlImplementationEditorProps = {
   assessmentId: string;
