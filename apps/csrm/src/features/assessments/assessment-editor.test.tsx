@@ -196,16 +196,35 @@ const controlEditorOptions = {
   searchControls,
 };
 
+type PickerRecord = { documentId: string; name: string };
+type PickerSearchResult = { ok: true; data: readonly PickerRecord[] } | { ok: false; formError: string };
+
+/** The originating request's selections, offered first in the system and asset pickers (D-30). */
+const requestSystems = [{ documentId: 'system-1', name: 'Customer portal' }, { documentId: 'system-2', name: 'Payments gateway' }];
+const requestAssets = [{ documentId: 'asset-1', name: 'Customer data' }, { documentId: 'asset-2', name: 'Card records' }];
+const searchSystems = vi.fn(async (_input: { search: string }): Promise<PickerSearchResult> => ({ ok: true, data: [] }));
+const searchAssets = vi.fn(async (_input: { search: string }): Promise<PickerSearchResult> => ({ ok: true, data: [] }));
+
 const editorProps = {
   assessment,
   risks: [risk],
   controlImplementations: { 'risk-1': [implementation] },
   riskTypes: [internetExposure],
   users: [analyst],
-  systems: [{ documentId: 'system-1', name: 'Customer portal' }],
-  assets: [{ documentId: 'asset-1', name: 'Customer data' }],
+  requestSystems,
+  requestAssets,
+  // The served Risk list names each Risk's system and asset (D-30).
+  relationLabels: { 'system-1': 'Customer portal', 'asset-1': 'Customer data' },
   searchOwners,
+  searchSystems,
+  searchAssets,
 } as const;
+
+/** The record each system or asset picker chooses when a test edits every field. */
+const pickerChoices: Readonly<Record<string, string>> = {
+  'Information system impacted': 'Payments gateway',
+  'Information asset impacted': 'Card records',
+};
 
 const persistedOwner = { documentId: 'persisted-owner-id', displayName: 'Persisted inactive owner' };
 
@@ -242,6 +261,8 @@ describe('analyst assessment editor contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     searchOwners.mockResolvedValue({ ok: true, data: [analyst] });
+    searchSystems.mockResolvedValue({ ok: true, data: [] });
+    searchAssets.mockResolvedValue({ ok: true, data: [] });
     actionMocks.updateRiskAction.mockResolvedValue({ ok: true, data: risk });
     actionMocks.createRiskAction.mockResolvedValue({ ok: true, data: risk });
     actionMocks.updateControlImplementationAction.mockResolvedValue({ ok: true, data: implementation });
@@ -293,7 +314,12 @@ describe('analyst assessment editor contract', () => {
     for (const label of selectRiskLabels) {
       const field = screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
       if (field instanceof HTMLInputElement && field.type === 'checkbox') fireEvent.click(field);
-      else if (field instanceof HTMLSelectElement) {
+      else if (pickerChoices[label]) {
+        // The system and asset fields are record pickers (D-28): choose another record on the request.
+        expect(field).toHaveAttribute('role', 'combobox');
+        fireEvent.click(field);
+        fireEvent.click(screen.getByRole('option', { name: pickerChoices[label] }));
+      } else if (field instanceof HTMLSelectElement) {
         const next = [...field.options].map((option) => option.value).find((value) => value !== field.value) ?? '';
         fireEvent.change(field, { target: { value: next } });
       } else if (field instanceof HTMLInputElement && field.type === 'date') fireEvent.change(field, { target: { value: '2026-11-11' } });
@@ -318,12 +344,112 @@ describe('analyst assessment editor contract', () => {
     view.unmount();
     render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
     for (const label of selectRiskLabels) {
+      if (pickerChoices[label]) continue;
       const field = screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
       if (field instanceof HTMLInputElement && field.type === 'checkbox') expect(field.checked).toBe(Boolean(risk.isExempted));
       else if (label === 'Exemption review date') expect(field).toHaveValue(risk.exemptionReviewDate ?? '');
       else expect(field).toHaveValue(String(risk[riskWritableFields[riskLabels.indexOf(label)]!] ?? ''));
     }
     expect(screen.getAllByText(`Selected owner: ${analyst.displayName}`)).toHaveLength(2);
+    expect(screen.getByText('Selected system: Customer portal')).toBeInTheDocument();
+    expect(screen.getByText('Selected asset: Customer data')).toBeInTheDocument();
+  });
+
+  it('offers the request’s systems first and searches the whole inventory for the rest (D-28, D-30, UI-SPEC §13.1)', async () => {
+    vi.useFakeTimers();
+    searchSystems.mockResolvedValue({ ok: true, data: [{ documentId: 'system-2', name: 'Payments gateway' }, { documentId: 'system-26', name: 'Payroll ledger' }] });
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
+    const optionNames = (group: HTMLElement) => within(group).getAllByRole('option').map((option) => option.getAttribute('aria-label'));
+
+    const systemPicker = screen.getByRole('combobox', { name: 'Information system impacted' });
+    expect(systemPicker).toHaveAccessibleDescription('Search by name. Systems selected on the request come first.');
+    expect(screen.getByRole('combobox', { name: 'Information asset impacted' })).toHaveAccessibleDescription('Search by name. Assets selected on the request come first.');
+    expect(document.querySelector('select[name="informationSystemImpacted"], select[name="informationAssetImpacted"]')).toBeNull();
+
+    fireEvent.click(systemPicker);
+    expect(optionNames(screen.getByRole('group', { name: 'On this request' }))).toEqual(['Customer portal', 'Payments gateway']);
+    expect(searchSystems).not.toHaveBeenCalled();
+
+    fireEvent.change(systemPicker, { target: { value: 'pay' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(searchSystems).toHaveBeenCalledWith({ search: 'pay' });
+    // The request's own match stays in its group; the server's copy of it is not listed twice.
+    expect(optionNames(screen.getByRole('group', { name: 'On this request' }))).toEqual(['Payments gateway']);
+    expect(optionNames(screen.getByRole('group', { name: 'Other information systems' }))).toEqual(['Payroll ledger']);
+  });
+
+  it('says when a system or asset search fills its page or finds nothing (UI-SPEC §13.1)', async () => {
+    vi.useFakeTimers();
+    searchSystems.mockResolvedValue({ ok: true, data: Array.from({ length: 25 }, (_, index) => ({ documentId: `system-page-${index + 1}`, name: `Server ${index + 1}` })) });
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
+    const systemPicker = screen.getByRole('combobox', { name: 'Information system impacted' });
+
+    fireEvent.change(systemPicker, { target: { value: 'Server' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(screen.getByText('Showing the first 25 matches. Keep typing to narrow the list.')).toBeInTheDocument();
+
+    searchSystems.mockResolvedValue({ ok: true, data: [] });
+    fireEvent.change(systemPicker, { target: { value: 'Zebra' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(screen.getByText('No matching information systems. Try another name.')).toBeInTheDocument();
+
+    fireEvent.keyDown(systemPicker, { key: 'Escape' });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Information asset impacted' }), { target: { value: 'Zebra' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(searchAssets).toHaveBeenCalledWith({ search: 'Zebra' });
+    expect(screen.getByText('No matching information assets. Try another name.')).toBeInTheDocument();
+  });
+
+  it('names the chosen system and asset from the request, then the served Risk list, never an id (D-30)', () => {
+    const view = render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
+    expect(screen.getByText('Selected system: Customer portal')).toBeInTheDocument();
+    expect(screen.getByText('Selected asset: Customer data')).toBeInTheDocument();
+    view.unmount();
+
+    const farRisk = { ...risk, informationSystemImpacted: 'system-far', informationAssetImpacted: 'asset-gone' };
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={{ ...editorProps, relationLabels: { 'system-far': 'Archive server' } }} risk={farRisk} searchOwners={searchOwners} />);
+    expect(screen.getByText('Selected system: Archive server')).toBeInTheDocument();
+    expect(screen.getByText('Selected asset: Name not available')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('system-far');
+    expect(document.body.textContent).not.toContain('asset-gone');
+  });
+
+  it('chooses a system found by typing and saves only that change (D-28)', async () => {
+    vi.useFakeTimers();
+    searchSystems.mockResolvedValue({ ok: true, data: [{ documentId: 'system-26', name: 'Picker proof 26' }] });
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Information system impacted' }), { target: { value: 'Picker proof 26' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    fireEvent.click(screen.getByRole('option', { name: 'Picker proof 26' }));
+    expect(screen.getByText('Selected system: Picker proof 26')).toBeInTheDocument();
+
+    vi.useRealTimers();
+    await userEvent.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id', riskId: 'risk-1', values: { informationSystemImpacted: 'system-26' } }));
+  });
+
+  it('keeps a searched system’s name after adding a Risk refreshes the editor (D-30)', async () => {
+    vi.useFakeTimers();
+    searchSystems.mockResolvedValue({ ok: true, data: [{ documentId: 'system-26', name: 'Picker proof 26' }] });
+    const createdRisk = { ...risk, documentId: 'risk-created', riskNumber: 'RSK-0043', informationSystemImpacted: 'system-26' };
+    actionMocks.createRiskAction.mockResolvedValue({ ok: true, data: createdRisk });
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [createdRisk] } });
+    render(<AssessmentEditor {...editorProps} risks={[]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Risk' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Information system impacted' }), { target: { value: 'Picker' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    fireEvent.click(screen.getByRole('option', { name: 'Picker proof 26' }));
+    vi.useRealTimers();
+    await userEvent.click(screen.getByRole('button', { name: 'Add risk' }));
+
+    await waitFor(() => expect(actionMocks.createRiskAction).toHaveBeenCalledWith(expect.objectContaining({ values: expect.objectContaining({ informationSystemImpacted: 'system-26' }) })));
+    const card = await waitFor(() => {
+      const element = document.getElementById('risk-risk-created');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(within(card).getByText('Selected system: Picker proof 26')).toBeInTheDocument();
   });
 
   it('wires both owner pickers to the injected action and retains persisted labels outside search results', async () => {
@@ -606,6 +732,18 @@ describe('analyst assessment editor contract', () => {
     expect(route).toContain('notFound()');
     expect(route).toMatch(/export default function/);
     expect(route).not.toMatch(/export default async function/);
+  });
+
+  it('reads the request and the served Risk list for the system and asset pickers, never an inventory page (D-28, D-30)', () => {
+    const route = readFileSync(resolve(process.cwd(), 'app/(app)/app/review/assessments/[documentId]/page.tsx'), 'utf8');
+    expect(route).not.toMatch(/listInformationSystems|listInformationAssets/);
+    expect(route).toContain('getRequest(');
+    expect(route).toContain('listAssessmentRisks(');
+    expect(route).toContain('requestSystems=');
+    expect(route).toContain('requestAssets=');
+    expect(route).toContain('relationLabels=');
+    expect(route).toContain('searchSystems={searchInformationSystemsAction}');
+    expect(route).toContain('searchAssets={searchInformationAssetsAction}');
   });
 });
 
