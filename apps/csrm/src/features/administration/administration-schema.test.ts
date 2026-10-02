@@ -188,6 +188,16 @@ describe('Administration validation copy', () => {
     });
   });
 
+  it('words the applicable controls limits in sentence case, since control is not a capitalised record term (UI-SPEC Voice)', async () => {
+    const schema = await loadSchema();
+    expect(messagesFor(schema.riskTypeCreateInputSchema, {
+      name: 'Credential misuse',
+      applicableControls: Array.from({ length: 1_001 }, (_, index) => `control-${index}`),
+    })).toEqual({ applicableControls: ['Select 1,000 applicable controls or fewer.'] });
+    expect(messagesFor(schema.riskTypeCreateInputSchema, { name: 'Credential misuse', applicableControls: ['control-1', 'control-1'] }))
+      .toEqual({ applicableControls: ['Applicable controls must be distinct.'] });
+  });
+
   it('names how to fix an optional Control field that holds only spaces, which the form submits as empty', async () => {
     const schema = await loadSchema();
     expect(messagesFor(schema.controlCreateInputSchema, { ...control, controlReference: '   ', frameworkVersion: ' ', frameworkSource: '  ' })).toEqual({

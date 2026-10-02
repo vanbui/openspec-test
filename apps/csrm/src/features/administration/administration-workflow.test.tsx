@@ -523,17 +523,28 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it('names boolean fieldsets and exposes Applicable Controls combobox state', async () => {
+  it('names boolean fieldsets and exposes Applicable controls combobox state', async () => {
     const { AdministrationForm } = await loadWorkspace();
     const view = render(<AdministrationForm kind="information-systems" mode="create" createAction={vi.fn()} />);
     expect(screen.getByRole('group', { name: 'Internet-facing' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'External access required' })).toBeInTheDocument();
     view.unmount();
     render(<AdministrationForm kind="risk-types" mode="create" createAction={vi.fn()} initialControlOptions={[{ documentId: 'control-1', label: 'AC-1 · Access control' }]} />);
-    const combobox = screen.getByRole('combobox', { name: 'Applicable Controls' });
+    const combobox = screen.getByRole('combobox', { name: 'Applicable controls' });
     expect(combobox).toHaveAttribute('aria-expanded', 'true');
     expect(combobox).toHaveAttribute('aria-controls', 'applicable-control-options');
-    expect(screen.getByRole('status')).toHaveTextContent('1 Control options available.');
+    expect(screen.getByRole('status')).toHaveTextContent('1 control options available.');
+  });
+
+  it('labels the applicable controls field in sentence case, since control is not a capitalised record term (UI-SPEC Voice)', async () => {
+    const { AdministrationForm } = await loadWorkspace();
+    render(<AdministrationForm kind="risk-types" mode="create" createAction={vi.fn()} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Applicable controls' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Applicable controls' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Search controls' })).toBeInTheDocument();
+    const selected = screen.getByRole('group', { name: 'Selected applicable controls' });
+    expect(within(selected).getByText('No applicable controls selected.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Applicable Controls|Search Controls|applicable Controls/);
   });
 
   it('offers Create for first use, Clear filters for filtered empty, and submits blank Risk Type descriptions as null', async () => {
@@ -602,7 +613,7 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
       updateAction={vi.fn()}
     />);
 
-    const selected = screen.getByRole('group', { name: 'Selected applicable Controls' });
+    const selected = screen.getByRole('group', { name: 'Selected applicable controls' });
     expect(within(selected).getByText('V3.1.1 · Verify session management')).toBeInTheDocument();
     expect(within(selected).getByText('Control not found')).toBeInTheDocument();
     expect(selected.textContent).not.toMatch(/control-far|control-missing/);

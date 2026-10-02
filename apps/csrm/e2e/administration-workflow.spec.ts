@@ -130,7 +130,7 @@ test.describe.serial('@administration-risk-types Risk Type administration', () =
     const name = `Credential misuse ${suffix}`;
     await page.getByLabel('Name').fill(name);
     await page.getByLabel('Description').fill('Reusable definition created by the isolated administration journey.');
-    await page.getByRole('combobox', { name: /Applicable Controls/i }).click();
+    await page.getByRole('combobox', { name: 'Applicable controls', exact: true }).click();
     const firstControl = page.getByRole('option').first();
     await expect(firstControl).toBeVisible();
     const chosenControl = (await firstControl.innerText()).trim();
@@ -144,15 +144,15 @@ test.describe.serial('@administration-risk-types Risk Type administration', () =
     await page.reload();
     await expect(page.getByText('Reusable definition edited and persisted by the administration journey.')).toBeVisible();
     // ADMIN05_SELECTED_CONTROL_LABELLED: after a reload the saved control reads by its label, never its id (D-36).
-    const selectedControls = page.getByRole('group', { name: 'Selected applicable Controls' });
+    const selectedControls = page.getByRole('group', { name: 'Selected applicable controls', exact: true });
     await expect(selectedControls.getByText(chosenControl, { exact: true }), 'ADMIN05_SELECTED_CONTROL_LABELLED: the saved control keeps its label').toBeVisible();
     await expect(selectedControls.getByText('Control not found', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /delete/i })).toHaveCount(0);
     await page.getByRole('button', { name: 'Edit Risk Type' }).click();
     // ADMIN05_PICKER_FINDS_APP13 (10-23 walkthrough fix 2): the control picker's server search finds APP-13,
     // whose over-long description used to fail every picker page holding it.
-    await page.getByRole('combobox', { name: /Applicable Controls/i }).fill('APP-13');
-    await page.getByRole('button', { name: 'Search Controls' }).click();
+    await page.getByRole('combobox', { name: 'Applicable controls', exact: true }).fill('APP-13');
+    await page.getByRole('button', { name: 'Search controls', exact: true }).click();
     await expect(page.getByRole('option', { name: 'APP-13 · Correction of personal information', exact: true }),
       'ADMIN05_PICKER_FINDS_APP13: the picker search loads APP-13').toBeVisible();
     await page.getByLabel('Description').fill('Unsaved dialog evidence');
