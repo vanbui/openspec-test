@@ -107,23 +107,23 @@ coverage:
     description: "The Phase 10 gate passes on the production build: Strapi, web, typecheck, lint, api:check and the full Playwright suite (both projects)"
     verification:
       - kind: integration
-        ref: "pnpm --dir apps/backend test (630/630)"
+        ref: "pnpm --dir apps/backend test (third gate at 4c10b43: 649/649; first gate at eed7ed0: 630/630)"
         status: pass
       - kind: unit
-        ref: "pnpm --dir apps/csrm test (2,745/2,745)"
+        ref: "pnpm --dir apps/csrm test (third gate: 2,777/2,777; first gate: 2,745/2,745)"
         status: pass
       - kind: other
-        ref: "pnpm --dir apps/csrm typecheck; pnpm --dir apps/csrm lint; pnpm --dir apps/csrm api:check"
+        ref: "pnpm --dir apps/csrm typecheck; pnpm --dir apps/csrm lint; pnpm --dir apps/csrm api:check; pnpm verify:csrm-seed (third gate)"
         status: pass
       - kind: e2e
-        ref: "pnpm --dir apps/csrm test:e2e (86/86: desktop 82, mobile 4)"
+        ref: "pnpm --dir apps/csrm test:e2e (third gate: 87/87, desktop 83, mobile 4; first gate: 86/86)"
         status: pass
     human_judgment: false
   - id: D2
     description: "No content type changed since 5ea2b77, the catalogue copies are byte-identical, no Keycloak file changed, and no CSRM_AI_ source line changed"
     verification:
       - kind: other
-        ref: "the four static checks of 10-23 Task 1 at eed7ed0"
+        ref: "the four static checks of 10-23 Task 1, at eed7ed0, 5ef0f88 and 4c10b43"
         status: pass
     human_judgment: false
   - id: D3
@@ -1080,6 +1080,60 @@ Notes:
 | Playwright | 86 (82 + 4), 0 flaky, 14.9 min | 86 (82 + 4), 0 flaky, 12.7 min | No new test case. The fixes added assertions inside existing journeys (`administration-workflow`, `assessment-release-workflow`, `assessment-navigation-lifecycle`, `risk-register-workflow`; +34/−2 lines, no new `test(` line), so the count is unchanged. |
 | Seed verification | not run (the script was missing; deferred) | passed, 26.7 s | Restored by fix 3 (`ac34d19`). |
 | Static checks | all empty (after `eed7ed0`) | all empty | 11 more changed files since `5ea2b77`, none a content type, Keycloak file or `CSRM_AI_` line |
+
+The gate is green on every command. No fix was needed in this run.
+
+## Phase gate (third run, after Fix 3c)
+
+The full gate ran a third time at `4c10b43` (branch `post-demo`). That commit adds walkthrough round 2 and the title round to the second run's `5ef0f88`:
+- fixes 7 and 8: `15b08f7`, `ee7c673`, `ba1d9bb`, `d045322` and `d6e29c5`, with their records `c9122fe` and `c8508a6`;
+- Fix 3c: `be545dd` and `9306359`, with its record `4c10b43`.
+
+Conditions:
+- Each command ran on its own from the repository root under Node 24.19.0 and pnpm 11.24.0.
+- Ports 1337 and 3000 were free before the Strapi suite and before Playwright (`netstat` printed nothing). No dev server was started.
+- The Strapi suite and Playwright never ran at the same time, and the seed verification ran after Playwright.
+- Started 2026-10-02T18:28:56Z (UTC). Logs are in the session scratchpad (`p10-23-gate3-<name>.log`, each with `time` and `EXIT=` appended).
+
+| # | Command | Passed | Failed | Skipped | Flaky | Duration | Exit |
+|---|---|---|---|---|---|---|---|
+| 1 | `pnpm --dir apps/backend test` (full Strapi suite, node:test, serial) | 649 | 0 | 0 (cancelled 0, todo 0) | n/a | 693 s wall (node:test 688.0 s) | 0 |
+| 2 | `pnpm --dir apps/csrm test` (full web suite, Vitest, 130 files) | 2,777 | 0 | 0 | n/a | 31.1 s wall (Vitest 30.1 s) | 0 |
+| 3 | `pnpm --dir apps/csrm typecheck` (`next typegen && tsc --noEmit`) | clean | 0 errors | n/a | n/a | 3.6 s | 0 |
+| 4 | `pnpm --dir apps/csrm lint` (`next typegen && tsc --noEmit`) | clean | 0 errors | n/a | n/a | 3.2 s | 0 |
+| 5a | `pnpm --dir apps/csrm api:check` (`api:generate` then `git diff --exit-code` on `schema.d.ts`) | clean (no diff) | n/a | n/a | n/a | 1.6 s | 0 |
+| 5b | `git update-index --refresh -- apps/csrm/src/lib/api/generated/schema.d.ts` | `schema.d.ts` refreshed (not listed afterwards) | n/a | n/a | n/a | 0.1 s | 1, operator files only (as note 5b of the first run) |
+| 6 | `pnpm --dir apps/csrm test:e2e` (full Playwright suite, production build, 1 worker) | 87: desktop 83, mobile 4 | 0 | 0 | 0 | 12.4 min (748 s wall) | 0 |
+| 7 | `pnpm verify:csrm-seed` (the static catalogue verifier, then the runtime verifier on a disposable SQLite) | both passed | 0 | n/a | n/a | 26.1 s | 0 |
+
+Notes:
+- **No EPERM rerun.** The web log has no `EPERM: rename`, so no file was rerun alone.
+- **5b.** The refresh prints `apps/backend/types/generated/components.d.ts: needs update` and `apps/backend/types/generated/contentTypes.d.ts: needs update` and exits 1. Those are the operator's empty-diff line-ending items, left alone. `api:check` exits 0. Its only other output is git's `LF will be replaced by CRLF` notice on `schema.d.ts`.
+- **Playwright.**
+  - Flaky count 0: `retries` is 0 outside CI, and the run printed only `87 passed (12.4m)`, with no `failed`, `flaky` or `skipped` line and no retry.
+  - Per project: 83 `ok` lines for `[desktop]` and 4 for `[mobile]`, with 0 `not ok`.
+  - Next logged `⨯ Error: The destination stream closed early.` 31 times (191 in the first run, 46 in the second). No test asserts on it, and it is the benign navigation-abandon noise described in the first run's notes.
+- **Seed verification output.**
+  - The verifiers printed `IdamBox CSRM seed catalogue verification passed`, then `IdamBox CSRM runtime seed verification passed`.
+  - The runtime verifier's first boot logged `2646 controls (2646 created, 0 updated, 0 unchanged)`. Its second logged `2646 controls (0 created, 1 updated, 2645 unchanged)`, which is its own stale-control fixture being reconciled.
+- **Tree.** After every command, including Playwright and the seed verification, `git status --short` showed only the three operator items. No run changed a tracked file, and nothing was restored (D-48).
+
+**Static checks (third run)**, at `4c10b43` (`p10-23-gate3-static.log`). Each output is quoted between brackets.
+1. **Content types unchanged since `5ea2b77` (D-01).** `git diff --name-only 5ea2b77..HEAD -- 'apps/backend/src/api/*/content-types/*'` printed `[]`.
+2. **Catalogue copies byte-identical (D-02).** `cmp docs/references/idambox-csrm-role-function-api-catalogue.json apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` printed `[]` (exit 0).
+3. **No Keycloak file changed.** `git diff --name-only 5ea2b77..HEAD | grep -i keycloak` printed `[]`, over 236 changed files (232 in the second run).
+4. **No `CSRM_AI_` source line changed.** `git diff 5ea2b77..HEAD -- apps scripts package.json turbo.json pnpm-workspace.yaml | grep '^[+-].*CSRM_AI_'` printed `[]`.
+
+**Comparison with the second run (`5ef0f88`).**
+
+| Command | Second run | Third run | Change, and where it comes from |
+|---|---|---|---|
+| Strapi | 647/647, 900 s | 649/649, 693 s | +2 tests: Fix 3c's two in `control-titles.unit` (the 18 titles, and their superseded entries). Fix 3c changed the mounted reconcile proof in `assessment-seed.integration` but added no test there. Fixes 7 and 8 changed no Strapi test. |
+| Web | 2,768/2,768, 130 files, 40.7 s | 2,777/2,777, 130 files, 31.1 s | +9 tests, no new file: fix 7's wrap test in `administration-workflow.test.tsx` and fix 8's eight in `relation-picker.test.tsx`, `owner-combobox.test.tsx`, `risk-register.test.tsx` and `assessment-editor.test.tsx`. Fix 3c changed no web file. |
+| typecheck, lint, api:check | clean | clean | none |
+| Playwright | 86 (82 + 4), 0 flaky, 12.7 min | 87 (83 + 4), 0 flaky, 12.4 min | +1 desktop test: fix 8's `picker lists pass axe while open at 1440 and 375` (`accessibility.spec.ts:778`). Fix 7's `ADMIN05_CONTROL_TITLES_WRAP` is a step inside an existing journey. |
+| Seed verification | passed, 26.7 s | passed, 26.1 s | none. The verifiers read the title file, so they cover Fix 3c's 18 titles and superseded lists. |
+| Static checks | all empty | all empty | 4 more changed files since `5ea2b77`, all from fix 8: `owner-combobox.tsx`, `owner-combobox.test.tsx`, `risk-register-filters.tsx` and `risk-register.test.tsx`. Fix 3c's three files were already in the diff. None is a content type, a Keycloak file or a `CSRM_AI_` line. |
 
 The gate is green on every command. No fix was needed in this run.
 
