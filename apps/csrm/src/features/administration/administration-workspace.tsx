@@ -96,6 +96,15 @@ function systemCriticalityLabel(record: AdministrationWorkspaceRecord): string {
 }
 
 /*
+ * A name or a short label whose stored text may still be long (a Reference or Location of up to 500 characters; a
+ * Name, Owner or Business criticality of up to 255). It is capped at the long-text maximum (28rem, direction §4
+ * DataTable) and clamps to two lines with the full text in the DOM, so one long value cannot push the other columns
+ * out of view (WR-309). It takes no 14rem minimum: that belongs to statement and title columns (the `wrap` option),
+ * and a short value here keeps a compact, one-line column (10-23 fix 7).
+ */
+const boundedTextClassName = 'line-clamp-2 max-w-md whitespace-normal break-words';
+
+/*
  * A control's name as the controls list reads it: the title part, or `Not provided` for an untitled control,
  * so the number shows once in its row. The mobile card has no number column, so it uses the full control
  * label (D-36, UI-SPEC §16.2).
@@ -212,7 +221,7 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
   const riskTypeColumns: DataTableColumn<AdministrationWorkspaceRecord>[] = [
     {
       accessorKey: 'name', header: 'Name', enableSorting: true,
-      cell: (_value, record) => <RecordLink href={config.detailPath(record.documentId)}>{record.name}</RecordLink>,
+      cell: (_value, record) => <RecordLink className={boundedTextClassName} href={config.detailPath(record.documentId)}>{record.name}</RecordLink>,
     },
     // Long text (direction §4 DataTable, X-3): wraps within the column bounds and clamps to two lines.
     { accessorKey: 'description', header: 'Description', wrap: true, cell: (value) => <span className="line-clamp-2">{String(value ?? 'Not provided')}</span> },
@@ -226,13 +235,13 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
     { accessorKey: 'name', header: 'Name', enableSorting: true, wrap: true, cell: (_value, record) => <span className="line-clamp-2">{controlNameCell(record)}</span> },
     { accessorKey: 'framework', header: 'Framework', wrap: true, cell: (value) => <span className="line-clamp-2">{String(value)}</span> },
     { accessorKey: 'controlType', header: 'Type', cell: (value) => String(value ?? 'Not provided') },
-    { accessorKey: 'controlReference', header: 'Reference', cell: (value) => String(value ?? 'Not provided') },
+    { accessorKey: 'controlReference', header: 'Reference', cell: (value) => <span className={boundedTextClassName}>{String(value ?? 'Not provided')}</span> },
   ];
   const systemColumns: DataTableColumn<AdministrationWorkspaceRecord>[] = [
-    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (value, record) => <RecordLink href={config.detailPath(record.documentId)}>{String(value)}</RecordLink> },
+    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (value, record) => <RecordLink className={boundedTextClassName} href={config.detailPath(record.documentId)}>{String(value)}</RecordLink> },
     // Owner and Business criticality follow Name so the oversight columns stay in view; neither sorts (UI-D23).
-    { accessorKey: 'ownerName', header: 'Owner', cell: (_value, record) => systemOwnerLabel(record) },
-    { accessorKey: 'businessCriticality', header: 'Business criticality', cell: (_value, record) => systemCriticalityLabel(record) },
+    { accessorKey: 'ownerName', header: 'Owner', cell: (_value, record) => <span className={boundedTextClassName}>{systemOwnerLabel(record)}</span> },
+    { accessorKey: 'businessCriticality', header: 'Business criticality', cell: (_value, record) => <span className={boundedTextClassName}>{systemCriticalityLabel(record)}</span> },
     { accessorKey: 'systemType', header: 'Type', enableSorting: true, cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'environment', header: 'Environment', enableSorting: true, cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'deploymentModel', header: 'Deployment model', cell: (value) => String(value ?? 'Not provided') },
@@ -240,10 +249,10 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
     { accessorKey: 'internetFacing', header: 'Internet-facing', cell: (value) => yesNo(value) },
   ];
   const assetColumns: DataTableColumn<AdministrationWorkspaceRecord>[] = [
-    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (value, record) => <RecordLink href={config.detailPath(record.documentId)}>{String(value)}</RecordLink> },
+    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (value, record) => <RecordLink className={boundedTextClassName} href={config.detailPath(record.documentId)}>{String(value)}</RecordLink> },
     { accessorKey: 'type', header: 'Type', enableSorting: true, cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'dataClassification', header: 'Classification', enableSorting: true, cell: (value) => String(value ?? 'Not provided') },
-    { accessorKey: 'location', header: 'Location', cell: (value) => String(value ?? 'Not provided') },
+    { accessorKey: 'location', header: 'Location', cell: (value) => <span className={boundedTextClassName}>{String(value ?? 'Not provided')}</span> },
     { accessorKey: 'containsPersonalData', header: 'Sensitive-data flags', cell: (_value, record) => 'containsPersonalData' in record ? `Personal: ${yesNo(record.containsPersonalData)} · Legal: ${yesNo(record.containsLegalData)} · Credit card: ${yesNo(record.containsCreditCardData)}` : 'Not provided' },
   ];
   const columns = kind === 'controls' ? controlColumns : kind === 'information-systems' ? systemColumns : kind === 'information-assets' ? assetColumns : riskTypeColumns;
