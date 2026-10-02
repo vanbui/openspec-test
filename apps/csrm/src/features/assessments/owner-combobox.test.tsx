@@ -18,6 +18,19 @@ const casey = { documentId: 'user-casey', displayName: 'Casey Custodian' };
 afterEach(() => vi.useRealTimers());
 
 describe('OwnerCombobox', () => {
+  /* WR-204, UI-SPEC §13.1: Enter never submits the surrounding form, whatever the field holds. */
+  it('never lets Enter submit the surrounding form, including when the field is empty or blank', () => {
+    const submit = vi.fn();
+    render(<form onSubmit={submit}><OwnerCombobox label="Control owner" value={null} onValueChange={vi.fn()} searchOwners={vi.fn().mockResolvedValue({ ok: true, data: [] })} /></form>);
+    const input = screen.getByRole('combobox', { name: 'Control owner' });
+
+    // fireEvent returns false when the handler prevented the browser's default (here, the implicit submit).
+    expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false);
+    fireEvent.change(input, { target: { value: '   ' } });
+    expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false);
+    expect(submit).not.toHaveBeenCalled();
+  });
+
   it('debounces arbitrary non-empty names and never searches empty input', async () => {
     vi.useFakeTimers();
     const searchOwners = vi.fn().mockResolvedValue({ ok: true, data: [alex] });
