@@ -117,6 +117,25 @@ describe('summarizeReleaseReadiness (D-35, UI-SPEC §14.1)', () => {
   });
 });
 
+/* IN-205: Strapi only bounds a Risk number, so two Risks can share one; each keeps its own row and link. */
+describe('Risks that share a number', () => {
+  it('gives each Risk its own row, keyed by the Risk and not by its number', () => {
+    const summary = summarizeReleaseReadiness({
+      ready: false,
+      requirements: [
+        ...riskRequirements('RSK-0001', 'risk-first', ['riskStatement']),
+        ...riskRequirements('RSK-0001', 'risk-second', ['riskType', 'riskOwner']),
+      ],
+    });
+
+    expect(summary.outstandingRisks).toEqual([
+      { riskNumber: 'RSK-0001', href: '#risk-first', outstanding: 1, missing: ['Risk statement'] },
+      { riskNumber: 'RSK-0001', href: '#risk-second', outstanding: 2, missing: ['Risk type', 'Risk owner'] },
+    ]);
+    expect(summary.metRisks.map((row) => row.href)).toEqual(['#risk-first', '#risk-second']);
+  });
+});
+
 describe('missingCaption (UI-SPEC §14.1)', () => {
   it('names one, two, three and four labels as an English list', () => {
     expect(missingCaption(['Risk owner'])).toBe('Missing: Risk owner');
