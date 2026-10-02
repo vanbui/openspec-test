@@ -379,6 +379,42 @@ test.describe.serial('@administration-systems-assets Information System and Asse
     await expect(systemRow.getByRole('cell').nth(1), 'ADMIN05_SYSTEM_OWNER_COLUMNS: the owner reads by name').toHaveText('Jane Doe');
     await expect(systemRow.getByRole('cell').nth(2), 'ADMIN05_SYSTEM_OWNER_COLUMNS: the criticality reads as entered').toHaveText('High');
 
+    /*
+     * ADMIN05_LONG_TEXT_BOUNDED (WR-309): a 255-character Business criticality is capped at the long-text maximum
+     * and clamps to two lines, so it cannot push Type and the later columns out of view at 1440. The full text
+     * stays in the DOM.
+     */
+    const longCriticality = `High for payments, customer onboarding and partner settlement ${suffix} `.repeat(6).slice(0, 255).trim();
+    await systemRow.getByRole('link', { name: `Portal ${suffix}` }).click();
+    await page.getByRole('button', { name: 'Edit Information System' }).click();
+    await page.getByLabel('Business criticality').fill(longCriticality);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText('Changes saved.')).toBeVisible();
+    await page.goto(`/app/admin/information-systems?q=${encodeURIComponent(`Portal ${suffix}`)}`);
+    const longRow = systemsTable.locator('tbody tr', { hasText: `Portal ${suffix}` });
+    const criticalityCell = longRow.getByRole('cell').nth(2);
+    await expect(criticalityCell, 'ADMIN05_LONG_TEXT_BOUNDED: the whole criticality stays in the DOM').toHaveText(longCriticality);
+    await settleElementWidth(systemsScroller);
+    const bounded = await criticalityCell.evaluate((cell) => {
+      const text = cell.firstElementChild as HTMLElement;
+      // The clamped element's own line box (a text Range measures only the glyphs, which are shorter).
+      return {
+        cellWidth: cell.getBoundingClientRect().width,
+        textHeight: text.getBoundingClientRect().height,
+        lineHeight: Number.parseFloat(getComputedStyle(text).lineHeight),
+        rootFont: Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+      };
+    });
+    expect(Number.isFinite(bounded.lineHeight), 'ADMIN05_LONG_TEXT_BOUNDED: the criticality text has a measurable line height').toBe(true);
+    test.info().annotations.push({ type: 'ADMIN05_LONG_TEXT_BOUNDED', description: `criticality cell ${Math.round(bounded.cellWidth)}px wide, text ${Math.round(bounded.textHeight)}px (line ${Math.round(bounded.lineHeight)}px)` });
+    expect(bounded.cellWidth, 'ADMIN05_LONG_TEXT_BOUNDED: the criticality column is no wider than 28rem and its padding').toBeLessThanOrEqual(28 * bounded.rootFont + 48);
+    expect(bounded.textHeight, 'ADMIN05_LONG_TEXT_BOUNDED: the criticality clamps to two lines').toBeLessThanOrEqual(bounded.lineHeight * 2 + 1);
+    const longScrollerBox = await systemsScroller.boundingBox();
+    const typeBox = await systemHeaders.nth(3).boundingBox();
+    expect(typeBox && longScrollerBox && typeBox.x + typeBox.width <= longScrollerBox.x + longScrollerBox.width + 1,
+      'ADMIN05_LONG_TEXT_BOUNDED: Type stays in view without scrolling beside a long criticality at 1440px').toBe(true);
+    await expectNoHorizontalOverflow(page, 'ADMIN05_LONG_TEXT_BOUNDED: no page overflow at 1440px');
+
     await expectFocusVisible(page.getByRole('link', { name: 'Create Information System' }));
     await expectNoSeriousAxeViolations(page);
 
