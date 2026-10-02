@@ -1285,3 +1285,130 @@ describe('readiness-gated release', () => {
     expect(screen.queryByRole('button', { name: /save|add|remove|release/i })).not.toBeInTheDocument();
   });
 });
+
+/*
+ * CR-201: each form compares a save with the values last saved, not the values the page loaded. The server's
+ * answer to a save (or the refreshed assessment) becomes the next baseline, so a field set back to its page-load
+ * value is a change and is sent. A failed refresh after a save leaves no stale baseline and hides no new Risk.
+ */
+describe('each save compares with the latest saved values (CR-201)', () => {
+  /** The Risk update as Strapi serves it: the Risk summary, not the whole Risk (riskSchema). */
+  const servedRiskSummary = { documentId: 'risk-1', riskNumber: 'RSK-0042', riskStatement: risk.riskStatement, inherentRating: risk.inherentRating, residualRating: risk.residualRating };
+  const refreshFailed = { ok: false, formError: 'The assessment service is unavailable. Please try again later.' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchOwners.mockResolvedValue({ ok: true, data: [analyst] });
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [risk] } });
+  });
+
+  it('sends a mitigation control status set back to its page-load value (Planned, Implemented, Planned)', async () => {
+    let stored: ControlImplementation = { ...implementation, controlStatus: 'Planned' };
+    actionMocks.updateControlImplementationAction.mockImplementation(async ({ values }: { values: Partial<ControlImplementation> }) => {
+      stored = { ...stored, ...values };
+      return { ok: true, data: stored };
+    });
+    render(<AssessmentEditor {...editorProps} controlImplementations={{ 'risk-1': [stored] }} />);
+    const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
+    const save = within(region).getByRole('button', { name: 'Save mitigation control' });
+    const form = save.closest('form')!;
+
+    await userEvent.selectOptions(within(form).getByLabelText('Control status'), 'Implemented');
+    await userEvent.click(save);
+    await waitFor(() => expect(within(form).getByRole('status')).toHaveTextContent(/^Mitigation control saved at/));
+    expect(actionMocks.updateControlImplementationAction).toHaveBeenLastCalledWith({ assessmentId: 'assessment/id', implementationId: 'implementation-1', values: { controlStatus: 'Implemented' } });
+
+    await userEvent.selectOptions(within(form).getByLabelText('Control status'), 'Planned');
+    await userEvent.click(save);
+    await waitFor(() => expect(actionMocks.updateControlImplementationAction).toHaveBeenCalledTimes(2));
+    expect(actionMocks.updateControlImplementationAction).toHaveBeenLastCalledWith({ assessmentId: 'assessment/id', implementationId: 'implementation-1', values: { controlStatus: 'Planned' } });
+    await waitFor(() => expect(within(form).getByRole('status')).toHaveTextContent(/^Mitigation control saved at/));
+    expect(stored.controlStatus).toBe('Planned');
+
+    // The unchanged-save rule still holds, against the value just saved.
+    await userEvent.click(save);
+    await waitFor(() => expect(within(form).getByRole('status')).toHaveTextContent(/^No changes to save\.$/));
+    expect(actionMocks.updateControlImplementationAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends a Risk field set back to its page-load value when the refresh after the first save fails', async () => {
+    actionMocks.updateRiskAction.mockResolvedValue({ ok: true, data: servedRiskSummary });
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue(refreshFailed);
+    render(<AssessmentEditor {...editorProps} />);
+    const card = document.getElementById('risk-risk-1')!;
+    const comments = within(card).getByLabelText('Comments');
+    const save = within(card).getByRole('button', { name: 'Save risk' });
+
+    await userEvent.type(comments, ' Again.');
+    await userEvent.click(save);
+    await waitFor(() => expect(actionMocks.updateRiskAction).toHaveBeenCalledTimes(1));
+    expect(actionMocks.updateRiskAction).toHaveBeenLastCalledWith({ assessmentId: 'assessment/id', riskId: 'risk-1', values: { comments: 'Reviewed with the owner. Again.' } });
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalled());
+
+    await userEvent.clear(comments);
+    await userEvent.type(comments, 'Reviewed with the owner.');
+    await userEvent.click(save);
+    await waitFor(() => expect(actionMocks.updateRiskAction).toHaveBeenCalledTimes(2));
+    expect(actionMocks.updateRiskAction).toHaveBeenLastCalledWith({ assessmentId: 'assessment/id', riskId: 'risk-1', values: { comments: 'Reviewed with the owner.' } });
+  });
+
+  it('sends assessment details set back to their page-load value when the refresh after the first save fails', async () => {
+    actionMocks.saveAssessmentAction.mockImplementation(async ({ values }: { values: { summary?: string } }) => ({ ok: true, data: { ...assessment, summary: values.summary ?? assessment.summary } }));
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue(refreshFailed);
+    render(<AssessmentEditor {...editorProps} />);
+    const summary = screen.getByLabelText('Summary');
+    const save = screen.getByRole('button', { name: 'Save assessment' });
+
+    await userEvent.type(summary, ' Updated.');
+    await userEvent.click(save);
+    await waitFor(() => expect(actionMocks.saveAssessmentAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalled());
+
+    await userEvent.clear(summary);
+    await userEvent.type(summary, 'Customer portal assessment.');
+    await userEvent.click(save);
+    await waitFor(() => expect(actionMocks.saveAssessmentAction).toHaveBeenCalledTimes(2));
+    expect(actionMocks.saveAssessmentAction.mock.lastCall?.[0]).toMatchObject({ values: { summary: 'Customer portal assessment.' } });
+  });
+
+  it('shows a newly added Risk when the refresh after the create fails', async () => {
+    actionMocks.createRiskAction.mockResolvedValue({ ok: true, data: { documentId: 'risk-created', riskNumber: 'RSK-0043', riskStatement: 'New contextual Risk', inherentRating: null, residualRating: null } });
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue(refreshFailed);
+    render(<AssessmentEditor {...editorProps} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add Risk' }));
+    const create = screen.getByRole('button', { name: 'Add risk' });
+    fireEvent.change(within(create.closest('form')!).getByLabelText('Risk statement'), { target: { value: 'New contextual Risk' } });
+    await userEvent.click(create);
+
+    const card = await waitFor(() => {
+      const element = document.getElementById('risk-risk-created');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(within(card).getByText('RSK-0043')).toBeInTheDocument();
+  });
+
+  it('names a control re-pointed in this session in the read-only view after release', async () => {
+    const repointed: ControlImplementation = { ...implementation, control: 'control-2', controlSummary: applicableApp11 };
+    actionMocks.updateControlImplementationAction.mockResolvedValue({ ok: true, data: repointed });
+    actionMocks.releaseAssessmentAction.mockResolvedValue({
+      ok: true,
+      data: { ...assessment, assessmentStatus: 'approved', assessmentDate: '2026-08-30T02:00:00.000Z', approvalDate: '2026-08-30T02:00:00.000Z', approvedBy: analyst },
+    });
+    render(<AssessmentEditor {...editorProps} />);
+    const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
+
+    fireEvent.click(within(region).getByRole('combobox', { name: 'Control' }));
+    fireEvent.click(screen.getByRole('option', { name: 'APP-11 · Security of personal information' }));
+    await userEvent.click(within(region).getByRole('button', { name: 'Save mitigation control' }));
+    await waitFor(() => expect(actionMocks.updateControlImplementationAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Release assessment' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm release' }));
+    expect(await screen.findByText('Assessment released')).toBeInTheDocument();
+    expect(screen.getByText('APP-11 · Security of personal information')).toBeInTheDocument();
+    expect(screen.queryByText('AC-1 · Access control')).not.toBeInTheDocument();
+  });
+});
