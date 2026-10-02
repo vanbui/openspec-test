@@ -225,7 +225,8 @@ export function RelationPicker({
             aria-autocomplete="list"
             aria-controls={listboxShown ? listboxId : undefined}
             aria-describedby={describedBy}
-            aria-expanded={isOpen}
+            // APG: expanded only while the listbox popup is displayed; status lines and errors announce on their own.
+            aria-expanded={listboxShown}
             aria-haspopup="listbox"
             aria-invalid={invalid}
             autoComplete="off"
