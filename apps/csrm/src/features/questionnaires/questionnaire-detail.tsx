@@ -16,7 +16,8 @@ import { QuestionnaireRenderer } from './questionnaire-renderer';
 import { revertQuestionnaireToDraftAction } from './questionnaire-actions';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { availableAssessmentRequest } from './questionnaire-domain';
+import { availableAssessmentRequest, getVisibleQuestionKeys } from './questionnaire-domain';
+import { QuestionnaireIntroduction } from './questionnaire-introduction';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
 import { canRevertQuestionnaireToDraft, submittedNoticeVariant } from './questionnaire-workflow-rules';
@@ -36,6 +37,10 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
   if (!questionnaire || state === 'empty' || definition.length === 0) return <><PageHeader title="Questionnaire" description="No questions are currently available." /><Alert><AlertCircle aria-hidden="true" /><AlertTitle>No questionnaire questions are available</AlertTitle><AlertDescription>This authorised questionnaire does not yet contain a valid question definition.</AlertDescription></Alert><Link className={buttonVariants({ variant: 'outline' })} href="/app/questionnaires">Back to questionnaires</Link></>;
 
   const submitted = state === 'submitted' || questionnaire.state === 'submitted';
+  /*
+   * UI-SPEC §5.1: while answering, the introduction comes first and carries the description; once submitted,
+   * the description returns above the revert summary. The history always follows the questions.
+   */
   return (
     <>
       <PageHeader
@@ -44,13 +49,26 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
         title={questionnaire.title}
       />
       <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} />
-      {submitted && canRevertQuestionnaireToDraft({ ...questionnaire, state: 'submitted' }) ? <QuestionnaireRevertControl documentId={questionnaire.documentId} /> : null}
-      {questionnaire.description ? <p className="mb-6 max-w-3xl text-sm text-muted-foreground">{questionnaire.description}</p> : null}
-      <RevertAuditSummary className="mb-6" facts={questionnaire} />
-      <QuestionnaireRevisionTimeline depth="summary" questionnaire={questionnaire} />
-      <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} submittedNotice={submittedNoticeVariant('requestor', questionnaire)} />
+      {submitted && canRevertQuestionnaireToDraft({ state: 'submitted', assessmentRequest: questionnaire.assessmentRequest }) ? <QuestionnaireRevertControl documentId={questionnaire.documentId} /> : null}
+      <div className="grid min-w-0 grid-cols-1 gap-8">
+        {submitted
+          ? (questionnaire.description ? <p className="max-w-3xl text-sm text-muted-foreground">{questionnaire.description}</p> : null)
+          : <QuestionnaireIntroduction description={questionnaire.description} {...introductionFacts(definition)} />}
+        <RevertAuditSummary facts={questionnaire} />
+        <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} submittedNotice={submittedNoticeVariant('requestor', questionnaire)} />
+        <QuestionnaireRevisionTimeline depth="summary" questionnaire={questionnaire} />
+      </div>
     </>
   );
+}
+
+/** The count the completion card starts from: the questions shown for the answers the page loaded with. */
+function introductionFacts(definition: QuestionnaireDefinition): { questionCount: number; hasConditionalQuestions: boolean } {
+  const loadedAnswers = Object.fromEntries(definition.map((question) => [question.questionKey, question.answer]));
+  return {
+    questionCount: getVisibleQuestionKeys(definition, loadedAnswers).length,
+    hasConditionalQuestions: definition.some((question) => question.visibility != null),
+  };
 }
 
 function QuestionnaireRequestRelationship({ assessmentRequestHref, questionnaire }: Pick<QuestionnaireDetailProps, 'assessmentRequestHref'> & { questionnaire: QuestionnaireSummary }) {

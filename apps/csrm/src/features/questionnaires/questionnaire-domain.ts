@@ -124,7 +124,10 @@ export function validateActiveRequiredAnswers(
   unsupportedRequiredKeys: readonly string[];
 } {
   const visible = new Set(getVisibleQuestionKeys(definition, answers));
-  const activeRequired = definition.filter((question) => question.required && visible.has(question.questionKey));
+  /* Form order (section, then question): the server serves questions by question order alone, so sections interleave (D-13). */
+  const activeRequired = orderQuestionnaire(definition)
+    .flatMap((section) => section.questions)
+    .filter((question) => question.required && visible.has(question.questionKey));
   const unsupportedRequiredKeys = activeRequired
     .filter((question) => question.support.status === 'unsupported')
     .map((question) => question.questionKey);

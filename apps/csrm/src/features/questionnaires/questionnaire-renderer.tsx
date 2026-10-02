@@ -234,10 +234,14 @@ function ReadOnlyQuestion({ question }: { question: QuestionnaireQuestion }) {
   );
 }
 
+function hasFieldErrors(result: Extract<QuestionnaireActionResult, { ok: false }>): boolean {
+  return Object.entries(result.fieldErrors ?? {}).some(([key, messages]) => key.startsWith('answers.') && Boolean(messages?.[0]));
+}
+
 function applyFailure(result: Extract<QuestionnaireActionResult, { ok: false }>, setError: ReturnType<typeof useForm<FormValues>>['setError']): string {
   for (const [key, messages] of Object.entries(result.fieldErrors ?? {})) {
     const message = messages?.[0];
-    if (message && key.startsWith('answers.')) setError(key as `answers.${string}`, { message });
+    if (message && key.startsWith('answers.')) setError(key as `answers.${string}`, { type: 'server', message });
   }
   return result.formError ?? 'Check the highlighted answers and try again.';
 }
@@ -259,6 +263,8 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     setDefinition(initialDefinition);
   }
   const [formError, setFormError] = useState<string | null>(null);
+  /* The attention list appears only after a submit attempt or a server field error (UI-SPEC §5.3). */
+  const [attempted, setAttempted] = useState(false);
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const previousVisible = useRef<readonly string[]>([]);
@@ -276,6 +282,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
   const completeness = validateActiveRequiredAnswers(definition, domainAnswers);
   const unsupportedSet = new Set(completeness.unsupportedRequiredKeys);
   const supportedUnanswered = completeness.requiredUnansweredKeys.filter((key) => !unsupportedSet.has(key));
+  const supportedUnansweredSet = new Set(supportedUnanswered);
 
   useEffect(() => {
     const hidden = previousVisible.current.filter((key) => !visibleSet.has(key));
@@ -294,6 +301,15 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
 
   const sections = orderQuestionnaire(definition);
   const errors = form.formState.errors.answers ?? {};
+  /* Form order: section order, then question order, whatever order the server served them in (D-13). */
+  const formOrder = sections.flatMap((section) => section.questions).filter((question) => visibleSet.has(question.questionKey));
+  /*
+   * A required question leaves the list as soon as it is answered; a server field error stays until the
+   * field is validated again on blur, which replaces it.
+   */
+  const attention = formOrder.filter((question) => unsupportedSet.has(question.questionKey)
+    || supportedUnansweredSet.has(question.questionKey)
+    || (errors[question.questionKey] as { type?: string } | undefined)?.type === 'server');
 
   async function saveCurrentDraft(): Promise<boolean> {
     setSaving(true);
@@ -306,6 +322,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
       });
       if (!result.ok) {
         setFormError(applyFailure(result, form.setError));
+        if (hasFieldErrors(result)) setAttempted(true);
         return false;
       }
       setDraftMessage('Draft saved. Your answers remain editable.');
@@ -319,8 +336,9 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     setFormError(null);
     const valid = await form.trigger();
     if (valid) return true;
-    setFormError('Check the questions requiring attention before submitting.');
-    const firstInvalid = definition.find((question) => visibleSet.has(question.questionKey) && (form.getFieldState(`answers.${question.questionKey}`).invalid || unsupportedSet.has(question.questionKey)));
+    /* The attention list is the one list of what to fix (UI-D29); the form-level alert keeps only failures. */
+    setAttempted(true);
+    const firstInvalid = formOrder.find((question) => form.getFieldState(`answers.${question.questionKey}`).invalid || unsupportedSet.has(question.questionKey));
     if (firstInvalid) setTimeout(() => document.getElementById(fieldId(firstInvalid.questionKey))?.focus(), 0);
     return false;
   }
@@ -331,6 +349,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     const result = await submitQuestionnaireAction({ documentId, answers: activeAnswerInputs(definition, form.getValues('answers')) });
     if (!result.ok) {
       setFormError(applyFailure(result, form.setError));
+      if (hasFieldErrors(result)) setAttempted(true);
       throw new Error('Questionnaire submission failed');
     }
     setDefinition(result.data.answers);
@@ -357,13 +376,6 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
           <AlertTitle>Questionnaire not saved</AlertTitle>
           <AlertDescription>
             <p>{formError}</p>
-            {definition.some((question) => visibleSet.has(question.questionKey) && errors[question.questionKey]) ? (
-              <ul className="mt-2 grid gap-1">
-                {definition.filter((question) => visibleSet.has(question.questionKey) && errors[question.questionKey]).map((question) => (
-                  <li key={question.questionKey}><a className="underline underline-offset-4" href={`#${fieldId(question.questionKey)}`}>{question.questionText}</a></li>
-                ))}
-              </ul>
-            ) : null}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -373,12 +385,14 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
         <Progress aria-label={`${progress.answered} of ${progress.total} questionnaire questions answered`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={progress.percent} value={progress.percent} />
         <p className="text-sm text-muted-foreground">{supportedUnanswered.length} required {supportedUnanswered.length === 1 ? 'question' : 'questions'} unanswered</p>
       </section>
-      {(supportedUnanswered.length > 0 || completeness.unsupportedRequiredKeys.length > 0) ? (
+      {attempted && attention.length > 0 ? (
         <section aria-label="Questionnaire validation guidance" className="grid gap-2 rounded-lg border border-warning-border bg-warning-subtle p-4">
           <h2 className="text-heading-sm text-warning">Questions requiring attention</h2>
+          <p className="text-sm text-foreground">Answer or correct these questions, then submit again.</p>
           <ul className="grid gap-1 text-sm">
-            {supportedUnanswered.map((key) => { const item = definition.find((question) => question.questionKey === key); return item ? <li key={key}><a className="text-link underline underline-offset-4" href={`#${fieldId(key)}`}>{item.questionText}</a></li> : null; })}
-            {completeness.unsupportedRequiredKeys.map((key) => { const item = definition.find((question) => question.questionKey === key); return item ? <li key={key}>{item.questionText} — required but unavailable</li> : null; })}
+            {attention.map((question) => unsupportedSet.has(question.questionKey)
+              ? <li key={question.questionKey}>{`${question.questionText} - required but unavailable`}</li>
+              : <li key={question.questionKey}><a className="text-link underline underline-offset-4" href={`#${fieldId(question.questionKey)}`}>{question.questionText}</a></li>)}
           </ul>
         </section>
       ) : null}

@@ -201,6 +201,9 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await page.goto(questionnaireHref!);
 
   await expect(page.getByRole('heading', { name: seededQuestionnaireTitle })).toBeVisible();
+  // D-13, UI-SPEC §5.1 to §5.3: the introduction comes first, and nothing needs attention before a submit attempt.
+  await expect(page.getByRole('heading', { name: 'About this questionnaire' }), 'QUES09_INTRODUCTION_FIRST').toBeVisible();
+  await expect(page.getByRole('region', { name: 'Questionnaire validation guidance' }), 'QUES09_INTRODUCTION_FIRST').toHaveCount(0);
   await expectQuestionnaireRequestBacklink(page, '/app/requests/', 'mobile', page.getByRole('textbox', { name: serviceNameQuestion }));
   await expect(page.getByText(/0 of \d+ answered/i)).toBeVisible();
   await expect(
