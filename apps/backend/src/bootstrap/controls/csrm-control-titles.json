@@ -198,77 +198,77 @@
       "PSPF-002": "Compliance with Protective Security Directions",
       "PSPF-003": "Protective security guidance from the Technical Authority Entity",
       "PSPF-004": "Security services from the Shared Service Provider Entity",
-      "PSPF-005": "Documented partnership responsibilities of shared service providers",
+      "PSPF-005": "Documented shared service responsibilities for partnerships and security service arrangements",
       "PSPF-006": "Answerability of the Accountable Authority to the minister",
       "PSPF-007": "Accountable Authority ownership of security risks",
       "PSPF-008": "Appointing and empowering a Chief Security Officer",
       "PSPF-009": "Chief Security Officer seniority and clearance",
       "PSPF-010": "Chief Security Officer accountable to the Accountable Authority",
       "PSPF-011": "Appointing a Chief Information Security Officer",
-      "PSPF-012": "Chief Information Security Officer capability and clearance",
-      "PSPF-013": "Chief Information Security Officer accountability for cyber risks",
-      "PSPF-014": "Skilled and resourced security practitioners",
+      "PSPF-012": "Chief Information Security Officer capability, experience and clearance",
+      "PSPF-013": "CISO accountability to the Accountable Authority for cyber risks and their management",
+      "PSPF-014": "Skilled, empowered and resourced security practitioners",
       "PSPF-015": "Training access for security practitioners",
       "PSPF-016": "Accountable Authority approval of tailored security governance arrangements",
       "PSPF-017": "Monitored security mailbox for protective security information",
       "PSPF-018": "Security plan covering its mandatory elements",
       "PSPF-019": "Accountable Authority approval of the security plan",
-      "PSPF-020": "Periodic review of the security plan",
+      "PSPF-020": "Annual consideration and at least two-yearly review of the security plan",
       "PSPF-021": "Procedures to achieve the security plan",
-      "PSPF-022": "Monitoring the effectiveness of the security plan",
+      "PSPF-022": "Security plan effectiveness monitoring and continuous improvement",
       "PSPF-023": "Positive security culture program",
       "PSPF-024": "Induction and annual security awareness training",
-      "PSPF-025": "Specialist training for high-risk roles",
-      "PSPF-026": "Procedures for responding to security incidents",
+      "PSPF-025": "Security training targeted at specialist and high-risk positions",
+      "PSPF-026": "Procedures for responding to and managing security incidents",
       "PSPF-027": "Incident plans within business continuity arrangements",
-      "PSPF-028": "Reporting significant security incidents to authorities",
+      "PSPF-028": "Timely reporting of significant or reportable incidents and referrals to authorities",
       "PSPF-029": "Investigating incidents under the Investigations Standards",
-      "PSPF-030": "Procedural fairness in security investigations",
+      "PSPF-030": "Procedural fairness in security investigations, with regard to national security",
       "PSPF-031": "Annual protective security report to the Minister",
       "PSPF-032": "Annual protective security report to Home Affairs",
-      "PSPF-033": "Accountable Authority approval of the annual report",
+      "PSPF-033": "Accountable Authority verification and approval of the annual protective security report",
       "PSPF-034": "Cooperation with Home Affairs assurance activities",
       "PSPF-035": "Annual Cyber Security Survey to ASD",
-      "PSPF-036": "Entity tolerance for security risks",
-      "PSPF-037": "Risk steward for each security risk",
+      "PSPF-036": "Accountable Authority tolerance for security risks, documented in the security plan",
+      "PSPF-037": "Named risk steward for every security risk or category, including shared risks",
       "PSPF-038": "Considering risk decision impacts on other entities and sharing risk information",
-      "PSPF-039": "Accountability for procurement security risks",
-      "PSPF-040": "Security terms in procurement and contracts",
-      "PSPF-041": "Provider compliance with PSPF requirements",
-      "PSPF-042": "Provider incident reporting in contract terms",
-      "PSPF-043": "IRAP reports for consuming entities",
-      "PSPF-044": "Monitoring contract security terms over the contract life",
+      "PSPF-039": "Procurement security risk accountability, keeping contract decisions within acceptable risk",
+      "PSPF-040": "Proportionate security terms in procurement, contracts and outsourced arrangements",
+      "PSPF-041": "Provider, contractor and subcontractor compliance with entity-specified PSPF requirements",
+      "PSPF-042": "Contract terms for provider incident reporting and following investigation directions",
+      "PSPF-043": "IRAP reports for current and prospective consuming entities",
+      "PSPF-044": "Monitoring and reviewing contract security terms over the contract life",
       "PSPF-045": "Security arrangements for contract completion or termination",
       "PSPF-046": "Foreign ownership, control or influence risks in procurement and contracts",
-      "PSPF-047": "Reassessing contractual security risks over time",
+      "PSPF-047": "Managing, reassessing and adjusting contractual security risks over the contract life",
       "PSPF-048": "Use of secure, verifiable third parties, with CISO-approved business exceptions",
       "PSPF-049": "Security risks of engaging foreign partners",
       "PSPF-050": "Clearance details kept off online platforms",
-      "PSPF-051": "Managing insider threat in vetted entities",
-      "PSPF-052": "Varying PSPF requirements in exceptional circumstances",
+      "PSPF-051": "Program against insider threat in entities managing security clearance subjects",
+      "PSPF-052": "Time-limited variation of PSPF requirements in exceptional circumstances, within risk tolerance",
       "PSPF-053": "Documenting exceptional-circumstance variations in the security plan",
-      "PSPF-054": "Annual review of alternative mitigations",
-      "PSPF-055": "Business continuity plan for critical services",
+      "PSPF-054": "Annual review and reporting of alternative mitigation decisions",
+      "PSPF-055": "Continuity planning for critical and risk-warranted services and assets",
       "PSPF-056": "Emergency plans in the business continuity plan",
-      "PSPF-057": "Notifying personnel of heightened emergency risk",
-      "PSPF-058": "Originator control of classification changes",
-      "PSPF-059": "Assessing the value and sensitivity of information",
+      "PSPF-057": "Notifying likely impacted personnel of heightened emergency risk",
+      "PSPF-058": "Originator control of sanitisation and classification changes",
+      "PSPF-059": "Originator assessment of information value, importance and sensitivity",
       "PSPF-060": "Lowest reasonable security classification",
       "PSPF-061": "Marking security classified information",
-      "PSPF-062": "Applying minimum protections to classified information",
+      "PSPF-062": "Applying minimum protections and handling to OFFICIAL and security classified information",
       "PSPF-063": "Protecting security caveated information",
-      "PSPF-064": "Marking security caveats as text",
+      "PSPF-064": "Text-marked security caveats, only alongside a security classification",
       "PSPF-065": "Page and reference numbering of accountable material",
       "PSPF-066": "Special handling of accountable material",
       "PSPF-067": "Applying the Email Protective Marking Standard",
       "PSPF-068": "Security classification metadata on technology systems",
       "PSPF-069": "Rights metadata for access restrictions",
-      "PSPF-070": "Classified discussions only in approved locations",
-      "PSPF-071": "Operational controls proportional to information value",
-      "PSPF-072": "Register of TOP SECRET and accountable material",
+      "PSPF-070": "Classified discussions and dissemination only in approved locations",
+      "PSPF-071": "Operational controls proportional to information value, importance and sensitivity",
+      "PSPF-072": "TOP SECRET and accountable material recorded in an auditable register",
       "PSPF-073": "Secure disposal of official information",
-      "PSPF-074": "Destroying classified information after retention",
-      "PSPF-075": "Need-to-know access for people outside the entity",
+      "PSPF-074": "Destroying classified information after retention or at authorised destruction dates",
+      "PSPF-075": "People outside the entity: needed clearance, need-to-know and compliant transfer",
       "PSPF-076": "Sharing with state and territory government agencies",
       "PSPF-077": "Agreement before sharing outside government, except returned external information",
       "PSPF-078": "International agreement security provisions",
@@ -278,18 +278,18 @@
       "PSPF-082": "Safeguarding foreign entity information",
       "PSPF-083": "Sharing with foreign non-government stakeholders",
       "PSPF-084": "ISM cyber security principles across the system lifecycle",
-      "PSPF-085": "Risk-based application of ISM controls",
-      "PSPF-086": "Authorisation to operate on accepted residual risk",
-      "PSPF-087": "Risk-based decisions to authorise systems",
+      "PSPF-085": "Risk-based application of ISM controls and guidelines",
+      "PSPF-086": "Authorisation to operate on accepted residual risk before handling government data",
+      "PSPF-087": "ISM risk-based decisions to authorise new or changed systems",
       "PSPF-088": "Authorisation to the highest classification",
       "PSPF-089": "Register of authorised technology systems",
-      "PSPF-090": "Reassessing authorisation after significant change",
+      "PSPF-090": "Reassessing authorisation after significant system or security environment change",
       "PSPF-091": "Blocking and removing TikTok on government devices without a legitimate business reason",
       "PSPF-092": "Approved TikTok use with mitigations",
       "PSPF-093": "Managing legacy IT that cannot yet be replaced",
-      "PSPF-094": "Security Zone storage for SECRET technology assets",
-      "PSPF-095": "Rack storage for TOP SECRET technology assets",
-      "PSPF-096": "Certified outsourced facilities for catastrophic-impact assets",
+      "PSPF-094": "Security Zone storage for technology assets at SECRET or below",
+      "PSPF-095": "SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets",
+      "PSPF-096": "ASIO-T4 certified and ASD accredited outsourced facilities for catastrophic-impact assets",
       "PSPF-097": "Secure disposal of technology assets",
       "PSPF-098": "ISM-aligned cyber security strategy and uplift plan with Zero Trust culture",
       "PSPF-099": "Maturity Level Two: patch applications",
@@ -301,48 +301,48 @@
       "PSPF-105": "Maturity Level Two: user application hardening",
       "PSPF-106": "Maturity Level Two: regular back-ups",
       "PSPF-107": "Remaining strategies to mitigate cyber incidents",
-      "PSPF-108": "Blocking connections to malicious endpoints",
-      "PSPF-109": "IRAP-assessed cloud service providers",
-      "PSPF-110": "Acting on IRAP assessment findings",
-      "PSPF-111": "Certified hosting for classified information",
+      "PSPF-108": "Blocking connections to and from known malicious endpoints",
+      "PSPF-109": "Using only cloud providers IRAP-assessed in the last 24 months",
+      "PSPF-110": "Risk-based action on IRAP assessment recommendations and findings",
+      "PSPF-111": "Certified hosting for classified information and systems of government significance",
       "PSPF-112": "Procuring data centre services through the panel",
       "PSPF-114": "Gateways with an IRAP or ASD assessment in the last 24 months",
-      "PSPF-115": "Receiving and resolving disclosed vulnerabilities",
+      "PSPF-115": "Receiving, verifying, resolving and reporting disclosed vulnerabilities from any source",
       "PSPF-116": "Assuring personnel eligibility and suitability",
-      "PSPF-117": "Identity verification to Level 3 assurance",
+      "PSPF-117": "Identity verified to at least Level 3 assurance before employment",
       "PSPF-118": "Verifying biographic information in identity documents",
-      "PSPF-119": "Confirming eligibility to work for the government",
+      "PSPF-119": "Confirming eligibility to work in Australia and for the government",
       "PSPF-120": "Assurance of suitability during pre-employment screening",
-      "PSPF-121": "Checks before granting temporary access",
+      "PSPF-121": "Checks before temporary access, and Negative Vetting 1 for TOP SECRET",
       "PSPF-122": "Risk assessment for temporary access",
       "PSPF-123": "Supervised temporary access",
       "PSPF-124": "Limits on short-term temporary access",
       "PSPF-125": "Conditions for provisional temporary access",
       "PSPF-126": "Temporary access to caveated information",
       "PSPF-127": "Personal undertaking before temporary access",
-      "PSPF-128": "Third-party agreement before temporary access",
+      "PSPF-128": "Agreement of other information owners before temporary access",
       "PSPF-129": "Facilitating access to official information",
-      "PSPF-130": "Controlling access to supporting technology",
+      "PSPF-130": "Enabling official information access and controlling access to supporting technology",
       "PSPF-131": "Need-to-know access for entity personnel",
       "PSPF-132": "Clearances for ongoing access",
-      "PSPF-133": "Clearance requirements for caveated information",
-      "PSPF-134": "Individual user identification for classified systems",
+      "PSPF-133": "Clearance and suitability requirements for caveated information access",
+      "PSPF-134": "Per-user identification, authentication and authorisation for classified system access",
       "PSPF-135": "Risk assessment for working in another entity's facilities",
       "PSPF-136": "Agreement for working in another entity's facilities",
       "PSPF-137": "ASD approval for overseas TOP SECRET remote access outside PSPF facilities",
       "PSPF-138": "Risk assessment for remote work in international locations",
       "PSPF-139": "Remote work exposed to foreign government direction",
-      "PSPF-140": "Use of authorised security vetting agencies",
+      "PSPF-140": "Security vetting by authorised vetting agencies or, where authorised, the entity",
       "PSPF-141": "Vetting personnel skills and competencies",
       "PSPF-142": "Clearance conditions when gaining sponsorship",
       "PSPF-143": "Eligibility waiver when transferring sponsorship",
       "PSPF-144": "Clearances issued only when sponsored or authorised by government",
-      "PSPF-145": "Identifying positions that need a clearance",
+      "PSPF-145": "Identifying positions that need a clearance and documenting the level",
       "PSPF-146": "Valid clearance for each identified position",
       "PSPF-147": "Citizenship and screening before seeking a clearance",
-      "PSPF-148": "Business need before a citizenship eligibility waiver",
+      "PSPF-148": "Exceptional business need and risk assessment before a citizenship eligibility waiver",
       "PSPF-149": "Approving and recording citizenship eligibility waivers",
-      "PSPF-150": "Business need before a checkable background waiver",
+      "PSPF-150": "Exceptional business need and risk assessment before a checkable background waiver",
       "PSPF-151": "Approving and recording checkable background eligibility waivers",
       "PSPF-152": "Uncheckable backgrounds: vetting agency advice and Accountable Authority waiver",
       "PSPF-153": "Informed consent of the clearance subject",
@@ -352,16 +352,16 @@
       "PSPF-157": "Resolving doubt in the national interest",
       "PSPF-158": "Conditional clearances for manageable concerns",
       "PSPF-159": "Concerns shared with the vetting outcome",
-      "PSPF-160": "Procedural fairness in clearance decisions",
+      "PSPF-160": "Procedural fairness in adverse clearance decisions, preserving the national interest",
       "PSPF-161": "Annual review of clearance conditions",
       "PSPF-162": "Review for cause when concerns arise",
       "PSPF-163": "Ongoing assessment under the TOP SECRET-Privileged Access Standard",
       "PSPF-164": "Ongoing suitability of personnel",
-      "PSPF-165": "Monitoring conditional clearance compliance",
+      "PSPF-165": "Monitoring conditional clearance compliance and reporting breaches to the vetting agency",
       "PSPF-166": "Clearance maintenance obligations",
       "PSPF-167": "Sponsoring Entity sharing of relevant concerns where appropriate",
       "PSPF-168": "Annual security check with cleared personnel",
-      "PSPF-169": "Annual review of eligibility waivers",
+      "PSPF-169": "Reviewing eligibility waivers annually, before revalidation and before position transfers",
       "PSPF-170": "Sponsor management of TOP SECRET-Privileged Access holders",
       "PSPF-171": "Revalidating minimum personnel security checks",
       "PSPF-172": "Reassessing integrity of clearance holders",
@@ -369,48 +369,48 @@
       "PSPF-174": "Resolving doubt in the national interest on reassessment",
       "PSPF-175": "Starting revalidation before clearances lapse",
       "PSPF-176": "Vetting agency concerns to inform access limits",
-      "PSPF-177": "Sponsoring entity concerns passed to the vetting agency",
+      "PSPF-177": "Sponsoring Entity concerns passed to the vetting agency where appropriate",
       "PSPF-178": "Vetting agency sharing of security concerns",
       "PSPF-179": "Assessing and responding to security concerns",
-      "PSPF-180": "Travel briefings for Negative Vetting 2 holders",
-      "PSPF-181": "Advising security staff of adverse separations",
+      "PSPF-180": "International travel briefings for Negative Vetting 2 and higher holders",
+      "PSPF-181": "Advance advice to security staff of adverse cessations of employment",
       "PSPF-182": "Security obligations and debriefing at separation",
-      "PSPF-183": "Security information for the receiving entity",
+      "PSPF-183": "Security information for a receiving entity on request",
       "PSPF-184": "Reporting security concerns to ASIO on transfer",
       "PSPF-185": "Risk assessment when separation procedures are impossible",
-      "PSPF-186": "Withdrawing access on separation",
+      "PSPF-186": "Withdrawing access on separation or transfer",
       "PSPF-187": "Notifying the vetting agency of separation",
-      "PSPF-188": "Recording clearance status changes on separation",
+      "PSPF-188": "Recording separation clearance changes and lawful security file transfers between vetting agencies",
       "PSPF-189": "Security integrated into facility planning, selection, design and modification",
       "PSPF-190": "Security plans for new and refurbished facilities",
       "PSPF-191": "Site selection for facility locations",
-      "PSPF-192": "Access controls designed for the highest risk",
-      "PSPF-193": "Construction to ASIO Technical Notes for public areas",
+      "PSPF-192": "Facility access controls designed or modified for the highest risk level",
+      "PSPF-193": "Construction to ASIO Technical Notes for public areas and unclassified asset storage",
       "PSPF-194": "Construction of Security Zones Two to Five",
       "PSPF-195": "Operating and maintaining entity facilities",
       "PSPF-196": "Certifying Security Zones One to Four",
       "PSPF-197": "ASIO-T4 certification of Zone Five areas",
       "PSPF-198": "Accrediting Security Zones One to Five",
-      "PSPF-199": "SCIF accreditation for TOP SECRET systems",
+      "PSPF-199": "ASD-accredited SCIFs for TOP SECRET systems and compartmented information",
       "PSPF-200": "Preventing unauthorised use or loss of resources",
       "PSPF-201": "Protection matched to business impact level",
       "PSPF-202": "Protecting people from physical harm",
-      "PSPF-203": "Containers and secure rooms by business impact",
+      "PSPF-203": "Containers and secure rooms by Security Zone and business impact",
       "PSPF-204": "Construction and securing of perimeter doors and hardware",
-      "PSPF-205": "Access control for authorised personnel",
+      "PSPF-205": "Zone access control for authorised personnel, vehicles and equipment",
       "PSPF-206": "Access control for visitors",
-      "PSPF-207": "Ongoing facility access for people not engaged",
+      "PSPF-207": "Approved ongoing facility access for people neither engaged nor contracted",
       "PSPF-208": "Security alarm systems",
       "PSPF-209": "Guard arrangements for Security Zones",
       "PSPF-210": "Countermeasures against technical surveillance",
       "PSPF-211": "Technology asset stocktake and risk management plan",
       "PSPF-212": "Post-quantum cryptography on newly procured equipment and software",
-      "PSPF-213": "Cyber risk reporting to the Audit Committee",
+      "PSPF-213": "Cyber risk reports to each Audit Committee and biannual uplift plan progress",
       "PSPF-214": "Gateway protection for digital infrastructure",
-      "PSPF-215": "Cyber Security Partnership Program participation",
+      "PSPF-215": "Cyber Security Partnership Program participation and notifying ASD of risk profile changes",
       "PSPF-216": "Cyber Threat Intelligence Sharing connection",
       "PSPF-217": "Protecting Systems of Government Significance",
-      "PSPF-218": "Withholding temporary access while a waiver is considered",
+      "PSPF-218": "Withholding temporary or provisional access from waiver subjects until vetting completes",
       "PSPF-219": "Training on foreign interference, espionage, cultivation and exploitation"
     }
   },
@@ -573,23 +573,125 @@
       ]
     },
     "pspf-release-2026.json": {
+      "PSPF-005": [
+        "Documented partnership responsibilities of shared service providers"
+      ],
       "PSPF-008": [
         "Appointing a Chief Security Officer"
+      ],
+      "PSPF-012": [
+        "Chief Information Security Officer capability and clearance"
+      ],
+      "PSPF-013": [
+        "Chief Information Security Officer accountability for cyber risks"
+      ],
+      "PSPF-014": [
+        "Skilled and resourced security practitioners"
       ],
       "PSPF-016": [
         "Approved security governance arrangements"
       ],
+      "PSPF-020": [
+        "Periodic review of the security plan"
+      ],
+      "PSPF-022": [
+        "Monitoring the effectiveness of the security plan"
+      ],
+      "PSPF-025": [
+        "Specialist training for high-risk roles"
+      ],
+      "PSPF-026": [
+        "Procedures for responding to security incidents"
+      ],
+      "PSPF-028": [
+        "Reporting significant security incidents to authorities"
+      ],
+      "PSPF-030": [
+        "Procedural fairness in security investigations"
+      ],
+      "PSPF-033": [
+        "Accountable Authority approval of the annual report"
+      ],
+      "PSPF-036": [
+        "Entity tolerance for security risks"
+      ],
+      "PSPF-037": [
+        "Risk steward for each security risk"
+      ],
       "PSPF-038": [
         "Impact of risk decisions on other entities"
+      ],
+      "PSPF-039": [
+        "Accountability for procurement security risks"
+      ],
+      "PSPF-040": [
+        "Security terms in procurement and contracts"
+      ],
+      "PSPF-041": [
+        "Provider compliance with PSPF requirements"
+      ],
+      "PSPF-042": [
+        "Provider incident reporting in contract terms"
+      ],
+      "PSPF-043": [
+        "IRAP reports for consuming entities"
+      ],
+      "PSPF-044": [
+        "Monitoring contract security terms over the contract life"
       ],
       "PSPF-046": [
         "Foreign ownership, control or influence in procurement"
       ],
+      "PSPF-047": [
+        "Reassessing contractual security risks over time"
+      ],
       "PSPF-048": [
         "Use of secure, verifiable third-party vendors"
       ],
+      "PSPF-051": [
+        "Managing insider threat in vetted entities"
+      ],
+      "PSPF-052": [
+        "Varying PSPF requirements in exceptional circumstances"
+      ],
       "PSPF-053": [
         "Documenting decisions to vary requirements"
+      ],
+      "PSPF-054": [
+        "Annual review of alternative mitigations"
+      ],
+      "PSPF-055": [
+        "Business continuity plan for critical services"
+      ],
+      "PSPF-057": [
+        "Notifying personnel of heightened emergency risk"
+      ],
+      "PSPF-058": [
+        "Originator control of classification changes"
+      ],
+      "PSPF-059": [
+        "Assessing the value and sensitivity of information"
+      ],
+      "PSPF-062": [
+        "Applying minimum protections to classified information"
+      ],
+      "PSPF-064": [
+        "Marking security caveats as text"
+      ],
+      "PSPF-070": [
+        "Classified discussions only in approved locations"
+      ],
+      "PSPF-071": [
+        "Operational controls proportional to information value"
+      ],
+      "PSPF-072": [
+        "Register of TOP SECRET and accountable material"
+      ],
+      "PSPF-074": [
+        "Destroying classified information after retention"
+      ],
+      "PSPF-075": [
+        "Need-to-know access for people outside the entity"
       ],
       "PSPF-077": [
         "Agreement before sharing outside government"
@@ -597,23 +699,92 @@
       "PSPF-080": [
         "AUSTEO information withheld from non-citizens"
       ],
+      "PSPF-085": [
+        "Risk-based application of ISM controls"
+      ],
+      "PSPF-086": [
+        "Authorisation to operate on accepted residual risk"
+      ],
+      "PSPF-087": [
+        "Risk-based decisions to authorise systems"
+      ],
+      "PSPF-090": [
+        "Reassessing authorisation after significant change"
+      ],
       "PSPF-091": [
         "TikTok removal from government devices"
+      ],
+      "PSPF-094": [
+        "Security Zone storage for SECRET technology assets"
+      ],
+      "PSPF-095": [
+        "Rack storage for TOP SECRET technology assets"
+      ],
+      "PSPF-096": [
+        "Certified outsourced facilities for catastrophic-impact assets"
       ],
       "PSPF-098": [
         "Maintaining a cyber security strategy and uplift plan"
       ],
+      "PSPF-108": [
+        "Blocking connections to malicious endpoints"
+      ],
+      "PSPF-109": [
+        "IRAP-assessed cloud service providers"
+      ],
+      "PSPF-110": [
+        "Acting on IRAP assessment findings"
+      ],
+      "PSPF-111": [
+        "Certified hosting for classified information"
+      ],
       "PSPF-114": [
         "IRAP-assessed gateway capabilities"
+      ],
+      "PSPF-115": [
+        "Receiving and resolving disclosed vulnerabilities"
+      ],
+      "PSPF-117": [
+        "Identity verification to Level 3 assurance"
+      ],
+      "PSPF-119": [
+        "Confirming eligibility to work for the government"
+      ],
+      "PSPF-121": [
+        "Checks before granting temporary access"
+      ],
+      "PSPF-128": [
+        "Third-party agreement before temporary access"
+      ],
+      "PSPF-130": [
+        "Controlling access to supporting technology"
+      ],
+      "PSPF-133": [
+        "Clearance requirements for caveated information"
+      ],
+      "PSPF-134": [
+        "Individual user identification for classified systems"
       ],
       "PSPF-137": [
         "ASD approval for overseas TOP SECRET remote access"
       ],
+      "PSPF-140": [
+        "Use of authorised security vetting agencies"
+      ],
       "PSPF-144": [
         "Clearances issued only with sponsorship"
       ],
+      "PSPF-145": [
+        "Identifying positions that need a clearance"
+      ],
+      "PSPF-148": [
+        "Business need before a citizenship eligibility waiver"
+      ],
       "PSPF-149": [
         "Approving citizenship eligibility waivers"
+      ],
+      "PSPF-150": [
+        "Business need before a checkable background waiver"
       ],
       "PSPF-151": [
         "Approving checkable background eligibility waivers"
@@ -621,17 +792,71 @@
       "PSPF-152": [
         "Vetting agency advice on uncheckable backgrounds"
       ],
+      "PSPF-160": [
+        "Procedural fairness in clearance decisions"
+      ],
+      "PSPF-165": [
+        "Monitoring conditional clearance compliance"
+      ],
       "PSPF-167": [
         "Sponsoring entity sharing of relevant concerns"
+      ],
+      "PSPF-169": [
+        "Annual review of eligibility waivers"
+      ],
+      "PSPF-177": [
+        "Sponsoring entity concerns passed to the vetting agency"
+      ],
+      "PSPF-180": [
+        "Travel briefings for Negative Vetting 2 holders"
+      ],
+      "PSPF-181": [
+        "Advising security staff of adverse separations"
+      ],
+      "PSPF-183": [
+        "Security information for the receiving entity"
+      ],
+      "PSPF-186": [
+        "Withdrawing access on separation"
+      ],
+      "PSPF-188": [
+        "Recording clearance status changes on separation"
       ],
       "PSPF-189": [
         "Security integrated into facility planning"
       ],
+      "PSPF-192": [
+        "Access controls designed for the highest risk"
+      ],
+      "PSPF-193": [
+        "Construction to ASIO Technical Notes for public areas"
+      ],
+      "PSPF-199": [
+        "SCIF accreditation for TOP SECRET systems"
+      ],
+      "PSPF-203": [
+        "Containers and secure rooms by business impact"
+      ],
       "PSPF-204": [
         "Construction and securing of perimeter doors"
       ],
+      "PSPF-205": [
+        "Access control for authorised personnel"
+      ],
+      "PSPF-207": [
+        "Ongoing facility access for people not engaged"
+      ],
       "PSPF-212": [
         "Post-quantum cryptography on new equipment"
+      ],
+      "PSPF-213": [
+        "Cyber risk reporting to the Audit Committee"
+      ],
+      "PSPF-215": [
+        "Cyber Security Partnership Program participation"
+      ],
+      "PSPF-218": [
+        "Withholding temporary access while a waiver is considered"
       ],
       "PSPF-219": [
         "Training on foreign interference and espionage"
