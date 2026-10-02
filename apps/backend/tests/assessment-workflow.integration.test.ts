@@ -947,10 +947,18 @@ test("mounted contextual ControlImplementation routes cover every frozen writabl
   );
   const created = (await payload(createdResponse)).data as Record<string, unknown>;
   assert.deepEqual(Object.keys(created).sort(), [
-    "control", "controlOwner", "controlStatus", "documentId", "effectivenessRating", "evidence", "implementationDueDate",
-    "implementedDate", "reviewDate",
+    "control", "controlOwner", "controlStatus", "controlSummary", "documentId", "effectivenessRating", "evidence",
+    "implementationDueDate", "implementedDate", "reviewDate",
   ]);
   assert.equal(created.control, fixtures.aggregate.control, "REUSABLE_CONTROL_REFERENCE_PROJECTION_MISSING");
+  // D-34: every control implementation response names its control, so no screen falls back to the id.
+  const mountedControlSummary = {
+    documentId: fixtures.aggregate.control,
+    controlNumber: "MOUNTED-CTRL-001",
+    name: "Mounted boundary protection",
+    framework: "Mounted test framework",
+  };
+  assert.deepEqual(created.controlSummary, mountedControlSummary, "CREATED_CONTROL_SUMMARY_MISSING");
   assert.equal((created.controlOwner as Record<string, unknown>)?.documentId, harness.users.owner);
   contextualControlImplementationId = String(created.documentId);
 
@@ -970,7 +978,12 @@ test("mounted contextual ControlImplementation routes cover every frozen writabl
   const listed = rows(await payload(listResponse));
   assert.ok(listed.some((implementation) => implementation.documentId === contextualControlImplementationId));
   assert.ok(listed.every((implementation) => Object.keys(implementation).sort().join(",")
-    === "control,controlOwner,controlStatus,documentId,effectivenessRating,evidence,implementationDueDate,implementedDate,reviewDate"));
+    === "control,controlOwner,controlStatus,controlSummary,documentId,effectivenessRating,evidence,implementationDueDate,implementedDate,reviewDate"));
+  assert.deepEqual(
+    listed.find((implementation) => implementation.documentId === contextualControlImplementationId)?.controlSummary,
+    mountedControlSummary,
+    "LISTED_CONTROL_SUMMARY_MISSING",
+  );
   const wrongParent = rows(await payload(await request(
     `/api/v1/risks/${encodeURIComponent(fixtures.aggregate.risk)}/control_implementations`,
     harness.identities.analyst,
@@ -996,6 +1009,7 @@ test("mounted contextual ControlImplementation routes cover every frozen writabl
   assert.equal(updatedResponse.status, 200, "CONTEXTUAL_CONTROL_IMPLEMENTATION_UPDATE_ROUTE_MISSING");
   const updated = (await payload(updatedResponse)).data as Record<string, unknown>;
   assert.equal(updated.control, fixtures.aggregate.control);
+  assert.deepEqual(updated.controlSummary, mountedControlSummary, "UPDATED_CONTROL_SUMMARY_MISSING");
   assert.equal((updated.controlOwner as Record<string, unknown>)?.documentId, harness.users.otherRequestor);
   for (const field of [
     "controlStatus", "effectivenessRating", "evidence", "implementationDueDate", "implementedDate", "reviewDate",
@@ -1536,6 +1550,26 @@ test("mounted Requestor reads require owner scope and the complete release aggre
     harness.identities.owner,
   )));
   assert.ok(controls.some((control) => control.documentId === fixtures.aggregate.controlImplementation), "OWNER_RELEASE_CONTROL_MISSING");
+  // D-34: the owning Requestor reads each mitigation control by number, name and framework, never by id alone.
+  assert.deepEqual(
+    controls.find((control) => control.documentId === fixtures.aggregate.controlImplementation)?.controlSummary,
+    {
+      documentId: fixtures.aggregate.control,
+      controlNumber: "MOUNTED-CTRL-001",
+      name: "Mounted boundary protection",
+      framework: "Mounted test framework",
+    },
+    "OWNER_RELEASE_CONTROL_SUMMARY_MISSING",
+  );
+  // Another Requestor still gets 404 on both released descendant reads, so the richer facts never cross owners.
+  for (const path of [
+    `/api/v1/risk_assessments/${encodeURIComponent(fixtures.releaseFacts.complete)}/risks`,
+    `/api/v1/risks/${encodeURIComponent(fixtures.aggregate.risk)}/control_implementations`,
+  ]) {
+    const crossOwner = await request(path, harness.identities.otherRequestor);
+    assert.equal(crossOwner.status, 404, `CROSS_OWNER_RELEASED_DESCENDANT_DISCLOSED_${path}`);
+    assert.doesNotMatch(await crossOwner.text(), /Mounted aggregate risk|MOUNTED-CTRL-001|Mounted boundary protection/, `CROSS_OWNER_RELEASED_FACTS_DISCLOSED_${path}`);
+  }
 
   for (const assessmentId of [fixtures.releaseFacts.unreleased, fixtures.releaseFacts.approvedOnly, fixtures.releaseFacts.crossOwnerComplete]) {
     const hidden = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`, harness.identities.owner);

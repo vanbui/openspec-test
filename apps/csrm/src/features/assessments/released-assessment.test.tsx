@@ -61,6 +61,12 @@ const risk: Risk = {
 const implementation: ControlImplementation = {
   documentId: 'implementation-1',
   control: 'control-1',
+  controlSummary: {
+    documentId: 'control-1',
+    controlNumber: 'ACCESS-1a',
+    name: 'ACCESS-1a — Establish Identities and Manage Authentication',
+    framework: 'Essential Eight',
+  },
   controlOwner: { documentId: 'owner-1', displayName: 'Jane Doe' },
   controlStatus: 'Planned',
   effectivenessRating: 'Partially Effective',
@@ -191,6 +197,36 @@ describe('immutable released assessment detail', () => {
     expect(within(view).getByText('31 January 2027')).toBeInTheDocument();
     expect(within(view).getByRole('link', { name: 'RAR-2026-0042: Customer portal security assessment' })).toHaveAttribute('href', '/app/requests/request-42');
     expect(within(view).getByRole('heading', { name: 'Current lifecycle state: Released' })).toBeInTheDocument();
+  });
+
+  it('names each mitigation control by its number and title, never by its internal id (D-34, D-36)', () => {
+    const untitled: ControlImplementation = {
+      ...implementation,
+      documentId: 'implementation-2',
+      control: 'control-2',
+      controlSummary: { documentId: 'control-2', controlNumber: '5.1', name: '5.1', framework: 'ISO/IEC 27001 Information security management systems — Annex A' },
+    };
+    const unnamed: ControlImplementation = { ...implementation, documentId: 'implementation-3', control: 'control-3', controlSummary: null };
+    render(
+      <ReleasedAssessmentDetailView
+        assessment={releasedDetail}
+        controlsByRisk={{ [risk.documentId]: [implementation, untitled, unnamed] }}
+        risks={[risk]}
+        state="populated"
+      />,
+    );
+
+    const view = screen.getByRole('article', { name: 'Released risk assessment ASM-0042' });
+    const controls = within(view).getAllByText('Control', { selector: 'dt' }).map((term) => term.nextElementSibling?.textContent);
+    expect(controls).toEqual([
+      'ACCESS-1a · Establish Identities and Manage Authentication',
+      '5.1 · ISO/IEC 27001 Information security management systems — Annex A',
+      'Not recorded',
+    ]);
+    expect(within(view).queryByText('Control reference')).not.toBeInTheDocument();
+    for (const internalId of ['control-1', 'control-2', 'control-3', 'implementation-1']) {
+      expect(view.textContent).not.toContain(internalId);
+    }
   });
 
   it('shows the header status as the shared Released assessment badge', () => {
