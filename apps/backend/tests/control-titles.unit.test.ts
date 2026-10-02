@@ -176,3 +176,103 @@ test("ADMIN-05 D-46 the seed refuses a title outside the form rules", async () =
     );
   }
 });
+
+/*
+ * D-46: every seeded control carries a title. The paragraph-level requirements of APRA CPS 234, CPS 230
+ * and the PSPF take short descriptive titles in CSRM's words; each must share a specific word with its
+ * own paragraph (the anchor check), so a shifted or unrelated title fails.
+ */
+
+const DESCRIPTIVE_FILES = ["apra-cps-230-2026.json", CPS_234_FILE, "pspf-release-2026.json"] as const;
+const ANCHOR_STOP_WORDS = new Set([
+  "with", "from", "that", "this", "their", "into", "must", "shall", "each", "such",
+  "which", "where", "when", "have", "than", "also", "only", "under", "other",
+]);
+
+function letterRuns(text: string): string[] {
+  return text.toLowerCase().match(/[a-z]+/g) ?? [];
+}
+
+function countedStems(title: string): string[] {
+  return [...new Set(letterRuns(title)
+    .filter((word) => word.length >= 4 && !ANCHOR_STOP_WORDS.has(word))
+    .map((word) => word.slice(0, 5)))];
+}
+
+function paragraphOf(seed: ControlSeed): string {
+  return String((seed.sourceData.control as { statement: unknown }).statement);
+}
+
+function titleOf(seed: ControlSeed): string {
+  return seed.name.slice(`${seed.controlNumber} — `.length);
+}
+
+test("ADMIN-05 D-46 the title file holds a title for each of the 386 untitled controls", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const file = JSON.parse(await readFile(path.join(appRoot, "src", "bootstrap", "controls", TITLE_FILE), "utf8")) as {
+    sources: Record<string, { basis: string }>;
+    titles: Record<string, Record<string, string>>;
+  };
+  const counts = Object.fromEntries(Object.entries(file.titles).map(([sourceFile, titles]) => [sourceFile, Object.keys(titles).length]));
+  assert.deepEqual(counts, {
+    "iso-iec-27001-2022-annex-a.json": 93,
+    "apra-cps-230-2026.json": 51,
+    [CPS_234_FILE]: 24,
+    "pspf-release-2026.json": 218,
+  });
+  assert.deepEqual(Object.keys(file.sources).sort(), Object.keys(file.titles).sort());
+  assert.equal(file.sources[ISO_FILE].basis, "framework");
+  for (const sourceFile of DESCRIPTIVE_FILES) assert.equal(file.sources[sourceFile].basis, "descriptive", sourceFile);
+  assert.equal((await library()).titles.size, 386);
+});
+
+test("ADMIN-05 D-46 no seeded control is untitled", async () => {
+  const seeds = await titledSeeds();
+  assert.equal(seeds.length, 2_646);
+  const untitled = seeds.filter((seed) => seed.name.length <= seed.controlNumber.length || seed.name === seed.controlNumber);
+  assert.deepEqual(untitled.map((seed) => seed.controlNumber), []);
+});
+
+test("ADMIN-05 D-46 titles are unique within each framework", async () => {
+  const seeds = await titledSeeds();
+  for (const sourceFile of [ISO_FILE, ...DESCRIPTIVE_FILES]) {
+    const titles = seedsFrom(seeds, sourceFile).map((seed) => titleOf(seed).toLowerCase());
+    const repeated = titles.filter((title, index) => titles.indexOf(title) !== index);
+    assert.deepEqual(repeated, [], `${sourceFile} repeats a title`);
+  }
+});
+
+test("ADMIN-05 D-46 descriptive titles are short noun phrases in the CSRM voice", async () => {
+  const seeds = await titledSeeds();
+  for (const sourceFile of DESCRIPTIVE_FILES) {
+    for (const seed of seedsFrom(seeds, sourceFile)) {
+      const title = titleOf(seed);
+      const words = title.split(/\s+/);
+      assert.ok(words.length >= 2 && words.length <= 8, `${seed.controlNumber} has 2 to 8 words: ${title}`);
+      assert.ok(title.length <= 80, `${seed.controlNumber} is at most 80 characters: ${title}`);
+      assert.match(title, /^[A-Z0-9]/, `${seed.controlNumber} starts with a capital: ${title}`);
+      assert.doesNotMatch(title, /\b(must|shall)\b/i, `${seed.controlNumber} states no obligation verb: ${title}`);
+      assert.ok(!paragraphOf(seed).toLowerCase().startsWith(title.toLowerCase()), `${seed.controlNumber} does not copy its paragraph's opening: ${title}`);
+    }
+  }
+});
+
+test("ADMIN-05 D-46 each descriptive title shares a specific word with its own paragraph", async () => {
+  const seeds = await titledSeeds();
+  for (const sourceFile of DESCRIPTIVE_FILES) {
+    const framework = seedsFrom(seeds, sourceFile);
+    const paragraphs = framework.map((seed) => letterRuns(paragraphOf(seed)));
+    const isGeneric = (stem: string) =>
+      paragraphs.filter((words) => words.some((word) => word.startsWith(stem))).length > paragraphs.length / 2;
+    const unanchored = framework.filter((seed, index) => !countedStems(titleOf(seed))
+      .some((stem) => !isGeneric(stem) && paragraphs[index].some((word) => word.startsWith(stem))));
+    assert.deepEqual(unanchored.map((seed) => `${seed.controlNumber}: ${titleOf(seed)}`), [], `${sourceFile} titles that share no specific word with their paragraph`);
+  }
+});
+
+test("ADMIN-05 D-46 a title word finds its control on the picker's first page", async () => {
+  const matches = (await titledSeeds()).filter((seed) =>
+    [seed.controlNumber, seed.name, seed.framework].some((value) => value.toLowerCase().includes("masking")));
+  assert.ok(matches.length >= 1 && matches.length <= 10, `masking matches ${matches.length} controls`);
+  assert.ok(matches.some((seed) => seed.controlNumber === "8.11"), "8.11 is among them");
+});

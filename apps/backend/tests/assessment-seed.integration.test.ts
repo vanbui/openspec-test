@@ -159,6 +159,37 @@ test("ADMIN-05 D-46 a seeded start titles a control an earlier seed stored by it
   assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
 });
 
+/*
+ * D-46: after a seeded start no stored control is named by its number alone, and an APRA or PSPF
+ * requirement keeps its clause or section as its reference and its paragraph as its description.
+ */
+test("ADMIN-05 D-46 a seeded start leaves no control named by its number alone", async () => {
+  const untitled: string[] = [];
+  let total = 0;
+  for (let start = 0; ; start += 1_000) {
+    const page = await strapi.documents("api::csrm-control.csrm-control").findMany({
+      fields: ["controlNumber", "name"], sort: ["controlNumber:asc"], limit: 1_000, start,
+    });
+    total += page.length;
+    untitled.push(...page.filter((control) => !control.name || control.name === control.controlNumber).map((control) => String(control.controlNumber)));
+    if (page.length < 1_000) break;
+  }
+  assert.equal(total, 2_646);
+  assert.deepEqual(untitled, []);
+});
+
+test("ADMIN-05 D-46 a titled APRA or PSPF requirement keeps its reference and its paragraph", async () => {
+  for (const [controlNumber, reference, paragraphStart] of [
+    ["CPS-234-15", "Clause 15", "An APRA -regulated entity must maintain an information security capability"],
+    ["PSPF-001", "Section 01", "The Department of State supports portfolio entities"],
+  ] as const) {
+    const control = await seededControl(controlNumber);
+    assert.match(String(control.name), new RegExp(`^${controlNumber} — \\S.{2,}`), `${controlNumber} carries a title`);
+    assert.equal(control.controlReference, reference, `${controlNumber} keeps its source reference`);
+    assert.ok(String(control.description).startsWith(paragraphStart), `${controlNumber} keeps its paragraph: ${String(control.description).slice(0, 80)}`);
+  }
+});
+
 test("assessment workflow RiskType seed requires every exact development gate", async () => {
   for (const values of [
     { nodeEnv: "production", environment: "development", identity: "true", seed: "true" },
