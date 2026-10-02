@@ -618,7 +618,7 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(options[0]).toEqual({ documentId: 'control-0', label: 'C-0 · Control 0' });
     expect(options[99]).toEqual({ documentId: 'control-99', label: 'C-99 · Control 99' });
     expect(options[100]).toEqual({ documentId: 'control-140', label: 'C-140 · Control 140' });
-    expect(applicableControlOptions([{ documentId: 'control-5-1', controlNumber: '5.1', name: '5.1', description: null }]))
+    expect(applicableControlOptions([{ documentId: 'control-5-1', controlNumber: '5.1', name: '5.1' }]))
       .toEqual([{ documentId: 'control-5-1', label: '5.1' }]);
     expect(applicableControlOptions([], ['control-1'])).toEqual([]);
   });
