@@ -66,9 +66,11 @@ export function RelationPicker({
   value,
   onValueChange,
   search,
+  pageSize,
   suggested,
   otherGroupLabel,
   searchingText,
+  noMatchText,
   errorId,
   invalid = false,
   inputRef,
@@ -165,6 +167,8 @@ export function RelationPicker({
   let status: string | null = null;
   if (!term && suggestedItems.length === 0) status = `Type to search ${nounPlural}.`;
   else if (term && isLoading) status = searchingText;
+  else if (term && !error && options.length === 0) status = noMatchText;
+  else if (term && !error && results.length >= pageSize) status = `Showing the first ${pageSize} matches. Keep typing to narrow the list.`;
 
   const describedBy = [hint ? hintId : null, invalid && errorId ? errorId : null].filter(Boolean).join(' ') || undefined;
   const listboxShown = isOpen && options.length > 0;
@@ -273,7 +277,12 @@ export function RelationPicker({
             </div>
           ) : null}
           {status ? <p className="px-2 py-3 text-sm text-muted-foreground" role="status">{status}</p> : null}
-          {error ? <p className="px-2 py-3 text-sm" role="alert">{error}</p> : null}
+          {error ? (
+            <div className="grid gap-2 px-2 py-3 text-sm" role="alert">
+              <span>{error}</span>
+              <button className="min-h-6 w-fit text-primary underline-offset-4 hover:underline" onClick={() => { void runSearch(term); }} onMouseDown={(event) => event.preventDefault()} type="button">Retry search</button>
+            </div>
+          ) : null}
         </PopoverContent>
       </Popover>
       {value ? (

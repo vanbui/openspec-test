@@ -2,6 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import type { RelationPickerItem } from '@/components/csrm/relation-picker';
+import { listAdministrationControls } from '@/features/administration/administration-service';
+import { parseAdministrationQuery } from '@/features/administration/administration-schema';
 import type { ConflictReason } from '@/lib/api/conflict-reasons';
 import { refusalMessage } from '@/lib/api/refusal-copy';
 
@@ -41,6 +44,7 @@ import {
   type ReleasedAssessmentDetail,
   type Risk,
 } from './assessment-schema';
+import { controlPickerItem } from './control-label';
 
 export type AssessmentServerActionResult<T> =
   | { ok: true; data: T }
@@ -91,6 +95,12 @@ const releaseInputSchema = z.object({ assessmentId: documentIdSchema }).strict()
 const activeUserSearchInputSchema = z.object({
   search: z.string().trim().min(1).max(100),
 }).strict();
+/* The Control picker's search: the Administration list's own 200-character bound on its query. */
+const controlSearchInputSchema = z.object({
+  search: z.string().trim().min(1).max(200),
+}).strict();
+/** One bounded page per search; a full page tells the analyst to keep typing (UI-SPEC §13.1). */
+const controlSearchPageSize = 10;
 
 function submittedValues(input: unknown): Record<string, unknown> | undefined {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) return undefined;
@@ -257,6 +267,33 @@ export async function searchActiveUsersAction(input: unknown): Promise<Assessmen
   const result = await searchActiveUsers(parsed.data.search);
   if (result.error) return serviceFailure(result.error.status);
   return { ok: true, data: result.data };
+}
+
+/**
+ * Searches the whole control library for the Control picker by number, name or framework (D-29), one page of
+ * 10 through the Administration control search under the analyst's existing grant. Strapi enforces that grant;
+ * a refusal reads as the request selector's permission message and returns no data (T-10-48).
+ */
+export async function searchControlsAction(input: unknown): Promise<AssessmentServerActionResult<readonly RelationPickerItem[]>> {
+  const parsed = controlSearchInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailure(parsed.error, input);
+  const result = await listAdministrationControls(parseAdministrationQuery('controls', {
+    q: parsed.data.search,
+    page: 1,
+    pageSize: controlSearchPageSize,
+  }));
+  if (result.error || !result.data) {
+    return {
+      ok: false,
+      formError: result.error?.status === 403
+        ? 'You do not have permission to search these records.'
+        : 'The selection service is unavailable. Please try again later.',
+    };
+  }
+  return {
+    ok: true,
+    data: result.data.data.flatMap((record) => 'controlNumber' in record ? [controlPickerItem(record)] : []),
+  };
 }
 
 export async function saveAssessmentAction(input: unknown): Promise<AssessmentServerActionResult<AssessmentDetail>> {

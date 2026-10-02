@@ -28,7 +28,7 @@ export function maxCharactersMessage(maxLength: number): string {
   return `Use ${characterCount.format(maxLength)} characters or fewer.`;
 }
 
-/** A required relation left unchosen, named as the product names it: `Select a reusable Control.` */
-export function selectRelationMessage(relation: string): string {
-  return `Select ${withArticle(relation)}.`;
+/** A required relation left unchosen, named as the product names it: `Choose a control.` (UI-SPEC §13.1) */
+export function chooseRelationMessage(relation: string): string {
+  return `Choose ${withArticle(relation)}.`;
 }

@@ -57,7 +57,7 @@ export type AssessmentEditorProps = {
   searchControls?: (input: RelationPickerSearchInput) => Promise<RelationPickerSearchResult>;
 };
 
-const noControlSearch = async (): Promise<RelationPickerSearchResult> => ({ ok: true, data: [] });
+const noControlSearch = async (): Promise<RelationPickerSearchResult> => ({ ok: false, formError: 'The selection service is unavailable. Please try again later.' });
 
 /**
  * A drafted assessment that still carries a reviewer of record is a reviewed

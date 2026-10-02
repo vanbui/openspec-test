@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { requestStatuses } from '@/features/requests/request-domain';
-import { enterFieldMessage, maxCharactersMessage, selectRelationMessage } from '@/lib/schemas/validation-messages';
+import { chooseRelationMessage, enterFieldMessage, maxCharactersMessage } from '@/lib/schemas/validation-messages';
 
 import { assessmentStatuses } from './assessment-domain';
 
@@ -466,9 +466,9 @@ const controlImplementationInputShape = {
 export const controlImplementationUpdateInputSchema = z.object(controlImplementationInputShape).strict();
 export const controlImplementationCreateInputSchema = controlImplementationUpdateInputSchema.extend({
   // Add mitigation control sends no choice as null; the Risk detail's form asks the same way (WR-04).
-  control: z.string({ error: selectRelationMessage('reusable Control') })
+  control: z.string({ error: chooseRelationMessage('control') })
     .trim()
-    .min(1, selectRelationMessage('reusable Control'))
+    .min(1, chooseRelationMessage('control'))
     .max(255),
 }).strict();
 export type ControlImplementationCreateInput = z.infer<typeof controlImplementationCreateInputSchema>;

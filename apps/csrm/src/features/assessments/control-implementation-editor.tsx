@@ -187,7 +187,7 @@ export function ControlImplementationEditor({ assessmentId, focusControlOnOpen =
       </div>
       <div className="flex flex-wrap gap-3">
         <Button disabled={form.formState.isSubmitting} type="submit">{mode === 'create' ? 'Add mitigation control' : 'Save mitigation control'}</Button>
-        {mode === 'edit' ? <ConfirmDialog confirmLabel="Remove mitigation control" confirmVariant="destructive" description="This removes the contextual use of the reusable control from this Risk." errorMessage={removeError} onConfirm={remove} pendingLabel="Removing mitigation control…" title="Remove this mitigation control?" trigger={<Button type="button" variant="outline">Remove mitigation control</Button>} /> : null}
+        {mode === 'edit' ? <ConfirmDialog confirmLabel="Remove mitigation control" confirmVariant="destructive" description="This removes the control from this Risk. The control stays in the library." errorMessage={removeError} onConfirm={remove} pendingLabel="Removing mitigation control…" title="Remove this mitigation control?" trigger={<Button type="button" variant="outline">Remove mitigation control</Button>} /> : null}
       </div>
     </form>
   );

@@ -14,7 +14,7 @@ import {
   listControlImplementations,
   listRiskTypes,
 } from '@/features/assessments/assessment-service';
-import { searchActiveUsersAction } from '@/features/assessments/assessment-actions';
+import { searchActiveUsersAction, searchControlsAction } from '@/features/assessments/assessment-actions';
 import { listInformationAssets, listInformationSystems } from '@/features/requests/request-service';
 import { canViewerReviewAssessments } from '@/lib/capabilities/analyst-review-gate';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
@@ -85,6 +85,7 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
       riskTypes={riskTypesResult.data ?? []}
       systems={systemsResult.data ?? []}
       searchOwners={searchActiveUsersAction}
+      searchControls={searchControlsAction}
     />
   );
 }
