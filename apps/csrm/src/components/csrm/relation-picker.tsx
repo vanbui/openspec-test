@@ -46,6 +46,8 @@ export type RelationPickerProps = {
 
 /** The shipped combobox debounce (OwnerCombobox). */
 const debounceMs = 300;
+/** A search that could not reach the server reads as the selection service's own failure sentence. */
+const searchUnavailable = 'The selection service is unavailable. Please try again later.';
 
 function matches(item: RelationPickerItem, term: string): boolean {
   const needle = term.toLocaleLowerCase('en-AU');
@@ -101,7 +103,13 @@ export function RelationPicker({
     const request = ++sequence.current;
     setIsLoading(true);
     setError(null);
-    const result = await searchRef.current({ search: term });
+    let result: RelationPickerSearchResult;
+    try {
+      result = await searchRef.current({ search: term });
+    } catch {
+      // A Server Action rejects when the network drops or the deployment changes: the person still gets Retry search.
+      result = { ok: false, formError: searchUnavailable };
+    }
     // A later keystroke or choice supersedes this response.
     if (request !== sequence.current) return;
     setIsLoading(false);
