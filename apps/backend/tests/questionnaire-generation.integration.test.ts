@@ -185,6 +185,64 @@ test("mounted replacement with a full governance log fails and changes nothing",
   assert.deepEqual(await harness.snapshot([() => harness.getQuestionnaire(questionnaireId), () => harness.getRequest(requestId)]), before, "FULL_LOG_REPLACEMENT_WROTE");
 });
 
+/*
+ * D-09: a released questionnaire is what the Requestor is answering. Replacing it would publish questions no
+ * analyst reviewed, so generation is refused before a job is queued, with or without the replacement
+ * acknowledgement, and nothing is written. The analyst returns it to analyst review first.
+ */
+test("mounted generation refuses to replace a released questionnaire before queueing a job", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("RELEASED");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "RELEASED_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+  assert.equal((await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/release`, harness.identities.analyst, json("POST"))).status, 200, "RELEASED_FIXTURE_RELEASE_FAILED");
+  const state = () => harness.snapshot([() => harness.getQuestionnaire(questionnaireId), () => harness.getRequest(requestId)]);
+  const before = await state();
+
+  for (const [payload, diagnostic] of [[{ replaceUnansweredQuestionnaire: true }, "ACKNOWLEDGED"], [undefined, "UNACKNOWLEDGED"]] as const) {
+    const refused = await request(generatePath(requestId), harness.identities.analyst, json("POST", payload));
+    assert.equal(refused.status, 409, `RELEASED_REPLACEMENT_NOT_REFUSED_${diagnostic}`);
+    assert.deepEqual((await body(refused)).error, {
+      status: 409,
+      name: "ConflictError",
+      message: "Released questionnaires cannot be replaced.",
+      details: { reason: "QUESTIONNAIRE_RELEASED" },
+    }, `RELEASED_REPLACEMENT_REASON_${diagnostic}`);
+  }
+  // A queued job would have run by now; the refusal queued none and wrote nothing.
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.deepEqual(await state(), before, "RELEASED_REPLACEMENT_WROTE");
+});
+
+/*
+ * D-09, the race: a release that lands while a replacement job waits for its provider makes the job fail
+ * with QUESTIONNAIRE_RELEASED under the request row lock, and the released questionnaire keeps its
+ * questions, generation facts, release facts and log.
+ */
+test("mounted replacement job fails when the questionnaire is released while it runs", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("RELEASE-RACE");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "RACE_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+  const state = () => harness.snapshot([() => harness.getQuestionnaire(questionnaireId), () => harness.getRequest(requestId)]);
+
+  let released: unknown[] = [];
+  let heldJobId = "";
+  await harness.withHeldQuestionnaireGeneration(requestId, async (jobId) => {
+    heldJobId = jobId;
+    assert.equal((await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/release`, harness.identities.analyst, json("POST"))).status, 200, "RACE_RELEASE_FAILED");
+    released = await state();
+  }, { replaceUnansweredQuestionnaire: true, expectedStatus: "failed" });
+
+  const job = await terminalJob(heldJobId, harness.identities.analyst);
+  assert.equal(job.status, "failed", "RACE_JOB_DID_NOT_FAIL");
+  assert.equal(job.failureCode, "QUESTIONNAIRE_RELEASED", "RACE_JOB_FAILURE_CODE");
+  assert.equal(job.failureMessage, "Released questionnaires cannot be replaced.", "RACE_JOB_FAILURE_MESSAGE");
+  assert.deepEqual(await state(), released, "RACE_JOB_CHANGED_THE_RELEASED_QUESTIONNAIRE");
+});
+
 test("mounted questionnaire generation keeps completed relations populated and job reads actor-scoped", async () => {
   const harness = await harnessPromise;
   assert.equal(process.env.CSRM_AI_PROVIDER, "deterministic");

@@ -360,9 +360,15 @@ export type AuthorizationHttpHarness = {
   /**
    * Queues questionnaire generation for the request as the analyst and holds the
    * deterministic provider until `action` settles, so the job stays active for
-   * exactly that long. The job is then released and followed to completion.
+   * exactly that long. The job is then released and followed to completion, or
+   * to the failure `expectedStatus` names. `replaceUnansweredQuestionnaire`
+   * queues an acknowledged replacement; `action` receives the job's id.
    */
-  withHeldQuestionnaireGeneration: <T>(requestDocumentId: string, action: () => Promise<T>) => Promise<T>;
+  withHeldQuestionnaireGeneration: <T>(
+    requestDocumentId: string,
+    action: (jobId: string) => Promise<T>,
+    options?: { replaceUnansweredQuestionnaire?: boolean; expectedStatus?: "completed" | "failed" },
+  ) => Promise<T>;
   /** Counts a review queue through the running application's own shared bucket counter. */
   countReviewQueueBucketFixture: (bucket: ReviewQueueBucketFixture, activeIds: readonly string[]) => Promise<number>;
   createAssessmentFixture: (data: {
@@ -1157,7 +1163,7 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
         provider.generate = originalGenerate;
       }
     },
-    async withHeldQuestionnaireGeneration(requestDocumentId, action) {
+    async withHeldQuestionnaireGeneration(requestDocumentId, action, options = {}) {
       const mountedProviderModule = require(path.join(
         appDir,
         "dist",
@@ -1183,13 +1189,15 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       try {
         const queued = await analystRequest(
           `/api/v1/assessment_requests/${encodeURIComponent(requestDocumentId)}/generate_questionnaire`,
-          { method: "POST" },
+          options.replaceUnansweredQuestionnaire
+            ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ replaceUnansweredQuestionnaire: true }) }
+            : { method: "POST" },
         );
         assert.equal(queued.status, 202, "HELD_QUESTIONNAIRE_GENERATION_NOT_QUEUED");
         const job = ((await queued.json()) as { data?: { jobId?: unknown } }).data;
         assert.equal(typeof job?.jobId, "string", "HELD_QUESTIONNAIRE_GENERATION_JOB_ID_MISSING");
         jobId = job?.jobId as string;
-        return await action();
+        return await action(jobId);
       } finally {
         releaseGate();
         try {
@@ -1202,7 +1210,8 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
               if (status === "completed" || status === "failed") break;
               await new Promise((resolve) => setTimeout(resolve, 50));
             }
-            assert.equal(status, "completed", "HELD_QUESTIONNAIRE_GENERATION_DID_NOT_COMPLETE");
+            const expectedStatus = options.expectedStatus ?? "completed";
+            assert.equal(status, expectedStatus, expectedStatus === "completed" ? "HELD_QUESTIONNAIRE_GENERATION_DID_NOT_COMPLETE" : "HELD_QUESTIONNAIRE_GENERATION_DID_NOT_FAIL");
           }
         } finally {
           provider.generate = originalGenerate;
