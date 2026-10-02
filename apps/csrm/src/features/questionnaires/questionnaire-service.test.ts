@@ -244,4 +244,17 @@ describe('questionnaire service contract', () => {
       expect(service.parseQuestionnaireListQuery({ status })).toEqual({ page: 1, pageSize: 25, sort: 'updatedAt:desc' });
     }
   });
+
+  /* D-18: question events carry a text snapshot, bounded at 500 characters on both event shapes. */
+  it('accepts a question text snapshot up to the 500-character event bound and no further', () => {
+    const parse = (label: string, data: unknown) => service.contractResponseParsers.find((entry) => entry.label === label)?.parser.safeParse({ data }).success;
+    const timelineEvent = (questionText: string) => ({ kind: 'question-edited', at: '2026-09-03T00:00:00.000Z', by: { documentId: 'analyst-1', displayName: 'Morgan Analyst' }, questionKey: 'hosting-region', questionText });
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [timelineEvent('a'.repeat(500))] })).toBe(true);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [timelineEvent('a'.repeat(501))] })).toBe(false);
+    const release = { releasedAt: '2026-09-01T00:00:00.000Z', releasedBy: { documentId: 'analyst-1', displayName: 'Morgan Analyst' } };
+    const storedEvent = (questionText: string) => ({ schemaVersion: 1, kind: 'question-added', at: '2026-09-03T00:00:00.000Z', by: 'analyst-1', questionKey: 'hosting-region', questionText });
+    const governance = (questionText: string) => ({ ...questionnaire, release, events: [storedEvent(questionText)] });
+    expect(parse('addQuestionnaireQuestion', governance('a'.repeat(500)))).toBe(true);
+    expect(parse('addQuestionnaireQuestion', governance('a'.repeat(501)))).toBe(false);
+  });
 });

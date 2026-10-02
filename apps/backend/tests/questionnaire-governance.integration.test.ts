@@ -495,6 +495,57 @@ test("mounted authorised questionnaire read projects its owned revision timeline
 });
 
 /*
+ * D-17 and D-18 (Phase 10): an edited question's new words are written into the stored event in the
+ * same change, and the analyst timeline names the question by them. The owning Requestor's timeline
+ * carries neither the text nor the key.
+ */
+test("mounted question edit stores the question's text on its event and only the analyst timeline shows it", async () => {
+  const harness = await harnessPromise;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "QUESTIONNAIRE-GOVERNANCE-SNAPSHOT", title: "Governance question text request", requestStatus: "questionnaire-in-progress", requestor: "owner",
+  });
+  const questionnaireId = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: "QUES-GOVERNANCE-SNAPSHOT",
+    title: "Governance question text questionnaire",
+    assessmentRequest: requestId,
+  });
+  const questionId = await harness.createFixtureDocument("api::csrm-question.csrm-question", {
+    questionText: "Where is the service hosted?",
+    answerType: "Text",
+    options: { schemaVersion: 1, questionKey: "snapshot-hosting", section: { key: "context", title: "Context", order: 1 }, order: 1, required: true },
+    answer: null,
+    questionnaire: questionnaireId,
+  });
+  const revisedText = "Where will the service be hosted?";
+
+  const edited = await request(`${questionsPath(questionnaireId)}/${encodeURIComponent(questionId)}`, harness.identities.analyst, {
+    method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ questionText: revisedText }),
+  });
+  assert.equal(edited.status, 200, "SNAPSHOT_EDIT_FAILED");
+
+  const stored = record(await harness.getQuestionnaire(questionnaireId), "SNAPSHOT_STORED_QUESTIONNAIRE").governanceLog as Array<Record<string, unknown>>;
+  assert.equal(stored.at(-1)?.kind, "question-edited", "SNAPSHOT_EVENT_NOT_STORED");
+  assert.equal(stored.at(-1)?.questionText, revisedText, "SNAPSHOT_NOT_STORED_WITH_THE_EDIT");
+
+  const analystResponse = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`, harness.identities.analyst);
+  assert.equal(analystResponse.status, 200, "SNAPSHOT_ANALYST_READ_FAILED");
+  const analystEvents = record((await payload(analystResponse)).data, "SNAPSHOT_ANALYST_RESPONSE").events as Array<Record<string, unknown>>;
+  const editedEvent = analystEvents.find((event) => event.kind === "question-edited");
+  assert.equal(editedEvent?.questionText, revisedText, "SNAPSHOT_NOT_PROJECTED_FOR_THE_ANALYST");
+  assert.equal(editedEvent?.questionKey, "snapshot-hosting");
+
+  assert.equal((await request(releasePath(questionnaireId), harness.identities.analyst, post())).status, 200, "SNAPSHOT_RELEASE_FAILED");
+  const ownerResponse = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`, harness.identities.owner);
+  assert.equal(ownerResponse.status, 200, "SNAPSHOT_OWNER_READ_FAILED");
+  const ownerEvents = record((await payload(ownerResponse)).data, "SNAPSHOT_OWNER_RESPONSE").events as Array<Record<string, unknown>>;
+  assert.ok(ownerEvents.some((event) => event.kind === "question-edited"), "SNAPSHOT_OWNER_TIMELINE_LOST_THE_EDIT");
+  for (const [index, event] of ownerEvents.entries()) {
+    assert.equal("questionText" in event, false, `SNAPSHOT_REQUESTOR_RECEIVED_QUESTION_TEXT_${index}`);
+    assert.equal("questionKey" in event, false, `SNAPSHOT_REQUESTOR_RECEIVED_QUESTION_KEY_${index}`);
+  }
+});
+
+/*
  * D-31 (Phase 8): the log keeps an actor's documentId for good, but the person
  * behind it may have left the directory or been deactivated. Such an id keeps a
  * null display name, so the timeline falls back to its neutral wording rather

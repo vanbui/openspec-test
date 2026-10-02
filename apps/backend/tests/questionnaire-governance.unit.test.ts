@@ -6,8 +6,10 @@ import {
   GOVERNANCE_EVENT_KINDS,
   GOVERNANCE_LOG_MAX_ENTRIES,
   GovernanceLogError,
+  MAX_QUESTION_TEXT_LENGTH,
   parseGovernanceEvent,
   parseGovernanceLog,
+  questionTextSnapshot,
   summariseGovernanceLog,
 } from "../src/api/csrm-questionnaire/services/questionnaire-governance-log";
 import {
@@ -146,6 +148,39 @@ test("appendGovernanceEvent only ever appends, leaving prior entries untouched a
   );
 });
 
+/*
+ * D-18: a question event keeps the question's own words, bounded like an explanation. The snapshot
+ * is what the analyst timeline names the question by after the question changes again (D-17).
+ */
+test("questionTextSnapshot keeps short text and cuts long text to the event bound with an ellipsis", () => {
+  assert.equal(MAX_QUESTION_TEXT_LENGTH, 500);
+  assert.equal(questionTextSnapshot("  Where will the service be hosted?  "), "Where will the service be hosted?", "SNAPSHOT_NOT_TRIMMED");
+  assert.equal(questionTextSnapshot("a".repeat(500)), "a".repeat(500), "SNAPSHOT_CUT_TEXT_WITHIN_THE_BOUND");
+  const cut = questionTextSnapshot("a".repeat(600));
+  assert.equal(cut.length, 500, "SNAPSHOT_NOT_CUT_TO_THE_BOUND");
+  assert.equal(cut, `${"a".repeat(499)}…`, "SNAPSHOT_NOT_ENDED_WITH_AN_ELLIPSIS");
+  // Whatever the snapshot returns, the closed parser accepts.
+  assert.equal(parseGovernanceEvent(event({ kind: "question-edited", questionKey: "hosting", questionText: cut })).questionText, cut);
+});
+
+test("a question event carries its question text up to 500 characters and older events stay readable", () => {
+  const added = appendGovernanceEvent([event()], event({ kind: "question-added", questionKey: "hosting", questionText: "Where will the service be hosted?" }));
+  assert.equal(added.at(-1)?.questionText, "Where will the service be hosted?", "QUESTION_TEXT_NOT_APPENDED");
+  assert.equal(appendGovernanceEvent(null, event({ kind: "question-edited", questionKey: "hosting", questionText: "a".repeat(500) })).at(-1)?.questionText, "a".repeat(500));
+  assert.throws(
+    () => appendGovernanceEvent(null, event({ kind: "question-edited", questionKey: "hosting", questionText: "a".repeat(501) })),
+    GovernanceLogError,
+    "OVERLONG_QUESTION_TEXT_ACCEPTED",
+  );
+  assert.throws(() => parseGovernanceEvent(event({ kind: "question-deleted", questionText: "   " })), GovernanceLogError, "BLANK_QUESTION_TEXT_ACCEPTED");
+  assert.throws(() => parseGovernanceEvent(event({ kind: "question-deleted", questionText: 42 })), GovernanceLogError, "NON_STRING_QUESTION_TEXT_ACCEPTED");
+  // Events written before the snapshot existed carry no text and still parse unchanged.
+  assert.deepEqual(
+    parseGovernanceLog([event({ kind: "question-edited", questionKey: "hosting" })]),
+    [{ schemaVersion: 1, kind: "question-edited", at: AT, by: ACTOR, questionKey: "hosting" }],
+  );
+});
+
 test("the governance log module exports no way to remove, reorder or rewrite an entry", async () => {
   const module = await import("../src/api/csrm-questionnaire/services/questionnaire-governance-log");
   const writers = Object.keys(module).filter((name) => /remove|delete|reorder|rewrite|replace|splice|sort|clear|set|update/i.test(name));
@@ -188,6 +223,17 @@ test("projectGovernanceEvents preserves analyst detail and narrows requestor his
   assert.deepEqual(projectGovernanceEvents(questionnaire({ governanceLog: [{ kind: "released" }] }), "analyst"), []);
   assert.equal(projectGovernanceEvents(questionnaire({ governanceLog: Array.from({ length: 1001 }, () => event()) }), "analyst").length, 0);
   assert.deepEqual(projectGovernanceEvents(questionnaire({ governanceLog: [event(), event({ kind: "future-event" })] }), "analyst").map((entry) => entry.kind), ["released"]);
+});
+
+test("projectGovernanceEvents gives the analyst a question event's stored text and the Requestor neither text nor key", () => {
+  const source = questionnaire({ governanceLog: [
+    event({ kind: "question-edited", at: "2026-09-03T00:00:00.000Z", questionKey: "service-name", questionText: "What is the service called?" }),
+  ] });
+  const [analyst] = projectGovernanceEvents(source, "analyst");
+  const [requestor] = projectGovernanceEvents(source, "requestor");
+  assert.equal(analyst?.questionText, "What is the service called?", "ANALYST_TIMELINE_LOST_THE_SNAPSHOT");
+  assert.equal(analyst?.questionKey, "service-name");
+  assert.deepEqual(Object.keys(requestor ?? {}).sort(), ["at", "kind"], "REQUESTOR_RECEIVED_QUESTION_DETAIL");
 });
 
 /*

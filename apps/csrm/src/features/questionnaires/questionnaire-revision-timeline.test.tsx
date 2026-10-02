@@ -124,6 +124,18 @@ describe('QuestionnaireRevisionTimeline', () => {
     expect(time?.textContent?.replace(/\s/g, ' ')).toBe('3 Sept 2026, 3:47 pm');
   });
 
+  it('names a question by its text and never by its key (UI-SPEC §4.2)', () => {
+    const named: QuestionnaireSummary = {
+      ...questionnaire,
+      events: [{ kind: 'question-edited', at: '2026-09-03T00:00:00.000Z', by: { documentId: 'analyst-1', displayName: 'Morgan Analyst' }, questionKey: 'hosting-region', questionText: 'Where will the service be hosted?' }],
+    };
+    render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={named} />);
+    const line = screen.getByText('Where will the service be hosted?');
+    expect(line).toHaveTextContent('Question: Where will the service be hosted?');
+    expect(line).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.queryByText(/hosting-region/)).not.toBeInTheDocument();
+  });
+
   it('renders the explicit empty state at both depths', () => {
     const empty = { ...questionnaire, events: [] };
     const view = render(<QuestionnaireRevisionTimeline depth="detail" questionnaire={empty} />);
