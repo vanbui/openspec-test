@@ -211,6 +211,17 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await page.getByRole('textbox', { name: serviceNameQuestion }).fill('Customer portal');
   await page.getByRole('textbox', { name: serviceDescriptionQuestion }).fill('Customers use the portal to manage their accounts.');
   await page.getByRole('radio', { name: 'Yes', exact: true }).check();
+  // UAT-064: one quick arrow press, as press() sends it, moves focus and checks the next choice.
+  const controllerGroup = page.getByRole('group', { name: controllerQuestion });
+  const controllerYes = controllerGroup.getByRole('radio', { name: 'Yes', exact: true });
+  const controllerNo = controllerGroup.getByRole('radio', { name: 'No', exact: true });
+  await controllerYes.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(controllerNo, 'QUES09_ARROW_KEYS_SELECT').toBeChecked();
+  await expect(controllerNo, 'QUES09_ARROW_KEYS_SELECT').toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(controllerYes, 'QUES09_ARROW_KEYS_SELECT').toBeChecked();
+  await expect(controllerYes, 'QUES09_ARROW_KEYS_SELECT').toBeFocused();
   const dependentGroup = page.getByRole('group', { name: dependentQuestion });
   await expect(dependentGroup).toBeVisible();
   await dependentGroup.getByRole('checkbox', { name: dependentAnswer }).check();
