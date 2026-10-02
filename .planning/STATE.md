@@ -3,19 +3,19 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: "post-demo Stage 3: quick tasks 261002-2y8 and 261002-drq accepted (gate green at c8d164d); Phase 10's fresh plan check passed after the pilot's baseline revision; Phase 10 execution next."
-last_updated: "2026-10-02T01:13:08.836Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-10-02T01:51:57.621Z"
 last_activity: 2026-10-02
-last_activity_desc: Phase 10 execution started
-state_head: 2dd4f1dff3d9fbdd4ecdb240a4e74bbe985e7ed1
+last_activity_desc: Plan 10-01 complete (viewer time zone; X-1 to X-5 recorded)
+state_head: 5a9db354591903729bb4c69185efc962113f595d
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
-current_phase_name: Existing-flow gap closure
 current_phase: 10
+current_phase_name: Existing-flow gap closure
 current_plan: 0
 ---
 
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 1 of 23
-Status: Executing Phase 10
-Last activity: 2026-10-02 — Phase 10 execution started
+Plan: 2 of 23
+Status: Ready to execute
+Last activity: 2026-10-02 — Plan 10-01 complete: viewer time zone on timelines and the revert summary, X-1 to X-5 recorded; web 2,092/2,092, Playwright 86/86 (82 desktop, 4 mobile, 12.0 min)
 
 ## Milestone
 
@@ -101,6 +101,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Post-demo G-19, 2026-10-01]: The in-app notification centre moves from Phase 17 into the inserted Phase 19.1 (after 19, before 17), keeping Phase 17 within L; NOTIFY-01 moves with it, its first kinds are the events that exist before Phase 17, and Phase 17 adds its response kinds through the same service (reverses only decision 18's placement of the centre in Phase 17).
 - [Phase 10 baseline, 2026-10-02]: Phase 10's static guards (content-type freeze, Keycloak, `CSRM_AI_`, vendored catalogues) diff from `5ea2b77`, the last `post-demo` commit before any Phase 10 code. The plans' `uat-trial` baseline `98fe99c` is not in this repository (10-CONTEXT D-49).
 - [Post-demo G-20, 2026-10-01]: When the AI data policy refuses generation, Phase 22 adds a manual start (an empty questionnaire or assessment draft); until then Phase 12's refusal names the classification, the ceiling and the administrator who sets `CSRM_AI_DATA_CLASSIFICATION_CEILING` (named in the `.example` with a safe default). Offering the deterministic provider as a template was rejected as a governance risk.
+- [Phase 10]: 10-01: ViewerTimeZoneSync relies on Next's same-round-trip route re-render after the cookie-setting Server Action; no explicit router.refresh(), which rendered the page twice and aborted the first response (e12e0f8). LocalInstant/formatInstant is the one way to render an instant on a D-19 surface.
+- [Phase 10]: 10-01: VIEWER_TIME_ZONE_COOKIE lives in the pure lib/time/format-instant.ts and is re-exported by the server-only viewer-time-zone.ts, so jsdom tests rendering LocalInstant never import server-only. Plan 10-02 should add viewer-time-zone.ts to the server-only gate list.
 
 ## Risks and Open Decisions
 
@@ -159,11 +161,16 @@ Items acknowledged and deferred at milestone close, most recent first:
 **Post-demo gate after 261002-drq** (2026-10-02, `c8d164d`): Playwright 86/86 (82 desktop, 4 mobile, 10.9 min); Strapi 578/578 (676 s); web 2,055/2,055; typecheck, lint and `api:check` clean; the tree was clean afterwards.
 
 Gate history: `.planning/milestones/v1.0-STATE.md`.
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 10 P01 | 32 min | 3 tasks | 16 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02
-**Stopped At:** post-demo Stage 3 (2026-10-02): quick tasks 261002-2y8 (G-10 fonts) and 261002-drq (Vietnamese subsets and the 500 Button weight) are done and accepted by the pilot, with the gate green at `c8d164d`. Phase 10 passed its fresh plan check after the pilot moved its guard baseline to `5ea2b77` (D-49), and its execution is next.
+**Last session:** 2026-10-02T01:51:50.776Z
+**Stopped At:** Completed 10-01-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
@@ -172,7 +179,7 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
 
 **Resume prompt:** `.planning/prompts/post-demo-build.md`. Paste the launcher line the operator was given into a new session after the weekly reset.
-**Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
+**Resume File:** None
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.

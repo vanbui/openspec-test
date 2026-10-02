@@ -73,11 +73,11 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 23 plans (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 1/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
-- [ ] 10-01-PLAN.md — Record the five UI-SPEC extensions (X-1 to X-5) in the design direction, then deliver D-19's viewer time zone end to end: the browser's zone reaches a validated cookie through a Server Action, the app
+- [x] 10-01-PLAN.md — Record the five UI-SPEC extensions (X-1 to X-5) in the design direction, then deliver D-19's viewer time zone end to end: the browser's zone reaches a validated cookie through a Server Action, the app
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 10-02-PLAN.md — Gate the three analyst detail routes on `assessment:review` before any read, exactly as the analyst dashboard does (07 D-16), and rewrite every Phase 10 permission description in plain terms (D-24). C
