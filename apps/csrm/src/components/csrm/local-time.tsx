@@ -22,7 +22,15 @@ export function useViewerTimeZone(): string | null {
   return useContext(ViewerTimeZoneContext);
 }
 
-/** An instant in the viewer's zone inside a `<time>` element, or `fallback` when it is missing or invalid. */
+/**
+ * An instant in the viewer's zone inside a `<time>` element, or `fallback` when it is missing or invalid.
+ *
+ * The server (Node's ICU) and the browser (its own ICU and CLDR) can word the same instant differently, for
+ * example `Sep` or `Sept`, or a narrow no-break space before `pm`. The zone is shared, so both are the same
+ * instant: `suppressHydrationWarning` keeps the server's wording instead of raising a hydration error that would
+ * client-render the page (WR-304). It covers this element's own text only, and `dateTime` stays machine-readable.
+ * Rendering only after mount was not chosen: the server-rendered time is the useful first paint.
+ */
 export function LocalInstant({ value, style, fallback = null }: {
   value: string | null | undefined;
   style: InstantStyle;
@@ -30,7 +38,7 @@ export function LocalInstant({ value, style, fallback = null }: {
 }) {
   const zone = useViewerTimeZone();
   const text = formatInstant(value, { zone, style });
-  return value && text !== null ? <time dateTime={value}>{text}</time> : <>{fallback}</>;
+  return value && text !== null ? <time dateTime={value} suppressHydrationWarning>{text}</time> : <>{fallback}</>;
 }
 
 /**
