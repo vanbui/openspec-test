@@ -383,6 +383,33 @@ describe('RiskDetails', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Mitigation control changes saved.');
   });
 
+  /*
+   * X-5 (design direction, In-place edit form): discarding returns focus to the control that opened the form.
+   * Walkthrough fix 6: after Discard mitigation changes, focus fell to the page body.
+   */
+  it('returns focus to Edit mitigation control after its changes are discarded (X-5)', async () => {
+    const user = userEvent.setup();
+    renderDetails();
+    await user.click(screen.getByRole('button', { name: 'Edit mitigation control' }));
+    await user.type(screen.getByRole('textbox', { name: 'Evidence' }), ' Draft.');
+    await user.click(screen.getByRole('button', { name: 'Discard mitigation changes' }));
+
+    expect(screen.queryByRole('form', { name: 'Edit mitigation control' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit mitigation control' })).toHaveFocus());
+    expect(actionMocks.updateMitigationControlAction).not.toHaveBeenCalled();
+  });
+
+  it('returns focus to Add mitigation control after a new control is discarded (X-5)', async () => {
+    const user = userEvent.setup();
+    renderDetails();
+    await user.click(screen.getByRole('button', { name: 'Add mitigation control' }));
+    await user.click(screen.getByRole('button', { name: 'Discard mitigation changes' }));
+
+    expect(screen.queryByRole('form', { name: 'Add mitigation control' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add mitigation control' })).toHaveFocus());
+    expect(actionMocks.createMitigationControlAction).not.toHaveBeenCalled();
+  });
+
   it('opens the mitigation form on its Control picker with the Risk Type’s applicable controls first (D-31, UI-SPEC §13.1)', async () => {
     const user = userEvent.setup();
     renderDetails({ detail: { ...detail, controlImplementations: [] } });

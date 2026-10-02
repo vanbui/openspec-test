@@ -605,6 +605,8 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await expectFocusVisible(addForm.getByRole('combobox', { name: 'Control', exact: true }));
   await addForm.getByRole('button', { name: 'Discard mitigation changes' }).click();
   await expect(page.getByRole('button', { name: 'Add mitigation control' })).toBeVisible();
+  // X-5 (walkthrough fix 6): discarding returns focus to the control that opened the form.
+  await expect(page.getByRole('button', { name: 'Add mitigation control' }), 'RISK_DISCARD_RETURNS_FOCUS').toBeFocused();
 
   /*
    * ASSESS06_SYSTEM_PAST_FIRST_PAGE (D-28, UAT-010): a system the old 25-row option list could never show is
