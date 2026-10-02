@@ -416,9 +416,23 @@ export const controlImplementationCreateInputSchema = controlImplementationUpdat
 export type ControlImplementationCreateInput = z.infer<typeof controlImplementationCreateInputSchema>;
 export type ControlImplementationUpdateInput = z.infer<typeof controlImplementationUpdateInputSchema>;
 
+/*
+ * D-34: the control a mitigation control implements, named by the served summary so no screen falls back to
+ * its id. The bounds mirror ControlImplementationControlSummary in the contract (the Administration control
+ * record's), and the summary is null when the populated control lacks any of them.
+ */
+export const controlImplementationControlSummarySchema = z.object({
+  documentId: z.string().min(1).max(255),
+  controlNumber: z.string().min(1).max(255),
+  name: z.string().min(1).max(255),
+  framework: z.string().min(1).max(255),
+}).strict();
+export type ControlImplementationControlSummary = z.infer<typeof controlImplementationControlSummarySchema>;
+
 export const controlImplementationSchema = z.object({
   documentId: documentIdSchema,
   control: documentIdSchema,
+  controlSummary: controlImplementationControlSummarySchema.nullable(),
   controlOwner: activeUserSchema.nullable(),
   controlStatus: z.enum(['Existing', 'Planned', 'Implemented', 'Retired']).nullable(),
   effectivenessRating: controlEffectivenessSchema.nullable(),

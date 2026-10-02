@@ -121,6 +121,7 @@ const risk = {
 const implementation: ControlImplementation = {
   documentId: 'implementation-1',
   control: 'control-1',
+  controlSummary: { documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', framework: 'NIST SP 800-53' },
   controlOwner: analyst,
   controlStatus: 'Implemented',
   effectivenessRating: 'Effective',

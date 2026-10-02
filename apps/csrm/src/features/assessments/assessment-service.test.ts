@@ -136,6 +136,8 @@ const controlInput = {
   reviewDate: '2026-11-15',
 } as const;
 
+const controlSummary = { documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', framework: 'NIST SP 800-53' } as const;
+
 describe('assessment contract schemas', () => {
   it('requires a populated questionnaire only for completed questionnaire generation jobs', () => {
     const base = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: timestamp };
@@ -228,7 +230,11 @@ describe('assessment contract schemas', () => {
     expect(riskTypeSchema.safeParse({ documentId: 'risk-type-1', name: 'Internet Exposure', description: null }).success).toBe(true);
     expect(riskSchema.safeParse({ documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: 'A risk.', inherentRating: 'High', residualRating: 'Moderate' }).success).toBe(true);
     expect(riskTypeSchema.safeParse({ documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: 'A risk.' }).success).toBe(false);
-    expect(controlImplementationSchema.safeParse({ documentId: 'implementation-1', ...controlInput, controlOwner: analyst }).success).toBe(true);
+    expect(controlImplementationSchema.safeParse({ documentId: 'implementation-1', ...controlInput, controlSummary, controlOwner: analyst }).success).toBe(true);
+    expect(controlImplementationSchema.safeParse({ documentId: 'implementation-1', ...controlInput, controlSummary: null, controlOwner: analyst }).success).toBe(true);
+    // D-34: the summary is required, so a served implementation can never fall back to naming its control by id.
+    expect(controlImplementationSchema.safeParse({ documentId: 'implementation-1', ...controlInput, controlOwner: analyst }).success).toBe(false);
+    expect(controlImplementationSchema.safeParse({ documentId: 'implementation-1', ...controlInput, controlSummary: { ...controlSummary, framework: '' }, controlOwner: analyst }).success).toBe(false);
     expect(controlImplementationSchema.safeParse({ documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control' }).success).toBe(false);
   });
 });
@@ -277,6 +283,7 @@ describe('assessment generated-client service boundary', () => {
   const implementation = {
     documentId: 'implementation-1',
     ...controlInput,
+    controlSummary,
     controlOwner: analyst,
   };
 

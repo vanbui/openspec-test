@@ -4,6 +4,7 @@ import {
   type AssessmentMutationStrapi,
   withMutableAssessmentMutation,
 } from "../../csrm-assessment/services/assessment-workflow";
+import { projectControlImplementationControlSummary } from "../../csrm-assessment/services/assessment-scope";
 
 type RecordValue = Record<string, unknown>;
 type DocumentService = {
@@ -144,6 +145,7 @@ export function projectControlImplementationSummary(document: RecordValue): Reco
   return {
     documentId: document.documentId,
     control: controlDocumentId,
+    controlSummary: projectControlImplementationControlSummary(document.control),
     controlOwner: owner,
     controlStatus: document.controlStatus ?? null,
     effectivenessRating: document.effectivenessRating ?? null,

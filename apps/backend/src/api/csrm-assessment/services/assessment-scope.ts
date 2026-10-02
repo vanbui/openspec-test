@@ -341,12 +341,33 @@ export function projectActiveUserSummary(document: RecordValue): RecordValue {
   return { documentId: document.documentId, displayName: document.displayName };
 }
 
+const CONTROL_SUMMARY_FIELDS = ["documentId", "controlNumber", "name", "framework"] as const;
+const CONTROL_SUMMARY_MAX_LENGTH = 255;
+
+/**
+ * D-34: the bounded summary of the control a mitigation control implements (the contract's
+ * ControlImplementationControlSummary, with the Administration control record's 1-255 bounds), so every
+ * reader names the control without its id. It is null when the control is not populated or a field falls
+ * outside those bounds, never a partial or unbounded object.
+ */
+export function projectControlImplementationControlSummary(control: unknown): RecordValue | null {
+  if (!isRecord(control)) return null;
+  const summary: RecordValue = {};
+  for (const field of CONTROL_SUMMARY_FIELDS) {
+    const value = control[field];
+    if (typeof value !== "string" || value.length === 0 || value.length > CONTROL_SUMMARY_MAX_LENGTH) return null;
+    summary[field] = value;
+  }
+  return summary;
+}
+
 export function projectControlImplementationSummary(document: RecordValue): RecordValue {
   return {
     documentId: document.documentId,
     control: isRecord(document.control) && typeof document.control.documentId === "string"
       ? document.control.documentId
       : document.control,
+    controlSummary: projectControlImplementationControlSummary(document.control),
     controlOwner: projectUser(document.controlOwner),
     controlStatus: document.controlStatus ?? null,
     effectivenessRating: document.effectivenessRating ?? null,

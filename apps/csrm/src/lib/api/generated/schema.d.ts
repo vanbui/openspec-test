@@ -2851,6 +2851,8 @@ export interface components {
         ControlImplementationSummary: {
             documentId: string;
             control: string;
+            /** @description D-34: the implemented control's number, name and framework, so every reader names it without the id. Null when the control lacks one of them or one falls outside its bounds. */
+            controlSummary: components["schemas"]["ControlImplementationControlSummary"] | null;
             controlOwner: components["schemas"]["ActiveUserSummary"] | null;
             /** @enum {string|null} */
             controlStatus: "Existing" | "Planned" | "Implemented" | "Retired" | null;
@@ -2863,6 +2865,13 @@ export interface components {
             implementedDate: string | null;
             /** Format: date */
             reviewDate: string | null;
+        };
+        /** @description D-34: a bounded summary of the control a mitigation control implements, with the Administration control record's bounds. */
+        ControlImplementationControlSummary: {
+            documentId: string;
+            controlNumber: string;
+            name: string;
+            framework: string;
         };
         ControlImplementationResponse: {
             data: components["schemas"]["ControlImplementationSummary"];

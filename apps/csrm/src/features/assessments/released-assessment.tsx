@@ -23,6 +23,7 @@ import type {
 } from './assessment-schema';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
+import { controlLabel } from './control-label';
 import type { AssessmentCollectionQuery, CollectionPagination } from './assessment-service';
 import { usePathname, useRouter } from 'next/navigation';
 import { type FormEvent, useMemo } from 'react';
@@ -129,7 +130,7 @@ function ControlImplementationView({ implementation }: { implementation: Control
   return (
     <li className="rounded-lg border border-border bg-background p-4">
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Definition label="Control reference" value={implementation.control} />
+        <Definition label="Control" value={implementation.controlSummary ? controlLabel(implementation.controlSummary) : 'Not recorded'} />
         <Definition label="Control owner" value={implementation.controlOwner?.displayName ?? 'Not recorded'} />
         <Definition label="Status" value={implementation.controlStatus ?? 'Not recorded'} />
         <Definition label="Effectiveness" value={implementation.effectivenessRating ?? 'Not recorded'} />

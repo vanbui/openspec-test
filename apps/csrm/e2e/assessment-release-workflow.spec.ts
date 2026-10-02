@@ -335,7 +335,13 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   }
   await expect(page.getByRole('article', { name: /Released risk assessment ASM-/ })).toBeVisible();
   await expect(page.getByText(deterministicRiskStatement, { exact: true }), 'ASSESS-05 Jane sees the released risk').toBeVisible();
-  await expect(page.getByRole('region', { name: 'Mitigation control implementations' }).first().getByText(reusableControlValue!, { exact: true }), 'ASSESS-05 Jane sees the persisted reusable Control reference').toBeVisible();
+  // E12 (D-34, D-36): Jane reads the control by its number and title, never by its internal id. The number is the
+  // option text the analyst chose, before its first separator.
+  const releasedMitigation = page.getByRole('region', { name: 'Mitigation control implementations' }).first();
+  const reusableControlNumber = reusableControlLabel!.split(' — ')[0]!.trim();
+  const controlNumberPattern = reusableControlNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await expect(releasedMitigation.getByText(new RegExp(`^${controlNumberPattern} · \\S`)), 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE Jane sees the persisted control by its label').toBeVisible();
+  await expect(releasedMitigation, 'ASSESS07_CONTROL_NAMED_BY_NUMBER_AND_TITLE the control id never shows').not.toContainText(reusableControlValue!);
   const releasedMain = page.getByRole('main');
   await expect(releasedMain.getByRole('form')).toHaveCount(0);
   await expect(releasedMain.getByRole('textbox')).toHaveCount(0);
