@@ -108,9 +108,11 @@ export function QuestionnaireRevisionTimeline({ depth, questionnaire }: { depth:
   const answerable = questionnaire.release !== null && questionnaire.release !== undefined && questionnaire.state !== 'submitted';
   const cleared = events.filter((event) => event.kind === 'answer-cleared');
   const summaryEntries = depth === 'summary' ? summarise(questionnaire.events ?? []) : [];
+  // The summary leaves out pre-release question changes and replacements, so it can hold nothing (IN-305).
+  const nothingToShow = depth === 'summary' ? summaryEntries.length === 0 : events.length === 0;
 
   return <section aria-label="Questionnaire revision timeline" className="mb-6 grid min-w-0 gap-3">
     <div><h2 className="text-heading-sm text-foreground">Revision timeline</h2>{depth === 'summary' && answerable && cleared.length > 0 ? <p className="mt-1 text-sm text-muted-foreground">Some answers need completing again before you re-submit.</p> : null}</div>
-    {events.length === 0 ? <p className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">No revisions have been recorded.</p> : depth === 'detail' ? <ol className="grid min-w-0 gap-3">{events.map((event, index) => <DetailEntry event={event} key={`${event.at}-${event.kind}-${index}`} />)}</ol> : <ol className="grid min-w-0 gap-3">{summaryEntries.map((item, index) => <SummaryEntry item={item} key={`${item.at}-${item.type === 'round' ? 'round' : item.event.kind}-${index}`} />)}</ol>}
+    {nothingToShow ? <p className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">No revisions have been recorded.</p> : depth === 'detail' ? <ol className="grid min-w-0 gap-3">{events.map((event, index) => <DetailEntry event={event} key={`${event.at}-${event.kind}-${index}`} />)}</ol> : <ol className="grid min-w-0 gap-3">{summaryEntries.map((item, index) => <SummaryEntry item={item} key={`${item.at}-${item.type === 'round' ? 'round' : item.event.kind}-${index}`} />)}</ol>}
   </section>;
 }
