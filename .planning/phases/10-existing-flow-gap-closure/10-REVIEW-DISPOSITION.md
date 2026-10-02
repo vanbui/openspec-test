@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: CR-101
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "A questionnaire replacement is not serialised with governance mutations, so governance events can be lost and D-09 does not hold"
   - id: CR-201
     severity: critical
@@ -17,15 +17,15 @@ findings:
     title: "UX06_JOB_STATUS_ON_RETURN can never fail on the regression it names"
   - id: WR-101
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The seed reconciliation does not keep an operator's cleared description, or operator edits to the other control fields"
   - id: WR-102
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A replacement refused by the governance log fails with a generic code, and the discard count reads 0 on a malformed log"
   - id: WR-103
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`verify-csrm-seed-runtime.mjs` now contains a raw NUL byte and was converted to CRLF line endings"
   - id: WR-201
     severity: warning
@@ -117,23 +117,23 @@ findings:
     title: "\"Each Risk row says what is missing\" checks only the first row"
   - id: IN-101
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`canRetry` means \"initiated by this viewer\", not \"may retry\""
   - id: IN-102
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The title file's strict checks can stop a seeded Strapi start, contrary to its comment"
   - id: IN-103
     severity: info
-    disposition: open
+    disposition: skipped
     title: "The seed verifiers no longer check the catalogue list independently"
   - id: IN-104
     severity: info
-    disposition: open
+    disposition: deferred
     title: "The control text bounds are declared in four places"
   - id: IN-105
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The D-09 race test claims more than it proves"
   - id: IN-201
     severity: info
@@ -227,7 +227,7 @@ findings:
     severity: info
     disposition: open
     title: "`.first()` hides duplicate owner options"
-open: 56
+open: 47
 total: 56
 recorded: 2026-10-02T19:39:25.663Z
 ---
@@ -236,12 +236,12 @@ recorded: 2026-10-02T19:39:25.663Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-101 | critical | open | - |
+| CR-101 | critical | fixed | e5ee253 (test), 96013ae (fix): replacement, release, return to review, question add, edit and delete, and the Requestor's answer mutations all lock the request row then the questionnaire row before reading (questionnaire-row-locks.ts); D-09 re-checked under both. Mounted tests interleave a release, a question add and a replacement into the other's transaction window with PostgreSQL row locks emulated (SQLite has one connection), plus a lock-order test across seven mutations. SQLite proves the protocol, not PostgreSQL's blocking (R-08-37). |
 | CR-201 | critical | open | - |
 | CR-401 | critical | open | - |
-| WR-101 | warning | open | - |
-| WR-102 | warning | open | - |
-| WR-103 | warning | open | - |
+| WR-101 | warning | fixed | 45726c0 (test), d9eb46e (fix): the seed-owned-value rule now covers controlReference, description, framework, frameworkVersion and frameworkSource against the stored catalogue entry and framework; an operator's edit or clear (null) is kept, a seed-written value still follows the catalogue; comment matches. The runtime verifier's stale fixture stores the earlier framework beside the value it wrote. |
+| WR-102 | warning | fixed | 160cf3c (test), ee93a02 (fix): a full or unreadable log fails the replacement job with HISTORY_UNAVAILABLE; an unreadable log gives no change count (null), the analyst revision omits it and the web says any; the web words the new failure with the UI-SPEC G copy. No contract change. |
+| WR-103 | warning | fixed | 7a9da03: the NUL byte is now the \u0000 escape, LF restored (git diff 5ea2b77 is 44 insertions, 35 deletions), scripts/*.mjs marked text in .gitattributes; pnpm verify:csrm-seed passes. A file-encoding defect has no test. |
 | WR-201 | warning | open | - |
 | WR-202 | warning | open | - |
 | WR-203 | warning | open | - |
@@ -264,11 +264,11 @@ recorded: 2026-10-02T19:39:25.663Z
 | WR-404 | warning | open | - |
 | WR-405 | warning | open | - |
 | WR-406 | warning | open | - |
-| IN-101 | info | open | - |
-| IN-102 | info | open | - |
-| IN-103 | info | open | - |
-| IN-104 | info | open | - |
-| IN-105 | info | open | - |
+| IN-101 | info | fixed | 1296d8a: canRetry documented as the initiator fact (true whatever the status; retry still refuses a job that has not failed) in the specification, the regenerated schema.d.ts and the registry comments. The catalogue copies keep their wording, byte-identical. |
+| IN-102 | info | fixed | 6a8c58a: the comment now says the stale-entry checks fail fast and stop a seeded start until the title file is corrected; both are tested in control-titles.unit.test.ts. |
+| IN-103 | info | skipped | Not a defect: verify-csrm-seed.mjs also checks the seed's list against the controls directory listing (an orphan or unlisted file fails) and the fixed 2,646 count, and an unparseable declaration fails loudly (CSRM seed must declare ...). 10-23's one-list decision (ac34d19) stands. |
+| IN-104 | info | deferred | Phase 22 (Admin role and configurable lists, Admin-owned reference data): one exported bounds table with a specification comparison test. The four bounds agree today (10,000, 500, 255, 2,000 against ControlsAdministrationRecord). |
+| IN-105 | info | fixed | e5ee253: the race test's comment now says it proves the before-transaction check, and the CR-101 window test covers a release inside the transaction. |
 | IN-201 | info | open | - |
 | IN-202 | info | open | - |
 | IN-203 | info | open | - |
