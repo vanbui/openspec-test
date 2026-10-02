@@ -66,6 +66,66 @@ describe('QuestionnaireGovernance', () => {
     await vi.waitFor(() => expect(actions.returnQuestionnaireToAnalystReviewAction).toHaveBeenCalledWith({ documentId: 'questionnaire-1', reason: 'Needs corrections' }));
   });
 
+  /*
+   * WR-308: a refused release or return shows its error once, inside its dialog (D-06), and the error does not
+   * outlive the attempt: dismissing, reopening or a later success leaves no old refusal on the page.
+   */
+  const refusal = 'This questionnaire can’t be released yet. Answer types must be supported.';
+
+  it('announces a refused release once, inside its dialog, and clears it on dismiss so a reopened dialog starts clean (WR-308)', async () => {
+    const user = userEvent.setup();
+    actions.releaseQuestionnaireAction.mockReset();
+    actions.releaseQuestionnaireAction.mockResolvedValueOnce({ ok: false, formError: refusal });
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />);
+
+    await user.click(screen.getByRole('button', { name: 'Release questionnaire' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Release this questionnaire?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Release questionnaire' }));
+    await vi.waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent(refusal));
+    expect(screen.getAllByText(refusal)).toHaveLength(1);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByText(refusal)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Release questionnaire' }));
+    expect(within(screen.getByRole('alertdialog', { name: 'Release this questionnaire?' })).queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('clears a refused release once a retry succeeds (WR-308)', async () => {
+    const user = userEvent.setup();
+    actions.releaseQuestionnaireAction.mockReset();
+    actions.releaseQuestionnaireAction
+      .mockResolvedValueOnce({ ok: false, formError: refusal })
+      .mockResolvedValueOnce({ ok: true, data: { ...questionnaire } });
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />);
+
+    await user.click(screen.getByRole('button', { name: 'Release questionnaire' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Release this questionnaire?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Release questionnaire' }));
+    await vi.waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent(refusal));
+    await user.click(within(dialog).getByRole('button', { name: 'Release questionnaire' }));
+
+    await vi.waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(screen.queryByText(refusal)).not.toBeInTheDocument();
+  });
+
+  it('announces a refused return once and clears it on dismiss (WR-308)', async () => {
+    const user = userEvent.setup();
+    const returnRefusal = 'An assessment has been drafted from these answers, so the questionnaire can’t return to analyst review.';
+    actions.returnQuestionnaireToAnalystReviewAction.mockReset();
+    actions.returnQuestionnaireToAnalystReviewAction.mockResolvedValueOnce({ ok: false, formError: returnRefusal });
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={{ ...questionnaire, release: { releasedAt: '2026-09-20T00:00:00.000Z', releasedBy: null } }} />);
+
+    await user.click(screen.getByRole('button', { name: 'Return to analyst review' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Return questionnaire to analyst review?' });
+    await user.type(within(dialog).getByLabelText('Reason'), 'Needs corrections');
+    await user.click(within(dialog).getByRole('button', { name: 'Return to analyst review' }));
+    await vi.waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent(returnRefusal));
+    expect(screen.getAllByText(returnRefusal)).toHaveLength(1);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByText(returnRefusal)).not.toBeInTheDocument();
+  });
+
   it('disables deleting the last active question', () => {
     render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />);
     expect(screen.getByRole('button', { name: 'Delete question: Is it protected?' })).toBeDisabled();
