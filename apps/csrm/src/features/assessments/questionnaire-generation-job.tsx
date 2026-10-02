@@ -304,6 +304,9 @@ export function QuestionnaireGenerationJob({
   const replace = <ConfirmDialog cancelLabel="Keep this questionnaire" confirmLabel="Replace questionnaire" confirmVariant="destructive" description={replacementDescription(analystChangesSinceGeneration)} errorMessage={replacementError} onConfirm={confirmReplacement} onDismiss={() => setReplacementError(null)} pendingLabel="Replacing questionnaire…" title="Replace this questionnaire?" trigger={replacementTrigger} />;
   const questionnaireLabel = questionnaireNumber && existingQuestionnaireHref ? <RecordLink href={existingQuestionnaireHref}>{questionnaireNumber}</RecordLink> : (questionnaireNumber ?? 'the questionnaire');
   const releasedHint = <p className="text-sm text-foreground-secondary">This questionnaire has been released to the Requestor. To replace it, return {questionnaireLabel} to analyst review first.</p>;
+  /* IN-201: a questionnaire that exists but is not served as released; the page knows no more than that. */
+  const existsHint = <p className="text-sm text-foreground-secondary">A questionnaire already exists for this request.</p>;
+  const replacementRefused = action === 'released' || action === 'exists';
   /* What the card offers with no job on it, per the served questionnaire relation (UI-SPEC §3.1). */
   const idleAction = action === 'generate' ? generate : action === 'replace' ? replace : null;
   const retryButton = <Button disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying questionnaire generation…' : 'Retry questionnaire generation'}</Button>;
@@ -333,10 +336,11 @@ export function QuestionnaireGenerationJob({
         */}
       {/* D-26: Retry stays with the analyst who started the job; anyone else may start a new one. */}
       {job?.status === 'failed' && job.failureCode === 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED'
-        ? (action === 'released' ? null : replace)
+        ? (replacementRefused ? null : replace)
         : job?.status === 'failed' ? (canRetry === false ? idleAction : retryButton) : null}
       {/* D-09 (UI-SPEC §3.3): a released questionnaire is never offered for replacement; say how to get there. */}
       {action === 'released' && (!job || job.status === 'failed') ? releasedHint : null}
+      {action === 'exists' && (!job || job.status === 'failed') ? existsHint : null}
       {job?.status === 'completed' ? <Link className={buttonVariants()} href={questionnaireHref(job.questionnaire.documentId)}>Review generated questionnaire</Link> : null}
     </CardContent>
   </Card>;
