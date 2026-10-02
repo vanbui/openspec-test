@@ -60,6 +60,13 @@ export default async function AdministrationRecordPage({ params }: Props) {
   if (result.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
   if (result.error?.status === 404) return <AdministrationUnavailableState />;
   if (result.error || !result.data) return <AdministrationUnavailableState error />;
+  /*
+   * WR-207: each saved applicable control is labelled from the library read. Without it every saved control
+   * would read `Control not found` (D-36's wording for a control deleted from the library) and invite its
+   * removal, so a failed read shows the page's load failure and no form, and a refused one the permission state.
+   */
+  if (controls.error?.status === 403) return <AdministrationAccessDenied kind={kind} />;
+  if (controls.error) return <AdministrationUnavailableState error />;
   // The saved selections join the first options so each reads by its label, wherever it sits in the library (D-36).
   const initialControlOptions = applicableControlOptions(controls.data ?? [], result.data.applicableControls ?? []);
   return <><AdministrationBreadcrumbs kind={kind} current={result.data.name} /><AdministrationForm documentId={documentId.data} initialControlOptions={initialControlOptions} initialValues={result.data} kind={kind} mode="edit" searchControls={searchApplicableControlsAction} updateAction={updateRiskTypeAction} /></>;
