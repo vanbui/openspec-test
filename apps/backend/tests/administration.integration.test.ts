@@ -682,6 +682,25 @@ test("ADMIN-04 applies five-state imports for every remaining Administration col
   }
 });
 
+/* D-38 (UI-SPEC §17.1): a mounted preview names a repeated key by the collection's own column, never "natural key". */
+test("UAT-054 a mounted CSV preview names a repeated key by its column", async () => {
+  const harness = await harnessPromise;
+  for (const candidate of [
+    { path: "controls", csv: "controlNumber,name,framework\r\nUAT-054-DUP,Duplicate one,CSRM acceptance\r\n uat-054-dup ,Duplicate two,CSRM acceptance", message: "This control number appears more than once in the file." },
+    { path: "risk_types", csv: "name,description\r\nUAT 054 duplicate,first\r\n uat 054 duplicate ,second", message: "This name appears more than once in the file." },
+  ] as const) {
+    const preview = await harness.request({
+      path: `/api/v1/${candidate.path}/import/preview`, identity: harness.identities.analyst,
+      init: { method: "POST", body: harness.createCsvMultipart({ filename: `${candidate.path}-uat-054.csv`, bytes: Buffer.from(candidate.csv) }) },
+    });
+    assert.equal(preview.status, 200, await preview.clone().text());
+    const body = await responseJson(preview) as { data: { rows: Array<{ state: string; issues: Array<{ message: string }> }> } };
+    assert.deepEqual(body.data.rows.map((row) => row.state), ["ambiguous", "ambiguous"]);
+    for (const row of body.data.rows) assert.deepEqual(row.issues.map((item) => item.message), [candidate.message], candidate.path);
+    assert.doesNotMatch(JSON.stringify(body), /natural key|Invalid Administration CSV/i);
+  }
+});
+
 test("ADMIN-02 ADMIN-04 carries exact frozen Control caps from preview through commit and rejects cap plus one", async () => {
   const harness = await harnessPromise;
   await harness.seedAdministrationFixtures();

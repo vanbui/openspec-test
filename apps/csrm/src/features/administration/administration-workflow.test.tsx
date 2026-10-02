@@ -534,6 +534,63 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(applicableControlOptions([], ['control-1'])).toEqual([]);
   });
 
+  /* D-38 (UI-SPEC §17.1): Administration copy says what each page is for, never how the system stores it. */
+  it.each([
+    ['risk-types', 'Manage the Risk Types used to identify Risks in assessments.'],
+    ['controls', 'Manage the control library used for mitigation controls on Risks.'],
+  ] as const)('UAT-054 describes the %s collection plainly', async (kind, description) => {
+    const { AdministrationWorkspace } = await loadWorkspace();
+    render(<AdministrationWorkspace {...baseWorkspaceProps} kind={kind} items={[]} state="empty" pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} />);
+    expect(screen.getByText(description)).toBeInTheDocument();
+  });
+
+  it('UAT-054 explains each Administration form in plain words', async () => {
+    installTestResizeObserver();
+    onTestFinished(() => { vi.unstubAllGlobals(); });
+    const { AdministrationForm } = await loadWorkspace();
+    const plainText = () => expect(document.body.textContent).not.toMatch(/reusable|contextual|canonical|non-editable|Strapi/i);
+
+    const controlCreate = render(<AdministrationForm kind="controls" mode="create" createAction={vi.fn()} />);
+    for (const text of [
+      'Add a control to the library.', 'Identify this control and the framework it comes from.',
+      'Enter the control’s title without its number.', 'Describe what this control requires.',
+    ]) expect(screen.getByText(text)).toBeInTheDocument();
+    plainText();
+    controlCreate.unmount();
+
+    const control = { name: 'APP-11 — Security of personal information', description: null, controlNumber: 'APP-11', framework: 'Privacy Act 1988' };
+    const controlEdit = render(<AdministrationForm kind="controls" mode="edit" documentId="control-1" initialValues={control} updateAction={vi.fn()} />);
+    for (const text of [
+      'Edit this control. Mitigation controls on Risks keep their own status and evidence.',
+      'Mitigation controls on Risks keep their own assessment history.',
+      'This control may be used by Risk Types and by mitigation controls on Risks. Nothing is deleted or changed automatically.',
+    ]) expect(screen.getByText(text)).toBeInTheDocument();
+    plainText();
+    controlEdit.unmount();
+
+    const riskTypeCreate = render(<AdministrationForm kind="risk-types" mode="create" createAction={vi.fn()} />);
+    for (const text of [
+      'Create a Risk Type for use in future assessments.', 'Name and describe this Risk Type.',
+      'Explain which risks this Risk Type covers.', 'Choose the controls that usually mitigate this Risk Type.',
+      'Search by control number, name or framework.',
+    ]) expect(screen.getByText(text)).toBeInTheDocument();
+    plainText();
+    riskTypeCreate.unmount();
+
+    const riskTypeEdit = render(<AdministrationForm kind="risk-types" mode="edit" documentId={item.documentId} initialValues={{ ...item, applicableControls: [] }} updateAction={vi.fn()} />);
+    for (const text of [
+      'Edit this Risk Type. Risks already identified keep their own details.',
+      'Risks already identified keep their own assessment history.',
+      'Applicable controls suggest controls for this Risk Type only. Nothing is deleted or changed automatically.',
+    ]) expect(screen.getByText(text)).toBeInTheDocument();
+    plainText();
+    riskTypeEdit.unmount();
+
+    render(<AdministrationForm kind="information-systems" mode="edit" documentId="system-1" initialValues={{ name: 'Customer portal', description: null }} updateAction={vi.fn()} />);
+    expect(screen.getByText('Assessments and Risks keep their own history.')).toBeInTheDocument();
+    expect(screen.getByText('This Information System may be used in assessments. Nothing is deleted or changed automatically.')).toBeInTheDocument();
+  });
+
   it('renders detail context and saves edited Risk Type values', async () => {
     const user = userEvent.setup();
     const { AdministrationForm } = await loadWorkspace();
@@ -633,6 +690,31 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Guidance' })).not.toHaveFocus();
     await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
     expect(screen.getByRole('heading', { level: 2, name: 'Select file' })).toHaveFocus();
+  });
+
+  /* D-38 (UI-SPEC §17.1): the import explains matching by the collection's own column and never names the server. */
+  it('UAT-054 explains matching, the final check and the key column in plain words', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const controls = render(<CsvImportFlow kind="controls" previewAction={vi.fn()} commitAction={vi.fn()} />);
+    expect(screen.getByText('A row whose control number matches an existing Control updates it. Other valid rows create new Controls. Unchanged, rejected and ambiguous rows are never written.')).toBeInTheDocument();
+    controls.unmount();
+
+    const rows: CsvPreviewRow[] = [{ rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] }];
+    const { user } = await renderPreview(CsvImportFlow, rows);
+    expect(within(screen.getByRole('table', { name: 'Risk Type import preview' })).getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    expect(screen.getByText('Imports never delete records. We check the file again before anything is written.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Strapi|natural key|natural-key|authoritative|Server validation/i);
+  });
+
+  it('UAT-054 asks to choose the file again when the preview can’t be loaded', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const user = userEvent.setup();
+    render(<CsvImportFlow kind="risk-types" previewAction={vi.fn().mockResolvedValue({ unexpected: true })} commitAction={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
+    await user.upload(screen.getByLabelText(/CSV file/i), new File(['name\r\nExample'], 'risk-types.csv', { type: 'text/csv' }));
+    await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+    expect(await screen.findByText('The preview couldn’t be loaded. Choose the file again to retry.', { selector: '#csv-file-error' })).toBeInTheDocument();
   });
 
   it('shows all five ordered steps and all five row classifications', async () => {
@@ -754,7 +836,9 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     for (const text of ['Created 1', 'Updated 1', 'Unchanged 1', 'Rejected 1', 'Ambiguous 1']) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
-    expect(screen.getByText(/Server validation changed the result for 1 row/)).toBeInTheDocument();
+    expect(screen.getByText('The final check changed some results')).toBeInTheDocument();
+    expect(screen.getByText(/The final check before import changed the result for 1 row/)).toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Risk Type import results' })).getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Risk Types' })).toHaveAttribute('href', '/app/admin/risk-types');
     expect(commitAction).toHaveBeenCalledTimes(1);
   });

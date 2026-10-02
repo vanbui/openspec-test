@@ -287,6 +287,27 @@ test("ADMIN-04 classifies against the complete existing-record set beyond the CS
   assert.equal((parsed.rows[0] as { matchedDocumentId?: string }).matchedDocumentId, target.documentId);
 });
 
+/* D-38 (UI-SPEC §17.1): the parser's messages match the web's and name the collection's own column. */
+test("UAT-054 CSV messages say why a file can't be imported and name the matching column plainly", () => {
+  const csv = loadCsvModule();
+  const messages = (row: unknown) => ((row as { issues: Array<{ message: string }> }).issues).map((item) => item.message);
+  assert.throws(
+    () => csv.parseAdministrationCsv({ kind: "risk-types", bytes: Buffer.from("name\r\n") }),
+    { message: "This file can’t be imported: include one header and at least one data row." },
+  );
+  const duplicates = csv.parseAdministrationCsv({ kind: "controls", bytes: Buffer.from("controlNumber,name,framework\r\nAC-1,One,NIST\r\n ac-1 ,Two,NIST") });
+  assert.deepEqual(duplicates.rows.map(messages), [
+    ["This control number appears more than once in the file."],
+    ["This control number appears more than once in the file."],
+  ]);
+  const matches = csv.parseAdministrationCsv({
+    kind: "risk-types",
+    bytes: Buffer.from("name\r\nCredential misuse"),
+    existing: [{ documentId: "risk-type-1", name: "Credential misuse" }, { documentId: "risk-type-2", name: "credential misuse" }],
+  });
+  assert.deepEqual(messages(matches.rows[0]), ["More than one existing record has this name."]);
+});
+
 test("T-06-04 T-06-06 T-06-07 rejects malformed bytes and neutralizes spreadsheet formulas", () => {
   const csv = loadCsvModule();
   for (const bytes of [Buffer.from([]), Buffer.from("name\r\n"), Buffer.from([0xc3, 0x28])]) {

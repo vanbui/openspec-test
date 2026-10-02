@@ -38,7 +38,7 @@ type CsvClientParserModule = {
     kind: string;
     bytes: Uint8Array;
     existing?: readonly Record<string, unknown>[];
-  }) => Promise<{ rows: Array<{ state: string; matchedDocumentId: string | null }> }>;
+  }) => Promise<{ rows: Array<{ state: string; matchedDocumentId: string | null; issues: Array<{ message: string }> }> }>;
 };
 
 async function loadSchema(): Promise<AdministrationSchemaModule> {
@@ -215,6 +215,28 @@ describe('ADMIN-04 client CSV file bounds', () => {
     for (const file of cases) {
       await expect(parser.validateAdministrationCsvFile('risk-types', file)).rejects.toThrow();
     }
+  });
+
+  /* D-38 (UI-SPEC §17.1): the parser names the problem in the collection's own words, never an internal term. */
+  it('UAT-054 says why a file can’t be imported and names the matching column plainly', async () => {
+    const parser = await loadCsvParser();
+    const encode = (text: string) => new TextEncoder().encode(text);
+
+    await expect(parser.parseAdministrationCsvClient({ kind: 'risk-types', bytes: encode('name\r\n') }))
+      .rejects.toThrow('This file can’t be imported: include one header and at least one data row.');
+
+    const duplicates = await parser.parseAdministrationCsvClient({ kind: 'controls', bytes: encode('controlNumber,name,framework\r\nAC-1,One,NIST\r\n ac-1 ,Two,NIST') });
+    expect(duplicates.rows.map((row) => row.issues.map((item) => item.message))).toEqual([
+      ['This control number appears more than once in the file.'],
+      ['This control number appears more than once in the file.'],
+    ]);
+
+    const existing = [{ documentId: 'risk-type-1', name: 'Credential misuse' }, { documentId: 'risk-type-2', name: 'credential misuse' }];
+    const matches = await parser.parseAdministrationCsvClient({ kind: 'risk-types', bytes: encode('name\r\nCredential misuse'), existing });
+    expect(matches.rows[0]?.issues.map((item) => item.message)).toEqual(['More than one existing record has this name.']);
+
+    const nameDuplicates = await parser.parseAdministrationCsvClient({ kind: 'information-systems', bytes: encode('name\r\nPortal\r\nportal') });
+    expect(nameDuplicates.rows[0]?.issues.map((item) => item.message)).toEqual(['This name appears more than once in the file.']);
   });
 
   it('classifies against the complete existing-record set beyond the CSV row cap', async () => {
