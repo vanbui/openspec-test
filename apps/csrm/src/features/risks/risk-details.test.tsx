@@ -459,7 +459,12 @@ describe('RiskDetails', () => {
     expect(actionMocks.createMitigationControlAction).not.toHaveBeenCalled();
   });
 
-  it('says when a saved control can no longer be named (UI-SPEC §13.5)', async () => {
+  /*
+   * WR-306: Strapi serves no control summary when a stored control field is empty or over-long, but the write has
+   * succeeded. The saved card is named from the analyst's own choice; the form never reports a completed save as
+   * a failure, so Save mitigation control cannot be pressed again to create a duplicate.
+   */
+  it('shows a created mitigation control as saved, named by the choice, when the response cannot name it (WR-306)', async () => {
     const user = userEvent.setup();
     actionMocks.createMitigationControlAction.mockResolvedValue({ ok: true, data: implementationResponse(null, 'implementation-unnamed') });
     renderDetails({ detail: { ...detail, controlImplementations: [] } });
@@ -468,7 +473,11 @@ describe('RiskDetails', () => {
     fireEvent.click(screen.getByRole('option', { name: 'IA-05 · Authenticator management' }));
     await user.click(screen.getByRole('button', { name: 'Save mitigation control' }));
 
-    expect(await screen.findByText('The selected control is no longer available. Choose another control.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 3, name: 'IA-05 · Authenticator management' })).toBeInTheDocument();
+    expect(screen.queryByText('Mitigation control not changed')).not.toBeInTheDocument();
+    expect(screen.queryByText('The selected control is no longer available. Choose another control.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save mitigation control' })).not.toBeInTheDocument();
+    expect(actionMocks.createMitigationControlAction).toHaveBeenCalledOnce();
     expect(document.body.textContent).not.toContain('implementation-unnamed');
   });
 
