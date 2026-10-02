@@ -249,8 +249,10 @@ function controlTitleProblem(controlId: string, title: unknown): string | undefi
 /*
  * Reads the CSRM title file (D-46) against the parsed catalogues and returns each titled control's
  * title by control id. It refuses anything that could mislabel a control, naming the file and the
- * control. Coverage is proved by the tests, not enforced here, so a later catalogue update cannot
- * stop Strapi from starting.
+ * control. Coverage (a title for every control its catalogue leaves unlabelled) is proved by the tests,
+ * not enforced here. These checks fail fast, though: a catalogue update that removes a titled control, or
+ * starts labelling one the file titles, leaves the file stale, and a seeded start then stops with that
+ * error until the title file is corrected. control-titles.unit.test.ts reports the same error first.
  */
 export function parseControlTitles(
   sourceFile: string,
