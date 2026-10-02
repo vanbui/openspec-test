@@ -120,4 +120,27 @@ describe('page and section composites', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Request overview' })).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
+
+  it('makes a section heading an in-page link destination only when asked (UI-D27)', async () => {
+    const DetailSection = await loadComponent<SectionProps & { headingFocusable?: boolean }>('src/components/csrm/detail-section.tsx', 'DetailSection');
+
+    render(
+      <>
+        <DetailSection headingFocusable headingId="assessment-details" title="Assessment details"><p>Summary</p></DetailSection>
+        <DetailSection headingId="related-records" title="Related records"><p>None</p></DetailSection>
+      </>,
+    );
+
+    const destination = screen.getByRole('heading', { level: 2, name: 'Assessment details' });
+    expect(destination).toHaveAttribute('id', 'assessment-details');
+    expect(destination).toHaveAttribute('tabindex', '-1');
+    destination.focus();
+    expect(destination).toHaveFocus();
+
+    // Other callers keep a heading that is not focusable.
+    const plain = screen.getByRole('heading', { level: 2, name: 'Related records' });
+    expect(plain).not.toHaveAttribute('tabindex');
+    plain.focus();
+    expect(plain).not.toHaveFocus();
+  });
 });

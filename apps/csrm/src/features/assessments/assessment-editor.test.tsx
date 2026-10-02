@@ -974,45 +974,127 @@ describe('readiness-gated release', () => {
     vi.clearAllMocks();
   });
 
-  it('retains every server requirement with explicit state and exact Risk anchors', () => {
-    const incompleteRisk = {
-      ...risk,
-      riskStatement: null,
-      inherentLikelihood: null,
-      highestInherentConsequence: null,
-      inherentRating: null,
-      residualLikelihood: null,
-      highestResidualConsequence: null,
-      residualRating: null,
-      riskOwner: null,
-      treatmentAction: null,
-      targetDate: null,
-    };
-    const requirements = [
-      { scope: 'assessment' as const, key: 'reviewedBy', label: 'Reviewer', state: 'outstanding' as const },
-      { scope: 'assessment' as const, key: 'summary', label: 'Summary', state: 'met' as const },
-      { scope: 'risk' as const, key: 'riskStatement', label: 'Risk statement', state: 'outstanding' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
-      { scope: 'risk' as const, key: 'riskOwner', label: 'Risk owner', state: 'met' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
-    ];
-    const view = render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, releaseReadiness: { ready: false, requirements } }} controlImplementations={{ 'risk-1': [] }} risks={[incompleteRisk]} />);
+  /** A Risk with nothing recorded yet, so its readiness rows are outstanding. */
+  const incompleteRisk = {
+    ...risk,
+    riskStatement: null,
+    inherentLikelihood: null,
+    highestInherentConsequence: null,
+    inherentRating: null,
+    residualLikelihood: null,
+    highestResidualConsequence: null,
+    residualRating: null,
+    riskOwner: null,
+    treatmentAction: null,
+    targetDate: null,
+  };
+  const mixedRequirements = [
+    { scope: 'assessment' as const, key: 'reviewedBy', label: 'Reviewer', state: 'outstanding' as const },
+    { scope: 'assessment' as const, key: 'summary', label: 'Summary', state: 'met' as const },
+    { scope: 'risk' as const, key: 'riskStatement', label: 'Risk statement', state: 'outstanding' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
+    { scope: 'risk' as const, key: 'riskOwner', label: 'Risk owner', state: 'met' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
+    { scope: 'risk' as const, key: 'targetDate', label: 'Target date', state: 'outstanding' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
+  ];
+  const renderMixed = () => render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, releaseReadiness: { ready: false, requirements: mixedRequirements } }} controlImplementations={{ 'risk-1': [] }} risks={[incompleteRisk]} />);
+  const readinessCard = () => screen.getByRole('heading', { level: 2, name: 'Release readiness' }).closest<HTMLElement>('[data-slot="card"]')!;
+  const controlName = (control: HTMLElement) => control.getAttribute('aria-label') ?? control.textContent ?? '';
 
-    for (const text of ['Reviewer', 'Summary', 'Risk RSK-0042 — Risk statement', 'Risk RSK-0042 — Risk owner']) {
-      expect(screen.getAllByText(text).length).toBeGreaterThan(0);
-    }
-    expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('href', '#assessment-details');
-    expect(screen.getByRole('link', { name: 'Risk RSK-0042 — Risk statement' })).toHaveAttribute('href', '#risk-risk-1');
-    expect(document.getElementById('risk-risk-1')).toBeInTheDocument();
-    expect(screen.getByText('2 of 4 release requirements met')).toBeInTheDocument();
-    expect(screen.getAllByText('Met')).toHaveLength(2);
-    expect(screen.getAllByText('Outstanding')).toHaveLength(2);
-    expect(screen.getByRole('list', { name: 'Release requirements' })).toBeInTheDocument();
+  it('lists outstanding assessment items first, then one row per Risk saying what is missing (D-35, UI-SPEC §14.1)', () => {
+    renderMixed();
+
+    expect(within(readinessCard()).getByText('Every requirement must be met before release. We check them all again when you release.')).toBeInTheDocument();
+    expect(screen.getByText('2 of 5 release requirements met')).toBeInTheDocument();
+    const outstanding = screen.getByRole('list', { name: 'Release requirements' });
+    expect(within(outstanding).getAllByRole('link').map(controlName)).toEqual(['Reviewer', 'RSK-0042: 2 outstanding']);
+    expect(within(outstanding).getByRole('link', { name: 'Reviewer' })).toHaveAttribute('href', '#assessment-details');
+    expect(within(outstanding).getAllByText('Outstanding')).toHaveLength(1);
+
+    const riskRow = within(outstanding).getByRole('link', { name: 'RSK-0042: 2 outstanding' });
+    expect(riskRow).toHaveAttribute('href', '#risk-risk-1');
+    expect(riskRow).toHaveTextContent('2 outstanding');
+    expect(riskRow).toHaveAccessibleDescription('Missing: Risk statement and Target date');
+    expect(within(outstanding).getByText('Missing: Risk statement and Target date')).toBeInTheDocument();
+    // One row per Risk, never one per requirement.
+    expect(within(outstanding).queryByText(/Risk RSK-0042 — /)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Release assessment' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /approve|submit for approval/i })).not.toBeInTheDocument();
+  });
 
-    view.unmount();
-    render(<AssessmentEditor {...editorProps} />);
+  it('shows met items only when the analyst asks, and hides them again (D-35)', async () => {
+    const user = userEvent.setup();
+    renderMixed();
+
+    expect(screen.queryByRole('list', { name: 'Met release requirements' })).not.toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: 'Show met requirements (2)' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('data-print', 'hidden');
+    const controlled = document.getElementById(toggle.getAttribute('aria-controls')!);
+    expect(controlled).toBeInTheDocument();
+
+    await user.click(toggle);
+    const met = screen.getByRole('list', { name: 'Met release requirements' });
+    expect(met).toBe(controlled);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAccessibleName('Hide met requirements');
+    expect(within(met).getByRole('link', { name: 'Summary' })).toHaveAttribute('href', '#assessment-details');
+    expect(within(met).getByText('Met')).toBeInTheDocument();
+    expect(within(met).getByRole('link', { name: 'RSK-0042: 1 met' })).toHaveAttribute('href', '#risk-risk-1');
+
+    await user.click(toggle);
+    expect(screen.queryByRole('list', { name: 'Met release requirements' })).not.toBeInTheDocument();
+    expect(toggle).toHaveAccessibleName('Show met requirements (2)');
+  });
+
+  it('drops the outstanding list when all are met, and the met toggle when nothing is met', () => {
+    const view = render(<AssessmentEditor {...editorProps} />);
     expect(screen.getByText('All release requirements are met')).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Release requirements' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Release requirements' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show met requirements (2)' })).toBeInTheDocument();
+    view.unmount();
+
+    const allOutstanding = mixedRequirements.map((item) => ({ ...item, state: 'outstanding' as const }));
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, releaseReadiness: { ready: false, requirements: allOutstanding } }} risks={[incompleteRisk]} />);
+    expect(screen.getByText('0 of 5 release requirements met')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /met requirements/ })).not.toBeInTheDocument();
+  });
+
+  it('makes every readiness destination focusable, so following a link moves focus there (UI-D27)', () => {
+    const requirements = [
+      ...mixedRequirements,
+      { scope: 'assessment' as const, key: 'risks', label: 'At least one Risk', state: 'outstanding' as const },
+    ];
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, releaseReadiness: { ready: false, requirements } }} controlImplementations={{ 'risk-1': [] }} risks={[incompleteRisk]} />);
+
+    const hrefs = within(screen.getByRole('list', { name: 'Release requirements' })).getAllByRole('link').map((link) => link.getAttribute('href')!);
+    expect(new Set(hrefs)).toEqual(new Set(['#assessment-details', '#identified-risks', '#risk-risk-1']));
+    for (const href of hrefs) {
+      const destination = document.getElementById(decodeURIComponent(href.slice(1)))!;
+      expect(destination, href).toHaveAttribute('tabindex', '-1');
+      destination.focus();
+      expect(destination, href).toHaveFocus();
+    }
+  });
+
+  it('names no readiness control with save, add, edit, remove or release but Release assessment (UI-D19)', async () => {
+    const user = userEvent.setup();
+    renderMixed();
+    await user.click(screen.getByRole('button', { name: 'Show met requirements (2)' }));
+
+    const card = readinessCard();
+    const names = [...within(card).getAllByRole('button'), ...within(card).getAllByRole('link')].map(controlName);
+    expect(names.length).toBeGreaterThan(4);
+    expect(names.filter((name) => /save|add|edit|remove|release/i.test(name))).toEqual(['Release assessment']);
+  });
+
+  it('keeps a ten-Risk all-outstanding assessment to fifteen readiness links (UAT-011)', () => {
+    const tenRisks = Array.from({ length: 10 }, (_, index) => ['riskStatement', 'riskOwner', 'targetDate', 'treatmentAction'].map((key) => ({
+      scope: 'risk' as const, key, label: key, state: 'outstanding' as const, riskNumber: `RSK-00${index + 10}`, destination: `risk-r${index}`,
+    }))).flat();
+    const fiveItems = ['summary', 'overallRating', 'overallControlEffectiveness', 'reviewedBy', 'risks']
+      .map((key) => ({ scope: 'assessment' as const, key, label: key, state: 'outstanding' as const }));
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, releaseReadiness: { ready: false, requirements: [...fiveItems, ...tenRisks] } }} />);
+
+    expect(within(screen.getByRole('list', { name: 'Release requirements' })).getAllByRole('link')).toHaveLength(15);
   });
 
   it('offers release only for the in-review analyst presentation', () => {
@@ -1069,7 +1151,7 @@ describe('readiness-gated release', () => {
     await user.clear(screen.getByLabelText('Summary'));
     await user.type(screen.getByLabelText('Summary'), 'Changed on the server');
     await user.click(screen.getByRole('button', { name: 'Save assessment' }));
-    expect(await screen.findByRole('link', { name: 'Risk RSK-0042 — At least one mitigation control' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'RSK-0042: 1 outstanding' })).toHaveAccessibleDescription('Missing: At least one mitigation control');
     expect(screen.getByRole('button', { name: 'Release assessment' })).toBeDisabled();
 
     actionMocks.refreshAnalystAssessmentAction.mockResolvedValueOnce({ ok: true, data: assessment });
