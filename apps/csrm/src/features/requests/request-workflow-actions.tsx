@@ -41,7 +41,9 @@ export function RequestWorkflowActions({ request }: { request: CsrmAssessmentReq
   /*
    * After a submit or a return to draft, focus moves to the first control of the new action set, else to
    * the Request actions region (UI-SPEC §9.2). It never moves on first render, and the trigger that held
-   * focus has gone with the old action set.
+   * focus has gone with the old action set. It runs for each request the route serves, not only for a new
+   * status: a refresh that serves the same status (another change reached the request first) still settles
+   * the transition, so focus never jumps on a later, unrelated change (IN-203).
    */
   useEffect(() => {
     if (!transitioned.current) return;
@@ -50,7 +52,7 @@ export function RequestWorkflowActions({ request }: { request: CsrmAssessmentReq
     const target = container?.querySelector<HTMLElement>('a[href], button:not([disabled])')
       ?? container?.closest<HTMLElement>('#request-actions');
     target?.focus();
-  }, [status]);
+  }, [request]);
 
   async function revert(reason?: string) {
     const result = await revertRequestToDraftAction({ documentId: request.documentId, reason });
