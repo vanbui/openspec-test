@@ -76,6 +76,12 @@ describe('RequestContextDetails', () => {
     expect(value(group('Business context'), 'Third-party involvement')).toHaveTextContent('No');
   });
 
+  /* IN-204: an unknown answer is not a No. */
+  it('says Not provided when third-party involvement was not served', () => {
+    render(<RequestContextDetails request={request({ thirdPartyInvolvement: undefined, thirdPartyDetails: null })} />);
+    expect(value(group('Business context'), 'Third-party involvement')).toHaveTextContent(/^Not provided$/);
+  });
+
   it('says Not provided for a missing value and None selected for an empty list', () => {
     render(<RequestContextDetails request={request({
       description: null, assessmentType: null, division: '', thirdPartyDetails: null, regulatoryRequirements: null,
