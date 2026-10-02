@@ -172,6 +172,30 @@ describe('RequestWorkflowActions after a transition', () => {
     await waitFor(() => expect(edit).toHaveFocus());
   });
 
+  /* IN-203: the refresh after a transition settles it even when it serves the same status, so focus never jumps later. */
+  it('settles a transition on the refresh that follows it, so a later status change never moves focus', async () => {
+    const user = userEvent.setup();
+    mocks.submitRequestAction.mockResolvedValue({ ok: true, data: { documentId: 'request-1', requestStatus: 'submitted', submittedDate: submittedAt } });
+    const view = render(<RequestWorkflowActions request={requestIn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    await user.click(within(screen.getByRole('alertdialog', { name: 'Submit this assessment request?' })).getByRole('button', { name: 'Submit request' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+
+    // The refresh serves the request still in draft (another change reached it first).
+    view.rerender(<RequestWorkflowActions request={requestIn()} />);
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Edit request' })).toHaveFocus());
+
+    // Later, while the person works elsewhere, a refresh serves a status change this page did not start.
+    const elsewhere = document.createElement('button');
+    document.body.append(elsewhere);
+    elsewhere.focus();
+    view.rerender(<RequestWorkflowActions request={requestIn({ requestStatus: 'submitted', submittedDate: submittedAt })} />);
+    expect(screen.getByRole('button', { name: 'Return to draft' })).not.toHaveFocus();
+    expect(elsewhere).toHaveFocus();
+    elsewhere.remove();
+  });
+
   it('never moves focus on first render', () => {
     render(<RequestWorkflowActions request={requestIn({ requestStatus: 'submitted', submittedDate: submittedAt })} />);
     expect(screen.getByRole('button', { name: 'Return to draft' })).not.toHaveFocus();
