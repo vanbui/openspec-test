@@ -1,4 +1,5 @@
 import { TimeZoneProvider, ViewerTimeZoneSync } from '@/components/csrm/local-time';
+import { NavigationGuardProvider } from '@/components/csrm/navigation-guard';
 import type { DevelopmentRole } from '@/lib/auth/session-adapter';
 import type { Capability } from '@/lib/capabilities/capability-adapter';
 export { PageHeader, type PageHeaderProps } from '@/components/csrm/page-header';
@@ -23,23 +24,26 @@ export function AppShell({ children, granted, role, account, timeZone }: AppShel
   return (
     <TimeZoneProvider zone={timeZone}>
       <ViewerTimeZoneSync />
-      <a className="skip-link" href="#main-content">Skip to main content</a>
-      <div className="shell">
-        <aside className="sidebar">
-          <Wordmark />
-          <CapabilityNavigation granted={granted} />
-          {footer ? <div className="shell-footer">{footer}</div> : null}
-        </aside>
-        <div className="shell-content">
-          <header className="header">
-            <MobileNavigation footer={footer} granted={granted} />
-            <span className="header-title">Cyber Risk Manager</span>
-            {role ? <span className="header-role micro-label">{role}</span> : null}
-            {account ? <AccountMenu displayName={account.displayName} email={account.email} /> : null}
-          </header>
-          <main className="page" id="main-content">{children}</main>
+      {/* Every in-app link the shell renders, and a page's own guarded links, consult this (D-12). */}
+      <NavigationGuardProvider>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
+        <div className="shell">
+          <aside className="sidebar">
+            <Wordmark />
+            <CapabilityNavigation granted={granted} />
+            {footer ? <div className="shell-footer">{footer}</div> : null}
+          </aside>
+          <div className="shell-content">
+            <header className="header">
+              <MobileNavigation footer={footer} granted={granted} />
+              <span className="header-title">Cyber Risk Manager</span>
+              {role ? <span className="header-role micro-label">{role}</span> : null}
+              {account ? <AccountMenu displayName={account.displayName} email={account.email} /> : null}
+            </header>
+            <main className="page" id="main-content">{children}</main>
+          </div>
         </div>
-      </div>
+      </NavigationGuardProvider>
     </TimeZoneProvider>
   );
 }

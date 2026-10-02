@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { FormSection } from '@/components/csrm/form-section';
+import { useLeaveGuard } from '@/components/csrm/navigation-guard';
 import { SaveStatus } from '@/components/csrm/save-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -336,6 +337,8 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     getAnswers: () => activeAnswerInputs(definition, form.getValues('answers')),
   });
   const { schedule, flush, reset: resetAutosave } = autosave;
+  /* Leaving warns while a change waits, a save is in flight or the last one failed; never once submitted (D-12). */
+  useLeaveGuard(autosave.blocking && !submitted, autosave.status.kind === 'failed' ? 'failed' : 'waiting');
 
   useEffect(() => {
     const subscription = form.watch((_values, { type }) => {

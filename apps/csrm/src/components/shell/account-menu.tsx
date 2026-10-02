@@ -1,6 +1,7 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
+import { useRef } from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { signOutOfSession } from '../../../app/actions/session';
+import { useNavigationGuard } from '../csrm/navigation-guard';
 import { accountInitials } from './account-initials';
 
 interface AccountMenuProps {
@@ -31,6 +33,13 @@ const AVATAR_FALLBACK_CLASS = 'bg-muted text-foreground text-xs font-medium';
 export function AccountMenu({ displayName, email }: AccountMenuProps) {
   const initials = accountInitials(displayName);
   const showEmail = Boolean(email) && email !== displayName;
+  /*
+   * Signing out ends the session before the browser leaves, so unsaved answers could neither be saved nor
+   * kept. While the page has unsaved work, Sign out asks first, like a link (UI-SPEC §6.3).
+   */
+  const guard = useNavigationGuard();
+  const form = useRef<HTMLFormElement>(null);
+  const leaveChosen = useRef(false);
 
   return (
     <DropdownMenu>
@@ -61,7 +70,21 @@ export function AccountMenu({ displayName, email }: AccountMenuProps) {
           The form must stay mounted until the server action redirects: without preventDefault Radix
           unmounts the closed menu at once and a pointer click would never submit the form.
         */}
-        <form action={signOutOfSession}>
+        <form
+          action={signOutOfSession}
+          onSubmit={(event) => {
+            if (leaveChosen.current || !guard.blocking) return;
+            const trigger = (event.nativeEvent as SubmitEvent).submitter;
+            guard.guardLink(event, {
+              trigger: trigger instanceof HTMLElement ? trigger : null,
+              onLeave: () => {
+                leaveChosen.current = true;
+                form.current?.requestSubmit();
+              },
+            });
+          }}
+          ref={form}
+        >
           <DropdownMenuItem asChild onSelect={(event) => event.preventDefault()}>
             <button className="w-full" type="submit">
               <LogOut aria-hidden="true" />

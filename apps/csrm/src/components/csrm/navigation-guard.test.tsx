@@ -181,10 +181,10 @@ describe('the leave guard (D-12, UI-SPEC §6.3)', () => {
       const guard = useNavigationGuard();
       return <p>{guard.blocking ? 'blocking' : 'not blocking'}</p>;
     }
-    render(<><Probe /><GuardedLink href="/app">Workspace</GuardedLink><Wordmark /><CapabilityNavigation granted={granted} /></>);
+    render(<><Probe /><GuardedLink href="/app">Home page</GuardedLink><Wordmark /><CapabilityNavigation granted={granted} /></>);
 
     expect(screen.getByText('not blocking')).toBeInTheDocument();
-    await user.click(screen.getByRole('link', { name: 'Workspace' }));
+    await user.click(screen.getByRole('link', { name: 'Home page' }));
     await user.click(screen.getByRole('link', { name: 'BProton, IdamBox CSRM home' }));
     await user.click(screen.getByRole('link', { name: 'My Requests' }));
     expect(navigations).toEqual(['/app', '/app', '/app/requests']);
@@ -228,7 +228,9 @@ describe('the shell links consult the guard', () => {
     const myRequests = within(sheet).getByRole('link', { name: 'My Requests' });
     await user.click(myRequests);
 
-    expect(screen.getByRole('dialog', { name: 'Navigation', hidden: true })).toBeInTheDocument();
+    // The warning hides the page behind it from assistive technology, the sheet included, but the sheet stays open.
+    expect(sheet).toBeInTheDocument();
+    expect(sheet).toHaveAttribute('data-state', 'open');
     expect(screen.getByRole('alertdialog', { name: 'Leave this questionnaire?' })).toBeInTheDocument();
     expect(navigations).toEqual([]);
 

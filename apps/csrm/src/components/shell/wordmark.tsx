@@ -1,5 +1,6 @@
 import Image from 'next/image';
-import Link from 'next/link';
+
+import { GuardedLink } from '../csrm/navigation-guard';
 
 /*
  * BProton header lockup: the mark on a foreground tile, then the wordmark.
@@ -20,8 +21,9 @@ export function BrandLockup() {
 
 /*
  * The name begins with the visible word (WCAG 2.5.3 Label in Name), so a speech-input user who says
- * "BProton" reaches the link, and a screen reader still hears where it goes.
+ * "BProton" reaches the link, and a screen reader still hears where it goes. It asks first while the page
+ * has unsaved answers (UI-SPEC §6.3).
  */
 export function Wordmark() {
-  return <Link aria-label="BProton, IdamBox CSRM home" className="wordmark" href="/app"><BrandLockup /></Link>;
+  return <GuardedLink aria-label="BProton, IdamBox CSRM home" className="wordmark" href="/app"><BrandLockup /></GuardedLink>;
 }

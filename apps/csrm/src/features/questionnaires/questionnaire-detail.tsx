@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle } from 'lucide-react';
-import { RecordLink } from '@/components/csrm/record-link';
+import { GuardedLink } from '@/components/csrm/navigation-guard';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -91,12 +91,13 @@ function QuestionnaireRequestRelationship({ assessmentRequestHref, questionnaire
 
   return (
     <div className="mb-6">
-      <RecordLink
-        className="inline-flex min-h-11 items-center font-medium text-foreground underline underline-offset-4 hover:underline focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      {/* The record link treatment, asking first while answers are unsaved (UI-SPEC §6.3). */}
+      <GuardedLink
+        className="inline-flex min-h-11 items-center font-medium text-foreground underline underline-offset-4 hover:underline focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring record-link"
         href={assessmentRequestHref}
       >
         Assessment request {request.requestNumber}
-      </RecordLink>
+      </GuardedLink>
     </div>
   );
 }

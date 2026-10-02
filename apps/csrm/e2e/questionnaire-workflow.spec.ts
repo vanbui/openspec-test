@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
 import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
 import { signInAs } from './helpers/navigation';
@@ -242,7 +242,39 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_FORM_DESKTOP_PAGE_OVERFLOW');
   await page.setViewportSize({ width: 375, height: 812 });
 
+  /*
+   * QUES09_LEAVE_WARNING (D-12, UI-SPEC §6.3): with saves failing, following a navigation link asks first. A
+   * Server Action posts to the page's own URL, so aborting those posts makes every save fail.
+   */
   const completion = page.getByRole('region', { name: 'Questionnaire completion' });
+  const questionnairePath = new URL(page.url()).pathname;
+  const questionnairePage = (url: URL) => url.pathname === questionnairePath;
+  const failSaves = (route: Route) => (route.request().method() === 'POST' ? route.abort() : route.continue());
+  await page.route(questionnairePage, failSaves);
+  const descriptionField = page.getByRole('textbox', { name: serviceDescriptionQuestion });
+  const unsavedDescription = 'Customers use the portal to manage their accounts and payments.';
+  await descriptionField.fill(unsavedDescription);
+  await expect(completion.getByRole('alert'), 'QUES09_LEAVE_WARNING save failed').toContainText('Your latest answers weren’t saved.');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  const navigationSheet = page.getByRole('dialog', { name: 'Navigation' });
+  const myRequestsLink = navigationSheet.getByRole('link', { name: 'My Requests' });
+  await myRequestsLink.click();
+  const leaveWarning = page.getByRole('alertdialog', { name: 'Leave this questionnaire?' });
+  await expect(leaveWarning, 'QUES09_LEAVE_WARNING').toBeVisible();
+  await expect(leaveWarning).toContainText('Your latest answers weren’t saved. If you leave now, they’ll be lost.');
+  await expect(leaveWarning.getByRole('button', { name: 'Keep answering' })).toBeFocused();
+  await leaveWarning.getByRole('button', { name: 'Keep answering' }).click();
+  await expect(leaveWarning).toHaveCount(0);
+  await expect(page, 'QUES09_LEAVE_WARNING stays on the questionnaire').toHaveURL(new RegExp(`${questionnairePath}$`));
+  await expect(navigationSheet, 'QUES09_LEAVE_WARNING keeps the sheet open').toBeVisible();
+  await expect(myRequestsLink, 'QUES09_LEAVE_WARNING returns focus to the link').toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(navigationSheet).toHaveCount(0);
+  await expect(descriptionField, 'QUES09_LEAVE_WARNING keeps the typed answer').toHaveValue(unsavedDescription);
+  await page.unroute(questionnairePage, failSaves);
+  await completion.getByRole('button', { name: 'Retry save' }).click();
+  await expect(completion.getByRole('status')).toContainText('Saved at');
+
   await page.getByRole('button', { name: 'Save draft' }).click();
   // E2 (UI-SPEC §6.1): wait until nothing is waiting to be saved, so the reload is not held by the leave prompt.
   await expect(completion.getByRole('status')).toContainText('Saved at');
