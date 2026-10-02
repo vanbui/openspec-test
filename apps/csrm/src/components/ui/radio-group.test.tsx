@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { type KeyboardEvent, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { SegmentedControl } from '@/components/csrm/segmented-control';
+
 import { RadioGroup, RadioGroupItem } from './radio-group';
 
 const answerOptions = [
@@ -220,5 +222,55 @@ describe('RadioGroup arrow keys', () => {
     expect(radio('Yes')).toHaveFocus();
     expect(radio('Yes')).toBeChecked();
     expect(onValueChange).not.toHaveBeenCalled();
+  });
+});
+
+const periodOptions = [
+  { value: '6', label: '6 months' },
+  { value: '12', label: '12 months' },
+] as const;
+
+type Period = (typeof periodOptions)[number]['value'];
+
+/** A controlled two-segment control between two buttons, as the report header renders one. */
+function PeriodHarness({ onValueChange }: { onValueChange: (value: Period) => void }) {
+  const [period, setPeriod] = useState<Period>('6');
+
+  return (
+    <>
+      <button type="button">Before</button>
+      <SegmentedControl
+        label="Period"
+        onValueChange={(next) => {
+          onValueChange(next);
+          setPeriod(next);
+        }}
+        options={periodOptions}
+        value={period}
+      />
+      <button type="button">After</button>
+    </>
+  );
+}
+
+describe('SegmentedControl arrow keys', () => {
+  it('checks the next segment on one quick ArrowRight press, then wraps to the first', async () => {
+    const onValueChange = vi.fn();
+    const user = userEvent.setup();
+    render(<PeriodHarness onValueChange={onValueChange} />);
+
+    await enterGroup(user);
+    expect(radio('6 months')).toHaveFocus();
+
+    await user.keyboard('{ArrowRight}');
+    expect(radio('12 months')).toHaveFocus();
+    expect(radio('12 months')).toBeChecked();
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledWith('12');
+
+    await user.keyboard('{ArrowRight}');
+    expect(radio('6 months')).toHaveFocus();
+    expect(radio('6 months')).toBeChecked();
+    expect(onValueChange.mock.calls).toEqual([['12'], ['6']]);
   });
 });

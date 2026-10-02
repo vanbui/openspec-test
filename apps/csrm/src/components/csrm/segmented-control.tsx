@@ -3,6 +3,7 @@
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useId } from 'react';
 
+import { selectAdjacentRadio } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
 export type SegmentedControlOption<TValue extends string> = {
@@ -58,6 +59,7 @@ export function SegmentedControl<TValue extends string>({
               'data-[state=unchecked]:hover:bg-surface-hover data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
             )}
             key={option.value}
+            onKeyDown={selectAdjacentRadio}
             value={option.value}
           >
             {option.label}
