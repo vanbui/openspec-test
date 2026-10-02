@@ -33,36 +33,76 @@ function DetailEntry({ event }: { event: TimelineEvent }) {
   </li>;
 }
 
-function SummaryEntry({ event, count }: { event: TimelineEvent; count?: number }) {
-  const presentation = eventPresentation[event.kind];
-  const Icon = presentation.icon;
-  const label = event.kind === 'released' ? 'Questionnaire made available to you'
-    : event.kind === 'returned-to-review' ? 'Questionnaire taken back for analyst review'
-      : event.kind === 'answer-cleared' ? 'An answer was cleared because its question changed'
-        : `${count ?? 1} question${count === 1 ? '' : 's'} added or changed`;
-  return <li className="grid min-w-0 gap-1 rounded-lg border border-border bg-card p-3"><div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{label}</p><p className="text-sm text-muted-foreground"><LocalInstant style="date-time" value={event.at} /></p></div></div>{event.explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground">{event.explanation}</p> : null}</li>;
+const QUESTION_CHANGES: ReadonlySet<TimelineEvent['kind']> = new Set(['question-added', 'question-edited', 'question-deleted']);
+
+/*
+ * The Requestor's summary (UI-SPEC §4.3) shows only `kind`, `at` and `explanation`: the Requestor projection
+ * carries no question key and no actor (D-17). Question changes collapse into one entry per release round.
+ */
+type SummaryItem =
+  | { type: 'event'; at: string; event: TimelineEvent }
+  | { type: 'round'; at: string; count: number };
+
+const summaryLabels: Partial<Record<TimelineEvent['kind'], string>> = {
+  released: 'Questionnaire made available to you',
+  'returned-to-review': 'Questionnaire taken back for analyst review',
+  'answer-cleared': 'An answer was cleared because its question changed',
+};
+
+/*
+ * Walks the events in time order. Changes made before the first release are not listed: the Requestor never
+ * saw that version (UI-D9). After it, each return to analyst review opens a round, and the changes made in
+ * that round become one entry counting them, dated by its latest change. Other events stay single entries.
+ * The list reads newest first.
+ */
+function summarise(events: readonly TimelineEvent[]): SummaryItem[] {
+  const chronological = events.map((event, index) => ({ event, index }))
+    .sort((left, right) => Date.parse(left.event.at) - Date.parse(right.event.at) || left.index - right.index)
+    .map(({ event }) => event);
+  const items: SummaryItem[] = [];
+  let released = false;
+  let round: { at: string; count: number } | null = null;
+  const closeRound = () => {
+    if (round && round.count > 0) items.push({ type: 'round', at: round.at, count: round.count });
+    round = null;
+  };
+  for (const event of chronological) {
+    if (QUESTION_CHANGES.has(event.kind)) {
+      if (released && round) round = { at: event.at, count: round.count + 1 };
+      continue;
+    }
+    if (event.kind === 'released') {
+      closeRound();
+      released = true;
+    } else if (event.kind === 'returned-to-review' && released) {
+      closeRound();
+      round = { at: event.at, count: 0 };
+    }
+    items.push({ type: 'event', at: event.at, event });
+  }
+  closeRound();
+  return items.map((item, index) => ({ item, index }))
+    .sort((left, right) => Date.parse(right.item.at) - Date.parse(left.item.at) || right.index - left.index)
+    .map(({ item }) => item);
+}
+
+function SummaryEntry({ item }: { item: SummaryItem }) {
+  const Icon = item.type === 'round' ? FilePenLine : eventPresentation[item.event.kind].icon;
+  const label = item.type === 'round'
+    ? `${item.count} ${item.count === 1 ? 'change' : 'changes'} to the questions`
+    : summaryLabels[item.event.kind] ?? eventPresentation[item.event.kind].label;
+  const explanation = item.type === 'event' ? item.event.explanation : null;
+  return <li className="grid min-w-0 gap-1 rounded-lg border border-border bg-card p-3"><div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{label}</p><p className="text-sm text-muted-foreground"><LocalInstant style="date-time" value={item.at} /></p></div></div>{explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground">{explanation}</p> : null}</li>;
 }
 
 export function QuestionnaireRevisionTimeline({ depth, questionnaire }: { depth: 'detail' | 'summary'; questionnaire: QuestionnaireSummary }) {
   const events = [...(questionnaire.events ?? [])].reverse();
   const answerable = questionnaire.release !== null && questionnaire.release !== undefined && questionnaire.state !== 'submitted';
   const cleared = events.filter((event) => event.kind === 'answer-cleared');
-  const changes = events.filter((event) => ['question-added', 'question-edited', 'question-deleted'].includes(event.kind));
-  const summaryEvents = events.filter((event) => !['question-added', 'question-edited', 'question-deleted', 'answer-cleared'].includes(event.kind));
-  const latestChange = changes[0];
-  /*
-   * A Requestor reads a dated timeline (D-09), so the summary stays in date
-   * order. The question changes collapse into one entry dated by the most
-   * recent of them, rather than being appended after everything else.
-   */
-  const summaryEntries = [
-    ...summaryEvents.map((event) => ({ event, count: undefined as number | undefined })),
-    ...(latestChange ? [{ event: latestChange, count: changes.length }] : []),
-    ...cleared.map((event) => ({ event, count: undefined as number | undefined })),
-  ].sort((left, right) => Date.parse(right.event.at) - Date.parse(left.event.at));
+  const summaryEntries = depth === 'summary' ? summarise(questionnaire.events ?? []) : [];
 
   return <section aria-label="Questionnaire revision timeline" className="mb-6 grid min-w-0 gap-3">
     <div><h2 className="text-heading-sm text-foreground">Revision timeline</h2>{depth === 'summary' && answerable && cleared.length > 0 ? <p className="mt-1 text-sm text-muted-foreground">Some answers need completing again before you re-submit.</p> : null}</div>
-    {events.length === 0 ? <p className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">No revisions have been recorded.</p> : depth === 'detail' ? <ol className="grid min-w-0 gap-3">{events.map((event, index) => <DetailEntry event={event} key={`${event.at}-${event.kind}-${index}`} />)}</ol> : <ol className="grid min-w-0 gap-3">{summaryEntries.map(({ count, event }, index) => <SummaryEntry count={count} event={event} key={`${event.at}-${event.kind}-${index}`} />)}</ol>}
+    {events.length === 0 ? <p className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">No revisions have been recorded.</p> : depth === 'detail' ? <ol className="grid min-w-0 gap-3">{events.map((event, index) => <DetailEntry event={event} key={`${event.at}-${event.kind}-${index}`} />)}</ol> : <ol className="grid min-w-0 gap-3">{summaryEntries.map((item, index) => <SummaryEntry item={item} key={`${item.at}-${item.type === 'round' ? 'round' : item.event.kind}-${index}`} />)}</ol>}
   </section>;
 }
