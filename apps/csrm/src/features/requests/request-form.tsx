@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { FormSection } from '@/components/csrm/form-section';
 import { DetailSection } from '@/components/csrm/detail-section';
+import { LocalInstant } from '@/components/csrm/local-time';
 import { RecordLink } from '@/components/csrm/record-link';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
@@ -23,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createRequestAction, searchInformationAssetsAction, searchInformationSystemsAction, submitRequestAction, updateRequestAction, type RequestActionResult } from './request-actions';
 import { RelationMultiSelect, type RelationSearchInput, type RelationSearchResult, type RelationSelection } from '../assessments/owner-combobox';
-import { formatRequestDate, type RequestAssessmentRelation, type RequestQuestionnaireRelation, type RequestRelationSummary } from './request-domain';
+import { type RequestAssessmentRelation, type RequestQuestionnaireRelation, type RequestRelationSummary } from './request-domain';
 import { requestDraftSchema, type RequestDraftInput, type RequestMutationResult } from './request-schema';
 
 export type RequestFormProps = {
@@ -197,7 +198,7 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
         {isSubmitted ? (
           <Alert>
             <AlertTitle><StatusBadge live status="submitted" /></AlertTitle>
-            <AlertDescription>Submitted {formatRequestDate(submittedResult.submittedDate)}. This request can no longer be edited.</AlertDescription>
+            <AlertDescription>Submitted <LocalInstant style="date" value={submittedResult.submittedDate} />. You can return it to draft from the request page until a Security Analyst starts work on it.</AlertDescription>
           </Alert>
         ) : null}
         <FormSection description="Name the request and explain why the assessment is needed." title="Request overview">
@@ -229,7 +230,7 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
           )} />
           <RelationField description="Search and select every system included in the assessment scope." label="Information systems" name="informationSystems" options={systems} searchRelations={searchInformationSystemsAction} />
           <RelationField description="Search and select every information asset included in scope." label="Information assets" name="informationAssets" options={assets} searchRelations={searchInformationAssetsAction} />
-          <p className="text-sm text-muted-foreground">Sponsor selection is unavailable until a least-privilege directory contract exists.</p>
+          <p className="text-sm text-muted-foreground">Sponsor selection is not available in CSRM.</p>
         </FormSection>
         {!isSubmitted ? (
           <div className="flex flex-wrap gap-3 border-t border-border pt-6">
@@ -238,7 +239,7 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
               <ConfirmDialog
                 confirmLabel="Submit request"
                 confirmVariant="default"
-                description="Submission is irreversible. This request cannot be edited after submission."
+                description="A Security Analyst will review your request and send you a questionnaire to answer. Until they start work on it, you can return the request to draft to make changes."
                 errorMessage={formError}
                 onConfirm={submitDraft}
                 onDismiss={() => {

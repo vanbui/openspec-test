@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { CsrmAssessmentRequest } from '@/features/requests/request-domain';
+import { canRevertRequestToDraft, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
 import { RequestContextDetails } from '@/features/requests/request-context-details';
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
 import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
@@ -84,7 +84,8 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, refusal, r
       <div className="grid gap-6">
         <RequestLifecycleStepper lifecycle={request.lifecycle} />
         <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={request.lifecycle} request={request} />
-        {request.requestStatus === 'submitted' && request.relationships?.assessment.availability !== 'available' ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
+        {/* Offered only while Strapi's rule allows it: submitted, with no questionnaire and no assessment (D-22). */}
+        {canRevertRequestToDraft(request) ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <RequestContextDetails request={request} />
         {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob hasExistingQuestionnaire={questionnaire.availability === 'available'} requestId={request.documentId} /> : null}
         {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}

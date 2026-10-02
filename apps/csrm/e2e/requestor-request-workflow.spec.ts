@@ -222,7 +222,9 @@ test('Requestor completes an authorised assessment request journey @journey', as
 
   await requestActions.getByRole('button', { name: 'Submit request' }).click();
   const confirmation = page.getByRole('alertdialog', { name: 'Submit this assessment request?' });
-  await expect(confirmation).toContainText(/cannot be undone|irreversible/i);
+  // D-15: the dialog says what happens next and how to change it, never that the step is irreversible.
+  await expect(confirmation).toContainText('A Security Analyst will review your request');
+  await expect(confirmation).not.toContainText(/cannot be undone|irreversible/i);
   await confirmation.getByRole('button', { name: 'Submit request' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('Request submitted.')).toBeVisible();
@@ -230,6 +232,30 @@ test('Requestor completes an authorised assessment request journey @journey', as
   await expect(page.getByRole('region', { name: 'Request actions' }).getByText('Submitted', { exact: true })).toBeVisible();
   await expect(page.getByText(/^Submitted \d{1,2} \w{3,4} \d{4}$/)).toBeVisible();
   await expect(page.getByRole('link', { name: 'Edit request' })).toHaveCount(0);
+
+  /*
+   * UAT-037 (D-21): in the same page session, without reloading, a return to draft brings back the draft's
+   * actions, because they come from the refreshed request and never from the earlier in-page submit. Focus
+   * moves to the first new action (UI-SPEC §9.2). Then submit again so the journey continues from a
+   * submitted request as before.
+   */
+  await dismissToasts(page);
+  await requestActions.getByRole('button', { name: 'Return to draft' }).click();
+  const inPageRevert = page.getByRole('alertdialog', { name: 'Return this request to draft?' });
+  await inPageRevert.getByLabel('Reason').fill('Correct the request before analyst review');
+  await inPageRevert.getByRole('button', { name: 'Return request to draft' }).click();
+  await expect(page.getByText('Request returned to draft.')).toBeVisible();
+  await expect(requestActions.getByRole('link', { name: 'Edit request' }), 'REQ07_ACTIONS_REFRESH_AFTER_REVERT').toBeVisible();
+  await expect(requestActions.getByRole('button', { name: 'Submit request' }), 'REQ07_ACTIONS_REFRESH_AFTER_REVERT').toBeVisible();
+  await expect(requestActions.getByRole('button', { name: 'Return to draft' }), 'REQ07_ACTIONS_REFRESH_AFTER_REVERT').toHaveCount(0);
+  await expect(requestActions.getByRole('link', { name: 'Edit request' }), 'REQ07_ACTIONS_REFRESH_AFTER_REVERT moves focus to the first action').toBeFocused();
+  await dismissToasts(page);
+  await requestActions.getByRole('button', { name: 'Submit request' }).click();
+  const inPageResubmit = page.getByRole('alertdialog', { name: 'Submit this assessment request?' });
+  await inPageResubmit.getByRole('button', { name: 'Submit request' }).click();
+  await expect(page.getByText('Request submitted.')).toBeVisible();
+  await expect(requestActions.getByRole('button', { name: 'Return to draft' })).toBeVisible();
+  await expect(requestActions.getByText('You can return this request to draft to make changes until a Security Analyst starts work on it.')).toBeVisible();
 
   // Reversal uses the same production detail surface and leaves the Requestor
   // with an editable draft that can re-enter the established submission flow.

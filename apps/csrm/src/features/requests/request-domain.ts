@@ -129,6 +129,19 @@ export function canRequestorEdit(status: RequestStatus): boolean {
   return status === 'draft';
 }
 
+/**
+ * Whether a request may return to draft (D-22), mirroring the rule Strapi applies: it is submitted and
+ * neither a questionnaire nor an assessment exists for it. It reads only the served relationships, where
+ * `unavailable` still means one exists, never the legacy nullable fields. A request read without its
+ * relationships fails closed. Both actors' pages use it to decide whether to offer the action; Strapi
+ * still decides whether to perform it.
+ */
+export function canRevertRequestToDraft(request: Pick<CsrmAssessmentRequest, 'requestStatus' | 'relationships'>): boolean {
+  const relationships = request.relationships;
+  if (request.requestStatus !== 'submitted' || !relationships) return false;
+  return relationships.questionnaire.availability === 'absent' && relationships.assessment.availability === 'absent';
+}
+
 export interface RequestPagination {
   page: number;
   pageSize: number;

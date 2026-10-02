@@ -60,7 +60,7 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
           * delivered, from the request they own. The analyst reads the same component.
           */}
         <RequestContextDetails request={request} />
-        <section aria-label="Request actions" className="rounded-lg border border-border p-6">
+        <section aria-label="Request actions" className="rounded-lg border border-border p-6" id="request-actions" tabIndex={-1}>
           <RequestWorkflowActions request={request} />
         </section>
       </div>
