@@ -66,6 +66,7 @@ export const guardedFiles = [
   'src/features/assessments/assessment-request-link.tsx',
   'src/features/assessments/control-implementation-editor.tsx',
   'src/features/assessments/control-label.ts',
+  'src/features/assessments/generation-failure-copy.ts',
   'src/features/assessments/questionnaire-generation-job.tsx',
   'src/features/assessments/release-readiness-summary.ts',
   'src/features/assessments/released-assessment.tsx',

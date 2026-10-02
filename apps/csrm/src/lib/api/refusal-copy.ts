@@ -20,7 +20,8 @@ export type RefusalFamily =
   | 'returnToReview'
   | 'questionChange'
   | 'questionDelete'
-  | 'questionnaireGeneration';
+  | 'questionnaireGeneration'
+  | 'assessmentDraft';
 
 type FamilyCopy = {
   readonly reasons: Readonly<Partial<Record<ConflictReason, string>>>;
@@ -114,6 +115,19 @@ const refusalCopy: Readonly<Record<RefusalFamily, FamilyCopy>> = {
       QUESTIONNAIRE_RELEASED: 'This questionnaire has been released to the Requestor, so it can’t be replaced. Return it to analyst review first.',
     },
     fallback: 'A questionnaire can’t be generated for this request in its current state.',
+  },
+  /*
+   * Generate an assessment draft (Security Analyst; the draft card's error alert). Not a §10.2 family (WR-205): its
+   * sentences are the card's own precondition (§12.2) and §10.2 E and F's wording for an assessment that already
+   * exists, and its fallback follows §10.2's pattern. Strapi serves no reason for these refusals today, so the
+   * fallback is what the analyst reads; it never says the assessment changed (D-22).
+   */
+  assessmentDraft: {
+    reasons: {
+      QUESTIONNAIRE_NOT_SUBMITTED: 'Draft generation can begin only after the linked questionnaire is submitted.',
+      ASSESSMENT_STARTED: 'An assessment already exists for this request, so a draft can’t be generated.',
+    },
+    fallback: 'An assessment draft can’t be generated for this questionnaire in its current state.',
   },
 };
 

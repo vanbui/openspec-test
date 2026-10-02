@@ -7,6 +7,7 @@ import { listAdministrationControls } from '@/features/administration/administra
 import { parseAdministrationQuery } from '@/features/administration/administration-schema';
 import type { ConflictReason } from '@/lib/api/conflict-reasons';
 import { refusalMessage } from '@/lib/api/refusal-copy';
+import { generationFailureMessage, type GenerationOperation, type GenerationSubject } from './generation-failure-copy';
 
 import {
   createControlImplementation,
@@ -152,12 +153,22 @@ function serviceFailure(
 }
 
 /**
- * A refused questionnaire generation, start or retry. A 409 reads UI-SPEC §10.2 I for the served reason and
- * returns it; the other statuses keep the assessment service's messages.
+ * A failed questionnaire generation or assessment draft, start or retry (WR-205). A 409 reads the operation's
+ * refusal family for the served reason (UI-SPEC §10.2 I for questionnaire generation) and returns it; any other
+ * status names the request, the questionnaire or the generation, never an assessment that may not exist.
  */
-function generationFailure(error: { status?: number; reason?: ConflictReason }): AssessmentServerActionResult<never> {
-  if (error.status !== 409) return serviceFailure(error.status);
-  return { ok: false, formError: refusalMessage('questionnaireGeneration', error.reason), ...(error.reason ? { reason: error.reason } : {}) };
+function generationFailure(
+  operation: 'questionnaireGeneration' | 'assessmentDraft',
+  error: { status?: number; reason?: ConflictReason },
+  subject: GenerationSubject,
+): AssessmentServerActionResult<never> {
+  if (error.status !== 409) return generationReadFailure(operation, error.status, subject);
+  return { ok: false, formError: refusalMessage(operation, error.reason), ...(error.reason ? { reason: error.reason } : {}) };
+}
+
+/** A generation status check that failed: worded about what it reads (WR-205). */
+function generationReadFailure(operation: GenerationOperation, status: number | undefined, subject: GenerationSubject): AssessmentServerActionResult<never> {
+  return { ok: false, formError: generationFailureMessage(operation, status, subject) };
 }
 
 function revalidateJobStart(questionnaireId: string): void {
@@ -185,7 +196,7 @@ export async function startAssessmentDraftAction(input: unknown): Promise<Assess
   const parsed = questionnaireIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await startAssessmentDraft(parsed.data.questionnaireId);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationFailure('assessmentDraft', result.error, 'record');
   revalidateJobStart(parsed.data.questionnaireId);
   return { ok: true, data: result.data };
 }
@@ -194,7 +205,7 @@ export async function getAssessmentDraftJobAction(input: unknown): Promise<Asses
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await getAssessmentDraftJob(parsed.data.jobId);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationReadFailure('assessmentDraft', result.error.status, 'job');
   return { ok: true, data: result.data };
 }
 
@@ -211,7 +222,7 @@ export async function retryAssessmentDraftJobAction(input: unknown): Promise<Ass
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await retryAssessmentDraftJob(parsed.data.jobId);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationFailure('assessmentDraft', result.error, 'job');
   revalidateJobRetry();
   return { ok: true, data: result.data };
 }
@@ -226,7 +237,7 @@ export async function startQuestionnaireGenerationAction(input: unknown): Promis
   const parsed = questionnaireGenerationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await startQuestionnaireGeneration(parsed.data.requestId, parsed.data.replaceUnansweredQuestionnaire);
-  if (result.error) return generationFailure(result.error);
+  if (result.error) return generationFailure('questionnaireGeneration', result.error, 'record');
   revalidateQuestionnaireGeneration(parsed.data.requestId, result.data.status === 'completed' ? result.data.questionnaire.documentId : undefined);
   return { ok: true, data: result.data };
 }
@@ -235,7 +246,7 @@ export async function getQuestionnaireGenerationJobAction(input: unknown): Promi
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await getQuestionnaireGenerationJob(parsed.data.jobId);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationReadFailure('questionnaireGeneration', result.error.status, 'job');
   return { ok: true, data: result.data };
 }
 
@@ -248,7 +259,7 @@ export async function getRequestGenerationJobsAction(input: unknown): Promise<As
   const parsed = requestIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await getRequestGenerationJobs(parsed.data.requestId);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationReadFailure('generationJobs', result.error.status, 'record');
   return { ok: true, data: result.data };
 }
 
@@ -256,7 +267,7 @@ export async function retryQuestionnaireGenerationJobAction(input: unknown): Pro
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await retryQuestionnaireGenerationJob(parsed.data.jobId);
-  if (result.error) return generationFailure(result.error);
+  if (result.error) return generationFailure('questionnaireGeneration', result.error, 'job');
   revalidateQuestionnaireGeneration(result.data.requestId);
   return { ok: true, data: result.data };
 }
