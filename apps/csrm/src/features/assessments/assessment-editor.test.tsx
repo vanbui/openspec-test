@@ -7,11 +7,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   AnalystAssessmentDetail,
+  AssessmentRiskListItem,
   ControlImplementation,
   AnalystRisk,
   RiskUpdateInput,
 } from './assessment-schema';
 import { controlImplementationWritableFields, riskWritableFields } from './assessment-schema';
+import { canMutateAssessment } from './assessment-domain';
 
 const actionMocks = vi.hoisted(() => ({
   createControlImplementationAction: vi.fn(),
@@ -132,6 +134,41 @@ const implementation: ControlImplementation = {
 };
 
 const searchOwners = vi.fn(async () => ({ ok: true as const, data: [analyst] }));
+
+const releasedAssessment: AnalystAssessmentDetail = {
+  ...assessment,
+  assessmentStatus: 'approved',
+  assessmentDate: '2026-08-30T02:00:00.000Z',
+  approvalDate: '2026-08-30T02:00:00.000Z',
+  approvedBy: analyst,
+};
+
+/** The served list item for risk-1 (D-34): names, not ids, for the system, asset and both owners. */
+const riskListItem: AssessmentRiskListItem = {
+  documentId: 'risk-1',
+  riskNumber: 'RSK-0042',
+  riskStatement: 'Attackers may compromise the portal.',
+  informationSystemImpacted: { documentId: 'system-1', name: 'Customer portal' },
+  informationAssetImpacted: { documentId: 'asset-1', name: 'Customer data' },
+  inherentLikelihood: 'Likely',
+  highestInherentConsequence: 'Major',
+  inherentRating: 'High',
+  residualLikelihood: 'Possible',
+  highestResidualConsequence: 'Moderate',
+  residualRating: 'Moderate',
+  treatmentAction: 'Treat',
+  treatmentPlan: 'Deploy stronger controls.',
+  treatmentStatus: 'In Progress',
+  riskOwner: { documentId: 'bob-id', displayName: 'Bob Doe' },
+  treatmentOwner: { documentId: 'bob-id', displayName: 'Bob Doe' },
+  targetDate: '2026-10-30',
+};
+
+function definitionValue(term: string): HTMLElement {
+  const terms = screen.getAllByText(term, { selector: 'dt' });
+  expect(terms, `exactly one ${term} row`).toHaveLength(1);
+  return terms[0]!.nextElementSibling as HTMLElement;
+}
 
 const editorProps = {
   assessment,
@@ -396,6 +433,49 @@ describe('analyst assessment editor contract', () => {
       implementationId: 'implementation-1',
       values: { evidence: 'Updated control evidence' },
     });
+  });
+
+  it('shows a released Risk through the shared read-only component with h3 groups (D-34, UI-SPEC §15.2)', () => {
+    // No control library is loaded: the label comes from the served control summary (D-36).
+    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} controls={[]} riskListItems={[riskListItem]} />);
+
+    for (const group of ['Ratings', 'Ownership and treatment', 'Mitigation control implementations']) {
+      expect(screen.getByRole('heading', { level: 3, name: group })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('heading', { level: 4 })).not.toBeInTheDocument();
+    expect(definitionValue('Information system impacted')).toHaveTextContent(/^Customer portal$/);
+    expect(definitionValue('Risk owner')).toHaveTextContent(/^Bob Doe$/);
+    expect(definitionValue('Treatment status').querySelector('[data-slot="badge"]')).toHaveTextContent('In Progress');
+    expect(definitionValue('Target date')).toHaveTextContent(/^30 October 2026$/);
+    expect(definitionValue('Control')).toHaveTextContent(/^AC-1 · Access control$/);
+    expect(screen.queryByText('Reusable control')).not.toBeInTheDocument();
+    for (const internalId of ['control-1', 'system-1', 'asset-1', 'bob-id']) {
+      expect(document.body.textContent).not.toContain(internalId);
+    }
+  });
+
+  it('names a released Risk’s owners, system and asset from the loaded labels when no list item is served', () => {
+    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} controls={[]} />);
+
+    expect(definitionValue('Information system impacted')).toHaveTextContent(/^Customer portal$/);
+    expect(definitionValue('Information asset impacted')).toHaveTextContent(/^Customer data$/);
+    expect(definitionValue('Risk owner')).toHaveTextContent(/^Bob Doe$/);
+    expect(definitionValue('Treatment owner')).toHaveTextContent(/^Bob Doe$/);
+    expect(definitionValue('Control')).toHaveTextContent(/^AC-1 · Access control$/);
+    expect(document.body.textContent).not.toContain('bob-id');
+  });
+
+  it('offers mutation only to an unreleased draft or in-review assessment, from the shared zod-free predicate', () => {
+    expect(canMutateAssessment(assessment)).toBe(true);
+    expect(canMutateAssessment({ ...assessment, assessmentStatus: 'draft' })).toBe(true);
+    expect(canMutateAssessment(releasedAssessment)).toBe(false);
+    expect(canMutateAssessment({ ...assessment, assessmentStatus: 'closed' })).toBe(false);
+    expect(canMutateAssessment({ ...assessment, approvalDate: '2026-08-30T02:00:00.000Z' })).toBe(false);
+
+    const route = readFileSync(resolve(process.cwd(), 'app/(app)/app/review/assessments/[documentId]/page.tsx'), 'utf8');
+    expect(route).toContain('canMutateAssessment');
+    expect(route).toContain('listAssessmentRisks');
+    expect(route).toContain('riskListItems=');
   });
 
   it('renders deliberate safe states and never mutates released or partial release facts', () => {

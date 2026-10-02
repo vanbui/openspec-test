@@ -13,6 +13,17 @@ let generatedAssessmentId = "";
 let contextualRiskId = "";
 let contextualControlImplementationId = "";
 
+/*
+ * D-34: the assessment's risk list item (AssessmentRiskListItem). The Risk create and update responses keep the
+ * five RiskSummary fields (research Pitfall 9); only this list read carries the treatment and ownership facts.
+ */
+const RISK_SUMMARY_KEYS = ["documentId", "inherentRating", "residualRating", "riskNumber", "riskStatement"];
+const ASSESSMENT_RISK_LIST_ITEM_KEYS = [
+  "documentId", "riskNumber", "riskStatement", "informationSystemImpacted", "informationAssetImpacted",
+  "inherentLikelihood", "highestInherentConsequence", "inherentRating", "residualLikelihood", "highestResidualConsequence",
+  "residualRating", "treatmentAction", "treatmentPlan", "treatmentStatus", "riskOwner", "treatmentOwner", "targetDate",
+].sort();
+
 async function request(path: string, identity?: string, init: RequestInit = {}) {
   const harness = await harnessPromise;
   return harness.request({ path, identity, init });
@@ -724,7 +735,8 @@ test("mounted contextual Risk routes cover the frozen writable surface and bound
   assert.equal(listResponse.status, 200, "CONTEXTUAL_RISK_LIST_ROUTE_MISSING");
   const listed = rows(await payload(listResponse));
   assert.ok(listed.some((risk) => risk.documentId === createdRiskId));
-  assert.ok(listed.every((risk) => Object.keys(risk).sort().join(",") === "documentId,inherentRating,residualRating,riskNumber,riskStatement"));
+  assert.ok(listed.every((risk) => Object.keys(risk).sort().join(",") === ASSESSMENT_RISK_LIST_ITEM_KEYS.join(",")),
+    "ASSESSMENT_RISK_LIST_ITEM_PROJECTION_IS_NOT_CLOSED");
   const wrongParentRows = rows(await payload(await request(
     `/api/v1/risk_assessments/${encodeURIComponent(fixtures.releaseFacts.unreleased)}/risks`,
     harness.identities.analyst,
@@ -739,6 +751,7 @@ test("mounted contextual Risk routes cover the frozen writable surface and bound
   assert.equal(updatedResponse.status, 200, "CONTEXTUAL_RISK_UPDATE_ROUTE_MISSING");
   const updated = (await payload(updatedResponse)).data as Record<string, unknown>;
   assert.equal(updated.riskStatement, "Updated contextual risk statement");
+  assert.deepEqual(Object.keys(updated).sort(), RISK_SUMMARY_KEYS, "RISK_UPDATE_RESPONSE_WIDENED");
   const persistedUpdate = await harness.getRisk(createdRiskId);
   assert.equal(persistedUpdate?.issueStatement, "Updated contextual issue");
   assert.equal(persistedUpdate?.riskStatement, "Updated contextual risk statement");
@@ -1801,4 +1814,111 @@ test("mounted assessment writes admit the service agent's exact grants", async (
   });
   assert.equal(created.status, 201, "SERVICE_AGENT_RISK_CREATE_REFUSED");
   assert.equal(await harness.countRisksForAssessment(assessmentId), 1);
+});
+
+test("mounted released risk list carries each Risk's treatment and ownership for both actors and no one else", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const { relations } = await harness.seedRequestWorkflowFixtures();
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "ASSESSMENT-RELEASE-TREAT1",
+    title: "Released treatment and ownership fixture",
+    requestStatus: "approved",
+    requestor: "owner",
+  });
+  const assessmentId = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "ASM-2026-TREAT1",
+    assessmentStatus: "approved",
+    summary: "Released treatment and ownership fixture",
+    overallRating: "Moderate",
+    assessmentRequest: requestId,
+    approvedBy: harness.users.analyst,
+    approvalDate: "2026-09-30T00:00:00.000Z",
+    assessmentDate: "2026-09-30T00:00:00.000Z",
+  });
+  const fullRiskId = await harness.createRiskRegisterFixture(assessmentId, {
+    riskNumber: "RSK-2026-TREAT1",
+    riskStatement: "Released treated risk",
+    informationSystemImpacted: relations.informationSystem,
+    informationAssetImpacted: relations.informationAsset,
+    inherentLikelihood: "Likely",
+    highestInherentConsequence: "Major",
+    inherentRating: "High",
+    residualLikelihood: "Possible",
+    highestResidualConsequence: "Moderate",
+    residualRating: "Moderate",
+    treatmentAction: "Treat",
+    treatmentPlan: "Enforce phishing-resistant MFA for administrators.",
+    treatmentStatus: "In Progress",
+    riskOwner: harness.users.owner,
+    treatmentOwner: harness.users.analyst,
+    targetDate: "2027-08-30",
+    // Analyst working facts the released list never carries.
+    issueStatement: "Analyst-only issue statement",
+    riskCause: "Analyst-only risk cause",
+    inherentRatingRationale: "Analyst-only rating rationale",
+    escalationDetails: "Analyst-only escalation",
+    comments: "Analyst-only comment",
+    dataClassification: "Restricted",
+  });
+  const sparseRiskId = await harness.createRiskRegisterFixture(assessmentId, {
+    riskNumber: "RSK-2026-TREAT2",
+    riskStatement: "Released risk with nothing else recorded",
+  });
+
+  const expected = [
+    {
+      documentId: fullRiskId,
+      riskNumber: "RSK-2026-TREAT1",
+      riskStatement: "Released treated risk",
+      informationSystemImpacted: { documentId: relations.informationSystem, name: "Workflow system" },
+      informationAssetImpacted: { documentId: relations.informationAsset, name: "Workflow asset" },
+      inherentLikelihood: "Likely",
+      highestInherentConsequence: "Major",
+      inherentRating: "High",
+      residualLikelihood: "Possible",
+      highestResidualConsequence: "Moderate",
+      residualRating: "Moderate",
+      treatmentAction: "Treat",
+      treatmentPlan: "Enforce phishing-resistant MFA for administrators.",
+      treatmentStatus: "In Progress",
+      riskOwner: { documentId: harness.users.owner, displayName: "Jane Doe" },
+      treatmentOwner: { documentId: harness.users.analyst, displayName: "Bob Doe" },
+      targetDate: "2027-08-30",
+    },
+    {
+      documentId: sparseRiskId,
+      riskNumber: "RSK-2026-TREAT2",
+      riskStatement: "Released risk with nothing else recorded",
+      informationSystemImpacted: null,
+      informationAssetImpacted: null,
+      inherentLikelihood: null,
+      highestInherentConsequence: null,
+      inherentRating: null,
+      residualLikelihood: null,
+      highestResidualConsequence: null,
+      residualRating: null,
+      treatmentAction: null,
+      treatmentPlan: null,
+      treatmentStatus: null,
+      riskOwner: null,
+      treatmentOwner: null,
+      targetDate: null,
+    },
+  ];
+  // The owning Requestor and the analyst read the same released facts (D-34).
+  for (const identity of [harness.identities.owner, harness.identities.analyst]) {
+    const response = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/risks`, identity);
+    assert.equal(response.status, 200, `RELEASED_RISK_LIST_UNAVAILABLE_${identity}`);
+    const body = await response.text();
+    assert.deepEqual((JSON.parse(body) as { data: unknown }).data, expected, `RELEASED_RISK_LIST_ITEM_MISMATCH_${identity}`);
+    assert.doesNotMatch(body, /Analyst-only|Restricted/, `RELEASED_RISK_LIST_DISCLOSED_ANALYST_FACTS_${identity}`);
+  }
+
+  // Another Requestor, and a birthright Requestor with no stake in the request, get 404 and no released fact.
+  for (const identity of [harness.identities.otherRequestor, harness.identities.analystAgent]) {
+    const response = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/risks`, identity);
+    assert.equal(response.status, 404, `CROSS_OWNER_RELEASED_RISK_LIST_${identity}`);
+    assert.doesNotMatch(await response.text(), /Released treated risk|phishing-resistant|Jane Doe|Bob Doe|Workflow system/, `CROSS_OWNER_RELEASED_RISK_FACTS_${identity}`);
+  }
 });

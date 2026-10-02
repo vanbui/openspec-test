@@ -684,7 +684,7 @@ describe('contract-to-client-schema parity', () => {
     // Risk Register parser had been hidden behind a root-reporting wrapper, and
     // the question list behind a registration that stopped at its envelope, so
     // their bounds were already there, not new.
-    expect(Object.keys(boundaryGrandfathered).length).toBe(43);
+    expect(Object.keys(boundaryGrandfathered).length).toBe(42);
   });
 
   it('rejects duplicate, omitted, parser-free, and unresolved parser declarations', () => {

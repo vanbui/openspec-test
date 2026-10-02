@@ -7,11 +7,12 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('next/navigation', () => ({ usePathname: () => '/app/assessments', useRouter: () => ({ replace: vi.fn() }) }));
 
 import type {
+  AssessmentRiskListItem,
   ControlImplementation,
   ReleasedAssessmentDetailForActor,
   ReleasedAssessmentSummary,
-  Risk,
 } from './assessment-schema';
+import { ReleasedRiskDetails } from './released-risk-details';
 import {
   ReleasedAssessmentDetailView,
   ReleasedAssessmentDetailSkeleton,
@@ -50,13 +51,54 @@ const releasedDetail: ReleasedAssessmentDetailForActor = {
   approvedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' },
 };
 
-const risk: Risk = {
+const risk: AssessmentRiskListItem = {
   documentId: 'risk-1',
   riskNumber: 'RSK-0042',
   riskStatement: 'An attacker could misuse privileged access.',
+  informationSystemImpacted: { documentId: 'system-1', name: 'Customer portal' },
+  informationAssetImpacted: { documentId: 'asset-1', name: 'Customer records' },
+  inherentLikelihood: 'Likely',
+  highestInherentConsequence: 'Major',
   inherentRating: 'Critical',
+  residualLikelihood: 'Possible',
+  highestResidualConsequence: 'Moderate',
   residualRating: 'Moderate',
+  treatmentAction: 'Treat',
+  treatmentPlan: 'Enforce phishing-resistant MFA for administrators.',
+  treatmentStatus: 'In Progress',
+  riskOwner: { documentId: 'owner-2', displayName: 'Priya Nair' },
+  treatmentOwner: { documentId: 'owner-3', displayName: 'Sam Lee' },
+  targetDate: '2027-03-31',
 };
+
+const sparseRisk: AssessmentRiskListItem = {
+  documentId: 'risk-2',
+  riskNumber: 'RSK-0043',
+  riskStatement: null,
+  informationSystemImpacted: null,
+  informationAssetImpacted: null,
+  inherentLikelihood: null,
+  highestInherentConsequence: null,
+  inherentRating: null,
+  residualLikelihood: null,
+  highestResidualConsequence: null,
+  residualRating: null,
+  treatmentAction: null,
+  treatmentPlan: null,
+  treatmentStatus: null,
+  riskOwner: null,
+  treatmentOwner: null,
+  targetDate: null,
+};
+
+/** The value beside a definition term, by the term's text. */
+function definition(scope: HTMLElement, term: string): HTMLElement {
+  const terms = within(scope).getAllByText(term, { selector: 'dt' });
+  expect(terms, `exactly one ${term} row`).toHaveLength(1);
+  const value = terms[0]!.nextElementSibling;
+  expect(value?.tagName).toBe('DD');
+  return value as HTMLElement;
+}
 
 const implementation: ControlImplementation = {
   documentId: 'implementation-1',
@@ -176,7 +218,12 @@ describe('immutable released assessment detail', () => {
     const view = screen.getByRole('article', { name: 'Released risk assessment ASM-0042' });
     expect(within(view).getByRole('heading', { level: 2, name: 'Assessment overview' })).toHaveClass('text-heading-md');
     expect(within(view).getByRole('heading', { level: 2, name: 'Identified risks' })).toHaveClass('text-heading-md');
-    expect(within(view).getByRole('heading', { level: 3, name: 'Mitigation control implementations' })).toHaveClass('text-heading-sm');
+    // UI-SPEC §15.2: h2 Identified risks, h3 per Risk, h4 per group, so no level is skipped.
+    expect(within(view).getByRole('heading', { level: 3, name: 'RSK-0042' })).toBeInTheDocument();
+    for (const group of ['Ratings', 'Ownership and treatment', 'Mitigation control implementations']) {
+      expect(within(view).getByRole('heading', { level: 4, name: group })).toHaveClass('text-heading-sm');
+    }
+    expect(within(view).getByRole('region', { name: 'Mitigation control implementations' })).toBeInTheDocument();
     for (const value of [
       'Released customer portal assessment.',
       'Internet exposure and privileged access drive the rating.',
@@ -227,6 +274,77 @@ describe('immutable released assessment detail', () => {
     for (const internalId of ['control-1', 'control-2', 'control-3', 'implementation-1']) {
       expect(view.textContent).not.toContain(internalId);
     }
+  });
+
+  it('shows each Risk’s system, asset, ratings, treatment and owners, never an internal id (D-34, UI-SPEC §15.2)', () => {
+    render(
+      <ReleasedAssessmentDetailView
+        assessment={releasedDetail}
+        controlsByRisk={{ [risk.documentId]: [implementation] }}
+        risks={[risk]}
+        state="populated"
+      />,
+    );
+
+    const view = screen.getByRole('article', { name: 'Released risk assessment ASM-0042' });
+    expect(definition(view, 'Information system impacted')).toHaveTextContent(/^Customer portal$/);
+    expect(definition(view, 'Information asset impacted')).toHaveTextContent(/^Customer records$/);
+    expect(definition(view, 'Inherent likelihood')).toHaveTextContent(/^Likely$/);
+    expect(definition(view, 'Highest inherent consequence')).toHaveTextContent(/^Major$/);
+    expect(definition(view, 'Inherent risk rating').querySelector('[data-slot="badge"]')).toHaveTextContent('Critical');
+    expect(definition(view, 'Residual likelihood')).toHaveTextContent(/^Possible$/);
+    expect(definition(view, 'Highest residual consequence')).toHaveTextContent(/^Moderate$/);
+    expect(definition(view, 'Residual risk rating').querySelector('[data-slot="badge"]')).toHaveTextContent('Moderate');
+    expect(definition(view, 'Risk owner')).toHaveTextContent(/^Priya Nair$/);
+    expect(definition(view, 'Treatment owner')).toHaveTextContent(/^Sam Lee$/);
+    expect(definition(view, 'Treatment action')).toHaveTextContent(/^Treat$/);
+    expect(definition(view, 'Treatment status').querySelector('[data-slot="badge"]')).toHaveTextContent('In Progress');
+    // A calendar date stays a calendar date (D-19).
+    expect(definition(view, 'Target date')).toHaveTextContent(/^31 March 2027$/);
+    expect(definition(view, 'Treatment plan')).toHaveTextContent(/^Enforce phishing-resistant MFA for administrators\.$/);
+    for (const internalId of ['risk-1', 'system-1', 'asset-1', 'owner-2', 'owner-3', 'control-1', 'implementation-1']) {
+      expect(view.textContent).not.toContain(internalId);
+    }
+  });
+
+  it('reads an absent fact as plain Not recorded, never as a badge', () => {
+    render(<ReleasedAssessmentDetailView assessment={releasedDetail} controlsByRisk={{}} risks={[sparseRisk]} state="populated" />);
+
+    const view = screen.getByRole('article', { name: 'Released risk assessment ASM-0042' });
+    for (const term of [
+      'Information system impacted', 'Information asset impacted', 'Inherent likelihood', 'Highest inherent consequence',
+      'Inherent risk rating', 'Residual likelihood', 'Highest residual consequence', 'Residual risk rating', 'Risk owner',
+      'Treatment owner', 'Treatment action', 'Treatment status', 'Target date', 'Treatment plan',
+    ]) {
+      const value = definition(view, term);
+      expect(value, term).toHaveTextContent(/^Not recorded$/);
+      expect(value.querySelector('[data-slot="badge"]'), term).toBeNull();
+    }
+    expect(within(view).getByText('No mitigation control implementations are recorded.')).toBeInTheDocument();
+  });
+
+  it('lays a Risk out in one column, two from 640px and three from 1024px, with micro-labels and wide plan rows', () => {
+    const { container } = render(<ReleasedRiskDetails groupHeadingLevel={4} implementations={[implementation]} risk={risk} />);
+
+    const lists = [...container.querySelectorAll('dl')];
+    expect(lists.length).toBeGreaterThan(0);
+    for (const list of lists) {
+      expect(list).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-3');
+    }
+    for (const term of container.querySelectorAll('dt')) expect(term).toHaveClass('micro-label');
+    for (const value of container.querySelectorAll('dd')) expect(value).toHaveClass('text-sm');
+    for (const wide of ['Treatment plan', 'Evidence']) {
+      expect(screen.getByText(wide, { selector: 'dt' }).parentElement).toHaveClass('sm:col-span-2', 'lg:col-span-3');
+    }
+  });
+
+  it('takes its group heading level from its page, so the analyst’s read-only editor uses h3', () => {
+    render(<ReleasedRiskDetails groupHeadingLevel={3} implementations={[]} risk={risk} />);
+
+    for (const group of ['Ratings', 'Ownership and treatment', 'Mitigation control implementations']) {
+      expect(screen.getByRole('heading', { level: 3, name: group })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('heading', { level: 4 })).not.toBeInTheDocument();
   });
 
   it('shows the header status as the shared Released assessment badge', () => {
