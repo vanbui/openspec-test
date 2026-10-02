@@ -322,7 +322,10 @@ test.describe.serial('@administration-systems-assets Information System and Asse
         // UAT-053: the system gets an owner through the owner search and a business criticality.
         await page.getByLabel('Business criticality').fill('High');
         await page.getByRole('combobox', { name: 'Owner', exact: true }).fill('Jane');
-        await page.getByRole('option', { name: 'Jane Doe', exact: true }).first().click();
+        // IN-409: the owner search lists each user once, so a duplicated result row fails here.
+        const janeDoe = page.getByRole('option', { name: 'Jane Doe', exact: true });
+        await expect(janeDoe, 'the owner search lists Jane Doe once').toHaveCount(1);
+        await janeDoe.click();
         await expect(page.getByText('Selected owner: Jane Doe', { exact: true })).toBeVisible();
       }
       await page.getByRole('button', { name: `Create ${record.singular}` }).click();
