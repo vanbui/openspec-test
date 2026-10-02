@@ -414,3 +414,113 @@ test("ADMIN-05 D-46 fix 3: the seed refuses a malformed superseded title list", 
     );
   }
 });
+
+/*
+ * 10-23 walkthrough fix 3b: 21 of the 39 PSPF titles fix 3 sampled narrowed or misstated their paragraph, so
+ * every remaining PSPF title (179) was audited against its paragraph under the same rule. These 75 failed and
+ * are corrected; the other 104 cover their paragraph and stay. Each row is the control, the title 10-22 seeded
+ * and the corrected title.
+ */
+const PSPF_FILE = "pspf-release-2026.json";
+const CORRECTED_PSPF_TITLES: ReadonlyArray<readonly [string, string, string]> = [
+  ["PSPF-005", "Documented partnership responsibilities of shared service providers", "Documented shared service responsibilities for partnerships and security service arrangements"],
+  ["PSPF-012", "Chief Information Security Officer capability and clearance", "Chief Information Security Officer capability, experience and clearance"],
+  ["PSPF-013", "Chief Information Security Officer accountability for cyber risks", "CISO accountability to the Accountable Authority for cyber risks and their management"],
+  ["PSPF-014", "Skilled and resourced security practitioners", "Skilled, empowered and resourced security practitioners"],
+  ["PSPF-020", "Periodic review of the security plan", "Annual consideration and at least two-yearly review of the security plan"],
+  ["PSPF-022", "Monitoring the effectiveness of the security plan", "Security plan effectiveness monitoring and continuous improvement"],
+  ["PSPF-025", "Specialist training for high-risk roles", "Security training targeted at specialist and high-risk positions"],
+  ["PSPF-026", "Procedures for responding to security incidents", "Procedures for responding to and managing security incidents"],
+  ["PSPF-028", "Reporting significant security incidents to authorities", "Timely reporting of significant or reportable incidents and referrals to authorities"],
+  ["PSPF-030", "Procedural fairness in security investigations", "Procedural fairness in security investigations, with regard to national security"],
+  ["PSPF-033", "Accountable Authority approval of the annual report", "Accountable Authority verification and approval of the annual protective security report"],
+  ["PSPF-036", "Entity tolerance for security risks", "Accountable Authority tolerance for security risks, documented in the security plan"],
+  ["PSPF-037", "Risk steward for each security risk", "Named risk steward for every security risk or category, including shared risks"],
+  ["PSPF-039", "Accountability for procurement security risks", "Procurement security risk accountability, keeping contract decisions within acceptable risk"],
+  ["PSPF-040", "Security terms in procurement and contracts", "Proportionate security terms in procurement, contracts and outsourced arrangements"],
+  ["PSPF-041", "Provider compliance with PSPF requirements", "Provider, contractor and subcontractor compliance with entity-specified PSPF requirements"],
+  ["PSPF-042", "Provider incident reporting in contract terms", "Contract terms for provider incident reporting and following investigation directions"],
+  ["PSPF-043", "IRAP reports for consuming entities", "IRAP reports for current and prospective consuming entities"],
+  ["PSPF-044", "Monitoring contract security terms over the contract life", "Monitoring and reviewing contract security terms over the contract life"],
+  ["PSPF-047", "Reassessing contractual security risks over time", "Managing, reassessing and adjusting contractual security risks over the contract life"],
+  ["PSPF-051", "Managing insider threat in vetted entities", "Program against insider threat in entities managing security clearance subjects"],
+  ["PSPF-052", "Varying PSPF requirements in exceptional circumstances", "Time-limited variation of PSPF requirements in exceptional circumstances, within risk tolerance"],
+  ["PSPF-054", "Annual review of alternative mitigations", "Annual review and reporting of alternative mitigation decisions"],
+  ["PSPF-055", "Business continuity plan for critical services", "Continuity planning for critical and risk-warranted services and assets"],
+  ["PSPF-057", "Notifying personnel of heightened emergency risk", "Notifying likely impacted personnel of heightened emergency risk"],
+  ["PSPF-058", "Originator control of classification changes", "Originator control of sanitisation and classification changes"],
+  ["PSPF-059", "Assessing the value and sensitivity of information", "Originator assessment of information value, importance and sensitivity"],
+  ["PSPF-062", "Applying minimum protections to classified information", "Applying minimum protections and handling to OFFICIAL and security classified information"],
+  ["PSPF-064", "Marking security caveats as text", "Text-marked security caveats, only alongside a security classification"],
+  ["PSPF-070", "Classified discussions only in approved locations", "Classified discussions and dissemination only in approved locations"],
+  ["PSPF-071", "Operational controls proportional to information value", "Operational controls proportional to information value, importance and sensitivity"],
+  ["PSPF-072", "Register of TOP SECRET and accountable material", "TOP SECRET and accountable material recorded in an auditable register"],
+  ["PSPF-074", "Destroying classified information after retention", "Destroying classified information after retention or at authorised destruction dates"],
+  ["PSPF-075", "Need-to-know access for people outside the entity", "People outside the entity: needed clearance, need-to-know and compliant transfer"],
+  ["PSPF-085", "Risk-based application of ISM controls", "Risk-based application of ISM controls and guidelines"],
+  ["PSPF-086", "Authorisation to operate on accepted residual risk", "Authorisation to operate on accepted residual risk before handling government data"],
+  ["PSPF-087", "Risk-based decisions to authorise systems", "ISM risk-based decisions to authorise new or changed systems"],
+  ["PSPF-090", "Reassessing authorisation after significant change", "Reassessing authorisation after significant system or security environment change"],
+  ["PSPF-094", "Security Zone storage for SECRET technology assets", "Security Zone storage for technology assets at SECRET or below"],
+  ["PSPF-095", "Rack storage for TOP SECRET technology assets", "SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets"],
+  ["PSPF-096", "Certified outsourced facilities for catastrophic-impact assets", "ASIO-T4 certified and ASD accredited outsourced facilities for catastrophic-impact assets"],
+  ["PSPF-108", "Blocking connections to malicious endpoints", "Blocking connections to and from known malicious endpoints"],
+  ["PSPF-109", "IRAP-assessed cloud service providers", "Using only cloud providers IRAP-assessed in the last 24 months"],
+  ["PSPF-110", "Acting on IRAP assessment findings", "Risk-based action on IRAP assessment recommendations and findings"],
+  ["PSPF-111", "Certified hosting for classified information", "Certified hosting for classified information and systems of government significance"],
+  ["PSPF-115", "Receiving and resolving disclosed vulnerabilities", "Receiving, verifying, resolving and reporting disclosed vulnerabilities from any source"],
+  ["PSPF-117", "Identity verification to Level 3 assurance", "Identity verified to at least Level 3 assurance before employment"],
+  ["PSPF-119", "Confirming eligibility to work for the government", "Confirming eligibility to work in Australia and for the government"],
+  ["PSPF-121", "Checks before granting temporary access", "Checks before temporary access, and Negative Vetting 1 for TOP SECRET"],
+  ["PSPF-128", "Third-party agreement before temporary access", "Agreement of other information owners before temporary access"],
+  ["PSPF-130", "Controlling access to supporting technology", "Enabling official information access and controlling access to supporting technology"],
+  ["PSPF-133", "Clearance requirements for caveated information", "Clearance and suitability requirements for caveated information access"],
+  ["PSPF-134", "Individual user identification for classified systems", "Per-user identification, authentication and authorisation for classified system access"],
+  ["PSPF-140", "Use of authorised security vetting agencies", "Security vetting by authorised vetting agencies or, where authorised, the entity"],
+  ["PSPF-145", "Identifying positions that need a clearance", "Identifying positions that need a clearance and documenting the level"],
+  ["PSPF-148", "Business need before a citizenship eligibility waiver", "Exceptional business need and risk assessment before a citizenship eligibility waiver"],
+  ["PSPF-150", "Business need before a checkable background waiver", "Exceptional business need and risk assessment before a checkable background waiver"],
+  ["PSPF-160", "Procedural fairness in clearance decisions", "Procedural fairness in adverse clearance decisions, preserving the national interest"],
+  ["PSPF-165", "Monitoring conditional clearance compliance", "Monitoring conditional clearance compliance and reporting breaches to the vetting agency"],
+  ["PSPF-169", "Annual review of eligibility waivers", "Reviewing eligibility waivers annually, before revalidation and before position transfers"],
+  ["PSPF-177", "Sponsoring entity concerns passed to the vetting agency", "Sponsoring Entity concerns passed to the vetting agency where appropriate"],
+  ["PSPF-180", "Travel briefings for Negative Vetting 2 holders", "International travel briefings for Negative Vetting 2 and higher holders"],
+  ["PSPF-181", "Advising security staff of adverse separations", "Advance advice to security staff of adverse cessations of employment"],
+  ["PSPF-183", "Security information for the receiving entity", "Security information for a receiving entity on request"],
+  ["PSPF-186", "Withdrawing access on separation", "Withdrawing access on separation or transfer"],
+  ["PSPF-188", "Recording clearance status changes on separation", "Recording separation clearance changes and lawful security file transfers between vetting agencies"],
+  ["PSPF-192", "Access controls designed for the highest risk", "Facility access controls designed or modified for the highest risk level"],
+  ["PSPF-193", "Construction to ASIO Technical Notes for public areas", "Construction to ASIO Technical Notes for public areas and unclassified asset storage"],
+  ["PSPF-199", "SCIF accreditation for TOP SECRET systems", "ASD-accredited SCIFs for TOP SECRET systems and compartmented information"],
+  ["PSPF-203", "Containers and secure rooms by business impact", "Containers and secure rooms by Security Zone and business impact"],
+  ["PSPF-205", "Access control for authorised personnel", "Zone access control for authorised personnel, vehicles and equipment"],
+  ["PSPF-207", "Ongoing facility access for people not engaged", "Approved ongoing facility access for people neither engaged nor contracted"],
+  ["PSPF-213", "Cyber risk reporting to the Audit Committee", "Cyber risk reports to each Audit Committee and biannual uplift plan progress"],
+  ["PSPF-215", "Cyber Security Partnership Program participation", "Cyber Security Partnership Program participation and notifying ASD of risk profile changes"],
+  ["PSPF-218", "Withholding temporary access while a waiver is considered", "Withholding temporary or provisional access from waiver subjects until vetting completes"],
+];
+
+test("ADMIN-05 D-46 fix 3b: every corrected PSPF title covers every limb of its paragraph", async () => {
+  const seeds = seedsFrom(await titledSeeds(), PSPF_FILE);
+  assert.equal(CORRECTED_PSPF_TITLES.length, 75);
+  assert.equal(new Set(CORRECTED_PSPF_TITLES.map(([controlNumber]) => controlNumber)).size, 75);
+  const fix3 = new Set(CORRECTED_TITLES.map(([, controlNumber]) => controlNumber));
+  assert.deepEqual(CORRECTED_PSPF_TITLES.filter(([controlNumber]) => fix3.has(controlNumber)), [], "fix 3b corrects only titles fix 3 did not review");
+  const wrong = CORRECTED_PSPF_TITLES
+    .filter(([controlNumber, , title]) => seedFor(seeds, controlNumber).name !== `${controlNumber} — ${title}`)
+    .map(([controlNumber]) => `${controlNumber}: ${seedFor(seeds, controlNumber).name}`);
+  assert.deepEqual(wrong, [], "PSPF controls still seeded under a title that narrows their paragraph");
+});
+
+test("ADMIN-05 D-46 fix 3b: each PSPF title an earlier seed wrote stays listed as superseded", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const file = JSON.parse(await readFile(path.join(appRoot, "src", "bootstrap", "controls", TITLE_FILE), "utf8")) as {
+    supersededTitles?: Record<string, Record<string, string[]>>;
+  };
+  const superseded = file.supersededTitles?.[PSPF_FILE] ?? {};
+  const missing = CORRECTED_PSPF_TITLES
+    .filter(([controlNumber, earlier]) => !(superseded[controlNumber] ?? []).includes(earlier))
+    .map(([controlNumber, earlier]) => `${controlNumber}: ${earlier}`);
+  assert.deepEqual(missing, [], "earlier seeded PSPF titles the seed could not recognise");
+  assert.equal(Object.keys(superseded).length, 21 + 75, "fix 3's 21 and fix 3b's 75 PSPF titles are superseded");
+});
