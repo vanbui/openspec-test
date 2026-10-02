@@ -210,13 +210,11 @@ export function OwnerCombobox({
                   event.preventDefault();
                   setActiveIndex((index) => Math.max(index - 1, 0));
                 }
-                if (event.key === 'Enter' && activeOwner) {
+                if (event.key === 'Enter') {
+                  // Enter chooses the active option, or the first, and never submits the surrounding form (UI-SPEC §13.1, WR-204).
                   event.preventDefault();
-                  choose(activeOwner);
-                }
-                if (event.key === 'Enter' && !activeOwner && query.trim()) {
-                  event.preventDefault();
-                  if (results[0]) choose(results[0]);
+                  const chosen = activeOwner ?? (query.trim() ? results[0] : undefined);
+                  if (chosen) choose(chosen);
                 }
                 if (event.key === 'Tab') setIsOpen(false);
                 if (event.key === 'Escape') {
