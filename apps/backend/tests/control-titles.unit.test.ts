@@ -363,11 +363,45 @@ const CORRECTED_TITLES: ReadonlyArray<readonly [string, string, string, string]>
   ["pspf-release-2026.json", "PSPF-219", "Training on foreign interference and espionage", "Training on foreign interference, espionage, cultivation and exploitation"],
 ];
 
+/*
+ * 10-23 walkthrough fix 3c: an independent audit of all 386 titles found 12 that still drop a limb, threshold or
+ * scope word of their paragraph and 6 an analyst could read two ways. 13 of them are fix 3 or fix 3b titles, so
+ * those controls now carry a third title. Each row is the catalogue, the control, the title it replaces and the
+ * corrected title; the limb each restores is recorded in 10-23-SUMMARY.md.
+ */
+const CORRECTED_3C_TITLES: ReadonlyArray<readonly [string, string, string, string]> = [
+  ["apra-cps-230-2026.json", "CPS-230-21", "Board oversight and approval for operational risk, BCP, tolerances and providers", "Board oversight of operational risk; approval of BCP, tolerances and provider policy"],
+  ["apra-cps-230-2026.json", "CPS-230-34", "Critical operations defined by material harm to customers or the financial system", "Critical operations: material adverse impact on customers or financial system role"],
+  ["apra-cps-230-2026.json", "CPS-230-38", "APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness", "APRA-required tolerance changes, and APRA-set tolerances on heightened risk or material weakness"],
+  ["apra-cps-230-2026.json", "CPS-230-56", "APRA-required review and change of provider arrangements on prudential concerns", "APRA-required review and change of provider arrangements on heightened prudential concerns"],
+  ["apra-cps-230-2026.json", "CPS-230-57", "Partial relief for listed providers on standardised terms or no formal agreement", "Partial relief for Attachment-category providers on standardised terms or no formal agreement"],
+  ["apra-cps-230-2026.json", "CPS-230-58", "APRA written exemption for arrangements outside the paragraph 57 relief", "APRA written partial exemption for arrangements outside the paragraph 57 relief"],
+  ["apra-cps-230-2026.json", "CPS-230-60", "Notifying APRA of critical service agreements and material offshoring, including changes", "Notifying APRA of critical service agreements and material offshoring, including material changes"],
+  ["apra-cps-234-2019.json", "CPS-234-35", "Notifying APRA within 72 hours of material or regulator-notified incidents", "72-hour APRA notice of material incidents or those notified to other regulators"],
+  ["pspf-release-2026.json", "PSPF-077", "Agreement before sharing outside government, except returned external information", "Agreement before sharing outside government, except returning or answering OFFICIAL: Sensitive input"],
+  ["pspf-release-2026.json", "PSPF-112", "Procuring data centre services through the panel", "Procuring data centre services through the Data Centre Facilities Supplies Panel"],
+  ["pspf-release-2026.json", "PSPF-114", "Gateways with an IRAP or ASD assessment in the last 24 months", "Gateways IRAP-assessed, or ASD-assessed if TOP SECRET, in the last 24 months"],
+  ["pspf-release-2026.json", "PSPF-139", "Remote work exposed to foreign government direction", "Remote work exposed to extrajudicial foreign government directions conflicting with Australian law"],
+  ["pspf-release-2026.json", "PSPF-155", "Assessing TOP SECRET-Privileged Access suitability", "Assessing TOP SECRET-Privileged Access eligibility and suitability under its Standard"],
+  ["pspf-release-2026.json", "PSPF-175", "Starting revalidation before clearances lapse", "Starting revalidation early enough to finish before clearances lapse"],
+  ["pspf-release-2026.json", "PSPF-190", "Security plans for new and refurbished facilities", "Security plans for new or under-construction facilities and major refurbishments"],
+  ["pspf-release-2026.json", "PSPF-212", "Post-quantum cryptography on newly procured equipment and software", "Supporting approved post-quantum algorithms in newly procured cryptographic equipment and software"],
+  ["pspf-release-2026.json", "PSPF-213", "Cyber risk reports to each Audit Committee and biannual uplift plan progress", "Reporting cyber risk every Audit Committee meeting; strategy and uplift progress twice-yearly"],
+  ["pspf-release-2026.json", "PSPF-218", "Withholding temporary or provisional access from waiver subjects until vetting completes", "Eligibility waiver granted or pending: no temporary or provisional access until vetted"],
+];
+
+const TITLES_3C = new Map(CORRECTED_3C_TITLES.map(([, controlNumber, , title]) => [controlNumber, title]));
+
+/* The title a control carries now: fix 3c's where it corrected a fix 3 or fix 3b title again. */
+function currentTitle(controlNumber: string, title: string): string {
+  return TITLES_3C.get(controlNumber) ?? title;
+}
+
 test("ADMIN-05 D-46 fix 3: a corrected title covers every limb of its paragraph", async () => {
   const seeds = await titledSeeds();
   assert.equal(CORRECTED_TITLES.length, 72);
   const wrong = CORRECTED_TITLES
-    .filter(([, controlNumber, , title]) => seedFor(seeds, controlNumber).name !== `${controlNumber} — ${title}`)
+    .filter(([, controlNumber, , title]) => seedFor(seeds, controlNumber).name !== `${controlNumber} — ${currentTitle(controlNumber, title)}`)
     .map(([, controlNumber]) => `${controlNumber}: ${seedFor(seeds, controlNumber).name}`);
   assert.deepEqual(wrong, [], "controls still seeded under a title that narrows their paragraph");
 });
@@ -500,6 +534,9 @@ const CORRECTED_PSPF_TITLES: ReadonlyArray<readonly [string, string, string]> = 
   ["PSPF-218", "Withholding temporary access while a waiver is considered", "Withholding temporary or provisional access from waiver subjects until vetting completes"],
 ];
 
+/* The PSPF controls fix 3c corrects that neither fix 3 nor fix 3b had corrected. */
+const PSPF_NEWLY_SUPERSEDED_IN_3C = ["PSPF-112", "PSPF-139", "PSPF-155", "PSPF-175", "PSPF-190"];
+
 test("ADMIN-05 D-46 fix 3b: every corrected PSPF title covers every limb of its paragraph", async () => {
   const seeds = seedsFrom(await titledSeeds(), PSPF_FILE);
   assert.equal(CORRECTED_PSPF_TITLES.length, 75);
@@ -507,7 +544,7 @@ test("ADMIN-05 D-46 fix 3b: every corrected PSPF title covers every limb of its 
   const fix3 = new Set(CORRECTED_TITLES.map(([, controlNumber]) => controlNumber));
   assert.deepEqual(CORRECTED_PSPF_TITLES.filter(([controlNumber]) => fix3.has(controlNumber)), [], "fix 3b corrects only titles fix 3 did not review");
   const wrong = CORRECTED_PSPF_TITLES
-    .filter(([controlNumber, , title]) => seedFor(seeds, controlNumber).name !== `${controlNumber} — ${title}`)
+    .filter(([controlNumber, , title]) => seedFor(seeds, controlNumber).name !== `${controlNumber} — ${currentTitle(controlNumber, title)}`)
     .map(([controlNumber]) => `${controlNumber}: ${seedFor(seeds, controlNumber).name}`);
   assert.deepEqual(wrong, [], "PSPF controls still seeded under a title that narrows their paragraph");
 });
@@ -521,6 +558,49 @@ test("ADMIN-05 D-46 fix 3b: each PSPF title an earlier seed wrote stays listed a
   const missing = CORRECTED_PSPF_TITLES
     .filter(([controlNumber, earlier]) => !(superseded[controlNumber] ?? []).includes(earlier))
     .map(([controlNumber, earlier]) => `${controlNumber}: ${earlier}`);
-  assert.deepEqual(missing, [], "earlier seeded PSPF titles the seed could not recognise");
-  assert.equal(Object.keys(superseded).length, 21 + 75, "fix 3's 21 and fix 3b's 75 PSPF titles are superseded");
+  assert.equal(PSPF_NEWLY_SUPERSEDED_IN_3C.length, 5);
+  assert.equal(
+    Object.keys(superseded).length,
+    21 + 75 + PSPF_NEWLY_SUPERSEDED_IN_3C.length,
+    "fix 3's 21, fix 3b's 75 and fix 3c's 5 further PSPF controls have superseded titles",
+  );
+});
+
+test("ADMIN-05 D-46 fix 3c: each audited title covers every limb its audit names", async () => {
+  const seeds = await titledSeeds();
+  assert.equal(CORRECTED_3C_TITLES.length, 18);
+  assert.equal(TITLES_3C.size, 18);
+  const earlier = new Map([
+    ...CORRECTED_TITLES.map(([, controlNumber, , title]) => [controlNumber, title] as const),
+    ...CORRECTED_PSPF_TITLES.map(([controlNumber, , title]) => [controlNumber, title] as const),
+  ]);
+  const notFromEarlierFix = CORRECTED_3C_TITLES
+    .filter(([, controlNumber, replaced]) => earlier.has(controlNumber) && earlier.get(controlNumber) !== replaced)
+    .map(([, controlNumber, replaced]) => `${controlNumber}: ${replaced}`);
+  assert.deepEqual(notFromEarlierFix, [], "fix 3c replaces the fix 3 or fix 3b title where one exists");
+  assert.deepEqual(
+    CORRECTED_3C_TITLES.filter(([, controlNumber]) => !earlier.has(controlNumber)).map(([, controlNumber]) => controlNumber),
+    PSPF_NEWLY_SUPERSEDED_IN_3C,
+  );
+  const wrong = CORRECTED_3C_TITLES
+    .filter(([sourceFile, controlNumber, , title]) => {
+      const seed = seedFor(seedsFrom(seeds, sourceFile), controlNumber);
+      return seed.name !== `${controlNumber} — ${title}`;
+    })
+    .map(([, controlNumber]) => `${controlNumber}: ${seedFor(seeds, controlNumber).name}`);
+  assert.deepEqual(wrong, [], "controls still seeded under a title the audit found narrowing or ambiguous");
+});
+
+test("ADMIN-05 D-46 fix 3c: each title fix 3c replaces stays listed as superseded, after any earlier one", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const file = JSON.parse(await readFile(path.join(appRoot, "src", "bootstrap", "controls", TITLE_FILE), "utf8")) as {
+    supersededTitles?: Record<string, Record<string, string[]>>;
+  };
+  const missing = CORRECTED_3C_TITLES
+    .filter(([sourceFile, controlNumber, replaced]) => {
+      const listed = file.supersededTitles?.[sourceFile]?.[controlNumber] ?? [];
+      return listed[listed.length - 1] !== replaced;
+    })
+    .map(([, controlNumber, replaced]) => `${controlNumber}: ${replaced}`);
+  assert.deepEqual(missing, [], "titles fix 3c replaced that the seed could not recognise");
 });

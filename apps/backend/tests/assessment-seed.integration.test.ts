@@ -271,23 +271,33 @@ test("ADMIN-05 D-46 a titled APRA or PSPF requirement keeps its reference and it
  * their paragraph. A seeded start replaces a name the seed wrote (an earlier seeded title, or the bare number)
  * with the corrected title, and never an operator's own name for a seeded control.
  */
-const CPS_230_34_EARLIER = "CPS-230-34 — Critical operations defined by adverse customer impact";
-const CPS_230_34_CORRECTED = "CPS-230-34 — Critical operations defined by material harm to customers or the financial system";
+/*
+ * CPS-230-34 has carried three seeded titles: 10-22's, fix 3's and fix 3c's (the audit's correction of "material
+ * harm to … the financial system" to its paragraph's "material adverse impact … or its role in the financial
+ * system"). A database seeded at either earlier fix is renamed.
+ */
+const CPS_230_34_EARLIER = [
+  "CPS-230-34 — Critical operations defined by adverse customer impact",
+  "CPS-230-34 — Critical operations defined by material harm to customers or the financial system",
+];
+const CPS_230_34_CORRECTED = "CPS-230-34 — Critical operations: material adverse impact on customers or financial system role";
 
-test("ADMIN-05 D-46 fix 3: a seeded start renames a control stored under its earlier seeded title, then changes nothing", async () => {
+test("ADMIN-05 D-46 fix 3: a seeded start renames a control stored under any earlier seeded title, then changes nothing", async () => {
   const control = await seededControl("CPS-230-34");
-  await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { name: CPS_230_34_EARLIER } });
-  assert.equal((await seededControl("CPS-230-34")).name, CPS_230_34_EARLIER);
+  for (const earlierName of CPS_230_34_EARLIER) {
+    await strapi.documents("api::csrm-control.csrm-control").update({ documentId: control.documentId, data: { name: earlierName } });
+    assert.equal((await seededControl("CPS-230-34")).name, earlierName);
 
-  await seedCsrmData(strapi as never);
-  const renamed = await seededControl("CPS-230-34");
-  assert.equal(renamed.documentId, control.documentId);
-  assert.equal(renamed.name, CPS_230_34_CORRECTED, "the seed replaces the title it wrote earlier");
-  assert.equal(renamed.description, control.description, "the paragraph stays the description");
-  await seedCsrmData(strapi as never);
-  const unchanged = await seededControl("CPS-230-34");
-  assert.equal(unchanged.name, CPS_230_34_CORRECTED);
-  assert.equal(String(unchanged.updatedAt), String(renamed.updatedAt), "a further seeded start leaves CPS-230-34 untouched");
+    await seedCsrmData(strapi as never);
+    const renamed = await seededControl("CPS-230-34");
+    assert.equal(renamed.documentId, control.documentId);
+    assert.equal(renamed.name, CPS_230_34_CORRECTED, `the seed replaces the title it wrote earlier: ${earlierName}`);
+    assert.equal(renamed.description, control.description, "the paragraph stays the description");
+    await seedCsrmData(strapi as never);
+    const unchanged = await seededControl("CPS-230-34");
+    assert.equal(unchanged.name, CPS_230_34_CORRECTED);
+    assert.equal(String(unchanged.updatedAt), String(renamed.updatedAt), "a further seeded start leaves CPS-230-34 untouched");
+  }
   assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
 });
 
