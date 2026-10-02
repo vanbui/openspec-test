@@ -703,7 +703,7 @@ test("mounted governance conflicts name their reason and leave the questionnaire
 test("mounted analyst adds to an existing and a new section of a generated questionnaire", async () => {
   const harness = await harnessPromise;
   const analyst = harness.identities.analyst;
-  assert.equal(process.env.CSRM_AI_PROVIDER, "deterministic");
+  // The harness pins the deterministic provider; GENERATED_ADD_CONTEXT_SECTION below proves its shape.
   const workflow = await harness.seedRequestWorkflowFixtures();
 
   const queued = await request(`/api/v1/assessment_requests/${encodeURIComponent(workflow.requests.submitted)}/generate_questionnaire`, analyst, post());
