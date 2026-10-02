@@ -848,6 +848,44 @@ test('picker lists pass axe while open at 1440 and 375', async ({ page }) => {
  */
 const overflowSearch = 'data';
 
+/*
+ * The one accepted axe exception (10-23 Fix 8 addendum). When a picker list overflows, axe reports
+ * `scrollable-region-focusable` on the popover content, the element that scrolls, because nothing in it takes
+ * focus. That is the ARIA APG combobox pattern with a listbox popup: focus stays on the combobox and the options
+ * are reached with aria-activedescendant, each scrolled into view as it becomes active. A tabbable popup container
+ * would add a Tab stop the pattern does not have and break its Tab behaviour, so it is not added. The pilot checked
+ * WCAG 2.1.1 directly (ArrowDown reaches all ten options, each scrolled into view; Escape closes the list; Discard
+ * returns focus to Add mitigation control), and the test below proves the same keyboard path. Only that rule, and
+ * only on the open popover content that holds the listbox, is set aside: any other node it reports, and every other
+ * rule, still counts.
+ */
+type AxeViolation = AxeResults['violations'][number];
+
+async function withoutAcceptedPopupScroll(page: Page, violations: readonly AxeViolation[]): Promise<{ remaining: AxeViolation[]; accepted: number }> {
+  const remaining: AxeViolation[] = [];
+  let accepted = 0;
+  for (const violation of violations) {
+    if (violation.id !== 'scrollable-region-focusable') {
+      remaining.push(violation);
+      continue;
+    }
+    const nodes: AxeViolation['nodes'] = [];
+    for (const node of violation.nodes) {
+      const [selector] = node.target;
+      const isOpenListPopup = node.target.length === 1 && typeof selector === 'string' && await page.evaluate((target) => {
+        const element = document.querySelector(target);
+        return element !== null
+          && element.matches('[data-slot="popover-content"][data-state="open"]')
+          && element.querySelector('[role="listbox"]') !== null;
+      }, selector);
+      if (isOpenListPopup) accepted += 1;
+      else nodes.push(node);
+    }
+    if (nodes.length > 0) remaining.push({ ...violation, nodes });
+  }
+  return { remaining, accepted };
+}
+
 test('an overflowing picker list passes axe while open at 1440 and 375', async ({ page }) => {
   test.setTimeout(300_000);
   await attachCspCollector(page);
@@ -874,17 +912,44 @@ test('an overflowing picker list passes axe while open at 1440 and 375', async (
     expect(box.content, `${label}: the list overflows its popover (${box.content}px in ${box.height}px)`).toBeGreaterThan(box.height);
 
     const { violations } = await scanWithBestPractice(page);
-    const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
-    expect(blocking, `${label} with its list open has no serious or critical axe violation (${summarise(violations)})`).toEqual([]);
+    const { remaining, accepted } = await withoutAcceptedPopupScroll(page, violations);
+    const blocking = remaining.filter(({ impact }) => impact === 'serious' || impact === 'critical');
+    expect(blocking, `${label} with its list open has no serious or critical axe violation beyond the accepted popup scroll (${summarise(violations)})`).toEqual([]);
+    expect(accepted, `${label}: the accepted finding is the one open popover`).toBeLessThanOrEqual(1);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       `${label} has no horizontal page overflow`,
     ).toBe(true);
-    results.push(`${label}: ${box.content}px in ${box.height}px; ${violations.length === 0 ? 'no violations' : summarise(violations)}`);
+
+    // WCAG 2.1.1 through the APG pattern: with focus on the combobox, ArrowDown reaches the last option.
+    await expect(combobox, `${label}: focus is on the combobox`).toBeFocused();
+    const count = await options.count();
+    for (let press = 0; press < count; press += 1) await combobox.press('ArrowDown');
+    const last = options.last();
+    await expect(combobox, `${label}: ArrowDown makes the last option active`).toHaveAttribute('aria-activedescendant', (await last.getAttribute('id'))!);
+    await expect(last, `${label}: the last option is the active one`).toHaveAttribute('aria-selected', 'true');
+    await expect(combobox, `${label}: focus stays on the combobox`).toBeFocused();
+    const placement = () => last.evaluate((option) => {
+      const scroller = option.closest('[data-slot="popover-content"]');
+      if (!scroller) return { inView: false, scrollTop: 0, optionBottom: 0, scrollerBottom: 0 };
+      const optionBox = option.getBoundingClientRect();
+      const scrollerBox = scroller.getBoundingClientRect();
+      return {
+        inView: optionBox.top >= scrollerBox.top - 1 && optionBox.bottom <= scrollerBox.bottom + 1,
+        scrollTop: Math.round(scroller.scrollTop),
+        optionBottom: Math.round(optionBox.bottom),
+        scrollerBottom: Math.round(scrollerBox.bottom),
+      };
+    });
+    await expect.poll(async () => (await placement()).inView, `${label}: the last option is scrolled into view inside the list`).toBe(true);
+    const shown = await placement();
+    expect(shown.scrollTop, `${label}: the list scrolled to show the last option`).toBeGreaterThan(0);
+    results.push(`${label}: ${box.content}px in ${box.height}px; option ${count} active and in view (scrolled ${shown.scrollTop}px, bottom ${shown.optionBottom} of ${shown.scrollerBottom}); accepted ${accepted}; ${remaining.length === 0 ? 'no other violations' : summarise(remaining)}`);
 
     await combobox.press('Escape');
     await expect(openPopups(page).getByRole('listbox'), `${label}: Escape closes the list without choosing`).toHaveCount(0);
     await addForm.getByRole('button', { name: 'Discard mitigation changes' }).click();
+    await expect(page.getByRole('button', { name: 'Add mitigation control' }), `${label}: Discard returns focus to Add mitigation control`).toBeFocused();
   }
   test.info().annotations.push({ type: 'overflowing picker scans', description: results.join('; ') });
   console.log(`accessibility: overflowing picker scans: ${results.join('; ')}`);
