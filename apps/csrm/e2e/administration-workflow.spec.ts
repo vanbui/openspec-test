@@ -183,6 +183,22 @@ test.describe.serial('@administration-controls Control administration', () => {
     await expectFocusVisible(page.getByRole('link', { name: 'Create Control' }));
     await expectNoSeriousAxeViolations(page);
 
+    // ADMIN05_CONTROL_LABELS: each control number shows once in its row, and APP-11 reads its complete
+    // title (D-36, D-44). 5.1's name is asserted by plan 10-22, which loads the Annex A names (D-46).
+    const controlsTable = page.getByRole('table', { name: 'Controls results', exact: true });
+    const controlRow = (controlNumber: string): Locator => controlsTable.locator('tbody tr')
+      .filter({ has: page.locator('td:first-child').getByText(controlNumber, { exact: true }) });
+    await page.goto('/app/admin/controls?q=APP-11');
+    const privacyRow = controlRow('APP-11');
+    await expect(privacyRow, 'ADMIN05_CONTROL_LABELS: APP-11 is found').toHaveCount(1);
+    await expect(privacyRow.getByRole('cell').nth(1), 'ADMIN05_CONTROL_LABELS: APP-11 reads its complete title').toHaveText('Security of personal information');
+    await expect(privacyRow.getByText('Security of personal information', { exact: true }), 'ADMIN05_CONTROL_LABELS: the title shows once').toHaveCount(1);
+    await expect(privacyRow.getByRole('cell').filter({ hasText: 'APP-11' }), 'ADMIN05_CONTROL_LABELS: APP-11 shows once in its row').toHaveCount(1);
+    await page.goto('/app/admin/controls?q=5.1');
+    const annexRow = controlRow('5.1');
+    await expect(annexRow, 'ADMIN05_CONTROL_LABELS: 5.1 is found').toHaveCount(1);
+    await expect(annexRow.getByRole('cell', { name: '5.1', exact: true }), 'ADMIN05_CONTROL_LABELS: 5.1 shows once in its row').toHaveCount(1);
+
     const controlNumber = `ZZ-${suffix}`;
     await page.getByRole('link', { name: 'Create Control' }).click();
     await expect(page).toHaveURL(/\/app\/admin\/controls\/new$/);

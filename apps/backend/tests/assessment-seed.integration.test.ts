@@ -99,6 +99,40 @@ after(async () => {
   }
 });
 
+async function seededControl(controlNumber: string): Promise<Document> {
+  const [control] = await findBy("api::csrm-control.csrm-control", { controlNumber: { $eq: controlNumber } });
+  assert.ok(control, `${controlNumber} is seeded`);
+  return control;
+}
+
+/*
+ * D-36, D-44 (UI-SPEC §16.3): the Australian Privacy Principles read as Schedule 1 titles them, in sentence
+ * case, and the fragment of each truncated title no longer opens its legal text (the seed copies legalText
+ * into the description). APP-7's text opens with its own heading, which is not a leak.
+ */
+test("ADMIN-05 the seeded Privacy Principles carry their complete titles and legal text", async () => {
+  assert.equal((await seededControl("APP-1")).name, "APP-1 — Open and transparent management of personal information");
+  assert.equal((await seededControl("APP-2")).name, "APP-2 — Anonymity and pseudonymity");
+  const app11 = await seededControl("APP-11");
+  assert.equal(app11.name, "APP-11 — Security of personal information");
+  assert.ok(String(app11.description).startsWith("11.1 If an APP entity holds"), String(app11.description).slice(0, 60));
+  assert.ok(String((await seededControl("APP-7")).description).startsWith("Direct marketing 7.1"));
+});
+
+test("ADMIN-05 a seeded start corrects a Privacy Principle an earlier seed stored truncated", async () => {
+  const app11 = await seededControl("APP-11");
+  await strapi.documents("api::csrm-control.csrm-control").update({
+    documentId: app11.documentId,
+    data: { name: "APP-11 — security of personal", description: "information 11.1 If an APP entity holds personal information" },
+  });
+  await seedCsrmData(strapi as never);
+  const corrected = await seededControl("APP-11");
+  assert.equal(corrected.documentId, app11.documentId);
+  assert.equal(corrected.name, "APP-11 — Security of personal information");
+  assert.ok(String(corrected.description).startsWith("11.1 If an APP entity holds"));
+  assert.equal(await strapi.documents("api::csrm-control.csrm-control").count(), 2_646);
+});
+
 test("assessment workflow RiskType seed requires every exact development gate", async () => {
   for (const values of [
     { nodeEnv: "production", environment: "development", identity: "true", seed: "true" },

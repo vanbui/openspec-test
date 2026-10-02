@@ -45,7 +45,7 @@ type AdministrationFormProps = {
   kind: 'risk-types' | 'controls' | 'information-systems' | 'information-assets';
   mode: 'create' | 'edit';
   documentId?: string;
-  initialValues?: { name: string; description: string | null; applicableControls?: readonly string[]; owner?: string | null; ownerName?: string | null; businessCriticality?: string | null };
+  initialValues?: { name: string; description: string | null; applicableControls?: readonly string[]; owner?: string | null; ownerName?: string | null; businessCriticality?: string | null; controlNumber?: string; framework?: string };
   initialControlOptions?: readonly { documentId: string; label: string }[];
   createAction?: (input: unknown) => Promise<unknown>;
   updateAction?: (input: unknown) => Promise<unknown>;
@@ -174,6 +174,49 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     } });
     expect(screen.queryByLabelText(/source data/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  /*
+   * D-36 (UI-SPEC §16.2): the controls list shows each control number once. The Name column carries the
+   * title part only, `Not provided` for an untitled control; the mobile card and the edit page title use
+   * the control label.
+   */
+  it('UAT-007 shows each control number once in the controls list, its mobile card and the edit title', async () => {
+    const { AdministrationForm, AdministrationWorkspace } = await loadWorkspace();
+    const privacy = {
+      documentId: 'control-app-11', controlNumber: 'APP-11', name: 'APP-11 — Security of personal information',
+      description: '11.1 If an APP entity holds personal information', framework: 'Privacy Act 1988 (Cth)',
+      controlType: null, controlReference: 'Schedule 1, APP 11',
+    };
+    const untitled = {
+      documentId: 'control-5-1', controlNumber: '5.1', name: '5.1', description: null,
+      framework: 'ISO/IEC 27001 Information security management systems — Annex A', controlType: null, controlReference: null,
+    };
+    const view = render(<AdministrationWorkspace
+      {...baseWorkspaceProps}
+      kind="controls"
+      items={[privacy, untitled]}
+      pagination={{ page: 1, pageSize: 25, pageCount: 1, total: 2 }}
+      query={{ q: '', framework: '', controlType: '', sort: 'controlNumber:asc', page: 1, pageSize: 25 }}
+    />);
+
+    const table = screen.getByRole('table', { name: 'Controls results' });
+    const cellsOf = (number: string) => within(within(table).getAllByRole('row').find((row) => within(row).queryAllByRole('cell')[0]?.textContent === number)!)
+      .getAllByRole('cell').map((cell) => cell.textContent);
+    expect(cellsOf('APP-11').slice(0, 2)).toEqual(['APP-11', 'Security of personal information']);
+    expect(cellsOf('5.1').slice(0, 2)).toEqual(['5.1', 'Not provided']);
+    expect(cellsOf('5.1').filter((text) => text === '5.1')).toHaveLength(1);
+
+    const cards = screen.getByRole('list', { name: 'Controls results' });
+    expect(within(cards).getByRole('link', { name: 'APP-11 · Security of personal information' })).toBeInTheDocument();
+    expect(within(cards).getByRole('link', { name: '5.1 · ISO/IEC 27001 Information security management systems — Annex A' })).toBeInTheDocument();
+    expect(cards.textContent).not.toContain('APP-11 · APP-11');
+    view.unmount();
+
+    render(<AdministrationForm kind="controls" mode="edit" documentId="control-app-11" initialValues={privacy} updateAction={vi.fn()} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'APP-11 · Security of personal information' })).toBeInTheDocument();
+    // The Name field holds the stored value unchanged: it is the data being edited.
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('APP-11 — Security of personal information');
   });
 
   /*
