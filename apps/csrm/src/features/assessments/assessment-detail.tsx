@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { canRevertRequestToDraft, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
+import { canRevertRequestToDraft, questionnaireGenerationAction, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
 import { RequestContextDetails } from '@/features/requests/request-context-details';
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
 import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
@@ -63,7 +63,11 @@ function SafeDetailState({ refusal = 'record', state }: { refusal?: AnalystRefus
   );
 }
 
-export function AssessmentDetail({ assessmentHref, questionnaireHref, refusal, request, state }: { assessmentHref?: string; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
+/**
+ * `analystChangesSinceGeneration` is the served count from the analyst questionnaire summary (D-16), read by
+ * the page on the server so this client view receives a number; `null` or absent when no count was served.
+ */
+export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref, questionnaireHref, refusal, request, state }: { analystChangesSinceGeneration?: number | null; assessmentHref?: string; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
   if (state !== 'populated' || !request) return <SafeDetailState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
   // Direct component callers from older route tests do not carry the server projection.
   // The production route always passes the discriminated relationship state.
@@ -87,7 +91,8 @@ export function AssessmentDetail({ assessmentHref, questionnaireHref, refusal, r
         {/* Offered only while Strapi's rule allows it: submitted, with no questionnaire and no assessment (D-22). */}
         {canRevertRequestToDraft(request) ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <RequestContextDetails request={request} />
-        {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob hasExistingQuestionnaire={questionnaire.availability === 'available'} requestId={request.documentId} /> : null}
+        {/* Generate, Replace or neither, from the served questionnaire relation (D-08, D-09, UI-SPEC §3.1). */}
+        {request.requestStatus === 'submitted' ? <QuestionnaireGenerationJob action={questionnaireGenerationAction(questionnaire)} analystChangesSinceGeneration={analystChangesSinceGeneration ?? null} requestId={request.documentId} /> : null}
         {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} /> : null}
       </div>
     </>

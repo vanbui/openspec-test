@@ -3,6 +3,8 @@ import { cache, Suspense } from 'react';
 import { notFound } from 'next/navigation';
 
 import { AssessmentDetail, AssessmentDetailSkeleton } from '@/features/assessments/assessment-detail';
+import { getQuestionnaire } from '@/features/questionnaires/questionnaire-service';
+import { questionnaireGenerationAction, type CsrmAssessmentRequest } from '@/features/requests/request-domain';
 import { getRequest } from '@/features/requests/request-service';
 import { canViewerReviewAssessments } from '@/lib/capabilities/analyst-review-gate';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
@@ -39,6 +41,7 @@ export async function AssessmentRequestDetailContent({ params }: AssessmentReque
     ? `/app/review/questionnaires/${encodeURIComponent(relationships.questionnaire.documentId)}` : undefined;
   const assessmentHref = relationships?.assessment.availability === 'available'
     ? `/app/review/assessments/${encodeURIComponent(relationships.assessment.documentId)}` : undefined;
+  const analystChangesSinceGeneration = await readAnalystChangesSinceGeneration(request);
   /*
    * A request with no linked questionnaire is still a request the analyst is
    * authorised to review and, while it is submitted, to return to draft — it is
@@ -46,7 +49,21 @@ export async function AssessmentRequestDetailContent({ params }: AssessmentReque
    * deliberate treatment for the missing questionnaire, so the empty state here
    * is reserved for a missing request rather than a missing questionnaire.
    */
-  return <AssessmentDetail assessmentHref={assessmentHref} questionnaireHref={questionnaireHref} request={request} state="populated" />;
+  return <AssessmentDetail analystChangesSinceGeneration={analystChangesSinceGeneration} assessmentHref={assessmentHref} questionnaireHref={questionnaireHref} request={request} state="populated" />;
+}
+
+/*
+ * The Replace confirmation states how many analyst changes a replacement discards (D-08, D-16). The count is
+ * on the analyst questionnaire summary, so it is read here, on the server, only when the hub offers Replace:
+ * the request is submitted and its questionnaire is still in analyst review. A failed read or a summary
+ * without the count gives `null`, and the dialog then says it cannot count the changes.
+ */
+async function readAnalystChangesSinceGeneration(request: CsrmAssessmentRequest): Promise<number | null> {
+  const questionnaire = request.relationships?.questionnaire;
+  if (request.requestStatus !== 'submitted' || !questionnaire || questionnaire.availability !== 'available') return null;
+  if (questionnaireGenerationAction(questionnaire) !== 'replace') return null;
+  const summary = await getQuestionnaire(questionnaire.documentId);
+  return summary.data?.revision?.analystChangesSinceGeneration ?? null;
 }
 
 export default function AssessmentRequestDetailPage(props: AssessmentRequestDetailPageProps) {

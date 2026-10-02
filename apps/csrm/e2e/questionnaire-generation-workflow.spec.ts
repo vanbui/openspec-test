@@ -36,7 +36,7 @@ async function dismissToasts(page: Page): Promise<void> {
 }
 
 async function attachReplacementDiagnostic(page: Page, testInfo: TestInfo, browserEvents: string[]): Promise<void> {
-  const replacementDialog = page.getByRole('alertdialog', { name: 'Replace the unanswered questionnaire?' });
+  const replacementDialog = page.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
   const review = page.getByRole('link', { name: 'Review generated questionnaire' });
   const lifecycleText = await page.locator('text=/Questionnaire generation/').allTextContents().catch(() => []);
   const diagnostic = {
@@ -145,14 +145,14 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
     if (message.type() === 'error' || message.type() === 'warning') browserEvents.push(`console:${message.type()}:${message.text()}`);
   });
   page.on('pageerror', (error) => browserEvents.push(`pageerror:${error.message}`));
-  await test.step('return to the request and open replacement acknowledgement', async () => {
+  await test.step('return to the request and open the replacement confirmation', async () => {
     /*
      * A history restore retains the client island from before the first job and
-     * can therefore present a stale `hasExistingQuestionnaire` prop. Reload the
-     * authoritative request route before opening the acknowledgement, rather
-     * than deliberately starting an unacknowledged job to make the dialog
-     * appear. Strapi still owns the answered-questionnaire and eligibility
-     * checks once the acknowledged action is submitted.
+     * can therefore present a stale `action` prop. Reload the authoritative
+     * request route before opening the confirmation, rather than deliberately
+     * starting an unacknowledged job to make the dialog appear. Strapi still
+     * owns the answered, released and eligibility checks once the acknowledged
+     * action is submitted.
      */
     await page.goto(requestUrl);
     await expect(page).toHaveURL(/\/app\/review\/requests\/[^/]+$/);
@@ -160,12 +160,19 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
     await expect(page.getByText('Draft generation can begin only after the linked questionnaire is submitted.', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Generate assessment draft' })).toHaveCount(0);
     await dismissToasts(page);
-    await page.getByRole('button', { name: 'Generate questionnaire' }).click();
-    await expect(page.getByRole('alertdialog', { name: 'Replace the unanswered questionnaire?' })).toBeVisible();
+    // E7 (D-08): a questionnaire in analyst review is replaced, never generated over.
+    await expect(page.getByRole('button', { name: 'Generate questionnaire' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Replace questionnaire' }).click();
+    const replacement = page.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
+    await expect(replacement).toBeVisible();
+    // The two questions added in QUES08_ADD_TO_GENERATED_SECTIONS are the analyst changes a replacement discards.
+    await expect(replacement).toContainText('discarding the 2 changes analysts made to its questions since it was generated');
+    await expect(replacement).toContainText('Requestor answers are never replaced.');
+    await expect(replacement.getByRole('button', { name: 'Keep this questionnaire' })).toBeVisible();
   });
   await test.step('confirm replacement and require a new reviewable completion', async () => {
-    const replacement = page.getByRole('alertdialog', { name: 'Replace the unanswered questionnaire?' });
-    await replacement.getByRole('button', { name: 'Replace unanswered questionnaire' }).press('Enter');
+    const replacement = page.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
+    await replacement.getByRole('button', { name: 'Replace questionnaire' }).press('Enter');
     try {
       await expect(page.getByText('Questionnaire generation is ready for review').first()).toBeVisible({ timeout: 45_000 });
       await expect(page.getByRole('link', { name: 'Review generated questionnaire' })).toHaveAttribute('href', /^\/app\/review\/questionnaires\/[^/]+$/);

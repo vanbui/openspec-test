@@ -142,6 +142,20 @@ export function canRevertRequestToDraft(request: Pick<CsrmAssessmentRequest, 're
   return relationships.questionnaire.availability === 'absent' && relationships.assessment.availability === 'absent';
 }
 
+export type QuestionnaireGenerationAction = 'generate' | 'replace' | 'released';
+
+/**
+ * Which generation action the analyst hub offers for a submitted request (D-08, D-09, D-22), read from the
+ * served questionnaire relation alone. With no questionnaire the analyst generates one; a questionnaire still
+ * in analyst review may be replaced. Any other questionnaire that exists (released, submitted, not open to
+ * this analyst, or served without a state) is never offered for replacement, because Strapi would refuse it.
+ * Strapi still decides.
+ */
+export function questionnaireGenerationAction(relation: RequestQuestionnaireRelation): QuestionnaireGenerationAction {
+  if (relation.availability === 'absent') return 'generate';
+  return relation.availability === 'available' && relation.state === 'analyst-review' ? 'replace' : 'released';
+}
+
 export interface RequestPagination {
   page: number;
   pageSize: number;

@@ -18,7 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 export type ConfirmDialogProps = {
   cancelLabel?: string;
-  description: string;
+  /** Usually a sentence; a node when part of it needs its own treatment, such as a count in tabular figures. */
+  description: ReactNode;
   confirmLabel: string;
   pendingLabel: string;
   confirmVariant: ComponentProps<typeof Button>['variant'];
