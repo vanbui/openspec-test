@@ -229,8 +229,9 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
     router.refresh();
   }
 
-  async function release() { const result = await releaseQuestionnaireAction({ documentId: questionnaire.documentId }); if (!result.ok) { setEditorError(result.formError); throw new Error('Release failed'); } router.refresh(); }
-  async function returnToReview(reason?: string) { const result = await returnQuestionnaireToAnalystReviewAction({ documentId: questionnaire.documentId, reason }); if (!result.ok) { setEditorError(result.formError); throw new Error('Return failed'); } router.refresh(); }
+  // Release and return show a refusal only inside their own dialog (D-06), and only for the latest attempt (WR-308).
+  async function release() { setEditorError(null); const result = await releaseQuestionnaireAction({ documentId: questionnaire.documentId }); if (!result.ok) { setEditorError(result.formError); throw new Error('Release failed'); } router.refresh(); }
+  async function returnToReview(reason?: string) { setEditorError(null); const result = await returnQuestionnaireToAnalystReviewAction({ documentId: questionnaire.documentId, reason }); if (!result.ok) { setEditorError(result.formError); throw new Error('Return failed'); } router.refresh(); }
   async function remove(question: QuestionnaireQuestion, siblings: readonly QuestionnaireQuestion[]) {
     const id = questionId(question);
     const index = siblings.findIndex((sibling) => questionId(sibling) === id);
@@ -290,12 +291,10 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
 
   return <section aria-label="Questionnaire governance" className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4" ref={containerRef}>
     <div className="flex items-start gap-3"><ClipboardPenLine aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" /><div><h2 className="text-heading-sm text-foreground">{inAnalystReview ? 'Analyst review' : 'Released to Requestor'}</h2><p className="text-sm text-muted-foreground">{panelDescription}</p></div></div>
-    {/* Release and return only: a question form shows its own errors beside Save question (D-06). */}
-    {editorError ? <p className="text-sm text-destructive" role="alert">{editorError}</p> : null}
     {cleared.length ? <div aria-live="polite" className="rounded-lg border border-border p-3"><p className="font-medium">Answers cleared by this revision</p><ul className="mt-2 list-disc pl-5 text-sm">{cleared.map((answer) => <li key={`${answer.questionKey}-${answer.explanation}`}><span className="font-medium">{questionTextFor(answer.questionKey)}</span>: {answer.explanation}</li>)}</ul><Button className="mt-2" data-print="hidden" onClick={() => setCleared([])} size="sm" type="button" variant="outline">Dismiss notice</Button></div> : null}
     {inAnalystReview ? <>
       <div className="grid justify-items-start gap-2">
-        <ConfirmDialog confirmLabel="Release questionnaire" confirmVariant="default" description="The Requestor can view this questionnaire after release." errorMessage={editorError} onConfirm={release} pendingLabel="Releasing questionnaire…" title="Release this questionnaire?" trigger={<Button data-print="hidden" disabled={formOpen} type="button"><CheckCircle2 aria-hidden="true" />Release questionnaire</Button>} />
+        <ConfirmDialog confirmLabel="Release questionnaire" confirmVariant="default" description="The Requestor can view this questionnaire after release." errorMessage={editorError} onConfirm={release} onDismiss={() => setEditorError(null)} pendingLabel="Releasing questionnaire…" title="Release this questionnaire?" trigger={<Button data-print="hidden" disabled={formOpen} type="button"><CheckCircle2 aria-hidden="true" />Release questionnaire</Button>} />
         {formOpen ? <p className="text-xs text-foreground-secondary">Save or discard the open question before you release the questionnaire.</p> : null}
       </div>
       <div className="grid gap-3">
@@ -332,7 +331,7 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
           </div>;
         })}
       </div>
-    </> : returnable ? <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={editorError} onConfirm={returnToReview} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} /> : null}
+    </> : returnable ? <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={editorError} onConfirm={returnToReview} onDismiss={() => setEditorError(null)} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} /> : null}
     <p aria-live="polite" className="sr-only">{announcement}</p>
   </section>;
 }
