@@ -785,6 +785,56 @@ All runs had no dev server running (`netstat` printed nothing). Logs are in the 
 
 The full gate reruns in the next agent.
 
+## Phase gate (second run, after the walkthrough fixes)
+
+The full gate ran again at `5ef0f88` (branch `post-demo`), after the last walkthrough fix and its record. That commit includes all six fixes: fix 2 (`7e07dba`, `a31ae03`, `f60fd2f`); fixes 3 and 3b (`ee24167`, `0797c33`, `ac34d19`, `5a4c544`, `a99efae`, `feac941`, `81b8343`); and fixes 1, 4, 5 and 6 (`de7ab44` to `5ef0f88`).
+
+Conditions:
+- Each command ran on its own from the repository root under Node 24.19.0 and pnpm 11.24.0.
+- Ports 1337 and 3000 were free (`netstat` printed nothing), and no dev server was started.
+- The Strapi suite and Playwright never ran at the same time, and the seed verification ran after Playwright.
+- Started 2026-10-02T16:33:37Z. Logs are in the session scratchpad (`p10-23-gate2-<name>.log`, each with `time` and `EXIT=` appended).
+
+| # | Command | Passed | Failed | Skipped | Flaky | Duration | Exit |
+|---|---|---|---|---|---|---|---|
+| 1 | `pnpm --dir apps/backend test` (full Strapi suite, node:test, serial) | 647 | 0 | 0 (cancelled 0, todo 0) | n/a | 900 s wall (node:test 892.0 s) | 0 |
+| 2 | `pnpm --dir apps/csrm test` (full web suite, Vitest, 130 files) | 2,768 | 0 | 0 | n/a | 40.7 s wall (Vitest 39.5 s) | 0 |
+| 3 | `pnpm --dir apps/csrm typecheck` (`next typegen && tsc --noEmit`) | clean | 0 errors | n/a | n/a | 5.2 s | 0 |
+| 4 | `pnpm --dir apps/csrm lint` (`next typegen && tsc --noEmit`) | clean | 0 errors | n/a | n/a | 3.9 s | 0 |
+| 5a | `pnpm --dir apps/csrm api:check` (`api:generate` then `git diff --exit-code` on `schema.d.ts`) | clean (no diff) | n/a | n/a | n/a | 1.8 s | 0 |
+| 5b | `git update-index --refresh -- apps/csrm/src/lib/api/generated/schema.d.ts` | `schema.d.ts` refreshed (not listed afterwards) | n/a | n/a | n/a | 0.1 s | 1, operator files only (as note 5b of the first run) |
+| 6 | `pnpm --dir apps/csrm test:e2e` (full Playwright suite, production build, 1 worker) | 86: desktop 82, mobile 4 | 0 | 0 | 0 | 12.7 min (763 s wall) | 0 |
+| 7 | `pnpm verify:csrm-seed` (extra check, restored by fix 3: the static catalogue verifier, then the runtime verifier on a disposable SQLite) | both passed | 0 | n/a | n/a | 26.7 s | 0 |
+
+Notes:
+- **No EPERM rerun.** The web log has no `EPERM: rename`, so no file was rerun alone.
+- **5b.** As in the first run, the refresh prints `apps/backend/types/generated/components.d.ts: needs update` and `apps/backend/types/generated/contentTypes.d.ts: needs update` and exits 1. Those are the operator's empty-diff line-ending items, left alone. `api:check` exits 0. Its only other output is git's `LF will be replaced by CRLF` notice on `schema.d.ts`.
+- **Playwright.**
+  - Flaky count 0: `retries` is 0 outside CI, and the run printed only `86 passed (12.7m)`, with no `failed`, `flaky` or `skipped` line and no retry.
+  - Per project: 82 `ok` lines for `[desktop]` and 4 for `[mobile]`, with 0 `not ok`.
+  - Next logged `⨯ Error: The destination stream closed early.` 46 times (191 in the first run). No test asserts on it, and it is the benign navigation-abandon noise described in the first run's notes.
+- **Seed verification output.** `IdamBox CSRM seed catalogue verification passed` and then `IdamBox CSRM runtime seed verification passed`. The runtime verifier's second boot logged `IdamBox CSRM control seed complete: 2646 controls (0 created, 1 updated, 2645 unchanged)`, its own stale-control fixture being reconciled.
+- **Tree.** After every command, including Playwright and the seed verification, `git status --short` showed only the three operator items. No run changed a tracked file, and nothing was restored (D-48).
+
+**Static checks (second run)**, at `5ef0f88` (`p10-23-gate2-static.log`). Each output is quoted between brackets.
+1. **Content types unchanged since `5ea2b77` (D-01).** `git diff --name-only 5ea2b77..HEAD -- 'apps/backend/src/api/*/content-types/*'` printed `[]`.
+2. **Catalogue copies byte-identical (D-02).** `cmp docs/references/idambox-csrm-role-function-api-catalogue.json apps/backend/src/bootstrap/idambox-csrm-role-function-api-catalogue.json` printed `[]` (exit 0).
+3. **No Keycloak file changed.** `git diff --name-only 5ea2b77..HEAD | grep -i keycloak` printed `[]`, over 232 changed files (221 in the first run).
+4. **No `CSRM_AI_` source line changed.** `git diff 5ea2b77..HEAD -- apps scripts package.json turbo.json pnpm-workspace.yaml | grep '^[+-].*CSRM_AI_'` printed `[]`.
+
+**Comparison with the first run (`eed7ed0`).**
+
+| Command | First run | Second run | Change, and where it comes from |
+|---|---|---|---|
+| Strapi | 630/630, 789 s | 647/647, 900 s | +17 tests. Fix 2 added `control-library-bounds.unit.test.ts`, plus cases in `administration.unit`, `administration.integration` and `assessment-seed.integration`. Fixes 3 and 3b added cases in `control-titles.unit` and `assessment-seed.integration`. Fixes 1, 4, 5 and 6 changed no Strapi test. |
+| Web | 2,745/2,745, 129 files, 39 s | 2,768/2,768, 130 files, 40.7 s | +23 tests and +1 file. The new file is `request-domain.test.ts` (fix 4, 7 tests). Fix 1 added cases in `assessment-domain.test.ts` and `assessment-editor.test.tsx`, fix 4 in `assessment-review-workflow.test.tsx`, fix 6 in `risk-details.test.tsx`, and fix 2 one parser pin in `administration-schema.test.ts`. Fix 5 changed expectations only. |
+| typecheck, lint, api:check | clean | clean | none |
+| Playwright | 86 (82 + 4), 0 flaky, 14.9 min | 86 (82 + 4), 0 flaky, 12.7 min | No new test case. The fixes added assertions inside existing journeys (`administration-workflow`, `assessment-release-workflow`, `assessment-navigation-lifecycle`, `risk-register-workflow`; +34/−2 lines, no new `test(` line), so the count is unchanged. |
+| Seed verification | not run (the script was missing; deferred) | passed, 26.7 s | Restored by fix 3 (`ac34d19`). |
+| Static checks | all empty (after `eed7ed0`) | all empty | 11 more changed files since `5ea2b77`, none a content type, Keycloak file or `CSRM_AI_` line |
+
+The gate is green on every command. No fix was needed in this run.
+
 ## Task Commits
 
 1. **Task 1: run the phase gate and the static checks, then commit the gate record**
