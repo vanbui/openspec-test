@@ -717,6 +717,24 @@ describe('bounded assessment draft generation job', () => {
     expect(actionMocks.getAssessmentDraftJobAction).toHaveBeenCalledTimes(1);
   });
 
+  /* WR-202: a refreshed seed for another job never starts a second status check beside one in flight. */
+  it('never runs two status checks at once when a refreshed seed names another job, and then polls that job', async () => {
+    const slow = deferred<{ ok: true; data: typeof queuedJob }>();
+    const other = { ...queuedJob, jobId: 'job/two', attempt: 2 };
+    actionMocks.getAssessmentDraftJobAction.mockReturnValueOnce(slow.promise).mockResolvedValue({ ok: true, data: other });
+    const { rerender } = render(<AssessmentDraftJob seededJob={{ job: queuedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    rerender(<AssessmentDraftJob seededJob={{ job: other, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+    expect(actionMocks.getAssessmentDraftJobAction).toHaveBeenCalledTimes(1);
+
+    await act(async () => { slow.resolve({ ok: true, data: queuedJob }); await slow.promise; });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(actionMocks.getAssessmentDraftJobAction).toHaveBeenCalledTimes(2);
+    expect(actionMocks.getAssessmentDraftJobAction).toHaveBeenLastCalledWith({ jobId: 'job/two' });
+  });
+
   it('announces meaningful transitions and stops at completion', async () => {
     actionMocks.getAssessmentDraftJobAction
       .mockResolvedValueOnce({ ok: true, data: runningJob })

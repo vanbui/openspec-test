@@ -121,6 +121,24 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
     expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledWith({ jobId: 'job-two' });
   });
 
+  /* WR-202: a tick that finds a status check in flight is never dropped for good. */
+  it('keeps polling the new job when a refreshed seed arrives while a slow status check is in flight', async () => {
+    const slow = deferred<{ ok: true; data: QuestionnaireGenerationJobRecord }>();
+    const replacement = { ...queuedJob, jobId: 'job-two', attempt: 2 };
+    actionMocks.getQuestionnaireGenerationJobAction.mockReturnValueOnce(slow.promise).mockResolvedValue({ ok: true, data: replacement });
+    const { rerender } = render(<QuestionnaireGenerationJob action="generate" seededJob={{ job: queuedJob, canRetry: true }} requestId="request-one" />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    rerender(<QuestionnaireGenerationJob action="generate" seededJob={{ job: replacement, canRetry: true }} requestId="request-one" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+    expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledTimes(1);
+
+    await act(async () => { slow.resolve({ ok: true, data: queuedJob }); await slow.promise; });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledTimes(2);
+    expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenLastCalledWith({ jobId: 'job-two' });
+  });
+
   it('does not let an obsolete status response replace a newer authoritative job', async () => {
     const poll = deferred<{ ok: true; data: QuestionnaireGenerationJobRecord }>();
     actionMocks.getQuestionnaireGenerationJobAction.mockReturnValue(poll.promise);
