@@ -73,6 +73,30 @@ function optionalText(value: string): string | null {
   return value.trim() ? value : null;
 }
 
+/* What each form is for, in the direction's voice (D-38, UI-SPEC §17.1). */
+function formDescription(kind: AdministrationKind, mode: 'create' | 'edit'): string {
+  if (kind === 'controls') return mode === 'create' ? 'Add a control to the library.' : 'Edit this control. Mitigation controls on Risks keep their own status and evidence.';
+  if (kind === 'information-systems') return 'Manage this organisational Information System for assessment workflows.';
+  if (kind === 'information-assets') return 'Manage this organisational Information Asset for assessment workflows.';
+  return mode === 'create' ? 'Create a Risk Type for use in future assessments.' : 'Edit this Risk Type. Risks already identified keep their own details.';
+}
+
+/* What happens to the records that use this one when it changes: nothing is deleted or rewritten. */
+function downstreamUse(kind: AdministrationKind, label: string): { description: string; body: string } {
+  if (kind === 'controls') return {
+    description: 'Mitigation controls on Risks keep their own assessment history.',
+    body: 'This control may be used by Risk Types and by mitigation controls on Risks. Nothing is deleted or changed automatically.',
+  };
+  if (kind === 'risk-types') return {
+    description: 'Risks already identified keep their own assessment history.',
+    body: 'Applicable controls suggest controls for this Risk Type only. Nothing is deleted or changed automatically.',
+  };
+  return {
+    description: 'Assessments and Risks keep their own history.',
+    body: `This ${label} may be used in assessments. Nothing is deleted or changed automatically.`,
+  };
+}
+
 function applyFailure(result: Extract<AdministrationActionResult<AdministrationRecord>, { ok: false }>, form: ReturnType<typeof useForm<FormValues>>, setFormError: (message: string | null) => void) {
   for (const [field, messages] of Object.entries(result.fieldErrors ?? {})) {
     const message = messages?.[0];
@@ -192,10 +216,11 @@ export function AdministrationForm({ createAction, documentId, initialControlOpt
 
   const returnLink = <Link className={buttonVariants({ variant: 'outline' })} href={config.listPath}>Return to {config.pluralLabel}</Link>;
   const resolvedSearchOwners = searchOwners ?? (async () => ({ ok: true as const, data: [] }));
+  const downstream = downstreamUse(kind, config.label);
   return (
     <div className="space-y-8">
       <PageHeader
-        description={kind === 'controls' ? 'Manage the reusable Control definition without changing contextual Control Implementations.' : kind === 'information-systems' ? 'Manage this organisational Information System for assessment workflows.' : kind === 'information-assets' ? 'Manage this organisational Information Asset for assessment workflows.' : mode === 'create' ? 'Create a reusable definition for use in future assessments.' : 'Edit this reusable definition without changing existing contextual Risks.'}
+        description={formDescription(kind, mode)}
         title={mode === 'create' ? `Create ${config.label}` : kind === 'controls' ? controlLabel({ controlNumber: initial.controlNumber ?? '', name: initial.name, framework: initial.framework }) : initial.name || config.label}
       />
       {mode === 'edit' ? <Button type="button" variant="outline" onClick={() => form.setFocus(kind === 'controls' ? 'controlNumber' : 'name')}>Edit {config.label}</Button> : null}
@@ -203,13 +228,13 @@ export function AdministrationForm({ createAction, documentId, initialControlOpt
       <Form {...form}>
         <form className="space-y-8" noValidate onSubmit={form.handleSubmit(submit)}>
           {kind === 'controls' ? <>
-          <FormSection title="Identity" description="Identify this reusable Control and its governing framework.">
+          <FormSection title="Identity" description="Identify this control and the framework it comes from.">
             <FormField control={form.control} name="controlNumber" render={({ field }) => <FormItem><FormLabel>Control number</FormLabel><FormControl><Input {...field} value={String(field.value ?? '')} aria-required="true" /></FormControl><FormDescription>Enter a unique Control number.</FormDescription><FormMessage /></FormItem>} />
-            <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} aria-required="true" /></FormControl><FormDescription>Enter the reusable Control name.</FormDescription><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} aria-required="true" /></FormControl><FormDescription>Enter the control’s title without its number.</FormDescription><FormMessage /></FormItem>} />
             <FormField control={form.control} name="framework" render={({ field }) => <FormItem><FormLabel>Framework</FormLabel><FormControl><Input {...field} value={String(field.value ?? '')} aria-required="true" /></FormControl><FormDescription>Name the source framework.</FormDescription><FormMessage /></FormItem>} />
             <FormField control={form.control} name="frameworkVersion" render={({ field }) => <FormItem><FormLabel>Framework version</FormLabel><FormControl><Input {...field} value={String(field.value ?? '')} onChange={(event) => field.onChange(optionalText(event.target.value))} /></FormControl><FormMessage /></FormItem>} />
           </FormSection>
-          <FormSection title="Definition" description="Describe the reusable Control, not a contextual implementation.">
+          <FormSection title="Definition" description="Describe what this control requires.">
             <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} value={String(field.value ?? '')} onChange={(event) => field.onChange(optionalText(event.target.value))} /></FormControl><FormMessage /></FormItem>} />
             <FormField control={form.control} name="controlType" render={({ field }) => <FormItem><FormLabel>Control type</FormLabel><FormControl><select className={`${nativeSelectClassName} w-full`} value={String(field.value ?? '')} onChange={(event) => field.onChange(event.target.value || null)}><option value="">Not provided</option>{controlTypeValues.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormControl><FormMessage /></FormItem>} />
             <FormField control={form.control} name="controlReference" render={({ field }) => <FormItem><FormLabel>Control reference</FormLabel><FormControl><Input {...field} value={String(field.value ?? '')} onChange={(event) => field.onChange(optionalText(event.target.value))} /></FormControl><FormMessage /></FormItem>} />
@@ -248,12 +273,12 @@ export function AdministrationForm({ createAction, documentId, initialControlOpt
           </FormSection>
           <FormSection title="Notes" description="Record supporting Information Asset notes."><FormField control={form.control} name="comments" render={({ field }) => <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} value={String(field.value ?? '')} onChange={(event) => field.onChange(optionalText(event.target.value))} /></FormControl><FormMessage /></FormItem>} /></FormSection>
           </> : <>
-          <FormSection title="Definition" description="Define the canonical Risk Type used by assessment workflows.">
+          <FormSection title="Definition" description="Name and describe this Risk Type.">
             <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} value={String(field.value ?? '')} aria-required="true" /></FormControl><FormDescription>Enter a unique Risk Type name.</FormDescription><FormMessage /></FormItem>} />
-            <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} value={String(field.value ?? '')} onChange={(event) => field.onChange(optionalText(event.target.value))} /></FormControl><FormDescription>Explain when this reusable definition applies.</FormDescription><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} value={String(field.value ?? '')} onChange={(event) => field.onChange(optionalText(event.target.value))} /></FormControl><FormDescription>Explain which risks this Risk Type covers.</FormDescription><FormMessage /></FormItem>} />
           </FormSection>
-          <FormSection title="Applicable Controls" description="Map reusable Controls, not contextual Control Implementations.">
-            <FormField control={form.control} name="applicableControls" render={({ field }) => <FormItem><FormLabel>Applicable Controls</FormLabel><FormControl><div className="space-y-3"><div className="flex gap-2"><Input aria-label="Applicable Controls" aria-autocomplete="list" aria-controls={controlOptions.length ? 'applicable-control-options' : undefined} aria-expanded={controlOptions.length > 0} role="combobox" ref={controlSearchRef} onInput={(event) => handleControlInput(event.currentTarget.value)} /><Button type="button" variant="outline" onClick={() => void searchRemoteControls()}>Search Controls</Button></div><p className="sr-only" role="status" aria-live="polite">{controlOptions.length} Control options available.</p>{controlOptions.length ? <div className="rounded-lg border border-border bg-popover p-1" id="applicable-control-options" ref={controlOptionsRef} role="listbox">{controlOptions.filter((option) => !field.value?.includes(option.documentId)).map((option) => <button className="flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm hover:bg-muted" data-label={option.label} key={option.documentId} onClick={() => { field.onChange([...(field.value ?? []), option.documentId]); setSelectedControlLabels((labels) => ({ ...labels, [option.documentId]: option.label })); if (controlSearchRef.current) controlSearchRef.current.value = ''; }} role="option" type="button">{option.label}</button>)}</div> : null}<fieldset className="rounded-lg border border-border p-4"><legend className="px-1 text-sm font-medium">Selected applicable Controls</legend>{field.value?.length ? field.value.map((controlId) => <label className="flex min-h-11 items-center gap-3 text-sm" key={controlId}><Checkbox checked onCheckedChange={(checked) => { if (!checked) field.onChange(field.value?.filter((id) => id !== controlId)); }} />{selectedControlLabels[controlId] ?? 'Control not found'}</label>) : <p className="text-sm text-muted-foreground">No applicable Controls selected.</p>}</fieldset></div></FormControl><FormDescription>Search by Control number or name. These are reusable Controls, not implementations.</FormDescription><FormMessage /></FormItem>} />
+          <FormSection title="Applicable Controls" description="Choose the controls that usually mitigate this Risk Type.">
+            <FormField control={form.control} name="applicableControls" render={({ field }) => <FormItem><FormLabel>Applicable Controls</FormLabel><FormControl><div className="space-y-3"><div className="flex gap-2"><Input aria-label="Applicable Controls" aria-autocomplete="list" aria-controls={controlOptions.length ? 'applicable-control-options' : undefined} aria-expanded={controlOptions.length > 0} role="combobox" ref={controlSearchRef} onInput={(event) => handleControlInput(event.currentTarget.value)} /><Button type="button" variant="outline" onClick={() => void searchRemoteControls()}>Search Controls</Button></div><p className="sr-only" role="status" aria-live="polite">{controlOptions.length} Control options available.</p>{controlOptions.length ? <div className="rounded-lg border border-border bg-popover p-1" id="applicable-control-options" ref={controlOptionsRef} role="listbox">{controlOptions.filter((option) => !field.value?.includes(option.documentId)).map((option) => <button className="flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm hover:bg-muted" data-label={option.label} key={option.documentId} onClick={() => { field.onChange([...(field.value ?? []), option.documentId]); setSelectedControlLabels((labels) => ({ ...labels, [option.documentId]: option.label })); if (controlSearchRef.current) controlSearchRef.current.value = ''; }} role="option" type="button">{option.label}</button>)}</div> : null}<fieldset className="rounded-lg border border-border p-4"><legend className="px-1 text-sm font-medium">Selected applicable Controls</legend>{field.value?.length ? field.value.map((controlId) => <label className="flex min-h-11 items-center gap-3 text-sm" key={controlId}><Checkbox checked onCheckedChange={(checked) => { if (!checked) field.onChange(field.value?.filter((id) => id !== controlId)); }} />{selectedControlLabels[controlId] ?? 'Control not found'}</label>) : <p className="text-sm text-muted-foreground">No applicable Controls selected.</p>}</fieldset></div></FormControl><FormDescription>Search by control number, name or framework.</FormDescription><FormMessage /></FormItem>} />
           </FormSection>
           </>}
           <div className="flex flex-wrap gap-3">
@@ -262,7 +287,7 @@ export function AdministrationForm({ createAction, documentId, initialControlOpt
           </div>
         </form>
       </Form>
-      {mode === 'edit' ? <DetailSection title="Downstream use" description={kind === 'controls' ? 'Contextual Control Implementations retain their own assessment history.' : kind === 'risk-types' ? 'Existing contextual Risks retain their own assessment history.' : 'Assessment and Risk references retain their own workflow history.'}><p className="text-sm text-muted-foreground">{kind === 'controls' ? 'This reusable Control may be referenced by Risk Types and contextual Control Implementations. No records are deleted or changed automatically.' : kind === 'risk-types' ? 'Applicable Controls identify reusable relationships only. No records are deleted or changed automatically.' : `This ${config.label} may be referenced by assessment workflows. No records are deleted or changed automatically.`}</p></DetailSection> : null}
+      {mode === 'edit' ? <DetailSection title="Downstream use" description={downstream.description}><p className="text-sm text-muted-foreground">{downstream.body}</p></DetailSection> : null}
     </div>
   );
 }

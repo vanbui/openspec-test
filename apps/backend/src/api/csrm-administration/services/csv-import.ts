@@ -92,7 +92,15 @@ export const ADMINISTRATION_CSV_CONTRACTS = {
 } as const satisfies Record<AdministrationKind, CsvContract>;
 
 function csvError(message: string): never {
-  throw new Error(`Invalid Administration CSV: ${message}`);
+  throw new Error(`This file can’t be imported: ${message}`);
+}
+
+/*
+ * The matching column as people name it, lower-cased for a sentence (D-38, UI-SPEC §17.1): the web's
+ * csv-client-parser.ts keyLabel gives the same words, so a row reads alike in the preview and the result.
+ */
+function keyLabel(contract: CsvContract): string {
+  return contract.naturalKey === "controlNumber" ? "control number" : "name";
 }
 
 function assertBytesAndPreflightRecords(bytes: Uint8Array): void {
@@ -226,10 +234,10 @@ function classifyRows(
   return drafts.map((row): CsvImportRow => {
     const matches = row.normalizedKey ? existingByKey.get(row.normalizedKey) ?? [] : [];
     if (row.normalizedKey && (duplicateCounts.get(row.normalizedKey) ?? 0) > 1) {
-      return { rowNumber: row.rowNumber, state: "ambiguous", naturalKey: row.naturalKey, matchedDocumentId: null, matchedUpdatedAt: null, values: row.values, changes: [], issues: [...row.issues, issue("DUPLICATE_CSV_KEY", contract.naturalKey, "This natural key occurs more than once in the CSV.")].slice(0, CSV_MAX_ISSUES_PER_ROW) };
+      return { rowNumber: row.rowNumber, state: "ambiguous", naturalKey: row.naturalKey, matchedDocumentId: null, matchedUpdatedAt: null, values: row.values, changes: [], issues: [...row.issues, issue("DUPLICATE_CSV_KEY", contract.naturalKey, `This ${keyLabel(contract)} appears more than once in the file.`)].slice(0, CSV_MAX_ISSUES_PER_ROW) };
     }
     if (matches.length > 1) {
-      return { rowNumber: row.rowNumber, state: "ambiguous", naturalKey: row.naturalKey, matchedDocumentId: null, matchedUpdatedAt: null, values: row.values, changes: [], issues: [...row.issues, issue("MULTIPLE_EXISTING_MATCHES", contract.naturalKey, "Multiple existing records match this natural key.")].slice(0, CSV_MAX_ISSUES_PER_ROW) };
+      return { rowNumber: row.rowNumber, state: "ambiguous", naturalKey: row.naturalKey, matchedDocumentId: null, matchedUpdatedAt: null, values: row.values, changes: [], issues: [...row.issues, issue("MULTIPLE_EXISTING_MATCHES", contract.naturalKey, `More than one existing record has this ${keyLabel(contract)}.`)].slice(0, CSV_MAX_ISSUES_PER_ROW) };
     }
     if (row.issues.length > 0 || !row.normalizedKey) {
       return { rowNumber: row.rowNumber, state: "rejected", naturalKey: row.naturalKey, matchedDocumentId: null, matchedUpdatedAt: null, values: row.values, changes: [], issues: row.issues.slice(0, CSV_MAX_ISSUES_PER_ROW) };

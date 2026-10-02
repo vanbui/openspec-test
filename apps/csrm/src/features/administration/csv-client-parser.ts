@@ -24,7 +24,15 @@ export { CSV_MAX_BYTES, CSV_MAX_ROWS, CSV_MAX_RECORD_BYTES } from './csv-import-
 type CsvScalar = string | boolean | number | null;
 
 function csvError(message: string): never {
-  throw new Error(`Invalid Administration CSV: ${message}`);
+  throw new Error(`This file can’t be imported: ${message}`);
+}
+
+/*
+ * The column that matches a CSV row to an existing record, as people name it (D-38, UI-SPEC §17.1): `Control
+ * number` for Controls, else `Name`. Strapi's csv-import.ts derives the same label for its own messages.
+ */
+export function keyLabel(kind: AdministrationKind): 'Control number' | 'Name' {
+  return getAdministrationCsvContract(kind).naturalKey === 'controlNumber' ? 'Control number' : 'Name';
 }
 
 function assertBytesAndPreflightRecords(bytes: Uint8Array): void {
@@ -158,11 +166,12 @@ export async function parseAdministrationCsvClient(input: {
   });
   const duplicates = new Map<string, number>();
   for (const row of drafts) if (row.key) duplicates.set(row.key, (duplicates.get(row.key) ?? 0) + 1);
+  const key = keyLabel(input.kind).toLocaleLowerCase('en-AU');
 
   const rows: CsvImportPreviewRow[] = drafts.map((row) => {
     const matches = row.key ? existingByKey.get(row.key) ?? [] : [];
-    if (row.key && (duplicates.get(row.key) ?? 0) > 1) return { rowNumber: row.rowNumber, state: 'ambiguous', naturalKey: row.naturalKey, matchedDocumentId: null, values: row.values, changes: [], issues: [...row.issues, issue('DUPLICATE_CSV_KEY', contract.naturalKey, 'This natural key occurs more than once in the CSV.')].slice(0, CSV_MAX_ISSUES_PER_ROW) };
-    if (matches.length > 1) return { rowNumber: row.rowNumber, state: 'ambiguous', naturalKey: row.naturalKey, matchedDocumentId: null, values: row.values, changes: [], issues: [...row.issues, issue('MULTIPLE_EXISTING_MATCHES', contract.naturalKey, 'Multiple existing records match this natural key.')].slice(0, CSV_MAX_ISSUES_PER_ROW) };
+    if (row.key && (duplicates.get(row.key) ?? 0) > 1) return { rowNumber: row.rowNumber, state: 'ambiguous', naturalKey: row.naturalKey, matchedDocumentId: null, values: row.values, changes: [], issues: [...row.issues, issue('DUPLICATE_CSV_KEY', contract.naturalKey, `This ${key} appears more than once in the file.`)].slice(0, CSV_MAX_ISSUES_PER_ROW) };
+    if (matches.length > 1) return { rowNumber: row.rowNumber, state: 'ambiguous', naturalKey: row.naturalKey, matchedDocumentId: null, values: row.values, changes: [], issues: [...row.issues, issue('MULTIPLE_EXISTING_MATCHES', contract.naturalKey, `More than one existing record has this ${key}.`)].slice(0, CSV_MAX_ISSUES_PER_ROW) };
     if (row.issues.length || !row.key) return { rowNumber: row.rowNumber, state: 'rejected', naturalKey: row.naturalKey, matchedDocumentId: null, values: row.values, changes: [], issues: row.issues.slice(0, CSV_MAX_ISSUES_PER_ROW) };
     if (!matches.length) return { rowNumber: row.rowNumber, state: 'create', naturalKey: row.naturalKey, matchedDocumentId: null, values: row.values, changes: [], issues: [] };
     const match = matches[0];

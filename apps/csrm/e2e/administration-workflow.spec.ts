@@ -128,8 +128,11 @@ test.describe.serial('@administration-risk-types Risk Type administration', () =
     await page.getByLabel('Name').fill(name);
     await page.getByLabel('Description').fill('Reusable definition created by the isolated administration journey.');
     await page.getByRole('combobox', { name: /Applicable Controls/i }).click();
-    await expect(page.getByRole('option').first()).toBeVisible();
-    await page.getByRole('option').first().click();
+    const firstControl = page.getByRole('option').first();
+    await expect(firstControl).toBeVisible();
+    const chosenControl = (await firstControl.innerText()).trim();
+    expect(chosenControl, 'the first control option reads by its label').not.toBe('');
+    await firstControl.click();
     await page.getByRole('button', { name: 'Create Risk Type' }).click();
     await expect(page.getByText('Risk Type created.')).toBeVisible();
     await page.getByRole('button', { name: 'Edit Risk Type' }).click();
@@ -137,6 +140,10 @@ test.describe.serial('@administration-risk-types Risk Type administration', () =
     await page.getByRole('button', { name: 'Save changes' }).click();
     await page.reload();
     await expect(page.getByText('Reusable definition edited and persisted by the administration journey.')).toBeVisible();
+    // ADMIN05_SELECTED_CONTROL_LABELLED: after a reload the saved control reads by its label, never its id (D-36).
+    const selectedControls = page.getByRole('group', { name: 'Selected applicable Controls' });
+    await expect(selectedControls.getByText(chosenControl, { exact: true }), 'ADMIN05_SELECTED_CONTROL_LABELLED: the saved control keeps its label').toBeVisible();
+    await expect(selectedControls.getByText('Control not found', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /delete/i })).toHaveCount(0);
     await page.getByRole('button', { name: 'Edit Risk Type' }).click();
     await page.getByLabel('Description').fill('Unsaved dialog evidence');

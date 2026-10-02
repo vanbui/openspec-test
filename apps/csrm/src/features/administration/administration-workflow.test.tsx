@@ -577,7 +577,8 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     plainText();
     riskTypeCreate.unmount();
 
-    const riskTypeEdit = render(<AdministrationForm kind="risk-types" mode="edit" documentId={item.documentId} initialValues={{ ...item, applicableControls: [] }} updateAction={vi.fn()} />);
+    // The stored description is data, so this fixture's own words stay clear of the terms checked above.
+    const riskTypeEdit = render(<AdministrationForm kind="risk-types" mode="edit" documentId={item.documentId} initialValues={{ name: item.name, description: 'Misuse of valid credentials', applicableControls: [] }} updateAction={vi.fn()} />);
     for (const text of [
       'Edit this Risk Type. Risks already identified keep their own details.',
       'Risks already identified keep their own assessment history.',

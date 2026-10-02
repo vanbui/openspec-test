@@ -112,8 +112,8 @@ function mobileCardTitle(record: AdministrationWorkspaceRecord): string {
 
 /* Each collection's purpose, under its heading on the list and on its denial alike. */
 const collectionDescriptions: Record<AdministrationKind, string> = {
-  'risk-types': 'Manage reusable Risk Type definitions used to identify contextual Risks in assessments.',
-  controls: 'Manage reusable Control definitions; implementations remain attached to contextual Risks.',
+  'risk-types': 'Manage the Risk Types used to identify Risks in assessments.',
+  controls: 'Manage the control library used for mitigation controls on Risks.',
   'information-systems': 'Manage the organisational Information Systems available to assessment workflows.',
   'information-assets': 'Manage the organisational Information Assets available to assessment workflows.',
 };
