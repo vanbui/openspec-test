@@ -253,7 +253,7 @@ On 2026-09-28 the operator delegated the remaining items as well ("Use your own 
     - The files are unmodified copies of `@fontsource` 5.3.0 from the npm registry, with their OFL licences and SHA-256 hashes in `apps/csrm/app/fonts/README.md`.
     - The latin and latin-ext subsets ship, and only latin is preloaded.
     - A build with every outbound request blocked succeeds, and no build output or page names a Google host.
-    - Follow-up before Phase 10: restore the Vietnamese coverage that the Google-era build served in the family, for Plus Jakarta Sans and IBM Plex Mono.
+    - Follow-up before Phase 10, **done 2026-10-02:** quick task 261002-drq (`ff61dbf`, `1896015`). The vietnamese subsets of Plus Jakarta Sans (400/500/600) and IBM Plex Mono (400/500) are served, 24,484 B in all, loaded on demand by `unicode-range` and never preloaded, so Vietnamese names render in family. Instrument Serif has no vietnamese subset and falls back to Times New Roman. Every Button now renders the direction's 500 (`--text-button`), because the form-control font reset sits in `@layer base`.
 
 ## Post-demo decisions
 

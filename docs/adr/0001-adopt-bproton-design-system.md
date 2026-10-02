@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-24
-- **Amended:** 2026-10-02 (G-10: the three families are self-hosted)
+- **Amended:** 2026-10-02 (G-10: the three families are self-hosted, with the vietnamese subsets of Plus Jakarta Sans and IBM Plex Mono added by quick task 261002-drq)
 - **Supersedes:** the Phase 06.5 scope decision "The cool neutral scale, Inter, and the existing accent all stand" (`.planning/ROADMAP.md`, Phase 06.5), and the rejections in `docs/design/csrm-design-direction.md` §2 revision of 2026-08-29.
 - **Source of truth:** BProton design system, https://claude.ai/artifact/QaGDSeesQHocAe3yvoGpAx (`project/README.md`, `project/tokens.json`, `project/assets/Logos/README.md`; synced from `dthbui/bproton-website-v2@2383fbe` on 2026-09-20).
 
@@ -60,9 +60,9 @@ CSRM adopts the BProton design system. Every value the system defines is used ex
 ## Amendment 2026-10-02: self-hosted families (G-10)
 
 - **Decision source:** `.planning/NEXT-WAVE-DECISIONS.md` G-10, built by quick task 261002-2y8. It closes R-08-24.
-- **What changed:** the loader, and each font token now lists its family's latin-ext companion first (see Coverage). The families, weights, normal style, swap display and CSS variables are unchanged, and no design value changes.
+- **What changed:** the loader, and each font token now lists its family's companions first: latin-ext, then vietnamese for Plus Jakarta Sans and IBM Plex Mono (quick task 261002-drq), then the latin face (see Coverage). The families, weights, normal style, swap display and CSS variables are unchanged, and no design value changes.
 - **Why:** R-08-24. The Google loader fetched the families from Google Fonts on every build and dev compile, and the fetch failed four times on 2026-09-25 and 2026-09-26: in three builds and one `next dev` compile.
 - **Provenance:** the three @fontsource 5.3.0 packages from the npm registry (Plus Jakarta Sans 2.071, Instrument Serif 1.000, IBM Plex Mono 2.3), copied byte-identical into `apps/csrm/app/fonts/`. Its README records every file's SHA-256 and each tarball's integrity. No dependency is added.
 - **Licence:** SIL Open Font License 1.1. The licence text sits beside the files.
-- **Coverage:** latin is preloaded. latin-ext is downloaded on demand by `unicode-range`, through a companion face listed first in each font token, because `next/font/local` sets preload and descriptors per call, not per file. Cyrillic and vietnamese are not shipped.
+- **Coverage:** latin is preloaded. latin-ext, and since quick task 261002-drq vietnamese for Plus Jakarta Sans and IBM Plex Mono (24,484 B, never preloaded), are downloaded on demand by `unicode-range` through companion faces listed ahead of the latin face in each font token, because `next/font/local` sets preload and descriptors per call, not per file. latin-ext comes before vietnamese, so the vietnamese file loads only for the Vietnamese tone letters and combining marks no other subset covers. Instrument Serif has no vietnamese subset, so Vietnamese tone letters in display text fall back to Times New Roman. Cyrillic is not shipped.
 - **Fallback metrics:** the same local fallback fonts as before (Arial for Plus Jakarta Sans and IBM Plex Mono, Times New Roman for Instrument Serif). The metrics are now computed from the files and sit within 3% of the Google values.
