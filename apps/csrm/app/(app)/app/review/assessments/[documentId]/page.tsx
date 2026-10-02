@@ -55,10 +55,20 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
     listAssessmentRisks(documentId),
     mutable ? getRequest(assessmentResult.data.assessmentRequest.documentId) : undefined,
   ]);
-  const results = [riskTypesResult, riskListResult, ...(requestResult ? [requestResult] : [])];
-  if (results.some((result) => result.error?.status === 403)) return <AssessmentEditor state="permission" />;
-  if (results.some((result) => result.error)) return <AssessmentEditor state="error" />;
-  const riskListItems = riskListResult.data ?? [];
+  /*
+   * WR-206: only the reads the editor cannot work without block it. The Risk Types always do. The served Risk list
+   * does when the assessment is read-only, because the released view reads it (D-34); for an editable assessment
+   * it only names the saved systems and assets, so its failure leaves those names unavailable (never an id), while
+   * Strapi refusing it still shows the permission state. The originating request only feeds the pickers'
+   * suggestions (D-30): a failed or refused request read leaves the editor searching only, as the Risk Register's
+   * Risk page does (research Open Question 2).
+   */
+  const riskListBlocks = !mutable || riskListResult.error?.status === 403;
+  const blocking = [riskTypesResult, ...(riskListBlocks ? [riskListResult] : [])];
+  if (blocking.some((result) => result.error?.status === 403)) return <AssessmentEditor state="permission" />;
+  if (blocking.some((result) => result.error)) return <AssessmentEditor state="error" />;
+  const riskListItems = riskListResult.error ? [] : riskListResult.data ?? [];
+  const requestSelections = requestResult && !requestResult.error ? requestResult.data : undefined;
 
   const risks = assessmentResult.data.risks;
   const implementationResults = await Promise.all(risks.map(async (risk) => ({
@@ -74,8 +84,8 @@ export async function AssessmentEditorContent({ params }: AssessmentReviewPagePr
       assessment={assessmentResult.data}
       controlImplementations={controlImplementations}
       relationLabels={relationLabelsFromRiskList(riskListItems)}
-      requestAssets={requestResult?.data?.informationAssets ?? []}
-      requestSystems={requestResult?.data?.informationSystems ?? []}
+      requestAssets={requestSelections?.informationAssets ?? []}
+      requestSystems={requestSelections?.informationSystems ?? []}
       risks={risks}
       riskListItems={riskListItems}
       riskTypes={riskTypesResult.data ?? []}
