@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { parse } from "csv-parse/sync";
 
 import { normalizeAdministrationNaturalKey } from "./administration-query";
+import { boundServedText, warnServedTextBounded } from "./served-text";
 import type { AdministrationKind } from "./administration-config";
 
 export const CSV_MAX_BYTES = 5_242_880;
@@ -197,8 +198,13 @@ function parseCell(column: Column, raw: string, issues: CsvImportIssue[]): CsvSc
   return value;
 }
 
+// AdministrationImportChange bounds `before` and `after` at 10,000 characters.
+const CSV_CHANGE_VALUE_MAX_LENGTH = 10_000;
+
+// A stored value beyond the change bound is a data defect no valid write produces: it is shown shortened,
+// visibly (served-text.ts), so it never equals a file value and the row updates the record.
 function comparable(value: unknown): CsvScalar {
-  if (typeof value === "string") return value.slice(0, 10_000);
+  if (typeof value === "string") return boundServedText(value, CSV_CHANGE_VALUE_MAX_LENGTH);
   if (typeof value === "boolean" || typeof value === "number" || value === null) return value;
   return null;
 }
@@ -257,6 +263,10 @@ function classifyRows(
       .filter(({ before, after }) => before !== after)
       .slice(0, CSV_MAX_CHANGES_PER_ROW);
     const matchedDocumentId = typeof matched.documentId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(matched.documentId) ? matched.documentId : null;
+    const shortened = changes
+      .filter(({ field }) => typeof matched[field] === "string" && (matched[field] as string).length > CSV_CHANGE_VALUE_MAX_LENGTH)
+      .map(({ field }) => field);
+    if (shortened.length > 0) warnServedTextBounded(`CSRM Administration record ${matchedDocumentId ?? "without a valid documentId"}`, shortened);
     const matchedUpdatedAt = typeof matched.updatedAt === "string" ? matched.updatedAt : null;
     return { rowNumber: row.rowNumber, state: changes.length > 0 ? "update" : "unchanged", naturalKey: row.naturalKey, matchedDocumentId, matchedUpdatedAt, values: authoritativeValues, changes, issues: [] };
   });

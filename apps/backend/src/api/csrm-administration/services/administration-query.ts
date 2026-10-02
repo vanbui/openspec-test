@@ -1,4 +1,5 @@
 import { administrationConfig, type AdministrationKind } from "./administration-config";
+import { boundServedText, warnServedTextBounded } from "./served-text";
 
 type RecordValue = Record<string, unknown>;
 
@@ -236,6 +237,38 @@ function projectedOwnerName(owner: unknown): string | null {
   return displayName.length >= 1 && displayName.length <= 255 ? displayName : null;
 }
 
+/*
+ * The bound on every text field a Controls record serves (ControlsAdministrationRecord in the specification;
+ * the writes above refuse a value beyond the same bounds). The web's closed parser refuses a whole page for
+ * one field beyond its bound, so a stored value no valid write could produce is served shortened, visibly.
+ */
+const CONTROL_RECORD_TEXT_BOUNDS = [
+  ["controlNumber", 255],
+  ["name", 255],
+  ["description", 10_000],
+  ["controlReference", 500],
+  ["framework", 255],
+  ["frameworkVersion", 255],
+  ["frameworkSource", 2_000],
+] as const;
+
+function boundedControlRecord(record: RecordValue): RecordValue {
+  const shortened: string[] = [];
+  const bounded: RecordValue = { ...record };
+  for (const [field, maxLength] of CONTROL_RECORD_TEXT_BOUNDS) {
+    const value = record[field];
+    if (typeof value === "string" && value.length > maxLength) {
+      bounded[field] = boundServedText(value, maxLength);
+      shortened.push(field);
+    }
+  }
+  if (shortened.length > 0) {
+    const controlNumber = typeof record.controlNumber === "string" && record.controlNumber.length <= 255 ? ` (${record.controlNumber})` : "";
+    warnServedTextBounded(`CSRM control ${String(record.documentId)}${controlNumber}`, shortened);
+  }
+  return bounded;
+}
+
 export function projectAdministrationRecord(kind: AdministrationKind | string, input: RecordValue): RecordValue {
   if (typeof input.documentId !== "string" || typeof input.name !== "string") {
     throw new AdministrationValidationError("CSRM Administration record is invalid.");
@@ -247,7 +280,7 @@ export function projectAdministrationRecord(kind: AdministrationKind | string, i
   };
   if (kind === "controls") {
     if (typeof input.controlNumber !== "string" || typeof input.framework !== "string") throw new AdministrationValidationError("CSRM Administration record is invalid.");
-    return {
+    return boundedControlRecord({
       ...result,
       controlNumber: input.controlNumber,
       controlType: CONTROL_TYPES.includes(input.controlType as typeof CONTROL_TYPES[number]) ? input.controlType : null,
@@ -255,7 +288,7 @@ export function projectAdministrationRecord(kind: AdministrationKind | string, i
       framework: input.framework,
       frameworkVersion: typeof input.frameworkVersion === "string" ? input.frameworkVersion : null,
       frameworkSource: typeof input.frameworkSource === "string" ? input.frameworkSource : null,
-    };
+    });
   }
   if (kind === "information-systems") {
     const owner = isRecord(input.owner) ? input.owner.documentId : input.owner;

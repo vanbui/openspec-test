@@ -29,6 +29,8 @@ const CONTROL_TITLE_BASES = ["framework", "descriptive"] as const;
 const CONTROL_TITLE_MIN_LENGTH = 3;
 const CONTROL_TITLE_MAX_LENGTH = 100;
 const CONTROL_QUERY_PAGE_SIZE = 1_000;
+// The Controls contract bound on a description (ControlsAdministrationRecord in the specification).
+const CONTROL_DESCRIPTION_MAX_LENGTH = 10_000;
 const CSRM_APPLICATION = {
   name: "IdamBox CSRM",
   slug: CSRM_APPLICATION_SLUG,
@@ -438,6 +440,11 @@ function controlReference(control: JsonObject): string | undefined {
   );
 }
 
+// The description the seed derives from a catalogue entry, for a fresh seed and for recognising one it wrote.
+function controlDescription(control: JsonObject): string | undefined {
+  return firstString(control.statement, control.legalText, control.title);
+}
+
 export function createControlSeeds(
   catalogues: ControlCatalogue[],
   titles: Map<string, string>,
@@ -452,11 +459,7 @@ export function createControlSeeds(
     return catalogue.controls.map((control) => ({
       controlNumber: control.id,
       controlReference: controlReference(control),
-      description: firstString(
-        control.statement,
-        control.legalText,
-        control.title,
-      ),
+      description: controlDescription(control),
       framework: catalogue.framework.name,
       frameworkSource,
       frameworkVersion,
@@ -483,6 +486,45 @@ function stableJson(value: unknown): string {
   }
 
   return JSON.stringify(value ?? null);
+}
+
+/*
+ * A stored description the seed wrote is the one its stored catalogue entry gives: the seed keeps that entry
+ * in sourceData, which no Administration write can change. Any other stored description is an operator's own,
+ * and a seeded start keeps it, unless it is beyond the Controls contract bound, which no valid write can
+ * store. A seed-written description is replaced by the current seed's (APP-13's over-long text, for one).
+ */
+function operatorDescription(existingControl: ExistingControl): string | undefined {
+  const stored: unknown = existingControl.description;
+
+  if (typeof stored !== "string" || stored.trim().length === 0) {
+    return undefined;
+  }
+
+  if (stored.length > CONTROL_DESCRIPTION_MAX_LENGTH) {
+    return undefined;
+  }
+
+  const sourceData: unknown = existingControl.sourceData;
+  const seededEntry =
+    isJsonObject(sourceData) && isJsonObject(sourceData.control)
+      ? sourceData.control
+      : undefined;
+
+  return seededEntry && stored === controlDescription(seededEntry)
+    ? undefined
+    : stored;
+}
+
+function reconciledControlSeed(
+  existingControl: ExistingControl,
+  controlSeed: ControlSeed,
+): ControlSeed {
+  const description = operatorDescription(existingControl);
+
+  return description === undefined
+    ? controlSeed
+    : { ...controlSeed, description };
 }
 
 function controlNeedsUpdate(
@@ -542,10 +584,12 @@ async function seedCsrmControls(
       continue;
     }
 
-    if (controlNeedsUpdate(existingControl, controlSeed)) {
+    const reconciledSeed = reconciledControlSeed(existingControl, controlSeed);
+
+    if (controlNeedsUpdate(existingControl, reconciledSeed)) {
       await controlService.update({
         documentId: existingControl.documentId,
-        data: controlSeed,
+        data: reconciledSeed,
       });
       updated += 1;
     }
