@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-15-PLAN.md
-last_updated: "2026-10-02T09:18:24.786Z"
+stopped_at: Completed 10-16-PLAN.md
+last_updated: "2026-10-02T09:59:13.840Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-15 complete (the released assessment reads as a finished document: each Risk's system, asset, ratings, treatment and owners for both actors through a new risk list item, every mitigation control named by number and title from a served control summary, and local release dates; UAT-033, ASSESS-07, ADMIN-05 label rule, UX-06)
-state_head: b0c54d50c4e726984917bcea566bda5b74fa579a
+last_activity_desc: "Plan 10-16 complete (the Information System owner reads by name: ownerName on the Administration record and list, the form names the owner, never by id, and the systems list shows Owner and Business criticality after Name on desktop and the mobile card; UAT-053 system half, ADMIN-05 except the asset owner)"
+state_head: 1d7adbc4e315867c56969a24839035cf82057d58
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 16 of 23
+Plan: 17 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-15 complete: GET /v1/risk_assessments/{assessmentId}/risks answers AssessmentRiskListItem (system, asset and owners by name, ratings, treatment, target date) for the owning Requestor and the analyst; every control implementation response carries controlSummary; the zod-free controlLabel/controlTitle rule; ReleasedRiskDetails renders the released Risk on both surfaces (h4 groups on the released view, h3 in the analyst's read-only editor); Release date and Released by in the viewer's zone; the mismatch diagnostic leaves the page; grandfather count 42; web 2,611/2,611, Strapi 601/601 (650 s), release journey 1/1 (desktop), typecheck, lint and api:check clean
+Last activity: 2026-10-02 — Plan 10-16 complete: the Information System record and list serve ownerName (trimmed display name, 1-255, else null; owner populate narrowed to documentId and displayName; not writable); InformationSystemsAdministrationRecord.ownerName in the spec and schema.d.ts; the form reads Selected owner: {name} or Name not available; the systems list adds Owner and Business criticality after Name, unsortable, and the mobile card line; ADMIN-05 stays open for the Information Asset owner (Phase 22); web 2,613/2,613, Strapi 602/602 (1,282 s), administration journey 5/5, typecheck, lint and api:check clean
 
 ## Milestone
 
@@ -129,6 +129,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-14: a card polls by id only a job the viewer started or retried; any other job, and one a start handed back (the registry returns the active job to any analyst, so the retry right is unknown), is polled through getRequestGenerationJobsAction by request (D-27, UI-SPEC 12.5). A refused start or retry has its own title (Questionnaire generation couldn’t start, Draft generation couldn’t start; Status unavailable is only for a failed status check), resolving the 10-12 deferred item. Both job cards are in the D-38 copy guard.
 - [Phase 10]: 10-15: GET /api/v1/risk_assessments/{assessmentId}/risks answers AssessmentRiskListResponse of AssessmentRiskListItem (statement; system and asset { documentId, name } inline with 1-255 bounds; inherent and residual likelihood, consequence and rating; treatment action, plan and status; risk and treatment owner as ActiveUserSummary; target date), populated and projected by projectAssessmentRiskListItem for the owning Requestor and the analyst alike; RiskSummary stays the five-field create and update response and RiskListResponse is removed. Every control implementation response carries the required nullable controlSummary { documentId, controlNumber, name, framework } (1-255 each, else null). The parser is listAssessmentRiskItems (no grandfathering), so the grandfather count is 42.
 - [Phase 10]: 10-15: controlLabel/controlTitle (features/assessments/control-label.ts, zod-free) is the D-36 rule for every later plan. ReleasedRiskDetails is the one read-only Risk: h4 groups under the released view's h3 Risk number, h3 groups in the analyst's read-only editor, which now renders the whole shared Risk (mitigation group included) instead of RiskReadOnly/ControlReadOnly and the separate Mitigation controls section; the review page reads the list items when canMutateAssessment (now in assessment-domain.ts) is false. The released view's assessment and release dates use LocalInstant date-long; a contract mismatch shows the ordinary error state and the route logs [csrm-contract] response contract mismatch: {operation}.
+- [Phase 10]: 10-16: the Information System record and list serve ownerName, the owner's trimmed display name (1-255, else null), from an owner populate narrowed to documentId and displayName; the form reads Selected owner: {name} or Name not available, never the id; ownerName is served whatever the owner's account status and is not writable
+- [Phase 10]: 10-16: the systems list shows Owner and Business criticality after Name, unsortable, through systemOwnerLabel and systemCriticalityLabel (served name, Name not available, Not provided); ADMIN-05 stays open for the Information Asset owner (Phase 22). Plan 10-17's copy sweep keeps these columns
 
 ## Risks and Open Decisions
 
@@ -206,11 +208,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P13 | 33 min | 3 tasks | 23 files |
 | Phase 10 P14 | 19 min | 3 tasks | 12 files |
 | Phase 10 P15 | 32 min | 3 tasks | 22 files |
+| Phase 10 P16 | 37 min | 2 tasks | 10 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T09:18:15.991Z
-**Stopped At:** Completed 10-15-PLAN.md
+**Last session:** 2026-10-02T09:59:06.401Z
+**Stopped At:** Completed 10-16-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.

@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 15/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 16/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -122,7 +122,7 @@ Plans:
 - [x] 10-15-PLAN.md — Add D-03's fifth API change (D-34): a new list-item schema for the assessment's risk read carrying the brief §8 treatment and ownership facts, and a bounded control summary on control implementations.
 
 **Wave 16** *(blocked on Wave 15 completion)*
-- [ ] 10-16-PLAN.md — Add D-03's sixth API change: the Information System owner's display name on the Administration record and list (D-37), then seed the form's owner combobox with it and add the Owner and Business critic
+- [x] 10-16-PLAN.md — Add D-03's sixth API change: the Information System owner's display name on the Administration record and list (D-37), then seed the form's owner combobox with it and add the Owner and Business critic
 
 **Wave 17** *(blocked on Wave 16 completion)*
 - [ ] 10-17-PLAN.md — Finish D-36's content and label work in Administration: correct the public APP titles and the three Risk Type descriptions in the seed data, apply the control label rule to the Administration controls
