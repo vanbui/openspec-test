@@ -275,6 +275,21 @@ describe('questionnaire domain operations', () => {
     const mismatched = { ...answers, details: submitted('implemented', '2026-08-30T02:00:00.000Z') };
     expect(validateActiveRequiredAnswers(supported, mismatched).complete).toBe(false);
   });
+
+  it('reports required keys in form order (section, then question), not in the order the server serves them (D-13)', () => {
+    // The server sorts by question order alone, so the two sections interleave.
+    const served = questionnaireDefinitionSchema.parse([
+      question('b0', 'Text', { section: section('details', 2), order: 0, required: true }),
+      question('a0', 'Text', { section: section('context', 1), order: 0, required: true }),
+      question('b1', 'File upload', { section: section('details', 2), order: 1, required: true }),
+      question('a1', 'File upload', { section: section('context', 1), order: 1, required: true }),
+    ]);
+    expect(validateActiveRequiredAnswers(served, {})).toEqual({
+      complete: false,
+      requiredUnansweredKeys: ['a0', 'a1', 'b0', 'b1'],
+      unsupportedRequiredKeys: ['a1', 'b1'],
+    });
+  });
 });
 
 /*

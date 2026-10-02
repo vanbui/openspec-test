@@ -141,7 +141,85 @@ describe('QuestionnaireRenderer', () => {
     expect(screen.getByText(/2 required questions unanswered/i)).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
     expect(screen.getByRole('progressbar')).toHaveAccessibleName('0 of 7 questionnaire questions answered');
-    expect(screen.getByRole('region', { name: 'Questionnaire validation guidance' })).not.toHaveAttribute('role', 'alert');
+    // UI-SPEC §5.3: nothing needs attention until the Requestor tries to submit.
+    expect(screen.queryByRole('region', { name: 'Questionnaire validation guidance' })).not.toBeInTheDocument();
+  });
+
+  /*
+   * The server sorts questions by question order alone, so two sections interleave in what it serves
+   * (D-13). Section A (order 1) holds a0 and a1; section B (order 2) holds b0 and b1.
+   */
+  const sectionA = { key: 'service', title: 'Service', order: 1 };
+  const sectionB = { key: 'hosting', title: 'Hosting', order: 2 };
+  const interleaved: QuestionnaireDefinition = [
+    question('b0', 'Where is the service hosted?', 'Text', { section: sectionB, order: 0, required: true }),
+    question('a0', 'What is the service called?', 'Text', { section: sectionA, order: 0, required: true }),
+    question('b1', 'Hosting evidence', 'File upload', { section: sectionB, order: 1, required: true }),
+    question('a1', 'Who owns the service?', 'Text', { section: sectionA, order: 1, required: true }),
+  ];
+
+  it('lists the questions requiring attention only after a submit attempt, in form order, and focuses the first', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnaireRenderer definition={interleaved} documentId="questionnaire-1" mode="edit" />);
+    expect(screen.queryByRole('region', { name: 'Questionnaire validation guidance' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Submit questionnaire' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    const region = await screen.findByRole('region', { name: 'Questionnaire validation guidance' });
+    expect(within(region).getByRole('heading', { level: 2, name: 'Questions requiring attention' })).toBeInTheDocument();
+    expect(within(region).getByText('Answer or correct these questions, then submit again.')).toBeInTheDocument();
+    expect(within(region).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'What is the service called?',
+      'Who owns the service?',
+      'Where is the service hosted?',
+      'Hosting evidence - required but unavailable',
+    ]);
+    const first = screen.getByRole('textbox', { name: /What is the service called/ });
+    await waitFor(() => expect(first).toHaveFocus());
+
+    await user.type(first, 'Customer portal');
+    expect(within(region).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Who owns the service?',
+      'Where is the service hosted?',
+      'Hosting evidence - required but unavailable',
+    ]);
+  });
+
+  it('keeps the attention list as the one list of questions: the form-level alert repeats none of them', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnaireRenderer definition={interleaved} documentId="questionnaire-1" mode="edit" />);
+    await user.click(screen.getByRole('button', { name: 'Submit questionnaire' }));
+    await screen.findByRole('region', { name: 'Questionnaire validation guidance' });
+    expect(screen.queryByText('Questionnaire not saved')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Who owns the service?' })).toHaveLength(1);
+  });
+
+  it('removes the attention list once nothing remains outstanding', async () => {
+    const user = userEvent.setup();
+    const supported = interleaved.filter((item) => item.questionKey !== 'b1');
+    render(<QuestionnaireRenderer definition={supported} documentId="questionnaire-1" mode="edit" />);
+    await user.click(screen.getByRole('button', { name: 'Submit questionnaire' }));
+    await screen.findByRole('region', { name: 'Questionnaire validation guidance' });
+    await user.type(screen.getByRole('textbox', { name: /What is the service called/ }), 'Customer portal');
+    await user.type(screen.getByRole('textbox', { name: /Who owns the service/ }), 'Service owner');
+    await user.type(screen.getByRole('textbox', { name: /Where is the service hosted/ }), 'Sydney');
+    expect(screen.queryByRole('region', { name: 'Questionnaire validation guidance' })).not.toBeInTheDocument();
+  });
+
+  it('lists a question the server returns a field error for, after the submit is refused', async () => {
+    const user = userEvent.setup();
+    const optional = interleaved.filter((item) => item.questionKey !== 'b1').map((item) => ({ ...item, required: false }));
+    saveQuestionnaireDraftAction.mockResolvedValue({ ok: true, data: { questionnaireId: 'questionnaire-1', state: 'draft', progress: { answered: 1, total: 3, percent: 33 }, answers: optional, updatedAt: '2026-08-30T01:00:00.000Z' } });
+    submitQuestionnaireAction.mockResolvedValue({ ok: false, formError: 'Check the highlighted answers and try again.', fieldErrors: { 'answers.a1': ['Enter a shorter answer for Who owns the service?.'] } });
+    render(<QuestionnaireRenderer definition={optional} documentId="questionnaire-1" mode="edit" />);
+    expect(screen.queryByRole('region', { name: 'Questionnaire validation guidance' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: /Who owns the service/ }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Submit questionnaire' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Submit questionnaire' }));
+    // The refused submit keeps its dialog open (UI-SPEC §5.4), so the page behind it is hidden from the accessibility tree.
+    const region = await screen.findByRole('region', { name: 'Questionnaire validation guidance', hidden: true });
+    expect(within(region).getAllByRole('listitem', { hidden: true }).map((item) => item.textContent)).toEqual(['Who owns the service?']);
   });
 
   it('shows and clears conditional answers while updating textual progress', async () => {

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -105,6 +105,62 @@ describe('My Questionnaires discovery', () => {
     view.rerender(<QuestionnaireDetail definition={definition} questionnaire={{ ...questionnaire, assessmentRequest: { availability: 'unavailable' } }} state="ready" />);
     expect(screen.queryByText('No assessment request is linked to this questionnaire.')).not.toBeInTheDocument();
     expect(screen.queryByText('RAR-2026-X7K4Q2')).not.toBeInTheDocument();
+  });
+
+  const follows = (earlier: Element, later: Element) => Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('opens with the introduction, then the revert summary, the questions and the history (UI-SPEC §5.1)', () => {
+    const returned: QuestionnaireSummary = { ...questionnaire, revertReason: 'Please add the hosting region.', revertedAt: '2026-08-28T10:00:00.000Z', revertedBy: { documentId: 'analyst-1', displayName: 'Morgan Analyst' }, events: [] };
+    render(<QuestionnaireDetail assessmentRequestHref="/app/requests/request-one" definition={submittedDefinition} questionnaire={returned} state="ready" />);
+
+    const order = [
+      screen.getByRole('heading', { level: 1, name: questionnaire.title }),
+      screen.getByRole('link', { name: 'Assessment request RAR-2026-X7K4Q2' }),
+      screen.getByRole('heading', { level: 2, name: 'About this questionnaire' }),
+      screen.getByRole('heading', { name: 'Last returned to draft' }),
+      screen.getByText('Shared questionnaire renderer'),
+      screen.getByRole('heading', { level: 2, name: 'Revision timeline' }),
+    ];
+    for (let index = 1; index < order.length; index += 1) expect(follows(order[index - 1]!, order[index]!), order[index]!.textContent ?? '').toBe(true);
+    // The description moves into the introduction while the Requestor answers.
+    expect(screen.getAllByText(questionnaire.description!)).toHaveLength(1);
+    expect(within(screen.getByRole('region', { name: 'About this questionnaire' })).getByText(questionnaire.description!)).toBeInTheDocument();
+  });
+
+  it('introduces the questionnaire with the request’s purpose, the question count, saving and what to do when unsure (UI-SPEC §5.2)', () => {
+    render(<QuestionnaireDetail definition={submittedDefinition} questionnaire={questionnaire} state="ready" />);
+    const introduction = screen.getByRole('region', { name: 'About this questionnaire' });
+    expect(within(introduction).getByText('A Security Analyst has sent you 1 question about this request so they can assess its cyber risk.')).toBeInTheDocument();
+    expect(within(introduction).getByText('Your answers save automatically, so you can stop and finish later. Answer every question marked (required) before you submit. The Security Analyst sees your answers only after you submit.')).toBeInTheDocument();
+    expect(within(introduction).getByText('Not sure of an answer? Give your best answer, and where a question asks for text, say what you don’t know. The Security Analyst can send the questionnaire back to you if they need more detail.')).toBeInTheDocument();
+    expect(introduction).not.toHaveTextContent(/Depending on your answers/);
+    // No "Not sure" choice is promised: generated "Not sure" choices are Phase 12 (D-13).
+    expect(introduction).not.toHaveTextContent(/(choose|select|pick) ['‘“"]?Not sure/i);
+  });
+
+  it('counts the questions shown at load and says when more may appear', () => {
+    const base = submittedDefinition[0]!;
+    const conditional: QuestionnaireDefinition = [
+      { ...base, answer: null },
+      { ...base, documentId: 'question-two', questionKey: 'stores_data', questionText: 'Does the service store customer data?', answerType: 'Boolean', order: 2, answer: null },
+      { ...base, documentId: 'question-three', questionKey: 'data_kinds', questionText: 'Which data does it store?', answerType: 'Long text', order: 3, answer: null, visibility: { questionKey: 'stores_data', operator: 'equals', value: true } },
+    ];
+    render(<QuestionnaireDetail definition={conditional} questionnaire={questionnaire} state="ready" />);
+    expect(within(screen.getByRole('region', { name: 'About this questionnaire' })).getByText('A Security Analyst has sent you 2 questions about this request so they can assess its cyber risk. Depending on your answers, a few more may appear.')).toBeInTheDocument();
+  });
+
+  it('keeps the submitted order: Return to draft, the description, the revert summary, the answers, then the history', () => {
+    const returned: QuestionnaireSummary = { ...submittedQuestionnaire, revertReason: 'Please add the hosting region.', revertedAt: '2026-08-28T10:00:00.000Z', events: [] };
+    render(<QuestionnaireDetail definition={submittedDefinition} questionnaire={returned} state="submitted" />);
+    expect(screen.queryByRole('heading', { name: 'About this questionnaire' })).not.toBeInTheDocument();
+    const order = [
+      screen.getByRole('button', { name: 'Return to draft' }),
+      screen.getByText(questionnaire.description!),
+      screen.getByRole('heading', { name: 'Last returned to draft' }),
+      screen.getByText('Shared questionnaire renderer'),
+      screen.getByRole('heading', { level: 2, name: 'Revision timeline' }),
+    ];
+    for (let index = 1; index < order.length; index += 1) expect(follows(order[index - 1]!, order[index]!), order[index]!.textContent ?? '').toBe(true);
   });
 
   it('uses the native questionnaire status filter and clears all active filters from page one', () => {
