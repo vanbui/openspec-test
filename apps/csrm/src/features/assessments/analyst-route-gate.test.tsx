@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
@@ -213,6 +213,43 @@ describe('the analyst request route', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Vendor onboarding review' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Return to draft' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Go to My Requests' })).not.toBeInTheDocument();
+  });
+
+  /*
+   * UAT-019 (D-08, D-16): the Replace confirmation states how many analyst changes it discards, read from
+   * the analyst questionnaire summary on the server, so the client card receives a number and no schema.
+   */
+  const requestInAnalystReview = {
+    ...submittedRequest,
+    questionnaire: { documentId: 'questionnaire-under-review', title: 'Vendor questionnaire' },
+    relationships: {
+      questionnaire: { availability: 'available' as const, documentId: 'questionnaire-under-review', questionnaireNumber: 'QNR-2026-KX2AHV', title: 'Vendor questionnaire', state: 'analyst-review' },
+      assessment: { availability: 'absent' as const },
+    },
+  };
+
+  it('reads the questionnaire summary for the change count a replacement discards', async () => {
+    signInAsAnalyst();
+    mocks.getRequest.mockResolvedValue({ data: requestInAnalystReview, error: null });
+    mocks.getQuestionnaire.mockResolvedValue({ data: { documentId: 'questionnaire-under-review', revision: { eventCount: 3, lastEventAt: '2026-09-03T00:00:00.000Z', analystChangesSinceGeneration: 2 } }, error: null });
+
+    render(await AssessmentRequestDetailContent(props()));
+
+    expect(mocks.getQuestionnaire).toHaveBeenCalledWith('questionnaire-under-review');
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
+      .toHaveTextContent('discarding the 2 changes analysts made to its questions since it was generated');
+  });
+
+  it('confirms a replacement without a count when the questionnaire summary cannot be read', async () => {
+    signInAsAnalyst();
+    mocks.getRequest.mockResolvedValue({ data: requestInAnalystReview, error: null });
+
+    render(await AssessmentRequestDetailContent(props()));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
+      .toHaveTextContent('discarding any changes analysts made to its questions since it was generated');
   });
 
   it('renders the record variant when Strapi refuses an analyst the request', async () => {

@@ -23,6 +23,7 @@ import {
 } from './assessment-list';
 import { AssessmentDetail, AssessmentDetailSkeleton } from './assessment-detail';
 import { AssessmentDraftJob } from './assessment-draft-job';
+import { questionnaireGenerationAction } from '@/features/requests/request-domain';
 
 const request: AssessmentRequestQueueItem = {
   documentId: 'request/id with spaces',
@@ -403,6 +404,73 @@ describe('analyst review presentations', () => {
   it('withholds the analyst reversal when the questionnaire exists but is not open to the analyst', () => {
     const detail = submittedDetail('absent');
     render(<AssessmentDetail request={{ ...detail, relationships: { ...detail.relationships, questionnaire: { availability: 'unavailable' as const } } }} state="populated" />);
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * UAT-019 (D-08, D-09, D-22): which generation action the hub offers comes from the served questionnaire
+ * relation alone. A questionnaire still in analyst review can be replaced; any other questionnaire that
+ * exists, open to the analyst or not, is never offered for replacement, because Strapi would refuse it.
+ */
+describe('the questionnaire generation action the hub offers', () => {
+  it.each([
+    ['absent', { availability: 'absent' as const }, 'generate'],
+    ['in analyst review', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'analyst-review' }, 'replace'],
+    ['released', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'released' }, 'released'],
+    ['submitted', { availability: 'available' as const, documentId: 'q', questionnaireNumber: 'QNR-2026-AAAAAA', title: 'Q', state: 'submitted' }, 'released'],
+    ['available with no served state', { availability: 'available' as const, documentId: 'q', questionnaireNumber: null, title: 'Q', state: null }, 'released'],
+    ['not open to the analyst', { availability: 'unavailable' as const }, 'released'],
+  ] as const)('a questionnaire relation that is %s gives %s', (_label, relation, expected) => {
+    expect(questionnaireGenerationAction(relation)).toBe(expected);
+  });
+
+  function requestWithQuestionnaire(state: 'analyst-review' | 'released') {
+    return {
+      documentId: 'request-9',
+      requestNumber: 'RAR-0049',
+      title: 'Replacement review',
+      description: 'Submitted request with a questionnaire.',
+      requestStatus: 'submitted' as const,
+      submittedDate: '2026-08-30T01:00:00.000Z',
+      dueDate: null,
+      updatedAt: null,
+      dueDateLabel: null,
+      updatedDateLabel: null,
+      informationSystems: [],
+      informationAssets: [],
+      questionnaire: { documentId: 'questionnaire/id', title: 'Portal questionnaire' },
+      assessment: null,
+      relationships: {
+        questionnaire: { availability: 'available' as const, documentId: 'questionnaire/id', questionnaireNumber: 'QNR-2026-KX2AHV', title: 'Portal questionnaire', state },
+        assessment: { availability: 'absent' as const },
+      },
+    };
+  }
+
+  it('offers Replace questionnaire with the served change count while the questionnaire is in analyst review', () => {
+    render(<AssessmentDetail analystChangesSinceGeneration={2} request={requestWithQuestionnaire('analyst-review')} state="populated" />);
+
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
+      .toHaveTextContent('discarding the 2 changes analysts made to its questions since it was generated');
+  });
+
+  it('says it cannot count the changes when the hub was given no count', () => {
+    render(<AssessmentDetail request={requestWithQuestionnaire('analyst-review')} state="populated" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
+      .toHaveTextContent('discarding any changes analysts made to its questions since it was generated');
+  });
+
+  it('offers neither Generate nor Replace once the questionnaire is released', () => {
+    render(<AssessmentDetail analystChangesSinceGeneration={2} request={requestWithQuestionnaire('released')} state="populated" />);
+
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
   });
 });
