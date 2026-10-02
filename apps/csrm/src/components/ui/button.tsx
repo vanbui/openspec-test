@@ -8,20 +8,22 @@ const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-button whitespace-nowrap transition-[transform,box-shadow,background-color] duration-120 ease-out-expo outline-none enabled:active:scale-[0.995] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
+      // Every variant's ink is important: tailwind-merge reads text-button as a text colour and
+      // would drop it beside a plain text-colour utility, so the label would lose its type scale
+      // (direction section 3.10). Ghost sets no ink, so it keeps text-button as it is.
       variant: {
         default:
           "bg-primary !text-primary-foreground shadow-button hover:-translate-y-px hover:shadow-button-hover",
         destructive:
-          "bg-destructive-solid text-destructive-foreground shadow-button hover:-translate-y-px hover:shadow-button-hover focus-visible:ring-destructive/40",
+          "bg-destructive-solid !text-destructive-foreground shadow-button hover:-translate-y-px hover:shadow-button-hover focus-visible:ring-destructive/40",
         // Ink text of its own: inherited text could be the sidebar's light text on this white fill.
-        // Important, as the primary variant's ink is, so tailwind-merge keeps text-button beside it.
         outline:
           "border border-border bg-surface !text-foreground hover:-translate-y-px hover:bg-surface-muted",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-secondary !text-secondary-foreground hover:bg-secondary/80",
         ghost:
           "hover:bg-surface-hover",
-        link: "text-foreground underline decoration-muted-foreground underline-offset-3 hover:decoration-foreground",
+        link: "!text-foreground underline decoration-muted-foreground underline-offset-3 hover:decoration-foreground",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

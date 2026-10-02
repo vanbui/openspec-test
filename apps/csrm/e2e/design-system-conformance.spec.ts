@@ -423,17 +423,17 @@ test.describe('self-hosted type families (G-10, R-08-24)', () => {
     await expectFace('.sign-in-card .wordmark', 'InstrumentSerif-Regular');
     await expectFace('.sign-in-eyebrow', 'IBMPlexMono-Regular');
     await expectFace('.sign-in-lead', 'PlusJakartaSans-Regular');
-    // The button renders in the Plus Jakarta Sans face of its computed weight (the unlayered
-    // `button { font: inherit }` reset in globals.css decides that weight, not the loader).
+    // The button proves the Medium face at the --text-button token (direction section 3.10: 14px/20px,
+    // 500, -0.025em), now that the form-control reset sits in @layer base.
     const requestorButton = 'button[name="role"][value="Requestor"]';
-    const buttonWeight = await page.locator(requestorButton).evaluate((element) => getComputedStyle(element).fontWeight);
-    const jakartaFaces: Record<string, string> = { 400: 'PlusJakartaSans-Regular', 500: 'PlusJakartaSans-Medium', 600: 'PlusJakartaSans-SemiBold' };
-    expect(Object.keys(jakartaFaces), `the Continue as Requestor button uses a shipped weight, not ${buttonWeight}`).toContain(buttonWeight);
-    await expectFace(requestorButton, jakartaFaces[buttonWeight]!);
-    await probe(page, 'sans-500', 'font-family: var(--font-sans); font-weight: 500', 'Medium weight');
+    const requestor = page.locator(requestorButton);
+    await expect(requestor, 'Continue as Requestor is drawn at weight 500').toHaveCSS('font-weight', '500');
+    await expect(requestor, 'Continue as Requestor is drawn at 14px').toHaveCSS('font-size', '14px');
+    await expect(requestor, 'Continue as Requestor is drawn with a 20px line height').toHaveCSS('line-height', '20px');
+    await expect(requestor, 'Continue as Requestor is drawn at -0.025em tracking').toHaveCSS('letter-spacing', '-0.35px');
+    await expectFace(requestorButton, 'PlusJakartaSans-Medium');
     await probe(page, 'sans-600', 'font-family: var(--font-sans); font-weight: 600', 'Semibold weight');
     await probe(page, 'mono-500', 'font-family: var(--font-mono); font-weight: 500', 'Medium weight');
-    await expectFace('[data-g10-probe="sans-500"]', 'PlusJakartaSans-Medium');
     await expectFace('[data-g10-probe="sans-600"]', 'PlusJakartaSans-SemiBold');
     await expectFace('[data-g10-probe="mono-500"]', 'IBMPlexMono-Medium');
 
@@ -687,9 +687,157 @@ test.describe('print', () => {
 
 /*
  * Direction section 4: a page header's actions sit beside the title from 768px and stack full-width
- * below it (W-13), and a status or risk badge is 20px tall (W-11).
+ * below it (W-13), and a status or risk badge is 20px tall (W-11). Every Button label is drawn at
+ * --text-button and every form field at --text-body (section 3.10; section 4 Buttons and Forms).
  */
+
+/** The first three names of a computed font-family list, unquoted. */
+function sansFamily(fontFamily: string): string[] {
+  return fontFamily.split(',').map((name) => name.trim().replace(/^["']|["']$/g, '')).slice(0, 3);
+}
+
+/** The computed type of every visible Button (Button sets data-variant and data-size; Radix triggers override only data-slot). */
+async function buttonTypography(page: Page) {
+  return page.locator(':is(button, a)[data-variant][data-size]').evaluateAll((elements) => elements
+    .filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden')
+    .map((element) => {
+      const style = getComputedStyle(element);
+      return {
+        label: (element.getAttribute('aria-label') ?? element.textContent?.trim() ?? '').slice(0, 40),
+        variant: element.getAttribute('data-variant') ?? '',
+        size: element.getAttribute('data-size') ?? '',
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        fontWeight: style.fontWeight,
+        letterSpacing: style.letterSpacing,
+        fontFamily: style.fontFamily,
+      };
+    }));
+}
+
+/** The computed type of every visible text field in main ('Rows per page' takes 12px from its pagination row). */
+async function fieldTypography(page: Page) {
+  return page
+    .locator('main input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]), main textarea, main select:not([aria-label="Rows per page"])')
+    .evaluateAll((elements) => elements
+      .filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden')
+      .map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          label: (element.getAttribute('aria-label') ?? element.getAttribute('name') ?? element.id ?? '').slice(0, 40),
+          tag: element.tagName.toLowerCase(),
+          type: element.getAttribute('type') ?? '',
+          fontSize: style.fontSize,
+          lineHeight: style.lineHeight,
+          fontWeight: style.fontWeight,
+          fontFamily: style.fontFamily,
+        };
+      }));
+}
+
+/** The vietnamese companion faces in the document, with their load status. */
+async function vietnameseFaces(page: Page) {
+  return page.evaluate(async () => {
+    await document.fonts.ready;
+    const faces: Array<{ family: string; weight: string; status: string }> = [];
+    document.fonts.forEach((fontFace) => {
+      const family = fontFace.family.replace(/["']/g, '');
+      if (family.endsWith('Vietnamese')) faces.push({ family, weight: fontFace.weight, status: fontFace.status });
+    });
+    return faces;
+  });
+}
+
+const sansFamilyNames = ['jakartaLatinExt', 'jakartaVietnamese', 'jakarta'];
+
+/** Every visible Button at --text-button, every field at --text-body, and no vietnamese face loaded. */
+async function expectTypeTokens(page: Page, label: string) {
+  const buttons = await buttonTypography(page);
+  expect(buttons.length, `${label} shows at least one Button`).toBeGreaterThan(0);
+  expect(
+    buttons
+      .filter((button) => button.fontSize !== '14px' || button.lineHeight !== '20px' || button.fontWeight !== '500' || button.letterSpacing !== '-0.35px'
+        || sansFamily(button.fontFamily).join(',') !== sansFamilyNames.join(','))
+      .map((button) => `${button.label} (${button.variant}, ${button.size}): ${button.fontSize}/${button.lineHeight}/${button.fontWeight}/${button.letterSpacing} ${button.fontFamily}`),
+    `every Button on ${label} is drawn at --text-button`,
+  ).toEqual([]);
+
+  const fields = await fieldTypography(page);
+  expect(
+    fields
+      .filter((field) => field.fontSize !== '14px' || field.fontWeight !== '400' || sansFamily(field.fontFamily).join(',') !== sansFamilyNames.join(',')
+        // Chromium keeps a select's line height `normal`, so only inputs and textareas are held to 20px.
+        || (field.tag !== 'select' && field.lineHeight !== '20px'))
+      .map((field) => `${field.tag}[${field.type}] ${field.label}: ${field.fontSize}/${field.lineHeight}/${field.fontWeight} ${field.fontFamily}`),
+    `every form field on ${label} is drawn at --text-body`,
+  ).toEqual([]);
+
+  const faces = await vietnameseFaces(page);
+  expect(faces, `${label} declares the five vietnamese faces (three Plus Jakarta Sans, two IBM Plex Mono)`).toHaveLength(5);
+  expect(faces.filter(({ status }) => status !== 'unloaded'), `${label} renders no Vietnamese character, so it loads no vietnamese face`).toEqual([]);
+  return { buttons, fields };
+}
+
 test.describe('components at the direction values', () => {
+  test('draws every Button label at the button token and every form field at the body token', async ({ page }) => {
+    test.setTimeout(180_000);
+    await signIn(page);
+    for (const width of [375, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/app/risks?state=open');
+      await expect(page.getByRole('button', { name: 'Clear filters', exact: true }), `Clear filters shows on /app/risks?state=open at ${width}px`).toBeVisible();
+      const { buttons, fields } = await expectTypeTokens(page, `/app/risks?state=open at ${width}px`);
+      expect(
+        buttons.some(({ variant, label }) => variant === 'link' && label === 'Clear filters'),
+        `the link-variant Clear filters is among the Buttons at ${width}px`,
+      ).toBe(true);
+      if (width === 1440) {
+        // At 375px the filters sit in a closed sheet.
+        expect(fields.some(({ tag }) => tag === 'select'), 'the risk register shows a filter select at 1440px').toBe(true);
+        expect(fields.some(({ tag }) => tag === 'input'), 'the risk register shows a filter input at 1440px').toBe(true);
+      }
+    }
+
+    // The destructive confirmation draws both of its Buttons at the button token. Cancel deletes
+    // nothing: later tests and specs share this seeded questionnaire.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/app/review/questionnaires');
+    await page.getByRole('main').getByRole('link', { name: 'Customer portal questionnaire awaiting release', exact: true }).filter({ visible: true }).first().click();
+    await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Customer portal questionnaire awaiting release' })).toBeVisible();
+    const deleteTriggers = page.getByRole('main').getByRole('button', { name: /^Delete question:/ }).filter({ visible: true });
+    await expect(deleteTriggers.first(), 'the questionnaire review offers Delete question').toBeVisible();
+    const enabledTriggers = deleteTriggers.and(page.locator(':enabled'));
+    const triggerCount = await enabledTriggers.count();
+    expect(triggerCount, 'the questionnaire review offers an enabled Delete question').toBeGreaterThan(0);
+    await enabledTriggers.first().click();
+    const dialog = page.getByRole('alertdialog', { name: 'Delete this question?' });
+    await expect(dialog).toBeVisible();
+    const confirm = dialog.getByRole('button', { name: 'Delete question', exact: true });
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    await expect(confirm, 'Delete question is the destructive Button').toHaveAttribute('data-variant', 'destructive');
+    for (const [name, button] of [['Delete question', confirm], ['Cancel', cancel]] as const) {
+      await expect(button, `${name} is drawn at 14px`).toHaveCSS('font-size', '14px');
+      await expect(button, `${name} is drawn with a 20px line height`).toHaveCSS('line-height', '20px');
+      await expect(button, `${name} is drawn at weight 500`).toHaveCSS('font-weight', '500');
+      await expect(button, `${name} is drawn at -0.025em tracking`).toHaveCSS('letter-spacing', '-0.35px');
+    }
+    await cancel.click();
+    await expect(dialog, 'Cancel closes the confirmation').toBeHidden();
+    await expect(enabledTriggers, 'Cancel deletes no question').toHaveCount(triggerCount);
+
+    await signInAsRequestor(page);
+    for (const width of [375, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/app/requests/new');
+      await expect(page.getByRole('heading', { level: 1, name: 'New assessment request' }), `the new request form shows at ${width}px`).toBeVisible();
+      const { fields } = await expectTypeTokens(page, `/app/requests/new at ${width}px`);
+      for (const tag of ['input', 'textarea', 'select'] as const) {
+        expect(fields.some((field) => field.tag === tag), `the new request form shows a ${tag} at ${width}px`).toBe(true);
+      }
+    }
+  });
+
+
   test('draws every status and risk badge 20px tall', async ({ page }) => {
     await signIn(page);
     await page.setViewportSize({ width: 1440, height: 900 });

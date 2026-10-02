@@ -401,11 +401,26 @@ body {
     text-decoration: none;
   }
 }
-button,
-select,
-input,
-textarea {
-  font: inherit;
+/*
+ * Layered for the same reason. Unlayered, the form-control font reset beat every
+ * utility, so no Button showed its `text-button` token (direction section 3.10,
+ * 500), and the Input and Textarea primitives never had their own size utilities.
+ * In @layer base it is the default that utilities build on. Fields take the body
+ * weight even inside a `font-medium` label (section 3.10 `--text-body` 400,
+ * section 4 Forms).
+ */
+@layer base {
+  button,
+  select,
+  input,
+  textarea {
+    font: inherit;
+  }
+  select,
+  input,
+  textarea {
+    font-weight: 400;
+  }
 }
 :focus-visible {
   outline: 2px solid var(--focus-ring);
