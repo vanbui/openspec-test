@@ -7,6 +7,7 @@ import {
   governanceActorNames,
   isRecord,
   loadCompleteQuestionnaireScope,
+  projectAnalystRevision,
   projectQuestionnaireCollection,
   projectQuestionnaire,
   projectGovernanceEvents,
@@ -370,7 +371,14 @@ export function questionnaireControllerExtension({ strapi }: { strapi: Controlle
       if (!document) return safeError(ctx, 404, "CSRM questionnaire was not found.");
       const actor = questionnaireActor(ctx.state);
       const resolveDisplayName = await timelineActorNames(document, actor);
-      return { data: { ...projectQuestionnaire(document), events: projectGovernanceEvents(document, actor, resolveDisplayName) } };
+      return {
+        data: {
+          ...projectQuestionnaire(document),
+          // D-16: only an analyst learns how many question changes a replacement would discard.
+          ...(actor === "analyst" ? { revision: projectAnalystRevision(document) } : {}),
+          events: projectGovernanceEvents(document, actor, resolveDisplayName),
+        },
+      };
     },
     async listQuestions(ctx: RecordValue) {
       try {

@@ -48,7 +48,8 @@ const questionnaireSummarySchema = z.object({
   revertedAt: timestampSchema.nullable().optional(),
   revertedBy: z.object({ documentId: documentIdSchema, displayName: z.string().max(255).nullish() }).nullable().optional(),
   release: z.object({ releasedAt: timestampSchema, releasedBy: z.object({ documentId: documentIdSchema, displayName: z.string().max(255).nullable() }).nullable() }).strict().nullable().optional(),
-  revision: z.object({ eventCount: z.number().int().nonnegative(), lastEventAt: timestampSchema.nullable() }).strict().nullable().optional(),
+  // analystChangesSinceGeneration is served on analyst reads only (D-16); the Replace confirmation reads it.
+  revision: z.object({ eventCount: z.number().int().nonnegative(), lastEventAt: timestampSchema.nullable(), analystChangesSinceGeneration: z.number().int().nonnegative().optional() }).strict().nullable().optional(),
   // Left absent rather than defaulted: the timeline is served only where it is
   // authorised, and an empty array would tell every other projection that a
   // questionnaire has no revisions when it was simply never asked for.

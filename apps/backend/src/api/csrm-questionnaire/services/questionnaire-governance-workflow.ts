@@ -24,7 +24,7 @@ import {
 import { appendGovernanceEvent, GovernanceLogError, questionTextSnapshot } from "./questionnaire-governance-log";
 import { parseRevertReason } from "../../csrm-assessment-request/services/revert-reason";
 import { ASSESSMENT_STAGE_REQUEST_STATUSES, parseAnswerEnvelope, type AnswerEnvelope } from "./questionnaire-workflow";
-import { projectQuestionnaire } from "./questionnaire-scope";
+import { projectAnalystRevision, projectQuestionnaire } from "./questionnaire-scope";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 
 type RecordValue = Record<string, unknown>;
@@ -442,6 +442,8 @@ function questionKeyFromText(text: string, definition: QuestionnaireDefinitionQu
 function resultForGovernance(questionnaire: RecordValue, clearedAnswers: Array<{ questionKey: string; explanation: string }> = []): RecordValue {
   return {
     ...projectQuestionnaire(questionnaire),
+    // Governance is analyst-only, so its result carries the D-16 change count the analyst read does.
+    revision: projectAnalystRevision(questionnaire),
     events: Array.isArray(questionnaire.governanceLog) ? questionnaire.governanceLog : [],
     ...(clearedAnswers.length ? { clearedAnswers } : {}),
   };

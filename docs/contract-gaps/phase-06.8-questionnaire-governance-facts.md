@@ -127,7 +127,7 @@ already carried. The Requestor projection is unchanged: `kind`, `at` and `explan
 question's text, key or actor. The published schemas `QuestionnaireGovernanceEvent` and
 `QuestionnaireRevisionTimelineEvent` declare the key with the same bounds.
 
-## Phase 10 amendment (2026-09-27), part two: the `regenerated` event
+## Phase 10 amendment (2026-09-27), part two: the `regenerated` event and the change count
 
 Decided in Phase 10 (10-CONTEXT D-01, D-09 and D-10) and recorded on 2026-10-02 with the change
 that implements it (plan 10-11). Like part one, it extends the `governanceLog` event envelope and
@@ -163,3 +163,14 @@ appended.
 analyst and the explanation. The Requestor projection carries only `kind` and `at`: the
 explanation counts analyst work the Requestor never saw. The Requestor's history lists a
 replacement only after the questionnaire was first released (UI-SPEC §4.3).
+
+**The change count (D-16).** The published `QuestionnaireRevision` facts gain one optional field,
+`analystChangesSinceGeneration`: an integer, 0 or more, counting the `question-added`,
+`question-edited` and `question-deleted` events at or after the questionnaire's latest
+`generatedDate` (every one of them when it has none or it cannot be read; a log that cannot be
+parsed counts 0). It is what replacing the questionnaire now would discard, and the request hub's
+Replace confirmation states it. It is derived from the log on each read and never stored, so no
+stored record changes. It is served on analyst paths only: the analyst questionnaire read and
+every governance result. The Requestor read omits it, which is why the field is optional, in the
+same way `questionKey` and `questionText` are analyst-only. The list reads and the release result
+do not carry it.

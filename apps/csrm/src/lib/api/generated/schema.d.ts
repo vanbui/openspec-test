@@ -1804,6 +1804,8 @@ export interface components {
             eventCount: number;
             /** Format: date-time */
             lastEventAt: string | null;
+            /** @description Analyst reads only: question additions, edits and removals recorded at or after the questionnaire's latest generation, which replacing it would discard. Requestor reads omit it. */
+            analystChangesSinceGeneration?: number;
         };
         QuestionnaireGovernanceResult: {
             documentId: string;

@@ -5,6 +5,7 @@ import {
   type QuestionnaireValue,
 } from "./questionnaire-definition";
 import {
+  countAnalystChangesSinceGeneration,
   GOVERNANCE_LOG_MAX_ENTRIES,
   GOVERNANCE_EVENT_KINDS,
   parseGovernanceEvent,
@@ -441,6 +442,19 @@ export function projectQuestionnaire(document: RecordValue): RecordValue {
     release: projectQuestionnaireRelease(document),
     revision: summariseGovernanceLog(document.governanceLog),
     updatedAt: document.updatedAt,
+  };
+}
+
+/*
+ * The revision facts an analyst read carries (D-16): the narrative summary every reader gets, plus how many
+ * question changes analysts made since the latest generation, which a replacement would discard. Only analyst
+ * paths call this; `projectQuestionnaire` serves both actors and never carries the count.
+ */
+export function projectAnalystRevision(document: RecordValue): RecordValue {
+  const generatedDate = document.generatedDate instanceof Date || typeof document.generatedDate === "string" ? document.generatedDate : null;
+  return {
+    ...summariseGovernanceLog(document.governanceLog),
+    analystChangesSinceGeneration: countAnalystChangesSinceGeneration(document.governanceLog, generatedDate),
   };
 }
 
