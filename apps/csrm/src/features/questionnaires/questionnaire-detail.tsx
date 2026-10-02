@@ -17,7 +17,7 @@ import { revertQuestionnaireToDraftAction } from './questionnaire-actions';
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { availableAssessmentRequest, introductionFacts } from './questionnaire-domain';
-import { answersUpdatedAt } from './use-answer-autosave';
+import { answersUpdatedAt, savedQuestionnaireAfter } from './use-answer-autosave';
 import { QuestionnaireIntroduction } from './questionnaire-introduction';
 import { RevertAuditSummary } from '@/components/csrm/revert-audit-summary';
 import { QuestionnaireRevisionTimeline } from './questionnaire-revision-timeline';
@@ -54,13 +54,30 @@ export function QuestionnaireDetail({ assessmentRequestHref, definition = [], qu
       <div className="grid min-w-0 grid-cols-1 gap-8">
         {submitted
           ? (questionnaire.description ? <p className="max-w-3xl text-sm text-muted-foreground">{questionnaire.description}</p> : null)
-          : <QuestionnaireIntroduction description={questionnaire.description} {...introductionFacts(definition)} />}
+          : <AnsweringIntroduction definition={definition} description={questionnaire.description} documentId={questionnaire.documentId} serverUpdatedAt={answersUpdatedAt(questionnaire, definition)} />}
         <RevertAuditSummary facts={questionnaire} />
         <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode={submitted ? 'read-only' : 'edit'} serverUpdatedAt={answersUpdatedAt(questionnaire, definition)} submittedNotice={submittedNoticeVariant('requestor', questionnaire)} />
         <QuestionnaireRevisionTimeline depth="summary" questionnaire={questionnaire} />
       </div>
     </>
   );
+}
+
+/*
+ * The introduction counts from the answers the renderer starts from (UI-SPEC §5.2: the same count as the completion
+ * card). At mount a newer save this tab remembers wins, as it does in the renderer (Back and Forward, D-11); a new
+ * page payload replaces it. On the server and at a fresh load the tab remembers nothing, so both render the page's
+ * answers (IN-302).
+ */
+function AnsweringIntroduction({ definition, description, documentId, serverUpdatedAt }: {
+  definition: QuestionnaireDefinition;
+  description: QuestionnaireSummary['description'];
+  documentId: string;
+  serverUpdatedAt: string;
+}) {
+  const [seed, setSeed] = useState(() => ({ from: definition, answers: savedQuestionnaireAfter(documentId, serverUpdatedAt)?.answers ?? definition }));
+  if (seed.from !== definition) setSeed({ from: definition, answers: definition });
+  return <QuestionnaireIntroduction description={description} {...introductionFacts(seed.answers)} />;
 }
 
 function QuestionnaireRequestRelationship({ assessmentRequestHref, questionnaire }: Pick<QuestionnaireDetailProps, 'assessmentRequestHref'> & { questionnaire: QuestionnaireSummary }) {

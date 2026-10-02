@@ -162,7 +162,7 @@ describe('My Questionnaires discovery', () => {
       { ...base, documentId: 'question-three', questionKey: 'data_kinds', questionText: 'Which data does it store?', answerType: 'Long text', order: 3, answer: null, visibility: { questionKey: 'stores_data', operator: 'equals', value: true } },
     ];
     const remembered: QuestionnaireDefinition = served.map((question) => question.questionKey === 'stores_data'
-      ? { ...question, answer: { value: true, updatedAt: '2026-08-29T10:05:00.000Z' } }
+      ? { ...question, answer: { schemaVersion: 1 as const, value: true, state: 'draft' as const, updatedAt: '2026-08-29T10:05:00.000Z' } }
       : question);
     const backForward = { ...questionnaire, documentId: 'questionnaire/back-forward' };
     rememberSavedQuestionnaire(backForward.documentId, { updatedAt: '2026-08-29T10:05:00.000Z', answers: remembered });
