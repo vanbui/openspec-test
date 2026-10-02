@@ -386,21 +386,28 @@ function QuestionForm({ headingLevel, initial, onDiscard, onReload, onSave, refu
     onSave(draft);
   }
 
-  return <form aria-labelledby={ids.title} className="grid w-full max-w-[640px] gap-4 rounded-lg border border-border bg-surface-muted p-4" data-print="hidden" noValidate onSubmit={submit}>
-    <Heading className="text-sm font-medium text-foreground" id={ids.title}>{title}</Heading>
-    <div className="grid gap-2"><Label htmlFor={ids.text}>Question text</Label><Textarea aria-describedby={describedBy(errors.questionText && ids.textError)} aria-invalid={errors.questionText ? true : undefined} id={ids.text} onChange={(event) => setDraft({ ...draft, questionText: event.target.value })} ref={textRef} value={draft.questionText} /><FieldError id={ids.textError} message={errors.questionText} /></div>
-    <div className="grid gap-2"><Label htmlFor={ids.type}>Answer type</Label><select className={`${nativeSelectClassName} block w-full`} id={ids.type} onChange={(event) => setDraft({ ...draft, answerType: event.target.value as DraftAnswerType })} value={draft.answerType}>{answerTypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
-    {isChoiceType(draft.answerType) ? <div className="grid gap-2"><Label htmlFor={ids.choices}>Choices</Label><Textarea aria-describedby={describedBy(ids.choicesHint, errors.choices && ids.choicesError)} aria-invalid={errors.choices ? true : undefined} id={ids.choices} onChange={(event) => setDraft({ ...draft, choices: event.target.value })} ref={choicesRef} value={draft.choices} /><p className="text-sm text-muted-foreground" id={ids.choicesHint}>One choice per line.</p><FieldError id={ids.choicesError} message={errors.choices} /></div> : null}
-    <div className="grid gap-2"><Label htmlFor={ids.section}>Section</Label><select aria-describedby={ids.sectionHint} className={`${nativeSelectClassName} block w-full`} id={ids.section} onChange={(event) => setDraft({ ...draft, sectionChoice: event.target.value })} value={draft.sectionChoice}>{sections.map((section) => <option key={section.key} value={section.key}>{section.label}</option>)}<option value={NEW_SECTION}>New section</option></select><p className="text-sm text-muted-foreground" id={ids.sectionHint}>A question you add or move goes at the end of its section.</p></div>
-    {draft.sectionChoice === NEW_SECTION ? <div className="grid gap-2"><Label htmlFor={ids.newSection}>New section title</Label><Input aria-describedby={describedBy(ids.newSectionHint, errors.newSectionTitle && ids.newSectionError)} aria-invalid={errors.newSectionTitle ? true : undefined} id={ids.newSection} maxLength={255} onChange={(event) => setDraft({ ...draft, newSectionTitle: event.target.value })} ref={newSectionRef} value={draft.newSectionTitle} /><p className="text-sm text-muted-foreground" id={ids.newSectionHint}>Shown to the Requestor as a heading.</p><FieldError id={ids.newSectionError} message={errors.newSectionTitle} /></div> : null}
-    <div className="flex items-center gap-2"><Checkbox checked={draft.required} id={ids.required} onCheckedChange={(checked) => setDraft({ ...draft, required: checked === true })} /><Label htmlFor={ids.required}>Required</Label></div>
-    {refusal ? <div className="flex flex-wrap items-start gap-2">
-      <p className="flex min-w-0 flex-1 items-start gap-1.5 text-sm text-destructive" role="alert"><AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{refusal.message}</p>
-      {refusal.reload ? <Button className="max-md:min-h-11" data-print="hidden" onClick={onReload} size="sm" type="button" variant="outline">Reload questions</Button> : null}
-    </div> : null}
-    <div className="flex flex-col gap-2 md:flex-row">
-      <Button aria-disabled={saving ? true : undefined} className="w-full max-md:min-h-11 md:w-auto" type="submit">{saving ? 'Saving question…' : 'Save question'}</Button>
-      <Button className="w-full max-md:min-h-11 md:w-auto" onClick={onDiscard} type="button" variant="outline">Discard changes</Button>
+  /*
+   * The X-5 well spans the card; its content column stops at the direction's §4 Forms maximum field width (640px,
+   * UI-SPEC §1.1). The direction names the value but no token yet, so it is written here as an arbitrary value until
+   * a field-width token joins the X-n extensions (deferred to Phase 11, 10-UI-REVIEW.md Disposition).
+   */
+  return <form aria-labelledby={ids.title} className="grid w-full gap-4 rounded-lg border border-border bg-surface-muted p-4" data-print="hidden" noValidate onSubmit={submit}>
+    <div className="grid w-full max-w-[640px] gap-4">
+      <Heading className="text-sm font-medium text-foreground" id={ids.title}>{title}</Heading>
+      <div className="grid gap-2"><Label htmlFor={ids.text}>Question text</Label><Textarea aria-describedby={describedBy(errors.questionText && ids.textError)} aria-invalid={errors.questionText ? true : undefined} id={ids.text} onChange={(event) => setDraft({ ...draft, questionText: event.target.value })} ref={textRef} value={draft.questionText} /><FieldError id={ids.textError} message={errors.questionText} /></div>
+      <div className="grid gap-2"><Label htmlFor={ids.type}>Answer type</Label><select className={`${nativeSelectClassName} block w-full`} id={ids.type} onChange={(event) => setDraft({ ...draft, answerType: event.target.value as DraftAnswerType })} value={draft.answerType}>{answerTypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
+      {isChoiceType(draft.answerType) ? <div className="grid gap-2"><Label htmlFor={ids.choices}>Choices</Label><Textarea aria-describedby={describedBy(ids.choicesHint, errors.choices && ids.choicesError)} aria-invalid={errors.choices ? true : undefined} id={ids.choices} onChange={(event) => setDraft({ ...draft, choices: event.target.value })} ref={choicesRef} value={draft.choices} /><p className="text-sm text-muted-foreground" id={ids.choicesHint}>One choice per line.</p><FieldError id={ids.choicesError} message={errors.choices} /></div> : null}
+      <div className="grid gap-2"><Label htmlFor={ids.section}>Section</Label><select aria-describedby={ids.sectionHint} className={`${nativeSelectClassName} block w-full`} id={ids.section} onChange={(event) => setDraft({ ...draft, sectionChoice: event.target.value })} value={draft.sectionChoice}>{sections.map((section) => <option key={section.key} value={section.key}>{section.label}</option>)}<option value={NEW_SECTION}>New section</option></select><p className="text-sm text-muted-foreground" id={ids.sectionHint}>A question you add or move goes at the end of its section.</p></div>
+      {draft.sectionChoice === NEW_SECTION ? <div className="grid gap-2"><Label htmlFor={ids.newSection}>New section title</Label><Input aria-describedby={describedBy(ids.newSectionHint, errors.newSectionTitle && ids.newSectionError)} aria-invalid={errors.newSectionTitle ? true : undefined} id={ids.newSection} maxLength={255} onChange={(event) => setDraft({ ...draft, newSectionTitle: event.target.value })} ref={newSectionRef} value={draft.newSectionTitle} /><p className="text-sm text-muted-foreground" id={ids.newSectionHint}>Shown to the Requestor as a heading.</p><FieldError id={ids.newSectionError} message={errors.newSectionTitle} /></div> : null}
+      <div className="flex items-center gap-2"><Checkbox checked={draft.required} id={ids.required} onCheckedChange={(checked) => setDraft({ ...draft, required: checked === true })} /><Label htmlFor={ids.required}>Required</Label></div>
+      {refusal ? <div className="flex flex-wrap items-start gap-2">
+        <p className="flex min-w-0 flex-1 items-start gap-1.5 text-sm text-destructive" role="alert"><AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{refusal.message}</p>
+        {refusal.reload ? <Button className="max-md:min-h-11" data-print="hidden" onClick={onReload} size="sm" type="button" variant="outline">Reload questions</Button> : null}
+      </div> : null}
+      <div className="flex flex-col gap-2 md:flex-row">
+        <Button aria-disabled={saving ? true : undefined} className="w-full max-md:min-h-11 md:w-auto" type="submit">{saving ? 'Saving question…' : 'Save question'}</Button>
+        <Button className="w-full max-md:min-h-11 md:w-auto" onClick={onDiscard} type="button" variant="outline">Discard changes</Button>
+      </div>
     </div>
   </form>;
 }
