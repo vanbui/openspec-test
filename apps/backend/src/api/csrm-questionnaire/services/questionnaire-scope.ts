@@ -448,13 +448,15 @@ export function projectQuestionnaire(document: RecordValue): RecordValue {
 /*
  * The revision facts an analyst read carries (D-16): the narrative summary every reader gets, plus how many
  * question changes analysts made since the latest generation, which a replacement would discard. Only analyst
- * paths call this; `projectQuestionnaire` serves both actors and never carries the count.
+ * paths call this; `projectQuestionnaire` serves both actors and never carries the count. A log that cannot
+ * be read gives no count, so the optional field is omitted and the web says how many is unknown (WR-102).
  */
 export function projectAnalystRevision(document: RecordValue): RecordValue {
   const generatedDate = document.generatedDate instanceof Date || typeof document.generatedDate === "string" ? document.generatedDate : null;
+  const analystChangesSinceGeneration = countAnalystChangesSinceGeneration(document.governanceLog, generatedDate);
   return {
     ...summariseGovernanceLog(document.governanceLog),
-    analystChangesSinceGeneration: countAnalystChangesSinceGeneration(document.governanceLog, generatedDate),
+    ...(analystChangesSinceGeneration === null ? {} : { analystChangesSinceGeneration }),
   };
 }
 

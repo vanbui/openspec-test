@@ -194,15 +194,16 @@ export function summariseGovernanceLog(value: unknown): { eventCount: number; la
  * How many analyst question changes (added, edited, removed) the log records at or after the
  * questionnaire's latest generation (D-16): what replacing it now would discard. Without a generation
  * date every change counts, and so does every change when the date cannot be read, because a
- * confirmation that undercounts discarded work is the worse error. A malformed log counts nothing;
+ * confirmation that undercounts discarded work is the worse error. For the same reason a malformed log
+ * gives no count at all (null, unknown) rather than 0, which would read as "nothing discarded" (WR-102);
  * like the summary, this never throws out of a read.
  */
-export function countAnalystChangesSinceGeneration(log: unknown, generatedDate: string | Date | null | undefined): number {
+export function countAnalystChangesSinceGeneration(log: unknown, generatedDate: string | Date | null | undefined): number | null {
   let events: GovernanceEvent[];
   try {
     events = parseGovernanceLog(log);
   } catch (error) {
-    if (error instanceof GovernanceLogError) return 0;
+    if (error instanceof GovernanceLogError) return null;
     throw error;
   }
   const since = generatedDate instanceof Date ? generatedDate.getTime() : typeof generatedDate === "string" ? Date.parse(generatedDate) : Number.NaN;

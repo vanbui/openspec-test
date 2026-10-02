@@ -4,7 +4,7 @@ import { openaiCompatibleQuestionnaireGenerationProvider } from "./openai-compat
 import { createQuestionnaireGenerationRegistry, QuestionnaireGenerationJobFailure, QuestionnaireGenerationRegistryError, type QuestionnaireGenerationJobActor, type QuestionnaireGenerationJobRecord } from "./questionnaire-generation-registry";
 import { validatedGenerationQuestions } from "./questionnaire-generation-provider";
 import { activeQuestionnaireDefinition, parseQuestionnaireDefinition, QuestionnaireDefinitionError } from "./questionnaire-definition";
-import { appendGovernanceEvent, countAnalystChangesSinceGeneration } from "./questionnaire-governance-log";
+import { appendGovernanceEvent, countAnalystChangesSinceGeneration, GovernanceLogError } from "./questionnaire-governance-log";
 import { CSRM_AI_PROVIDER_MODE } from "../../../csrm/ai-provider-selection";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 import { latestAssessmentDraftJobForQuestionnaire } from "../../csrm-assessment/services/assessment-workflow";
@@ -43,8 +43,24 @@ function replacedQuestionCount(questions: unknown): number {
 function replacementExplanation(existing: RecordValue): string {
   const replaced = replacedQuestionCount(existing.questions);
   const discarded = countAnalystChangesSinceGeneration(existing.governanceLog, existing.generatedDate as string | Date | null | undefined);
+  // An unreadable log cannot say what the replacement discards, and cannot take the event either.
+  if (discarded === null) throw new GovernanceLogError();
   const discardedSentence = discarded === 0 ? "No analyst changes were discarded." : discarded === 1 ? "1 analyst change was discarded." : `${discarded} analyst changes were discarded.`;
   return `A newly generated questionnaire replaced ${replaced} ${replaced === 1 ? "question" : "questions"}. ${discardedSentence}`;
+}
+const HISTORY_UNAVAILABLE_MESSAGE = "The questionnaire’s change history cannot record a replacement.";
+/*
+ * The regenerated event appended to the stored log. A log that cannot take it (full at 1,000 entries, or
+ * unreadable) fails the job with HISTORY_UNAVAILABLE, the reason every governance path gives for the same
+ * condition (WR-102, D-22), rather than the generic generation failure.
+ */
+function appendRegeneratedEvent(existing: RecordValue, at: string, by: string) {
+  try {
+    return appendGovernanceEvent(existing.governanceLog, { schemaVersion: 1, kind: "regenerated", at, by, explanation: replacementExplanation(existing) });
+  } catch (error) {
+    if (error instanceof GovernanceLogError) throw new QuestionnaireGenerationJobFailure("HISTORY_UNAVAILABLE", HISTORY_UNAVAILABLE_MESSAGE);
+    throw error;
+  }
 }
 async function lock(strapi: Strapi, documentId: string, trx: unknown) { const query = strapi.db.queryBuilder("api::csrm-assessment-request.csrm-assessment-request"); query.select(["id"]); query.where({ documentId }); query.forUpdate(); query.transacting(trx); await query.execute(); }
 export async function persistGeneratedQuestionnaire(strapi: Strapi, requestId: string, analystId: string, replaceUnansweredQuestionnaire: boolean): Promise<{ questionnaireId: string }> {
@@ -65,7 +81,7 @@ export async function persistGeneratedQuestionnaire(strapi: Strapi, requestId: s
        * It is dated by the new generation, which also moves generatedDate: the D-17 resolution window
        * and the D-16 change count both start again from here.
        */
-      const governanceLog = appendGovernanceEvent(existing.governanceLog, { schemaVersion: 1, kind: "regenerated", at: generatedDate, by: analystId, explanation: replacementExplanation(existing) });
+      const governanceLog = appendRegeneratedEvent(existing, generatedDate, analystId);
       for (const row of Array.isArray(existing.questions) ? existing.questions : []) if (record(row) && typeof row.documentId === "string") await questions.delete({ documentId: row.documentId });
       await questionnaires.update({ documentId: questionnaireId, data: { title: proposal.title, ...(proposal.description ? { description: proposal.description } : {}), generatedDate, generatedBy: analystId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version, governanceLog } });
     } else { const created = await createWithQuestionnaireNumber((questionnaireNumber) => questionnaires.create({ data: { questionnaireNumber, title: proposal.title, ...(proposal.description ? { description: proposal.description } : {}), assessmentRequest: requestId, generatedDate, generatedBy: analystId, providerName: activeQuestionnaireGenerationProvider.name, providerVersion: activeQuestionnaireGenerationProvider.version } })); if (typeof created.documentId !== "string") throw new Error("Questionnaire persistence failed."); questionnaireId = created.documentId; }

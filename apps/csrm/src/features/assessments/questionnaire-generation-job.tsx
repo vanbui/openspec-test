@@ -95,6 +95,7 @@ const failureCopy = new Map<string, string>([
   ['QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED', 'A questionnaire already exists for this request. Replace it to generate a new one.'],
   ['QUESTIONNAIRE_ANSWERED', 'The Requestor has started answering this questionnaire, so it can’t be replaced.'],
   ['QUESTIONNAIRE_RELEASED', 'The questionnaire was released before generation finished, so it wasn’t replaced. Return it to analyst review to replace it.'],
+  ['HISTORY_UNAVAILABLE', 'This questionnaire’s change history can’t record more changes. Contact your administrator.'],
 ]);
 
 export function QuestionnaireGenerationJob({
