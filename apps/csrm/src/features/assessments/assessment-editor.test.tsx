@@ -924,6 +924,47 @@ describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 a
     expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
   });
 
+  it('sends nothing for unchanged assessment details and says No changes to save. in the same region (UI-SPEC §13.4)', async () => {
+    render(inSydney(<AssessmentEditor {...editorProps} />));
+    const save = screen.getByRole('button', { name: 'Save assessment' });
+    await userEvent.click(save);
+    const status = within(actionRow(save)).getByRole('status');
+    await waitFor(() => expect(status).toHaveTextContent(/^No changes to save\.$/));
+    expect(status.querySelector('svg')).toBeNull();
+    expect(actionMocks.saveAssessmentAction).not.toHaveBeenCalled();
+    expect(actionMocks.refreshAnalystAssessmentAction).not.toHaveBeenCalled();
+    expect(save).toHaveFocus();
+
+    // A change undone before saving is still no change; the next real change saves and confirms.
+    await userEvent.type(screen.getByLabelText('Summary'), ' X');
+    await userEvent.type(screen.getByLabelText('Summary'), '{Backspace}{Backspace}');
+    await userEvent.click(save);
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent(/^No changes to save\.$/));
+    expect(actionMocks.saveAssessmentAction).not.toHaveBeenCalled();
+
+    await userEvent.type(screen.getByLabelText('Summary'), ' Reviewed.');
+    await userEvent.click(save);
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent(/^Assessment details saved at 11:00 am$/));
+    expect(actionMocks.saveAssessmentAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads empty stored details as unchanged, so an untouched form with blank choices and no date sends nothing', async () => {
+    const blank = { ...assessment, summary: null, overallRating: null, overallControlEffectiveness: null, recommendationsSummary: null, overallRiskRationale: null, nextReviewDate: null };
+    render(inSydney(<AssessmentEditor {...editorProps} assessment={blank} />));
+    const save = screen.getByRole('button', { name: 'Save assessment' });
+    await userEvent.click(save);
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent(/^No changes to save\.$/));
+    expect(actionMocks.saveAssessmentAction).not.toHaveBeenCalled();
+  });
+
+  it('still saves an unchanged drafted assessment, because that save records the analyst’s review (D-13)', async () => {
+    render(inSydney(<AssessmentEditor {...editorProps} assessment={{ ...assessment, assessmentStatus: 'draft' }} />));
+    const save = screen.getByRole('button', { name: 'Save assessment' });
+    await userEvent.click(save);
+    await waitFor(() => expect(actionMocks.saveAssessmentAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent(/^Assessment details saved at 11:00 am$/));
+  });
+
   it('confirms an added Risk on its new card and returns focus to Add Risk (UI-SPEC §13.4)', async () => {
     const createdRisk = { ...risk, documentId: 'risk-created', riskNumber: 'RSK-0043' };
     actionMocks.createRiskAction.mockResolvedValue({ ok: true, data: createdRisk });
