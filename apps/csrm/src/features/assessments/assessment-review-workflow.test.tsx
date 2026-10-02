@@ -950,6 +950,27 @@ describe('the hub’s next action while a generation job runs', () => {
     expect(screen.getByText('Started by another Security Analyst.')).toBeInTheDocument();
   });
 
+  /*
+   * Walkthrough fix 4: the Phase 7 fixtures RAR-E2E-P7-OVERDUE-001 (under review) and RAR-E2E-P7-DUESOON-001
+   * (questionnaire in progress) hold no questionnaire, so Strapi's lifecycle serves the Submitted step's
+   * "Generate the questionnaire." Strapi generates only for a submitted request, so the page offers no Generate
+   * control, and the line must not name it.
+   */
+  it.each(['under-review', 'questionnaire-in-progress'] as const)('names no questionnaire generation for a %s request with no questionnaire, because none is offered', (requestStatus) => {
+    render(<AssessmentDetail request={hubRequest({ requestStatus })} state="populated" />);
+
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Next action:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Generate the questionnaire.')).not.toBeInTheDocument();
+  });
+
+  it('names questionnaire generation for a submitted request with no questionnaire, beside the Generate control', () => {
+    render(<AssessmentDetail request={hubRequest()} state="populated" />);
+
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeInTheDocument();
+    expect(nextActionLine()).toHaveTextContent('Next action: Generate the questionnaire.');
+  });
+
   it('shows the failed-read line on the hub’s card when the jobs read failed', () => {
     render(<AssessmentDetail jobsReadFailed request={hubRequest()} state="populated" />);
 
