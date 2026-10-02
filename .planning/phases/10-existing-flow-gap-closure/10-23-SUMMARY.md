@@ -96,6 +96,9 @@ key-decisions:
   - "10-23 fix 7: the controls Name and Framework columns and the Risk Type Description column use the DataTable long-text option (wrap within 14rem to 28rem, clamp to two lines); system and asset names, types and references stay on one line"
   - "10-23 fix 8: every picker popup is an APG listbox popup (focus stays in the input, options through aria-activedescendant), so the Popover wrapper carries no dialog role; More filters, which takes focus, stays a dialog named by its title"
   - "10-23 fix 8: two Label in Name defects the open-list scan found are fixed with it: a Control option's framework line is its description and leaves the label text, and a readiness Risk row separates its number from its count"
+  - "10-23 fix 3c: the 18 titles an independent audit of all 386 found faulty (12) or ambiguous (6) are corrected within the 12-word, 100-character cap; each replaced title is listed last in supersededTitles, so 13 controls now list two earlier titles"
+  - "10-23 fix 3c: every fix 3 and 3b 'restored' claim was checked mechanically against its delivered title; 9 overstated rows are annotated as completed in Fix 3c and 16 now say the limb is generalised, with no further retitle beyond the audit's 18"
+  - "10-23 fix 3c: ISO Annex A 8.1 'User endpoint devices' versus 'User end point devices' is deferred to the operator, because there is no licensed copy to check against"
 
 requirements-completed: []
 
@@ -294,46 +297,46 @@ The worksheet is `p10-23-f3-title-review.md` in the session scratchpad. It holds
 
 | Control | 10-22 title | Corrected title | Limb or qualifier restored |
 |---|---|---|---|
-| CPS-230-34 | Critical operations defined by adverse customer impact | Critical operations defined by material harm to customers or the financial system | the second limb 'or its role in the financial system', and 'material' |
-| CPS-230-57 | Relief for listed providers on standardised terms | Partial relief for listed providers on standardised terms or no formal agreement | the alternative 'or is not documented in a formal agreement', and 'partial' (only paragraphs 53, 54, 55(d), 59(a) and 59(c)) |
+| CPS-230-34 | Critical operations defined by adverse customer impact | Critical operations defined by material harm to customers or the financial system | the second limb 'or its role in the financial system', and 'material' (completed in Fix 3c: this title said 'material harm to … the financial system', not its role in it) |
+| CPS-230-57 | Relief for listed providers on standardised terms | Partial relief for listed providers on standardised terms or no formal agreement | the alternative 'or is not documented in a formal agreement', and 'partial' (only paragraphs 53, 54, 55(d), 59(a) and 59(c)) (revised in Fix 3c: 'listed providers' could be read as stock-exchange listed) |
 | CPS-230-11 | Operational risk, critical operations and service provider risks | Operational risk, conduct and compliance standards, critical operations and providers | limb (a)'s standards for conduct and compliance |
-| CPS-230-13 | Preventing and recovering from disruption to critical operations | Preventing, withstanding and recovering from critical operation disruption where practicable | the limb that keeps operating within tolerance during a disruption, and the qualifier 'to the extent practicable' |
+| CPS-230-13 | Preventing and recovering from disruption to critical operations | Preventing, withstanding and recovering from critical operation disruption where practicable | the limb that keeps operating during a disruption, as 'withstanding' ('within tolerance' is generalised), and the qualifier 'to the extent practicable' |
 | CPS-230-14 | Service provider reliance within prudential obligations | Service provider reliance only with obligations met and risks managed | the second condition: the associated risks are effectively managed |
 | CPS-230-16 | Periodic review of operational risk management | Operational risk management within the required framework reviews | removes 'periodic', which the paragraph does not say; the review is part of the CPS 220 and SPS 220 framework reviews |
 | CPS-230-17 | Integrating operational risk into overall risk management | Operational risk integration and BCP consistency with recovery and exit plans | the paragraph's second sentence: business continuity planning consistent with recovery and exit planning |
 | CPS-230-18 | APRA actions on operational risk weaknesses | APRA actions on material operational risk weaknesses | the threshold 'material' |
 | CPS-230-19 | Board accountability for operational risk oversight | Board accountability for overseeing operational risk, continuity and providers | business continuity and service provider arrangements, which the paragraph includes |
 | CPS-230-20 | Senior manager roles for operational risk | Board-ensured senior manager roles for operational risk, continuity and providers | the Board's duty to ensure the roles, and business continuity and service provider arrangements |
-| CPS-230-21 | Board approval of BCP, tolerances and provider policy | Board oversight and approval for operational risk, BCP, tolerances and providers | limb (a), Board oversight of operational risk and key controls, and the reviews in (b) and (c) |
+| CPS-230-21 | Board approval of BCP, tolerances and provider policy | Board oversight and approval for operational risk, BCP, tolerances and providers | limb (a), Board oversight of operational risk (its key controls and the reviews in (b) and (c) are generalised under 'oversight') (revised in Fix 3c: 'approval for … providers' read as the Board approving providers) |
 | CPS-230-22 | Briefing the Board on impacts to critical operations | Senior management briefing the Board on decisions affecting critical operations | the party (senior management) and the condition: decisions that could affect critical operations' resilience |
 | CPS-230-23 | Managing the full range of operational risks | Full range of operational risks, with end-to-end senior management responsibility | the second sentence: senior management responsibility across the end-to-end process |
 | CPS-230-24 | IT capability and information asset health | IT capability, information asset age and health, and CPS 234 security | 'age' of information assets and the CPS 234 information security limb |
 | CPS-230-25 | Operational risk impact of business decisions | Business and strategic decision impacts on operational risk and resilience | strategic decisions and operational resilience |
-| CPS-230-27 | Risk assessment before providing a material service | Risk assessment before providing a material service, and APRA-required stronger controls | the second sentence: APRA may require stronger controls or processes |
+| CPS-230-27 | Risk assessment before providing a material service | Risk assessment before providing a material service, and APRA-required stronger controls | the second sentence: APRA may require stronger controls (processes are generalised under 'controls') |
 | CPS-230-28 | Designing and embedding operational risk controls | Operational risk controls designed and embedded within appetite and compliance obligations | 'in line with its risk appetite' and the purpose of meeting compliance obligations |
-| CPS-230-29 | Monitoring and testing control effectiveness | Risk-based control monitoring and testing, senior management reporting and timely rectification | monitoring and review, frequency by materiality, reporting to senior management and timely rectification |
-| CPS-230-30 | Remediating control gaps and weaknesses | Timely root-cause remediation of material weaknesses, tracked in the risk profile | 'material', failures, root causes and timeliness, and the limb keeping weaknesses in the risk profile until remediated |
+| CPS-230-29 | Monitoring and testing control effectiveness | Risk-based control monitoring and testing, senior management reporting and timely rectification | monitoring (review is generalised under 'monitoring and testing'), frequency by materiality (as 'risk-based'), reporting to senior management and timely rectification |
+| CPS-230-30 | Remediating control gaps and weaknesses | Timely root-cause remediation of material weaknesses, tracked in the risk profile | 'material', root causes and timeliness (failures are generalised under 'material weaknesses'), and the limb keeping weaknesses in the risk profile until remediated |
 | CPS-230-31 | Recording and addressing incidents and near misses | Timely incident and near miss handling, reflected in risk and control assessments | the second sentence: incidents and near misses taken into the risk profile and control effectiveness assessments |
 | CPS-230-32 | Notifying APRA of operational incidents within 72 hours | Notifying APRA within 72 hours of material operational risk incidents | the materiality threshold (material financial impact or material impact on critical operations) |
 | CPS-230-35 | Minimum critical operations by entity type | Minimum critical operations by entity type, unless justified otherwise | the qualifier 'unless it can justify otherwise' |
 | CPS-230-36 | APRA power to classify critical operations | APRA power to require critical operation classification | corrects the actor: APRA requires the entity to classify; it does not classify |
-| CPS-230-38 | APRA review and setting of tolerance levels | APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness | corrects the actor (APRA requires the entity to review) and adds the condition for APRA-set tolerances |
+| CPS-230-38 | APRA review and setting of tolerance levels | APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness | corrects the actor (APRA requires the entity to review) and adds the condition for APRA-set tolerances (completed in Fix 3c: this title dropped 'change' and 'material' before 'weakness') |
 | CPS-230-40 | BCP capabilities and tolerance level monitoring | BCP capabilities, tolerance monitoring and Board reporting of failures with remediation | the limb reporting tolerance failures, with a remediation plan, to the Board |
 | CPS-230-41 | Notifying APRA of critical disruptions within 24 hours | Notifying APRA within 24 hours of a critical operation disruption beyond tolerance | corrects 'critical disruptions' to a disruption to a critical operation outside tolerance |
 | CPS-230-43 | Severe but plausible test scenarios | Tailored severe but plausible test scenarios, including any APRA-determined scenario | tailoring to material risks and the APRA-determined scenario limb |
 | CPS-230-44 | Annual update of the BCP | Annual BCP update as needed for changes and review or testing shortcomings | the qualifier 'as necessary' and what the update reflects |
 | CPS-230-45 | Internal audit review of the BCP | Internal audit review and Board assurance on the BCP and its testing | the assurance to the Board, which covers the BCP's credibility and the testing procedures |
-| CPS-230-47 | Provider policy on agreements, exits and fourth parties | Provider policy on agreement lifecycle, material provider risks and fourth parties | limb (b), managing material service provider risks, and monitoring and substituting in (a) |
+| CPS-230-47 | Provider policy on agreements, exits and fourth parties | Provider policy on agreement lifecycle, material provider risks and fourth parties | limb (b), managing material service provider risks, and (a)'s monitoring and substituting, generalised as 'agreement lifecycle' |
 | CPS-230-48 | Register of material service providers | Register of material service providers and management of their risks | the limb managing the material risks of using these providers |
 | CPS-230-49 | Minimum material service providers by entity type | Minimum material service providers by entity type, unless justified otherwise | the qualifier 'unless it can justify otherwise' |
 | CPS-230-50 | Annual submission of the provider register | Annual submission of the material provider register to APRA | the recipient (APRA) and 'material' |
 | CPS-230-51 | APRA power to classify providers as material | APRA power to require providers or arrangements to be classified material | corrects the actor and adds service provider arrangements |
 | CPS-230-52 | Due diligence before a material arrangement | Due diligence and risk assessment before a material arrangement or material change | materially modifying an arrangement, and limb (b), the reliance risk assessment |
 | CPS-230-54 | APRA access rights in provider agreements | APRA access and non-obstruction terms in provider agreements | limb (c): the provider agrees not to impede APRA |
-| CPS-230-56 | APRA-directed changes to provider arrangements | APRA-required review and change of provider arrangements on prudential concerns | the review, and the condition 'heightened prudential concerns' |
-| CPS-230-58 | APRA written exemption for unlisted arrangements | APRA written exemption for arrangements outside the paragraph 57 relief | arrangements failing either paragraph 57 condition, not only unlisted providers |
-| CPS-230-59 | Monitoring material arrangements and provider performance | Monitoring and senior management reporting on material arrangements | senior management reporting, and control effectiveness and compliance beside performance |
-| CPS-230-60 | Notifying APRA of critical and offshoring arrangements | Notifying APRA of critical service agreements and material offshoring, including changes | material changes to agreements and significant offshoring changes; 'material' offshoring |
+| CPS-230-56 | APRA-directed changes to provider arrangements | APRA-required review and change of provider arrangements on prudential concerns | the review, and the condition 'heightened prudential concerns' (completed in Fix 3c: this title dropped 'heightened') |
+| CPS-230-58 | APRA written exemption for unlisted arrangements | APRA written exemption for arrangements outside the paragraph 57 relief | arrangements failing either paragraph 57 condition, not only unlisted providers (revised in Fix 3c: 'exemption' read as a full exemption) |
+| CPS-230-59 | Monitoring material arrangements and provider performance | Monitoring and senior management reporting on material arrangements | senior management reporting (performance, control effectiveness and compliance are generalised under 'Monitoring') |
+| CPS-230-60 | Notifying APRA of critical and offshoring arrangements | Notifying APRA of critical service agreements and material offshoring, including changes | material changes to agreements and significant offshoring changes; 'material' offshoring (completed in Fix 3c: this title said 'including changes', with no threshold) |
 | CPS-230-61 | Internal audit of critical outsourcing arrangements | Internal audit review of proposed critical outsourcing and Board compliance reporting | 'proposed' arrangements and the regular compliance reporting to the Board |
 | CPS-234-15 | Information security capability proportionate to threats | Information security capability proportionate to threats and supporting sound operation | the second limb: a capability that enables the entity's continued sound operation |
 | CPS-234-16 | Third-party information security capability assessment | Proportionate assessment of related and third-party information security capability | related parties beside third parties, and 'commensurate with the potential consequences' |
@@ -343,19 +346,19 @@ The worksheet is `p10-23-f3-title-review.md` in the session scratchpad. It holds
 | CPS-234-29 | Escalating unremediated control deficiencies | Escalating control deficiencies that cannot be remediated in time | corrects 'unremediated' to deficiencies that cannot be remediated in a timely manner |
 | CPS-234-31 | Annual review of testing program sufficiency | Reviewing testing program sufficiency annually and on material change | the second trigger: a material change to information assets or the business environment |
 | CPS-234-34 | Internal audit of third-party control assurance | Internal audit of related or third-party assurance it relies on, where material | related parties and both conditions: material potential impact and internal audit's reliance |
-| CPS-234-35 | Notifying APRA of material incidents within 72 hours | Notifying APRA within 72 hours of material or regulator-notified incidents | limb (b): incidents notified to other regulators |
+| CPS-234-35 | Notifying APRA of material incidents within 72 hours | Notifying APRA within 72 hours of material or regulator-notified incidents | limb (b): incidents notified to other regulators (completed in Fix 3c: 'regulator-notified' read as notified by a regulator, and dropped 'other') |
 | CPS-234-36 | Notifying APRA of material control weaknesses | Notifying APRA of material control weaknesses not remediable in time | the condition: weaknesses the entity expects it cannot remediate in a timely manner |
 | PSPF-008 | Appointing a Chief Security Officer | Appointing and empowering a Chief Security Officer | 'empowered' to oversee protective security |
-| PSPF-016 | Approved security governance arrangements | Accountable Authority approval of tailored security governance arrangements | the approving party and the qualifier 'tailored to the entity's size, complexity and risk environment' |
+| PSPF-016 | Approved security governance arrangements | Accountable Authority approval of tailored security governance arrangements | the approving party and the qualifier 'tailored' (its basis, the entity's size, complexity and risk environment, is not named) |
 | PSPF-038 | Impact of risk decisions on other entities | Considering risk decision impacts on other entities and sharing risk information | the second limb: sharing risk information where appropriate |
-| PSPF-046 | Foreign ownership, control or influence in procurement | Foreign ownership, control or influence risks in procurement and contracts | the limb covering developments during the contract period |
-| PSPF-048 | Use of secure, verifiable third-party vendors | Use of secure, verifiable third parties, with CISO-approved business exceptions | the exception: other use where business operations require it and the CISO approves the residual risk |
+| PSPF-046 | Foreign ownership, control or influence in procurement | Foreign ownership, control or influence risks in procurement and contracts | the limb covering developments during the contract period, generalised as 'and contracts' |
+| PSPF-048 | Use of secure, verifiable third-party vendors | Use of secure, verifiable third parties, with CISO-approved business exceptions | the exception: other use where business operations require it, approved by the CISO (the residual risk is generalised as the approved exception) |
 | PSPF-053 | Documenting decisions to vary requirements | Documenting exceptional-circumstance variations in the security plan | the condition 'due to exceptional circumstances' and where they are documented |
-| PSPF-077 | Agreement before sharing outside government | Agreement before sharing outside government, except returned external information | the exception for returning or responding to information an outside party provided |
+| PSPF-077 | Agreement before sharing outside government | Agreement before sharing outside government, except returned external information | the exception for returning or responding to information an outside party provided (completed in Fix 3c: this title carried 'returned' only, and not the OFFICIAL: Sensitive limit) |
 | PSPF-080 | AUSTEO information withheld from non-citizens | AUSTEO information withheld from non-citizens unless exempted | the exception 'unless an exemption is granted' |
 | PSPF-091 | TikTok removal from government devices | Blocking and removing TikTok on government devices without a legitimate business reason | preventing installation, and the legitimate business reason exception |
-| PSPF-098 | Maintaining a cyber security strategy and uplift plan | ISM-aligned cyber security strategy and uplift plan with Zero Trust culture | 'in accordance with the Information Security Manual and the Zero Trust guiding principles', and develop and implement beside maintain |
-| PSPF-114 | IRAP-assessed gateway capabilities | Gateways with an IRAP or ASD assessment in the last 24 months | the 24-month recency and the ASD assessment for TOP SECRET gateways |
+| PSPF-098 | Maintaining a cyber security strategy and uplift plan | ISM-aligned cyber security strategy and uplift plan with Zero Trust culture | 'in accordance with the Information Security Manual and the Zero Trust guiding principles' (develop, implement and maintain are not named: the title names the strategy and plan as an umbrella) |
+| PSPF-114 | IRAP-assessed gateway capabilities | Gateways with an IRAP or ASD assessment in the last 24 months | the 24-month recency and the ASD assessment for TOP SECRET gateways (completed in Fix 3c: this title offered IRAP or ASD as open alternatives) |
 | PSPF-137 | ASD approval for overseas TOP SECRET remote access | ASD approval for overseas TOP SECRET remote access outside PSPF facilities | the condition 'outside of facilities meeting PSPF requirements' |
 | PSPF-144 | Clearances issued only with sponsorship | Clearances issued only when sponsored or authorised by government | the alternative 'or otherwise authorised by the Australian Government' |
 | PSPF-149 | Approving citizenship eligibility waivers | Approving and recording citizenship eligibility waivers | the limb keeping a record of every waiver approved |
@@ -364,7 +367,7 @@ The worksheet is `p10-23-f3-title-review.md` in the session scratchpad. It holds
 | PSPF-167 | Sponsoring entity sharing of relevant concerns | Sponsoring Entity sharing of relevant concerns where appropriate | the qualifier 'where appropriate' |
 | PSPF-189 | Security integrated into facility planning | Security integrated into facility planning, selection, design and modification | selecting, designing and modifying facilities beside planning |
 | PSPF-204 | Construction and securing of perimeter doors | Construction and securing of perimeter doors and hardware | perimeter hardware beside doors |
-| PSPF-212 | Post-quantum cryptography on new equipment | Post-quantum cryptography on newly procured equipment and software | software beside equipment, and 'newly procured' |
+| PSPF-212 | Post-quantum cryptography on new equipment | Post-quantum cryptography on newly procured equipment and software | software beside equipment, and 'newly procured' (revised in Fix 3c: 'cryptographic' equipment and 'approved' algorithms) |
 | PSPF-219 | Training on foreign interference and espionage | Training on foreign interference, espionage, cultivation and exploitation | cultivation and exploitation by foreign powers |
 
 All 72 titles stay within 10-22's anchor, opening-copy, uniqueness and form checks. They run to at most 12 words and 95 characters (CPS-230-29 is the longest), so a stored name `{number} — {title}` is at most 108 characters against the contract's 255.
@@ -409,7 +412,7 @@ All 72 titles stay within 10-22's anchor, opening-copy, uniqueness and form chec
 | PSPF-106 | Maturity Level Two: regular back-ups | the Essential Eight strategy at Maturity Level Two |
 | PSPF-122 | Risk assessment for temporary access | the risk assessment for temporary access |
 | PSPF-129 | Facilitating access to official information | facilitated access to official information |
-| PSPF-139 | Remote work exposed to foreign government direction | names the subject (remote work exposed to foreign direction) without stating the rule, so it narrows nothing |
+| PSPF-139 | Remote work exposed to foreign government direction | names the subject (remote work exposed to foreign direction) without stating the rule, so it narrows nothing (corrected in Fix 3c: the audit found it dropped 'extrajudicial' and 'that conflict with Australian law') |
 | PSPF-158 | Conditional clearances for manageable concerns | an umbrella for the three conditional-clearance steps and the delegation |
 | PSPF-159 | Concerns shared with the vetting outcome | the concerns shared with the vetting outcome |
 | PSPF-174 | Resolving doubt in the national interest on reassessment | resolving doubt in the national interest on reassessment |
@@ -558,7 +561,7 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-039 | Accountability for procurement security risks | Procurement security risk accountability, keeping contract decisions within acceptable risk | the second limb: procurement and contract decisions do not expose the entity or government to unacceptable risk |
 | PSPF-040 | Security terms in procurement and contracts | Proportionate security terms in procurement, contracts and outsourced arrangements | third-party outsourced arrangements and the qualifier 'proportionate' |
 | PSPF-041 | Provider compliance with PSPF requirements | Provider, contractor and subcontractor compliance with entity-specified PSPF requirements | contractors and subcontractors beside providers, and 'relevant ... as detailed by the entity' |
-| PSPF-042 | Provider incident reporting in contract terms | Contract terms for provider incident reporting and following investigation directions | the second limb: following reasonable direction arising from incident investigations |
+| PSPF-042 | Provider incident reporting in contract terms | Contract terms for provider incident reporting and following investigation directions | the second limb: following direction arising from incident investigations ('reasonable' is not carried) |
 | PSPF-043 | IRAP reports for consuming entities | IRAP reports for current and prospective consuming entities | entities 'looking to consume' the services |
 | PSPF-044 | Monitoring contract security terms over the contract life | Monitoring and reviewing contract security terms over the contract life | review beside monitoring |
 | PSPF-047 | Reassessing contractual security risks over time | Managing, reassessing and adjusting contractual security risks over the contract life | managing and adjusting beside reassessing, over the life of the contract |
@@ -578,10 +581,10 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-075 | Need-to-know access for people outside the entity | People outside the entity: needed clearance, need-to-know and compliant transfer | the clearance (where required) and the transfer under the Minimum Protections and Handling Requirements |
 | PSPF-085 | Risk-based application of ISM controls | Risk-based application of ISM controls and guidelines | the ISM cyber security guidelines beside its controls |
 | PSPF-086 | Authorisation to operate on accepted residual risk | Authorisation to operate on accepted residual risk before handling government data | the condition: authorised before the system processes, stores or communicates government information |
-| PSPF-087 | Risk-based decisions to authorise systems | ISM risk-based decisions to authorise new or changed systems | changes to existing systems and reauthorisation, and the ISM basis |
+| PSPF-087 | Risk-based decisions to authorise systems | ISM risk-based decisions to authorise new or changed systems | changes to existing systems and the ISM basis (reauthorisation is generalised under 'authorise') |
 | PSPF-090 | Reassessing authorisation after significant change | Reassessing authorisation after significant system or security environment change | the second trigger: a considerable change to the system's security environment |
 | PSPF-094 | Security Zone storage for SECRET technology assets | Security Zone storage for technology assets at SECRET or below | 'or below' (10-22 read SECRET only) |
-| PSPF-095 | Rack storage for TOP SECRET technology assets | SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets | compartments, SCEC endorsement and the accredited Zone Five area |
+| PSPF-095 | Rack storage for TOP SECRET technology assets | SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets | compartments, SCEC endorsement and the Zone Five area ('accredited' is not carried) |
 | PSPF-096 | Certified outsourced facilities for catastrophic-impact assets | ASIO-T4 certified and ASD accredited outsourced facilities for catastrophic-impact assets | the ASD accreditation beside the ASIO-T4 certification |
 | PSPF-108 | Blocking connections to malicious endpoints | Blocking connections to and from known malicious endpoints | connections from malicious endpoints, and 'known' |
 | PSPF-109 | IRAP-assessed cloud service providers | Using only cloud providers IRAP-assessed in the last 24 months | the 24-month recency (as PSPF-114) |
@@ -591,8 +594,8 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-117 | Identity verification to Level 3 assurance | Identity verified to at least Level 3 assurance before employment | the threshold 'at least', and the check made before employment |
 | PSPF-119 | Confirming eligibility to work for the government | Confirming eligibility to work in Australia and for the government | eligibility to work in Australia |
 | PSPF-121 | Checks before granting temporary access | Checks before temporary access, and Negative Vetting 1 for TOP SECRET | the second limb: an existing Negative Vetting 1 clearance before TOP SECRET temporary access |
-| PSPF-128 | Third-party agreement before temporary access | Agreement of other information owners before temporary access | other government entities beside third parties |
-| PSPF-130 | Controlling access to supporting technology | Enabling official information access and controlling access to supporting technology | the main limb: enabling appropriate access to official information |
+| PSPF-128 | Third-party agreement before temporary access | Agreement of other information owners before temporary access | other entities and third parties, generalised as 'other information owners' |
+| PSPF-130 | Controlling access to supporting technology | Enabling official information access and controlling access to supporting technology | the main limb: enabling access to official information ('appropriate' is not carried) |
 | PSPF-133 | Clearance requirements for caveated information | Clearance and suitability requirements for caveated information access | suitability requirements beside clearance |
 | PSPF-134 | Individual user identification for classified systems | Per-user identification, authentication and authorisation for classified system access | authentication and authorisation beside identification |
 | PSPF-140 | Use of authorised security vetting agencies | Security vetting by authorised vetting agencies or, where authorised, the entity | the alternative: authorised entities conducting their own vetting |
@@ -614,15 +617,15 @@ The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds
 | PSPF-203 | Containers and secure rooms by business impact | Containers and secure rooms by Security Zone and business impact | the Security Zone as the second basis |
 | PSPF-205 | Access control for authorised personnel | Zone access control for authorised personnel, vehicles and equipment | vehicles and equipment beside personnel |
 | PSPF-207 | Ongoing facility access for people not engaged | Approved ongoing facility access for people neither engaged nor contracted | the approval, and people covered by a contract or agreement as outside the rule |
-| PSPF-213 | Cyber risk reporting to the Audit Committee | Cyber risk reports to each Audit Committee and biannual uplift plan progress | every meeting, and the second limb: biannual reporting on the strategy and uplift plan |
+| PSPF-213 | Cyber risk reporting to the Audit Committee | Cyber risk reports to each Audit Committee and biannual uplift plan progress | every meeting, and the second limb: biannual reporting on the strategy and uplift plan (completed in Fix 3c: 'each Audit Committee' misread every meeting of the one committee, and the strategy was missing) |
 | PSPF-215 | Cyber Security Partnership Program participation | Cyber Security Partnership Program participation and notifying ASD of risk profile changes | the second limb: notifying ASD of a change in the risk profile |
-| PSPF-218 | Withholding temporary access while a waiver is considered | Withholding temporary or provisional access from waiver subjects until vetting completes | provisional access, subjects who already hold a waiver, and 'until vetting is complete' |
+| PSPF-218 | Withholding temporary access while a waiver is considered | Withholding temporary or provisional access from waiver subjects until vetting completes | provisional access, subjects who already hold a waiver, and 'until vetting is complete' (completed in Fix 3c: 'waiver subjects' did not say a waiver granted or pending) |
 
 All 75 pass 10-22's anchor, opening-copy, uniqueness and form checks, and fix 3's 12-word, 100-character voice rule.
 
 **Titles reviewed and kept (104).** Each reason is in the worksheet. In summary:
 - **Umbrella titles that name the whole subject:** PSPF-009, 018, 049, 063, 066, 067, 078, 079, 082, 089, 092, 107, 124, 125, 126, 143, 153, 164, 166, 187, 194, 198, 208 and 211. PSPF-126 and PSPF-143 name the subject without stating the rule, as fix 3 kept PSPF-139.
-- **Titles that name the whole requirement:** PSPF-002, 003, 004, 006, 007, 010, 015, 017, 019, 021, 024, 027, 029, 032, 034, 035, 045, 050, 056, 060, 065, 069, 073, 084, 088, 112, 116, 118, 120, 123, 127, 131, 132, 135, 136, 138, 141, 142, 146, 147, 154, 155, 156, 157, 161, 162, 163, 168, 170, 171, 172, 173, 175, 176, 178, 179, 184, 185, 190, 191, 196, 200, 201, 202, 206, 209, 210, 214, 216 and 217.
+- **Titles that name the whole requirement:** PSPF-002, 003, 004, 006, 007, 010, 015, 017, 019, 021, 024, 027, 029, 032, 034, 035, 045, 050, 056, 060, 065, 069, 073, 084, 088, 112, 116, 118, 120, 123, 127, 131, 132, 135, 136, 138, 141, 142, 146, 147, 154, 155, 156, 157, 161, 162, 163, 168, 170, 171, 172, 173, 175, 176, 178, 179, 184, 185, 190, 191, 196, 200, 201, 202, 206, 209, 210, 214, 216 and 217. Four of them, PSPF-112, 155, 175 and 190, were corrected in Fix 3c: the independent audit found that each leaves out or blurs a word of its paragraph (the panel's name, 'eligibility', finishing in time, 'major').
 - **Essential Eight at Maturity Level Two:** PSPF-099 to PSPF-105, which follow fix 3's kept PSPF-106.
 - **"In accordance with" a standard (how, not what):** PSPF-093, 097 and 195.
 
@@ -908,6 +911,127 @@ All runs had no dev server running (`netstat` printed nothing before each Playwr
 **Open for the pilot.** Re-walk two things:
 - B3 at 1440 on the CPS 230 controls page;
 - each picker with its list open, under the pilot's own axe scan.
+
+### Fix 3c: the audited titles
+
+Walkthrough round 3 (2026-10-03). The pilot accepted fixes 7 and 8. An independent, judge-only audit then read all 386 descriptive titles against their paragraphs (the ISO titles against the Annex A control names). It found 12 faults and 6 ambiguous titles:
+
+| Catalogue | Audited | Faults | Ambiguous |
+|---|---|---|---|
+| ISO/IEC 27001:2022 Annex A | 93 | 0 | 0 |
+| APRA CPS 230 | 51 | 4 | 3 |
+| APRA CPS 234 | 24 | 0 | 1 |
+| PSPF | 218 | 8 | 2 |
+| **Total** | **386** | **12** | **6** |
+
+Fix 3c corrects all 18 as a GSD Rule 1 deviation, failing test first. 13 of the 18 were fix 3 or fix 3b titles, so those controls now carry their third seeded title. The audit also found three fix 3 rows whose "restored" claim the delivered title did not carry (CPS-230-56, PSPF-077 and PSPF-114), and the record corrections below follow from that.
+
+**Every corrected title (18).** "Replaced title" is the title the seed stored before this fix.
+
+| Control | Replaced title | Corrected title | Limb or reading restored |
+|---|---|---|---|
+| CPS-230-21 | Board oversight and approval for operational risk, BCP, tolerances and providers | Board oversight of operational risk; approval of BCP, tolerances and provider policy | (c)'s object: the Board approves the service provider management policy, not the providers. Its key controls and the reviews in (b) and (c) stay generalised under 'oversight' |
+| CPS-230-34 | Critical operations defined by material harm to customers or the financial system | Critical operations: material adverse impact on customers or financial system role | 'material adverse impact', and the entity's role in the financial system rather than harm to the system itself (completes fix 3's claim) |
+| CPS-230-38 | APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness | APRA-required tolerance changes, and APRA-set tolerances on heightened risk or material weakness | the change APRA may require (the review is generalised: the required change entails it), and 'material' before 'weakness'; 'on' replaces 'for', so the tolerances follow APRA's finding (completes fix 3's claim) |
+| CPS-230-56 | APRA-required review and change of provider arrangements on prudential concerns | APRA-required review and change of provider arrangements on heightened prudential concerns | 'heightened' (completes fix 3's claim) |
+| CPS-230-57 | Partial relief for listed providers on standardised terms or no formal agreement | Partial relief for Attachment-category providers on standardised terms or no formal agreement | providers in a category the Attachment lists, which 'listed providers' let a reader take as stock-exchange listed |
+| CPS-230-58 | APRA written exemption for arrangements outside the paragraph 57 relief | APRA written partial exemption for arrangements outside the paragraph 57 relief | 'partial': APRA may exempt only from paragraphs 53, 54, 55(d), 59(a) and 59(c) |
+| CPS-230-60 | Notifying APRA of critical service agreements and material offshoring, including changes | Notifying APRA of critical service agreements and material offshoring, including material changes | the threshold on changes: (a)'s material change to a critical-service agreement and (b)'s significant offshoring change, generalised as 'material' (completes fix 3's claim) |
+| CPS-234-35 | Notifying APRA within 72 hours of material or regulator-notified incidents | 72-hour APRA notice of material incidents or those notified to other regulators | incidents the entity notified to other regulators, which 'regulator-notified' let a reader take as notified by a regulator (completes fix 3's claim) |
+| PSPF-077 | Agreement before sharing outside government, except returned external information | Agreement before sharing outside government, except returning or answering OFFICIAL: Sensitive input | 'responding to' (as 'answering'), and the limit to outside information the entity then classified OFFICIAL: Sensitive (completes fix 3's claim) |
+| PSPF-112 | Procuring data centre services through the panel | Procuring data centre services through the Data Centre Facilities Supplies Panel | the panel's name |
+| PSPF-114 | Gateways with an IRAP or ASD assessment in the last 24 months | Gateways IRAP-assessed, or ASD-assessed if TOP SECRET, in the last 24 months | an ASD assessment counts only for TOP SECRET gateways (completes fix 3's claim) |
+| PSPF-139 | Remote work exposed to foreign government direction | Remote work exposed to extrajudicial foreign government directions conflicting with Australian law | 'extrajudicial' and 'that conflict with Australian law' |
+| PSPF-155 | Assessing TOP SECRET-Privileged Access suitability | Assessing TOP SECRET-Privileged Access eligibility and suitability under its Standard | 'eligibility' beside suitability, and the TOP SECRET-Privileged Access Standard |
+| PSPF-175 | Starting revalidation before clearances lapse | Starting revalidation early enough to finish before clearances lapse | starting in time to complete revalidation before the due date, not merely before the lapse |
+| PSPF-190 | Security plans for new and refurbished facilities | Security plans for new or under-construction facilities and major refurbishments | 'major' refurbishments, and facilities under construction |
+| PSPF-212 | Post-quantum cryptography on newly procured equipment and software | Supporting approved post-quantum algorithms in newly procured cryptographic equipment and software | 'cryptographic' equipment and software, and 'approved' algorithms |
+| PSPF-213 | Cyber risk reports to each Audit Committee and biannual uplift plan progress | Reporting cyber risk every Audit Committee meeting; strategy and uplift progress twice-yearly | every meeting of the one Audit Committee, the strategy beside the uplift plan, and 'twice-yearly' for 'biannual', which reads as biennial (completes fix 3b's claim) |
+| PSPF-218 | Withholding temporary or provisional access from waiver subjects until vetting completes | Eligibility waiver granted or pending: no temporary or provisional access until vetted | clearance subjects who hold an eligibility waiver or for whom one is being considered (completes fix 3b's claim) |
+
+**Wording.** 15 titles are the audit's proposals. Three are my own:
+- **PSPF-190** adds facilities under construction. The audit's "new facilities and major refurbishments" left them out.
+- **PSPF-212** says "approved", not "ISM-approved". The ISM's cryptography guidelines list the ASD-approved algorithms rather than approving them. "Supporting" also carries the paragraph's "are supported".
+- **CPS-230-38** keeps the audit's wording, which names the change. "Review and change" with both other limbs needs 13 words.
+
+**Checks.** All 18 have at most 12 words and 100 characters. PSPF-077 is exactly 100, the most the seed accepts. Ten run to 12 words: CPS-230-21, 38, 57 and 60, CPS-234-35, and PSPF-077, 114, 139, 213 and 218. Each passes 10-22's anchor, opening-copy, uniqueness and form checks: no em or en dash, no trailing full stop, no control-id prefix, and no "must" or "shall". A stored name `{number} — {title}` is at most 111 characters, against the contract's 255.
+
+**Data.** `supersededTitles` lists each replaced title last:
+- the 13 controls fix 3 or fix 3b had corrected keep their 10-22 title and add their fix 3 or fix 3b title after it (CPS 230 seven, CPS 234 one, PSPF five);
+- PSPF-112, 139, 155, 175 and 190 get their first entry, their 10-22 title.
+
+The lists now cover 41 CPS 230 controls (48 titles), 10 CPS 234 controls (11) and 101 PSPF controls (106). A guarded scratch script changed only the 18 titles and these lists, and checked that nothing else in the parsed file changed (key order kept, LF endings).
+
+**Reconciling the development database.** No new mechanism. On the next seeded Strapi start, each of the 18 controls still stored under any title the seed wrote is renamed to its corrected title, keeping its documentId and relations. That covers 10-22's title, or fix 3's or fix 3b's if the database was seeded after them. A name an operator edited is kept. The mounted proof now renames CPS-230-34 from both of its earlier titles.
+
+**Tests.**
+
+| File | Test | Before the fix (`be545dd`) | After (`9306359`) |
+|---|---|---|---|
+| `apps/backend/tests/control-titles.unit.test.ts` | fix 3c: each audited title covers every limb its audit names (18 pinned; the 13 that revise fix 3 or 3b replace exactly that title; PSPF-112, 139, 155, 175 and 190 are the five new) | fail: 18 controls still under the audited titles | pass |
+| same | fix 3c: each title fix 3c replaces stays listed as superseded, after any earlier one | fail: none listed | pass |
+| same | fix 3 and fix 3b pins now expect fix 3c's title for the 13 controls it revises; the PSPF superseded list holds 21 + 75 + 5 controls | fail: 11 fix 3 and 2 fix 3b controls under their earlier titles; 96 PSPF controls listed | pass |
+| `apps/backend/tests/assessment-seed.integration.test.ts` | fix 3: a seeded start renames a control stored under any earlier seeded title (10-22's, then fix 3's), then changes nothing | fail: renamed to fix 3's title | pass |
+
+Runs (logs in the session scratchpad, `p10-23-f3c-*`):
+- **RED:**
+  - `control-titles.unit` alone: 25 tests, 20 passed and 5 failed, all on assertions (`p10-23-f3c-red-unit.tap`).
+  - `assessment-seed.integration` alone: 15 tests, 14 passed and 1 failed on its assertion (`p10-23-f3c-red-seed.tap`).
+  - `check tdd-red-evidence` returned RED_EVIDENCE_OK for both target tests.
+- **GREEN:** four files, 65 of 65, in 74 s: `control-titles.unit` (25), `control-library-bounds.unit` (2), `assessment-seed.integration` (15) and `administration.integration` (23).
+- **`pnpm verify:csrm-seed`:** exit 0 in 25 s. Both the static and the runtime seed verifications passed.
+- **No journey run.** No web, e2e or Strapi source file names any of the 18 replaced titles. Only the title file's `supersededTitles` and the unit test do (`grep` over `apps` and `scripts`; `apps/backend/dist` is ignored build output). No web file changed.
+
+**Correcting the record (fix 3 and fix 3b).** A summary must claim no more than the data delivers. So every "Limb or qualifier restored" claim in the fix 3 and fix 3b tables was checked mechanically against the title that fix delivered. The script is `p10-23-f3c-claimcheck.mjs` in the session scratchpad, not in the repository, and its output is `p10-23-f3c-claimcheck.out`. It reads the record as committed at `9306359`, before these corrections, so its counts reproduce. It works in four steps:
+- it splits each claim into limbs, honouring quotes;
+- it takes each limb's content words, dropping only words that describe a claim ("limb", "second", "qualifier", "corrects", "beside", and so on);
+- it reports a limb whose words are not all in the delivered title, comparing five-letter stems;
+- every reported limb was then judged, and the verdicts are recorded in the script.
+
+| Count | Limbs |
+|---|---|
+| Rows checked (fix 3: 72, fix 3b: 75) | 147 rows, 226 limbs |
+| Every key word in the delivered title | 71 |
+| Label only (for example "limb (a)", with its content in the next limb) | 6 |
+| Reported, then judged carried: the missing words only describe the limb ("the second sentence"), or the title says it in the same sense ("BCP", "where practicable", "on request", "Proportionate") | 122 |
+| Reported, then judged generalised: the title covers the limb with a broader word, and the claim now says so | 17 (16 rows) |
+| Reported, then judged overstated: the title did not carry the limb, and fix 3c's title does | 10 (9 rows) |
+
+The corrections:
+- **Completed in Fix 3c (9 rows).** The three the audit named: CPS-230-56 ('heightened'), PSPF-077 ('responding to' and the OFFICIAL: Sensitive limit) and PSPF-114 (ASD assessment only for TOP SECRET gateways). The check found six more:
+  - CPS-230-34: the role in the financial system;
+  - CPS-230-38: 'material' weakness and the change;
+  - CPS-230-60: the threshold on changes;
+  - CPS-234-35: 'other' regulators;
+  - PSPF-213: every meeting and the strategy;
+  - PSPF-218: a waiver granted or pending.
+
+  Each row now ends "(completed in Fix 3c: …)", saying what that title lacked.
+- **Generalised (16 rows).** Each claim now says the limb is generalised, or that a qualifier is not carried. No title changed: the independent audit judged each of these titles fair, and none is among its 18.
+  - Fix 3: CPS-230-13 ('within tolerance'), CPS-230-21 (key controls and the (b) and (c) reviews), CPS-230-27 (processes), CPS-230-29 (review), CPS-230-30 (failures), CPS-230-47 (monitoring and substituting) and CPS-230-59 (performance, control effectiveness and compliance). Also PSPF-016 (the basis of tailoring), PSPF-046 (developments during the contract), PSPF-048 (the residual risk) and PSPF-098 (develop, implement and maintain).
+  - Fix 3b: PSPF-042 ('reasonable'), PSPF-087 (reauthorisation), PSPF-095 ('accredited'), PSPF-128 (other entities and third parties) and PSPF-130 ('appropriate').
+- **Revised in Fix 3c, claim already true (4 rows).** CPS-230-21 (also generalised above), CPS-230-57, CPS-230-58 and PSPF-212 end "(revised in Fix 3c: …)", so the tables point to the later title.
+- **Kept titles.** Two "kept" entries were also overstated:
+  - fix 3's PSPF-139 ("narrows nothing");
+  - fix 3b's PSPF-112, 155, 175 and 190 ("name the whole requirement").
+
+  Both entries now note that Fix 3c corrected them.
+
+In all, 28 claim cells and 2 kept entries changed. The audit's two optional tidy-ups (CPS-230-27 "or processes" and PSPF-038 "where appropriate") were not applied, because the audit judged both titles fair. CPS-230-27's claim now says processes are generalised.
+
+**Commits.**
+- `be545dd` test(10-23): expect the 18 audited control titles to cover every limb
+- `9306359` fix(10-23): correct the 18 audited control titles to cover every limb
+- the docs commit that records this fix
+
+**Decisions.**
+- All 18 audited titles are applied. Three are reworded where the audit's proposal left out a limb (PSPF-190) or named the wrong approving body (PSPF-212), or where the alternative ran past the cap (CPS-230-38, which keeps the audit's wording).
+- Where an earlier fix's claim overstated its title, the claim is corrected in place and annotated, and the title changes only where the audit found a fault. That keeps the record and the data in step without a second, unaudited retitle.
+- The ISO 8.1 spelling stays as it is until it is checked against a licensed copy (deferred, below).
+
+**Deferred.** One open question for the operator is in `deferred-items.md`. The audit says ISO/IEC 27001:2022's Annex A table may print 8.1 as "User end point devices", where the file has "User endpoint devices" (ISO/IEC 27002:2022's spelling). It is unchanged, because there is no licensed copy to check against.
+
+**Open for the pilot:** the descriptive-title Manual-Only row. After the next seeded Strapi start, re-walk a few of the 18 (for example CPS-230-34, CPS-230-57, PSPF-077 and PSPF-213). The development database picks up fix 3c only on a seeded start, and operator renames survive it.
 
 ## Phase gate (second run, after the walkthrough fixes)
 
