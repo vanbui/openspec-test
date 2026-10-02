@@ -22,7 +22,7 @@ import {
   deleteControlImplementationAction,
   updateControlImplementationAction,
 } from './assessment-actions';
-import { controlImplementationWritableFields, controlPickerPageSize } from './assessment-domain';
+import { changedWritableValues, controlImplementationWritableFields, controlPickerPageSize } from './assessment-domain';
 import { controlPickerItem } from './control-label';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from './owner-combobox';
 import type {
@@ -99,10 +99,6 @@ function normalizeEmptyValues(values: ControlImplementationUpdateInput): Control
   return Object.fromEntries(controlImplementationWritableFields.map((field) => [field, values[field] === '' ? null : values[field]])) as ControlImplementationUpdateInput;
 }
 
-function changedValues(values: ControlImplementationUpdateInput, initial: ControlImplementationUpdateInput) {
-  return Object.fromEntries(controlImplementationWritableFields.filter((field) => values[field] !== initial[field]).map((field) => [field, values[field]])) as ControlImplementationUpdateInput;
-}
-
 export function ControlImplementationEditor({ addedAt, assessmentId, focusControlOnOpen = false, implementation, mode, onCreated, onRemoved, onUpdated, options, riskId }: ControlImplementationEditorProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -136,7 +132,7 @@ export function ControlImplementationEditor({ addedAt, assessmentId, focusContro
     setFormError(null);
     confirmation.clear();
     const normalized = normalizeEmptyValues(values);
-    const submitted = mode === 'create' ? normalized : changedValues(normalized, initial);
+    const submitted = mode === 'create' ? normalized : changedWritableValues(controlImplementationWritableFields, normalized, initial);
     if (mode === 'edit' && Object.keys(submitted).length === 0) {
       confirmation.note('No changes to save.');
       return;

@@ -33,7 +33,7 @@ import type { RelationPickerItem, RelationPickerSearchInput, RelationPickerSearc
 import { ControlImplementationEditor, type ControlImplementationEditorOptions } from './control-implementation-editor';
 import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
-import { applicableControlGroup, assessmentRiskListItemFromAnalystRisk, canMutateAssessment } from './assessment-domain';
+import { applicableControlGroup, assessmentDetailsFormValues, assessmentRiskListItemFromAnalystRisk, assessmentSaveWrites, canMutateAssessment, normalizeAssessmentDetails } from './assessment-domain';
 import { missingCaption, summarizeReleaseReadiness, type ReleaseReadinessSummary } from './release-readiness-summary';
 import { ReleasedRiskDetails } from './released-risk-details';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
@@ -438,25 +438,18 @@ function ReleaseReadinessRequirements({ summary }: { summary: ReleaseReadinessSu
 
 function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: AnalystAssessmentDetail; mutable: boolean; onUpdated: () => void }) {
   const [formError, setFormError] = useState<string | null>(null);
-  const form = useForm<AssessmentUpdateInput>({ defaultValues: {
-    summary: assessment.summary ?? '',
-    overallRating: assessment.overallRating ?? undefined,
-    overallControlEffectiveness: assessment.overallControlEffectiveness ?? undefined,
-    recommendationsSummary: assessment.recommendationsSummary ?? '',
-    overallRiskRationale: assessment.overallRiskRationale ?? '',
-    nextReviewDate: assessment.nextReviewDate,
-  } });
+  const form = useForm<AssessmentUpdateInput>({ defaultValues: assessmentDetailsFormValues(assessment) });
   const confirmation = useRecordSaveStatus(form.watch);
 
   async function submit(values: AssessmentUpdateInput) {
     setFormError(null);
     confirmation.clear();
-    const normalized: AssessmentUpdateInput = {
-      ...values,
-      overallRating: values.overallRating || undefined,
-      overallControlEffectiveness: values.overallControlEffectiveness || undefined,
-      nextReviewDate: values.nextReviewDate || null,
-    };
+    // Unchanged details send nothing, as on the Risk and mitigation control forms (UI-SPEC §13.4).
+    if (!assessmentSaveWrites(assessment.assessmentStatus, values, assessment)) {
+      confirmation.note('No changes to save.');
+      return;
+    }
+    const normalized = normalizeAssessmentDetails(values);
     const result = await saveAssessmentAction({ assessmentId: assessment.documentId, values: normalized });
     if (!result.ok) {
       for (const [field, messages] of Object.entries(result.fieldErrors ?? {})) {

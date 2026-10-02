@@ -19,6 +19,7 @@ import { createRiskAction, updateRiskAction } from './assessment-actions';
 import { useRecordSaveStatus } from './use-record-save-status';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from './owner-combobox';
 import {
+  changedWritableValues,
   exemptionReviewDateFormValue,
   inventoryPickerPageSize,
   requestRelationGroup,
@@ -148,12 +149,6 @@ function selectedValues(risk?: EditableRisk): RiskUpdateInput {
   return { ...values, exemptionReviewDate: exemptionReviewDateFormValue(risk.exemptionReviewDate) || null };
 }
 
-function changedValues(values: RiskUpdateInput, initial: RiskUpdateInput): RiskUpdateInput {
-  return Object.fromEntries(
-    riskWritableFields.filter((field) => values[field] !== initial[field]).map((field) => [field, values[field]]),
-  ) as RiskUpdateInput;
-}
-
 function normalizeEmptyValues(values: RiskUpdateInput): RiskUpdateInput {
   return Object.fromEntries(
     riskWritableFields.map((field) => [field, values[field] === '' ? null : values[field]]),
@@ -194,7 +189,7 @@ export function RiskEditor({ addedAt, assessmentId, mode, onCreated, onRelationC
     confirmation.clear();
     const formValues = normalizeEmptyValues(values);
     const normalized = withExemptionReviewInstant(formValues);
-    const submitted = mode === 'create' ? normalized : withExemptionReviewInstant(changedValues(formValues, initial));
+    const submitted = mode === 'create' ? normalized : withExemptionReviewInstant(changedWritableValues(riskWritableFields, formValues, initial));
     if (mode === 'edit' && Object.keys(submitted).length === 0) {
       confirmation.note('No changes to save.');
       return;

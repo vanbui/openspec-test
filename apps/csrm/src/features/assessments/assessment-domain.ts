@@ -5,6 +5,7 @@ import type {
   AssessmentRating,
   AssessmentRiskListItem,
   AssessmentStatus,
+  AssessmentUpdateInput,
   ReleaseReadinessRequirement,
   RiskType,
 } from './assessment-schema';
@@ -181,6 +182,75 @@ export const controlImplementationWritableFields = [
   'implementedDate',
   'reviewDate',
 ] as const;
+
+/** The assessment details the analyst writes, in the order of `assessmentUpdateInputSchema`. */
+export const assessmentWritableFields = [
+  'summary',
+  'overallRating',
+  'overallControlEffectiveness',
+  'recommendationsSummary',
+  'overallRiskRationale',
+  'nextReviewDate',
+] as const;
+
+/**
+ * The writable fields whose value differs from the form's starting value (D-33; UI-SPEC §13.4). The Risk,
+ * mitigation control and assessment details forms share it, so "nothing changed" means the same on each: both
+ * sides are normalised the same way first, and an empty result is `No changes to save.` with no request.
+ */
+export function changedWritableValues<T extends object>(fields: readonly (keyof T)[], values: T, initial: T): Partial<T> {
+  return Object.fromEntries(fields.filter((field) => values[field] !== initial[field]).map((field) => [field, values[field]])) as Partial<T>;
+}
+
+/** The assessment details form's values, as the form holds them and as it sends them. */
+export type AssessmentDetailsValues = AssessmentUpdateInput;
+
+type StoredAssessmentDetails = Pick<AnalystAssessmentDetail, (typeof assessmentWritableFields)[number]>;
+
+/**
+ * The details form's values as Save assessment sends them: a blank choice is no choice and a blank date is
+ * no date. The stored assessment is normalised the same way, so an untouched form compares equal to it.
+ */
+export function normalizeAssessmentDetails(values: AssessmentDetailsValues): AssessmentDetailsValues {
+  return {
+    ...values,
+    summary: values.summary ?? '',
+    overallRating: values.overallRating || undefined,
+    overallControlEffectiveness: values.overallControlEffectiveness || undefined,
+    recommendationsSummary: values.recommendationsSummary ?? '',
+    overallRiskRationale: values.overallRiskRationale ?? '',
+    nextReviewDate: values.nextReviewDate || null,
+  };
+}
+
+/** The details form's starting values, read from the served assessment. */
+export function assessmentDetailsFormValues(assessment: StoredAssessmentDetails): AssessmentDetailsValues {
+  return {
+    summary: assessment.summary ?? '',
+    overallRating: assessment.overallRating ?? undefined,
+    overallControlEffectiveness: assessment.overallControlEffectiveness ?? undefined,
+    recommendationsSummary: assessment.recommendationsSummary ?? '',
+    overallRiskRationale: assessment.overallRiskRationale ?? '',
+    nextReviewDate: assessment.nextReviewDate,
+  };
+}
+
+/**
+ * Whether Save assessment has anything to write (UI-SPEC §13.4, D-13). Changed details always do. Unchanged
+ * details do only on a drafted assessment: Strapi records the analyst's review on any accepted save of a draft
+ * (a generated draft, or one whose completed review a later edit withdrew), and the page tells the analyst to
+ * save again to record it. On an in-review assessment an unchanged save would change nothing the analyst
+ * asked for, and on a release-ready one it would withdraw the completed review, so it sends nothing.
+ */
+export function assessmentSaveWrites(
+  status: AssessmentStatus,
+  values: AssessmentDetailsValues,
+  stored: StoredAssessmentDetails,
+): boolean {
+  if (status === 'draft') return true;
+  const initial = normalizeAssessmentDetails(assessmentDetailsFormValues(stored));
+  return Object.keys(changedWritableValues(assessmentWritableFields, normalizeAssessmentDetails(values), initial)).length > 0;
+}
 
 /**
  * The exemption review date as its date field shows it (D-32; UI-SPEC §13.3): the stored instant's UTC calendar

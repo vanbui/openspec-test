@@ -179,9 +179,25 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await page.getByRole('combobox', { name: 'Overall control effectiveness' }).selectOption('Partially Effective');
   const assessmentSaveResponse = page.waitForResponse((response) =>
     response.request().method() === 'POST' && response.url().includes('/app/review/assessments/'));
-  await page.getByRole('button', { name: 'Save assessment' }).click();
+  const saveAssessment = page.getByRole('button', { name: 'Save assessment' });
+  await saveAssessment.click();
   expect((await assessmentSaveResponse).ok(), 'ASSESS-03 assessment conclusion persisted').toBe(true);
   await expect(page.getByText('In review', { exact: true }).first()).toBeVisible();
+
+  // D-33, UI-SPEC §13.4: a changed save confirms beside Save assessment with its time; saving the same details
+  // again sends nothing and says so in the same region (walkthrough fix 1).
+  const detailsStatus = page.locator('[data-slot="form-actions"]').filter({ has: saveAssessment }).getByRole('status');
+  await expect(detailsStatus, 'ASSESS06_DETAILS_SAVE_CONFIRMED the changed save confirms with its time').toHaveText(/^Assessment details saved at /);
+  const unchangedSaveWrites: string[] = [];
+  const recordWrite = (sent: { method(): string; url(): string }) => {
+    if (sent.method() !== 'GET') unchangedSaveWrites.push(`${sent.method()} ${sent.url()}`);
+  };
+  page.on('request', recordWrite);
+  await saveAssessment.click();
+  await expect(detailsStatus, 'ASSESS06_UNCHANGED_SAVE_NOTED an unchanged save says so in the same region').toHaveText('No changes to save.');
+  page.off('request', recordWrite);
+  expect(unchangedSaveWrites, 'ASSESS06_UNCHANGED_SAVE_WRITES_NOTHING an unchanged save sends no request').toEqual([]);
+  await expect(page.getByText('In review', { exact: true }).first(), 'ASSESS06_UNCHANGED_SAVE_WRITES_NOTHING the review stands').toBeVisible();
 
   const readinessRequirements = page.getByRole('list', { name: 'Release requirements' });
   // E10 (D-35, UI-SPEC §14.1): one row per Risk, named `{risk number}: {n} outstanding`, saying what is missing.
