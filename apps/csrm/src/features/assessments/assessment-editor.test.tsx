@@ -37,6 +37,7 @@ class TestResizeObserver {
 vi.stubGlobal('ResizeObserver', TestResizeObserver);
 Element.prototype.scrollIntoView ??= () => {};
 
+import { TimeZoneProvider } from '@/components/csrm/local-time';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import {
   AssessmentEditor,
@@ -183,9 +184,12 @@ const internetExposure: RiskType = { documentId: 'risk-type-1', name: 'Internet 
 
 const searchControls = vi.fn(async () => ({ ok: true as const, data: [] }));
 
-/** The control editor's options: the owners, the Risk Type's applicable controls first, and the control search. */
+/** An active user who is on no Risk yet: the control owner search finds her (D-28, UAT-034). */
+const zoe = { documentId: 'zoe-id', displayName: 'Zoe Owner' };
+
+/** The control editor's options: the owner search, the Risk Type's applicable controls first, and the control search. */
 const controlEditorOptions = {
-  users: [analyst],
+  searchOwners,
   suggestedControls: {
     label: 'Applicable to Internet Exposure',
     items: [
@@ -574,6 +578,12 @@ describe('analyst assessment editor contract', () => {
         expect(field).toHaveAttribute('role', 'combobox');
         fireEvent.click(field);
         fireEvent.click(screen.getByRole('option', { name: 'APP-11 · Security of personal information' }));
+      } else if (label === 'Control owner') {
+        // The control owner is chosen with the owner search over every active user (D-28).
+        expect(field).toHaveAttribute('role', 'combobox');
+        searchOwners.mockResolvedValueOnce({ ok: true, data: [zoe] });
+        fireEvent.change(field, { target: { value: 'Zoe' } });
+        fireEvent.click(await screen.findByRole('option', { name: 'Zoe Owner' }));
       } else if (field instanceof HTMLSelectElement) {
         const next = [...field.options].map((option) => option.value).find((value) => value !== field.value) ?? '';
         fireEvent.change(field, { target: { value: next } });
@@ -787,6 +797,174 @@ describe('analyst assessment editor contract', () => {
     expect(route).toContain('relationLabels=');
     expect(route).toContain('searchSystems={searchInformationSystemsAction}');
     expect(route).toContain('searchAssets={searchInformationAssetsAction}');
+  });
+});
+
+describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 and §13.4)', () => {
+  // 01:00:05 UTC is 11:00 am in Sydney, so each confirmation reads a known local time (D-19).
+  const savedAt = new Date('2026-09-28T01:00:05.000Z');
+  const inSydney = (node: ReactNode) => <TimeZoneProvider zone="Australia/Sydney">{node}</TimeZoneProvider>;
+  /** The action row a Save button sits in, where its confirmation shows (X-1). */
+  const actionRow = (button: HTMLElement) => {
+    const row = button.closest<HTMLElement>('[data-slot="form-actions"]');
+    expect(row, 'the Save button sits in a form action row').not.toBeNull();
+    return row!;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(savedAt);
+    searchOwners.mockResolvedValue({ ok: true, data: [zoe] });
+    actionMocks.updateRiskAction.mockResolvedValue({ ok: true, data: risk });
+    actionMocks.createRiskAction.mockResolvedValue({ ok: true, data: risk });
+    actionMocks.updateControlImplementationAction.mockResolvedValue({ ok: true, data: implementation });
+    actionMocks.createControlImplementationAction.mockResolvedValue({ ok: true, data: implementation });
+    actionMocks.saveAssessmentAction.mockResolvedValue({ ok: true, data: assessment });
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: assessment });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('seeds the control owner from the served owner and chooses any active user by search (D-28, UAT-034)', async () => {
+    render(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />);
+    const owner = screen.getByRole('combobox', { name: 'Control owner' });
+    expect(owner.tagName).toBe('INPUT');
+    expect(screen.getByText('Selected owner: Bob Doe')).toBeInTheDocument();
+    expect(document.querySelector('select[name="controlOwner"]')).toBeNull();
+
+    await userEvent.type(owner, 'Zo');
+    await userEvent.click(await screen.findByRole('option', { name: 'Zoe Owner' }));
+    expect(searchOwners).toHaveBeenLastCalledWith({ search: 'Zo' });
+    expect(screen.getByText('Selected owner: Zoe Owner')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save mitigation control' }));
+    await waitFor(() => expect(actionMocks.updateControlImplementationAction).toHaveBeenCalledWith({
+      assessmentId: 'assessment/id', implementationId: 'implementation-1', values: { controlOwner: 'zoe-id' },
+    }));
+  });
+
+  it('hands the page’s owner search to every Control owner picker, never a list of names already on the Risk', async () => {
+    render(<AssessmentEditor {...editorProps} />);
+    const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
+    const owner = within(region).getByRole('combobox', { name: 'Control owner' });
+    expect(owner.tagName).toBe('INPUT');
+    await userEvent.type(owner, 'Zo');
+    expect(await screen.findByRole('option', { name: 'Zoe Owner' })).toBeInTheDocument();
+    expect(searchOwners).toHaveBeenCalledWith({ search: 'Zo' });
+  });
+
+  it('confirms a saved Risk beside Save risk with the local time, and clears it on the next change', async () => {
+    render(inSydney(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />));
+    const save = screen.getByRole('button', { name: 'Save risk' });
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+
+    await userEvent.type(screen.getByLabelText('Comments'), ' Reviewed.');
+    await userEvent.click(save);
+    const status = within(actionRow(save)).getByRole('status');
+    await waitFor(() => expect(status).toHaveTextContent(/^Risk saved at 11:00 am$/));
+    expect(status.querySelector('svg')).toHaveClass('text-success');
+    expect(status.querySelector('time')).toHaveAttribute('dateTime', savedAt.toISOString());
+
+    await userEvent.type(screen.getByLabelText('Comments'), ' Again.');
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('says No changes to save. in the same region, with no icon', async () => {
+    render(inSydney(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />));
+    const save = screen.getByRole('button', { name: 'Save risk' });
+    await userEvent.click(save);
+    const status = within(actionRow(save)).getByRole('status');
+    expect(status).toHaveTextContent(/^No changes to save\.$/);
+    expect(status.querySelector('svg')).toBeNull();
+    expect(actionMocks.updateRiskAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps the Risk not saved alert and shows no confirmation when a save fails', async () => {
+    render(inSydney(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />));
+    const save = screen.getByRole('button', { name: 'Save risk' });
+    await userEvent.type(screen.getByLabelText('Comments'), ' Reviewed.');
+    await userEvent.click(save);
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent('Risk saved at'));
+
+    actionMocks.updateRiskAction.mockResolvedValueOnce({ ok: false, formError: 'The assessment service is unavailable. Please try again later.' });
+    await userEvent.click(save);
+    expect(await screen.findByText('Risk not saved')).toBeInTheDocument();
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('confirms a saved mitigation control beside its Save button, clears it on the next change, and clears it on failure', async () => {
+    render(inSydney(<ControlImplementationEditor assessmentId="assessment/id" implementation={implementation} mode="edit" options={controlEditorOptions} riskId="risk-1" />));
+    const save = screen.getByRole('button', { name: 'Save mitigation control' });
+    await userEvent.type(screen.getByLabelText('Evidence'), ' Verified.');
+    await userEvent.click(save);
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent(/^Mitigation control saved at 11:00 am$/));
+
+    await userEvent.type(screen.getByLabelText('Evidence'), ' Again.');
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+
+    actionMocks.updateControlImplementationAction.mockResolvedValueOnce({ ok: false, formError: 'The assessment service is unavailable. Please try again later.' });
+    await userEvent.click(save);
+    expect(await screen.findByText('Mitigation control not changed')).toBeInTheDocument();
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('confirms saved assessment details beside Save assessment, and keeps Assessment not saved on failure', async () => {
+    render(inSydney(<AssessmentEditor {...editorProps} />));
+    const save = screen.getByRole('button', { name: 'Save assessment' });
+    await userEvent.type(screen.getByLabelText('Summary'), ' Reviewed.');
+    await userEvent.click(save);
+    await waitFor(() => expect(within(actionRow(save)).getByRole('status')).toHaveTextContent(/^Assessment details saved at 11:00 am$/));
+
+    await userEvent.type(screen.getByLabelText('Summary'), ' Again.');
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+
+    actionMocks.saveAssessmentAction.mockResolvedValueOnce({ ok: false, formError: 'Check the assessment details and try again.' });
+    await userEvent.click(save);
+    expect(await screen.findByText('Assessment not saved')).toBeInTheDocument();
+    expect(within(actionRow(save)).getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('confirms an added Risk on its new card and returns focus to Add Risk (UI-SPEC §13.4)', async () => {
+    const createdRisk = { ...risk, documentId: 'risk-created', riskNumber: 'RSK-0043' };
+    actionMocks.createRiskAction.mockResolvedValue({ ok: true, data: createdRisk });
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [risk, createdRisk] } });
+    render(inSydney(<AssessmentEditor {...editorProps} />));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add Risk' }));
+    const create = screen.getByRole('button', { name: 'Add risk' });
+    fireEvent.change(within(create.closest('form')!).getByLabelText('Risk statement'), { target: { value: 'New contextual Risk' } });
+    await userEvent.click(create);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add Risk' })).toHaveFocus());
+    const card = await waitFor(() => {
+      const element = document.getElementById('risk-risk-created');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    await waitFor(() => expect(within(card).getByRole('status')).toHaveTextContent(/^Risk added at 11:00 am$/));
+    // The Risk that was already there shows no confirmation.
+    expect(within(document.getElementById('risk-risk-1')!).getAllByRole('status').every((region) => region.textContent === '')).toBe(true);
+  });
+
+  it('confirms an added mitigation control on its form and returns focus to that Risk’s Add mitigation control', async () => {
+    const created: ControlImplementation = { ...implementation, documentId: 'implementation-2', control: 'control-2', controlSummary: applicableApp11 };
+    actionMocks.createControlImplementationAction.mockResolvedValue({ ok: true, data: created });
+    render(inSydney(<AssessmentEditor {...editorProps} />));
+    const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
+
+    await userEvent.click(within(region).getByRole('button', { name: 'Add mitigation control' }));
+    fireEvent.click(within(region).getAllByRole('combobox', { name: 'Control' }).at(-1)!);
+    fireEvent.click(screen.getByRole('option', { name: 'APP-11 · Security of personal information' }));
+    await userEvent.click(within(region).getByRole('button', { name: 'Add mitigation control' }));
+
+    // The create form gives way to the new control's own edit form before focus is checked: the create form's
+    // submit button shares the add control's name.
+    await waitFor(() => expect(within(region).getAllByRole('button', { name: 'Save mitigation control' })).toHaveLength(2));
+    expect(within(region).getByRole('button', { name: 'Add mitigation control' })).toHaveFocus();
+    const createdForm = within(region).getByText('Selected control: APP-11 · Security of personal information').closest('form')!;
+    expect(within(createdForm).getByRole('button', { name: 'Save mitigation control' })).toBeInTheDocument();
+    await waitFor(() => expect(within(createdForm).getByRole('status')).toHaveTextContent(/^Mitigation control added at 11:00 am$/));
+    const existingForm = within(region).getByText('Selected control: AC-1 · Access control').closest('form')!;
+    expect(within(existingForm).getByRole('status')).toBeEmptyDOMElement();
   });
 });
 

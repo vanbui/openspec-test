@@ -344,6 +344,32 @@ describe('RiskDetails', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Mitigation control removed.');
   });
 
+  it('chooses any active user as the control owner and names the card from the response (D-28, UAT-034)', async () => {
+    const user = userEvent.setup();
+    const zoe = { documentId: 'user-zoe', displayName: 'Zoe Owner' };
+    searchOwners.mockResolvedValue({ ok: true, data: [zoe] });
+    actionMocks.updateMitigationControlAction.mockResolvedValue({ ok: true, data: { ...implementationResponse(detail.controlImplementations[0]!.control), controlOwner: zoe } });
+    renderDetails();
+    await user.click(screen.getByRole('button', { name: 'Edit mitigation control' }));
+
+    const owner = screen.getByRole('combobox', { name: 'Control owner' });
+    expect(owner.tagName).toBe('INPUT');
+    expect(screen.getByText('Selected owner: Bob Doe')).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Edit mitigation control' }).querySelector('select[name="controlOwner"]')).toBeNull();
+    await user.type(owner, 'Zo');
+    await user.click(await screen.findByRole('option', { name: 'Zoe Owner' }));
+    expect(searchOwners).toHaveBeenLastCalledWith({ search: 'Zo' });
+    expect(screen.getByText('Selected owner: Zoe Owner')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save mitigation control' }));
+    await waitFor(() => expect(actionMocks.updateMitigationControlAction).toHaveBeenCalledWith({
+      riskId: 'risk-alpha', implementationId: 'implementation-1', values: { controlOwner: 'user-zoe' },
+    }));
+    // The card takes its owner from the saved control implementation, not from the names already on the Risk.
+    expect(definitionValue('Control owner')).toHaveTextContent(/^Zoe Owner$/);
+    expect(screen.getByRole('status')).toHaveTextContent('Mitigation control changes saved.');
+  });
+
   it('opens the mitigation form on its Control picker with the Risk Type’s applicable controls first (D-31, UI-SPEC §13.1)', async () => {
     const user = userEvent.setup();
     renderDetails({ detail: { ...detail, controlImplementations: [] } });

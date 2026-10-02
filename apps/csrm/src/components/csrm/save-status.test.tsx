@@ -59,6 +59,17 @@ describe('SaveStatus', () => {
     expect(normalised(screen.getByRole('status').textContent)).toBe('Risk saved at 11:00 am');
   });
 
+  it('a note shows its plain message in the same polite region, with no icon (UI-SPEC §13.4)', () => {
+    renderStatus({ kind: 'note', message: 'No changes to save.' });
+
+    const status = screen.getByRole('status');
+    expect(normalised(status.textContent)).toBe('No changes to save.');
+    expect(status.querySelector('svg')).toBeNull();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Saving…')).not.toBeInTheDocument();
+  });
+
   it('a retryable failure is announced once with Retry save', async () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
