@@ -125,7 +125,7 @@
       "CPS-230-18": "APRA actions on material operational risk weaknesses",
       "CPS-230-19": "Board accountability for overseeing operational risk, continuity and providers",
       "CPS-230-20": "Board-ensured senior manager roles for operational risk, continuity and providers",
-      "CPS-230-21": "Board oversight and approval for operational risk, BCP, tolerances and providers",
+      "CPS-230-21": "Board oversight of operational risk; approval of BCP, tolerances and provider policy",
       "CPS-230-22": "Senior management briefing the Board on decisions affecting critical operations",
       "CPS-230-23": "Full range of operational risks, with end-to-end senior management responsibility",
       "CPS-230-24": "IT capability, information asset age and health, and CPS 234 security",
@@ -138,11 +138,11 @@
       "CPS-230-31": "Timely incident and near miss handling, reflected in risk and control assessments",
       "CPS-230-32": "Notifying APRA within 72 hours of material operational risk incidents",
       "CPS-230-33": "Critical operations register and business continuity",
-      "CPS-230-34": "Critical operations defined by material harm to customers or the financial system",
+      "CPS-230-34": "Critical operations: material adverse impact on customers or financial system role",
       "CPS-230-35": "Minimum critical operations by entity type, unless justified otherwise",
       "CPS-230-36": "APRA power to require critical operation classification",
       "CPS-230-37": "Tolerance levels for each critical operation",
-      "CPS-230-38": "APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness",
+      "CPS-230-38": "APRA-required tolerance changes, and APRA-set tolerances on heightened risk or material weakness",
       "CPS-230-39": "Contents of the BCP, including triggers and communications",
       "CPS-230-40": "BCP capabilities, tolerance monitoring and Board reporting of failures with remediation",
       "CPS-230-41": "Notifying APRA within 24 hours of a critical operation disruption beyond tolerance",
@@ -160,11 +160,11 @@
       "CPS-230-53": "Formal agreement for material arrangements",
       "CPS-230-54": "APRA access and non-obstruction terms in provider agreements",
       "CPS-230-55": "Arrangement risks, continuity and orderly exit",
-      "CPS-230-56": "APRA-required review and change of provider arrangements on prudential concerns",
-      "CPS-230-57": "Partial relief for listed providers on standardised terms or no formal agreement",
-      "CPS-230-58": "APRA written exemption for arrangements outside the paragraph 57 relief",
+      "CPS-230-56": "APRA-required review and change of provider arrangements on heightened prudential concerns",
+      "CPS-230-57": "Partial relief for Attachment-category providers on standardised terms or no formal agreement",
+      "CPS-230-58": "APRA written partial exemption for arrangements outside the paragraph 57 relief",
       "CPS-230-59": "Monitoring and senior management reporting on material arrangements",
-      "CPS-230-60": "Notifying APRA of critical service agreements and material offshoring, including changes",
+      "CPS-230-60": "Notifying APRA of critical service agreements and material offshoring, including material changes",
       "CPS-230-61": "Internal audit review of proposed critical outsourcing and Board compliance reporting"
     },
     "apra-cps-234-2019.json": {
@@ -190,7 +190,7 @@
       "CPS-234-32": "Internal audit of information security controls",
       "CPS-234-33": "Skilled personnel for control assurance",
       "CPS-234-34": "Internal audit of related or third-party assurance it relies on, where material",
-      "CPS-234-35": "Notifying APRA within 72 hours of material or regulator-notified incidents",
+      "CPS-234-35": "72-hour APRA notice of material incidents or those notified to other regulators",
       "CPS-234-36": "Notifying APRA of material control weaknesses not remediable in time"
     },
     "pspf-release-2026.json": {
@@ -270,7 +270,7 @@
       "PSPF-074": "Destroying classified information after retention or at authorised destruction dates",
       "PSPF-075": "People outside the entity: needed clearance, need-to-know and compliant transfer",
       "PSPF-076": "Sharing with state and territory government agencies",
-      "PSPF-077": "Agreement before sharing outside government, except returned external information",
+      "PSPF-077": "Agreement before sharing outside government, except returning or answering OFFICIAL: Sensitive input",
       "PSPF-078": "International agreement security provisions",
       "PSPF-079": "Protecting classified information shared with foreign entities",
       "PSPF-080": "AUSTEO information withheld from non-citizens unless exempted",
@@ -305,8 +305,8 @@
       "PSPF-109": "Using only cloud providers IRAP-assessed in the last 24 months",
       "PSPF-110": "Risk-based action on IRAP assessment recommendations and findings",
       "PSPF-111": "Certified hosting for classified information and systems of government significance",
-      "PSPF-112": "Procuring data centre services through the panel",
-      "PSPF-114": "Gateways with an IRAP or ASD assessment in the last 24 months",
+      "PSPF-112": "Procuring data centre services through the Data Centre Facilities Supplies Panel",
+      "PSPF-114": "Gateways IRAP-assessed, or ASD-assessed if TOP SECRET, in the last 24 months",
       "PSPF-115": "Receiving, verifying, resolving and reporting disclosed vulnerabilities from any source",
       "PSPF-116": "Assuring personnel eligibility and suitability",
       "PSPF-117": "Identity verified to at least Level 3 assurance before employment",
@@ -331,7 +331,7 @@
       "PSPF-136": "Agreement for working in another entity's facilities",
       "PSPF-137": "ASD approval for overseas TOP SECRET remote access outside PSPF facilities",
       "PSPF-138": "Risk assessment for remote work in international locations",
-      "PSPF-139": "Remote work exposed to foreign government direction",
+      "PSPF-139": "Remote work exposed to extrajudicial foreign government directions conflicting with Australian law",
       "PSPF-140": "Security vetting by authorised vetting agencies or, where authorised, the entity",
       "PSPF-141": "Vetting personnel skills and competencies",
       "PSPF-142": "Clearance conditions when gaining sponsorship",
@@ -347,7 +347,7 @@
       "PSPF-152": "Uncheckable backgrounds: vetting agency advice and Accountable Authority waiver",
       "PSPF-153": "Informed consent of the clearance subject",
       "PSPF-154": "Assessing integrity for Baseline to Positive Vetting",
-      "PSPF-155": "Assessing TOP SECRET-Privileged Access suitability",
+      "PSPF-155": "Assessing TOP SECRET-Privileged Access eligibility and suitability under its Standard",
       "PSPF-156": "Minimum personnel security checks by clearance level",
       "PSPF-157": "Resolving doubt in the national interest",
       "PSPF-158": "Conditional clearances for manageable concerns",
@@ -367,7 +367,7 @@
       "PSPF-172": "Reassessing integrity of clearance holders",
       "PSPF-173": "Reassessing trustworthiness for TOP SECRET-Privileged Access",
       "PSPF-174": "Resolving doubt in the national interest on reassessment",
-      "PSPF-175": "Starting revalidation before clearances lapse",
+      "PSPF-175": "Starting revalidation early enough to finish before clearances lapse",
       "PSPF-176": "Vetting agency concerns to inform access limits",
       "PSPF-177": "Sponsoring Entity concerns passed to the vetting agency where appropriate",
       "PSPF-178": "Vetting agency sharing of security concerns",
@@ -382,7 +382,7 @@
       "PSPF-187": "Notifying the vetting agency of separation",
       "PSPF-188": "Recording separation clearance changes and lawful security file transfers between vetting agencies",
       "PSPF-189": "Security integrated into facility planning, selection, design and modification",
-      "PSPF-190": "Security plans for new and refurbished facilities",
+      "PSPF-190": "Security plans for new or under-construction facilities and major refurbishments",
       "PSPF-191": "Site selection for facility locations",
       "PSPF-192": "Facility access controls designed or modified for the highest risk level",
       "PSPF-193": "Construction to ASIO Technical Notes for public areas and unclassified asset storage",
@@ -404,13 +404,13 @@
       "PSPF-209": "Guard arrangements for Security Zones",
       "PSPF-210": "Countermeasures against technical surveillance",
       "PSPF-211": "Technology asset stocktake and risk management plan",
-      "PSPF-212": "Post-quantum cryptography on newly procured equipment and software",
-      "PSPF-213": "Cyber risk reports to each Audit Committee and biannual uplift plan progress",
+      "PSPF-212": "Supporting approved post-quantum algorithms in newly procured cryptographic equipment and software",
+      "PSPF-213": "Reporting cyber risk every Audit Committee meeting; strategy and uplift progress twice-yearly",
       "PSPF-214": "Gateway protection for digital infrastructure",
       "PSPF-215": "Cyber Security Partnership Program participation and notifying ASD of risk profile changes",
       "PSPF-216": "Cyber Threat Intelligence Sharing connection",
       "PSPF-217": "Protecting Systems of Government Significance",
-      "PSPF-218": "Withholding temporary or provisional access from waiver subjects until vetting completes",
+      "PSPF-218": "Eligibility waiver granted or pending: no temporary or provisional access until vetted",
       "PSPF-219": "Training on foreign interference, espionage, cultivation and exploitation"
     }
   },
@@ -441,7 +441,8 @@
         "Senior manager roles for operational risk"
       ],
       "CPS-230-21": [
-        "Board approval of BCP, tolerances and provider policy"
+        "Board approval of BCP, tolerances and provider policy",
+        "Board oversight and approval for operational risk, BCP, tolerances and providers"
       ],
       "CPS-230-22": [
         "Briefing the Board on impacts to critical operations"
@@ -474,7 +475,8 @@
         "Notifying APRA of operational incidents within 72 hours"
       ],
       "CPS-230-34": [
-        "Critical operations defined by adverse customer impact"
+        "Critical operations defined by adverse customer impact",
+        "Critical operations defined by material harm to customers or the financial system"
       ],
       "CPS-230-35": [
         "Minimum critical operations by entity type"
@@ -483,7 +485,8 @@
         "APRA power to classify critical operations"
       ],
       "CPS-230-38": [
-        "APRA review and setting of tolerance levels"
+        "APRA review and setting of tolerance levels",
+        "APRA-required tolerance reviews, and APRA-set tolerances for heightened risk or weakness"
       ],
       "CPS-230-40": [
         "BCP capabilities and tolerance level monitoring"
@@ -522,19 +525,23 @@
         "APRA access rights in provider agreements"
       ],
       "CPS-230-56": [
-        "APRA-directed changes to provider arrangements"
+        "APRA-directed changes to provider arrangements",
+        "APRA-required review and change of provider arrangements on prudential concerns"
       ],
       "CPS-230-57": [
-        "Relief for listed providers on standardised terms"
+        "Relief for listed providers on standardised terms",
+        "Partial relief for listed providers on standardised terms or no formal agreement"
       ],
       "CPS-230-58": [
-        "APRA written exemption for unlisted arrangements"
+        "APRA written exemption for unlisted arrangements",
+        "APRA written exemption for arrangements outside the paragraph 57 relief"
       ],
       "CPS-230-59": [
         "Monitoring material arrangements and provider performance"
       ],
       "CPS-230-60": [
-        "Notifying APRA of critical and offshoring arrangements"
+        "Notifying APRA of critical and offshoring arrangements",
+        "Notifying APRA of critical service agreements and material offshoring, including changes"
       ],
       "CPS-230-61": [
         "Internal audit of critical outsourcing arrangements"
@@ -566,7 +573,8 @@
         "Internal audit of third-party control assurance"
       ],
       "CPS-234-35": [
-        "Notifying APRA of material incidents within 72 hours"
+        "Notifying APRA of material incidents within 72 hours",
+        "Notifying APRA within 72 hours of material or regulator-notified incidents"
       ],
       "CPS-234-36": [
         "Notifying APRA of material control weaknesses"
@@ -694,7 +702,8 @@
         "Need-to-know access for people outside the entity"
       ],
       "PSPF-077": [
-        "Agreement before sharing outside government"
+        "Agreement before sharing outside government",
+        "Agreement before sharing outside government, except returned external information"
       ],
       "PSPF-080": [
         "AUSTEO information withheld from non-citizens"
@@ -738,8 +747,12 @@
       "PSPF-111": [
         "Certified hosting for classified information"
       ],
+      "PSPF-112": [
+        "Procuring data centre services through the panel"
+      ],
       "PSPF-114": [
-        "IRAP-assessed gateway capabilities"
+        "IRAP-assessed gateway capabilities",
+        "Gateways with an IRAP or ASD assessment in the last 24 months"
       ],
       "PSPF-115": [
         "Receiving and resolving disclosed vulnerabilities"
@@ -768,6 +781,9 @@
       "PSPF-137": [
         "ASD approval for overseas TOP SECRET remote access"
       ],
+      "PSPF-139": [
+        "Remote work exposed to foreign government direction"
+      ],
       "PSPF-140": [
         "Use of authorised security vetting agencies"
       ],
@@ -792,6 +808,9 @@
       "PSPF-152": [
         "Vetting agency advice on uncheckable backgrounds"
       ],
+      "PSPF-155": [
+        "Assessing TOP SECRET-Privileged Access suitability"
+      ],
       "PSPF-160": [
         "Procedural fairness in clearance decisions"
       ],
@@ -803,6 +822,9 @@
       ],
       "PSPF-169": [
         "Annual review of eligibility waivers"
+      ],
+      "PSPF-175": [
+        "Starting revalidation before clearances lapse"
       ],
       "PSPF-177": [
         "Sponsoring entity concerns passed to the vetting agency"
@@ -824,6 +846,9 @@
       ],
       "PSPF-189": [
         "Security integrated into facility planning"
+      ],
+      "PSPF-190": [
+        "Security plans for new and refurbished facilities"
       ],
       "PSPF-192": [
         "Access controls designed for the highest risk"
@@ -847,16 +872,19 @@
         "Ongoing facility access for people not engaged"
       ],
       "PSPF-212": [
-        "Post-quantum cryptography on new equipment"
+        "Post-quantum cryptography on new equipment",
+        "Post-quantum cryptography on newly procured equipment and software"
       ],
       "PSPF-213": [
-        "Cyber risk reporting to the Audit Committee"
+        "Cyber risk reporting to the Audit Committee",
+        "Cyber risk reports to each Audit Committee and biannual uplift plan progress"
       ],
       "PSPF-215": [
         "Cyber Security Partnership Program participation"
       ],
       "PSPF-218": [
-        "Withholding temporary access while a waiver is considered"
+        "Withholding temporary access while a waiver is considered",
+        "Withholding temporary or provisional access from waiver subjects until vetting completes"
       ],
       "PSPF-219": [
         "Training on foreign interference and espionage"
