@@ -5,6 +5,9 @@ export type AdministrationFeatureConfig = {
   kind: AdministrationKind;
   label: string;
   pluralLabel: string;
+  /** The record's name inside a sentence (sentence case, X-4 and D-38): `control`, never `Control`; Risk Type keeps its capitals. */
+  runningLabel: string;
+  runningPluralLabel: string;
   naturalKey: 'name' | 'controlNumber';
   defaultSort: 'name:asc' | 'controlNumber:asc';
   listPath: string;
@@ -18,6 +21,8 @@ export const administrationConfig = {
     kind: 'risk-types',
     label: 'Risk Type',
     pluralLabel: 'Risk Types',
+    runningLabel: 'Risk Type',
+    runningPluralLabel: 'Risk Types',
     naturalKey: 'name',
     defaultSort: 'name:asc',
     listPath: '/app/admin/risk-types',
@@ -29,6 +34,8 @@ export const administrationConfig = {
     kind: 'controls',
     label: 'Control',
     pluralLabel: 'Controls',
+    runningLabel: 'control',
+    runningPluralLabel: 'controls',
     naturalKey: 'controlNumber',
     defaultSort: 'controlNumber:asc',
     listPath: '/app/admin/controls',
@@ -40,6 +47,8 @@ export const administrationConfig = {
     kind: 'information-systems',
     label: 'Information System',
     pluralLabel: 'Information Systems',
+    runningLabel: 'information system',
+    runningPluralLabel: 'information systems',
     naturalKey: 'name',
     defaultSort: 'name:asc',
     listPath: '/app/admin/information-systems',
@@ -51,6 +60,8 @@ export const administrationConfig = {
     kind: 'information-assets',
     label: 'Information Asset',
     pluralLabel: 'Information Assets',
+    runningLabel: 'information asset',
+    runningPluralLabel: 'information assets',
     naturalKey: 'name',
     defaultSort: 'name:asc',
     listPath: '/app/admin/information-assets',

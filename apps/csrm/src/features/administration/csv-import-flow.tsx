@@ -128,7 +128,7 @@ export function CsvImportFlow({ kind, previewAction, commitAction }: CsvImportFl
         setError(failure.message); setUnknownOutcome(failure.unknownOutcome); return;
       }
       const imported = extractData<CsvImportResultData>(response);
-      if (!imported) throw new Error(`The import result couldn’t be loaded. Check the ${config.pluralLabel} list before importing again.`);
+      if (!imported) throw new Error(`The import result couldn’t be loaded. Check the ${config.runningPluralLabel} list before importing again.`);
       setResult(imported); setRowPage(1); move(5);
       toast.success(`Import complete: ${imported.summary.create} created, ${imported.summary.update} updated, ${imported.summary.rejected} rejected`);
     } catch {
@@ -162,7 +162,7 @@ export function CsvImportFlow({ kind, previewAction, commitAction }: CsvImportFl
       </CardHeader>
       <CardContent className="grid gap-5">
         {step === 1 ? <>
-          <p className="text-sm text-muted-foreground">{`A row whose ${keyColumn.toLocaleLowerCase('en-AU')} matches an existing ${config.label} updates it. Other valid rows create new ${config.pluralLabel}. Unchanged, rejected and ambiguous rows are never written.`}</p>
+          <p className="text-sm text-muted-foreground">{`A row whose ${keyColumn.toLocaleLowerCase('en-AU')} matches an existing ${config.runningLabel} updates it. Other valid rows create new ${config.runningPluralLabel}. Unchanged, rejected and ambiguous rows are never written.`}</p>
           <HorizontalScrollRegion className="overflow-x-auto rounded-lg border" label={`${config.label} CSV columns`}><Table aria-label={`${config.label} CSV columns`}><TableHeader><TableRow><TableHead>Column</TableHead><TableHead>Required</TableHead><TableHead>Format</TableHead></TableRow></TableHeader><TableBody>{csvContract.columns.map((column) => <TableRow key={column.field}><TableCell>{column.field}</TableCell><TableCell>{column.required ? 'Required' : 'Optional'}</TableCell><TableCell className="whitespace-normal">{column.type === 'enum' ? column.values?.join(', ') : column.type === 'boolean' ? 'true or false' : `Text, up to ${column.maxLength.toLocaleString('en-AU')} characters`}</TableCell></TableRow>)}</TableBody></Table></HorizontalScrollRegion>
           <div className="flex flex-wrap gap-3"><Button onClick={() => move(2)}>Choose CSV file</Button><Button variant="outline" onClick={() => downloadAdministrationCsv(createAdministrationCsvTemplate(kind), `${filePrefix}-template.csv`)}>Download CSV template</Button><Button asChild variant="outline"><Link href={config.listPath}>Return to {config.pluralLabel}</Link></Button></div>
         </> : null}
@@ -185,7 +185,7 @@ export function CsvImportFlow({ kind, previewAction, commitAction }: CsvImportFl
           <div className="flex flex-wrap gap-3"><Button disabled={eligible === 0} onClick={() => move(4)}>Continue to confirmation</Button><Button variant="outline" onClick={() => move(2)}>Back to file selection</Button></div>
         </> : null}
         {step === 4 && preview ? <>
-          <p>This import will create <strong>{preview.summary.create}</strong> and update <strong>{preview.summary.update}</strong> {config.pluralLabel}. <strong>{preview.summary.rejected}</strong> rejected, <strong>{preview.summary.ambiguous}</strong> ambiguous, and <strong>{preview.summary.unchanged}</strong> unchanged rows will be skipped.</p>
+          <p>This import will create <strong>{preview.summary.create}</strong> and update <strong>{preview.summary.update}</strong> {config.runningPluralLabel}. <strong>{preview.summary.rejected}</strong> rejected, <strong>{preview.summary.ambiguous}</strong> ambiguous, and <strong>{preview.summary.unchanged}</strong> unchanged rows will be skipped.</p>
           <p className="text-sm text-muted-foreground">Imports never delete records. We check the file again before anything is written.</p>
           <label className="flex items-center gap-3"><Checkbox checked={reviewed} onCheckedChange={(checked) => setReviewed(checked === true)} />I have reviewed the create and update rows.</label>
           {busy ? <div className="grid gap-2"><Progress aria-label="Importing CSV" /><p className="text-sm" role="status">Import in progress. Keep this page open.</p></div> : null}

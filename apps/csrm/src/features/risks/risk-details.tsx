@@ -216,13 +216,13 @@ function relatedRows(detail: RiskDetail): DetailRow[] {
           className="text-primary underline-offset-4 hover:underline"
           href={`/app/review/assessments/${encodeURIComponent(detail.assessment.documentId)}`}
         >
-          {detail.assessment.assessmentNumber} — {detail.assessment.title}
+          {detail.assessment.assessmentNumber} · {detail.assessment.title}
         </RecordLink>
       ),
       wide: true,
     },
-    { label: 'Impacted Information system', value: detail.informationSystemImpacted?.name },
-    { label: 'Impacted Information asset', value: detail.informationAssetImpacted?.name },
+    { label: 'Information system impacted', value: detail.informationSystemImpacted?.name },
+    { label: 'Information asset impacted', value: detail.informationAssetImpacted?.name },
   ];
 }
 

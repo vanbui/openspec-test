@@ -13,7 +13,7 @@ export function AssessmentRequestLink({ actor, request }: { actor: 'analyst' | '
     <section aria-labelledby="originating-request-label" className="rounded-xl border border-border bg-surface-muted p-4">
       <p className="text-sm text-foreground-secondary" id="originating-request-label">Originating assessment request</p>
       <RecordLink href={assessmentRequestHref(actor, request.documentId)}>
-        {request.requestNumber}: {request.title}
+        {request.requestNumber} · {request.title}
       </RecordLink>
     </section>
   );
