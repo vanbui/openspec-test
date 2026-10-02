@@ -755,6 +755,16 @@ async function scanWithBestPractice(page: Page): Promise<AxeResults> {
   return results;
 }
 
+/*
+ * WR-402: `toHaveAttribute(name, null)` reads the null as its options and checks only that the attribute exists,
+ * so a target without an id would pass any value. The id is proved present before it is compared.
+ */
+async function expectAttributeNamesId(subject: Locator, attribute: string, target: Locator, message: string): Promise<void> {
+  const id = await target.getAttribute('id');
+  expect(id, `${message}: the target has an id`).toBeTruthy();
+  await expect(subject, message).toHaveAttribute(attribute, id as string);
+}
+
 async function expectOpenListAccessible(page: Page, combobox: Locator, search: string, label: string): Promise<string> {
   await combobox.scrollIntoViewIfNeeded();
   await combobox.fill(search);
@@ -768,7 +778,7 @@ async function expectOpenListAccessible(page: Page, combobox: Locator, search: s
   await expect(popup, `${label} opens one listbox popup`).toHaveCount(1);
   await expect(popup, `${label}: the popup that positions the listbox is not a dialog`).not.toHaveAttribute('role', 'dialog');
   await expect(combobox, `${label}: the combobox declares a listbox popup`).toHaveAttribute('aria-haspopup', 'listbox');
-  await expect(combobox, `${label}: the combobox controls the open listbox`).toHaveAttribute('aria-controls', (await popup.getByRole('listbox').getAttribute('id'))!);
+  await expectAttributeNamesId(combobox, 'aria-controls', popup.getByRole('listbox'), `${label}: the combobox controls the open listbox`);
   await expect(combobox, `${label}: focus stays in the input`).toBeFocused();
   await combobox.press('Escape');
   await expect(openPopups(page).getByRole('listbox'), `${label}: Escape closes the list without choosing`).toHaveCount(0);
@@ -926,7 +936,7 @@ test('an overflowing picker list passes axe while open at 1440 and 375', async (
     const count = await options.count();
     for (let press = 0; press < count; press += 1) await combobox.press('ArrowDown');
     const last = options.last();
-    await expect(combobox, `${label}: ArrowDown makes the last option active`).toHaveAttribute('aria-activedescendant', (await last.getAttribute('id'))!);
+    await expectAttributeNamesId(combobox, 'aria-activedescendant', last, `${label}: ArrowDown makes the last option active`);
     await expect(last, `${label}: the last option is the active one`).toHaveAttribute('aria-selected', 'true');
     await expect(combobox, `${label}: focus stays on the combobox`).toBeFocused();
     const placement = () => last.evaluate((option) => {
