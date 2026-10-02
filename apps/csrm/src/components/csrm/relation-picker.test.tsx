@@ -342,3 +342,21 @@ describe('RelationPicker popup (APG combobox with a listbox popup)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
+
+/*
+ * Label in Name (WCAG 2.5.3; 10-23 walkthrough fix 8, found by the open-list axe scan): an option is named by its
+ * title line, so its framework line, shown below it, is its description and stays out of the text that has to
+ * match the name. The two lines read together as `…informationPrivacy Act…`, which the name did not contain.
+ */
+describe('RelationPicker option names (Label in Name)', () => {
+  it('names an option by its title line and describes it with the framework line, which is not part of its label text', () => {
+    render(<Harness suggested={applicable} />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Control' }));
+
+    const option = screen.getByRole('option', { name: app11.name });
+    expect(option).toHaveAccessibleName(app11.name);
+    expect(option).toHaveAccessibleDescription(app11.detail!);
+    expect(within(option).getByText(app11.detail!)).toHaveAttribute('aria-hidden', 'true');
+    expect(within(option).getByText(app11.name)).not.toHaveAttribute('aria-hidden');
+  });
+});
