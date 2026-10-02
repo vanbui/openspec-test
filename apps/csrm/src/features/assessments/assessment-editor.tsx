@@ -36,7 +36,7 @@ import { RiskEditor, type EditableRisk } from './risk-editor';
 import type { OwnerSearchInput, OwnerSearchResult } from './owner-combobox';
 import { applicableControlGroup, assessmentDetailsFormValues, assessmentRiskListItemFromAnalystRisk, assessmentSaveWrites, canMutateAssessment, normalizeAssessmentDetails } from './assessment-domain';
 import { missingCaption, summarizeReleaseReadiness, type ReleaseReadinessSummary } from './release-readiness-summary';
-import { ReleasedRiskDetails } from './released-risk-details';
+import { formatCalendarDate, ReleasedRiskDetails } from './released-risk-details';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
 import type { AnalystRefusal } from './assessment-detail';
@@ -500,7 +500,7 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
   }
 
   if (!mutable) {
-    return <DetailSection description="Assessment context and analyst conclusion." headingFocusable headingId="assessment-details" title="Assessment details"><dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Summary" value={assessment.summary} /><DetailValue label="Overall rating" value={assessment.overallRating} /><DetailValue label="Overall control effectiveness" value={assessment.overallControlEffectiveness} /><DetailValue label="Overall risk rationale" value={assessment.overallRiskRationale} /><DetailValue label="Recommendations" value={assessment.recommendationsSummary} /><DetailValue label="Next review date" value={assessment.nextReviewDate} /></dl></DetailSection>;
+    return <DetailSection description="Assessment context and analyst conclusion." headingFocusable headingId="assessment-details" title="Assessment details"><dl className="grid gap-4 sm:grid-cols-2"><DetailValue label="Summary" value={assessment.summary} /><DetailValue label="Overall rating" value={assessment.overallRating} /><DetailValue label="Overall control effectiveness" value={assessment.overallControlEffectiveness} /><DetailValue label="Overall risk rationale" value={assessment.overallRiskRationale} /><DetailValue label="Recommendations" value={assessment.recommendationsSummary} /><DetailValue label="Next review date" value={assessment.nextReviewDate ? formatCalendarDate(assessment.nextReviewDate) : null} /></dl></DetailSection>;
   }
 
   return (
