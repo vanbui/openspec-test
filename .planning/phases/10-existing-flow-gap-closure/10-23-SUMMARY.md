@@ -468,9 +468,162 @@ Runs (logs in the session scratchpad, `p10-23-f3-*.log`):
 - A future change to a descriptive title must add the old title to `supersededTitles`. The parser refuses a list that names the current title, and the unit test pins this round's 72.
 - The seed verifiers derive their file list from the seed. The agent-grant equality became the subset invariant the catalogue actually holds.
 
-**Deferred.** The remaining 179 PSPF titles were not audited. The sample failure rate (16 of 30 spread titles, 5 of 8 multi-limb) suggests many of them narrow their paragraph in the same ways. This is logged in `deferred-items.md` for the pilot to schedule.
+**Deferred.** The remaining 179 PSPF titles were not audited. The sample failure rate (16 of 30 spread titles, 5 of 8 multi-limb) suggests many of them narrow their paragraph in the same ways. This is logged in `deferred-items.md` for the pilot to schedule. It is now resolved in Fix 3b below.
 
 **Open for the pilot:** the descriptive-title Manual-Only row. Re-walk CPS-230-34, CPS-230-57 and a few of the corrected titles on the development database after the next seeded Strapi start, which renames the 72.
+
+### Fix 3b: the remaining PSPF titles
+
+**Why the audit was widened.** Fix 3 sampled 39 PSPF titles, and 21 of them (55%) narrowed or misstated their paragraph: 16 of the 30 spread evenly across the catalogue and 5 of the 8 multi-limb ones. The pilot had widened the CPS audit to every title after 2 of 5 samples failed. The orchestrator applied the same rule to the PSPF, so this fix audits the other 179 PSPF titles. That resolves the open item in `deferred-items.md`.
+
+**Rule applied.** The rule is the pilot's, applied as in fix 3:
+- A title is short, in CSRM's own words, and never misstates or narrows its paragraph.
+- It must not drop a limb, party, condition, exception, threshold or qualifier that changes what the requirement covers, and it must not add one.
+- An umbrella title that names the whole subject, without listing its parts, drops nothing (as fix 3 kept PSPF-061, PSPF-139 and PSPF-158).
+- "In accordance with" a named standard says how a requirement is met, not what it covers, so a title need not name the standard (PSPF-093, PSPF-097, PSPF-195).
+- A title may open with the party's name, as fix 3's PSPF-016 and PSPF-167 do, but never with the paragraph's opening phrase. Five drafts that did were reworded (PSPF-025, 037, 051, 055 and 117).
+- The cap stays at 12 words and 100 characters. The longest new title is PSPF-188 at 98 characters, and seven run to 12 words (PSPF-013, 037, 095, 188, 193, 213 and 215). A stored name `{number} — {title}` is therefore at most 109 characters, against the contract's 255.
+
+**Audited set and counts.** All 218 PSPF descriptive titles have now been audited: fix 3 reviewed 39 and this fix the other 179.
+
+| PSPF domain | Reviewed in 3b | Changed | Kept |
+|---|---|---|---|
+| GOV (governance) | 29 | 11 | 18 |
+| RISK | 18 | 14 | 4 |
+| INFO (information) | 19 | 9 | 10 |
+| TECH (technology) | 33 | 14 | 19 |
+| PER (personnel) | 61 | 21 | 40 |
+| PHYS (physical) | 19 | 6 | 13 |
+| **Total** | **179** | **75** | **104** |
+
+Across both fixes, 96 of the 218 PSPF titles changed (21 in fix 3 and 75 here) and 122 were kept. 75 of 179 is 42%, below the sample's 55%, because the sample included eight multi-limb paragraphs by design.
+
+The worksheet is `p10-23-f3b-pspf-review.md` in the session scratchpad. It holds each paragraph, the 10-22 title, the verdict and either the limb restored or the reason the title was kept, in the format of fix 3's worksheet. It is not in the repository.
+
+**Every changed title (75).**
+
+| Control | 10-22 title | Corrected title | Limb or qualifier restored |
+|---|---|---|---|
+| PSPF-005 | Documented partnership responsibilities of shared service providers | Documented shared service responsibilities for partnerships and security service arrangements | the second limb: security service arrangements with other entities, beside partnerships |
+| PSPF-012 | Chief Information Security Officer capability and clearance | Chief Information Security Officer capability, experience and clearance | experience beside capability |
+| PSPF-013 | Chief Information Security Officer accountability for cyber risks | CISO accountability to the Accountable Authority for cyber risks and their management | the party held to account (the Accountable Authority) and the second limb: how the program manages the risks |
+| PSPF-014 | Skilled and resourced security practitioners | Skilled, empowered and resourced security practitioners | 'empowered' (as PSPF-008) |
+| PSPF-020 | Periodic review of the security plan | Annual consideration and at least two-yearly review of the security plan | the thresholds: considered annually and reviewed at least every two years |
+| PSPF-022 | Monitoring the effectiveness of the security plan | Security plan effectiveness monitoring and continuous improvement | the second limb: a continuous cycle of improvement |
+| PSPF-025 | Specialist training for high-risk roles | Security training targeted at specialist and high-risk positions | specialist positions as a second class of position (10-22 read 'specialist' as the training) |
+| PSPF-026 | Procedures for responding to security incidents | Procedures for responding to and managing security incidents | managing beside responding |
+| PSPF-028 | Reporting significant security incidents to authorities | Timely reporting of significant or reportable incidents and referrals to authorities | externally reportable incidents, referral obligations and the applicable timeframe |
+| PSPF-030 | Procedural fairness in security investigations | Procedural fairness in security investigations, with regard to national security | the qualifier 'with due regard to national security considerations' |
+| PSPF-033 | Accountable Authority approval of the annual report | Accountable Authority verification and approval of the annual protective security report | the limb confirming the report's content was verified |
+| PSPF-036 | Entity tolerance for security risks | Accountable Authority tolerance for security risks, documented in the security plan | the party setting tolerance and the limb documenting it in the security plan |
+| PSPF-037 | Risk steward for each security risk | Named risk steward for every security risk or category, including shared risks | the alternative 'or category of security risk' (10-22 required one per risk) and shared risks |
+| PSPF-039 | Accountability for procurement security risks | Procurement security risk accountability, keeping contract decisions within acceptable risk | the second limb: procurement and contract decisions do not expose the entity or government to unacceptable risk |
+| PSPF-040 | Security terms in procurement and contracts | Proportionate security terms in procurement, contracts and outsourced arrangements | third-party outsourced arrangements and the qualifier 'proportionate' |
+| PSPF-041 | Provider compliance with PSPF requirements | Provider, contractor and subcontractor compliance with entity-specified PSPF requirements | contractors and subcontractors beside providers, and 'relevant ... as detailed by the entity' |
+| PSPF-042 | Provider incident reporting in contract terms | Contract terms for provider incident reporting and following investigation directions | the second limb: following reasonable direction arising from incident investigations |
+| PSPF-043 | IRAP reports for consuming entities | IRAP reports for current and prospective consuming entities | entities 'looking to consume' the services |
+| PSPF-044 | Monitoring contract security terms over the contract life | Monitoring and reviewing contract security terms over the contract life | review beside monitoring |
+| PSPF-047 | Reassessing contractual security risks over time | Managing, reassessing and adjusting contractual security risks over the contract life | managing and adjusting beside reassessing, over the life of the contract |
+| PSPF-051 | Managing insider threat in vetted entities | Program against insider threat in entities managing security clearance subjects | the program, and corrects 'vetted entities' to entities that manage Baseline to Positive Vetting clearance subjects |
+| PSPF-052 | Varying PSPF requirements in exceptional circumstances | Time-limited variation of PSPF requirements in exceptional circumstances, within risk tolerance | the conditions: for a limited period and consistent with the entity's risk tolerance |
+| PSPF-054 | Annual review of alternative mitigations | Annual review and reporting of alternative mitigation decisions | annual reporting beside review |
+| PSPF-055 | Business continuity plan for critical services | Continuity planning for critical and risk-warranted services and assets | assets, and other services and assets when a threat and security risk assessment warrants |
+| PSPF-057 | Notifying personnel of heightened emergency risk | Notifying likely impacted personnel of heightened emergency risk | corrects the party: personnel likely to be impacted, not all personnel |
+| PSPF-058 | Originator control of classification changes | Originator control of sanitisation and classification changes | sanitisation beside reclassification and declassification |
+| PSPF-059 | Assessing the value and sensitivity of information | Originator assessment of information value, importance and sensitivity | the party (the originator) and 'importance' |
+| PSPF-062 | Applying minimum protections to classified information | Applying minimum protections and handling to OFFICIAL and security classified information | OFFICIAL information (not security classified) and the handling requirements |
+| PSPF-064 | Marking security caveats as text | Text-marked security caveats, only alongside a security classification | the second limb: a caveat appears only with a security classification |
+| PSPF-070 | Classified discussions only in approved locations | Classified discussions and dissemination only in approved locations | dissemination of classified information beside discussions |
+| PSPF-071 | Operational controls proportional to information value | Operational controls proportional to information value, importance and sensitivity | importance and sensitivity beside value |
+| PSPF-072 | Register of TOP SECRET and accountable material | TOP SECRET and accountable material recorded in an auditable register | the qualifier 'auditable' |
+| PSPF-074 | Destroying classified information after retention | Destroying classified information after retention or at authorised destruction dates | the second trigger: reaching authorised destruction dates |
+| PSPF-075 | Need-to-know access for people outside the entity | People outside the entity: needed clearance, need-to-know and compliant transfer | the clearance (where required) and the transfer under the Minimum Protections and Handling Requirements |
+| PSPF-085 | Risk-based application of ISM controls | Risk-based application of ISM controls and guidelines | the ISM cyber security guidelines beside its controls |
+| PSPF-086 | Authorisation to operate on accepted residual risk | Authorisation to operate on accepted residual risk before handling government data | the condition: authorised before the system processes, stores or communicates government information |
+| PSPF-087 | Risk-based decisions to authorise systems | ISM risk-based decisions to authorise new or changed systems | changes to existing systems and reauthorisation, and the ISM basis |
+| PSPF-090 | Reassessing authorisation after significant change | Reassessing authorisation after significant system or security environment change | the second trigger: a considerable change to the system's security environment |
+| PSPF-094 | Security Zone storage for SECRET technology assets | Security Zone storage for technology assets at SECRET or below | 'or below' (10-22 read SECRET only) |
+| PSPF-095 | Rack storage for TOP SECRET technology assets | SCEC-endorsed racks or compartments in Zone Five for TOP SECRET technology assets | compartments, SCEC endorsement and the accredited Zone Five area |
+| PSPF-096 | Certified outsourced facilities for catastrophic-impact assets | ASIO-T4 certified and ASD accredited outsourced facilities for catastrophic-impact assets | the ASD accreditation beside the ASIO-T4 certification |
+| PSPF-108 | Blocking connections to malicious endpoints | Blocking connections to and from known malicious endpoints | connections from malicious endpoints, and 'known' |
+| PSPF-109 | IRAP-assessed cloud service providers | Using only cloud providers IRAP-assessed in the last 24 months | the 24-month recency (as PSPF-114) |
+| PSPF-110 | Acting on IRAP assessment findings | Risk-based action on IRAP assessment recommendations and findings | recommendations beside findings, and the risk-based approach |
+| PSPF-111 | Certified hosting for classified information | Certified hosting for classified information and systems of government significance | the second class: systems of government significance information and data |
+| PSPF-115 | Receiving and resolving disclosed vulnerabilities | Receiving, verifying, resolving and reporting disclosed vulnerabilities from any source | verifying and reporting, and disclosures from internal and external sources |
+| PSPF-117 | Identity verification to Level 3 assurance | Identity verified to at least Level 3 assurance before employment | the threshold 'at least', and the check made before employment |
+| PSPF-119 | Confirming eligibility to work for the government | Confirming eligibility to work in Australia and for the government | eligibility to work in Australia |
+| PSPF-121 | Checks before granting temporary access | Checks before temporary access, and Negative Vetting 1 for TOP SECRET | the second limb: an existing Negative Vetting 1 clearance before TOP SECRET temporary access |
+| PSPF-128 | Third-party agreement before temporary access | Agreement of other information owners before temporary access | other government entities beside third parties |
+| PSPF-130 | Controlling access to supporting technology | Enabling official information access and controlling access to supporting technology | the main limb: enabling appropriate access to official information |
+| PSPF-133 | Clearance requirements for caveated information | Clearance and suitability requirements for caveated information access | suitability requirements beside clearance |
+| PSPF-134 | Individual user identification for classified systems | Per-user identification, authentication and authorisation for classified system access | authentication and authorisation beside identification |
+| PSPF-140 | Use of authorised security vetting agencies | Security vetting by authorised vetting agencies or, where authorised, the entity | the alternative: authorised entities conducting their own vetting |
+| PSPF-145 | Identifying positions that need a clearance | Identifying positions that need a clearance and documenting the level | the limb documenting the clearance level required |
+| PSPF-148 | Business need before a citizenship eligibility waiver | Exceptional business need and risk assessment before a citizenship eligibility waiver | 'exceptional' and the risk assessment |
+| PSPF-150 | Business need before a checkable background waiver | Exceptional business need and risk assessment before a checkable background waiver | 'exceptional' and the risk assessment |
+| PSPF-160 | Procedural fairness in clearance decisions | Procedural fairness in adverse clearance decisions, preserving the national interest | 'adverse' (10-22 covered every decision) and 'without compromising the national interest' |
+| PSPF-165 | Monitoring conditional clearance compliance | Monitoring conditional clearance compliance and reporting breaches to the vetting agency | the second limb: reporting non-compliance to the Authorised Vetting Agency |
+| PSPF-169 | Annual review of eligibility waivers | Reviewing eligibility waivers annually, before revalidation and before position transfers | the two further triggers: before revalidation and before a proposed position transfer |
+| PSPF-177 | Sponsoring entity concerns passed to the vetting agency | Sponsoring Entity concerns passed to the vetting agency where appropriate | the qualifier 'where appropriate' (as PSPF-167) |
+| PSPF-180 | Travel briefings for Negative Vetting 2 holders | International travel briefings for Negative Vetting 2 and higher holders | 'and higher' clearance holders, and international travel |
+| PSPF-181 | Advising security staff of adverse separations | Advance advice to security staff of adverse cessations of employment | the timing: advice before separation or transfer |
+| PSPF-183 | Security information for the receiving entity | Security information for a receiving entity on request | the condition 'when requested' |
+| PSPF-186 | Withdrawing access on separation | Withdrawing access on separation or transfer | transfer beside separation |
+| PSPF-188 | Recording clearance status changes on separation | Recording separation clearance changes and lawful security file transfers between vetting agencies | the limb transferring personal security files between Authorised Vetting Agencies, as far as legislation allows |
+| PSPF-192 | Access controls designed for the highest risk | Facility access controls designed or modified for the highest risk level | modifying facilities beside designing them |
+| PSPF-193 | Construction to ASIO Technical Notes for public areas | Construction to ASIO Technical Notes for public areas and unclassified asset storage | the second area: where unclassified physical resources and technical assets are stored |
+| PSPF-199 | SCIF accreditation for TOP SECRET systems | ASD-accredited SCIFs for TOP SECRET systems and compartmented information | Sensitive Compartmented Information and the accrediting party (ASD) |
+| PSPF-203 | Containers and secure rooms by business impact | Containers and secure rooms by Security Zone and business impact | the Security Zone as the second basis |
+| PSPF-205 | Access control for authorised personnel | Zone access control for authorised personnel, vehicles and equipment | vehicles and equipment beside personnel |
+| PSPF-207 | Ongoing facility access for people not engaged | Approved ongoing facility access for people neither engaged nor contracted | the approval, and people covered by a contract or agreement as outside the rule |
+| PSPF-213 | Cyber risk reporting to the Audit Committee | Cyber risk reports to each Audit Committee and biannual uplift plan progress | every meeting, and the second limb: biannual reporting on the strategy and uplift plan |
+| PSPF-215 | Cyber Security Partnership Program participation | Cyber Security Partnership Program participation and notifying ASD of risk profile changes | the second limb: notifying ASD of a change in the risk profile |
+| PSPF-218 | Withholding temporary access while a waiver is considered | Withholding temporary or provisional access from waiver subjects until vetting completes | provisional access, subjects who already hold a waiver, and 'until vetting is complete' |
+
+All 75 pass 10-22's anchor, opening-copy, uniqueness and form checks, and fix 3's 12-word, 100-character voice rule.
+
+**Titles reviewed and kept (104).** Each reason is in the worksheet. In summary:
+- **Umbrella titles that name the whole subject:** PSPF-009, 018, 049, 063, 066, 067, 078, 079, 082, 089, 092, 107, 124, 125, 126, 143, 153, 164, 166, 187, 194, 198, 208 and 211. PSPF-126 and PSPF-143 name the subject without stating the rule, as fix 3 kept PSPF-139.
+- **Titles that name the whole requirement:** PSPF-002, 003, 004, 006, 007, 010, 015, 017, 019, 021, 024, 027, 029, 032, 034, 035, 045, 050, 056, 060, 065, 069, 073, 084, 088, 112, 116, 118, 120, 123, 127, 131, 132, 135, 136, 138, 141, 142, 146, 147, 154, 155, 156, 157, 161, 162, 163, 168, 170, 171, 172, 173, 175, 176, 178, 179, 184, 185, 190, 191, 196, 200, 201, 202, 206, 209, 210, 214, 216 and 217.
+- **Essential Eight at Maturity Level Two:** PSPF-099 to PSPF-105, which follow fix 3's kept PSPF-106.
+- **"In accordance with" a standard (how, not what):** PSPF-093, 097 and 195.
+
+**Reconciling the development database.** This fix needs no new mechanism. Fix 3's ownership rule reads `supersededTitles`, which now lists 96 PSPF controls (fix 3's 21 and these 75). Each lists the single title 10-22 seeded for it. On the pilot's next seeded Strapi start, each of the 75 controls still stored as `{number} — {10-22 title}` is renamed to its corrected title, keeping its documentId and relations. A name an operator edited is kept. `parseControlTitles` already refuses a list that names a current title, a control the file does not title, or a malformed title, so the seed loads the new list only because each entry is valid.
+
+**Tests.**
+
+| File | Test | Before the fix (`a99efae`) | After (`feac941`) |
+|---|---|---|---|
+| `apps/backend/tests/control-titles.unit.test.ts` | fix 3b: every corrected PSPF title covers every limb of its paragraph (all 75 pinned; none overlaps fix 3's 72) | fail: 75 controls still under their 10-22 titles | pass |
+| same | fix 3b: each PSPF title an earlier seed wrote stays listed as superseded (and the PSPF list holds 21 + 75 controls) | fail: none of the 75 listed | pass |
+| same | the 21 existing tests: form rules, the 12-word and 100-character voice rule, anchors, uniqueness, 386 titles, and fix 3's 72 pins and superseded-list validation | pass | pass |
+
+Runs (logs in the session scratchpad, `p10-23-f3b-*`):
+- **RED:** `control-titles.unit` alone, 23 tests: 21 passed and 2 failed, both on assertions (`p10-23-f3b-red.tap`). `check tdd-red-evidence` returned RED_EVIDENCE_OK for the target test.
+- **GREEN:** four files, 63 of 63 passed in 80 s, with the tests compiled by `tsc -p tests/tsconfig.json` (clean build, no `noEmitOnError` workaround needed). The four files are:
+  - `control-titles.unit` (23);
+  - `control-library-bounds.unit` and `assessment-seed.integration` (17), which include fix 3's mounted reconcile proofs: a control stored under its earlier seeded title is renamed, and an operator's own name is kept;
+  - `administration.integration` (23).
+- **`pnpm verify:csrm-seed`:** exit 0 in 31 s. Both the static and the runtime seed verifications passed.
+- **No journey run.** No web, e2e or Strapi source file names any of the 75 old titles. Only the title file's `supersededTitles` and the unit test do. No web file changed.
+- **Static checks since `5ea2b77`:**
+  - the four vendored catalogues are byte-identical;
+  - no content type changed;
+  - this fix touched neither the specification nor either role-function catalogue copy, and the two copies are byte-identical.
+
+**Commits.**
+- `a99efae` test(10-23): expect every remaining PSPF title to cover its paragraph
+- `feac941` fix(10-23): correct the remaining PSPF titles that narrow their paragraph
+- the docs commit that records this fix
+
+**Decisions.**
+- Every PSPF title was audited rather than a further sample. This matches the pilot's call for CPS 230 and CPS 234 after a similar failure rate.
+- All 75 corrections are pinned, rather than a representative subset, so that a later edit cannot quietly reintroduce a narrowing title. Fix 3 pinned all 72 of its corrections in the same way.
+- Party names count as subjects, not as copied openings. Titles that repeated the paragraph's opening phrase were reworded.
+
+**Deferred.** None. The open PSPF item in `deferred-items.md` is resolved.
+
+**Open for the pilot:** the descriptive-title Manual-Only row. After the next seeded Strapi start, which renames fix 3's 72 controls and these 75, re-walk a few PSPF corrections (for example PSPF-094, PSPF-121 and PSPF-218).
 
 ## Task Commits
 
