@@ -126,7 +126,7 @@ export function PermissionDeniedState({ action, area, density, headingLevel }: {
 
   return (
     <StateFrame density={density} heading={heading} headingLevel={headingLevel} icon={LockKeyhole} kind="permission" role="alert">
-      <p className="text-sm text-foreground-secondary">Access is determined by your effective CSRM capabilities. Navigation visibility is not an authorization control.</p>
+      <p className="text-sm text-foreground-secondary">Your workspace shows the work you can open. If you think you should have access, contact your administrator.</p>
       {action ? <StateActionLink action={action} /> : (
         <Link className={buttonVariants({ variant: 'outline' })} href="/app">
           Return to workspace

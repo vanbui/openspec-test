@@ -154,7 +154,7 @@ export function RiskDetailsSkeleton() {
 
 function RiskDetailsState({ kind }: { kind: 'not-available' | 'error' | 'permission' }) {
   const content = kind === 'permission'
-    ? { title: 'You don’t have permission to view the Risk Register', body: 'Access is enforced by your effective CSRM capabilities and record scope.' }
+    ? { title: 'You don’t have permission to view the Risk Register', body: 'The Risk Register is for Security Analysts. Your workspace shows the work you can open.' }
     : kind === 'error'
       ? { title: 'We couldn’t load this Risk', body: 'Try again. If the problem continues, contact your CSRM administrator.' }
       : { title: 'Risk not available', body: 'This Risk may no longer exist or may not be available to you.' };

@@ -106,7 +106,7 @@ function AssessmentUnavailableNotice({ state, operation }: { state: Exclude<Rele
       ? 'We couldn’t load this risk assessment'
       : 'This released risk assessment is unavailable';
   const description = permission
-    ? 'Access is enforced by your effective CSRM capabilities and owner record scope.'
+    ? 'You can open released assessments for your own requests. Yours are listed in My Risk Assessments.'
     : error
       ? 'Try again. If the problem continues, contact your administrator.'
       : 'Only complete assessments released for your own requests can be displayed.';

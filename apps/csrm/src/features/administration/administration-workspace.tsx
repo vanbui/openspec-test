@@ -97,7 +97,7 @@ export function AdministrationAccessDenied({ kind }: { kind?: AdministrationKind
   return (
     <>
       <PageHeader
-        description={kind ? collectionDescriptions[kind] : 'Access to Administration records is determined by your capabilities.'}
+        description={kind ? collectionDescriptions[kind] : 'Administration records are managed by Security Analysts.'}
         title={kind ? getAdministrationConfig(kind).pluralLabel : 'Administration'}
       />
       <PermissionDeniedState area="Administration records" />
