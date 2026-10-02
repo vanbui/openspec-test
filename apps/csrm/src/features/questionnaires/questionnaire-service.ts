@@ -16,6 +16,7 @@ import {
   type QuestionnaireDefinition,
 } from './questionnaire-schema';
 import { assessmentRequestRelationshipSchema } from './questionnaire-domain';
+import type { QuestionPlacement } from './questionnaire-placement';
 
 const documentIdSchema = z.string().trim().min(1).max(255);
 const timestampSchema = z.iso.datetime({ offset: true });
@@ -109,6 +110,43 @@ const questionnaireQuestionListSchema = z.array(z.object({
   .pipe(questionnaireDefinitionSchema);
 
 const questionnaireQuestionsResponseSchema = z.object({ data: questionnaireQuestionListSchema });
+
+/*
+ * The same question list read for placement (10-CONTEXT D-05): every question, removed ones included, because
+ * Strapi's definition check counts them all. It reads only where each question sits, declares no bound of its
+ * own, and accepts the `deleted` marker Strapi serves on a removed question (top level, or in the options of
+ * a schemaVersion 2 envelope) without requiring it.
+ */
+const questionPlacementSectionSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  order: z.number().int().nonnegative(),
+});
+const questionPlacementListSchema = z.array(z.object({
+  documentId: z.string(),
+  questionText: z.string(),
+  options: z.object({
+    questionKey: z.string(),
+    section: questionPlacementSectionSchema,
+    order: z.number().int().nonnegative(),
+    deleted: z.unknown().optional(),
+  }),
+  deleted: z.unknown().optional(),
+})).transform((questions): QuestionPlacement[] => questions.map((question) => ({
+  documentId: question.documentId,
+  questionKey: question.options.questionKey,
+  questionText: question.questionText,
+  section: {
+    key: question.options.section.key,
+    title: question.options.section.title,
+    ...(question.options.section.description !== undefined ? { description: question.options.section.description } : {}),
+    order: question.options.section.order,
+  },
+  order: question.options.order,
+  removed: question.deleted !== undefined || question.options.deleted !== undefined,
+})));
+const questionnaireQuestionPlacementsResponseSchema = z.object({ data: questionPlacementListSchema });
 const governanceEventSchema = z.object({
   schemaVersion: z.literal(1), kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared']), at: timestampSchema, by: documentIdSchema,
   reason: z.string().max(500).optional(), questionKey: z.string().max(120).optional(), explanation: z.string().max(2_000).optional(),
@@ -270,6 +308,26 @@ export async function getQuestionnaireQuestions(documentId: string): Promise<Tra
   );
 }
 
+export interface QuestionnaireGovernanceQuestions {
+  /** The active questions, as every other question list is parsed. */
+  definition: QuestionnaireDefinition;
+  /** Where every question sits, removed ones included, for placing an added or moved question. */
+  placements: QuestionPlacement[];
+}
+
+/** The analyst's question read: one request, parsed as the active definition and as the full placement set. */
+export async function getQuestionnaireGovernanceQuestions(documentId: string): Promise<TransportResult<QuestionnaireGovernanceQuestions>> {
+  return read(
+    (client) => client.GET('/v1/questionnaires/{questionnaireId}/questions', {
+      params: { path: { questionnaireId: documentIdSchema.parse(documentId) } },
+    }),
+    (payload) => ({
+      definition: questionnaireQuestionsResponseSchema.parse(payload).data,
+      placements: questionnaireQuestionPlacementsResponseSchema.parse(payload).data,
+    }),
+  );
+}
+
 function parseMutation(payload: unknown): QuestionnaireMutationResult {
   const parsed = mutationResponseSchema.parse(payload).data;
   return {
@@ -383,6 +441,7 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
   { label: 'getQuestionnaireReviewSummary', component: 'QuestionnaireReviewSummaryResponse', parser: reviewSummaryResponseSchema },
   { label: 'getQuestionnaire', component: 'QuestionnaireHeaderResponse', parser: questionnaireResponseSchema },
   { label: 'getQuestionnaireQuestions', component: 'QuestionnaireQuestionsResponse', parser: questionnaireQuestionsResponseSchema, narrowedPaths: questionListNarrowings('data') },
+  { label: 'getQuestionnaireQuestionPlacements', component: 'QuestionnaireQuestionsResponse', parser: questionnaireQuestionPlacementsResponseSchema },
   { label: 'saveQuestionnaireDraft', component: 'QuestionnaireMutationResponse', parser: mutationContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
   { label: 'submitQuestionnaire', component: 'QuestionnaireSubmitResponse', parser: mutationContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
   { label: 'revertQuestionnaireToDraft', component: 'QuestionnaireRevertResponse', parser: revertContractSchema, narrowedPaths: questionListNarrowings('data.answers') },

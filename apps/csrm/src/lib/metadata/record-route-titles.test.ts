@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   getAnalystAssessment: vi.fn(),
   getQuestionnaire: vi.fn(),
+  getQuestionnaireGovernanceQuestions: vi.fn(),
   getQuestionnaireQuestions: vi.fn(),
   getRequest: vi.fn(),
   granted: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/features/questionnaires/questionnaire-service', () => ({
   getQuestionnaire: mocks.getQuestionnaire,
+  getQuestionnaireGovernanceQuestions: mocks.getQuestionnaireGovernanceQuestions,
   getQuestionnaireQuestions: mocks.getQuestionnaireQuestions,
 }));
 vi.mock('@/features/requests/request-service', () => ({

@@ -558,6 +558,7 @@ describe('contract-to-client-schema parity', () => {
 
   it.each([
     ['getQuestionnaireQuestions', ['data']],
+    ['getQuestionnaireQuestionPlacements', ['data']],
     ['saveQuestionnaireDraft', ['data', 'answers']],
     ['submitQuestionnaire', ['data', 'answers']],
     ['revertQuestionnaireToDraft', ['data', 'answers']],

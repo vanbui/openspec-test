@@ -4,7 +4,7 @@ import { cache } from 'react';
 
 import { QuestionnaireReview } from '@/features/questionnaires/questionnaire-review';
 import { availableAssessmentRequest } from '@/features/questionnaires/questionnaire-domain';
-import { getQuestionnaire, getQuestionnaireQuestions } from '@/features/questionnaires/questionnaire-service';
+import { getQuestionnaire, getQuestionnaireGovernanceQuestions } from '@/features/questionnaires/questionnaire-service';
 import { canViewerReviewAssessments } from '@/lib/capabilities/analyst-review-gate';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
 
@@ -47,15 +47,16 @@ export default async function QuestionnaireReviewPage({ params }: QuestionnaireR
   if (!questionnaireResult.data) notFound();
 
   const assessmentRequestHref = await analystRequestHref(questionnaireResult.data);
-  const questionsResult = await getQuestionnaireQuestions(documentId);
+  // One read serves the active questions and, for placing an added question, every question (D-05).
+  const questionsResult = await getQuestionnaireGovernanceQuestions(documentId);
   if (questionsResult.error?.status === 403) return <QuestionnaireReview state="permission" />;
   if (questionsResult.error) return <QuestionnaireReview state="error" />;
-  if (!questionsResult.data?.length) return <QuestionnaireReview state="empty" />;
+  if (!questionsResult.data?.definition.length) return <QuestionnaireReview state="empty" />;
 
   const state = !questionnaireResult.data.release
     ? 'analyst-review'
     : questionnaireResult.data.state === 'submitted'
       ? 'submitted'
       : 'awaiting-submission';
-  return <QuestionnaireReview assessmentRequestHref={assessmentRequestHref} definition={questionsResult.data} questionnaire={questionnaireResult.data} state={state} />;
+  return <QuestionnaireReview assessmentRequestHref={assessmentRequestHref} definition={questionsResult.data.definition} placements={questionsResult.data.placements} questionnaire={questionnaireResult.data} state={state} />;
 }

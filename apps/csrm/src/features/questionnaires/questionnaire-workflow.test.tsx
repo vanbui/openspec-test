@@ -643,7 +643,8 @@ describe('Security Analyst questionnaire review', () => {
 
     expect(listSource).toContain('listQuestionnairesForReview');
     expect(detailSource).toContain('getQuestionnaire');
-    expect(detailSource).toContain('getQuestionnaireQuestions');
+    // One read gives the editor the active questions and every question's placement (D-05).
+    expect(detailSource).toContain('getQuestionnaireGovernanceQuestions');
     expect(`${listSource}\n${detailSource}`).not.toContain("'use client'");
     expect(`${listSource}\n${detailSource}`).not.toMatch(/\bfetch\s*\(/);
   });

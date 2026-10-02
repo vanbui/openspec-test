@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   getAnalystAssessment: vi.fn(),
   getQuestionnaire: vi.fn(),
-  getQuestionnaireQuestions: vi.fn(),
+  getQuestionnaireGovernanceQuestions: vi.fn(),
   getRequest: vi.fn(),
   granted: vi.fn(),
   listControlImplementations: vi.fn(),
@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
 const recordReads = [
   'getAnalystAssessment',
   'getQuestionnaire',
-  'getQuestionnaireQuestions',
+  'getQuestionnaireGovernanceQuestions',
   'getRequest',
   'listControlImplementations',
   'listControls',
@@ -59,7 +59,7 @@ vi.mock('@/features/requests/request-service', () => ({
 }));
 vi.mock('@/features/questionnaires/questionnaire-service', () => ({
   getQuestionnaire: mocks.getQuestionnaire,
-  getQuestionnaireQuestions: mocks.getQuestionnaireQuestions,
+  getQuestionnaireGovernanceQuestions: mocks.getQuestionnaireGovernanceQuestions,
 }));
 vi.mock('@/features/assessments/assessment-service', () => ({
   getAnalystAssessment: mocks.getAnalystAssessment,
@@ -157,7 +157,7 @@ beforeEach(() => {
   mocks.getRequest.mockResolvedValue({ data: submittedRequest, error: null });
   const refused = { data: null, error: { status: 403, message: 'Refused' } };
   mocks.getQuestionnaire.mockResolvedValue(refused);
-  mocks.getQuestionnaireQuestions.mockResolvedValue(refused);
+  mocks.getQuestionnaireGovernanceQuestions.mockResolvedValue(refused);
   mocks.getAnalystAssessment.mockResolvedValue(refused);
   for (const list of [mocks.listControlImplementations, mocks.listControls, mocks.listInformationAssets, mocks.listInformationSystems, mocks.listRiskTypes]) {
     list.mockResolvedValue({ data: [], error: null });

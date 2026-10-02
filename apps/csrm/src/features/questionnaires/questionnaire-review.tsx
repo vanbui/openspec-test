@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
+import type { QuestionPlacement } from './questionnaire-placement';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
 import type { QuestionnaireSummary } from './questionnaire-service';
 import { QuestionnaireRenderer } from './questionnaire-renderer';
@@ -27,13 +28,15 @@ export type QuestionnaireReviewState = 'submitted' | 'analyst-review' | 'awaitin
 export interface QuestionnaireReviewProps {
   assessmentRequestHref?: string;
   definition?: QuestionnaireDefinition;
+  /** Where every question sits, removed ones included, so the editor can place an added question (D-05). */
+  placements?: readonly QuestionPlacement[];
   questionnaire?: QuestionnaireSummary;
   /** Who a permission state is for: `role` when the route gate refused the viewer before any read (UI-SPEC §11.1). */
   refusal?: AnalystRefusal;
   state: QuestionnaireReviewState;
 }
 
-function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire, refusal = 'record', state }: Pick<QuestionnaireReviewProps, 'assessmentRequestHref' | 'refusal'> & { definition?: QuestionnaireDefinition; questionnaire?: QuestionnaireSummary; state: Exclude<QuestionnaireReviewState, 'submitted' | 'analyst-review'> }) {
+function SafeReviewState({ assessmentRequestHref, definition = [], placements = [], questionnaire, refusal = 'record', state }: Pick<QuestionnaireReviewProps, 'assessmentRequestHref' | 'placements' | 'refusal'> & { definition?: QuestionnaireDefinition; questionnaire?: QuestionnaireSummary; state: Exclude<QuestionnaireReviewState, 'submitted' | 'analyst-review'> }) {
   const roleRefusal = state === 'permission' && refusal === 'role';
   const content = (() => {
   if (state === 'permission') {
@@ -68,10 +71,10 @@ function SafeReviewState({ assessmentRequestHref, definition = [], questionnaire
   const heading = identify
     ? { title: questionnaire.title, description: `${questionnaire.questionnaireNumber} · ${availableAssessmentRequest(questionnaire.assessmentRequest)?.requestNumber ?? ''}` }
     : { title: 'Questionnaire review', description: 'Review an authorised questionnaire submission.' };
-  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}{roleRefusal ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/questionnaires">Go to My Questionnaires</Link> : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link>}</>;
+  return <><PageHeader status={identify ? <StatusBadge family="questionnaire" value={identify.state} /> : undefined} title={heading.title} description={heading.description} />{identify ? <QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={identify} /> : null}{governable ? <QuestionnaireGovernance definition={definition} placements={placements} questionnaire={governable} /> : null}{content}<RevertAuditSummary className="my-6" facts={questionnaire ?? {}} />{questionnaire ? <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /> : null}{roleRefusal ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/questionnaires">Go to My Questionnaires</Link> : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/questionnaires">Back to questionnaire reviews</Link>}</>;
 }
 
-export function QuestionnaireReview({ assessmentRequestHref, definition = [], questionnaire, refusal, state }: QuestionnaireReviewProps) {
+export function QuestionnaireReview({ assessmentRequestHref, definition = [], placements = [], questionnaire, refusal, state }: QuestionnaireReviewProps) {
   if (state === 'analyst-review' && questionnaire) {
     if (definition.length === 0) return <SafeReviewState assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} state="empty" />;
     /*
@@ -79,10 +82,10 @@ export function QuestionnaireReview({ assessmentRequestHref, definition = [], qu
      * questionnaire has no answers to show, and the read-only renderer would repeat every question
      * under a Submitted notice that is untrue before release.
      */
-    return <><PageHeader status={<StatusBadge family="questionnaire" value="analyst-review" />} description={questionnaire.questionnaireNumber} title={questionnaire.title} /><QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} /><QuestionnaireGovernance definition={definition} questionnaire={questionnaire} /><QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /></>;
+    return <><PageHeader status={<StatusBadge family="questionnaire" value="analyst-review" />} description={questionnaire.questionnaireNumber} title={questionnaire.title} /><QuestionnaireRequestRelationship assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} /><QuestionnaireGovernance definition={definition} placements={placements} questionnaire={questionnaire} /><QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} /></>;
   }
   if (state !== 'submitted' || !questionnaire || questionnaire.state !== 'submitted') {
-    return <SafeReviewState assessmentRequestHref={assessmentRequestHref} definition={definition} questionnaire={questionnaire} refusal={refusal} state={state === 'submitted' || state === 'analyst-review' ? 'empty' : state} />;
+    return <SafeReviewState assessmentRequestHref={assessmentRequestHref} definition={definition} placements={placements} questionnaire={questionnaire} refusal={refusal} state={state === 'submitted' || state === 'analyst-review' ? 'empty' : state} />;
   }
   if (definition.length === 0) return <SafeReviewState assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaire} state="empty" />;
 
@@ -102,7 +105,7 @@ export function QuestionnaireReview({ assessmentRequestHref, definition = [], qu
         * action on this screen; the governance panel follows it.
         */}
       {canRevertQuestionnaireToDraft(questionnaire) ? <AnalystQuestionnaireRevert documentId={questionnaire.documentId} /> : null}
-      <QuestionnaireGovernance definition={definition} questionnaire={questionnaire} />
+      <QuestionnaireGovernance definition={definition} placements={placements} questionnaire={questionnaire} />
       {questionnaire.description ? <p className="mb-6 max-w-3xl text-sm text-muted-foreground">{questionnaire.description}</p> : null}
       <QuestionnaireRevisionTimeline depth="detail" questionnaire={questionnaire} />
       <QuestionnaireRenderer definition={definition} documentId={questionnaire.documentId} mode="read-only" submittedNotice="analyst" />
