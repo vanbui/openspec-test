@@ -298,6 +298,28 @@ describe('QuestionnaireGovernance question forms (UI-SPEC §1)', () => {
     expect(screen.getByRole('button', { name: 'Edit question: Is it monitored?' })).toHaveFocus();
   });
 
+  it('moves focus to Add question once when the edited question is gone after a reload, never on a later render (WR-307)', async () => {
+    const user = userEvent.setup();
+    const view = renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Edit question: Is it monitored?' }));
+
+    // The reloaded questions no longer hold the question being edited.
+    const reloaded = [protectedQuestion, hosted];
+    await act(async () => {
+      view.rerender(<QuestionnaireGovernance definition={reloaded} placements={placements} questionnaire={questionnaire} />);
+    });
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add question' })).toHaveFocus();
+
+    // The analyst presses blank page space, then the page renders again (a refresh, an announcement).
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement).toBe(document.body);
+    await act(async () => {
+      view.rerender(<QuestionnaireGovernance definition={reloaded} placements={placementsOf(reloaded)} questionnaire={questionnaire} />);
+    });
+    expect(document.activeElement).toBe(document.body);
+  });
+
   it('focuses and announces a question added to a section once the questions reload', async () => {
     const user = userEvent.setup();
     actions.addQuestionnaireQuestionAction.mockResolvedValue(ok);
