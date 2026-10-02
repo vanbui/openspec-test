@@ -7,6 +7,7 @@ import { activeQuestionnaireDefinition, parseQuestionnaireDefinition, Questionna
 import { appendGovernanceEvent, countAnalystChangesSinceGeneration } from "./questionnaire-governance-log";
 import { CSRM_AI_PROVIDER_MODE } from "../../../csrm/ai-provider-selection";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
+import { latestAssessmentDraftJobForQuestionnaire } from "../../csrm-assessment/services/assessment-workflow";
 
 type RecordValue = Record<string, unknown>; const record = (value: unknown): value is RecordValue => typeof value === "object" && value !== null && !Array.isArray(value);
 type Documents = { findOne: (query: RecordValue) => Promise<RecordValue | null>; findMany: (query: RecordValue) => Promise<RecordValue[]>; create: (query: { data: RecordValue }) => Promise<RecordValue>; update: (query: { documentId: string; data: RecordValue }) => Promise<RecordValue>; delete: (query: { documentId: string }) => Promise<void> };
@@ -116,7 +117,7 @@ export const getQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: st
  */
 export async function getRequestGenerationJobs(input: { strapi: Strapi; requestId: string; viewerDocumentId: string }): Promise<RecordValue> {
   const viewer = actor(input.viewerDocumentId).documentId;
-  const request = await input.strapi.documents("api::csrm-assessment-request.csrm-assessment-request").findOne({ documentId: input.requestId });
+  const request = await input.strapi.documents("api::csrm-assessment-request.csrm-assessment-request").findOne({ documentId: input.requestId, populate: { questionnaire: true } });
   if (!request) throw new QuestionnaireGenerationWorkflowError(404, "Assessment request was not found.");
   const latest = registry(input.strapi).latestForRequest(input.requestId, viewer);
   let questionnaireGeneration: RecordValue | null = null;
@@ -126,7 +127,10 @@ export async function getRequestGenerationJobs(input: { strapi: Strapi; requestI
       : null;
     if (latest.job.status !== "completed" || questionnaire) questionnaireGeneration = { job: projectQuestionnaireGenerationJob(latest.job, questionnaire), canRetry: latest.canRetry };
   }
-  return { questionnaireGeneration, assessmentDraft: null };
+  // The draft registry is keyed by questionnaire, so the request's own questionnaire names its draft job.
+  const questionnaireId = record(request.questionnaire) && typeof request.questionnaire.documentId === "string" ? request.questionnaire.documentId : null;
+  const assessmentDraft = questionnaireId ? latestAssessmentDraftJobForQuestionnaire(input.strapi as never, questionnaireId, viewer) : null;
+  return { questionnaireGeneration, assessmentDraft };
 }
 export const retryQuestionnaireGenerationJob = (input: { strapi: Strapi; jobId: string; analystDocumentId: string }) => job({ ...input, retry: true });
 /*

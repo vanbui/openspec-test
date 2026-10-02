@@ -140,9 +140,7 @@ test("latestForQuestionnaire returns the questionnaire's current draft job with 
       gates.set(job.jobId, { succeed: () => resolve({ assessmentId: `assessment-${job.jobId}` }), fail: () => reject(new Error("provider failed")) });
     }),
   });
-  const latestForQuestionnaire = (registry as unknown as { latestForQuestionnaire?: (questionnaireId: string, viewerDocumentId: string) => LatestDraftJob }).latestForQuestionnaire;
-  assert.equal(typeof latestForQuestionnaire, "function", "DRAFT_REGISTRY_HAS_NO_LATEST_READ");
-  const read = (questionnaireId: string, viewer: string) => latestForQuestionnaire!(questionnaireId, viewer);
+  const read = (questionnaireId: string, viewer: string): LatestDraftJob => registry.latestForQuestionnaire(questionnaireId, viewer);
 
   assert.equal(read("questionnaire-1", "analyst-1"), null, "UNKNOWN_QUESTIONNAIRE_HAS_A_JOB");
   registry.enqueue({ questionnaireId: "questionnaire-1", initiatingAnalystDocumentId: "analyst-1", providerName: "provider", providerVersion: "1" });

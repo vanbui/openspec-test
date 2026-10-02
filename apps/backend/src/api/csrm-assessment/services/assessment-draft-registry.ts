@@ -230,5 +230,25 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
     return publicRecord(job);
   }
 
-  return { enqueue, get, retry, cleanup };
+  /*
+   * D-25: the questionnaire's current draft job for any analyst who may review
+   * its request — the job the questionnaire is mapped to (active or retained),
+   * else the retained job queued last — with whether the viewer may retry it.
+   * Like the questionnaire registry's request read, it neither authorises nor
+   * touches `lastAccess`; `get` and `retry` stay initiator-only (D-27).
+   */
+  function latestForQuestionnaire(questionnaireId: string, viewerDocumentId: string): { job: AssessmentDraftJobRecord; canRetry: boolean } | null {
+    cleanup();
+    if (!nonBlank(questionnaireId) || !nonBlank(viewerDocumentId)) return null;
+    const mappedId = jobsByQuestionnaire.get(questionnaireId);
+    let selected = mappedId ? jobs.get(mappedId) : undefined;
+    if (!selected) {
+      for (const job of jobs.values()) {
+        if (job.questionnaireId === questionnaireId && (!selected || job.queuedAt >= selected.queuedAt)) selected = job;
+      }
+    }
+    return selected ? { job: publicRecord(selected), canRetry: viewerDocumentId === selected.initiatingAnalystDocumentId } : null;
+  }
+
+  return { enqueue, get, retry, cleanup, latestForQuestionnaire };
 }

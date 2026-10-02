@@ -858,6 +858,16 @@ export function getAssessmentDraftJob(input: {
   return projectAssessmentDraftJob(draftRegistry(input.strapi).get(input.jobId, draftActor(input.analystDocumentId)));
 }
 
+/** D-25: the questionnaire's current draft job, projected as the by-id read projects it, with the viewer's retry right. */
+export function latestAssessmentDraftJobForQuestionnaire(
+  strapi: AssessmentDraftStrapi,
+  questionnaireId: string,
+  viewerDocumentId: string,
+): { job: RecordValue; canRetry: boolean } | null {
+  const latest = draftRegistry(strapi).latestForQuestionnaire(questionnaireId, draftActor(viewerDocumentId).documentId);
+  return latest ? { job: projectAssessmentDraftJob(latest.job), canRetry: latest.canRetry } : null;
+}
+
 export function retryAssessmentDraftJob(input: {
   strapi: AssessmentDraftStrapi;
   jobId: string;
