@@ -69,17 +69,25 @@ function selectAdjacentRadio(event: React.KeyboardEvent<HTMLButtonElement>) {
     }
   }
   if (!target) return
+  const next = target
 
-  // While a key repeats, Radix's arrow flag is already set and its focus handler clicks the radio
-  // itself. Click only when it did not, so each press reports exactly one change.
-  let checkedOnFocus = false
-  const noteClick = () => {
-    checkedOnFocus = true
-  }
-  target.addEventListener("click", noteClick)
-  target.focus()
-  target.removeEventListener("click", noteClick)
-  if (!checkedOnFocus) target.click()
+  // Move and check once the key event's dispatch has finished, still before the key is released
+  // (a microtask runs before the next task, and keyup is a later task). The click is then its own
+  // event, as it is on Radix's focus path, rather than one nested inside the keyboard event, so a
+  // transition started by the value change is not folded into the keyboard event's update batch.
+  queueMicrotask(() => {
+    if (!next.isConnected) return
+    // While a key repeats, Radix's arrow flag is already set and its focus handler clicks the
+    // radio itself. Click only when it did not, so each press reports exactly one change.
+    let checkedOnFocus = false
+    const noteClick = () => {
+      checkedOnFocus = true
+    }
+    next.addEventListener("click", noteClick)
+    next.focus()
+    next.removeEventListener("click", noteClick)
+    if (!checkedOnFocus) next.click()
+  })
 }
 
 function RadioGroupItem({
