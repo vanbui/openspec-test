@@ -6,6 +6,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/app/assessments', useRouter: () => ({ replace: vi.fn() }) }));
 
+import { TimeZoneProvider } from '@/components/csrm/local-time';
+
 import type {
   AssessmentRiskListItem,
   ControlImplementation,
@@ -244,6 +246,57 @@ describe('immutable released assessment detail', () => {
     expect(within(view).getByText('31 January 2027')).toBeInTheDocument();
     expect(within(view).getByRole('link', { name: 'RAR-2026-0042: Customer portal security assessment' })).toHaveAttribute('href', '/app/requests/request-42');
     expect(within(view).getByRole('heading', { name: 'Current lifecycle state: Released' })).toBeInTheDocument();
+    // UI-SPEC §15.1 and §15.3: the release is named as a release, and the description says what the list holds.
+    expect(definition(view, 'Release date')).toBeInTheDocument();
+    expect(definition(view, 'Released by')).toHaveTextContent(/^Bob Doe$/);
+    expect(within(view).queryByText('Approval date')).not.toBeInTheDocument();
+    expect(within(view).queryByText('Approved by')).not.toBeInTheDocument();
+    expect(within(view).getByText('Each Risk with its ratings, treatment and the controls that mitigate it.')).toBeInTheDocument();
+    expect(view.textContent).not.toMatch(/authoritative/i);
+  });
+
+  it('shows the assessment and release dates in the viewer’s local time and keeps calendar dates as stored (D-19)', () => {
+    // 15:30 UTC on 30 August is 01:30 on 31 August in Brisbane: only a zone-aware render shows the 31st.
+    const lateUtc: ReleasedAssessmentDetailForActor = {
+      ...releasedDetail,
+      assessmentDate: '2026-08-30T15:30:00.000Z',
+      approvalDate: '2026-08-30T15:30:00.000Z',
+    };
+    const { unmount } = render(
+      <TimeZoneProvider zone="Australia/Brisbane">
+        <ReleasedAssessmentDetailView assessment={lateUtc} controlsByRisk={{}} risks={[risk]} state="populated" />
+      </TimeZoneProvider>,
+    );
+
+    let view = screen.getByRole('article', { name: 'Released risk assessment ASM-0042' });
+    for (const term of ['Assessment date', 'Release date']) {
+      const value = definition(view, term);
+      expect(value, term).toHaveTextContent(/^31 August 2026$/);
+      expect(value.querySelector('time'), term).toHaveAttribute('dateTime', '2026-08-30T15:30:00.000Z');
+    }
+    expect(definition(view, 'Next review date')).toHaveTextContent(/^28 February 2027$/);
+    expect(definition(view, 'Target date')).toHaveTextContent(/^31 March 2027$/);
+    unmount();
+
+    // Before the zone is known the instant renders in UTC, and a date-only render carries no label.
+    render(<ReleasedAssessmentDetailView assessment={lateUtc} controlsByRisk={{}} risks={[risk]} state="populated" />);
+    view = screen.getByRole('article', { name: 'Released risk assessment ASM-0042' });
+    expect(definition(view, 'Release date')).toHaveTextContent(/^30 August 2026$/);
+  });
+
+  it('renders a contract mismatch as the ordinary error state and never names the operation on the page (UI-SPEC §15.3)', () => {
+    render(<ReleasedAssessmentDetailView state="contract-mismatch" />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t load this risk assessment');
+    expect(alert).toHaveTextContent('Try again. If the problem continues, contact your administrator.');
+    expect(document.body.textContent).not.toMatch(/contract|GET \/v1/i);
+
+    const view = readFileSync(resolve(process.cwd(), 'src/features/assessments/released-assessment.tsx'), 'utf8');
+    const route = readFileSync(resolve(process.cwd(), 'app/(app)/app/assessments/[documentId]/page.tsx'), 'utf8');
+    expect(view).not.toContain('Response contract mismatch');
+    expect(view).not.toContain('diagnosticOperation');
+    expect(route).not.toContain('diagnosticOperation');
   });
 
   it('names each mitigation control by its number and title, never by its internal id (D-34, D-36)', () => {
