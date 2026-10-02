@@ -178,7 +178,10 @@ export function AssessmentDraftJob({
     if (activeJobIdRef.current !== seededJob.job.jobId) {
       activeJobIdRef.current = seededJob.job.jobId;
       pollingStartedAtRef.current = timing.now();
-      requestInFlightRef.current = false;
+      /*
+       * WR-202: a status check for the earlier job may still be in flight. It keeps the in-flight flag until it
+       * settles and then schedules the next check, which reads this job, so two checks never overlap.
+       */
     }
     // Keyed on the seed's content, not on the object (see above); `seededJob` is this render's seed.
   }, [seededKey]);

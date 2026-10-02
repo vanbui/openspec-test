@@ -187,7 +187,6 @@ export function QuestionnaireGenerationJob({
     const handle = timing.setTimeout(() => {
       if (!mountedRef.current || requestInFlightRef.current) return;
       requestInFlightRef.current = true;
-      let followedJobId: string | null = polledJobId;
       void pollJob(requestId, polledJobId, byRequest).then((result) => {
         if (!mountedRef.current || activeJobIdRef.current !== polledJobId) return;
         if (!result.ok) {
@@ -199,14 +198,12 @@ export function QuestionnaireGenerationJob({
         const { entry } = result;
         if (!entry) {
           /* The server no longer holds a job for this request (D-26: jobs stay in the server process). */
-          followedJobId = null;
           activeJobIdRef.current = null;
           setJob(null);
           setCanRetry(null);
           setAnnouncement('');
           return;
         }
-        followedJobId = entry.job.jobId;
         activeJobIdRef.current = entry.job.jobId;
         setCanRetry(entry.canRetry);
         setJob((current) => {
@@ -215,7 +212,12 @@ export function QuestionnaireGenerationJob({
         });
       }).finally(() => {
         requestInFlightRef.current = false;
-        if (mountedRef.current && followedJobId !== null && activeJobIdRef.current === followedJobId) setPollCycle((current) => current + 1);
+        /*
+         * WR-202: always schedule the next check. A tick that found this check in flight was skipped, and the
+         * job shown may have changed meanwhile (a refreshed seed); the effect re-reads whichever job is shown,
+         * and stops for none, a completed or failed job, or the timeout.
+         */
+        if (mountedRef.current) setPollCycle((current) => current + 1);
       });
     }, Math.min(timing.pollIntervalMs, remaining));
     return () => timing.clearTimeout(handle);
