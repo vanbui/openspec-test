@@ -103,6 +103,16 @@ export function MitigationControlList({ implementations, mutable, onChanged, onC
   const [mode, setMode] = useState<{ kind: 'create' } | { kind: 'edit'; id: string } | null>(null);
   const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
   const addRef = useRef<HTMLButtonElement>(null);
+  const editButtons = useRef(new Map<string, HTMLButtonElement>());
+  // X-5: discarding a form returns focus to the control that opened it, once that control is back on the page.
+  const [returnFocus, setReturnFocus] = useState<{ kind: 'add' } | { kind: 'edit'; id: string } | null>(null);
+  useEffect(() => {
+    if (!returnFocus) return;
+    const target = returnFocus.kind === 'add' ? addRef.current : editButtons.current.get(returnFocus.id);
+    if (!target) return;
+    target.focus();
+    setReturnFocus(null);
+  }, [mode, returnFocus]);
   // Editing needs the page's pickers and its owner search; a released Risk receives neither.
   const editing = mutable && options && searchOwners ? { options, searchOwners } : undefined;
 
@@ -141,7 +151,7 @@ export function MitigationControlList({ implementations, mutable, onChanged, onC
       {implementations.map((implementation) => (
         <article className="grid gap-4 rounded-lg border border-border p-4" key={implementation.documentId}>
           {mode?.kind === 'edit' && mode.id === implementation.documentId && editing ? (
-            <MitigationControlEditor implementation={implementation} mode="edit" onCancel={() => setMode(null)} onChanged={(updated) => { setMode(null); onChanged(implementations.map((item) => item.documentId === updated.documentId ? updated : item), 'Mitigation control changes saved.'); }} onConflict={onConflict} options={editing.options} riskId={riskId} riskTypeId={riskTypeId} searchOwners={editing.searchOwners} />
+            <MitigationControlEditor implementation={implementation} mode="edit" onCancel={() => { setMode(null); setReturnFocus({ kind: 'edit', id: implementation.documentId }); }} onChanged={(updated) => { setMode(null); onChanged(implementations.map((item) => item.documentId === updated.documentId ? updated : item), 'Mitigation control changes saved.'); }} onConflict={onConflict} options={editing.options} riskId={riskId} riskTypeId={riskTypeId} searchOwners={editing.searchOwners} />
           ) : (
             <>
               <h3 className="text-heading-sm">{controlLabel(implementation.control)}</h3>
@@ -155,13 +165,13 @@ export function MitigationControlList({ implementations, mutable, onChanged, onC
                 <Value label="Implemented date" value={formatDate(implementation.implementedDate)} />
                 <Value label="Review date" value={formatDate(implementation.reviewDate)} />
               </dl>
-              {editing ? <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={() => setMode({ kind: 'edit', id: implementation.documentId })}>Edit mitigation control</Button><ConfirmDialog cancelLabel="Keep mitigation control" confirmLabel="Remove mitigation control" confirmVariant="destructive" description="This removes the control from this Risk. The control stays in the library." errorMessage={removeErrors[implementation.documentId]} onConfirm={() => remove(implementation)} pendingLabel="Removing mitigation control…" title="Remove this mitigation control?" trigger={<Button type="button" variant="outline">Remove mitigation control</Button>} /></div> : null}
+              {editing ? <div className="flex flex-wrap gap-3"><Button onClick={() => setMode({ kind: 'edit', id: implementation.documentId })} ref={(element) => { if (element) editButtons.current.set(implementation.documentId, element); else editButtons.current.delete(implementation.documentId); }} type="button" variant="outline">Edit mitigation control</Button><ConfirmDialog cancelLabel="Keep mitigation control" confirmLabel="Remove mitigation control" confirmVariant="destructive" description="This removes the control from this Risk. The control stays in the library." errorMessage={removeErrors[implementation.documentId]} onConfirm={() => remove(implementation)} pendingLabel="Removing mitigation control…" title="Remove this mitigation control?" trigger={<Button type="button" variant="outline">Remove mitigation control</Button>} /></div> : null}
             </>
           )}
         </article>
       ))}
       {editing && mode === null ? <Button ref={addRef} className="w-fit" type="button" onClick={() => setMode({ kind: 'create' })}>Add mitigation control</Button> : null}
-      {editing && mode?.kind === 'create' ? <MitigationControlEditor mode="create" onCancel={() => setMode(null)} onChanged={(created) => { setMode(null); onChanged([...implementations, created], 'Mitigation control added.'); }} onConflict={onConflict} options={editing.options} riskId={riskId} riskTypeId={riskTypeId} searchOwners={editing.searchOwners} /> : null}
+      {editing && mode?.kind === 'create' ? <MitigationControlEditor mode="create" onCancel={() => { setMode(null); setReturnFocus({ kind: 'add' }); }} onChanged={(created) => { setMode(null); onChanged([...implementations, created], 'Mitigation control added.'); }} onConflict={onConflict} options={editing.options} riskId={riskId} riskTypeId={riskTypeId} searchOwners={editing.searchOwners} /> : null}
     </div>
   );
 }
