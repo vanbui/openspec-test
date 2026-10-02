@@ -15,6 +15,7 @@ import {
   searchActiveUsers,
   retryAssessmentDraftJob,
   getQuestionnaireGenerationJob,
+  getRequestGenerationJobs,
   retryQuestionnaireGenerationJob,
   startQuestionnaireGeneration,
   startAssessmentDraft,
@@ -34,6 +35,7 @@ import {
   type AnalystAssessmentDetail,
   type AssessmentDraftJob,
   type QuestionnaireGenerationJob,
+  type RequestGenerationJobs,
   type ActiveUser,
   type ControlImplementation,
   type ReleasedAssessmentDetail,
@@ -53,6 +55,7 @@ export type AssessmentServerActionResult<T> =
 
 const questionnaireIdInputSchema = z.object({ questionnaireId: documentIdSchema }).strict();
 const jobIdInputSchema = z.object({ jobId: documentIdSchema }).strict();
+const requestIdInputSchema = z.object({ requestId: documentIdSchema }).strict();
 const questionnaireGenerationInputSchema = z.object({
   requestId: documentIdSchema,
   replaceUnansweredQuestionnaire: z.boolean(),
@@ -222,6 +225,19 @@ export async function getQuestionnaireGenerationJobAction(input: unknown): Promi
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await getQuestionnaireGenerationJob(parsed.data.jobId);
+  if (result.error) return serviceFailure(result.error.status);
+  return { ok: true, data: result.data };
+}
+
+/**
+ * D-25, D-26: polls a request's current generation jobs for the analyst hub,
+ * including jobs another analyst started. It only reads, so nothing is
+ * revalidated; Strapi decides who may read and who may retry.
+ */
+export async function getRequestGenerationJobsAction(input: unknown): Promise<AssessmentServerActionResult<RequestGenerationJobs>> {
+  const parsed = requestIdInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailure(parsed.error, input);
+  const result = await getRequestGenerationJobs(parsed.data.requestId);
   if (result.error) return serviceFailure(result.error.status);
   return { ok: true, data: result.data };
 }

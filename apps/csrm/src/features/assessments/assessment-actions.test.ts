@@ -7,6 +7,7 @@ const getAssessmentDraftJob = vi.hoisted(() => vi.fn());
 const retryAssessmentDraftJob = vi.hoisted(() => vi.fn());
 const startQuestionnaireGeneration = vi.hoisted(() => vi.fn());
 const getQuestionnaireGenerationJob = vi.hoisted(() => vi.fn());
+const getRequestGenerationJobs = vi.hoisted(() => vi.fn());
 const retryQuestionnaireGenerationJob = vi.hoisted(() => vi.fn());
 const updateAssessment = vi.hoisted(() => vi.fn());
 const createRisk = vi.hoisted(() => vi.fn());
@@ -24,6 +25,7 @@ vi.mock('./assessment-service', () => ({
   retryAssessmentDraftJob,
   startQuestionnaireGeneration,
   getQuestionnaireGenerationJob,
+  getRequestGenerationJobs,
   retryQuestionnaireGenerationJob,
   updateAssessment,
   createRisk,
@@ -43,6 +45,7 @@ afterEach(() => {
     retryAssessmentDraftJob,
     startQuestionnaireGeneration,
     getQuestionnaireGenerationJob,
+    getRequestGenerationJobs,
     retryQuestionnaireGenerationJob,
     updateAssessment,
     createRisk,
@@ -116,6 +119,31 @@ describe('assessment Server Action boundary', () => {
     expect(startQuestionnaireGeneration).toHaveBeenCalledWith('request/1', false);
     expect(getQuestionnaireGenerationJob).toHaveBeenCalledWith('job-1');
     expect(retryQuestionnaireGenerationJob).toHaveBeenCalledWith('job-1');
+  });
+
+  it('polls the generation jobs of a request by request identifier alone, without revalidating', async () => {
+    const jobs = {
+      questionnaireGeneration: {
+        job: { jobId: 'job-1', requestId: 'request/1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: '2026-08-30T01:02:03.000Z', status: 'running', startedAt: '2026-08-30T01:02:04.000Z' },
+        canRetry: false,
+      },
+      assessmentDraft: null,
+    };
+    getRequestGenerationJobs.mockResolvedValueOnce(success(jobs));
+
+    await expect(actions.getRequestGenerationJobsAction({ requestId: 'request/1' })).resolves.toEqual({ ok: true, data: jobs });
+    await expect(actions.getRequestGenerationJobsAction({ requestId: '' })).resolves.toMatchObject({ ok: false });
+    await expect(actions.getRequestGenerationJobsAction({ requestId: 'request-1', jobId: 'forged' })).resolves.toMatchObject({ ok: false });
+    expect(getRequestGenerationJobs).toHaveBeenCalledTimes(1);
+    expect(getRequestGenerationJobs).toHaveBeenCalledWith('request/1');
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('refuses a request generation poll the server refuses, without disclosing why', async () => {
+    getRequestGenerationJobs.mockResolvedValueOnce(failure(403));
+
+    await expect(actions.getRequestGenerationJobsAction({ requestId: 'request-1' })).resolves.toEqual({ ok: false, formError: 'You do not have permission to change this assessment.' });
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it('rejects forged Assessment and Risk fields before transport and retains submitted values', async () => {
