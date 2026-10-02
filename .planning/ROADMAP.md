@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 10/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 11/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -107,7 +107,7 @@ Plans:
 - [x] 10-10-PLAN.md — Add D-03's third API change in part: question events store a bounded text snapshot (D-18), and the analyst timeline projects question text by snapshot or by the D-17 resolution rule, so no timeline sh
 
 **Wave 11** *(blocked on Wave 10 completion)*
-- [ ] 10-11-PLAN.md — Deliver the server and contract half of UAT-019: the `regenerated` governance event (D-10, the remaining part of D-03 item 3), the refusal to replace a released questionnaire (D-09), and the analyst c
+- [x] 10-11-PLAN.md — Deliver the server and contract half of UAT-019: the `regenerated` governance event (D-10, the remaining part of D-03 item 3), the refusal to replace a released questionnaire (D-09), and the analyst c
 
 **Wave 12** *(blocked on Wave 11 completion)*
 - [ ] 10-12-PLAN.md — Build the hub side of UAT-019 on plan 10-11's contract: `Replace questionnaire` with a confirmation that states the discard count (D-08), no offer and an explanatory hint while the questionnaire is re
