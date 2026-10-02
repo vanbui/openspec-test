@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import type { ConflictReason } from '@/lib/api/conflict-reasons';
+import { refusalMessage } from '@/lib/api/refusal-copy';
 
 import {
   createControlImplementation,
@@ -45,6 +47,8 @@ export type AssessmentServerActionResult<T> =
       values?: Record<string, unknown>;
       fieldErrors?: Record<string, string[]>;
       formError: string;
+      /** The closed-list rule a refused workflow action named; never Strapi's message (T-10-17). */
+      reason?: ConflictReason;
     };
 
 const questionnaireIdInputSchema = z.object({ questionnaireId: documentIdSchema }).strict();
@@ -134,6 +138,15 @@ function serviceFailure(
   return { ok: false, ...(values ? { values } : {}), formError };
 }
 
+/**
+ * A refused questionnaire generation, start or retry. A 409 reads UI-SPEC §10.2 I for the served reason and
+ * returns it; the other statuses keep the assessment service's messages.
+ */
+function generationFailure(error: { status?: number; reason?: ConflictReason }): AssessmentServerActionResult<never> {
+  if (error.status !== 409) return serviceFailure(error.status);
+  return { ok: false, formError: refusalMessage('questionnaireGeneration', error.reason), ...(error.reason ? { reason: error.reason } : {}) };
+}
+
 function revalidateJobStart(questionnaireId: string): void {
   revalidatePath('/app/review/requests');
   revalidatePath(`/app/review/questionnaires/${encodeURIComponent(questionnaireId)}`);
@@ -200,7 +213,7 @@ export async function startQuestionnaireGenerationAction(input: unknown): Promis
   const parsed = questionnaireGenerationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await startQuestionnaireGeneration(parsed.data.requestId, parsed.data.replaceUnansweredQuestionnaire);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationFailure(result.error);
   revalidateQuestionnaireGeneration(parsed.data.requestId, result.data.status === 'completed' ? result.data.questionnaire.documentId : undefined);
   return { ok: true, data: result.data };
 }
@@ -217,7 +230,7 @@ export async function retryQuestionnaireGenerationJobAction(input: unknown): Pro
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await retryQuestionnaireGenerationJob(parsed.data.jobId);
-  if (result.error) return serviceFailure(result.error.status);
+  if (result.error) return generationFailure(result.error);
   revalidateQuestionnaireGeneration(result.data.requestId);
   return { ok: true, data: result.data };
 }

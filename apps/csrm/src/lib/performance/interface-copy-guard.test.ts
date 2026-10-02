@@ -67,6 +67,7 @@ export const guardedFiles = [
   'src/features/requests/request-hub.tsx',
   'src/features/requests/request-workflow-actions.tsx',
   'src/features/risks/risk-detail-editor.tsx',
+  'src/lib/api/refusal-copy.ts',
   'src/lib/time/format-instant.ts',
 ] as const;
 
