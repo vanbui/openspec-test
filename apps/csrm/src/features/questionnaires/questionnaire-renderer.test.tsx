@@ -219,7 +219,7 @@ describe('QuestionnaireRenderer', () => {
     expect(screen.queryByText(/^Submitted$/)).not.toBeInTheDocument();
   });
 
-  it('keeps irreversible confirmation open on server failure and prevents duplicate submits', async () => {
+  it('keeps the submit confirmation open on server failure and prevents duplicate submits', async () => {
     const editable = definition.filter((item) => item.questionKey !== 'evidence');
     const user = userEvent.setup();
     let resolveSave!: (value: unknown) => void;
@@ -231,7 +231,9 @@ describe('QuestionnaireRenderer', () => {
     await user.click(screen.getByRole('radio', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'Submit questionnaire' }));
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog).toHaveTextContent(/cannot be edited after submission/i);
+    // UI-SPEC §8.2: the dialog says what happens next and how the answers can still change; nothing calls it irreversible.
+    expect(dialog).toHaveAccessibleDescription('The Security Analyst will review your answers and use them to assess the request’s risk. Until they start the assessment, you can return the questionnaire to draft to change your answers.');
+    expect(dialog).not.toHaveTextContent(/irreversible|cannot be undone|cannot be edited/i);
     const confirm = within(dialog).getByRole('button', { name: 'Submit questionnaire' });
     await user.dblClick(confirm);
     expect(saveQuestionnaireDraftAction).toHaveBeenCalledTimes(1);
@@ -258,6 +260,39 @@ describe('QuestionnaireRenderer', () => {
     expect(screen.getByText('Customer portal')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Save draft|Submit questionnaire/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /Service name/ })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [undefined, 'Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.'],
+    ['requestor-revertible', 'Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.'],
+    ['requestor-locked', 'Questionnaire submitted. The Security Analyst has started the assessment, so your answers can no longer change.'],
+    ['analyst', 'Questionnaire submitted. These are the Requestor’s submitted answers.'],
+  ] as const)('shows the %s submitted notice under the unchanged Submitted title', (variant, notice) => {
+    render(<QuestionnaireRenderer definition={submittedDefinition} documentId="questionnaire-1" mode="read-only" submittedNotice={variant} />);
+    const alert = screen.getByText('Submitted', { exact: true }).closest('[role="alert"]');
+    expect(alert).toHaveTextContent(notice);
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.queryByText(/read-only and can no longer be edited/)).not.toBeInTheDocument();
+  });
+
+  it('offers the Requestor Return to draft and says so only while the request is questionnaire-in-progress', async () => {
+    const submitted = { ...questionnaire, state: 'submitted' as const };
+    const view = render(<QuestionnaireDetail definition={submittedDefinition} questionnaire={submitted} state="submitted" />);
+    expect(screen.getByRole('button', { name: 'Return to draft' })).toBeInTheDocument();
+    expect(screen.getByText('Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.')).toBeInTheDocument();
+
+    for (const requestStatus of ['risk-assessment-drafted', 'under-review']) {
+      view.rerender(<QuestionnaireDetail definition={submittedDefinition} questionnaire={{ ...submitted, assessmentRequest: { ...questionnaire.assessmentRequest, requestStatus } as QuestionnaireSummary['assessmentRequest'] }} state="submitted" />);
+      expect(screen.queryByRole('button', { name: 'Return to draft' }), requestStatus).not.toBeInTheDocument();
+      expect(screen.getByText('Questionnaire submitted. The Security Analyst has started the assessment, so your answers can no longer change.')).toBeInTheDocument();
+    }
+  });
+
+  it('describes the Requestor’s return to draft in plain words', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnaireDetail definition={submittedDefinition} questionnaire={{ ...questionnaire, state: 'submitted' }} state="submitted" />);
+    await user.click(screen.getByRole('button', { name: 'Return to draft' }));
+    expect(screen.getByRole('alertdialog', { name: 'Return this questionnaire to draft?' })).toHaveAccessibleDescription('Your answers go back to draft so you can change them. Submit the questionnaire again when you’re ready.');
   });
 
   it('renders the same ordered content in read-only mode without edit controls', async () => {

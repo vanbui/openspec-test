@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { QuestionnaireList } from './questionnaire-list';
@@ -298,6 +299,47 @@ describe('Security Analyst questionnaire review', () => {
     expect(screen.getByRole('button', { name: 'Return to draft' })).toHaveAttribute('data-variant', 'default');
   });
 
+  it('offers both actors Return to draft only while the request is questionnaire-in-progress (UI-SPEC §10.1)', () => {
+    const withRequest = (requestStatus: string): QuestionnaireSummary => ({
+      ...submittedQuestionnaire,
+      assessmentRequest: { availability: 'available', documentId: 'request-one', requestNumber: 'RAR-2026-X7K4Q2', title: 'Customer portal review', requestStatus },
+    });
+    const view = render(<QuestionnaireReview definition={submittedDefinition} questionnaire={withRequest('questionnaire-in-progress')} state="submitted" />);
+    expect(screen.getByRole('button', { name: 'Return to draft' })).toBeInTheDocument();
+
+    for (const questionnaireFacts of [
+      withRequest('risk-assessment-drafted'),
+      withRequest('under-review'),
+      { ...submittedQuestionnaire, assessmentRequest: { availability: 'unavailable' as const } },
+      { ...submittedQuestionnaire, assessmentRequest: { availability: 'absent' as const } },
+    ]) {
+      view.rerender(<QuestionnaireReview definition={submittedDefinition} questionnaire={questionnaireFacts} state="submitted" />);
+      expect(screen.queryByRole('button', { name: 'Return to draft' }), JSON.stringify(questionnaireFacts.assessmentRequest)).not.toBeInTheDocument();
+      view.rerender(<QuestionnaireDetail definition={submittedDefinition} questionnaire={questionnaireFacts} state="submitted" />);
+      expect(screen.queryByRole('button', { name: 'Return to draft' }), JSON.stringify(questionnaireFacts.assessmentRequest)).not.toBeInTheDocument();
+    }
+  });
+
+  it('passes each page’s submitted notice to the shared renderer (UI-SPEC §8.2)', () => {
+    questionnaireRenderer.mockClear();
+    const view = render(<QuestionnaireDetail definition={submittedDefinition} questionnaire={submittedQuestionnaire} state="submitted" />);
+    expect(questionnaireRenderer).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'read-only', submittedNotice: 'requestor-revertible' }), undefined);
+
+    const drafted: QuestionnaireSummary = { ...submittedQuestionnaire, assessmentRequest: { availability: 'available', documentId: 'request-one', requestNumber: 'RAR-2026-X7K4Q2', title: 'Customer portal review', requestStatus: 'risk-assessment-drafted' } };
+    view.rerender(<QuestionnaireDetail definition={submittedDefinition} questionnaire={drafted} state="submitted" />);
+    expect(questionnaireRenderer).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'read-only', submittedNotice: 'requestor-locked' }), undefined);
+
+    view.rerender(<QuestionnaireReview definition={submittedDefinition} questionnaire={drafted} state="submitted" />);
+    expect(questionnaireRenderer).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'read-only', submittedNotice: 'analyst' }), undefined);
+  });
+
+  it('describes the Security Analyst’s return to draft in plain words', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnaireReview definition={submittedDefinition} questionnaire={submittedQuestionnaire} state="submitted" />);
+    await user.click(screen.getByRole('button', { name: 'Return to draft' }));
+    expect(screen.getByRole('alertdialog', { name: 'Return this questionnaire to draft?' })).toHaveAccessibleDescription('The Requestor’s answers go back to draft so they can change them and submit again. Their answers are kept.');
+  });
+
   it('renders only the analyst-authorised review request backlink', () => {
     render(
       <QuestionnaireReview
@@ -485,7 +527,7 @@ describe('Security Analyst questionnaire review', () => {
     expect(screen.getByRole('heading', { name: submittedQuestionnaire.title })).toBeInTheDocument();
     expect(screen.getByText('Shared questionnaire renderer')).toHaveAttribute('data-mode', 'read-only');
     expect(questionnaireRenderer).toHaveBeenCalledWith(
-      { definition: submittedDefinition, documentId: submittedQuestionnaire.documentId, mode: 'read-only' },
+      { definition: submittedDefinition, documentId: submittedQuestionnaire.documentId, mode: 'read-only', submittedNotice: 'analyst' },
       undefined,
     );
     expect(screen.queryByRole('button', { name: /save|submit/i })).not.toBeInTheDocument();
