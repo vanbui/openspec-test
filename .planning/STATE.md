@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 10-14-PLAN.md
-last_updated: "2026-10-02T08:37:52.417Z"
+stopped_at: Completed 10-15-PLAN.md
+last_updated: "2026-10-02T09:18:24.786Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 10-14 complete (the analyst hub seeds both generation job cards from the request's jobs read, shows another analyst's job with the right retry rights, says generation is in progress on the Next action line, and explains a failed read; UAT-041, UX-06)
-state_head: 82fd583fb488b3aa2f748de87fb0c29499d566d2
+last_activity_desc: Plan 10-15 complete (the released assessment reads as a finished document: each Risk's system, asset, ratings, treatment and owners for both actors through a new risk list item, every mitigation control named by number and title from a served control summary, and local release dates; UAT-033, ASSESS-07, ADMIN-05 label rule, UX-06)
+state_head: b0c54d50c4e726984917bcea566bda5b74fa579a
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
-  completed_plans: 14
+  completed_plans: 15
   percent: 0
 current_phase: 10
 current_phase_name: Existing-flow gap closure
@@ -40,9 +40,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
 - **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: 15 of 23
+Plan: 16 of 23
 Status: Ready to execute
-Last activity: 2026-10-02 — Plan 10-14 complete: the analyst request page reads the request's generation jobs after the gate; both job cards are seeded with queued, running or failed jobs (seededJob { job, canRetry }), poll their initiator's job by id and any other by request, offer Retry only to the initiator, and read UI-SPEC §12's copy; the hub's Next action says generation is in progress while a job runs; a failed jobs read and a refused start each get their own copy; both cards are in the copy guard; journey UX06_JOB_STATUS_ON_RETURN; web 2,583/2,583, typecheck and lint clean, generation journey 1/1 (desktop, 13.5 s)
+Last activity: 2026-10-02 — Plan 10-15 complete: GET /v1/risk_assessments/{assessmentId}/risks answers AssessmentRiskListItem (system, asset and owners by name, ratings, treatment, target date) for the owning Requestor and the analyst; every control implementation response carries controlSummary; the zod-free controlLabel/controlTitle rule; ReleasedRiskDetails renders the released Risk on both surfaces (h4 groups on the released view, h3 in the analyst's read-only editor); Release date and Released by in the viewer's zone; the mismatch diagnostic leaves the page; grandfather count 42; web 2,611/2,611, Strapi 601/601 (650 s), release journey 1/1 (desktop), typecheck, lint and api:check clean
 
 ## Milestone
 
@@ -127,6 +127,8 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-13: a completed questionnaire job whose questionnaire can no longer be loaded reads as null on the request read instead of failing it. The harness has a second active human analyst (identities.secondAnalyst, users.secondAnalyst), and the matrix keeps six actors.
 - [Phase 10]: 10-14: the analyst request page reads getRequestGenerationJobs after the gate and the request read; AssessmentDetail seeds both job cards with queued, running or failed jobs (never completed ones) through seededJob { job, canRetry }, reset only when the job id, status or retry right changes, and derives UI-SPEC 12.3's plain-text Next action (RequestHub nextActionOverride) from the cards' onJobStatusChange, falling back to the seeded status for the server render. Retry shows only while canRetry is not false; another analyst gets the retry-rights line and Generate or Replace (questionnaire) or Generate assessment draft.
 - [Phase 10]: 10-14: a card polls by id only a job the viewer started or retried; any other job, and one a start handed back (the registry returns the active job to any analyst, so the retry right is unknown), is polled through getRequestGenerationJobsAction by request (D-27, UI-SPEC 12.5). A refused start or retry has its own title (Questionnaire generation couldn’t start, Draft generation couldn’t start; Status unavailable is only for a failed status check), resolving the 10-12 deferred item. Both job cards are in the D-38 copy guard.
+- [Phase 10]: 10-15: GET /api/v1/risk_assessments/{assessmentId}/risks answers AssessmentRiskListResponse of AssessmentRiskListItem (statement; system and asset { documentId, name } inline with 1-255 bounds; inherent and residual likelihood, consequence and rating; treatment action, plan and status; risk and treatment owner as ActiveUserSummary; target date), populated and projected by projectAssessmentRiskListItem for the owning Requestor and the analyst alike; RiskSummary stays the five-field create and update response and RiskListResponse is removed. Every control implementation response carries the required nullable controlSummary { documentId, controlNumber, name, framework } (1-255 each, else null). The parser is listAssessmentRiskItems (no grandfathering), so the grandfather count is 42.
+- [Phase 10]: 10-15: controlLabel/controlTitle (features/assessments/control-label.ts, zod-free) is the D-36 rule for every later plan. ReleasedRiskDetails is the one read-only Risk: h4 groups under the released view's h3 Risk number, h3 groups in the analyst's read-only editor, which now renders the whole shared Risk (mitigation group included) instead of RiskReadOnly/ControlReadOnly and the separate Mitigation controls section; the review page reads the list items when canMutateAssessment (now in assessment-domain.ts) is false. The released view's assessment and release dates use LocalInstant date-long; a contract mismatch shows the ordinary error state and the route logs [csrm-contract] response contract mismatch: {operation}.
 
 ## Risks and Open Decisions
 
@@ -203,11 +205,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P12 | 13 min | 2 tasks | 10 files |
 | Phase 10 P13 | 33 min | 3 tasks | 23 files |
 | Phase 10 P14 | 19 min | 3 tasks | 12 files |
+| Phase 10 P15 | 32 min | 3 tasks | 22 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T08:37:43.553Z
-**Stopped At:** Completed 10-14-PLAN.md
+**Last session:** 2026-10-02T09:18:15.991Z
+**Stopped At:** Completed 10-15-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
