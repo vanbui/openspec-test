@@ -1,24 +1,11 @@
 import { UndoDotIcon } from 'lucide-react';
 
+import { LocalInstant } from './local-time';
+
 export interface RevertAuditFacts {
   revertReason?: string | null;
   revertedAt?: string | null;
   revertedBy?: { documentId: string; displayName?: string | null } | null;
-}
-
-function formatRevertedAt(value: string | null | undefined): string {
-  if (!value) return 'Not recorded';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Not recorded';
-
-  return new Intl.DateTimeFormat('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  }).format(date);
 }
 
 /*
@@ -29,7 +16,8 @@ function formatRevertedAt(value: string | null | undefined): string {
 export function RevertAuditSummary({ className, facts }: { className?: string; facts: RevertAuditFacts }) {
   if (!facts.revertReason) return null;
 
-  const by = facts.revertedBy?.displayName?.trim() || facts.revertedBy?.documentId || 'Not recorded';
+  /* A document id is an opaque identifier, not a person; never show one as a name (UI-SPEC §4.4). */
+  const by = facts.revertedBy?.displayName?.trim() || 'Not recorded';
 
   return (
     <section className={className} aria-labelledby="revert-audit-heading">
@@ -55,7 +43,7 @@ export function RevertAuditSummary({ className, facts }: { className?: string; f
           <div className="grid min-w-0 gap-1">
             <dt className="text-xs font-medium text-muted-foreground">When</dt>
             <dd className="text-foreground tabular-nums">
-              {facts.revertedAt ? <time dateTime={facts.revertedAt}>{formatRevertedAt(facts.revertedAt)}</time> : 'Not recorded'}
+              <LocalInstant fallback="Not recorded" style="date-time" value={facts.revertedAt} />
             </dd>
           </div>
           <div className="grid min-w-0 gap-1">
