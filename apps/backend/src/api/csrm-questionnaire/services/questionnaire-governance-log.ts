@@ -41,6 +41,12 @@ export type GovernanceEvent = {
   by: string;
   reason?: string;
   questionKey?: string;
+  /*
+   * The question's own words when the event was written (Phase 10 D-18): what the analyst
+   * timeline names the question by after it changes again. Absent on events written before
+   * Phase 10 and on events that concern no question.
+   */
+  questionText?: string;
   explanation?: string;
 };
 
@@ -51,6 +57,7 @@ const GOVERNANCE_EVENT_KEYS = [
   "by",
   "reason",
   "questionKey",
+  "questionText",
   "explanation",
 ] as const;
 
@@ -58,6 +65,7 @@ const MAX_ACTOR_LENGTH = 255;
 const MAX_REASON_LENGTH = 500;
 const MAX_QUESTION_KEY_LENGTH = 120;
 const MAX_EXPLANATION_LENGTH = 500;
+export const MAX_QUESTION_TEXT_LENGTH = 500;
 
 export class GovernanceLogError extends Error {
   constructor(message = "CSRM questionnaire governance log is invalid.") {
@@ -108,6 +116,7 @@ export function parseGovernanceEvent(value: unknown): GovernanceEvent {
   if (!isGovernanceEventKind(value.kind)) throw new GovernanceLogError();
   const reason = optionalBoundedString(value.reason, MAX_REASON_LENGTH);
   const questionKey = optionalBoundedString(value.questionKey, MAX_QUESTION_KEY_LENGTH);
+  const questionText = optionalBoundedString(value.questionText, MAX_QUESTION_TEXT_LENGTH);
   const explanation = optionalBoundedString(value.explanation, MAX_EXPLANATION_LENGTH);
   return Object.freeze({
     schemaVersion: GOVERNANCE_LOG_SCHEMA_VERSION as 1,
@@ -116,8 +125,22 @@ export function parseGovernanceEvent(value: unknown): GovernanceEvent {
     by: boundedString(value.by, MAX_ACTOR_LENGTH),
     ...(reason === undefined ? {} : { reason }),
     ...(questionKey === undefined ? {} : { questionKey }),
+    ...(questionText === undefined ? {} : { questionText }),
     ...(explanation === undefined ? {} : { explanation }),
   });
+}
+
+/**
+ * The bounded snapshot of a question's text an event keeps (D-18): the trimmed text, or, when
+ * it is longer than the event bound, its first 499 characters and a closing ellipsis.
+ */
+export function questionTextSnapshot(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= MAX_QUESTION_TEXT_LENGTH) return trimmed;
+  let cut = trimmed.slice(0, MAX_QUESTION_TEXT_LENGTH - 1);
+  // Never end on half of a surrogate pair: the bound counts UTF-16 code units, like the parser.
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
 }
 
 /**

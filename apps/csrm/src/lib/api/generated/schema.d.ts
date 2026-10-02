@@ -1793,6 +1793,7 @@ export interface components {
             by: string;
             reason?: string;
             questionKey?: string;
+            questionText?: string;
             explanation?: string;
         };
         QuestionnaireClearedAnswer: {
@@ -2982,6 +2983,7 @@ export interface components {
             by?: components["schemas"]["QuestionnaireReleaseActor"] | null;
             reason?: string;
             questionKey?: string;
+            questionText?: string;
             explanation?: string;
         };
         QuestionnaireListResponse: {

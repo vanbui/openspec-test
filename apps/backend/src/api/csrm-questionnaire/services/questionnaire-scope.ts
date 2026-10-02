@@ -336,6 +336,7 @@ export function projectGovernanceEvents(
         by: projectRevertedBy({ documentId: event.by, displayName: resolveDisplayName?.(event.by) ?? null }),
         ...(event.reason === undefined ? {} : { reason: event.reason }),
         ...(event.questionKey === undefined ? {} : { questionKey: event.questionKey }),
+        ...(event.questionText === undefined ? {} : { questionText: event.questionText }),
         ...(event.explanation === undefined ? {} : { explanation: event.explanation }),
       }
       : {

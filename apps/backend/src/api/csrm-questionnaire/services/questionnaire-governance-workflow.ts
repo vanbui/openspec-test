@@ -21,7 +21,7 @@ import {
   type QuestionnaireAnswerType,
   type QuestionnaireDefinitionQuestion,
 } from "./questionnaire-definition";
-import { appendGovernanceEvent, GovernanceLogError } from "./questionnaire-governance-log";
+import { appendGovernanceEvent, GovernanceLogError, questionTextSnapshot } from "./questionnaire-governance-log";
 import { parseRevertReason } from "../../csrm-assessment-request/services/revert-reason";
 import { ASSESSMENT_STAGE_REQUEST_STATUSES, parseAnswerEnvelope, type AnswerEnvelope } from "./questionnaire-workflow";
 import { projectQuestionnaire } from "./questionnaire-scope";
@@ -454,13 +454,21 @@ function questionByDocumentId(questionnaire: RecordValue, documentId: string): Q
   return question;
 }
 
-function appendQuestionEvent(questionnaire: RecordValue, kind: "question-added" | "question-edited" | "question-deleted" | "answer-cleared", questionKey: string, input: GovernanceWorkflowInput, explanation?: string): unknown {
+/*
+ * Every question event names its question by key and keeps a bounded snapshot of its text (D-18):
+ * the text after the change for an added or edited question, the text it had when removed, and the
+ * revised question's text for a cleared answer. The snapshot is appended with the event, before
+ * any write, so a log that cannot take it leaves nothing behind.
+ */
+function appendQuestionEvent(questionnaire: RecordValue, kind: "question-added" | "question-edited" | "question-deleted" | "answer-cleared", questionKey: string, questionText: string, input: GovernanceWorkflowInput, explanation?: string): unknown {
+  const snapshot = questionTextSnapshot(questionText);
   return appendOrConflict(questionnaire.governanceLog, {
     schemaVersion: 1,
     kind,
     at: (input.now ?? new Date()).toISOString(),
     by: input.actorDocumentId as string,
     questionKey,
+    ...(snapshot ? { questionText: snapshot } : {}),
     ...(explanation ? { explanation } : {}),
   });
 }
@@ -486,7 +494,7 @@ export async function deleteQuestionnaireQuestion(input: GovernanceWorkflowInput
       throw new QuestionnaireGovernanceError(409, "CSRM questionnaire must retain an active question.", "LAST_ACTIVE_QUESTION");
     }
     const deleted = { ...question, schemaVersion: 2 as const, deleted: { deletedAt: (input.now ?? new Date()).toISOString(), deletedBy: input.actorDocumentId as string } };
-    const governanceLog = appendQuestionEvent(questionnaire, "question-deleted", question.questionKey, input);
+    const governanceLog = appendQuestionEvent(questionnaire, "question-deleted", question.questionKey, question.questionText, input);
     await input.strapi.documents(QUESTION_UID).update({ documentId: question.documentId, data: { options: questionOptions(deleted) } });
     await input.strapi.documents(QUESTIONNAIRE_UID).update({ documentId: input.questionnaireDocumentId, data: { governanceLog } });
     const reloaded = await loadGovernanceQuestionnaire(input);
@@ -553,7 +561,7 @@ export async function addQuestionnaireQuestion(input: GovernanceWorkflowInput): 
     const create = input.strapi.documents(QUESTION_UID).create;
     if (!create) throw new QuestionnaireGovernanceError(409, "CSRM questionnaire question cannot be created.");
     // Extended before the question is created, so a log that cannot take the event adds nothing.
-    const governanceLog = appendQuestionEvent(questionnaire, "question-added", question.questionKey, input);
+    const governanceLog = appendQuestionEvent(questionnaire, "question-added", question.questionKey, question.questionText, input);
     await create({ data: { questionText: question.questionText, helpText: payload.helpText ?? null, answerType: question.answerType, options: questionOptions(question), answer: null, questionnaire: input.questionnaireDocumentId } });
     await input.strapi.documents(QUESTIONNAIRE_UID).update({ documentId: input.questionnaireDocumentId, data: { governanceLog } });
     return resultForGovernance(await loadGovernanceQuestionnaire(input));
@@ -585,8 +593,8 @@ export async function editQuestionnaireQuestion(input: GovernanceWorkflowInput &
       : payload.answerType && payload.answerType !== question.answerType
         ? "The answer was cleared because the answer type changed."
         : "The answer was cleared because the revised question no longer accepts it.";
-    let governanceLog = appendQuestionEvent(questionnaire, "question-edited", question.questionKey, input);
-    if (explanation) governanceLog = appendQuestionEvent({ governanceLog }, "answer-cleared", question.questionKey, input, explanation);
+    let governanceLog = appendQuestionEvent(questionnaire, "question-edited", question.questionKey, stored.questionText, input);
+    if (explanation) governanceLog = appendQuestionEvent({ governanceLog }, "answer-cleared", question.questionKey, stored.questionText, input, explanation);
     await input.strapi.documents(QUESTION_UID).update({ documentId: question.documentId, data: {
       questionText: stored.questionText,
       ...(payload.helpText !== undefined ? { helpText: payload.helpText } : {}),
