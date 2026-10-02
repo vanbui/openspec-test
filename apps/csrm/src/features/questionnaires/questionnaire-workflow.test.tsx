@@ -517,6 +517,7 @@ describe('Security Analyst questionnaire review', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this questionnaire');
+    expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this questionnaire with your current access. Choose another from the questionnaire reviews.');
     expect(screen.getByRole('heading', { level: 1, name: 'Questionnaire review' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to questionnaire reviews' })).toHaveAttribute('href', '/app/review/questionnaires');
     expect(screen.queryByText(submittedQuestionnaire.title)).not.toBeInTheDocument();
@@ -555,7 +556,8 @@ describe('Security Analyst questionnaire review', () => {
 
     expect(requestorPage).toContain("can('assessment-request:read', granted)");
     expect(requestorPage).toContain('`/app/requests/${encodeURIComponent(request.documentId)}`');
-    expect(analystPage).toContain("can('assessment:review', granted)");
+    // The analyst route reuses the route gate (D-23), so its request backlink needs no second capability read.
+    expect(analystPage).toContain('canViewerReviewAssessments');
     expect(analystPage).toContain('`/app/review/requests/${encodeURIComponent(request.documentId)}`');
   });
 });

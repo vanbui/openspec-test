@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: AssessmentReviewPageProps): P
   return recordRouteMetadata(readAnalystAssessment((await params).documentId), 'Risk Assessment Review | IdamBox CSRM');
 }
 
-async function AssessmentEditorContent({ params }: AssessmentReviewPageProps) {
+export async function AssessmentEditorContent({ params }: AssessmentReviewPageProps) {
   const { documentId } = await params;
   const assessmentResult = await readAnalystAssessment(documentId);
   if (assessmentResult.error?.status === 404) notFound();

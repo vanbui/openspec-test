@@ -13,10 +13,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   current: vi.fn(),
+  getAnalystAssessment: vi.fn(),
+  getQuestionnaire: vi.fn(),
+  getQuestionnaireQuestions: vi.fn(),
   getRequest: vi.fn(),
   granted: vi.fn(),
+  listControlImplementations: vi.fn(),
+  listControls: vi.fn(),
+  listInformationAssets: vi.fn(),
+  listInformationSystems: vi.fn(),
+  listRiskTypes: vi.fn(),
   notFound: vi.fn(),
 }));
+
+/** Every record read an analyst route can make; a refused viewer must reach none of them. */
+const recordReads = [
+  'getAnalystAssessment',
+  'getQuestionnaire',
+  'getQuestionnaireQuestions',
+  'getRequest',
+  'listControlImplementations',
+  'listControls',
+  'listInformationAssets',
+  'listInformationSystems',
+  'listRiskTypes',
+] as const;
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({
@@ -31,17 +52,57 @@ vi.mock('@/lib/auth/development-session-adapter', () => ({
     capabilitiesFor: () => ({ granted: mocks.granted }),
   }),
 }));
-vi.mock('@/features/requests/request-service', () => ({ getRequest: mocks.getRequest }));
+vi.mock('@/features/requests/request-service', () => ({
+  getRequest: mocks.getRequest,
+  listInformationAssets: mocks.listInformationAssets,
+  listInformationSystems: mocks.listInformationSystems,
+}));
+vi.mock('@/features/questionnaires/questionnaire-service', () => ({
+  getQuestionnaire: mocks.getQuestionnaire,
+  getQuestionnaireQuestions: mocks.getQuestionnaireQuestions,
+}));
+vi.mock('@/features/assessments/assessment-service', () => ({
+  getAnalystAssessment: mocks.getAnalystAssessment,
+  listControlImplementations: mocks.listControlImplementations,
+  listControls: mocks.listControls,
+  listRiskTypes: mocks.listRiskTypes,
+}));
 vi.mock('@/features/requests/request-actions', () => ({ revertRequestToDraftAction: vi.fn() }));
-vi.mock('./assessment-actions', () => ({
+vi.mock('@/features/questionnaires/questionnaire-actions', () => ({
+  addQuestionnaireQuestionAction: vi.fn(),
+  deleteQuestionnaireQuestionAction: vi.fn(),
+  editQuestionnaireQuestionAction: vi.fn(),
+  releaseQuestionnaireAction: vi.fn(),
+  returnQuestionnaireToAnalystReviewAction: vi.fn(),
+  revertQuestionnaireToDraftAction: vi.fn(),
+  saveQuestionnaireDraftAction: vi.fn(),
+  submitQuestionnaireAction: vi.fn(),
+}));
+vi.mock('@/features/assessments/assessment-actions', () => ({
+  createControlImplementationAction: vi.fn(),
+  createRiskAction: vi.fn(),
+  deleteControlImplementationAction: vi.fn(),
   getAssessmentDraftJobAction: vi.fn(),
   getQuestionnaireGenerationJobAction: vi.fn(),
+  refreshAnalystAssessmentAction: vi.fn(),
+  releaseAssessmentAction: vi.fn(),
   retryAssessmentDraftJobAction: vi.fn(),
   retryQuestionnaireGenerationJobAction: vi.fn(),
+  saveAssessmentAction: vi.fn(),
+  searchActiveUsersAction: vi.fn(),
   startAssessmentDraftAction: vi.fn(),
   startQuestionnaireGenerationAction: vi.fn(),
+  updateControlImplementationAction: vi.fn(),
+  updateRiskAction: vi.fn(),
 }));
 
+import {
+  AssessmentEditorContent,
+  generateMetadata as assessmentRouteMetadata,
+} from '../../../app/(app)/app/review/assessments/[documentId]/page';
+import QuestionnaireReviewPage, {
+  generateMetadata as questionnaireRouteMetadata,
+} from '../../../app/(app)/app/review/questionnaires/[documentId]/page';
 import {
   AssessmentRequestDetailContent,
   generateMetadata as requestRouteMetadata,
@@ -94,7 +155,18 @@ beforeEach(() => {
   });
   // The Requestor's own request: Strapi would let her read it, which is why the gate must come first.
   mocks.getRequest.mockResolvedValue({ data: submittedRequest, error: null });
+  const refused = { data: null, error: { status: 403, message: 'Refused' } };
+  mocks.getQuestionnaire.mockResolvedValue(refused);
+  mocks.getQuestionnaireQuestions.mockResolvedValue(refused);
+  mocks.getAnalystAssessment.mockResolvedValue(refused);
+  for (const list of [mocks.listControlImplementations, mocks.listControls, mocks.listInformationAssets, mocks.listInformationSystems, mocks.listRiskTypes]) {
+    list.mockResolvedValue({ data: [], error: null });
+  }
 });
+
+function expectNoRecordRead() {
+  for (const read of recordReads) expect(mocks[read], `${read} must not run for a refused viewer`).not.toHaveBeenCalled();
+}
 
 describe('the analyst request route', () => {
   it('refuses a Requestor before reading the request and sends her to her own requests', async () => {
@@ -153,5 +225,81 @@ describe('the analyst request route', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this request with your current access. Choose another from the assessment requests.');
     expect(screen.getByRole('link', { name: 'Back to assessment requests' })).toHaveAttribute('href', '/app/review/requests');
     expect(screen.queryByRole('link', { name: 'Go to My Requests' })).not.toBeInTheDocument();
+  });
+});
+
+describe('the analyst questionnaire review route', () => {
+  it('refuses a Requestor before reading the questionnaire and sends her to her own questionnaires', async () => {
+    signInAsRequestor();
+
+    render(await QuestionnaireReviewPage(props()));
+
+    expectNoRecordRead();
+    expect(screen.getByRole('heading', { level: 1, name: 'Questionnaire review' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this questionnaire');
+    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing questionnaires is for Security Analysts. To answer a questionnaire sent to you, open it from My Questionnaires.');
+    expect(screen.getByRole('link', { name: 'Go to My Questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expectNoLinkIntoAnalystRoutes();
+  });
+
+  it('gives a Requestor, or a viewer with no session, the static title without a read', async () => {
+    signInAsRequestor();
+    await expect(questionnaireRouteMetadata(props())).resolves.toEqual({ title: 'Questionnaire Review | IdamBox CSRM' });
+    mocks.current.mockResolvedValue(null);
+    await expect(questionnaireRouteMetadata(props())).resolves.toEqual({ title: 'Questionnaire Review | IdamBox CSRM' });
+
+    expectNoRecordRead();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+  });
+
+  it('renders the record variant when Strapi refuses an analyst the questionnaire', async () => {
+    signInAsAnalyst();
+
+    render(await QuestionnaireReviewPage(props()));
+
+    expect(mocks.getQuestionnaire).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this questionnaire');
+    expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this questionnaire with your current access. Choose another from the questionnaire reviews.');
+    expect(screen.getByRole('link', { name: 'Back to questionnaire reviews' })).toHaveAttribute('href', '/app/review/questionnaires');
+    expect(screen.queryByRole('link', { name: 'Go to My Questionnaires' })).not.toBeInTheDocument();
+  });
+});
+
+describe('the analyst assessment review route', () => {
+  it('refuses a Requestor before any read and sends her to her released assessments', async () => {
+    signInAsRequestor();
+
+    render(await AssessmentEditorContent(props()));
+
+    expectNoRecordRead();
+    expect(screen.getByRole('heading', { level: 1, name: 'Risk assessment review' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this assessment');
+    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing assessments is for Security Analysts. Assessments released to you are in My Risk Assessments.');
+    expect(screen.getByRole('link', { name: 'Go to My Risk Assessments' })).toHaveAttribute('href', '/app/assessments');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expectNoLinkIntoAnalystRoutes();
+  });
+
+  it('gives a Requestor, or a viewer with no session, the static title without a read', async () => {
+    signInAsRequestor();
+    await expect(assessmentRouteMetadata(props())).resolves.toEqual({ title: 'Risk Assessment Review | IdamBox CSRM' });
+    mocks.current.mockResolvedValue(null);
+    await expect(assessmentRouteMetadata(props())).resolves.toEqual({ title: 'Risk Assessment Review | IdamBox CSRM' });
+
+    expectNoRecordRead();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+  });
+
+  it('renders the record variant with a way back when Strapi refuses an analyst the assessment', async () => {
+    signInAsAnalyst();
+
+    render(await AssessmentEditorContent(props()));
+
+    expect(mocks.getAnalystAssessment).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this assessment');
+    expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this assessment with your current access. Choose another from the risk assessments.');
+    expect(screen.getByRole('link', { name: 'Back to risk assessments' })).toHaveAttribute('href', '/app/review/assessments');
+    expect(screen.queryByRole('link', { name: 'Go to My Risk Assessments' })).not.toBeInTheDocument();
   });
 });

@@ -98,3 +98,22 @@ describe.each(recordRoutes)('the $route title', ({ page, read, title }) => {
     expect(mocks.notFound).toHaveBeenCalledTimes(1);
   });
 });
+
+/*
+ * The analyst routes check assessment:review before their read (D-23). A Requestor, or a viewer with no
+ * session, gets the static title and no read runs, so an existing id and a missing one look the same.
+ */
+describe.each(recordRoutes.filter(({ route }) => route.startsWith('/app/review/')))('the $route title for a refused viewer', ({ page, read, title }) => {
+  it('is the static title, with no record read', async () => {
+    const route = await loadRoute(page);
+    read.mockResolvedValue({ data: null, error: { status: 404, message: 'Not Found' } });
+
+    mocks.granted.mockResolvedValue(new Set(['assessment-request:read', 'assessment-request:create']));
+    await expect(route.generateMetadata!(props())).resolves.toEqual({ title });
+    mocks.current.mockResolvedValue(null);
+    await expect(route.generateMetadata!(props())).resolves.toEqual({ title });
+
+    expect(read).not.toHaveBeenCalled();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+  });
+});
