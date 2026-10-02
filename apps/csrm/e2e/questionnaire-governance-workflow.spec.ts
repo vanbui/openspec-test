@@ -3,6 +3,9 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
 import { signInAs } from './helpers/navigation';
 
+/* The browser runs in a zone other than UTC, so the timeline proves it shows the viewer's local time (D-19). */
+test.use({ timezoneId: 'Australia/Brisbane' });
+
 const unreleasedTitle = 'Customer portal questionnaire awaiting release';
 const unreleasedRequestTitle = 'Customer portal mobile app and public API';
 const serviceNameQuestion = 'What is the name of the service being assessed?';
@@ -138,6 +141,25 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   // The timeline records the action; the governance panel names the current
   // state. They read differently so one screen never says the same thing twice.
   await expect(timeline.getByText('Released', { exact: true }), 'CRITERION_1_RELEASE_IS_DATED_TIMELINE_EVENT').toBeVisible();
+  /*
+   * D-19, UI-SPEC §4.5. With only the zone cookie cleared, the reloaded page does not know the
+   * viewer's zone, so it first labels its times UTC. The shell then sends the browser's zone and the
+   * route re-renders in place, with no further navigation: the timeline shows Brisbane local time
+   * and no label. The poll absorbs that one re-render.
+   */
+  await page.context().clearCookies({ name: 'csrm-time-zone' });
+  await page.reload();
+  const timelineTime = timeline.locator('time').first();
+  const timelineInstant = await timelineTime.getAttribute('datetime');
+  expect(timelineInstant, 'UX06_TIMELINE_SHOWS_LOCAL_TIME_HAS_INSTANT').toBeTruthy();
+  const expectedLocalTime = await page.evaluate((iso) => new Intl.DateTimeFormat('en-AU', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Australia/Brisbane',
+  }).format(new Date(iso)).replace(/\s/g, ' '), timelineInstant!);
+  await expect.poll(
+    async () => (await timelineTime.textContent())?.replace(/\s/g, ' '),
+    { message: 'UX06_TIMELINE_SHOWS_LOCAL_TIME' },
+  ).toBe(expectedLocalTime);
+  expect((await timelineTime.textContent())?.endsWith(' UTC'), 'UX06_TIMELINE_SHOWS_LOCAL_TIME_NO_UTC_LABEL').toBe(false);
   await page.goto(analystRequestUrl!);
   await expect(page.getByRole('heading', { name: /Current lifecycle state: Questionnaire released/ }), 'CRITERION_1_RELEASED_STEPPER_STATE').toBeVisible();
 
