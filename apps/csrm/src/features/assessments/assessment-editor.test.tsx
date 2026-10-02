@@ -305,7 +305,7 @@ describe('analyst assessment editor contract', () => {
   it('renders the analyst request link and shared read-only lifecycle context', () => {
     const { container } = render(<AssessmentEditor {...editorProps} />);
 
-    expect(screen.getByRole('link', { name: 'RAR-2026-0042: Customer portal security assessment' })).toHaveAttribute('href', '/app/review/requests/request-42');
+    expect(screen.getByRole('link', { name: 'RAR-2026-0042 · Customer portal security assessment' })).toHaveAttribute('href', '/app/review/requests/request-42');
     expect(screen.getByRole('heading', { name: 'Current lifecycle state: In review' })).toBeInTheDocument();
     expect(container.querySelectorAll('[aria-label="Risk assessment lifecycle"]')).toHaveLength(1);
   });

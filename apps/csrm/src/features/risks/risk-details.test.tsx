@@ -210,7 +210,7 @@ describe('RiskDetails', () => {
       'Risk owner', 'Treatment owner', 'Treatment action', 'Treatment plan', 'Treatment status', 'Identified date', 'Target date',
       'Treatment resolve date', 'Closure date', 'Risk communication date', 'Exempted', 'Exemption review date', 'Escalation details', 'Comments',
       'Control', 'Control owner', 'Control status', 'Effectiveness rating', 'Evidence', 'Implementation due date', 'Implemented date', 'Review date',
-      'Related assessment', 'Impacted Information system', 'Impacted Information asset',
+      'Related assessment', 'Information system impacted', 'Information asset impacted',
     ]) expect(screen.getAllByText(value).length).toBeGreaterThan(0);
 
     expect(screen.queryByText('Reusable control')).not.toBeInTheDocument();
@@ -221,6 +221,10 @@ describe('RiskDetails', () => {
     expect(screen.getByText('15 Oct 2026')).toBeInTheDocument();
     expect(screen.getAllByText('Not provided').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /RA-2026-001/ })).toHaveAttribute('href', '/app/review/assessments/assessment-alpha');
+    // X-4 and the label rule (walkthrough fix 5): the number joins the title with a spaced middle dot, and the
+    // relation labels read as the editors' (UI-SPEC §13.1, §15.2).
+    expect(screen.getByRole('link', { name: 'RA-2026-001 · Customer portal review' })).toBeInTheDocument();
+    expect(screen.queryByText(/Impacted Information/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /RA-2026-001/ })).toHaveClass('record-link');
     expect(container.querySelector('dl')).toHaveClass('md:grid-cols-2');
   });

@@ -244,7 +244,7 @@ describe('immutable released assessment detail', () => {
     expect(within(view).getByText('28 February 2027')).toBeInTheDocument();
     expect(within(view).getByText('30 November 2026')).toBeInTheDocument();
     expect(within(view).getByText('31 January 2027')).toBeInTheDocument();
-    expect(within(view).getByRole('link', { name: 'RAR-2026-0042: Customer portal security assessment' })).toHaveAttribute('href', '/app/requests/request-42');
+    expect(within(view).getByRole('link', { name: 'RAR-2026-0042 · Customer portal security assessment' })).toHaveAttribute('href', '/app/requests/request-42');
     expect(within(view).getByRole('heading', { name: 'Current lifecycle state: Released' })).toBeInTheDocument();
     // UI-SPEC §15.1 and §15.3: the release is named as a release, and the description says what the list holds.
     expect(definition(view, 'Release date')).toBeInTheDocument();

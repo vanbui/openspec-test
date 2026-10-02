@@ -697,7 +697,7 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
   it('UAT-054 explains matching, the final check and the key column in plain words', async () => {
     const { CsvImportFlow } = await loadImportFlow();
     const controls = render(<CsvImportFlow kind="controls" previewAction={vi.fn()} commitAction={vi.fn()} />);
-    expect(screen.getByText('A row whose control number matches an existing Control updates it. Other valid rows create new Controls. Unchanged, rejected and ambiguous rows are never written.')).toBeInTheDocument();
+    expect(screen.getByText('A row whose control number matches an existing control updates it. Other valid rows create new controls. Unchanged, rejected and ambiguous rows are never written.')).toBeInTheDocument();
     controls.unmount();
 
     const rows: CsvPreviewRow[] = [{ rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] }];

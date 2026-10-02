@@ -101,7 +101,7 @@ async function expectOriginatingRequest(
 ): Promise<Locator> {
   const section = page.locator('section[aria-labelledby="originating-request-label"]');
   await expect(section.getByText('Originating assessment request', { exact: true })).toBeVisible();
-  const link = section.getByRole('link', { name: `${requestNumber}: ${requestTitle}` });
+  const link = section.getByRole('link', { name: `${requestNumber} · ${requestTitle}` });
   await expect(link).toHaveAttribute('href', expectedHref);
   return link;
 }
