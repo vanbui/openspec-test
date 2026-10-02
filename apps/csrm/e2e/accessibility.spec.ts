@@ -931,15 +931,11 @@ test('an overflowing picker list passes axe while open at 1440 and 375', async (
       `${label} has no horizontal page overflow`,
     ).toBe(true);
 
-    // WCAG 2.1.1 through the APG pattern: with focus on the combobox, ArrowDown reaches the last option.
+    // WCAG 2.1.1 through the APG pattern: with focus on the combobox, ArrowDown reaches every option in turn,
+    // and each one is scrolled into view inside the list as it becomes active (IN-406).
     await expect(combobox, `${label}: focus is on the combobox`).toBeFocused();
     const count = await options.count();
-    for (let press = 0; press < count; press += 1) await combobox.press('ArrowDown');
-    const last = options.last();
-    await expectAttributeNamesId(combobox, 'aria-activedescendant', last, `${label}: ArrowDown makes the last option active`);
-    await expect(last, `${label}: the last option is the active one`).toHaveAttribute('aria-selected', 'true');
-    await expect(combobox, `${label}: focus stays on the combobox`).toBeFocused();
-    const placement = () => last.evaluate((option) => {
+    const placement = (target: Locator) => target.evaluate((option) => {
       const scroller = option.closest('[data-slot="popover-content"]');
       if (!scroller) return { inView: false, scrollTop: 0, optionBottom: 0, scrollerBottom: 0 };
       const optionBox = option.getBoundingClientRect();
@@ -951,8 +947,16 @@ test('an overflowing picker list passes axe while open at 1440 and 375', async (
         scrollerBottom: Math.round(scrollerBox.bottom),
       };
     });
-    await expect.poll(async () => (await placement()).inView, `${label}: the last option is scrolled into view inside the list`).toBe(true);
-    const shown = await placement();
+    for (let press = 0; press < count; press += 1) {
+      await combobox.press('ArrowDown');
+      const option = options.nth(press);
+      await expectAttributeNamesId(combobox, 'aria-activedescendant', option, `${label}: ArrowDown ${press + 1} makes option ${press + 1} of ${count} active`);
+      await expect.poll(async () => (await placement(option)).inView, `${label}: option ${press + 1} of ${count} is scrolled into view inside the list`).toBe(true);
+    }
+    const last = options.last();
+    await expect(last, `${label}: the last option is the active one`).toHaveAttribute('aria-selected', 'true');
+    await expect(combobox, `${label}: focus stays on the combobox`).toBeFocused();
+    const shown = await placement(last);
     expect(shown.scrollTop, `${label}: the list scrolled to show the last option`).toBeGreaterThan(0);
     results.push(`${label}: ${box.content}px in ${box.height}px; option ${count} active and in view (scrolled ${shown.scrollTop}px, bottom ${shown.optionBottom} of ${shown.scrollerBottom}); accepted ${accepted}; ${remaining.length === 0 ? 'no other violations' : summarise(remaining)}`);
 
