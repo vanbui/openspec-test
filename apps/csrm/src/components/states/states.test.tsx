@@ -33,7 +33,7 @@ describe('shell state components', () => {
     expect(retry).toHaveBeenCalledOnce();
 
     rerender(<PermissionDeniedState />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Navigation visibility is not an authorization control.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Your workspace shows the work you can open. If you think you should have access, contact your administrator.');
     expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
   });
 
