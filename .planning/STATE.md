@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: verifying
-stopped_at: Completed 10-23-PLAN.md
+stopped_at: "Phase 10 built, gated and verified (6/6, no gaps; final gate green at 00306ac); phase completion awaits the pilot ruling on three open Manual-Only checks (10-UAT.md)"
 last_updated: "2026-10-02T19:21:47.811Z"
 last_activity: 2026-10-03
-last_activity_desc: "Plan 10-23 complete (the Phase 10 gate green three times, eleven walkthrough fixes and the Fix 8 addendum test-first, and the pilot's approved walk of both actors at 375 and 1440: 51 browser rows, all pass; ADMIN-05 delivered except the Information Asset owner, which moves to Phase 22)"
+last_activity_desc: "Phase 10 gates: code review (56 findings; 52 fixed test-first), regression, verify:post (security SECURED 87/87, validation Nyquist-compliant, UI review 20/24), verification 6/6 with no gaps (human_needed for three pilot-deferred manual checks), final gate green at 00306ac"
 state_head: 50893bc00bd675f786e6f33cc6eb5e374442b5a5
 progress:
   total_phases: 16
@@ -38,11 +38,17 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
   - the G-10 fonts quick task 261002-2y8 (`4913c90` to `6ae258b`), accepted by the pilot with the gate green: web 2,053/2,053, Strapi 578/578, Playwright 85/85;
   - the typography follow-up quick task 261002-drq (`ff61dbf` to `5ea2b77`): Vietnamese subsets for Plus Jakarta Sans and IBM Plex Mono on demand, and Buttons at the direction's weight 500. The pilot accepted it with the gate green: web 2,055/2,055, Strapi 578/578, Playwright 86/86.
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
-- **Now:** all 23 Phase 10 plans are executed (`/gsd-execute-phase 10`, one per wave, sequential on the main tree). Plan 10-23's walk is approved by the pilot. Still to run, by the orchestrator: the code review gate, the regression gate, `gsd-verifier` (10-VERIFICATION.md) and one final full gate, because Fix 3d and the Fix 8 addendum change code after the third gate. The phase is not marked complete until then.
+- **Now:** all 23 Phase 10 plans are executed and every post-execution gate has run:
+  - code review: 56 findings (3 critical, 25 warnings, 28 info) from four reviewer lanes; 52 fixed test-first, 1 skipped with evidence, 3 deferred with routes (`10-REVIEW.md`, `10-REVIEW-DISPOSITION.md`);
+  - regression: web 2,859/2,859 and Strapi 660/660;
+  - `verify:post`: `10-SECURITY.md` SECURED (87/87 threats closed), `10-VALIDATION.md` validated and Nyquist-compliant, `10-UI-REVIEW.md` 20/24 with its disposition;
+  - verification: `10-VERIFICATION.md` 6/6 success criteria, no gaps, status `human_needed` only for the three Manual-Only checks the pilot left open (`10-UAT.md`);
+  - the final full gate, green at `00306ac` (below).
+  `gsd-tools phase.complete 10` refuses while the verification is `human_needed`, so the phase is not yet marked complete: the pilot's ruling on the three open checks is needed (see Session Continuity).
 
 Plan: 23 of 23
-Status: All plans executed — awaiting the code review, regression and verification gates and the final full gate
-Last activity: 2026-10-03 — Plan 10-23 complete: the Phase 10 gate green three times (last at `4c10b43`: Strapi 649/649, web 2,777/2,777, Playwright 87/87, 0 flaky, `verify:csrm-seed` and the four static checks clean); walkthrough fixes 1 to 8, 3b, 3c and 3d and the Fix 8 addendum, each test-first (Fix 3d: PSPF-130 keeps "appropriate"; the addendum accepts only the overflowing popup's `scrollable-region-focusable`, with the keyboard path proved); the pilot's 51 browser rows all pass; REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 delivered, ADMIN-05 open with its Remainder (Information Asset owner to Phase 22). Previous: 2026-10-02 — Plan 10-22 complete: csrm-control-titles.json beside the byte-identical vendored catalogues holds 386 titles (93 Annex A names cross-checked against a public listing, 293 descriptive CPS 230, CPS 234 and PSPF titles, each anchored to its paragraph and reading-pass checked: 1 and 36 corrections, 4 more from the copy check); readControlLibrary, parseControlTitles and createControlSeeds feed seedCsrmData, and the reconciliation renames a control stored by its number; ADMIN05_CONTROL_TITLES_LOADED and ADMIN05_PICKER_FINDS_CONTROL_BY_TITLE_WORD (masking finds 8.11 · Data masking) in the journeys; Strapi 630/630, web 2,745/2,745, journeys 6/6, typecheck and api:check clean
+Status: Phase 10 built and verified (6/6, no gaps); awaiting the pilot's ruling on three open Manual-Only checks before phase completion
+Last activity: 2026-10-03 — Phase 10 gates complete: code review (56 findings from four lanes; 52 fixed test-first, 1 skipped, 3 deferred), regression (web 2,859, Strapi 660), verify:post (SECURITY 87/87 closed; VALIDATION Nyquist-compliant; UI review 20/24), verification 6/6 with no gaps (human_needed for three pilot-deferred manual checks, 10-UAT.md), and the final gate green at 00306ac (Playwright 88/88, Strapi 660/660, web 2,862/2,862). Before that: Plan 10-23 complete: the Phase 10 gate green three times (last at `4c10b43`: Strapi 649/649, web 2,777/2,777, Playwright 87/87, 0 flaky, `verify:csrm-seed` and the four static checks clean); walkthrough fixes 1 to 8, 3b, 3c and 3d and the Fix 8 addendum, each test-first (Fix 3d: PSPF-130 keeps "appropriate"; the addendum accepts only the overflowing popup's `scrollable-region-focusable`, with the keyboard path proved); the pilot's 51 browser rows all pass; REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 delivered, ADMIN-05 open with its Remainder (Information Asset owner to Phase 22). Previous: 2026-10-02 — Plan 10-22 complete: csrm-control-titles.json beside the byte-identical vendored catalogues holds 386 titles (93 Annex A names cross-checked against a public listing, 293 descriptive CPS 230, CPS 234 and PSPF titles, each anchored to its paragraph and reading-pass checked: 1 and 36 corrections, 4 more from the copy check); readControlLibrary, parseControlTitles and createControlSeeds feed seedCsrmData, and the reconciliation renames a control stored by its number; ADMIN05_CONTROL_TITLES_LOADED and ADMIN05_PICKER_FINDS_CONTROL_BY_TITLE_WORD (masking finds 8.11 · Data masking) in the journeys; Strapi 630/630, web 2,745/2,745, journeys 6/6, typecheck and api:check clean
 
 ## Milestone
 
@@ -100,6 +106,7 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Post-demo G-18, 2026-10-01]: Risk owners and executive approvers receive in-app notifications at each stage (Phases 17 and 17.1, and NOTIFY-04 for contest points in 17.2), and decisions left waiting get email reminders from Phase 20.
 - [Post-demo G-19, 2026-10-01]: The in-app notification centre moves from Phase 17 into the inserted Phase 19.1 (after 19, before 17), keeping Phase 17 within L; NOTIFY-01 moves with it, its first kinds are the events that exist before Phase 17, and Phase 17 adds its response kinds through the same service (reverses only decision 18's placement of the centre in Phase 17).
 - [Phase 10 baseline, 2026-10-02]: Phase 10's static guards (content-type freeze, Keycloak, `CSRM_AI_`, vendored catalogues) diff from `5ea2b77`, the last `post-demo` commit before any Phase 10 code. The plans' `uat-trial` baseline `98fe99c` is not in this repository (10-CONTEXT D-49).
+- [Phase 10 close, 2026-10-03, worker]: Every confirmed Critical and Warning code-review finding is fixed test-first before a phase closes, and every Info finding gets a recorded disposition (`10-REVIEW-DISPOSITION.md`); a phase review over 50 files runs as parallel `gsd-code-reviewer` lanes merged into one REVIEW.md, diffed from the phase's own baseline. A seeded start replaces only seed-owned values (the stored catalogue entry and `supersededTitles`), never an operator's edit. Questionnaire replacement and every governance mutation take one lock order, request row then questionnaire row (CR-101; real PostgreSQL blocking stays with R-08-37).
 - [Post-demo G-20, 2026-10-01]: When the AI data policy refuses generation, Phase 22 adds a manual start (an empty questionnaire or assessment draft); until then Phase 12's refusal names the classification, the ceiling and the administrator who sets `CSRM_AI_DATA_CLASSIFICATION_CEILING` (named in the `.example` with a safe default). Offering the deterministic provider as a template was rejected as a governance risk.
 - [Phase 10]: 10-01: ViewerTimeZoneSync relies on Next's same-round-trip route re-render after the cookie-setting Server Action; no explicit router.refresh(), which rendered the page twice and aborted the first response (e12e0f8). LocalInstant/formatInstant is the one way to render an instant on a D-19 surface.
 - [Phase 10]: 10-01: VIEWER_TIME_ZONE_COOKIE lives in the pure lib/time/format-instant.ts and is re-exported by the server-only viewer-time-zone.ts, so jsdom tests rendering LocalInstant never import server-only. Plan 10-02 should add viewer-time-zone.ts to the server-only gate list.
@@ -204,6 +211,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 **Post-demo gate after 261002-drq** (2026-10-02, `c8d164d`): Playwright 86/86 (82 desktop, 4 mobile, 10.9 min); Strapi 578/578 (676 s); web 2,055/2,055; typecheck, lint and `api:check` clean; the tree was clean afterwards.
 
+**Phase 10 final gate** (2026-10-03, `00306ac`, after the code review, regression, `verify:post` and verification gates): Playwright 88/88 (84 desktop, 4 mobile, 12.3 min, 0 flaky); Strapi 660/660 (650 s); web 2,862/2,862 (134 files); typecheck, lint and `api:check` clean; `verify:csrm-seed` passes; the content-type, catalogue, Keycloak, `CSRM_AI_` and vendored-catalogue checks against `5ea2b77` are empty; the tree was clean afterwards. Record: `10-23-SUMMARY.md` `## Phase gate (final run, after the code review)`.
+
 Gate history: `.planning/milestones/v1.0-STATE.md`.
 **Per-Plan Metrics:**
 
@@ -235,8 +244,8 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Session Continuity
 
-**Last session:** 2026-10-02T19:21:39.561Z
-**Stopped At:** Completed 10-23-PLAN.md
+**Last session:** 2026-10-03
+**Stopped At:** Phase 10 built, gated and verified (6/6 success criteria, no gaps; final gate green at `00306ac`); `phase.complete 10` blocked by GSD on `human_needed` until the pilot rules on the three open Manual-Only checks in `10-UAT.md`.
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
@@ -245,18 +254,18 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
 
 **Resume prompt:** `.planning/prompts/post-demo-build.md`. Paste the launcher line the operator was given into a new session after the weekly reset.
-**Resume File:** None
+**Resume File:** `.planning/POST-DEMO-BRIEF.md`
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
-2. Stage 2 is complete and its planning gate passed: every phase in execution order (10, 11, 12, 13, 14, 15, 16, 19, 19.1, 17, 17.1, 17.2, 18, 20, 21, 22) has its CONTEXT, an approved UI-SPEC, research, a pattern map, plans and a passing plan check.
-3. Both quick tasks before Phase 10 are done (261002-2y8 and 261002-drq). Deferred from 261002-drq, for a later task: a tailwind-merge configuration that knows the theme's custom text sizes, which would retire the `!text-*` Button inks; the unused `.button-primary` and `.button-secondary` CSS; and whether 14px inputs should become 16px on phones to stop iOS zooming on focus, a question for the design direction (`261002-drq-deferred-items.md`).
-4. Stage 3: build each phase in execution order, from Phase 10, whose plan check is done (`10-PLAN-CHECK.md`, fresh check of 2026-10-02). Each phase opens with a fresh plan check, then `/gsd-execute-phase` through the worker, the GSD verifier, every gate green in dev mode with Playwright covering the phase's flows, and atomic commits. Every contract-gap record stops at its approval checkpoint for the pilot (G-6). Plan 10-23 Task 2 is a blocking checkpoint where the pilot walks both actors on the dev servers at 375 and 1440. The post-demo journey (`apps/csrm/e2e/risk-owner-journey.spec.ts`) is built in slices by 17-19, 17.1-18, 17.2-15 and 20-23.
+2. Phase 10's closure: the pilot rules on the three `human_needed` items in `10-UAT.md` (the hosted-provider question add, blocked by the third-party provider; the leave prompt on reload and screen-reader cadence, skipped), either by performing them or by accepting them as residuals through `/gsd-verify-work 10`. Once the verification reads `passed`, run `gsd-tools query phase.complete 10`, the transition's post-completion steps (PROJECT.md: Phase 10's Active line to Validated, ADMIN-05's asset owner noted for Phase 22, three Key Decisions; STATE position and context), and push `post-demo`.
+3. Then Phase 11 (Navigation, landing and list clarity): a fresh plan check, then `/gsd-execute-phase 11` through the worker, under the same gates as Phase 10 (code review, regression, `verify:post`, verification, one final full gate).
+4. Carried from Phase 10 (`deferred-items.md`): assessment-side 409 reason codes (W-1) to Phase 17.1; the CPS 230 and CPS 234 PDF-extraction leftovers and the Information Asset owner to Phase 22; the RAR-E2E-P7 fixtures and the field-width token to Phase 11; the unload-safe answer save (IN-304) unowned; the unused `@radix-ui/react-dialog`; the Annex A 8.1 wording question for the operator.
 5. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
 
 ## Next Action
 
-**Post-demo Stage 3 on branch `post-demo`:** Phase 10 execution (its fresh plan check is done), following Session Continuity above. No phase is built yet.
+**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is built and verified; its completion waits on the pilot's ruling on three open Manual-Only checks (Session Continuity step 2). Then Phase 11.
 
 ## Accumulated Context
 
