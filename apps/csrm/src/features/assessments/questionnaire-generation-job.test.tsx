@@ -505,6 +505,56 @@ describe('retry rights, a failed jobs read and the reported status', () => {
     expect(alert).not.toHaveTextContent('Status unavailable');
   });
 
+  /* WR-203: a Server Action that throws (a network failure, a stale deployment) never leaves the card pending. */
+  it('restores Generate questionnaire with a visible error when the start action throws, and lets the analyst start again', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ ok: true, data: queuedJob });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Questionnaire generation couldn’t start');
+    expect(alert).toHaveTextContent('The questionnaire generation service is unavailable. Please try again later.');
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText('Questionnaire generation is queued')).not.toHaveLength(0);
+  });
+
+  it('shows the error inside the replacement confirmation when the replacement action throws', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockRejectedValueOnce(new Error('network'));
+    render(<QuestionnaireGenerationJob action="replace" requestId="request-one" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Replace questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(within(screen.getByRole('alertdialog')).getByText('The questionnaire generation service is unavailable. Please try again later.')).toBeInTheDocument();
+  });
+
+  it('restores Retry questionnaire generation with a visible error when the retry action throws', async () => {
+    actionMocks.retryQuestionnaireGenerationJobAction.mockRejectedValueOnce(new Error('network'));
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: failedJob, canRetry: true }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry questionnaire generation' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getAllByRole('alert').at(-1)).toHaveTextContent('The questionnaire generation service is unavailable. Please try again later.');
+    expect(screen.getByRole('button', { name: 'Retry questionnaire generation' })).toBeEnabled();
+  });
+
+  it('reads a status check whose action throws as Status unavailable, and keeps checking', async () => {
+    actionMocks.getQuestionnaireGenerationJobAction.mockRejectedValueOnce(new Error('network')).mockResolvedValue({ ok: true, data: completedJob });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: queuedJob, canRetry: true }} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Status unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('The questionnaire generation service is unavailable. Please try again later.');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('link', { name: 'Review generated questionnaire' })).toBeInTheDocument();
+  });
+
   it('keeps Status unavailable for a status check that failed', async () => {
     actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: false, formError: 'The assessment service is unavailable.' });
     render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: queuedJob, canRetry: true }} />);

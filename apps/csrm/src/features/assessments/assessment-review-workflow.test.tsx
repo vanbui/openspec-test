@@ -703,6 +703,44 @@ describe('bounded assessment draft generation job', () => {
     expectProviderNeutralCopy(container, [failedJob.failureMessage]);
   });
 
+  /* WR-203: a Server Action that throws never leaves the draft card pending. */
+  it('restores Generate assessment draft with a visible error when the start action throws, and lets the analyst start again', async () => {
+    actionMocks.startAssessmentDraftAction.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ ok: true, data: queuedJob });
+    render(<AssessmentDraftJob requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate assessment draft' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Draft generation couldn’t start');
+    expect(screen.getByRole('alert')).toHaveTextContent('The assessment service is unavailable. Please try again later.');
+    expect(screen.getByRole('button', { name: 'Generate assessment draft' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate assessment draft' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(actionMocks.startAssessmentDraftAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('restores Retry draft generation with a visible error when the retry action throws', async () => {
+    actionMocks.retryAssessmentDraftJobAction.mockRejectedValueOnce(new Error('network'));
+    render(<AssessmentDraftJob seededJob={{ job: failedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry draft generation' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getAllByRole('alert').at(-1)).toHaveTextContent('The assessment service is unavailable. Please try again later.');
+    expect(screen.getByRole('button', { name: 'Retry draft generation' })).toBeEnabled();
+  });
+
+  it('reads a draft status check whose action throws as Status unavailable, and keeps checking', async () => {
+    actionMocks.getAssessmentDraftJobAction.mockRejectedValueOnce(new Error('network')).mockResolvedValue({ ok: true, data: completedJob });
+    render(<AssessmentDraftJob seededJob={{ job: queuedJob, canRetry: true }} requestId="request/id" questionnaireId="questionnaire/id" questionnaireSubmitted />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Status unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('The assessment service is unavailable. Please try again later.');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('link', { name: 'Open assessment draft' })).toBeInTheDocument();
+  });
+
   it('keeps one poll in flight and cleans up on unmount', async () => {
     const pending = deferred<never>();
     actionMocks.getAssessmentDraftJobAction.mockReturnValue(pending.promise);
