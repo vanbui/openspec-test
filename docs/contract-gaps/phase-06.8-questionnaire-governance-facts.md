@@ -146,7 +146,10 @@ transaction that deletes the replaced questions and stamps the new generation. I
 replacement. A first generation writes no event. Under "Write Discipline" above, the event is
 appended in memory before any write: a log that cannot take it fails the job with the registry's
 safe generic failure (`QUESTIONNAIRE_GENERATION_FAILED`), and the questionnaire keeps its
-questions, generation facts and log.
+questions, generation facts and log. Replacing a released questionnaire is refused before a job is
+queued (409 `QUESTIONNAIRE_RELEASED`) and again inside the job, under the request row lock, when a
+release lands while it runs (failure code `QUESTIONNAIRE_RELEASED`, D-09). So no `regenerated`
+event ever describes a version the Requestor could see.
 
 **Its explanation.** The server writes it, because the analyst timeline shows it verbatim
 (UI-SPEC §3.4): `A newly generated questionnaire replaced {n} {question|questions}. {m} analyst

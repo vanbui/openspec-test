@@ -83,10 +83,18 @@ test("the generation registry exposes a sorted snapshot of the requests with an 
 test("the workflow exposes the active generation request ids and fails closed beyond its cap", async () => {
   let releaseJobRead: (value: null) => void = () => undefined;
   const heldJobRead = new Promise<null>((resolve) => { releaseJobRead = resolve; });
+  /*
+   * The synchronous read populates the request's questionnaire (D-09 refuses a released one); only the job's
+   * read populates that questionnaire's questions, and that is the read this test holds.
+   */
+  const isJobRead = (query: Record<string, unknown>) => {
+    const questionnaire = (query.populate as { questionnaire?: unknown } | undefined)?.questionnaire;
+    return typeof questionnaire === "object" && questionnaire !== null && "populate" in questionnaire;
+  };
   const documents = () => ({
-    findOne: async (query: Record<string, unknown>) => query.populate === undefined
-      ? { documentId: "request-1", requestStatus: "submitted", title: "Payroll replacement" }
-      : heldJobRead,
+    findOne: async (query: Record<string, unknown>) => isJobRead(query)
+      ? heldJobRead
+      : { documentId: "request-1", requestStatus: "submitted", title: "Payroll replacement" },
     findMany: async () => [],
     create: async () => ({ documentId: "created" }),
     update: async () => ({ documentId: "updated" }),
