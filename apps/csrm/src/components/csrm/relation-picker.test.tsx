@@ -284,6 +284,23 @@ describe('RelationPicker search (UI-SPEC §13.1)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('shows Retry search, never Searching… forever, when the search itself is rejected (WR-301)', async () => {
+    vi.useFakeTimers();
+    const search = vi.fn()
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ ok: true, data: [iso51] });
+    render(<Harness search={search} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Control' }), { target: { value: '5.1' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(screen.queryByText('Searching controls…')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('The selection service is unavailable. Please try again later.');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry search' }));
+    await act(async () => {});
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('option', { name: iso51.name })).toBeInTheDocument();
+  });
+
   it('ignores a response a later keystroke superseded', async () => {
     vi.useFakeTimers();
     let resolveFirst!: (value: RelationPickerSearchResult) => void;
