@@ -219,6 +219,13 @@ test.describe.serial('@administration-systems-assets Information System and Asse
       await page.goto(`/app/admin/${record.route}/new`);
       await page.getByLabel('Name').fill(record.name);
       await page.getByLabel('Description').fill(`Created ${record.singular} for the isolated journey.`);
+      if (record.route === 'information-systems') {
+        // UAT-053: the system gets an owner through the owner search and a business criticality.
+        await page.getByLabel('Business criticality').fill('High');
+        await page.getByRole('combobox', { name: 'Owner', exact: true }).fill('Jane');
+        await page.getByRole('option', { name: 'Jane Doe', exact: true }).first().click();
+        await expect(page.getByText('Selected owner: Jane Doe', { exact: true })).toBeVisible();
+      }
       await page.getByRole('button', { name: `Create ${record.singular}` }).click();
       await expect(page.getByText(`${record.singular} created.`)).toBeVisible();
       await page.getByRole('button', { name: `Edit ${record.singular}` }).click();
@@ -227,6 +234,12 @@ test.describe.serial('@administration-systems-assets Information System and Asse
       await page.getByRole('button', { name: 'Save changes' }).click();
       await page.reload();
       await expect(page.getByText(persistedDescription)).toBeVisible();
+      if (record.route === 'information-systems') {
+        // After a reload the owner reads from the served record: a name, never an id (UAT-053).
+        const selectedOwner = page.getByText(/^Selected owner: /);
+        await expect(selectedOwner, 'ADMIN05_SYSTEM_OWNER_NAME: the served owner name seeds the form').toHaveText('Selected owner: Jane Doe');
+        await expect(selectedOwner).not.toHaveText(/Selected owner: [A-Za-z0-9_-]{20,}$/);
+      }
       await expect(page.getByRole('button', { name: /delete/i })).toHaveCount(0);
     }
 
@@ -239,6 +252,34 @@ test.describe.serial('@administration-systems-assets Information System and Asse
         test.info().annotations.push({ type: 'Information Systems results data-overflow', description: `${width}px: ${overflow}` });
       }
     }
+
+    // ADMIN05_SYSTEM_OWNER_COLUMNS: at 1440 the oversight columns follow Name and are in view without
+    // scrolling; any overflow stays inside the labelled table region (UI-SPEC §16.4, UI-D23).
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/app/admin/information-systems?q=${encodeURIComponent(`Portal ${suffix}`)}`);
+    const systemsTable = page.getByRole('table', { name: 'Information Systems results', exact: true });
+    await expect(systemsTable).toBeVisible();
+    const systemHeaders = systemsTable.getByRole('columnheader');
+    await expect(systemHeaders, 'ADMIN05_SYSTEM_OWNER_COLUMNS: header order').toHaveText([
+      'Name', 'Owner', 'Business criticality', 'Type', 'Environment', 'Deployment model', 'Lifecycle', 'Internet-facing',
+    ]);
+    const systemsScroller = page.locator('[data-overflow]').filter({ has: systemsTable });
+    const scrollerBox = await systemsScroller.boundingBox();
+    expect(scrollerBox, 'ADMIN05_SYSTEM_OWNER_COLUMNS: the table region is laid out').not.toBeNull();
+    for (const [index, header] of ['Name', 'Owner', 'Business criticality'].entries()) {
+      const cell = systemHeaders.nth(index);
+      await expect(cell, `ADMIN05_SYSTEM_OWNER_COLUMNS: ${header} is fully in view at 1440px`).toBeInViewport({ ratio: 1 });
+      const box = await cell.boundingBox();
+      expect(box && scrollerBox && box.x + box.width <= scrollerBox.x + scrollerBox.width + 1,
+        `ADMIN05_SYSTEM_OWNER_COLUMNS: ${header} sits inside the table region without scrolling`).toBe(true);
+    }
+    await expect(systemsTable.getByRole('button', { name: 'Sort by Owner' })).toHaveCount(0);
+    await expect(systemsTable.getByRole('button', { name: 'Sort by Business criticality' })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, 'ADMIN05_SYSTEM_OWNER_COLUMNS: no page overflow at 1440px');
+    const systemRow = systemsTable.locator('tbody tr', { hasText: `Portal ${suffix}` });
+    await expect(systemRow.getByRole('cell').nth(1), 'ADMIN05_SYSTEM_OWNER_COLUMNS: the owner reads by name').toHaveText('Jane Doe');
+    await expect(systemRow.getByRole('cell').nth(2), 'ADMIN05_SYSTEM_OWNER_COLUMNS: the criticality reads as entered').toHaveText('High');
+
     await expectFocusVisible(page.getByRole('link', { name: 'Create Information System' }));
     await expectNoSeriousAxeViolations(page);
 

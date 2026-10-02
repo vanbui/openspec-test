@@ -80,6 +80,20 @@ function emptyState(filtered: boolean, config: ReturnType<typeof getAdministrati
 
 const yesNo = (value: unknown) => value === true ? 'Yes' : 'No';
 
+/*
+ * The Information System owner and business criticality as the systems list and its mobile card read
+ * them (D-37, UI-SPEC §16.4): the owner's served name, `Name not available` for an owner without one,
+ * and `Not provided` when there is no owner or no criticality. The owner id is never shown.
+ */
+function systemOwnerLabel(record: AdministrationWorkspaceRecord): string {
+  if (typeof record.owner !== 'string' || !record.owner) return 'Not provided';
+  return record.ownerName?.trim() || 'Name not available';
+}
+
+function systemCriticalityLabel(record: AdministrationWorkspaceRecord): string {
+  return record.businessCriticality?.trim() || 'Not provided';
+}
+
 /* Each collection's purpose, under its heading on the list and on its denial alike. */
 const collectionDescriptions: Record<AdministrationKind, string> = {
   'risk-types': 'Manage reusable Risk Type definitions used to identify contextual Risks in assessments.',
@@ -196,6 +210,9 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
   ];
   const systemColumns: DataTableColumn<AdministrationWorkspaceRecord>[] = [
     { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (value, record) => <RecordLink href={config.detailPath(record.documentId)}>{String(value)}</RecordLink> },
+    // Owner and Business criticality follow Name so the oversight columns stay in view; neither sorts (UI-D23).
+    { accessorKey: 'ownerName', header: 'Owner', cell: (_value, record) => systemOwnerLabel(record) },
+    { accessorKey: 'businessCriticality', header: 'Business criticality', cell: (_value, record) => systemCriticalityLabel(record) },
     { accessorKey: 'systemType', header: 'Type', enableSorting: true, cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'environment', header: 'Environment', enableSorting: true, cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'deploymentModel', header: 'Deployment model', cell: (value) => String(value ?? 'Not provided') },
@@ -248,7 +265,7 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
         page={pagination.page}
         pageSize={pagination.pageSize}
         pageSizeOptions={administrationPageSizes}
-        renderMobileCard={(record) => <article className="space-y-2"><RecordLink className="inline-flex min-h-11 items-center" href={config.detailPath(record.documentId)}>{'controlNumber' in record ? `${record.controlNumber} · ${record.name}` : record.name}</RecordLink><p className="line-clamp-3 text-sm">{record.description ?? 'Not provided'}</p><p className="text-sm text-muted-foreground">{'framework' in record ? `${record.framework} · ${record.controlType ?? 'Type not provided'}` : 'systemType' in record ? `${record.systemType ?? 'Type not provided'} · ${record.environment ?? 'Environment not provided'} · Internet-facing: ${yesNo(record.internetFacing)}` : 'dataClassification' in record ? `${record.type ?? 'Type not provided'} · ${record.dataClassification ?? 'Classification not provided'} · Personal: ${yesNo(record.containsPersonalData)}` : `${record.applicableControls?.length ?? 0} applicable controls`}</p></article>}
+        renderMobileCard={(record) => <article className="space-y-2"><RecordLink className="inline-flex min-h-11 items-center" href={config.detailPath(record.documentId)}>{'controlNumber' in record ? `${record.controlNumber} · ${record.name}` : record.name}</RecordLink><p className="line-clamp-3 text-sm">{record.description ?? 'Not provided'}</p><p className="text-sm text-muted-foreground">{'framework' in record ? `${record.framework} · ${record.controlType ?? 'Type not provided'}` : 'systemType' in record ? `${record.systemType ?? 'Type not provided'} · ${record.environment ?? 'Environment not provided'} · Internet-facing: ${yesNo(record.internetFacing)}` : 'dataClassification' in record ? `${record.type ?? 'Type not provided'} · ${record.dataClassification ?? 'Classification not provided'} · Personal: ${yesNo(record.containsPersonalData)}` : `${record.applicableControls?.length ?? 0} applicable controls`}</p>{kind === 'information-systems' ? <p className="text-sm text-muted-foreground">{`Owner: ${systemOwnerLabel(record)} · Business criticality: ${systemCriticalityLabel(record)}`}</p> : null}</article>}
         sorting={sorting}
         state={isPending ? 'loading' : resolvedState}
         stateSlots={{
