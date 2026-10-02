@@ -220,6 +220,11 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(controlPicker, 'ASSESS-06 the new form opens with focus in its Control picker').toBeFocused();
   await controlPicker.click();
   await expect(page.getByRole('group', { name: /^Applicable to / }), 'ASSESS06_APPLICABLE_CONTROLS_FIRST the Risk Type’s controls are offered first').toBeVisible();
+  // D-46, D-29: a word from a loaded control title finds the control through the same control search.
+  await controlPicker.fill('masking');
+  const titleWordOption = page.getByRole('option', { name: '8.11 · Data masking' });
+  await expect(titleWordOption, 'ADMIN05_PICKER_FINDS_CONTROL_BY_TITLE_WORD a word from its title finds the control').toBeVisible();
+  expect(await titleWordOption.getAttribute('aria-label'), 'ADMIN05_PICKER_FINDS_CONTROL_BY_TITLE_WORD the option starts with its number and name').toMatch(/^8\.11 · Data masking/);
   await controlPicker.fill('APP-11');
   const controlOption = page.getByRole('option', { name: /^APP-11 · / });
   await expect(controlOption, 'ASSESS06_CONTROL_PICKED_BY_TYPING typing finds the control by its number').toBeVisible();

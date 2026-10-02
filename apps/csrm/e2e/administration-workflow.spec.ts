@@ -193,8 +193,8 @@ test.describe.serial('@administration-controls Control administration', () => {
     await expectFocusVisible(page.getByRole('link', { name: 'Create Control' }));
     await expectNoSeriousAxeViolations(page);
 
-    // ADMIN05_CONTROL_LABELS: each control number shows once in its row, and APP-11 reads its complete
-    // title (D-36, D-44). 5.1's name is asserted by plan 10-22, which loads the Annex A names (D-46).
+    // ADMIN05_CONTROL_LABELS: each control number shows once in its row, APP-11 reads its complete
+    // title (D-36, D-44), and 5.1 reads its Annex A control name (D-46).
     const controlsTable = page.getByRole('table', { name: 'Controls results', exact: true });
     const controlRow = (controlNumber: string): Locator => controlsTable.locator('tbody tr')
       .filter({ has: page.locator('td:first-child').getByText(controlNumber, { exact: true }) });
@@ -208,6 +208,19 @@ test.describe.serial('@administration-controls Control administration', () => {
     const annexRow = controlRow('5.1');
     await expect(annexRow, 'ADMIN05_CONTROL_LABELS: 5.1 is found').toHaveCount(1);
     await expect(annexRow.getByRole('cell', { name: '5.1', exact: true }), 'ADMIN05_CONTROL_LABELS: 5.1 shows once in its row').toHaveCount(1);
+    await expect(annexRow.getByRole('cell').nth(1), 'ADMIN05_CONTROL_LABELS: 5.1 reads its Annex A name').toHaveText('Policies for information security');
+
+    // ADMIN05_CONTROL_TITLES_LOADED (D-46): paragraph-level requirements read by a descriptive title, not by
+    // their number or the empty-name fallback.
+    for (const titledNumber of ['CPS-234-15', 'PSPF-001']) {
+      await page.goto(`/app/admin/controls?q=${titledNumber}`);
+      const titledRow = controlRow(titledNumber);
+      await expect(titledRow, `ADMIN05_CONTROL_TITLES_LOADED: ${titledNumber} is found`).toHaveCount(1);
+      const titledName = titledRow.getByRole('cell').nth(1);
+      await expect(titledName, `ADMIN05_CONTROL_TITLES_LOADED: ${titledNumber} has a name`).not.toHaveText(/^\s*$/);
+      await expect(titledName, `ADMIN05_CONTROL_TITLES_LOADED: ${titledNumber} is not Not provided`).not.toHaveText('Not provided');
+      await expect(titledName, `ADMIN05_CONTROL_TITLES_LOADED: ${titledNumber} is not named by its number`).not.toHaveText(new RegExp(`^\\s*${titledNumber}`));
+    }
 
     const controlNumber = `ZZ-${suffix}`;
     await page.getByRole('link', { name: 'Create Control' }).click();
