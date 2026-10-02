@@ -12,11 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { applicableControlGroup, controlImplementationWritableFields, controlPickerPageSize } from '@/features/assessments/assessment-domain';
 import type {
+  ActiveUser,
   ControlImplementation,
   ControlImplementationCreateInput,
   ControlImplementationUpdateInput,
 } from '@/features/assessments/assessment-schema';
 import { controlLabel } from '@/features/assessments/control-label';
+import { OwnerCombobox } from '@/features/assessments/owner-combobox';
 import { chooseRelationMessage } from '@/lib/schemas/validation-messages';
 import {
   createMitigationControlAction,
@@ -24,7 +26,7 @@ import {
   updateMitigationControlAction,
   type RiskDetailServerActionResult,
 } from './risk-actions';
-import type { RiskDetailsOptions } from './risk-detail-editor';
+import type { RiskDetailsOptions, RiskOwnerSearch } from './risk-detail-editor';
 import type { RiskDetail } from './risk-schema';
 
 type Mitigation = RiskDetail['controlImplementations'][number];
@@ -39,6 +41,8 @@ export type MitigationControlListProps = {
   riskId: string;
   /** The Risk's saved Risk Type, whose applicable controls the Control picker offers first (D-31). */
   riskTypeId?: string | null;
+  /** Searches every active user for the control owner (D-28); the page's active-user search. */
+  searchOwners?: RiskOwnerSearch;
 };
 
 /** UI-SPEC §13.5: a saved control the response cannot name. */
@@ -72,19 +76,20 @@ function delta(values: ControlImplementationCreateInput, initial: ControlImpleme
 
 /**
  * The card for a saved mitigation control. The control is named by the response's served summary (10-15), else
- * by the card's current control when the choice did not change; with neither, it cannot be named (null).
+ * by the card's current control when the choice did not change; with neither, it cannot be named (null). The
+ * owner is the saved control implementation's own `controlOwner`, so anyone found by the owner search is named
+ * (D-28), never looked up among the names already on the Risk.
  */
-function mergeImplementation(current: Mitigation | undefined, values: ControlImplementationCreateInput, result: ControlImplementation, options: RiskDetailsOptions): Mitigation | null {
+function mergeImplementation(current: Mitigation | undefined, values: ControlImplementationCreateInput, result: ControlImplementation): Mitigation | null {
   const summary = result.controlSummary;
   const control = summary
     ? { documentId: summary.documentId, controlNumber: summary.controlNumber, name: summary.name }
     : current?.control.documentId === values.control ? current.control : undefined;
   if (!control) return null;
-  const owner = options.users.find((item) => item.documentId === values.controlOwner) ?? null;
   return {
     documentId: result.documentId || current?.documentId || '',
     control,
-    controlOwner: owner,
+    controlOwner: result.controlOwner,
     controlStatus: values.controlStatus ?? null,
     effectivenessRating: values.effectivenessRating ?? null,
     evidence: values.evidence ?? null,
@@ -94,10 +99,12 @@ function mergeImplementation(current: Mitigation | undefined, values: ControlImp
   };
 }
 
-export function MitigationControlList({ implementations, mutable, onChanged, onConflict, options, riskId, riskTypeId = null }: MitigationControlListProps) {
+export function MitigationControlList({ implementations, mutable, onChanged, onConflict, options, riskId, riskTypeId = null, searchOwners }: MitigationControlListProps) {
   const [mode, setMode] = useState<{ kind: 'create' } | { kind: 'edit'; id: string } | null>(null);
   const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
   const addRef = useRef<HTMLButtonElement>(null);
+  // Editing needs the page's pickers and its owner search; a released Risk receives neither.
+  const editing = mutable && options && searchOwners ? { options, searchOwners } : undefined;
 
   if (implementations.length === 0 && !mutable) {
     return (
@@ -133,8 +140,8 @@ export function MitigationControlList({ implementations, mutable, onChanged, onC
       ) : null}
       {implementations.map((implementation) => (
         <article className="grid gap-4 rounded-lg border border-border p-4" key={implementation.documentId}>
-          {mode?.kind === 'edit' && mode.id === implementation.documentId && options ? (
-            <MitigationControlEditor implementation={implementation} mode="edit" onCancel={() => setMode(null)} onChanged={(updated) => { setMode(null); onChanged(implementations.map((item) => item.documentId === updated.documentId ? updated : item), 'Mitigation control changes saved.'); }} onConflict={onConflict} options={options} riskId={riskId} riskTypeId={riskTypeId} />
+          {mode?.kind === 'edit' && mode.id === implementation.documentId && editing ? (
+            <MitigationControlEditor implementation={implementation} mode="edit" onCancel={() => setMode(null)} onChanged={(updated) => { setMode(null); onChanged(implementations.map((item) => item.documentId === updated.documentId ? updated : item), 'Mitigation control changes saved.'); }} onConflict={onConflict} options={editing.options} riskId={riskId} riskTypeId={riskTypeId} searchOwners={editing.searchOwners} />
           ) : (
             <>
               <h3 className="text-heading-sm">{controlLabel(implementation.control)}</h3>
@@ -148,18 +155,18 @@ export function MitigationControlList({ implementations, mutable, onChanged, onC
                 <Value label="Implemented date" value={formatDate(implementation.implementedDate)} />
                 <Value label="Review date" value={formatDate(implementation.reviewDate)} />
               </dl>
-              {mutable && options ? <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={() => setMode({ kind: 'edit', id: implementation.documentId })}>Edit mitigation control</Button><ConfirmDialog cancelLabel="Keep mitigation control" confirmLabel="Remove mitigation control" confirmVariant="destructive" description="This removes the control from this Risk. The control stays in the library." errorMessage={removeErrors[implementation.documentId]} onConfirm={() => remove(implementation)} pendingLabel="Removing mitigation control…" title="Remove this mitigation control?" trigger={<Button type="button" variant="outline">Remove mitigation control</Button>} /></div> : null}
+              {editing ? <div className="flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={() => setMode({ kind: 'edit', id: implementation.documentId })}>Edit mitigation control</Button><ConfirmDialog cancelLabel="Keep mitigation control" confirmLabel="Remove mitigation control" confirmVariant="destructive" description="This removes the control from this Risk. The control stays in the library." errorMessage={removeErrors[implementation.documentId]} onConfirm={() => remove(implementation)} pendingLabel="Removing mitigation control…" title="Remove this mitigation control?" trigger={<Button type="button" variant="outline">Remove mitigation control</Button>} /></div> : null}
             </>
           )}
         </article>
       ))}
-      {mutable && options && mode === null ? <Button ref={addRef} className="w-fit" type="button" onClick={() => setMode({ kind: 'create' })}>Add mitigation control</Button> : null}
-      {mutable && options && mode?.kind === 'create' ? <MitigationControlEditor mode="create" onCancel={() => setMode(null)} onChanged={(created) => { setMode(null); onChanged([...implementations, created], 'Mitigation control added.'); }} onConflict={onConflict} options={options} riskId={riskId} riskTypeId={riskTypeId} /> : null}
+      {editing && mode === null ? <Button ref={addRef} className="w-fit" type="button" onClick={() => setMode({ kind: 'create' })}>Add mitigation control</Button> : null}
+      {editing && mode?.kind === 'create' ? <MitigationControlEditor mode="create" onCancel={() => setMode(null)} onChanged={(created) => { setMode(null); onChanged([...implementations, created], 'Mitigation control added.'); }} onConflict={onConflict} options={editing.options} riskId={riskId} riskTypeId={riskTypeId} searchOwners={editing.searchOwners} /> : null}
     </div>
   );
 }
 
-function MitigationControlEditor({ implementation, mode, onCancel, onChanged, onConflict, options, riskId, riskTypeId }: {
+function MitigationControlEditor({ implementation, mode, onCancel, onChanged, onConflict, options, riskId, riskTypeId, searchOwners }: {
   implementation?: Mitigation;
   mode: 'create' | 'edit';
   onCancel: () => void;
@@ -168,6 +175,7 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
   options: RiskDetailsOptions;
   riskId: string;
   riskTypeId: string | null;
+  searchOwners: RiskOwnerSearch;
 }) {
   const initial = useMemo(() => implementation ? valuesFor(implementation) : emptyValues, [implementation]);
   const form = useForm<ControlImplementationCreateInput>({ defaultValues: initial, mode: 'onBlur' });
@@ -176,8 +184,11 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
   const [selectedControl, setSelectedControl] = useState<RelationPickerItem | null>(() => (
     implementation ? { documentId: implementation.control.documentId, name: controlLabel(implementation.control) } : null
   ));
+  // The served owner names the choice until the analyst picks another active user (D-28).
+  const [selectedOwner, setSelectedOwner] = useState<ActiveUser | null>(() => implementation?.controlOwner ?? null);
   const controlInput = useRef<HTMLInputElement>(null);
   const controlErrorId = useId();
+  const ownerErrorId = useId();
 
   // UI-SPEC §13.1: the form opens with focus in its Control input.
   useEffect(() => { controlInput.current?.focus(); }, []);
@@ -186,6 +197,12 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
     setSelectedControl(control);
     form.setValue('control', control?.documentId ?? '', { shouldDirty: true });
     form.clearErrors('control');
+  }
+
+  function chooseOwner(owner: ActiveUser | null) {
+    setSelectedOwner(owner);
+    form.setValue('controlOwner', owner?.documentId ?? null, { shouldDirty: true });
+    form.clearErrors('controlOwner');
   }
 
   async function submit(raw: ControlImplementationCreateInput) {
@@ -218,7 +235,7 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
       setError(result.formError);
       return;
     }
-    const merged = mergeImplementation(implementation, normalized, result.data, options);
+    const merged = mergeImplementation(implementation, normalized, result.data);
     if (!merged) {
       setError(controlUnavailableMessage);
       return;
@@ -248,7 +265,10 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
         />
         <FieldError id={controlErrorId} message={form.formState.errors.control?.message} />
       </div>
-      <SelectField error={form.formState.errors.controlOwner?.message} label="Control owner" name="controlOwner" options={options.users.map((user) => ({ label: user.displayName, value: user.documentId }))} register={form.register} />
+      <div className="grid min-w-0 gap-2">
+        <OwnerCombobox errorId={ownerErrorId} invalid={Boolean(form.formState.errors.controlOwner)} label="Control owner" onValueChange={chooseOwner} searchOwners={searchOwners} value={selectedOwner} />
+        <FieldError id={ownerErrorId} message={form.formState.errors.controlOwner?.message} />
+      </div>
       <SelectField error={form.formState.errors.controlStatus?.message} label="Control status" name="controlStatus" options={['Existing', 'Planned', 'Implemented', 'Retired'].map((value) => ({ label: value, value }))} register={form.register} />
       <SelectField error={form.formState.errors.effectivenessRating?.message} label="Effectiveness rating" name="effectivenessRating" options={['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed'].map((value) => ({ label: value, value }))} register={form.register} />
       <label className="grid gap-2"><span className="text-sm font-medium">Evidence</span><Textarea aria-describedby="evidence-error" aria-invalid={Boolean(form.formState.errors.evidence)} {...form.register('evidence', { maxLength: { value: 65_535, message: 'Evidence must be 65,535 characters or fewer.' } })} /><FieldError id="evidence-error" message={form.formState.errors.evidence?.message} /></label>
@@ -258,7 +278,7 @@ function MitigationControlEditor({ implementation, mode, onCancel, onChanged, on
   );
 }
 
-type SelectName = 'controlOwner' | 'controlStatus' | 'effectivenessRating';
+type SelectName = 'controlStatus' | 'effectivenessRating';
 function SelectField({ error, label, name, options, register }: { error?: string; label: string; name: SelectName; options: readonly { label: string; value: string }[]; register: ReturnType<typeof useForm<ControlImplementationCreateInput>>['register'] }) {
   return <label className="grid gap-2"><span className="text-sm font-medium">{label}</span><select aria-describedby={`${name}-error`} aria-invalid={Boolean(error)} className="h-9 rounded-md border border-input bg-surface px-3 text-sm" {...register(name)}><option value="">Not specified</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError id={`${name}-error`} message={error} /></label>;
 }

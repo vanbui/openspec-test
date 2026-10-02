@@ -2,13 +2,14 @@
 
 import { AlertCircleIcon, CheckCircle2Icon, LockKeyholeIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { DetailSection } from '@/components/csrm/detail-section';
 import { PageHeader } from '@/components/csrm/page-header';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
+import { SaveStatus } from '@/components/csrm/save-status';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -37,6 +38,10 @@ import { ReleasedRiskDetails } from './released-risk-details';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
 import type { AnalystRefusal } from './assessment-detail';
+import { useRecordSaveStatus } from './use-record-save-status';
+
+/** The add control focus returns to after a create (UI-SPEC §13.4, UI-D18). */
+type PendingFocus = { kind: 'add-risk' } | { kind: 'add-control'; riskId: string };
 
 export type AssessmentEditorState = 'populated' | 'empty' | 'error' | 'permission';
 
@@ -159,6 +164,22 @@ export function AssessmentEditor({
   const rememberRelation = (item: RelationPickerItem) => setKnownRelationLabels((current) => (
     current[item.documentId] === item.name ? current : { ...current, [item.documentId]: item.name }
   ));
+  // When each Risk or mitigation control was just added, by id, so its new form confirms the create (UI-SPEC §13.4).
+  const [addedAt, setAddedAt] = useState<Readonly<Record<string, string>>>({});
+  const [pendingFocus, setPendingFocus] = useState<PendingFocus | null>(null);
+  const addRiskButton = useRef<HTMLButtonElement>(null);
+  const addControlButtons = useRef(new Map<string, HTMLButtonElement>());
+
+  // After a create, focus returns to the add control that opened the form, once it is back on the page.
+  useEffect(() => {
+    if (!pendingFocus) return;
+    const target = pendingFocus.kind === 'add-risk' ? addRiskButton.current : addControlButtons.current.get(pendingFocus.riskId);
+    if (!target) return;
+    target.focus();
+    setPendingFocus(null);
+  }, [pendingFocus]);
+
+  const markAdded = (documentId: string) => setAddedAt((current) => ({ ...current, [documentId]: new Date().toISOString() }));
 
   if (state !== 'populated' || !currentAssessment) {
     return <SafeAssessmentState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
@@ -197,10 +218,11 @@ export function AssessmentEditor({
   };
   const labelledRecords = Object.entries(knownRelationLabels).map(([documentId, name]) => ({ documentId, name }));
   // Each Risk's Control picker offers its saved Risk Type's applicable controls first (D-31).
+  // The control owner searches every active user (D-28), never only the names already on the Risk.
   const controlOptionsFor = (risk: AnalystRisk): ControlImplementationEditorOptions => ({
-    users: currentAssessment.ownerLabels,
     suggestedControls: applicableControlGroup(riskTypes, risk.riskType),
     searchControls,
+    searchOwners,
   });
 
   return (
@@ -280,11 +302,12 @@ export function AssessmentEditor({
               <CardContent className="grid min-w-0 gap-6">
                 {mutable ? (
                   <>
-                    <RiskEditor assessmentId={currentAssessment.documentId} mode="edit" onRelationChosen={rememberRelation} onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} />
+                    <RiskEditor addedAt={addedAt[risk.documentId]} assessmentId={currentAssessment.documentId} mode="edit" onRelationChosen={rememberRelation} onUpdated={() => { void refreshAssessment(); }} options={options} risk={risk} searchOwners={searchOwners} />
                     <section aria-label={`Mitigation controls for ${risk.riskNumber}`} className="grid gap-4">
                       <h3 className="text-heading-sm">Mitigation controls</h3>
                       {(implementations[risk.documentId] ?? []).map((implementation) => (
                         <ControlImplementationEditor
+                          addedAt={addedAt[implementation.documentId]}
                           assessmentId={currentAssessment.documentId}
                           implementation={implementation}
                           key={implementation.documentId}
@@ -295,8 +318,21 @@ export function AssessmentEditor({
                           riskId={risk.documentId}
                         />
                       ))}
-                      {addingControlTo === risk.documentId ? <ControlImplementationEditor assessmentId={currentAssessment.documentId} focusControlOnOpen mode="create" onCreated={(created) => { setImplementations((current) => ({ ...current, [risk.documentId]: [...(current[risk.documentId] ?? []), created] })); setAddingControlTo(null); void refreshAssessment(); }} options={controlOptionsFor(risk)} riskId={risk.documentId} /> : null}
-                      {addingControlTo !== risk.documentId ? <Button className="justify-self-start" onClick={() => setAddingControlTo(risk.documentId)} type="button" variant="outline"><PlusIcon aria-hidden="true" />Add mitigation control</Button> : null}
+                      {addingControlTo === risk.documentId ? <ControlImplementationEditor assessmentId={currentAssessment.documentId} focusControlOnOpen mode="create" onCreated={(created) => { setImplementations((current) => ({ ...current, [risk.documentId]: [...(current[risk.documentId] ?? []), created] })); markAdded(created.documentId); setAddingControlTo(null); setPendingFocus({ kind: 'add-control', riskId: risk.documentId }); void refreshAssessment(); }} options={controlOptionsFor(risk)} riskId={risk.documentId} /> : null}
+                      {addingControlTo !== risk.documentId ? (
+                        <Button
+                          className="justify-self-start"
+                          onClick={() => setAddingControlTo(risk.documentId)}
+                          ref={(element) => {
+                            if (element) addControlButtons.current.set(risk.documentId, element);
+                            else addControlButtons.current.delete(risk.documentId);
+                          }}
+                          type="button"
+                          variant="outline"
+                        >
+                          <PlusIcon aria-hidden="true" />Add mitigation control
+                        </Button>
+                      ) : null}
                     </section>
                   </>
                 ) : (
@@ -316,8 +352,8 @@ export function AssessmentEditor({
               </CardContent>
             </Card>
           ))}
-          {mutable && addingRisk ? <Card><CardHeader><CardTitle>Add Risk</CardTitle></CardHeader><CardContent><RiskEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={() => { setAddingRisk(false); void refreshAssessment(); }} onRelationChosen={rememberRelation} options={options} searchOwners={searchOwners} /></CardContent></Card> : null}
-          {mutable && !addingRisk ? <Button className="justify-self-start" onClick={() => setAddingRisk(true)} type="button"><PlusIcon aria-hidden="true" />Add Risk</Button> : null}
+          {mutable && addingRisk ? <Card><CardHeader><CardTitle>Add Risk</CardTitle></CardHeader><CardContent><RiskEditor assessmentId={currentAssessment.documentId} mode="create" onCreated={(created) => { markAdded(created.documentId); setAddingRisk(false); setPendingFocus({ kind: 'add-risk' }); void refreshAssessment(); }} onRelationChosen={rememberRelation} options={options} searchOwners={searchOwners} /></CardContent></Card> : null}
+          {mutable && !addingRisk ? <Button className="justify-self-start" onClick={() => setAddingRisk(true)} ref={addRiskButton} type="button"><PlusIcon aria-hidden="true" />Add Risk</Button> : null}
         </div>
       </DetailSection>
     </div>
@@ -334,9 +370,11 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
     overallRiskRationale: assessment.overallRiskRationale ?? '',
     nextReviewDate: assessment.nextReviewDate,
   } });
+  const confirmation = useRecordSaveStatus(form.watch);
 
   async function submit(values: AssessmentUpdateInput) {
     setFormError(null);
+    confirmation.clear();
     const normalized: AssessmentUpdateInput = {
       ...values,
       overallRating: values.overallRating || undefined,
@@ -352,6 +390,8 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
       setFormError(result.formError);
       return;
     }
+    // Confirmed only after an ok result, so a save that did not persist never reads as saved (T-10-54).
+    confirmation.saved();
     onUpdated();
   }
 
@@ -369,7 +409,11 @@ function AssessmentMetadata({ assessment, mutable, onUpdated }: { assessment: An
         <MetadataFieldErrorInput error={form.formState.errors.overallRiskRationale?.message} label="Overall risk rationale"><Textarea aria-describedby={form.formState.errors.overallRiskRationale ? 'overallRiskRationale-error' : undefined} aria-invalid={Boolean(form.formState.errors.overallRiskRationale)} {...form.register('overallRiskRationale')} /></MetadataFieldErrorInput>
         <MetadataFieldErrorInput error={form.formState.errors.recommendationsSummary?.message} label="Recommendations"><Textarea aria-describedby={form.formState.errors.recommendationsSummary ? 'recommendationsSummary-error' : undefined} aria-invalid={Boolean(form.formState.errors.recommendationsSummary)} {...form.register('recommendationsSummary')} /></MetadataFieldErrorInput>
         <MetadataFieldErrorInput error={form.formState.errors.nextReviewDate?.message} label="Next review date"><Input aria-describedby={form.formState.errors.nextReviewDate ? 'nextReviewDate-error' : undefined} aria-invalid={Boolean(form.formState.errors.nextReviewDate)} type="date" {...form.register('nextReviewDate')} /></MetadataFieldErrorInput>
-        <div><Button disabled={form.formState.isSubmitting} type="submit">Save assessment</Button></div>
+        {/* X-1: the confirmation sits beside Save from 640px and below it on a phone. */}
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center" data-slot="form-actions">
+          <Button disabled={form.formState.isSubmitting} type="submit">Save assessment</Button>
+          <SaveStatus savedLabel={(time) => <>Assessment details saved at {time}</>} status={confirmation.status} />
+        </div>
       </form>
     </DetailSection>
   );

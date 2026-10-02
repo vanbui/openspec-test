@@ -10,11 +10,13 @@ import {
   type RelationPickerSearchInput,
   type RelationPickerSearchResult,
 } from '@/components/csrm/relation-picker';
+import { SaveStatus } from '@/components/csrm/save-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createRiskAction, updateRiskAction } from './assessment-actions';
+import { useRecordSaveStatus } from './use-record-save-status';
 import { OwnerCombobox, type OwnerSearchInput, type OwnerSearchResult } from './owner-combobox';
 import {
   exemptionReviewDateFormValue,
@@ -62,6 +64,8 @@ export type RiskEditorProps = {
   onUpdated?: (risk: EditableRisk) => void;
   /** Tells the page the name of a record chosen by search, so a remounted editor keeps it (D-30). */
   onRelationChosen?: (item: RelationPickerItem) => void;
+  /** When this Risk was just added, so its new card confirms `Risk added at {time}` (UI-SPEC §13.4). */
+  addedAt?: string;
 };
 
 const emptyRiskValues: RiskUpdateInput = {
@@ -156,12 +160,12 @@ function normalizeEmptyValues(values: RiskUpdateInput): RiskUpdateInput {
   ) as RiskUpdateInput;
 }
 
-export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, onUpdated, options, risk, searchOwners }: RiskEditorProps) {
+export function RiskEditor({ addedAt, assessmentId, mode, onCreated, onRelationChosen, onUpdated, options, risk, searchOwners }: RiskEditorProps) {
   const [formError, setFormError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const initial = selectedValues(risk);
   const form = useForm<RiskUpdateInput>({ defaultValues: initial });
   const { clearErrors, formState, handleSubmit, register, setError, setValue, watch } = form;
+  const confirmation = useRecordSaveStatus(watch, addedAt);
   const systemErrorId = useId();
   const assetErrorId = useId();
   // The chosen system and asset keep their names when they are not on the current search page (D-30).
@@ -187,12 +191,12 @@ export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, on
 
   async function submit(values: RiskUpdateInput) {
     setFormError(null);
-    setStatusMessage(null);
+    confirmation.clear();
     const formValues = normalizeEmptyValues(values);
     const normalized = withExemptionReviewInstant(formValues);
     const submitted = mode === 'create' ? normalized : withExemptionReviewInstant(changedValues(formValues, initial));
     if (mode === 'edit' && Object.keys(submitted).length === 0) {
-      setStatusMessage('No changes to save.');
+      confirmation.note('No changes to save.');
       return;
     }
     const result = mode === 'create'
@@ -209,14 +213,17 @@ export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, on
       setFormError(result.formError);
       return;
     }
+    // Confirmed only after an ok result, so a save that did not persist never reads as saved (T-10-54).
     if (mode === 'create') onCreated?.({ ...normalized, ...result.data } as EditableRisk);
-    else onUpdated?.({ ...risk, ...submitted, ...result.data } as EditableRisk);
+    else {
+      confirmation.saved();
+      onUpdated?.({ ...risk, ...submitted, ...result.data } as EditableRisk);
+    }
   }
 
   return (
     <form className="grid min-w-0 gap-6" noValidate onSubmit={handleSubmit(submit)}>
       {formError ? <Alert variant="destructive"><AlertTitle>Risk not saved</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
-      <p aria-atomic="true" aria-live="polite" role="status">{statusMessage ?? ''}</p>
       <div className="grid gap-5 md:grid-cols-2">
         {textFields.map(([name, label, multiline]) => (
           <label className={multiline ? 'grid gap-2 md:col-span-2' : 'grid gap-2'} key={name}>
@@ -275,7 +282,11 @@ export function RiskEditor({ assessmentId, mode, onCreated, onRelationChosen, on
         <div><OwnerCombobox errorId="treatmentOwner-error" invalid={Boolean(formState.errors.treatmentOwner)} label="Treatment owner" onValueChange={(owner) => chooseOwner('treatmentOwner', owner)} searchOwners={searchOwners} value={selectedTreatmentOwner} /><FieldError id="treatmentOwner-error" message={formState.errors.treatmentOwner?.message} /></div>
         <label className="grid gap-2"><span className="text-sm font-medium">Exempted</span><select aria-describedby={formState.errors.isExempted ? 'isExempted-error' : undefined} aria-invalid={Boolean(formState.errors.isExempted)} className="h-9 min-w-0 rounded-md border border-input bg-surface px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring" value={watch('isExempted') === null ? '' : String(watch('isExempted'))} onChange={(event) => setValue('isExempted', event.target.value === '' ? null : event.target.value === 'true', { shouldDirty: true })}><option value="">Not specified</option><option value="true">Yes</option><option value="false">No</option></select><FieldError id="isExempted-error" message={formState.errors.isExempted?.message} /></label>
       </div>
-      <div><Button disabled={formState.isSubmitting} type="submit">{formState.isSubmitting ? 'Saving risk…' : mode === 'create' ? 'Add risk' : 'Save risk'}</Button></div>
+      {/* X-1: the confirmation sits beside Save from 640px and below it on a phone. */}
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center" data-slot="form-actions">
+        <Button disabled={formState.isSubmitting} type="submit">{formState.isSubmitting ? 'Saving risk…' : mode === 'create' ? 'Add risk' : 'Save risk'}</Button>
+        <SaveStatus savedLabel={(time) => (confirmation.verb === 'added' ? <>Risk added at {time}</> : <>Risk saved at {time}</>)} status={confirmation.status} />
+      </div>
     </form>
   );
 }

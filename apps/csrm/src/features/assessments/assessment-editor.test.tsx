@@ -821,7 +821,8 @@ describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 a
     actionMocks.updateControlImplementationAction.mockResolvedValue({ ok: true, data: implementation });
     actionMocks.createControlImplementationAction.mockResolvedValue({ ok: true, data: implementation });
     actionMocks.saveAssessmentAction.mockResolvedValue({ ok: true, data: assessment });
-    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: assessment });
+    // The refreshed assessment still holds its Risk, so a save's refresh keeps the Risk card on the page.
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [risk] } });
   });
   afterEach(() => vi.useRealTimers());
 

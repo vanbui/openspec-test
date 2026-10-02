@@ -18,6 +18,8 @@ export type SaveStatusValue =
   | { kind: 'idle' }
   | { kind: 'saving' }
   | { kind: 'saved'; at: string }
+  /** A plain message in the same polite region, with no icon: `No changes to save.` (UI-SPEC §13.4). */
+  | { kind: 'note'; message: string }
   | { kind: 'failed'; failure: 'retryable' }
   | { kind: 'failed'; failure: 'blocked'; message: string };
 
@@ -41,7 +43,7 @@ const iconClass = 'size-3.5 shrink-0';
 export function SaveStatus({ status, savedLabel = (time) => <>Saved at {time}</>, onRetry, onRefresh, announce = true, className }: SaveStatusProps) {
   const saved = status.kind === 'saved'
     ? <><CheckCircle2 aria-hidden="true" className={cn(iconClass, 'text-success')} />{savedLabel(<LocalInstant style="time" value={status.at} />)}</>
-    : null;
+    : status.kind === 'note' ? status.message : null;
   const failureMessage = status.kind === 'failed' ? (status.failure === 'blocked' ? status.message : retryableMessage) : null;
   const recovery = status.kind === 'failed' && announce
     ? (status.failure === 'blocked'

@@ -127,7 +127,7 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
         )}
         {/* The anchor Control Implementation alerts open at (UI-SPEC §9 item 5). */}
         <DetailSection title="Mitigation controls" description="Contextual Control implementations linked to reusable Controls." headingId="mitigation-controls">
-          <MitigationControlList implementations={current.controlImplementations} mutable={mutable} options={mutable ? options : undefined} riskId={current.documentId} riskTypeId={current.riskType?.documentId ?? null} onConflict={handleConflict} onChanged={(implementations, nextMessage) => { setCurrent({ ...current, controlImplementations: [...implementations] }); setMessage(nextMessage); }} />
+          <MitigationControlList implementations={current.controlImplementations} mutable={mutable} options={mutable ? options : undefined} riskId={current.documentId} riskTypeId={current.riskType?.documentId ?? null} searchOwners={mutable ? searchOwners : undefined} onConflict={handleConflict} onChanged={(implementations, nextMessage) => { setCurrent({ ...current, controlImplementations: [...implementations] }); setMessage(nextMessage); }} />
         </DetailSection>
         <DetailSection title="Related records"><DefinitionList rows={relatedRows(current)} /></DetailSection>
       </div>
