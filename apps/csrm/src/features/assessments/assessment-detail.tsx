@@ -35,18 +35,31 @@ export function AssessmentDetailSkeleton() {
   );
 }
 
-function SafeDetailState({ state }: { state: Exclude<AssessmentDetailState, 'populated'> }) {
+/**
+ * Who a permission state is for (UI-SPEC §11.1, §11.2). `role`: the viewer lacks `assessment:review`, so the
+ * route refused before any read and points to the viewer's own list, never into /app/review/. `record`: an
+ * analyst whose read Strapi refused, pointed back to the analyst list.
+ */
+export type AnalystRefusal = 'record' | 'role';
+
+function SafeDetailState({ refusal = 'record', state }: { refusal?: AnalystRefusal; state: Exclude<AssessmentDetailState, 'populated'> }) {
   const permission = state === 'permission';
   const empty = state === 'empty';
+  const roleRefusal = permission && refusal === 'role';
+  const permissionDescription = roleRefusal
+    ? 'Reviewing requests is for Security Analysts. Your own requests are in My Requests.'
+    : 'You can’t review this request with your current access. Choose another from the assessment requests.';
   return (
     <>
       <PageHeader description="Inspect an authorised submitted assessment request." title="Assessment request review" />
       <Alert variant={permission || state === 'error' ? 'destructive' : 'default'} role={permission || state === 'error' ? 'alert' : undefined}>
         <AlertCircle aria-hidden="true" />
         <AlertTitle>{permission ? 'You don’t have permission to review this request' : empty ? 'No submitted questionnaire is available' : 'We couldn’t load this assessment request'}</AlertTitle>
-        <AlertDescription>{permission ? 'Access is enforced by your effective CSRM capabilities.' : empty ? draftGenerationPrecondition : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
+        <AlertDescription>{permission ? permissionDescription : empty ? draftGenerationPrecondition : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
       </Alert>
-      <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/requests">Back to assessment requests</Link>
+      {roleRefusal
+        ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/requests">Go to My Requests</Link>
+        : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/requests">Back to assessment requests</Link>}
     </>
   );
 }
@@ -55,8 +68,8 @@ function DetailValue({ label, value }: { label: string; value: string | null | u
   return <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-foreground">{value || 'Not provided'}</dd></div>;
 }
 
-export function AssessmentDetail({ assessmentHref, questionnaireHref, request, state }: { assessmentHref?: string; questionnaireHref?: string; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
-  if (state !== 'populated' || !request) return <SafeDetailState state={state === 'populated' ? 'empty' : state} />;
+export function AssessmentDetail({ assessmentHref, questionnaireHref, refusal, request, state }: { assessmentHref?: string; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
+  if (state !== 'populated' || !request) return <SafeDetailState refusal={refusal} state={state === 'populated' ? 'empty' : state} />;
   // Direct component callers from older route tests do not carry the server projection.
   // The production route always passes the discriminated relationship state.
   const questionnaire = request.relationships?.questionnaire ?? (request.questionnaire

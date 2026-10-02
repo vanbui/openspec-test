@@ -30,10 +30,12 @@ const transportModules = walk(join(src, 'lib', 'api', 'transport')).filter(isSou
 // return-to.ts is excluded by D-22: a pure path validator that holds nothing secret.
 const authModules = walk(join(src, 'lib', 'auth')).filter(isSourceModule).filter((path) => !path.endsWith(`${sep}return-to.ts`));
 const gateModules = [
+  ['lib', 'capabilities', 'analyst-review-gate.ts'],
   ['lib', 'capabilities', 'development-capabilities.ts'],
   ['lib', 'capabilities', 'server-guard.ts'],
   ['lib', 'testing', 'e2e-ui-state.ts'],
   ['lib', 'testing', 'e2e-runtime-attestation.ts'],
+  ['lib', 'time', 'viewer-time-zone.ts'],
 ].map((segments) => join(src, ...segments));
 const serviceModules = walk(join(src, 'features')).filter((path) => path.endsWith('-service.ts'));
 const guardedModules = [...transportModules, ...authModules, ...gateModules, ...serviceModules];
@@ -65,10 +67,12 @@ describe('the server-only boundary', () => {
       'src/lib/auth/development-runtime.ts',
       'src/lib/auth/development-session-adapter.ts',
       'src/lib/auth/session-adapter.ts',
+      'src/lib/capabilities/analyst-review-gate.ts',
       'src/lib/capabilities/development-capabilities.ts',
       'src/lib/capabilities/server-guard.ts',
       'src/lib/testing/e2e-ui-state.ts',
       'src/lib/testing/e2e-runtime-attestation.ts',
+      'src/lib/time/viewer-time-zone.ts',
       'src/features/administration/administration-service.ts',
       'src/features/requests/request-service.ts',
       'src/features/risks/risk-service.ts',

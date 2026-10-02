@@ -9,14 +9,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const mocks = vi.hoisted(() => ({
+  current: vi.fn(),
   getAnalystAssessment: vi.fn(),
   getQuestionnaire: vi.fn(),
   getQuestionnaireQuestions: vi.fn(),
   getRequest: vi.fn(),
+  granted: vi.fn(),
   notFound: vi.fn(),
 }));
 
 vi.mock('server-only', () => ({}));
+// The analyst routes gate on assessment:review before their read (D-23); these cases sign in as an analyst.
+vi.mock('@/lib/auth/development-session-adapter', () => ({
+  getSessionAdapter: () => ({
+    current: mocks.current,
+    capabilitiesFor: () => ({ granted: mocks.granted }),
+  }),
+}));
 vi.mock('next/navigation', () => ({
   notFound: mocks.notFound,
   usePathname: () => '/app',
@@ -61,6 +70,8 @@ beforeEach(() => {
   mocks.notFound.mockImplementation(() => {
     throw new Error('NEXT_NOT_FOUND');
   });
+  mocks.current.mockResolvedValue({ displayName: 'Bob Doe' });
+  mocks.granted.mockResolvedValue(new Set(['assessment-request:read', 'assessment-request:create', 'assessment:review', 'risk:manage']));
 });
 
 describe.each(recordRoutes)('the $route title', ({ page, read, title }) => {

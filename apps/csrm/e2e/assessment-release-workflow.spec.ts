@@ -243,6 +243,17 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(prereleasePage.getByText(deterministicRiskStatement, { exact: true })).toHaveCount(0);
   await prereleasePage.goto(crossOwnerHref!);
   await expect(prereleasePage.getByText('You don’t have permission to review this request'), 'ASSESS-05 cross-owner assessment is denied').toBeVisible();
+  // Jane's own request on the analyst route: the gate refuses her before the read and points to her own list (D-23).
+  await prereleasePage.goto(submittedRequestHref!);
+  for (const width of [375, 1440] as const) {
+    await prereleasePage.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await expect(prereleasePage.getByText('You don’t have permission to review this request'), `UX06_REQUESTOR_ON_ANALYST_REQUEST_ROUTE refused at ${width}px`).toBeVisible();
+    await expect(prereleasePage.getByRole('link', { name: 'Go to My Requests' }), `UX06_REQUESTOR_ON_ANALYST_REQUEST_ROUTE points to her own requests at ${width}px`).toHaveAttribute('href', '/app/requests');
+    await expect(prereleasePage.getByRole('button', { name: /^(Generate|Return to draft)/ }), `UX06_REQUESTOR_ON_ANALYST_REQUEST_ROUTE offers no analyst action at ${width}px`).toHaveCount(0);
+    await expect(prereleasePage.locator('a[href^="/app/review"]'), `UX06_REQUESTOR_ON_ANALYST_REQUEST_ROUTE links nowhere into the analyst routes at ${width}px`).toHaveCount(0);
+    await expectNoHorizontalOverflow(prereleasePage, `UX06_REQUESTOR_ON_ANALYST_REQUEST_ROUTE has no overflow at ${width}px`);
+  }
+  await prereleasePage.setViewportSize({ width: 375, height: 812 });
   await expectNoCspViolations(prereleasePage, 'the Requestor before release');
   await prereleaseContext.close();
 
