@@ -322,7 +322,7 @@
       "PSPF-127": "Personal undertaking before temporary access",
       "PSPF-128": "Agreement of other information owners before temporary access",
       "PSPF-129": "Facilitating access to official information",
-      "PSPF-130": "Enabling official information access and controlling access to supporting technology",
+      "PSPF-130": "Enabling appropriate access to official information and controlling supporting technology access",
       "PSPF-131": "Need-to-know access for entity personnel",
       "PSPF-132": "Clearances for ongoing access",
       "PSPF-133": "Clearance and suitability requirements for caveated information access",
@@ -770,7 +770,8 @@
         "Third-party agreement before temporary access"
       ],
       "PSPF-130": [
-        "Controlling access to supporting technology"
+        "Controlling access to supporting technology",
+        "Enabling official information access and controlling access to supporting technology"
       ],
       "PSPF-133": [
         "Clearance requirements for caveated information"
