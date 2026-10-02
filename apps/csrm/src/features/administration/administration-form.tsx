@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { OwnerCombobox, type OwnerSearchResult } from '@/features/assessments/owner-combobox';
 import type { ActiveUser } from '@/features/assessments/assessment-schema';
+import { controlLabel } from '@/features/assessments/control-label';
 import type { AdministrationActionResult, ApplicableControlOption } from './administration-actions';
 import { administrationSearchDelayMs, getAdministrationConfig, type AdministrationKind } from './administration-config';
 import {
@@ -191,7 +192,7 @@ export function AdministrationForm({ createAction, documentId, initialControlOpt
     <div className="space-y-8">
       <PageHeader
         description={kind === 'controls' ? 'Manage the reusable Control definition without changing contextual Control Implementations.' : kind === 'information-systems' ? 'Manage this organisational Information System for assessment workflows.' : kind === 'information-assets' ? 'Manage this organisational Information Asset for assessment workflows.' : mode === 'create' ? 'Create a reusable definition for use in future assessments.' : 'Edit this reusable definition without changing existing contextual Risks.'}
-        title={mode === 'create' ? `Create ${config.label}` : kind === 'controls' ? `${initial.controlNumber ?? ''} · ${initial.name}` : initial.name || config.label}
+        title={mode === 'create' ? `Create ${config.label}` : kind === 'controls' ? controlLabel({ controlNumber: initial.controlNumber ?? '', name: initial.name, framework: initial.framework }) : initial.name || config.label}
       />
       {mode === 'edit' ? <Button type="button" variant="outline" onClick={() => form.setFocus(kind === 'controls' ? 'controlNumber' : 'name')}>Edit {config.label}</Button> : null}
       {formError ? <Alert variant="destructive" role="alert"><AlertTitle>{config.label} could not be saved</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}

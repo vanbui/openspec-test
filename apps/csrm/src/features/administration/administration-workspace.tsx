@@ -13,6 +13,7 @@ import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/stat
 import { buttonVariants } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Input } from '@/components/ui/input';
+import { controlLabel, controlTitle } from '@/features/assessments/control-label';
 import { administrationSearchDelayMs, getAdministrationConfig, type AdministrationKind } from './administration-config';
 import {
   administrationPageSizes,
@@ -92,6 +93,21 @@ function systemOwnerLabel(record: AdministrationWorkspaceRecord): string {
 
 function systemCriticalityLabel(record: AdministrationWorkspaceRecord): string {
   return record.businessCriticality?.trim() || 'Not provided';
+}
+
+/*
+ * A control's name as the controls list reads it: the title part, or `Not provided` for an untitled control,
+ * so the number shows once in its row. The mobile card has no number column, so it uses the full control
+ * label (D-36, UI-SPEC §16.2).
+ */
+function controlNameCell(record: AdministrationWorkspaceRecord): string {
+  return controlTitle({ controlNumber: record.controlNumber ?? '', name: record.name }) ?? 'Not provided';
+}
+
+function mobileCardTitle(record: AdministrationWorkspaceRecord): string {
+  return typeof record.controlNumber === 'string'
+    ? controlLabel({ controlNumber: record.controlNumber, name: record.name, framework: record.framework })
+    : record.name;
 }
 
 /* Each collection's purpose, under its heading on the list and on its denial alike. */
@@ -203,7 +219,8 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
   ];
   const controlColumns: DataTableColumn<AdministrationWorkspaceRecord>[] = [
     { accessorKey: 'controlNumber', header: 'Control number', enableSorting: true, cell: (_value, record) => <RecordLink href={config.detailPath(record.documentId)}>{'controlNumber' in record ? record.controlNumber : ''}</RecordLink> },
-    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (value) => String(value) },
+    // The number has its own column, so Name carries the title part only (D-36, UI-SPEC §16.2).
+    { accessorKey: 'name', header: 'Name', enableSorting: true, cell: (_value, record) => controlNameCell(record) },
     { accessorKey: 'framework', header: 'Framework', cell: (value) => String(value) },
     { accessorKey: 'controlType', header: 'Type', cell: (value) => String(value ?? 'Not provided') },
     { accessorKey: 'controlReference', header: 'Reference', cell: (value) => String(value ?? 'Not provided') },
@@ -265,7 +282,7 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
         page={pagination.page}
         pageSize={pagination.pageSize}
         pageSizeOptions={administrationPageSizes}
-        renderMobileCard={(record) => <article className="space-y-2"><RecordLink className="inline-flex min-h-11 items-center" href={config.detailPath(record.documentId)}>{'controlNumber' in record ? `${record.controlNumber} · ${record.name}` : record.name}</RecordLink><p className="line-clamp-3 text-sm">{record.description ?? 'Not provided'}</p><p className="text-sm text-muted-foreground">{'framework' in record ? `${record.framework} · ${record.controlType ?? 'Type not provided'}` : 'systemType' in record ? `${record.systemType ?? 'Type not provided'} · ${record.environment ?? 'Environment not provided'} · Internet-facing: ${yesNo(record.internetFacing)}` : 'dataClassification' in record ? `${record.type ?? 'Type not provided'} · ${record.dataClassification ?? 'Classification not provided'} · Personal: ${yesNo(record.containsPersonalData)}` : `${record.applicableControls?.length ?? 0} applicable controls`}</p>{kind === 'information-systems' ? <p className="text-sm text-muted-foreground">{`Owner: ${systemOwnerLabel(record)} · Business criticality: ${systemCriticalityLabel(record)}`}</p> : null}</article>}
+        renderMobileCard={(record) => <article className="space-y-2"><RecordLink className="inline-flex min-h-11 items-center" href={config.detailPath(record.documentId)}>{mobileCardTitle(record)}</RecordLink><p className="line-clamp-3 text-sm">{record.description ?? 'Not provided'}</p><p className="text-sm text-muted-foreground">{'framework' in record ? `${record.framework} · ${record.controlType ?? 'Type not provided'}` : 'systemType' in record ? `${record.systemType ?? 'Type not provided'} · ${record.environment ?? 'Environment not provided'} · Internet-facing: ${yesNo(record.internetFacing)}` : 'dataClassification' in record ? `${record.type ?? 'Type not provided'} · ${record.dataClassification ?? 'Classification not provided'} · Personal: ${yesNo(record.containsPersonalData)}` : `${record.applicableControls?.length ?? 0} applicable controls`}</p>{kind === 'information-systems' ? <p className="text-sm text-muted-foreground">{`Owner: ${systemOwnerLabel(record)} · Business criticality: ${systemCriticalityLabel(record)}`}</p> : null}</article>}
         sorting={sorting}
         state={isPending ? 'loading' : resolvedState}
         stateSlots={{
