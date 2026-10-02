@@ -21,7 +21,7 @@ const releasedRequest = 'Customer portal public outage map without sign-in';
 const releasedAssessmentNumber = 'ASM-2026-33SAEN';
 
 const relationshipSection = 'Request relationships';
-const tileLabel = 'Contextual Risks by residual rating';
+const tileLabel = 'Risks by residual rating';
 
 /** Opens a request from the list by its title, which is how a record opens. */
 async function openRequest(page: Page, listPath: string, title: string): Promise<void> {
@@ -117,7 +117,7 @@ for (const [width, viewport] of [[375, 'mobile'], [1440, 'desktop']] as const) {
     await expect(tileLink).toHaveAttribute('href', /^\/app\/assessments\/[^/]+$/);
     for (const rating of ['Low', 'Moderate', 'High', 'Critical'] as const) {
       await expect(
-        page.getByLabel(new RegExp(`^${rating} residual contextual risks: \\d+$`)),
+        page.getByLabel(new RegExp(`^${rating} residual Risks: \\d+$`)),
         `RELATIONSHIP_${label}_TILE_RATING_${rating.toUpperCase()}`,
       ).toHaveCount(1);
     }

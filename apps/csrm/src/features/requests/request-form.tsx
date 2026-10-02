@@ -268,7 +268,7 @@ export function AssessmentRelationshipTile({ assessment, assessmentHref }: { ass
     <Card className="relative transition-transform duration-150 hover:-translate-y-px hover:border-foreground/30">
       <CardHeader>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Contextual Risks by residual rating
+          Risks by residual rating
         </p>
         <CardTitle>
           <RecordLink
@@ -286,7 +286,7 @@ export function AssessmentRelationshipTile({ assessment, assessmentHref }: { ass
             <div className="flex items-center justify-between gap-2" key={rating}>
               <dt><RiskRatingBadge rating={rating} /></dt>
               <dd
-                aria-label={`${rating} residual contextual risks: ${assessment.residualRiskCounts[rating]}`}
+                aria-label={`${rating} residual Risks: ${assessment.residualRiskCounts[rating]}`}
                 className="font-medium tabular-nums"
               >
                 {assessment.residualRiskCounts[rating]}
