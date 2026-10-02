@@ -255,6 +255,26 @@ describe('QuestionnaireGovernance question forms (UI-SPEC §1)', () => {
     expect(within(form).getByText('A question you add or move goes at the end of its section.')).toBeInTheDocument();
   });
 
+  it('stops the form’s fields at the §4 Forms maximum field width while the well spans the card (UI-SPEC §1.1)', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add question' }));
+    const form = screen.getByRole('form', { name: 'Add question' });
+    expect([...form.classList].filter((name) => name.startsWith('max-w-'))).toEqual([]);
+    const fields = [
+      within(form).getByLabelText('Question text'),
+      within(form).getByLabelText('Answer type'),
+      within(form).getByLabelText('Section', { selector: 'select' }),
+      within(form).getByRole('checkbox', { name: 'Required' }),
+    ];
+    for (const field of fields) {
+      const cap = field.closest('[class*="max-w-"]');
+      expect(cap, 'a width cap holds the field').not.toBeNull();
+      expect(form.contains(cap) && cap !== form, 'the cap sits inside the well, not on it').toBe(true);
+      expect(cap).toHaveClass('max-w-[640px]');
+    }
+  });
+
   it('keeps one form open at a time and says why release waits', async () => {
     const user = userEvent.setup();
     renderEditor();
