@@ -73,7 +73,7 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 5/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 6/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
 
 Plans:
 **Wave 1**
@@ -92,7 +92,7 @@ Plans:
 - [x] 10-05-PLAN.md — Rebuild the Requestor's questionnaire page around guidance (D-13): the introduction first, the attention list only after a submit attempt and in form order, history below the questions counted per rel
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 10-06-PLAN.md — Add D-03's first API change: closed conflict reason codes on the 409s the UAT met (D-22). Strapi's workflow errors carry one reason each (split throw sites), the controllers pass it as `details`, both
+- [x] 10-06-PLAN.md — Add D-03's first API change: closed conflict reason codes on the 409s the UAT met (D-22). Strapi's workflow errors carry one reason each (split throw sites), the controllers pass it as `details`, both
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 10-07-PLAN.md — Turn plan 10-06's reason codes into UI-SPEC §10.2's copy in the Server Actions for requests, questionnaires and questionnaire generation, and replace every "changed, reload" 409 fallback (§10.3). Save
