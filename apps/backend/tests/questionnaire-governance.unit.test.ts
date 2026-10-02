@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   appendGovernanceEvent,
+  countAnalystChangesSinceGeneration,
   GOVERNANCE_EVENT_KINDS,
   GOVERNANCE_LOG_MAX_ENTRIES,
   GovernanceLogError,
@@ -199,6 +200,30 @@ test("a malformed stored log summarises as empty rather than throwing out of a r
 
   const projected = projectQuestionnaire(questionnaire({ governanceLog: [{ kind: "released" }] }));
   assert.deepEqual(projected.revision, { eventCount: 0, lastEventAt: null }, "MALFORMED_LOG_BROKE_THE_READ_PATH");
+});
+
+test("countAnalystChangesSinceGeneration counts question changes at or after the latest generation (D-16)", () => {
+  const T = "2026-09-10T00:00:00.000Z";
+  const log = [
+    event({ kind: "question-edited", at: "2026-09-09T23:59:59.000Z", questionKey: "before" }),
+    event({ kind: "question-added", at: "2026-09-10T00:00:01.000Z", questionKey: "added" }),
+    event({ kind: "question-deleted", at: "2026-09-10T00:00:02.000Z", questionKey: "removed" }),
+    event({ kind: "released", at: "2026-09-10T00:00:03.000Z" }),
+  ];
+  assert.equal(countAnalystChangesSinceGeneration(log, T), 2, "CHANGES_BEFORE_GENERATION_COUNTED");
+  // An event at the generation instant itself counts.
+  assert.equal(countAnalystChangesSinceGeneration([event({ kind: "question-edited", at: T, questionKey: "same-instant" })], T), 1, "CHANGE_AT_GENERATION_NOT_COUNTED");
+  assert.equal(countAnalystChangesSinceGeneration(log, null), 3, "NO_GENERATION_DATE_NOT_ALL_CHANGES");
+  assert.equal(countAnalystChangesSinceGeneration(log, undefined), 3, "ABSENT_GENERATION_DATE_NOT_ALL_CHANGES");
+  assert.equal(countAnalystChangesSinceGeneration(log, new Date(T)), 2, "DATE_GENERATION_NOT_READ");
+  // Answer-cleared events follow from an edit and are not counted on their own; a replacement is not a change.
+  assert.equal(countAnalystChangesSinceGeneration([
+    event({ kind: "answer-cleared", at: "2026-09-11T00:00:00.000Z", questionKey: "added", explanation: "The choices changed." }),
+    event({ kind: "regenerated", at: "2026-09-11T00:00:01.000Z", explanation: "A newly generated questionnaire replaced 1 question. No analyst changes were discarded." }),
+  ], T), 0, "NON_CHANGE_EVENTS_COUNTED");
+  assert.equal(countAnalystChangesSinceGeneration("not a log", T), 0, "MALFORMED_LOG_COUNTED");
+  assert.equal(countAnalystChangesSinceGeneration([{ kind: "question-edited" }], T), 0, "INVALID_EVENT_COUNTED");
+  assert.equal(countAnalystChangesSinceGeneration(null, T), 0, "ABSENT_LOG_COUNTED");
 });
 
 test("projectGovernanceEvents preserves analyst detail and narrows requestor history", () => {

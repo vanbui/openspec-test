@@ -243,6 +243,51 @@ test("mounted replacement job fails when the questionnaire is released while it 
   assert.deepEqual(await state(), released, "RACE_JOB_CHANGED_THE_RELEASED_QUESTIONNAIRE");
 });
 
+/*
+ * D-16: analyst reads carry how many question changes a replacement would discard, counted since the latest
+ * generation, so the count restarts when a replacement moves generatedDate. A Requestor never receives it.
+ */
+test("mounted analyst reads count question changes since the latest generation and Requestor reads never do", async () => {
+  const harness = await harnessPromise;
+  const requestId = await submittedRequest("CHANGE-COUNT");
+  const first = await generate(requestId, false);
+  assert.equal(first.status, "completed", "COUNT_FIXTURE_NOT_GENERATED");
+  const questionnaireId = String((first.questionnaire as Record<string, unknown>).documentId);
+  const questionnairePath = `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`;
+  const revision = (data: unknown) => (data as Record<string, unknown>).revision as Record<string, unknown>;
+  const analystRevision = async () => {
+    const response = await request(questionnairePath, harness.identities.analyst);
+    assert.equal(response.status, 200, "COUNT_ANALYST_READ_FAILED");
+    return revision((await body(response)).data);
+  };
+  const edit = async (questionId: string, questionText: string) => {
+    const response = await request(`${questionnairePath}/questions/${encodeURIComponent(questionId)}`, harness.identities.analyst, json("PATCH", { questionText }));
+    assert.equal(response.status, 200, "COUNT_FIXTURE_EDIT_FAILED");
+    return revision((await body(response)).data);
+  };
+
+  assert.equal((await analystRevision()).analystChangesSinceGeneration, 0, "FRESH_QUESTIONNAIRE_COUNT");
+  const [firstQuestion, secondQuestion] = questionIds(await harness.getQuestionnaire(questionnaireId));
+  await edit(String(firstQuestion), "Which business service does this request cover?");
+  const governanceResult = await edit(String(secondQuestion), "Who owns the data the service processes?");
+  assert.equal(governanceResult.analystChangesSinceGeneration, 2, "GOVERNANCE_RESULT_COUNT");
+  assert.equal((await analystRevision()).analystChangesSinceGeneration, 2, "ANALYST_READ_COUNT");
+
+  // A replacement moves generatedDate, so the count starts again.
+  const replaced = await generate(requestId, true);
+  assert.equal(replaced.status, "completed", `COUNT_FIXTURE_REPLACEMENT_FAILED_${String(replaced.failureCode)}`);
+  assert.equal((await analystRevision()).analystChangesSinceGeneration, 0, "COUNT_DID_NOT_RESTART_AFTER_REPLACEMENT");
+  const [replacementQuestion] = questionIds(await harness.getQuestionnaire(questionnaireId));
+  assert.equal((await edit(String(replacementQuestion), "Which hosting region applies?")).analystChangesSinceGeneration, 1, "COUNT_AFTER_REPLACEMENT");
+
+  const released = await request(`${questionnairePath}/release`, harness.identities.analyst, json("POST"));
+  assert.equal(released.status, 200, "COUNT_FIXTURE_RELEASE_FAILED");
+  assert.equal((await analystRevision()).analystChangesSinceGeneration, 1, "RELEASED_ANALYST_READ_COUNT");
+  const ownerRead = await request(questionnairePath, harness.identities.owner);
+  assert.equal(ownerRead.status, 200, "COUNT_OWNER_READ_FAILED");
+  assert.deepEqual(Object.keys(revision((await body(ownerRead)).data)).sort(), ["eventCount", "lastEventAt"], "REQUESTOR_RECEIVED_THE_CHANGE_COUNT");
+});
+
 test("mounted questionnaire generation keeps completed relations populated and job reads actor-scoped", async () => {
   const harness = await harnessPromise;
   assert.equal(process.env.CSRM_AI_PROVIDER, "deterministic");

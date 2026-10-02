@@ -258,6 +258,20 @@ describe('questionnaire service contract', () => {
     expect(parse('addQuestionnaireQuestion', governance('a'.repeat(501)))).toBe(false);
   });
 
+  it('accepts the optional analyst change count on a questionnaire revision (D-16)', () => {
+    const parse = (label: string, data: unknown) => service.contractResponseParsers.find((entry) => entry.label === label)?.parser.safeParse({ data }).success;
+    const withCount = (analystChangesSinceGeneration?: number) => ({
+      ...questionnaire,
+      revision: { eventCount: 3, lastEventAt: '2026-09-03T00:00:00.000Z', ...(analystChangesSinceGeneration === undefined ? {} : { analystChangesSinceGeneration }) },
+    });
+    expect(parse('getQuestionnaire', withCount(2))).toBe(true);
+    expect(parse('getQuestionnaire', withCount(0))).toBe(true);
+    // Requestor reads omit it.
+    expect(parse('getQuestionnaire', withCount())).toBe(true);
+    expect(parse('getQuestionnaire', withCount(-1))).toBe(false);
+    expect(parse('getQuestionnaire', withCount(1.5))).toBe(false);
+  });
+
   it('accepts a regenerated event on the timeline and in a governance result (D-10)', () => {
     const parse = (label: string, data: unknown) => service.contractResponseParsers.find((entry) => entry.label === label)?.parser.safeParse({ data }).success;
     const explanation = 'A newly generated questionnaire replaced 12 questions. No analyst changes were discarded.';
