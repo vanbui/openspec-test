@@ -426,6 +426,41 @@ describe('RiskDetails', () => {
     expect(screen.getByText('Billing service')).toBeInTheDocument();
   });
 
+  it('enters the exemption review date as a date and keeps an untouched value as it was (D-32, UI-SPEC §13.3)', async () => {
+    const user = userEvent.setup();
+    renderDetails({ detail: { ...detail, exemptionReviewDate: '2026-10-15T13:45:00Z' } });
+    await user.click(screen.getByRole('button', { name: 'Edit risk' }));
+
+    const field = screen.getByLabelText('Exemption review date');
+    expect(field).toHaveAttribute('type', 'date');
+    expect(field).toHaveValue('2026-10-15');
+    expect(field).not.toHaveAccessibleDescription();
+    expect(screen.queryByText(/UTC format/)).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: 'Comments' }), ' Reviewed.');
+    await user.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskDetailAction).toHaveBeenCalledWith({
+      riskId: 'risk-alpha',
+      values: { comments: 'Tracked in the quarterly treatment review. Reviewed.' },
+    }));
+  });
+
+  it('saves a chosen exemption review date at 00:00 UTC and a cleared one as no date (D-32)', async () => {
+    const user = userEvent.setup();
+    renderDetails({ detail: { ...detail, exemptionReviewDate: '2026-10-15T13:45:00Z' } });
+    await user.click(screen.getByRole('button', { name: 'Edit risk' }));
+    fireEvent.change(screen.getByLabelText('Exemption review date'), { target: { value: '2026-11-11' } });
+    await user.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskDetailAction).toHaveBeenLastCalledWith({ riskId: 'risk-alpha', values: { exemptionReviewDate: '2026-11-11T00:00:00.000Z' } }));
+    expect(await screen.findByText('11 Nov 2026')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Edit risk' }));
+    expect(screen.getByLabelText('Exemption review date')).toHaveValue('2026-11-11');
+    fireEvent.change(screen.getByLabelText('Exemption review date'), { target: { value: '' } });
+    await user.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskDetailAction).toHaveBeenLastCalledWith({ riskId: 'risk-alpha', values: { exemptionReviewDate: null } }));
+  });
+
   it('searches only, with no group label, when the request’s selections could not be read (research Open Question 2)', async () => {
     vi.useFakeTimers();
     searchSystems.mockResolvedValue({ ok: true, data: [{ documentId: 'system-26', name: 'Picker proof 26' }] });

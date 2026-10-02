@@ -273,7 +273,7 @@ describe('analyst editor validation copy', () => {
     expect(createRisk).not.toHaveBeenCalled();
   });
 
-  it('states the length limit of Risk text and the format of the exemption review date', async () => {
+  it('states the length limit of Risk text and asks for a valid exemption review date (UI-SPEC §13.3)', async () => {
     const result = await actions.createRiskAction({
       assessmentId: 'assessment-1',
       values: { riskStatement: 'r'.repeat(65_536), treatmentPlan: 't'.repeat(65_536), exemptionReviewDate: '2026-12-01' },
@@ -284,7 +284,7 @@ describe('analyst editor validation copy', () => {
       fieldErrors: {
         riskStatement: ['Use 65,535 characters or fewer.'],
         treatmentPlan: ['Use 65,535 characters or fewer.'],
-        exemptionReviewDate: ['Enter the date and time as YYYY-MM-DDTHH:mm:ssZ.'],
+        exemptionReviewDate: ['Enter a valid exemption review date.'],
       },
     });
     expect(createRisk).not.toHaveBeenCalled();

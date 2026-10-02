@@ -323,7 +323,6 @@ describe('analyst assessment editor contract', () => {
         const next = [...field.options].map((option) => option.value).find((value) => value !== field.value) ?? '';
         fireEvent.change(field, { target: { value: next } });
       } else if (field instanceof HTMLInputElement && field.type === 'date') fireEvent.change(field, { target: { value: '2026-11-11' } });
-      else if (label === 'Exemption review date') fireEvent.change(field, { target: { value: '2026-11-11T00:00:00Z' } });
       else fireEvent.change(field, { target: { value: `Updated ${label}` } });
     }
     await userEvent.click(screen.getByRole('button', { name: 'Save risk' }));
@@ -331,6 +330,8 @@ describe('analyst assessment editor contract', () => {
     const update = actionMocks.updateRiskAction.mock.calls[0]?.[0];
     expect(update).toMatchObject({ assessmentId: 'assessment/id', riskId: 'risk-1' });
     expect(Object.keys(update.values).sort()).toEqual([...riskWritableFields].filter((field) => field !== 'riskOwner' && field !== 'treatmentOwner').sort());
+    // D-32: the exemption review date is a date like every other, saved as that calendar date at 00:00 UTC.
+    expect(update.values.exemptionReviewDate).toBe('2026-11-11T00:00:00.000Z');
 
     view.unmount();
     render(<RiskEditor assessmentId="assessment/id" mode="create" options={editorProps} searchOwners={searchOwners} />);
@@ -340,15 +341,17 @@ describe('analyst assessment editor contract', () => {
   });
 
   it('hydrates every persisted Risk field after an editor remount', () => {
-    const view = render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
+    // A legacy exemption review date with a time of day shows its UTC date (D-32).
+    const persisted = { ...risk, exemptionReviewDate: '2026-10-15T13:45:00Z' };
+    const view = render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={persisted} searchOwners={searchOwners} />);
     view.unmount();
-    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={risk} searchOwners={searchOwners} />);
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={persisted} searchOwners={searchOwners} />);
     for (const label of selectRiskLabels) {
       if (pickerChoices[label]) continue;
       const field = screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-      if (field instanceof HTMLInputElement && field.type === 'checkbox') expect(field.checked).toBe(Boolean(risk.isExempted));
-      else if (label === 'Exemption review date') expect(field).toHaveValue(risk.exemptionReviewDate ?? '');
-      else expect(field).toHaveValue(String(risk[riskWritableFields[riskLabels.indexOf(label)]!] ?? ''));
+      if (field instanceof HTMLInputElement && field.type === 'checkbox') expect(field.checked).toBe(Boolean(persisted.isExempted));
+      else if (label === 'Exemption review date') expect(field).toHaveValue('2026-10-15');
+      else expect(field).toHaveValue(String(persisted[riskWritableFields[riskLabels.indexOf(label)]!] ?? ''));
     }
     expect(screen.getAllByText(`Selected owner: ${analyst.displayName}`)).toHaveLength(2);
     expect(screen.getByText('Selected system: Customer portal')).toBeInTheDocument();
@@ -507,6 +510,45 @@ describe('analyst assessment editor contract', () => {
 
     await waitFor(() => expect(actionMocks.createRiskAction).toHaveBeenCalledWith(expect.objectContaining({ assessmentId: 'assessment/id', values: expect.objectContaining({ riskOwner: searchedOwner.documentId }) })));
     expect(await screen.findByText('Selected owner: Zoe Owner')).toBeInTheDocument();
+  });
+
+  it('enters the exemption review date as a date like every other, with no UTC hint (D-32, UI-SPEC §13.3)', () => {
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={{ ...risk, exemptionReviewDate: '2026-11-11T00:00:00.000Z' }} searchOwners={searchOwners} />);
+    const field = screen.getByLabelText('Exemption review date');
+    expect(field).toHaveAttribute('type', 'date');
+    expect(field).toHaveValue('2026-11-11');
+    expect(field).not.toHaveAccessibleDescription();
+    expect(screen.queryByText(/UTC format/)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('YYYY-MM-DDTHH');
+  });
+
+  it('keeps an untouched legacy exemption review date exactly as it was (D-32)', async () => {
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={{ ...risk, exemptionReviewDate: '2026-10-15T13:45:00Z' }} searchOwners={searchOwners} />);
+    await userEvent.clear(screen.getByLabelText('Risk statement'));
+    await userEvent.type(screen.getByLabelText('Risk statement'), 'Updated risk statement');
+    await userEvent.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id', riskId: 'risk-1', values: { riskStatement: 'Updated risk statement' } }));
+  });
+
+  it('saves a chosen exemption review date at 00:00 UTC and a cleared one as no date (D-32)', async () => {
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" options={editorProps} risk={{ ...risk, exemptionReviewDate: '2026-10-15T13:45:00Z' }} searchOwners={searchOwners} />);
+    fireEvent.change(screen.getByLabelText('Exemption review date'), { target: { value: '2026-11-11' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskAction).toHaveBeenLastCalledWith({ assessmentId: 'assessment/id', riskId: 'risk-1', values: { exemptionReviewDate: '2026-11-11T00:00:00.000Z' } }));
+
+    fireEvent.change(screen.getByLabelText('Exemption review date'), { target: { value: '' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.updateRiskAction).toHaveBeenLastCalledWith({ assessmentId: 'assessment/id', riskId: 'risk-1', values: { exemptionReviewDate: null } }));
+  });
+
+  it('adds a Risk with its exemption review date at 00:00 UTC (D-32)', async () => {
+    render(<RiskEditor assessmentId="assessment/id" mode="create" options={editorProps} searchOwners={searchOwners} />);
+    fireEvent.change(screen.getByLabelText('Risk statement'), { target: { value: 'New contextual Risk' } });
+    fireEvent.change(screen.getByLabelText('Exemption review date'), { target: { value: '2027-02-28' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Add risk' }));
+    await waitFor(() => expect(actionMocks.createRiskAction).toHaveBeenCalledWith(expect.objectContaining({
+      values: expect.objectContaining({ riskStatement: 'New contextual Risk', exemptionReviewDate: '2027-02-28T00:00:00.000Z' }),
+    })));
   });
 
   it('does not coerce an unspecified exemption while saving another Risk field', async () => {
