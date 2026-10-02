@@ -6,6 +6,7 @@ import { expectFocusNotObscured, expectFocusVisible } from './helpers/focus';
 import { primaryViewport, signInAs } from './helpers/navigation';
 import { labelToFieldGap } from './helpers/forms';
 import { paintedPixel, rgbOf, sameColour } from './helpers/pixel';
+import { settleElementWidth } from './helpers/settle';
 
 const releasedAssessmentNumber = 'ASM-2026-33SAEN';
 const releasedRiskNumber = 'RSK-RELEASED-33SAEN';
@@ -120,6 +121,8 @@ async function expectRegionFollowsOverflow(page: Page, tableName: string, messag
   await expect(table, `${message}: ${tableName} is shown`).toBeVisible();
   const scroller = page.locator('[data-overflow]').filter({ has: table });
   await expect(scroller, `${message}: one scroller holds ${tableName}`).toHaveCount(1);
+  // Right after a viewport change the table can still be reflowing: measure the settled width.
+  await settleElementWidth(scroller);
   const overflows = await scroller.evaluate((element) => element.scrollWidth > element.clientWidth);
   await expect(scroller, `${message}: data-overflow follows the measured width`).toHaveAttribute('data-overflow', String(overflows));
   const region = page.getByRole('region', { name: `${tableName}, scrolls horizontally`, exact: true });

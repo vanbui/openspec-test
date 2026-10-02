@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /** What a settled destination looks like: its URL, its exact document title and its level-one heading. */
 export type SettledExpectation = {
@@ -24,4 +24,22 @@ export async function expectSettled(page: Page, expected: SettledExpectation, su
     `${surface} shows its level-one heading`,
   ).toBeVisible();
   await expect(page.locator('[data-slot="skeleton"], [aria-busy="true"]'), `${surface} has nothing still loading`).toHaveCount(0);
+}
+
+/*
+ * Waits until an element's scroll and client widths hold for three consecutive animation frames.
+ * Right after a viewport change the layout can still be settling, so a single early reading can see
+ * the previous width's layout and expect an overflow the settled page no longer has.
+ */
+export async function settleElementWidth(element: Locator): Promise<void> {
+  await element.evaluate(async (node) => {
+    const read = () => `${node.scrollWidth}x${node.clientWidth}`;
+    let previous = read();
+    for (let stable = 0; stable < 3;) {
+      await new Promise<void>((resolve) => { requestAnimationFrame(() => resolve()); });
+      const current = read();
+      stable = current === previous ? stable + 1 : 0;
+      previous = current;
+    }
+  });
 }
