@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
-current_phase: 10
-current_phase_name: "Existing-flow gap closure (post-demo Stage 3)"
 status: executing
 stopped_at: "post-demo Stage 3: quick tasks 261002-2y8 and 261002-drq accepted (gate green at c8d164d); Phase 10's fresh plan check passed after the pilot's baseline revision; Phase 10 execution next."
-last_updated: "2026-10-02T01:05:14.831Z"
+last_updated: "2026-10-02T01:13:08.836Z"
 last_activity: 2026-10-02
-last_activity_desc: "Completed quick task 261002-drq: Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10)"
-state_head: c8d164d7dd044772778b86db9ad76f11b9e146ef
+last_activity_desc: Phase 10 execution started
+state_head: 2dd4f1dff3d9fbdd4ecdb240a4e74bbe985e7ed1
 progress:
   total_phases: 16
   completed_phases: 0
   total_plans: 290
   completed_plans: 0
   percent: 0
+current_phase_name: Existing-flow gap closure
+current_phase: 10
 current_plan: 0
 ---
 
@@ -26,7 +26,7 @@ current_plan: 0
 See: `.planning/PROJECT.md` (updated 2026-09-28)
 
 **Core value:** Make a complex cyber-risk workflow simple and auditable while keeping Security Analysts—not AI—in control of assessment review and release.
-**Current focus:** v2.0 Assessment Lifecycle and Oversight on branch `post-demo`, under `.planning/POST-DEMO-BRIEF.md`: reconcile the product demo's risk-owner asks into the roadmap (Stage 1), plan every remaining phase (Stage 2), then build in execution order (Stage 3).
+**Current focus:** Phase 10 — Existing-flow gap closure (post-demo Stage 3 on branch `post-demo`, under `.planning/POST-DEMO-BRIEF.md`)
 
 ## Current Position
 
@@ -38,11 +38,11 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
   - the G-10 fonts quick task 261002-2y8 (`4913c90` to `6ae258b`), accepted by the pilot with the gate green: web 2,053/2,053, Strapi 578/578, Playwright 85/85;
   - the typography follow-up quick task 261002-drq (`ff61dbf` to `5ea2b77`): Vietnamese subsets for Plus Jakarta Sans and IBM Plex Mono on demand, and Buttons at the direction's weight 500. The pilot accepted it with the gate green: web 2,055/2,055, Strapi 578/578, Playwright 86/86.
 - **Phase 10:** its fresh plan check found one blocker, guards that diffed from `uat-trial`'s `98fe99c`, which is not in this repository. The pilot resolved it by moving the baseline to `5ea2b77` (D-49), and the plans are ready to execute.
-- **Next:** execute Phase 10 through the worker. No phase is built yet.
+- **Now:** Phase 10 is executing through the worker (`/gsd-execute-phase 10`, 23 plans, one per wave, sequential on the main tree). No phase is built yet.
 
-Plan: —
-Status: Stage 3 in progress: Phase 10 execution next (the pilot drives every transition, and auto-advance is off)
-Last activity: 2026-10-02 - Completed quick task 261002-drq: Restore Vietnamese glyphs and the 500 Button weight (typography follow-ups to 261002-2y8, G-10)
+Plan: 1 of 23
+Status: Executing Phase 10
+Last activity: 2026-10-02 — Phase 10 execution started
 
 ## Milestone
 
@@ -170,6 +170,7 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - Every ask PD-1 to PD-5 traces to requirements, a phase, success criteria and plans (ASSESS-21 to 26, COLLAB-04, NOTIFY-04 and RISK-06 each appear in plan frontmatter; the journey spec `apps/csrm/e2e/risk-owner-journey.spec.ts` is built by 17-19, 17.1-18, 17.2-15 and 20-23).
 - No pre-rename app path in Phases 10–22, ROADMAP, REQUIREMENTS, STATE, PROJECT, NEXT-WAVE-DECISIONS or CONTEXT.md.
 - `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
+
 **Resume prompt:** `.planning/prompts/post-demo-build.md`. Paste the launcher line the operator was given into a new session after the weekly reset.
 **Resume File:** `.planning/POST-DEMO-BRIEF.md`: the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands. It replaces the git-excluded v2.0 orchestration brief, which does not exist in this repository.
 
