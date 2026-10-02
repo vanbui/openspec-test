@@ -58,30 +58,39 @@ function RelationCombobox({ kind, label, value, options, disabled, onChange, sea
   const selected = options.find((option) => option.documentId === value) ?? results.find((option) => option.documentId === value);
   useEffect(() => {
     const search = query.trim();
+    // A new query starts with no active option, so none that is no longer shown is named or chosen (IN-307).
+    setActive(-1);
     if (!search) { setResults(options); setOpen(false); setLoading(false); return; }
     setOpen(true);
     setLoading(true);
     const request = ++sequence.current;
     const timer = window.setTimeout(async () => {
-      const response = searchRelations
-        ? await searchRelations({ kind, search })
-        : { ok: true as const, data: options.filter((option) => option.label.toLocaleLowerCase('en-AU').includes(search.toLocaleLowerCase('en-AU'))) };
+      let response: RiskRelationSearchResult;
+      try {
+        response = searchRelations
+          ? await searchRelations({ kind, search })
+          : { ok: true as const, data: options.filter((option) => option.label.toLocaleLowerCase('en-AU').includes(search.toLocaleLowerCase('en-AU'))) };
+      } catch {
+        // A rejected Server Action ends the search like a refused one, never leaving Searching… on screen.
+        response = { ok: false, formError: 'Relation search is unavailable. Try again.' };
+      }
       if (request !== sequence.current) return;
       setLoading(false);
       setResults(response.ok ? response.data : []);
     }, 300);
     return () => window.clearTimeout(timer);
   }, [kind, options, query, searchRelations]);
+  const activeOption = open && !loading ? results[active] : undefined;
 
   const choose = (option: RiskPickerOption) => { onChange(option.documentId); setQuery(''); setOpen(false); setActive(-1); };
   return (
     <div className="grid gap-1.5 text-sm font-medium text-foreground">
       <label htmlFor={`${listboxId}-input`}>{label}</label>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverAnchor asChild><input id={`${listboxId}-input`} className={selectClassName} disabled={disabled} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-haspopup="listbox" aria-controls={open && !loading ? listboxId : undefined} aria-activedescendant={active >= 0 ? `${listboxId}-${active}` : undefined} placeholder={selected?.label ?? 'Search…'} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+        <PopoverAnchor asChild><input id={`${listboxId}-input`} className={selectClassName} disabled={disabled} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-haspopup="listbox" aria-controls={open && !loading ? listboxId : undefined} aria-activedescendant={activeOption ? `${listboxId}-${active}` : undefined} placeholder={selected?.label ?? 'Search…'} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
           if (event.key === 'ArrowDown' && results.length) { event.preventDefault(); setActive((index) => Math.min(index + 1, results.length - 1)); }
           if (event.key === 'ArrowUp' && results.length) { event.preventDefault(); setActive((index) => Math.max(index - 1, 0)); }
-          if (event.key === 'Enter' && results[active >= 0 ? active : 0]) { event.preventDefault(); choose(results[active >= 0 ? active : 0]); }
+          if (event.key === 'Enter' && open && !loading && results[active >= 0 ? active : 0]) { event.preventDefault(); choose(results[active >= 0 ? active : 0]); }
           if (event.key === 'Escape') setOpen(false);
         }} /></PopoverAnchor>
         {/* A listbox popup (ARIA APG combobox): focus stays in the input, so the Popover only positions it and carries no dialog role. */}
