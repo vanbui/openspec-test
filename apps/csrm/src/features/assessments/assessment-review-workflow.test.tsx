@@ -17,7 +17,8 @@ const actionMocks = vi.hoisted(() => ({
 }));
 vi.mock('./assessment-actions', () => actionMocks);
 vi.mock('@/features/requests/request-actions', () => ({ revertRequestToDraftAction: vi.fn() }));
-vi.mock('next/navigation', () => ({ usePathname: () => '/app/review/assessments', useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }) }));
+const routerMocks = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/app/review/assessments', useRouter: () => routerMocks }));
 
 import {
   AssessmentRequestList,
@@ -923,16 +924,53 @@ describe('the hub’s next action while a generation job runs', () => {
     return screen.getByText('Next action:').closest('p') as HTMLElement;
   }
 
-  it('says questionnaire generation is in progress, with no link, then returns the served next action', async () => {
+  /*
+   * WR-201, WR-401: the served lifecycle was read before the job completed, so it still names the step the job
+   * just did. The page refreshes once on completion, and until the refreshed request arrives the line names no
+   * action rather than one the card beside it has already done (walkthrough fix 4).
+   */
+  it('says questionnaire generation is in progress, with no link, then refreshes once it completes and never names Generate again', async () => {
     actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: completedGeneration });
-    render(<AssessmentDetail generationJobs={{ questionnaireGeneration: { job: runningGeneration, canRetry: true }, assessmentDraft: null }} request={hubRequest()} state="populated" />);
+    const { rerender } = render(<AssessmentDetail generationJobs={{ questionnaireGeneration: { job: runningGeneration, canRetry: true }, assessmentDraft: null }} request={hubRequest()} state="populated" />);
 
     expect(nextActionLine()).toHaveTextContent('Next action: Questionnaire generation is in progress. Review the questionnaire when it’s ready.');
     expect(within(nextActionLine()).queryByRole('link')).not.toBeInTheDocument();
+    expect(routerMocks.refresh).not.toHaveBeenCalled();
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
-    expect(nextActionLine()).toHaveTextContent('Next action: Generate the questionnaire.');
-    expect(within(nextActionLine()).getByRole('link', { name: 'Generate the questionnaire.' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review generated questionnaire' })).toBeInTheDocument();
+    expect(routerMocks.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Next action:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Generate the questionnaire.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Generate the questionnaire.' })).not.toBeInTheDocument();
+
+    // The refreshed request holds the generated questionnaire, so the served next action returns.
+    const refreshed = hubRequest({
+      questionnaire: { documentId: 'questionnaire-11', title: 'Generated questionnaire' },
+      lifecycle: { ...lifecycle, currentKey: 'questionnaire-generated' as const, currentLabel: 'Questionnaire generated', nextAction: { actor: 'analyst' as const, summary: 'Review and release the questionnaire.', href: '/app/review/questionnaires/questionnaire-11' } },
+      relationships: {
+        questionnaire: { availability: 'available' as const, documentId: 'questionnaire-11', questionnaireNumber: 'QNR-2026-KX2AHV', title: 'Generated questionnaire', state: 'analyst-review' },
+        assessment: { availability: 'absent' as const },
+      },
+    });
+    rerender(<AssessmentDetail generationJobs={null} request={refreshed} state="populated" />);
+    expect(nextActionLine()).toHaveTextContent('Next action: Review and release the questionnaire.');
+    expect(within(nextActionLine()).getByRole('link', { name: 'Review and release the questionnaire.' })).toHaveAttribute('href', '/app/review/questionnaires/questionnaire-11');
+    expect(routerMocks.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes once an assessment draft completes and never names Draft the assessment. beside Open assessment draft', async () => {
+    actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: true, data: { questionnaireGeneration: null, assessmentDraft: { job: completedJob, canRetry: false } } });
+    const questionnaire = { availability: 'available' as const, documentId: 'questionnaire/id', questionnaireNumber: 'QNR-2026-000001', title: 'Payments questionnaire', state: 'submitted' };
+    const draftLifecycle = { ...lifecycle, currentKey: 'questionnaire-submitted' as const, currentLabel: 'Questionnaire submitted', nextAction: { actor: 'analyst' as const, summary: 'Draft the assessment.', href: '/app/review/questionnaires/questionnaire%2Fid' } };
+    render(<AssessmentDetail generationJobs={{ questionnaireGeneration: null, assessmentDraft: { job: runningJob, canRetry: false } }} request={hubRequest({ requestStatus: 'questionnaire-in-progress', lifecycle: draftLifecycle, relationships: { questionnaire, assessment: { availability: 'absent' as const } } })} state="populated" />);
+
+    expect(nextActionLine()).toHaveTextContent('Next action: Assessment draft generation is in progress. Open the draft when it’s ready.');
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('link', { name: 'Open assessment draft' })).toBeInTheDocument();
+    expect(routerMocks.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Next action:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Draft the assessment.')).not.toBeInTheDocument();
   });
 
   it('keeps the served next action when the seeded job failed', () => {
