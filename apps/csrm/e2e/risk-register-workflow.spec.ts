@@ -601,9 +601,48 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
 
   await page.getByRole('button', { name: 'Add mitigation control' }).click();
   const addForm = page.getByRole('region', { name: 'Mitigation controls' }).locator('form').last();
-  await expectFocusVisible(addForm.getByRole('textbox', { name: 'Search reusable Controls' }));
+  // E16 (UI-SPEC §13.1): the new form opens with focus in its Control picker, which does the searching.
+  await expectFocusVisible(addForm.getByRole('combobox', { name: 'Control', exact: true }));
   await addForm.getByRole('button', { name: 'Discard mitigation changes' }).click();
   await expect(page.getByRole('button', { name: 'Add mitigation control' })).toBeVisible();
+
+  /*
+   * ASSESS06_SYSTEM_PAST_FIRST_PAGE (D-28, UAT-010): a system the old 25-row option list could never show is
+   * found by typing. The proof brings its own fixture (D-39): 26 uniquely named Information Systems imported
+   * through the Administration CSV import. A prefix search fills one 25-row page without the 26th; typing its
+   * name finds it. The edit is then discarded by reloading, so the shared mutable Risk is unchanged.
+   */
+  const pickerSuffix = Date.now().toString(36);
+  const pickerSystemName = (index: number) => `Picker proof ${pickerSuffix} ${String(index).padStart(2, '0')}`;
+  const pickerCsv = ['name,description', ...Array.from({ length: 26 }, (_, index) => `${pickerSystemName(index + 1)},Record picker proof system`)].join('\r\n');
+  await page.goto('/app/admin/information-systems/import');
+  await expect(page.getByRole('heading', { name: 'Import Information Systems from CSV' })).toBeVisible();
+  await page.getByRole('button', { name: 'Choose CSV file' }).click();
+  await page.locator('input[type="file"]').setInputFiles({ name: `picker-proof-${pickerSuffix}.csv`, mimeType: 'text/csv', buffer: Buffer.from(pickerCsv) });
+  await page.getByRole('button', { name: 'Validate and preview' }).click();
+  await expect(page.getByRole('button', { name: 'Create (26)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue to confirmation' }).click();
+  await page.getByRole('checkbox', { name: 'I have reviewed the create and update rows.' }).click();
+  await page.getByRole('button', { name: 'Confirm import' }).click();
+  await expect(page.getByRole('heading', { name: 'Import complete' })).toBeFocused();
+  await expect(page.getByText('Created 26', { exact: true })).toBeVisible();
+
+  await page.goto(mutableRiskHref!);
+  await page.getByRole('button', { name: 'Edit risk' }).click();
+  const pickerRiskForm = page.getByRole('form', { name: 'Edit Risk' });
+  const systemPicker = pickerRiskForm.getByRole('combobox', { name: 'Information system impacted', exact: true });
+  await systemPicker.fill(`Picker proof ${pickerSuffix}`);
+  await expect(page.getByText('Showing the first 25 matches. Keep typing to narrow the list.', { exact: true }), 'the prefix fills one bounded page').toBeVisible();
+  await expect(page.getByRole('option', { name: pickerSystemName(1), exact: true })).toBeVisible();
+  await expect(page.getByRole('option', { name: pickerSystemName(26), exact: true }), 'the 26th system is past the first page').toHaveCount(0);
+  await systemPicker.fill(pickerSystemName(26));
+  const pastFirstPage = page.getByRole('option', { name: pickerSystemName(26), exact: true });
+  await expect(pastFirstPage, 'typing its name finds the 26th system').toBeVisible();
+  await pastFirstPage.click();
+  await expect(pickerRiskForm.getByText(`Selected system: ${pickerSystemName(26)}`, { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Edit risk' })).toBeVisible();
+  await expect(page.getByText(pickerSystemName(26)), 'the discarded choice left the shared Risk unchanged').toHaveCount(0);
 
   for (const width of viewportWidths) {
     await expectRegisterGeometry(page, width);
