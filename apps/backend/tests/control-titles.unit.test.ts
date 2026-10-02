@@ -392,9 +392,20 @@ const CORRECTED_3C_TITLES: ReadonlyArray<readonly [string, string, string, strin
 
 const TITLES_3C = new Map(CORRECTED_3C_TITLES.map(([, controlNumber, , title]) => [controlNumber, title]));
 
-/* The title a control carries now: fix 3c's where it corrected a fix 3 or fix 3b title again. */
+/*
+ * 10-23 walkthrough fix 3d (the pilot's ruling): PSPF-130's paragraph enables *appropriate* access to official
+ * information. "Appropriate" carries the requirement's need-to-know intent, and fix 3b's title without it read as
+ * broadening access. Each row is the catalogue, the control, the title it replaces and the corrected title.
+ */
+const CORRECTED_3D_TITLES: ReadonlyArray<readonly [string, string, string, string]> = [
+  ["pspf-release-2026.json", "PSPF-130", "Enabling official information access and controlling access to supporting technology", "Enabling appropriate access to official information and controlling supporting technology access"],
+];
+
+const TITLES_3D = new Map(CORRECTED_3D_TITLES.map(([, controlNumber, , title]) => [controlNumber, title]));
+
+/* The title a control carries now: fix 3d's or fix 3c's where either corrected a fix 3 or fix 3b title again. */
 function currentTitle(controlNumber: string, title: string): string {
-  return TITLES_3C.get(controlNumber) ?? title;
+  return TITLES_3D.get(controlNumber) ?? TITLES_3C.get(controlNumber) ?? title;
 }
 
 test("ADMIN-05 D-46 fix 3: a corrected title covers every limb of its paragraph", async () => {
@@ -603,4 +614,28 @@ test("ADMIN-05 D-46 fix 3c: each title fix 3c replaces stays listed as supersede
     })
     .map(([, controlNumber, replaced]) => `${controlNumber}: ${replaced}`);
   assert.deepEqual(missing, [], "titles fix 3c replaced that the seed could not recognise");
+});
+
+test("ADMIN-05 D-46 fix 3d: PSPF-130 keeps 'appropriate', the need-to-know intent of its paragraph", async () => {
+  const seeds = seedsFrom(await titledSeeds(), PSPF_FILE);
+  assert.equal(CORRECTED_3D_TITLES.length, 1);
+  const fix3b = new Map(CORRECTED_PSPF_TITLES.map(([controlNumber, , title]) => [controlNumber, title] as const));
+  for (const [, controlNumber, replaced, title] of CORRECTED_3D_TITLES) {
+    assert.equal(fix3b.get(controlNumber), replaced, `fix 3d replaces fix 3b's ${controlNumber} title`);
+    assert.match(title, /\bappropriate access\b/i, `${controlNumber} qualifies the access it enables`);
+    assert.match(paragraphOf(seedFor(seeds, controlNumber)), /^Appropriate access to official information/);
+    assert.equal(seedFor(seeds, controlNumber).name, `${controlNumber} — ${title}`);
+  }
+});
+
+test("ADMIN-05 D-46 fix 3d: the title fix 3d replaces stays listed as superseded, after any earlier one", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const file = JSON.parse(await readFile(path.join(appRoot, "src", "bootstrap", "controls", TITLE_FILE), "utf8")) as {
+    supersededTitles?: Record<string, Record<string, string[]>>;
+  };
+  const listed = CORRECTED_3D_TITLES.map(([sourceFile, controlNumber]) => [controlNumber, file.supersededTitles?.[sourceFile]?.[controlNumber] ?? []] as const);
+  assert.deepEqual(listed, [[
+    "PSPF-130",
+    ["Controlling access to supporting technology", "Enabling official information access and controlling access to supporting technology"],
+  ]]);
 });
