@@ -13,7 +13,7 @@ findings:
     title: "Mitigation-control saves compare against values from page load, so a reverted field is never saved"
   - id: CR-401
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "UX06_JOB_STATUS_ON_RETURN can never fail on the regression it names"
   - id: WR-101
     severity: warning
@@ -97,23 +97,23 @@ findings:
     title: "A hub unit test locks in a Next action that names a control the page no longer offers"
   - id: WR-402
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Two attribute assertions quietly become presence checks when an id is missing"
   - id: WR-403
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`settleElementWidth` has no loop bound, so an oscillating layout hangs until the test timeout"
   - id: WR-404
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The new Risk detail route tests have no refused-viewer case for their new reads"
   - id: WR-405
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "An `every()` over a possibly empty list makes \"the existing Risk shows no confirmation\" vacuous"
   - id: WR-406
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "\"Each Risk row says what is missing\" checks only the first row"
   - id: IN-101
     severity: info
@@ -193,41 +193,41 @@ findings:
     title: "The Risk Register filter combobox keeps a stale active option and can hang on a rejected search"
   - id: IN-401
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Red-phase scaffolding left in unit tests"
   - id: IN-402
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The \"leaving times labelled UTC\" assertion holds whatever the sync does"
   - id: IN-403
     severity: info
-    disposition: open
+    disposition: fixed
     title: "A stale comment and vacuous negatives after the D-23 route gate"
   - id: IN-404
     severity: info
-    disposition: open
+    disposition: fixed
     title: "A spied getter leaks into later tests when its assertion fails"
   - id: IN-405
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The Requestor refusal on the request route checks fewer reads than its siblings"
   - id: IN-406
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The overflow test proves only that the last option scrolls into view"
   - id: IN-407
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The picker proof depends on the server's unspecified default sort"
   - id: IN-408
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The \"unchanged save sends nothing\" listener stops at the first UI change"
   - id: IN-409
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`.first()` hides duplicate owner options"
-open: 15
+open: 0
 total: 56
 recorded: 2026-10-02T19:39:25.663Z
 ---
@@ -238,7 +238,7 @@ recorded: 2026-10-02T19:39:25.663Z
 |---------|----------|-------------|--------|
 | CR-101 | critical | fixed | e5ee253 (test), 96013ae (fix): replacement, release, return to review, question add, edit and delete, and the Requestor's answer mutations all lock the request row then the questionnaire row before reading (questionnaire-row-locks.ts); D-09 re-checked under both. Mounted tests interleave a release, a question add and a replacement into the other's transaction window with PostgreSQL row locks emulated (SQLite has one connection), plus a lock-order test across seven mutations. SQLite proves the protocol, not PostgreSQL's blocking (R-08-37). |
 | CR-201 | critical | fixed | 4c4ca1a (test), 4ec499c (fix): the Risk and mitigation control forms compare each save with the record last saved (Strapi's answer, or a newer record from the page), never the page-load record; the page applies each save's answer (details, Risk, mitigation control, a created Risk) before it reads the assessment again, so a failed re-read leaves no stale baseline and hides no new Risk, and the read-only view after release names a control re-pointed in the session. Tests: Planned, Implemented, Planned sends twice and the store ends Planned; a Risk field and the details set back after a failed re-read are sent; a new Risk shows. The pilot-accepted rule holds (an unchanged in-review save sends nothing, a drafted one still records the review). The Risk not saved test now makes a real change before its failing save. Release readiness stays as last read when the re-read fails (display only; Strapi re-checks on release). |
-| CR-401 | critical | open | - |
+| CR-401 | critical | fixed | 3f18747 (test): chose a browser-side hold plus a narrowed claim. New UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS holds the card's status checks (Server Actions after the acknowledged start) at the page route, so the job Strapi started stays queued or running on the card; once a check is held the Generate and Replace counts are read once, outside any retry. UX06_JOB_STATUS_ON_RETURN now claims only the ending on return: the jobs read on return runs on the server, which the browser cannot hold, and a Strapi provider delay would add a test path to production code beside the CSRM_AI_ provider. The seeded queued or running case is proved by questionnaire-generation-job.test.tsx (queued and running seeded cases) and analyst-route-gate.test.tsx (running job in place of Generate). Proof: with the card offering its idle action beside a job (temporary mutation) the step fails at no Replace questionnaire while a job runs and 9 unit cases fail, the seeded ones included; real code passes. |
 | WR-101 | warning | fixed | 45726c0 (test), d9eb46e (fix): the seed-owned-value rule now covers controlReference, description, framework, frameworkVersion and frameworkSource against the stored catalogue entry and framework; an operator's edit or clear (null) is kept, a seed-written value still follows the catalogue; comment matches. The runtime verifier's stale fixture stores the earlier framework beside the value it wrote. |
 | WR-102 | warning | fixed | 160cf3c (test), ee93a02 (fix): a full or unreadable log fails the replacement job with HISTORY_UNAVAILABLE; an unreadable log gives no change count (null), the analyst revision omits it and the web says any; the web words the new failure with the UI-SPEC G copy. No contract change. |
 | WR-103 | warning | fixed | 7a9da03: the NUL byte is now the \u0000 escape, LF restored (git diff 5ea2b77 is 44 insertions, 35 deletions), scripts/*.mjs marked text in .gitattributes; pnpm verify:csrm-seed passes. A file-encoding defect has no test. |
@@ -259,11 +259,11 @@ recorded: 2026-10-02T19:39:25.663Z
 | WR-308 | warning | fixed | 3addbf3 (test), 55eaa58 (fix): the panel alert that repeated the dialog error is removed (D-06); both dialogs clear the error on dismiss, and each release or return attempt clears the previous one, so a reopened dialog starts clean and a success leaves none. |
 | WR-309 | warning | fixed | 2a63aab (test), 7e68c54 (fix), 365a938 (browser step): Reference, Location, Owner, Business criticality and the Risk Types, Systems and Assets Name links are capped at the long-text maximum (28rem) and clamp to two lines, full text in the DOM. Decision: not the wrap option, whose 14rem minimum is for statement and title columns and would force the Systems list wide for short values; Fix 7’s cells, unit test and ADMIN05_CONTROL_TITLES_WRAP stay as they were. New ADMIN05_LONG_TEXT_BOUNDED step: a 255-character criticality at 1440 is 213px wide and clamps to two 20px lines, Type stays in view and the table does not overflow; Fix 7's Controls table stays 1102px in 1102px. |
 | WR-401 | warning | fixed | 896e162 (test), 73369f4 (fix), with WR-201 (lane 2 fix, lane 4 test): the hub test that required the stale Generate the questionnaire. line now expects one refresh on completion, no Generate line or link beside Review generated questionnaire, and the served Review and release the questionnaire. once the refreshed request arrives; a draft twin expects no Draft the assessment. beside Open assessment draft. |
-| WR-402 | warning | open | - |
-| WR-403 | warning | open | - |
-| WR-404 | warning | open | - |
-| WR-405 | warning | open | - |
-| WR-406 | warning | open | - |
+| WR-402 | warning | fixed | ca89ac1 (test): expectAttributeNamesId asserts the target's id is present, then compares; used for aria-controls and aria-activedescendant. Proof: picker options without ids (temporary mutation) fail at the target has an id, where the old presence check passed; real code passes. |
+| WR-403 | warning | fixed | c4bd030 (test), 1b7942d (fix), e8411d6 (test typing): the in-page loop moved to src/lib/testing/settle-width.ts with a unit test; it keeps the three-stable-frames rule and stops after 120 frames with WIDTH_NEVER_SETTLED, the Locator's description and the last six scroll x client readings. RED: oscillating widths hung to the test timeout; GREEN 2 passed; the browser callers (Risk Register, administration) pass. |
+| WR-404 | warning | fixed | eccd814 (test): a viewer without risk:manage gets the permission state with no Risk, Risk Type, assessment or request read; a 403 or 404 on the Risk read runs no assessment, request or Risk Type read. Proof: those reads moved ahead of the gate (temporary mutation) fail all three; real code passes. |
+| WR-405 | warning | fixed | c580f63 (test): the check targets the existing Risk's Save risk action row and expects its status region empty. Proof: that status region not announced (temporary mutation) fails at the new line; real code passes. |
+| WR-406 | warning | fixed | aead711 (test): every outstanding Risk link must have a Missing: accessible description, with one caption per row. Proof: caption and aria-describedby on the first row only (temporary mutation) fail at Risk row 2 says what is missing; real code passes. |
 | IN-101 | info | fixed | 1296d8a: canRetry documented as the initiator fact (true whatever the status; retry still refuses a job that has not failed) in the specification, the regenerated schema.d.ts and the registry comments. The catalogue copies keep their wording, byte-identical. |
 | IN-102 | info | fixed | 6a8c58a: the comment now says the stale-entry checks fail fast and stop a seeded start until the title file is corrected; both are tested in control-titles.unit.test.ts. |
 | IN-103 | info | skipped | Not a defect: verify-csrm-seed.mjs also checks the seed's list against the controls directory listing (an orphan or unlisted file fails) and the fixed 2,646 count, and an unparseable declaration fails loudly (CSRM seed must declare ...). 10-23's one-list decision (ac34d19) stands. |
@@ -283,15 +283,15 @@ recorded: 2026-10-02T19:39:25.663Z
 | IN-305 | info | fixed | 67224d0 (test), 14cf85a (fix): the summary depth branches on its own entries, so a history of only pre-release changes reads No revisions have been recorded. |
 | IN-306 | info | deferred | Phase 15 (Steerable questionnaire AI, which reworks how question changes and choices are proposed and accepted): carry value and label pairs in the draft and send choices only when they change. Confirmed real and pre-existing (parseChoices and the label-only draftOf are unchanged since 5ea2b77); the fix changes the draft model and the choice diff, so it is not small. |
 | IN-307 | info | fixed | 0764671 (test), 232d41e (fix): a new query clears the active option, aria-activedescendant names an option only while it is shown, Enter chooses only from shown results, and a rejected search ends like a refused one (No matching options., as a served failure already reads). |
-| IN-401 | info | open | - |
-| IN-402 | info | open | - |
-| IN-403 | info | open | - |
-| IN-404 | info | open | - |
-| IN-405 | info | open | - |
-| IN-406 | info | open | - |
-| IN-407 | info | open | - |
-| IN-408 | info | open | - |
-| IN-409 | info | open | - |
+| IN-401 | info | fixed | d77c011, c852c4d (test): static imports of refusal-copy and applicable-controls, the existsSync and computed-path scaffolding and three repeated type checks removed; tsc then caught an excess description property the old cast hid. Assertions unchanged. |
+| IN-402 | info | fixed | 003e2d0 (test): renamed swallows a rejected sync without an unhandled rejection, and it listens for unhandledRejection. Found beyond the review: vi.fn handles every promise it returns, so the old implicit guard was vacuous too; the mock now hands the component a rejected promise of its own. Proof: without the component's catch (temporary mutation) it fails; real code passes. |
+| IN-403 | info | fixed | 91cffd9 (test): the comments describe the refused page (refused before any read, D-23, no analyst backlink); the three no-content checks are kept and labelled, since they fail if a refusal ever renders beside the questionnaire. Comment and label only. |
+| IN-404 | info | fixed | bf08dbc (test): vi.restoreAllMocks moves into the file's afterEach. No later test reads visibilityState today, so no assertion can show the leak; structural. |
+| IN-405 | info | fixed | 053be98 (test): the Requestor refusal calls expectNoRecordRead like its siblings. Proof: a questionnaire read before the gate (temporary mutation) fails it; real code passes. |
+| IN-406 | info | fixed | f50f8a0 (test): after each ArrowDown the combobox names that option active (through the WR-402 helper) and the option is inside the list's view; the accepted axe exception is unchanged. Proof: scrolling only the last option into view (temporary mutation) fails at option 8 of 10; real code passes. |
+| IN-407 | info | fixed | a0d49a6, 5c4edf0 (test): the step requires 25 of the 26 proof systems on the page, finds the one left out and types its name, whatever the order. Note: the selector search does sort name:asc then documentId:asc (csrm-information-system.ts), but no sort is in the contract. 5c4edf0 fixes the step's own pattern escape, caught by the mutation run. Proof: with the search reversed to name:desc (temporary mutation) the step passes, where the old step required 01 on the page. |
+| IN-408 | info | fixed | cc9fd60 (test): the listener stays attached up to two seconds after the note, ending early on any non-GET request, which then fails ASSESS06_UNCHANGED_SAVE_WRITES_NOTHING. The pilot-accepted rule is unchanged. Proof: a save sent 500 ms after the note (temporary mutation) fails it; real code passes. |
+| IN-409 | info | fixed | a417f52 (test): the owner search must list Jane Doe once before she is chosen. Proof: a search listing each user twice (temporary mutation) fails at lists Jane Doe once; real code passes. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
