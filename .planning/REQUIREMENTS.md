@@ -151,6 +151,7 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
   - Acceptance: (1) system and asset owners show by name, and the lists show owner and criticality columns; (2) controls carry meaningful names (decision 15: the framework's own control name where it has one, otherwise a short descriptive title in CSRM's words, with the source reference kept), and seeded Risk Types carry user-facing descriptions.
   - Trace: O2 · UAT-007, UAT-053 · Phase 10
   - Remainder (2026-09-27, Phase 10 plan check): the Information Asset owner needs a content-type change and moves to Phase 22 with a contract-gap record. Control titles are decided (decision 15) and stay in Phase 10.
+  - Partial by decision (2026-10-03, Phase 10 verified): the system owner by name with the owner and criticality columns, the APP titles, the 386 control titles and the Risk Type descriptions are delivered. The Information Asset owner (criterion 1, asset half) stays open, and Phase 22 closes ADMIN-05.
 - [ ] **ADMIN-06**: Systems, assets, controls and Risk Types show where they are used.
   - Acceptance: (1) each record has a "Used in" panel (requests, open risks by residual rating, control implementations by status) whose figures open the filtered list; (2) the lists show usage counts.
   - Trace: O2 · UAT-047 · Phase 20
@@ -261,8 +262,8 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 | Requirement | Phase | Status |
 |---|---|---|
-| REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, UX-06 | Phase 10 | Complete (plan 10-23, 2026-10-03; phase verification pending) |
-| ADMIN-05 | Phase 10; the Information Asset owner moves to Phase 22 (Remainder) | Pending |
+| REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07, UX-06 | Phase 10 | Complete (plan 10-23; phase verified 2026-10-03) |
+| ADMIN-05 | Phase 10; the Information Asset owner moves to Phase 22 (Remainder) | Partial by decision (Phase 10 verified 2026-10-03; Phase 22 closes it) |
 | UX-07, UX-08, UX-09, UX-10, DASH-03 | Phase 11 | Pending |
 | INT-05, INT-06, ASSESS-08, QUES-10 | Phase 12 | Pending |
 | REQ-08, COLLAB-01 | Phase 13 | Pending |
@@ -297,4 +298,4 @@ v1.0's requirements are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ---
 *Requirements defined: 2026-09-27*
-*Last updated: 2026-10-01 — post-demo decisions G-11 to G-18: nine requirements added (55 in all), eight amended, and Phase 17.2 inserted.*
+*Last updated: 2026-10-03 — Phase 10 complete: six requirements complete, and ADMIN-05 partial by decision until Phase 22.*

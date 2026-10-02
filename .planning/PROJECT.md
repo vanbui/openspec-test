@@ -57,11 +57,12 @@ It also fixes every defect the product gap UAT found in v1.0 flows.
 - [x] Let a Security Analyst generate a contextualised questionnaire from a submitted Request through the same reviewable, provider-independent AI job pattern used for assessment drafts. — Validated in v1.0.
 - [x] Let a person move between a request, its questionnaire, and its assessment directly, and meet the same control behaving the same way on every screen. — Validated in v1.0.
 
+- [x] Make the existing request, questionnaire, assessment and administration screens work as they say, with no lost input or misleading refusal. — Validated in Phase 10: Existing-flow gap closure (2026-10-03). ADMIN-05 is partial by decision, because the Information Asset owner moves to Phase 22.
+
 ### Active
 
 **v2.0 (Phases 10–22 and 17.1; requirements in REQUIREMENTS.md):**
 
-- [ ] Make the existing request, questionnaire, assessment and administration screens work as they say, with no lost input or misleading refusal (Phase 10).
 - [ ] Give each actor a sectioned sidebar and a Home that leads with their next action (Phase 11).
 - [ ] Let the AI work from the whole request, show where each proposal came from, and mark AI-proposed content until an analyst accepts it (Phase 12).
 - [ ] Let analysts pick up and assign requests, and let both actors add notes and files to a request at any point (Phases 13 and 14).
@@ -70,6 +71,7 @@ It also fixes every defect the product gap UAT found in v1.0 flows.
 - [ ] Require an explicit review, peer approval for Critical outcomes, and the risk owner's acceptance of residual risk before release (Phase 17.1).
 - [ ] Offer each assessment's risks as a spreadsheet-like table with copy and paste both ways, and export and import throughout (Phases 18 and 19).
 - [ ] Give oversight registers by assessment type that track treatment after release, management metrics, and an Admin role that owns reference data and configuration (Phases 20, 21 and 22).
+- [ ] Show each Information Asset's owner by name: the rest of ADMIN-05, carried from Phase 10, which needs a content-type change and a contract-gap record first (Phase 22).
 
 ### Out of Scope
 
@@ -117,6 +119,9 @@ It also fixes every defect the product gap UAT found in v1.0 flows.
 | A questionnaire's release gate reads dedicated release-fact fields, never a scan of the governance log | Access control must read an explicit validated field rather than derive itself from parsing a mutable JSON array, where a malformed or truncated log failing safe would deny every read; the log carries narrative history, the fields carry the gate | ✓ Validated in Phase 06.8 |
 | Plan the intended product as milestone v2.0 (Phases 10–22 and 17.1), with the product decisions made under the operator's delegation | The product gap UAT mapped every finding to one phase; v1.0 closed 2026-09-28 as shipped (G-8); `NEXT-WAVE-DECISIONS.md` grounds each decision in cyber-governance practice | — Pending (STATE.md Decisions, 2026-09-27) |
 | Durable audit trails without a modeled entity go through `docs/contract-gaps/` before implementation | The authoritative JDL/OpenAPI/catalogue carry no audit-revision representation; documenting the gap and reconciling the contract avoids a competing entity invented only in the frontend or a second source of truth in the web app | ✓ Applied in Phase 06.8 (`docs/contract-gaps/phase-06.8-questionnaire-governance-facts.md`) |
+| Every workflow refusal (409) names one code from a closed reason list that Strapi, the OpenAPI contract and the web share, and the web turns each code into plain copy, never Strapi's message | A refusal that states its real reason tells the user what to do next, where a generic "changed, reload" hides it. Equality tests on all three lists stop the server and the web from drifting apart | ✓ Validated in Phase 10 (18 codes, D-22); the assessment-side routes follow in Phase 17.1 (W-1) |
+| A seeded start replaces only values the seed still owns (the stored catalogue entry and the superseded titles), never an operator's edit | Seed corrections such as the APP titles, the Risk Type descriptions and the control titles must reach existing databases without overwriting what an administrator changed | ✓ Validated in Phase 10 |
+| Questionnaire replacement and every governance mutation lock the request row, then the questionnaire row | One lock order prevents deadlocks between a replacement and a concurrent governance edit (CR-101) | ✓ Validated in Phase 10; real PostgreSQL blocking stays with R-08-37 |
 
 ## Evolution
 
@@ -136,4 +141,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-28 after closing v1.0 and starting v2.0*
+*Last updated: 2026-10-03 after Phase 10*

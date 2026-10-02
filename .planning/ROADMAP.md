@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Controlled Cyber Risk Assessment Workflow** — Phases 1–9 with 06.1–06.10 (shipped to `main` 2026-09-26; closed 2026-09-28). Full detail: `.planning/milestones/v1.0-ROADMAP.md`.
-- 🚧 **v2.0 Assessment Lifecycle and Oversight** — Phases 10–22, 17.1, 17.2 and 19.1 (planning).
+- 🚧 **v2.0 Assessment Lifecycle and Oversight** — Phases 10–22, 17.1, 17.2 and 19.1 (in progress: Phase 10 complete 2026-10-03).
 
 ## Phases
 
@@ -73,7 +73,8 @@ Phase 19 runs before Phase 18, because the risk table's import and export reuse 
 5. The released assessment names each control and shows each risk's treatment plan, owners and target dates.
 6. Every refusal this UAT met (UAT-016, UAT-036, UAT-062) is either not offered or states its real reason, and revision timelines show local times and question text.
 
-**Plans:** 23/23 plans executed (one per wave; serialised by shared files and Playwright, D-40)
+**Plans:** 23/23 plans complete (one per wave; serialised by shared files and Playwright, D-40)
+**Status:** Complete (2026-10-03). Verification passed: 6/6 success criteria and no gaps, with three manual checks accepted by the pilot as residuals for the operator's UAT (`10-UAT.md`). ADMIN-05 is partial by decision: its Information Asset owner moves to Phase 22.
 
 Plans:
 **Wave 1**
