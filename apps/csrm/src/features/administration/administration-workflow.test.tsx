@@ -266,6 +266,61 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
   });
 
   /*
+   * WR-309: the other free-text columns (a Reference or a Location of up to 500 characters; a Name, an Owner or a
+   * Business criticality of up to 255) are bounded too. Each is capped at the long-text maximum (28rem) and clamps to
+   * two lines, with the full text in the DOM, so one long value cannot push the other columns out of view. They
+   * keep no 14rem minimum: these are names and short labels, and short values keep compact columns (Fix 7).
+   */
+  it('caps long names, references, locations, owners and criticality at the long-text width and clamps them (WR-309)', async () => {
+    const { AdministrationWorkspace } = await loadWorkspace();
+    const long = (label: string, length: number) => `${label} `.repeat(Math.ceil(length / (label.length + 1))).slice(0, length).trim();
+    const bounded = (element: HTMLElement) => expect(element).toHaveClass('line-clamp-2', 'max-w-md', 'whitespace-normal');
+
+    const reference = long('Section 4.2.1(a) of the operational resilience standard', 500);
+    const controlsView = render(<AdministrationWorkspace
+      {...baseWorkspaceProps}
+      kind="controls"
+      items={[{ documentId: 'control-1', controlNumber: 'AC-1', name: 'AC-1 — Access control', description: null, framework: 'NIST SP 800-53', controlType: 'Preventive', controlReference: reference }]}
+      query={{ q: '', framework: '', controlType: '', sort: 'controlNumber:asc', page: 1, pageSize: 25 }}
+    />);
+    bounded(within(screen.getByRole('table', { name: 'Controls results' })).getByText(reference, { exact: true }));
+    controlsView.unmount();
+
+    const riskTypeName = long('Credential misuse through phishing', 255);
+    const riskTypesView = render(<AdministrationWorkspace {...baseWorkspaceProps} items={[{ ...item, name: riskTypeName }]} />);
+    bounded(within(screen.getByRole('table', { name: 'Risk Types results' })).getByRole('link', { name: riskTypeName }));
+    riskTypesView.unmount();
+
+    const systemName = long('Customer portal and partner gateway', 255);
+    const ownerName = long('Jane Doe of the Enterprise Platforms Group', 255);
+    const criticality = long('High for payments and customer onboarding', 255);
+    const systemsView = render(<AdministrationWorkspace
+      {...baseWorkspaceProps}
+      kind="information-systems"
+      items={[{ documentId: 'system-1', name: systemName, description: null, systemType: 'Web application', owner: 'user-1', ownerName, businessCriticality: criticality, environment: 'Production', deploymentModel: 'Cloud', lifecycleState: 'Existing', internetFacing: true }]}
+    />);
+    const systemsTable = screen.getByRole('table', { name: 'Information Systems results' });
+    bounded(within(systemsTable).getByRole('link', { name: systemName }));
+    bounded(within(systemsTable).getByText(ownerName, { exact: true }));
+    bounded(within(systemsTable).getByText(criticality, { exact: true }));
+    // Short values stay on one line in a compact column: no 14rem minimum is imposed on the cell.
+    expect(within(systemsTable).getByText('Production', { exact: true }).closest('td')).not.toHaveClass('whitespace-normal');
+    expect(within(systemsTable).getByText(ownerName, { exact: true }).closest('td')).not.toHaveClass('min-w-56');
+    systemsView.unmount();
+
+    const assetName = long('Customer identity records', 255);
+    const location = long('Sydney primary data centre, rack 14, cage B', 500);
+    render(<AdministrationWorkspace
+      {...baseWorkspaceProps}
+      kind="information-assets"
+      items={[{ documentId: 'asset-1', name: assetName, description: null, type: 'Dataset', dataClassification: 'Restricted', location, containsPersonalData: true, containsLegalData: false, containsCreditCardData: false } as AdministrationItem & { location: string }]}
+    />);
+    const assetsTable = screen.getByRole('table', { name: 'Information Assets results' });
+    bounded(within(assetsTable).getByRole('link', { name: assetName }));
+    bounded(within(assetsTable).getByText(location, { exact: true }));
+  });
+
+  /*
    * WR-04: a missing required field is asked for by its label in the product's words, never in a validation
    * library's default English, and an optional field holding only spaces is empty rather than an error.
    */
