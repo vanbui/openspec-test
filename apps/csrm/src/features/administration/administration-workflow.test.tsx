@@ -20,6 +20,9 @@ type AdministrationItem = {
   controlType?: 'Preventive' | 'Detective' | 'Corrective' | 'Compensating' | null;
   controlReference?: string | null;
   systemType?: string | null;
+  owner?: string | null;
+  ownerName?: string | null;
+  businessCriticality?: string | null;
   environment?: 'Production' | 'Non-production' | null;
   deploymentModel?: 'On-prem' | 'Cloud' | 'SaaS' | null;
   lifecycleState?: 'New' | 'Changed' | 'Existing' | 'Decommissioning' | null;
@@ -258,6 +261,36 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     render(<AdministrationForm kind="information-systems" mode="edit" documentId="system-1" initialValues={{ ...record, ownerName: null }} updateAction={vi.fn()} />);
     expect(screen.getByText('Selected owner: Name not available')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('owner-document-id-1');
+  });
+
+  it('UAT-053 lists each Information System owner and business criticality after Name, unsortable, on desktop and mobile', async () => {
+    const { AdministrationWorkspace } = await loadWorkspace();
+    const base = { description: null, systemType: 'Web application', environment: 'Production' as const, deploymentModel: 'Cloud' as const, lifecycleState: 'Existing' as const, internetFacing: true };
+    const systems = [
+      { ...base, documentId: 'system-named', name: 'Customer portal', owner: 'owner-document-id-1', ownerName: 'Jane Doe', businessCriticality: 'High' },
+      { ...base, documentId: 'system-unnamed', name: 'Billing engine', owner: 'owner-document-id-2', ownerName: null, businessCriticality: null },
+      { ...base, documentId: 'system-unowned', name: 'Data lake', owner: null, ownerName: null, businessCriticality: 'Medium' },
+    ];
+    render(<AdministrationWorkspace {...baseWorkspaceProps} kind="information-systems" items={systems} pagination={{ page: 1, pageSize: 25, pageCount: 1, total: 3 }} />);
+
+    const table = screen.getByRole('table', { name: 'Information Systems results' });
+    expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
+      'Name', 'Owner', 'Business criticality', 'Type', 'Environment', 'Deployment model', 'Lifecycle', 'Internet-facing',
+    ]);
+    expect(within(table).getByRole('button', { name: 'Sort by Name' })).toBeInTheDocument();
+    expect(within(table).queryByRole('button', { name: 'Sort by Owner' })).not.toBeInTheDocument();
+    expect(within(table).queryByRole('button', { name: 'Sort by Business criticality' })).not.toBeInTheDocument();
+
+    const cellsOf = (name: string) => within(within(table).getByRole('row', { name: new RegExp(name) })).getAllByRole('cell').map((cell) => cell.textContent);
+    expect(cellsOf('Customer portal').slice(0, 3)).toEqual(['Customer portal', 'Jane Doe', 'High']);
+    expect(cellsOf('Billing engine').slice(0, 3)).toEqual(['Billing engine', 'Name not available', 'Not provided']);
+    expect(cellsOf('Data lake').slice(0, 3)).toEqual(['Data lake', 'Not provided', 'Medium']);
+
+    const cards = screen.getByRole('list', { name: 'Information Systems results' });
+    expect(within(cards).getByText('Owner: Jane Doe · Business criticality: High')).toBeInTheDocument();
+    expect(within(cards).getByText('Owner: Name not available · Business criticality: Not provided')).toBeInTheDocument();
+    expect(within(cards).getByText('Owner: Not provided · Business criticality: Medium')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/owner-document-id/);
   });
 
   it('keeps loading, first-use empty, filtered empty, error, and permission states non-enumerating', async () => {
