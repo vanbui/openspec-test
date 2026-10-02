@@ -42,7 +42,7 @@ type AdministrationFormProps = {
   kind: 'risk-types' | 'controls' | 'information-systems' | 'information-assets';
   mode: 'create' | 'edit';
   documentId?: string;
-  initialValues?: { name: string; description: string | null; applicableControls?: readonly string[] };
+  initialValues?: { name: string; description: string | null; applicableControls?: readonly string[]; owner?: string | null; ownerName?: string | null; businessCriticality?: string | null };
   initialControlOptions?: readonly { documentId: string; label: string }[];
   createAction?: (input: unknown) => Promise<unknown>;
   updateAction?: (input: unknown) => Promise<unknown>;
@@ -245,6 +245,19 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(screen.getByRole('combobox', { name: 'Lifecycle state' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Owner' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Yes, internet-facing' })).toBeInTheDocument();
+  });
+
+  it('UAT-053 seeds the Information System owner with the served name and never the id', async () => {
+    const { AdministrationForm } = await loadWorkspace();
+    const record = { name: 'Customer portal', description: null, owner: 'owner-document-id-1', businessCriticality: 'High' };
+    const named = render(<AdministrationForm kind="information-systems" mode="edit" documentId="system-1" initialValues={{ ...record, ownerName: 'Jane Doe' }} updateAction={vi.fn()} />);
+    expect(screen.getByText('Selected owner: Jane Doe')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('owner-document-id-1');
+    named.unmount();
+
+    render(<AdministrationForm kind="information-systems" mode="edit" documentId="system-1" initialValues={{ ...record, ownerName: null }} updateAction={vi.fn()} />);
+    expect(screen.getByText('Selected owner: Name not available')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('owner-document-id-1');
   });
 
   it('keeps loading, first-use empty, filtered empty, error, and permission states non-enumerating', async () => {

@@ -335,6 +335,7 @@ test("ADMIN-03 Systems and Assets preserve exact fields, owner scope, and normal
     description: "System acceptance record",
     systemType: "Customer portal",
     owner: harness.users.owner,
+    ownerName: "Jane Doe",
     environment: "Production",
     deploymentModel: "Cloud",
     businessCriticality: "High",
@@ -434,6 +435,77 @@ test("ADMIN-03 Systems and Assets preserve exact fields, owner scope, and normal
     assert.deepEqual(responses.map(({ status }) => status).sort(), [201, 409]);
     assert.equal(await harness.countAdministrationRecords(path === "information_systems" ? "information-systems" : "information-assets"), before + 1);
   }
+});
+
+test("ADMIN-05 UAT-053 the Information System record and list name the owner and nothing more of the owner's record", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAdministrationFixtures();
+  const displayName = `System Owner Proof ${process.pid}`;
+  const namedOwner = await harness.createUserFixture({
+    email: `system-owner-${process.pid}@example.test`, username: `system-owner-${process.pid}`,
+    displayName: `  ${displayName}  `, accountStatus: "active",
+  });
+  // Strapi already caps displayName at 255; an owner whose name is only spaces has no name to serve.
+  const blankOwner = await harness.createUserFixture({
+    email: `system-owner-blank-${process.pid}@example.test`, username: `system-owner-blank-${process.pid}`,
+    displayName: "   ", accountStatus: "active",
+  });
+
+  const cases = [
+    { name: `Owned system ${process.pid}`, owner: namedOwner, ownerName: displayName },
+    { name: `Unnamed owner system ${process.pid}`, owner: blankOwner, ownerName: null },
+    { name: `Unowned system ${process.pid}`, owner: null, ownerName: null },
+  ] as const;
+
+  for (const entry of cases) {
+    const created = await harness.request({
+      path: "/api/v1/information_systems",
+      identity: harness.identities.analyst,
+      init: {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: entry.name, owner: entry.owner, businessCriticality: "High" }),
+      },
+    });
+    assert.equal(created.status, 201, `UAT053_SYSTEM_CREATE_FAILED: ${await created.clone().text()}`);
+    const record = (await responseJson(created) as { data: Record<string, unknown> }).data;
+    assert.equal(record.owner, entry.owner);
+    assert.equal(record.ownerName, entry.ownerName, `UAT053_RECORD_OWNER_NAME_MISSING: ${entry.name}`);
+
+    const detail = await harness.request({
+      path: `/api/v1/information_systems/${String(record.documentId)}`, identity: harness.identities.analyst,
+    });
+    assert.equal(detail.status, 200);
+    const detailText = await detail.text();
+    assert.doesNotMatch(detailText, /@example\.test|"email"|"username"|"accountStatus"|"firstName"|"lastName"/, "UAT053_OWNER_RECORD_WIDENED");
+    const detailRecord = (JSON.parse(detailText) as { data: Record<string, unknown> }).data;
+    assert.equal(detailRecord.owner, entry.owner);
+    assert.equal(detailRecord.ownerName, entry.ownerName, `UAT053_DETAIL_OWNER_NAME_MISSING: ${entry.name}`);
+
+    const list = await harness.request({
+      path: `/api/v1/information_systems?q=${encodeURIComponent(entry.name)}&sort=name%3Aasc&page=1&pageSize=25`,
+      identity: harness.identities.analyst,
+    });
+    assert.equal(list.status, 200);
+    const listText = await list.text();
+    assert.doesNotMatch(listText, /@example\.test|"email"|"username"|"accountStatus"|"firstName"|"lastName"/, "UAT053_OWNER_LIST_WIDENED");
+    const listed = (JSON.parse(listText) as { data: Array<Record<string, unknown>> }).data
+      .find((row) => row.documentId === record.documentId);
+    assert.ok(listed, `UAT053_LIST_ROW_MISSING: ${entry.name}`);
+    assert.equal(listed.ownerName, entry.ownerName, `UAT053_LIST_OWNER_NAME_MISSING: ${entry.name}`);
+    assert.equal(listed.businessCriticality, "High");
+  }
+
+  const forgedName = await harness.request({
+    path: "/api/v1/information_systems",
+    identity: harness.identities.analyst,
+    init: {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: `Forged owner name ${process.pid}`, ownerName: "Forged" }),
+    },
+  });
+  assert.equal(forgedName.status, 400, "UAT053_OWNER_NAME_WRITABLE");
 });
 
 test("ADMIN-04 T-06-04 preview and commit bind the same digest and keep unchanged rows write-free", async () => {
