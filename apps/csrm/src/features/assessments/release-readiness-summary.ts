@@ -45,10 +45,11 @@ export function summarizeReleaseReadiness(readiness: {
       (requirement.state === 'met' ? metAssessment : outstandingAssessment).push(item);
       continue;
     }
-    let group = risks.get(requirement.riskNumber);
+    // Keyed by the Risk's destination, unique per Risk: Strapi only bounds a Risk number, so two may share one (IN-205).
+    let group = risks.get(requirement.destination);
     if (!group) {
       group = { riskNumber: requirement.riskNumber, href, outstanding: [], met: 0 };
-      risks.set(requirement.riskNumber, group);
+      risks.set(requirement.destination, group);
     }
     if (requirement.state === 'met') group.met += 1;
     else group.outstanding.push(requirement.label);

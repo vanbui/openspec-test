@@ -418,7 +418,7 @@ function ReleaseReadinessRequirements({ summary }: { summary: ReleaseReadinessSu
           {summary.outstandingRisks.map((row, index) => {
             const captionId = `${baseId}-missing-${index}`;
             return (
-              <li className={readinessRowClass} key={`risk-${row.riskNumber}`}>
+              <li className={readinessRowClass} key={`risk-${row.href}`}>
                 {/*
                   * The name reads `{risk number}: {n} outstanding`; what is missing is its description. The space
                   * between the two parts keeps the visible words the words of the name (Label in Name, WCAG 2.5.3).
@@ -457,7 +457,7 @@ function ReleaseReadinessRequirements({ summary }: { summary: ReleaseReadinessSu
               </li>
             ))}
             {summary.metRisks.map((row) => (
-              <li className={readinessRowClass} key={`risk-${row.riskNumber}`}>
+              <li className={readinessRowClass} key={`risk-${row.href}`}>
                 <a aria-label={`${row.riskNumber}: ${row.met} met`} className={`${readinessLinkClass} flex flex-wrap items-center gap-x-3 gap-y-1`} href={row.href}>
                   <span className="min-w-0 break-words">{row.riskNumber}</span>
                   <ReadinessState met>{row.met} met</ReadinessState>
