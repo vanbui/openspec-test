@@ -3,6 +3,7 @@ import { PermissionDeniedState } from '@/components/states/states';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { resolveSessionRuntimeMode } from '@/lib/auth/development-runtime';
 import { CapabilityDeniedError, requireCapability } from '@/lib/capabilities/server-guard';
+import { readViewerTimeZone } from '@/lib/time/viewer-time-zone';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,13 +19,14 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
     ? { displayName: session.displayName, ...(session.email ? { email: session.email } : {}) }
     : undefined;
   const granted = await sessionAdapter.capabilitiesFor(session).granted();
+  const timeZone = await readViewerTimeZone();
 
   try {
     requireCapability('assessment-request:read', granted);
   } catch (error) {
     if (error instanceof CapabilityDeniedError) {
       return (
-        <AppShell account={account} granted={granted} role={session.developmentRole}>
+        <AppShell account={account} granted={granted} role={session.developmentRole} timeZone={timeZone}>
           <PermissionDeniedState />
         </AppShell>
       );
@@ -33,5 +35,5 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
     throw error;
   }
 
-  return <AppShell account={account} granted={granted} role={session.developmentRole}>{children}</AppShell>;
+  return <AppShell account={account} granted={granted} role={session.developmentRole} timeZone={timeZone}>{children}</AppShell>;
 }

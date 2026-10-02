@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installTestResizeObserver } from '@/test/layout-stubs';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/app' }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/app', useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('@/lib/time/time-zone-actions', () => ({ syncViewerTimeZoneAction: vi.fn(async () => ({ ok: false })) }));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
 }));
@@ -33,7 +34,7 @@ afterEach(() => {
 describe('AppShell in OIDC mode (an account, no development role)', () => {
   it('shows an initials account button in the header and no sidebar footer', () => {
     render(
-      <AppShell account={{ displayName: 'Jane Doe' }} granted={granted}>
+      <AppShell account={{ displayName: 'Jane Doe' }} granted={granted} timeZone={null}>
         <p>content</p>
       </AppShell>,
     );
@@ -49,7 +50,7 @@ describe('AppShell in OIDC mode (an account, no development role)', () => {
   it('opens a menu with the name and a Sign out item that invokes the sign-out action', async () => {
     const user = userEvent.setup();
     render(
-      <AppShell account={{ displayName: 'Jane Doe' }} granted={granted}>
+      <AppShell account={{ displayName: 'Jane Doe' }} granted={granted} timeZone={null}>
         <p>content</p>
       </AppShell>,
     );
@@ -68,7 +69,7 @@ describe('AppShell in OIDC mode (an account, no development role)', () => {
   it('opens from the keyboard', async () => {
     const user = userEvent.setup();
     render(
-      <AppShell account={{ displayName: 'Jane Doe' }} granted={granted}>
+      <AppShell account={{ displayName: 'Jane Doe' }} granted={granted} timeZone={null}>
         <p>content</p>
       </AppShell>,
     );
@@ -82,7 +83,7 @@ describe('AppShell in OIDC mode (an account, no development role)', () => {
   it('shows the name and the email as two separate lines', async () => {
     const user = userEvent.setup();
     render(
-      <AppShell account={{ displayName: 'Jane Doe', email: 'jane.doe@idambox.com' }} granted={granted}>
+      <AppShell account={{ displayName: 'Jane Doe', email: 'jane.doe@idambox.com' }} granted={granted} timeZone={null}>
         <p>content</p>
       </AppShell>,
     );
@@ -97,7 +98,7 @@ describe('AppShell in OIDC mode (an account, no development role)', () => {
   it('does not repeat an email-only identity', async () => {
     const user = userEvent.setup();
     render(
-      <AppShell account={{ displayName: 'jane.doe@idambox.com', email: 'jane.doe@idambox.com' }} granted={granted}>
+      <AppShell account={{ displayName: 'jane.doe@idambox.com', email: 'jane.doe@idambox.com' }} granted={granted} timeZone={null}>
         <p>content</p>
       </AppShell>,
     );
@@ -112,7 +113,7 @@ describe('AppShell in OIDC mode (an account, no development role)', () => {
 describe('AppShell in development mode (a role, no account), unchanged', () => {
   it('shows the role switcher and no account menu or Sign out control', () => {
     render(
-      <AppShell granted={granted} role="Requestor">
+      <AppShell granted={granted} role="Requestor" timeZone={null}>
         <p>content</p>
       </AppShell>,
     );
@@ -126,7 +127,7 @@ describe('AppShell in development mode (a role, no account), unchanged', () => {
 describe('AppShell with neither a role nor an account, byte-identical to before', () => {
   it('renders no shell-footer and no account menu', () => {
     render(
-      <AppShell granted={granted}>
+      <AppShell granted={granted} timeZone={null}>
         <p>content</p>
       </AppShell>,
     );

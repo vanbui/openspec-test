@@ -2,6 +2,8 @@ import {
   CircleCheck, ClipboardPenLine, FilePenLine, RotateCcw, Trash2, UndoDot,
 } from 'lucide-react';
 
+import { LocalInstant } from '@/components/csrm/local-time';
+
 import type { QuestionnaireSummary } from './questionnaire-service';
 
 type TimelineEvent = NonNullable<QuestionnaireSummary['events']>[number];
@@ -15,12 +17,6 @@ const eventPresentation = {
   'answer-cleared': { icon: UndoDot, label: 'Answer cleared' },
 } as const;
 
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('en-AU', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC',
-  }).format(new Date(value));
-}
-
 /* A document id is an opaque identifier, not a person; never show one as a name. */
 function actor(event: TimelineEvent): string {
   return event.by?.displayName?.trim() || 'An analyst';
@@ -30,7 +26,7 @@ function DetailEntry({ event }: { event: TimelineEvent }) {
   const presentation = eventPresentation[event.kind];
   const Icon = presentation.icon;
   return <li className="grid min-w-0 gap-2 rounded-lg border border-border bg-card p-3">
-    <div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{presentation.label}</p><p className="text-sm text-muted-foreground"><time dateTime={event.at}>{formatDate(event.at)}</time> by {actor(event)}</p></div></div>
+    <div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{presentation.label}</p><p className="text-sm text-muted-foreground"><LocalInstant style="date-time" value={event.at} /> by {actor(event)}</p></div></div>
     {event.reason ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Reason: </span>{event.reason}</p> : null}
     {event.questionKey ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Question: </span>{event.questionKey}</p> : null}
     {event.explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground"><span className="font-medium">Detail: </span>{event.explanation}</p> : null}
@@ -44,7 +40,7 @@ function SummaryEntry({ event, count }: { event: TimelineEvent; count?: number }
     : event.kind === 'returned-to-review' ? 'Questionnaire taken back for analyst review'
       : event.kind === 'answer-cleared' ? 'An answer was cleared because its question changed'
         : `${count ?? 1} question${count === 1 ? '' : 's'} added or changed`;
-  return <li className="grid min-w-0 gap-1 rounded-lg border border-border bg-card p-3"><div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{label}</p><p className="text-sm text-muted-foreground"><time dateTime={event.at}>{formatDate(event.at)}</time></p></div></div>{event.explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground">{event.explanation}</p> : null}</li>;
+  return <li className="grid min-w-0 gap-1 rounded-lg border border-border bg-card p-3"><div className="flex min-w-0 items-start gap-2"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><div className="min-w-0"><p className="font-medium text-foreground">{label}</p><p className="text-sm text-muted-foreground"><LocalInstant style="date-time" value={event.at} /></p></div></div>{event.explanation ? <p className="min-w-0 [overflow-wrap:anywhere] text-sm text-foreground">{event.explanation}</p> : null}</li>;
 }
 
 export function QuestionnaireRevisionTimeline({ depth, questionnaire }: { depth: 'detail' | 'summary'; questionnaire: QuestionnaireSummary }) {
