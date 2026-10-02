@@ -3,13 +3,24 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   syncViewerTimeZoneAction: vi.fn(),
+  /** When set, the action rejects with it through a promise nothing else has handled. */
+  syncRejection: null as Error | null,
 }));
 
-vi.mock('@/lib/time/time-zone-actions', () => ({ syncViewerTimeZoneAction: mocks.syncViewerTimeZoneAction }));
+/*
+ * vi.fn handles every promise it returns (it records how each one settled), so a rejection it returns can
+ * never be unhandled. A rejected sync is therefore handed to the component as a promise of its own (IN-402).
+ */
+vi.mock('@/lib/time/time-zone-actions', () => ({
+  syncViewerTimeZoneAction: (zone: string) => {
+    const result = mocks.syncViewerTimeZoneAction(zone);
+    return mocks.syncRejection ? Promise.reject(mocks.syncRejection) : result;
+  },
+}));
 
 import { LocalInstant, TimeZoneProvider, useViewerTimeZone, ViewerTimeZoneSync } from './local-time';
 
@@ -30,6 +41,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   mocks.syncViewerTimeZoneAction.mockReset();
+  mocks.syncRejection = null;
 });
 
 describe('LocalInstant', () => {
@@ -134,15 +146,25 @@ describe('ViewerTimeZoneSync', () => {
     expect(mocks.syncViewerTimeZoneAction).not.toHaveBeenCalled();
   });
 
-  it('swallows a failed sync, leaving times labelled UTC', async () => {
+  /*
+   * IN-402: the zone never changes in this test, so the UTC label holds whatever the sync does. The proof that
+   * the rejection is swallowed is that the process sees no unhandled rejection of the action's own promise.
+   */
+  it('swallows a rejected sync without an unhandled rejection', async () => {
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    onTestFinished(() => { process.off('unhandledRejection', unhandled); });
     stubBrowserZone('Australia/Brisbane');
-    mocks.syncViewerTimeZoneAction.mockRejectedValue(new Error('offline'));
+    mocks.syncRejection = new Error('offline');
     const { container } = render(
       <TimeZoneProvider zone={null}><ViewerTimeZoneSync /><LocalInstant style="time" value={instant} /></TimeZoneProvider>,
     );
 
     await waitFor(() => expect(mocks.syncViewerTimeZoneAction).toHaveBeenCalledOnce());
+    // Node reports an unhandled rejection once the microtasks drain; two macrotask turns are past that point.
     await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(unhandled).not.toHaveBeenCalled();
     expect(normalised(container.querySelector('time')?.textContent)).toBe('5:47 am UTC');
   });
 });
