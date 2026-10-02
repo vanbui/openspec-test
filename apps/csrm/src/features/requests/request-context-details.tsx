@@ -29,6 +29,12 @@ function TextRow({ label, value, wide }: { label: string; value: string | null |
   return <Row label={label} wide={wide}>{value?.trim() ? value : notProvided}</Row>;
 }
 
+/* A yes or no answer, or Not provided when none was served: an unknown answer is not a No (IN-204). */
+function yesNo(value: boolean | null | undefined): string {
+  if (value === undefined || value === null) return notProvided;
+  return value ? 'Yes' : 'No';
+}
+
 function NameList({ items }: { items: readonly RequestRelationSummary[] }) {
   if (items.length === 0) return <>None selected</>;
   return <ul className="grid gap-1">{items.map((item) => <li key={item.documentId}>{item.name}</li>)}</ul>;
@@ -56,7 +62,7 @@ export function RequestContextDetails({ request }: { request: CsrmAssessmentRequ
         <Group title="Business context">
           <TextRow label="Business purpose" value={request.businessPurpose} wide />
           <TextRow label="Business criticality" value={request.businessCriticality} />
-          <Row label="Third-party involvement">{request.thirdPartyInvolvement ? 'Yes' : 'No'}</Row>
+          <Row label="Third-party involvement">{yesNo(request.thirdPartyInvolvement)}</Row>
           <TextRow label="Third-party details" value={request.thirdPartyDetails} wide />
           <TextRow label="Regulatory requirements" value={request.regulatoryRequirements} wide />
         </Group>
