@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   getQuestionnaire: vi.fn(),
   getQuestionnaireGovernanceQuestions: vi.fn(),
   getRequest: vi.fn(),
+  getRequestGenerationJobs: vi.fn(),
   granted: vi.fn(),
   listControlImplementations: vi.fn(),
   listControls: vi.fn(),
@@ -32,6 +33,7 @@ const recordReads = [
   'getQuestionnaire',
   'getQuestionnaireGovernanceQuestions',
   'getRequest',
+  'getRequestGenerationJobs',
   'listControlImplementations',
   'listControls',
   'listInformationAssets',
@@ -63,6 +65,7 @@ vi.mock('@/features/questionnaires/questionnaire-service', () => ({
 }));
 vi.mock('@/features/assessments/assessment-service', () => ({
   getAnalystAssessment: mocks.getAnalystAssessment,
+  getRequestGenerationJobs: mocks.getRequestGenerationJobs,
   listControlImplementations: mocks.listControlImplementations,
   listControls: mocks.listControls,
   listRiskTypes: mocks.listRiskTypes,
@@ -84,6 +87,7 @@ vi.mock('@/features/assessments/assessment-actions', () => ({
   deleteControlImplementationAction: vi.fn(),
   getAssessmentDraftJobAction: vi.fn(),
   getQuestionnaireGenerationJobAction: vi.fn(),
+  getRequestGenerationJobsAction: vi.fn(),
   refreshAnalystAssessmentAction: vi.fn(),
   releaseAssessmentAction: vi.fn(),
   retryAssessmentDraftJobAction: vi.fn(),
@@ -159,6 +163,7 @@ beforeEach(() => {
   mocks.getQuestionnaire.mockResolvedValue(refused);
   mocks.getQuestionnaireGovernanceQuestions.mockResolvedValue(refused);
   mocks.getAnalystAssessment.mockResolvedValue(refused);
+  mocks.getRequestGenerationJobs.mockResolvedValue({ data: { questionnaireGeneration: null, assessmentDraft: null }, error: null });
   for (const list of [mocks.listControlImplementations, mocks.listControls, mocks.listInformationAssets, mocks.listInformationSystems, mocks.listRiskTypes]) {
     list.mockResolvedValue({ data: [], error: null });
   }
@@ -175,6 +180,7 @@ describe('the analyst request route', () => {
     render(await AssessmentRequestDetailContent(props()));
 
     expect(mocks.getRequest).not.toHaveBeenCalled();
+    expect(mocks.getRequestGenerationJobs).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { level: 1, name: 'Assessment request review' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this request');
     expect(screen.getByRole('alert')).toHaveTextContent('Reviewing requests is for Security Analysts. Your own requests are in My Requests.');
@@ -250,6 +256,35 @@ describe('the analyst request route', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
       .toHaveTextContent('discarding any changes analysts made to its questions since it was generated');
+  });
+
+  /*
+   * UAT-041 (D-26, D-47): after the gate and the request read, the page reads the request's generation jobs
+   * and seeds the hub, so an analyst who comes back mid-generation sees the job instead of a second Generate.
+   */
+  it('reads the request generation jobs after the request and shows a running job in place of Generate', async () => {
+    signInAsAnalyst();
+    mocks.getRequest.mockResolvedValue({ data: submittedRequest, error: null });
+    const running = { jobId: 'generation-job', requestId: 'record-under-test', providerName: 'Context provider', providerVersion: '1.0', attempt: 1, queuedAt: '2026-09-03T00:00:00.000Z', status: 'running' as const, startedAt: '2026-09-03T00:00:01.000Z' };
+    mocks.getRequestGenerationJobs.mockResolvedValue({ data: { questionnaireGeneration: { job: running, canRetry: true }, assessmentDraft: null }, error: null });
+
+    render(await AssessmentRequestDetailContent(props()));
+
+    expect(mocks.getRequestGenerationJobs).toHaveBeenCalledTimes(1);
+    expect(mocks.getRequestGenerationJobs).toHaveBeenCalledWith('record-under-test');
+    expect(mocks.getRequest.mock.invocationCallOrder[0]).toBeLessThan(mocks.getRequestGenerationJobs.mock.invocationCallOrder[0]);
+    expect(screen.getByText('Questionnaire generation is running', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('You can leave this page. The status shows here when you come back.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+  });
+
+  it('does not read the generation jobs when Strapi refuses an analyst the request', async () => {
+    signInAsAnalyst();
+    mocks.getRequest.mockResolvedValue({ data: null, error: { status: 403, message: 'Refused' } });
+
+    render(await AssessmentRequestDetailContent(props()));
+
+    expect(mocks.getRequestGenerationJobs).not.toHaveBeenCalled();
   });
 
   it('renders the record variant when Strapi refuses an analyst the request', async () => {

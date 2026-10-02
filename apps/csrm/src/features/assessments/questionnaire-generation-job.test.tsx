@@ -5,6 +5,7 @@ import type { QuestionnaireGenerationJob as QuestionnaireGenerationJobRecord } f
 
 const actionMocks = vi.hoisted(() => ({
   getQuestionnaireGenerationJobAction: vi.fn(),
+  getRequestGenerationJobsAction: vi.fn(),
   retryQuestionnaireGenerationJobAction: vi.fn(),
   startQuestionnaireGenerationAction: vi.fn(),
 }));
@@ -327,5 +328,76 @@ describe('a failed questionnaire generation job', () => {
 
     expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledOnce();
     expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledWith({ requestId: 'request-one', replaceUnansweredQuestionnaire: true });
+  });
+});
+
+/*
+ * UAT-041 (D-26, D-27, UI-SPEC §12.1): an analyst who leaves the request while a job runs and comes back sees
+ * the job's status in place of Generate or Replace. The page seeds the card from the request's jobs read; a
+ * job the viewer started is polled by id, and a job another Security Analyst started is polled by request.
+ */
+const runningJob: QuestionnaireGenerationJobRecord = { ...queuedJob, status: 'running', startedAt: '2026-09-03T00:00:01.000Z' };
+const leaveAndReturn = 'You can leave this page. The status shows here when you come back.';
+const startedByAnother = 'Started by another Security Analyst.';
+
+describe('a questionnaire generation job seeded when the analyst comes back', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    ['queued', queuedJob, 'Questionnaire generation is queued'],
+    ['running', runningJob, 'Questionnaire generation is running'],
+  ] as const)('shows a %s job the viewer started in place of Generate and Replace, polled by id', async (_status, job, title) => {
+    actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: job });
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job, canRetry: true }} />);
+
+    expect(screen.getByText(title, { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText(leaveAndReturn)).toBeInTheDocument();
+    expect(screen.queryByText(startedByAnother)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/server-owned/i);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledWith({ jobId: 'job-one' });
+    expect(actionMocks.getRequestGenerationJobsAction).not.toHaveBeenCalled();
+  });
+
+  it('shows a running job another Security Analyst started and polls it by request, never by id', async () => {
+    actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: true, data: { questionnaireGeneration: { job: completedJob, canRetry: false }, assessmentDraft: null } });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: runningJob, canRetry: false }} />);
+
+    expect(screen.getByText('Questionnaire generation is running', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText(leaveAndReturn)).toBeInTheDocument();
+    expect(screen.getByText(startedByAnother)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(actionMocks.getRequestGenerationJobsAction).toHaveBeenCalledWith({ requestId: 'request-one' });
+    expect(actionMocks.getQuestionnaireGenerationJobAction).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Review generated questionnaire' })).toHaveAttribute('href', '/app/review/questionnaires/questionnaire-one');
+  });
+
+  it('does not reset the card when the page hands it a new but equal seeded job', async () => {
+    actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: completedJob });
+    const { rerender } = render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: runningJob, canRetry: true }} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByRole('link', { name: 'Review generated questionnaire' })).toBeInTheDocument();
+
+    rerender(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: { ...runningJob }, canRetry: true }} />);
+    expect(screen.getByRole('link', { name: 'Review generated questionnaire' })).toBeInTheDocument();
+    expect(screen.queryByText('Questionnaire generation is running', { selector: 'p' })).not.toBeInTheDocument();
+  });
+
+  it('shows the idle action when nothing is seeded', () => {
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" />);
+
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeInTheDocument();
+    expect(screen.queryByText(leaveAndReturn)).not.toBeInTheDocument();
   });
 });

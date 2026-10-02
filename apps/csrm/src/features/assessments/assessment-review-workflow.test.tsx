@@ -10,6 +10,10 @@ const actionMocks = vi.hoisted(() => ({
   startAssessmentDraftAction: vi.fn(),
   getAssessmentDraftJobAction: vi.fn(),
   retryAssessmentDraftJobAction: vi.fn(),
+  getQuestionnaireGenerationJobAction: vi.fn(),
+  getRequestGenerationJobsAction: vi.fn(),
+  retryQuestionnaireGenerationJobAction: vi.fn(),
+  startQuestionnaireGenerationAction: vi.fn(),
 }));
 vi.mock('./assessment-actions', () => actionMocks);
 vi.mock('@/features/requests/request-actions', () => ({ revertRequestToDraftAction: vi.fn() }));
@@ -759,5 +763,59 @@ describe('bounded assessment draft generation job', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
     expect(screen.getByRole('status')).toHaveTextContent('Checking the current draft generation status');
+  });
+});
+
+/*
+ * UAT-041 (D-26, UI-SPEC §12.1): the page reads the request's generation jobs and the hub seeds the
+ * questionnaire card with a queued, running or failed job, which takes the place of Generate or Replace.
+ * A completed job is not seeded: the hub shows its normal action.
+ */
+describe('the hub seeded with the request’s generation jobs', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const submittedWithoutQuestionnaire = {
+    documentId: 'request-10',
+    requestNumber: 'RAR-0050',
+    title: 'Returning analyst review',
+    description: 'Submitted request whose questionnaire is generating.',
+    requestStatus: 'submitted' as const,
+    submittedDate: '2026-08-30T01:00:00.000Z',
+    dueDate: null,
+    updatedAt: null,
+    dueDateLabel: null,
+    updatedDateLabel: null,
+    informationSystems: [],
+    informationAssets: [],
+    questionnaire: null,
+    assessment: null,
+    relationships: {
+      questionnaire: { availability: 'absent' as const },
+      assessment: { availability: 'absent' as const },
+    },
+  };
+  const generationBase = { jobId: 'generation-job', requestId: 'request-10', providerName: 'Context provider', providerVersion: '1.0', attempt: 1, queuedAt: '2026-09-03T00:00:00.000Z' };
+  const runningGeneration = { ...generationBase, status: 'running' as const, startedAt: '2026-09-03T00:00:01.000Z' };
+  const completedGeneration = {
+    ...runningGeneration,
+    status: 'completed' as const,
+    completedAt: '2026-09-03T00:00:02.000Z',
+    questionnaire: { documentId: 'questionnaire-10', questionnaireNumber: 'QNR-2026-KX2AHV', title: 'Generated questionnaire', generatedDate: '2026-09-03T00:00:02.000Z', generatedBy: null },
+  };
+
+  it('shows a running questionnaire job another analyst started instead of Generate questionnaire', () => {
+    render(<AssessmentDetail generationJobs={{ questionnaireGeneration: { job: runningGeneration, canRetry: false }, assessmentDraft: null }} request={submittedWithoutQuestionnaire} state="populated" />);
+
+    expect(screen.getByText('Questionnaire generation is running', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('Started by another Security Analyst.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+  });
+
+  it('does not seed a completed job, so the hub offers its normal action', () => {
+    render(<AssessmentDetail generationJobs={{ questionnaireGeneration: { job: completedGeneration, canRetry: true }, assessmentDraft: null }} request={submittedWithoutQuestionnaire} state="populated" />);
+
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeInTheDocument();
+    expect(screen.queryByText('Questionnaire generation is ready for review')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Review generated questionnaire' })).not.toBeInTheDocument();
   });
 });
