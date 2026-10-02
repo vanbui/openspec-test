@@ -6,10 +6,11 @@ import * as requestSchemas from './request-schema';
 const createRequest = vi.hoisted(() => vi.fn());
 const updateRequest = vi.hoisted(() => vi.fn());
 const submitRequest = vi.hoisted(() => vi.fn());
+const revertRequestToDraft = vi.hoisted(() => vi.fn());
 const revalidatePath = vi.hoisted(() => vi.fn());
 const redirect = vi.hoisted(() => vi.fn());
 
-vi.mock('./request-service', () => ({ createRequest, updateRequest, submitRequest }));
+vi.mock('./request-service', () => ({ createRequest, updateRequest, submitRequest, revertRequestToDraft }));
 vi.mock('next/cache', () => ({ revalidatePath }));
 vi.mock('next/navigation', () => ({ redirect }));
 
@@ -28,6 +29,7 @@ afterEach(() => {
   createRequest.mockReset();
   updateRequest.mockReset();
   submitRequest.mockReset();
+  revertRequestToDraft.mockReset();
   revalidatePath.mockReset();
   redirect.mockReset();
 });
@@ -116,7 +118,7 @@ describe('request mutation action contract', () => {
     });
     await expect(actions.updateRequestAction({ documentId: 'request-1', ...draft })).resolves.toEqual({
       ok: false,
-      formError: 'This request changed while you were editing it. Reload and try again.',
+      formError: 'This request can’t be saved in its current state.',
     });
     await expect(actions.submitRequestAction({ documentId: 'request-1', ...draft })).resolves.toEqual({
       ok: false,
@@ -133,5 +135,69 @@ describe('request mutation action contract', () => {
 
     expect(revalidatePath).toHaveBeenCalledTimes(8);
     expect(redirect).toHaveBeenCalledTimes(2);
+  });
+
+  it('says a create or submit conflict cannot be saved in the request’s current state, not that it changed', async () => {
+    const actions = await loadActions();
+    const draft = { title: 'Customer portal review' };
+    createRequest.mockResolvedValueOnce({ data: null, error: { message: 'raw backend detail', status: 409 } });
+    submitRequest.mockResolvedValueOnce({ data: null, error: { message: 'raw backend detail', status: 409, reason: 'REQUEST_NOT_SUBMITTED' } });
+
+    await expect(actions.createRequestAction(draft)).resolves.toEqual({ ok: false, formError: 'This request can’t be saved in its current state.' });
+    await expect(actions.submitRequestAction({ documentId: 'request-1', ...draft })).resolves.toEqual({
+      ok: false,
+      formError: 'This request can’t be saved in its current state.',
+    });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe('request return to draft refusals (UI-SPEC §10.2 A)', () => {
+  const input = { documentId: 'request-1', reason: 'Scope changed' };
+  const conflict = (reason?: string) => ({ data: null, error: { message: 'raw backend detail', status: 409, ...(reason ? { reason } : {}) } });
+
+  it('states that work has started and returns the served reason', async () => {
+    const actions = await loadActions();
+    revertRequestToDraft.mockResolvedValueOnce(conflict('REQUEST_WORK_STARTED'));
+
+    await expect(actions.revertRequestToDraftAction(input)).resolves.toEqual({
+      ok: false,
+      formError: 'Work on this request has started, so it can no longer return to draft.',
+      reason: 'REQUEST_WORK_STARTED',
+    });
+    expect(revertRequestToDraft).toHaveBeenCalledWith('request-1', 'Scope changed');
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('asks for a refresh only when the request is no longer submitted', async () => {
+    const actions = await loadActions();
+    revertRequestToDraft.mockResolvedValueOnce(conflict('REQUEST_NOT_SUBMITTED'));
+
+    await expect(actions.revertRequestToDraftAction(input)).resolves.toEqual({
+      ok: false,
+      formError: 'Only a submitted request can return to draft, and this one is no longer submitted. Refresh the page to see where it is.',
+      reason: 'REQUEST_NOT_SUBMITTED',
+    });
+  });
+
+  it('falls back without a reason and never says the request changed', async () => {
+    const actions = await loadActions();
+    revertRequestToDraft.mockResolvedValueOnce(conflict());
+
+    const result = await actions.revertRequestToDraftAction(input);
+    expect(result).toEqual({ ok: false, formError: 'This request can’t return to draft in its current state.' });
+    expect(result).not.toHaveProperty('reason');
+  });
+
+  it('keeps the existing permission, missing and unavailable messages', async () => {
+    const actions = await loadActions();
+    revertRequestToDraft
+      .mockResolvedValueOnce({ data: null, error: { message: 'raw backend detail', status: 403 } })
+      .mockResolvedValueOnce({ data: null, error: { message: 'raw backend detail', status: 404 } })
+      .mockResolvedValueOnce({ data: null, error: { message: 'raw backend detail', status: 503 } });
+
+    await expect(actions.revertRequestToDraftAction(input)).resolves.toEqual({ ok: false, formError: 'You do not have permission to save this request.' });
+    await expect(actions.revertRequestToDraftAction(input)).resolves.toEqual({ ok: false, formError: 'This request is no longer available.' });
+    await expect(actions.revertRequestToDraftAction(input)).resolves.toEqual({ ok: false, formError: 'The request service is unavailable. Please try again later.' });
   });
 });
