@@ -70,4 +70,30 @@ test.describe('Home and navigation @journey', () => {
     await expect(needsAction.locator('[data-slot="kpi-tile"]'), 'the four Needs action tiles').toHaveCount(4);
     await expect(page.getByRole('region', { name: 'Review queue', exact: true }), 'the Review queue widget').toBeVisible();
   });
+
+  /*
+   * D-17: the analyst dashboard's old address is a temporary redirect to Home from next.config.ts. It
+   * answers before the proxy, so even a request with no session gets the 307 and not the sign-in
+   * redirect, and the query is kept. A bookmark lands every actor on their own Home; the review queues
+   * under /app/review/ are unaffected.
+   */
+  test('UX08_REVIEW_REDIRECTS_TO_HOME: /app/review answers 307 to Home with its query, for every actor', async ({ page }) => {
+    await expectStrapiHealthy(page);
+    const redirect = await page.request.get('/app/review?from=bookmark', { maxRedirects: 0 });
+    expect(redirect.status(), 'UX08_REVIEW_REDIRECTS_TO_HOME: a temporary redirect').toBe(307);
+    expect(redirect.headers().location, 'UX08_REVIEW_REDIRECTS_TO_HOME: to Home, query kept').toMatch(/\/app\?from=bookmark$/);
+
+    for (const role of ['Security Analyst', 'Requestor'] as const) {
+      await signInAs(page, role);
+      await page.goto('/app/review');
+      await expect.poll(() => new URL(page.url()).pathname, { message: `${role} lands on Home` }).toBe('/app');
+      await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true }), `UX08_REVIEW_REDIRECTS_TO_HOME:${role}`).toBeVisible();
+      await expect(page.getByRole('banner').getByText(role, { exact: true })).toBeVisible();
+    }
+
+    await signInAs(page, 'Security Analyst');
+    await page.goto('/app/review/requests');
+    await expect.poll(() => new URL(page.url()).pathname, { message: 'a review queue is not redirected' }).toBe('/app/review/requests');
+    await expect(page.getByRole('heading', { level: 1, name: 'Assessment request review', exact: true })).toBeVisible();
+  });
 });

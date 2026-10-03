@@ -1,6 +1,6 @@
 import { PermissionDeniedState } from '@/components/states/states';
 import { AnalystDashboard, AnalystDashboardSkeleton } from '@/features/analyst-dashboard/analyst-dashboard';
-import { analystDashboardCopy, emptyAnalystDashboard } from '@/features/analyst-dashboard/analyst-dashboard-presentation';
+import { analystDashboardCopy, analystHomePermissionAction, emptyAnalystDashboard } from '@/features/analyst-dashboard/analyst-dashboard-presentation';
 import { getAnalystDashboard, type AnalystDashboard as AnalystDashboardData } from '@/features/analyst-dashboard/analyst-dashboard-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
@@ -23,7 +23,7 @@ export async function AnalystHomeContent({ searchParams }: AnalystHomeContentPro
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
-  if (!can('assessment:review', granted)) return <PermissionDeniedState area={analystDashboardCopy.area} />;
+  if (!can('assessment:review', granted)) return <PermissionDeniedState action={analystHomePermissionAction} area={analystDashboardCopy.area} />;
 
   const state = await getAnalystDashboard();
   // A refusal or a failed summary is authoritative: no fixture can stand in for it.

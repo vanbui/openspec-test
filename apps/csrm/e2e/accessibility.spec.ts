@@ -45,7 +45,8 @@ const phase7OverdueRiskNumber = 'RSK-E2E-P7-OVERDUE-001';
  * heading its page header renders. Detail routes head with the fixture record's title or their fixed
  * detail heading; a refused page is headed by the page, never by the record.
  */
-const dashboard: SettledExpectation = { url: /\/app$/, title: 'Dashboard | IdamBox CSRM', heading: 'Dashboard' };
+// Home is /app for every actor (D-16): the analyst's review summary or the Requestor's own work.
+const home: SettledExpectation = { url: /\/app$/, title: 'Home | IdamBox CSRM', heading: 'Home' };
 const myRequests: SettledExpectation = { url: /\/app\/requests$/, title: 'My Requests | IdamBox CSRM', heading: 'My Requests' };
 const newRequest: SettledExpectation = { url: /\/app\/requests\/new$/, title: 'New Request | IdamBox CSRM', heading: 'New assessment request' };
 const myQuestionnaires: SettledExpectation = { url: /\/app\/questionnaires$/, title: 'My Questionnaires | IdamBox CSRM', heading: 'My Questionnaires' };
@@ -68,7 +69,6 @@ const phase7Reports = [
  */
 type Refusal = { route: string; title: string; heading: string; permission: string };
 const phase7Refusals: readonly Refusal[] = [
-  { route: '/app/review', heading: 'Analyst dashboard', title: 'Analyst Dashboard | IdamBox CSRM', permission: 'You don’t have access to the analyst dashboard' },
   { route: '/app/alerts', heading: 'Alerts', title: 'Alerts | IdamBox CSRM', permission: 'You don’t have access to alerts' },
   { route: '/app/reports', heading: 'Reports', title: 'Reports | IdamBox CSRM', permission: 'You don’t have access to reports' },
   { route: '/app/reports/risk-exposure', heading: 'Reports', title: 'Reports | IdamBox CSRM', permission: 'You don’t have access to reports' },
@@ -212,7 +212,7 @@ const permissionState = (page: Page, heading: string): Guard => async (label) =>
   await expectNoErrorState(page, label);
 };
 
-/** A personal dashboard proves its seven lifecycle cards. */
+/** The Requestor Home proves its seven lifecycle cards. */
 const lifecycleDashboard = (page: Page): Guard => async (label) => {
   const cards = page.getByRole('region', { name: 'My Assessment Requests' }).getByRole('list', { name: 'My Assessment Requests by lifecycle state' }).getByRole('listitem');
   await expect(cards, `${label} shows the seven lifecycle cards`).toHaveCount(7);
@@ -233,7 +233,7 @@ const shows = (page: Page, what: string, locate: (page: Page) => Locator): Guard
 
 const importGuidance = (page: Page): Guard => shows(page, 'Choose CSV file', (current) => current.getByRole('main').getByRole('button', { name: 'Choose CSV file', exact: true }));
 
-/** The analyst dashboard proves its four KPI tiles, each with a figure. */
+/** The analyst Home proves its four KPI tiles, each with a figure. */
 const analystDashboardTiles = (page: Page): Guard => async (label) => {
   const tiles = page.getByRole('region', { name: 'Needs action', exact: true }).locator('[data-slot="kpi-tile"]');
   await expect(tiles, `${label} shows its four KPI tiles`).toHaveCount(4);
@@ -286,7 +286,8 @@ test('has no axe violations in the signed-in CSRM shell', async ({ page }) => {
   await attachCspCollector(page);
   // signInAs asserts the shell (the level-one Home heading and the role in the banner), never the URL (D-15).
   await signInAs(page, 'Security Analyst');
-  await expectAccessibleAtBothWidths(page, 'the signed-in shell', dashboard, lifecycleDashboard(page));
+  // The analyst's Home is the review summary (D-16), so the shell is proved over its four tiles.
+  await expectAccessibleAtBothWidths(page, 'the signed-in shell', home, analystDashboardTiles(page));
 });
 
 test('has no axe violations on phase 06.8 governed questionnaire surfaces', async ({ page }) => {
@@ -316,7 +317,7 @@ test('has no axe violations on phase 06.8 governed questionnaire surfaces', asyn
   await page.getByRole('link', { name: requestTitle }).first().click();
   await expectAccessibleAtBothWidths(page, 'Requestor request hub', { url: /\/app\/requests\/[^/?]+$/, title: requestDetailTitle, heading: requestTitle }, shows(page, 'its request actions', (current) => current.getByRole('region', { name: 'Request actions' })));
   await page.goto('/app');
-  await expectAccessibleAtBothWidths(page, 'Requestor dashboard lifecycle cards', dashboard, lifecycleDashboard(page));
+  await expectAccessibleAtBothWidths(page, 'Requestor Home lifecycle cards', home, lifecycleDashboard(page));
 
   await switchActor(page, 'Security Analyst');
   await page.goto('/app/review/requests');
@@ -354,8 +355,8 @@ test('has no axe violations on phase 07 analyst surfaces', async ({ page }) => {
   test.setTimeout(480_000);
   await attachCspCollector(page);
   await signInAs(page, 'Security Analyst');
-  await page.goto('/app/review');
-  await expectAccessibleAtBothWidths(page, 'analyst dashboard', { url: /\/app\/review$/, title: 'Analyst Dashboard | IdamBox CSRM', heading: 'Analyst dashboard' }, analystDashboardTiles(page));
+  await page.goto('/app');
+  await expectAccessibleAtBothWidths(page, 'analyst Home', home, analystDashboardTiles(page));
 
   await page.goto('/app/alerts?kind=risk-treatment-overdue&pageSize=50');
   await expectAccessibleAtBothWidths(page, 'analyst alerts', { url: /\/app\/alerts\?/, title: 'Alerts | IdamBox CSRM', heading: 'Alerts' }, shows(page, phase7OverdueRiskNumber, (current) => current.getByRole('link', { name: phase7OverdueRiskNumber, exact: true }).filter({ visible: true })));
@@ -443,7 +444,7 @@ test('has no axe violations on the Requestor lists, record edit and refusal rout
   const janesRequest = await recordHref(page, '/app/requests', requestTitle);
 
   await sweep(page, [
-    { route: '/app', surface: 'Requestor dashboard', expected: dashboard, guard: lifecycleDashboard(page) },
+    { route: '/app', surface: 'Requestor Home', expected: home, guard: lifecycleDashboard(page) },
     { route: '/app/requests', surface: 'Requestor My Requests', expected: myRequests, guard: populatedList(page, requestTitle) },
     { route: '/app/requests/new', surface: 'Requestor new request', expected: newRequest, guard: formField(page, 'Request title') },
     /*
@@ -472,7 +473,7 @@ test('has no axe violations for the Secondary Requestor lists and the denials of
   await switchActor(page, 'Secondary Requestor');
   const main = (current: Page) => current.getByRole('main');
   await sweep(page, [
-    { route: '/app', surface: 'Secondary Requestor dashboard', expected: dashboard, guard: lifecycleDashboard(page) },
+    { route: '/app', surface: 'Secondary Requestor Home', expected: home, guard: lifecycleDashboard(page) },
     { route: '/app/requests', surface: 'Secondary Requestor My Requests', expected: myRequests, guard: emptyList(page) },
     { route: '/app/requests/new', surface: 'Secondary Requestor new request', expected: newRequest, guard: formField(page, 'Request title') },
     { route: '/app/questionnaires', surface: 'Secondary Requestor My Questionnaires', expected: myQuestionnaires, guard: emptyList(page) },
@@ -519,7 +520,7 @@ test('keyboard operability of dialogs and sheets', async ({ page }) => {
   // The navigation sheet at 375: Tab reaches Menu, Enter opens it, focus stays inside, Escape returns it.
   await page.setViewportSize({ width: 375, height: 812 });
   await signInAs(page, 'Security Analyst');
-  await expectSettled(page, dashboard, 'the dashboard at 375px');
+  await expectSettled(page, home, 'Home at 375px');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to main content' }), 'the first Tab stop is the skip link').toBeFocused();
   await page.keyboard.press('Tab');

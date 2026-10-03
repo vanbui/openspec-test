@@ -1,14 +1,10 @@
-import { PageHeader } from '@/components/shell/app-shell';
-import { RequestorDashboard } from '@/features/dashboard/requestor-dashboard';
+import { HomePageHeader } from '@/features/home/home-page-header';
 
-export default function DashboardLoading() {
-  return (
-    <>
-      <PageHeader
-        title="Dashboard"
-        description="Your authorised requests, questionnaires, and released assessment activity."
-      />
-      <RequestorDashboard state={{ kind: 'loading' }} />
-    </>
-  );
+/*
+ * Home's route boundary (UI-D4). It renders before the page has read the session, so it cannot know
+ * which Home is coming: the header shows without an action and with no body. The page then streams
+ * the chosen Home behind that Home's own skeleton.
+ */
+export default function HomeLoading() {
+  return <HomePageHeader withAction={false} />;
 }

@@ -49,16 +49,21 @@ function days(window: number): string {
   return counted(window, 'day', 'days');
 }
 
+/*
+ * The analyst Home's own words (UI-SPEC §5.4). Its heading and description are Home's, shared with the
+ * Requestor Home (home-page-header.tsx), so the review summary names no page of its own.
+ */
 export const analystDashboardCopy = {
-  title: 'Analyst dashboard',
-  description: 'Review queues, Risk exposure, due dates and alerts across your authorised scope.',
-  loadingLabel: 'Loading analyst dashboard',
+  loadingLabel: 'Loading Home',
   /** The noun the page error names and the area the permission state identifies. */
-  area: 'the analyst dashboard',
+  area: 'the review summary',
   needsAction: 'Needs action',
   /** The KPI strip's error noun (§7.2). */
   summaryCountsNoun: 'the summary counts',
 } as const;
+
+/** The permission state's way out. It renders on Home, so a link back to Home would loop (UI-D19). */
+export const analystHomePermissionAction = { label: 'Return to sign in', href: '/sign-in' } as const;
 
 /* ---------------------------------------------------------------- KPI strip */
 

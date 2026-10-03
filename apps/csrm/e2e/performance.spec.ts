@@ -37,7 +37,7 @@ import { expectSettled } from './helpers/settle';
  * exception is Next's legacy-browser polyfill file: it is rendered as a `nomodule` script, which a
  * module-capable browser never downloads, so it is neither delivered nor counted.
  *
- * The page leaves the dashboard for about:blank before the measured navigation, so no late request
+ * The page leaves Home for about:blank before the measured navigation, so no late request
  * of the sign-in landing is counted. Trace recording is off in this file: its DOM snapshots and
  * screencast run inside the browser being timed.
  *
@@ -59,7 +59,6 @@ type KeyRoute =
   | '/app/requests'
   | '/app/requests/{documentId}'
   | '/app/questionnaires/{documentId}'
-  | '/app/review'
   | '/app/review/assessments/{documentId}'
   | '/app/risks'
   | '/app/risks/{documentId}'
@@ -92,7 +91,7 @@ const main = (page: Page) => page.getByRole('main');
 // Seeded fixtures (apps/backend/src/bootstrap): Jane's navigation lifecycle and questionnaire records, the Risk Register.
 const KEY_ROUTES: readonly KeyRouteEntry[] = [
   {
-    route: '/app', actor: 'Requestor', title: 'Dashboard | IdamBox CSRM', heading: 'Dashboard',
+    route: '/app', actor: 'Requestor', title: 'Home | IdamBox CSRM', heading: 'Home',
     populated: (page) => page.getByRole('region', { name: 'My Assessment Requests' }).getByRole('list', { name: 'My Assessment Requests by lifecycle state' }),
   },
   {
@@ -117,7 +116,8 @@ const KEY_ROUTES: readonly KeyRouteEntry[] = [
       .or(main(page).getByText('Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.')),
   },
   {
-    route: '/app/review', actor: 'Security Analyst', title: 'Analyst Dashboard | IdamBox CSRM', heading: 'Analyst dashboard',
+    // The analyst's Home is the review summary (D-16), at the same route as the Requestor's.
+    route: '/app', actor: 'Security Analyst', title: 'Home | IdamBox CSRM', heading: 'Home',
     populated: (page) => page.getByRole('region', { name: 'Needs action', exact: true }).locator('[data-slot="kpi-tile"]'),
   },
   {
@@ -329,7 +329,7 @@ type RecordedRoute = RouteSummary & {
   firstSampleAssets: Asset[];
 };
 
-/* Keeps this route's summary, samples and first sample's assets in the run's JSON record, replacing any earlier entry for it. */
+/* Keeps this route's summary, samples and first sample's assets in the run's JSON record, replacing any earlier entry for its route and actor. */
 function recordSummary(summary: RouteSummary, samples: readonly RouteSample[], unreferenced: readonly Unreferenced[], firstSampleAssets: Asset[], budget: Budget, browserVersion: string): void {
   const testInfo = test.info();
   const directory = resolve(testInfo.project.testDir, '..', '.tmp', 'performance');
@@ -355,11 +355,12 @@ function recordSummary(summary: RouteSummary, samples: readonly RouteSample[], u
     })),
     firstSampleAssets,
   };
-  writeFileSync(file, `${JSON.stringify([...records.filter((existing) => existing.route !== summary.route), record], null, 2)}\n`);
+  // /app is measured once per actor (each actor's Home), so a record is one route and one actor.
+  writeFileSync(file, `${JSON.stringify([...records.filter((existing) => existing.route !== summary.route || existing.actor !== summary.actor), record], null, 2)}\n`);
 }
 
 for (const entry of KEY_ROUTES) {
-  test(`${entry.route} stays within its performance budget`, async ({ browser }) => {
+  test(`${entry.route} as the ${entry.actor} stays within its performance budget`, async ({ browser }) => {
     test.setTimeout(240_000);
     const path = await resolveRouteUrl(browser, entry);
     const samples: RouteSample[] = [];

@@ -17,6 +17,7 @@ import {
   activityRows,
   alertWidgetNote,
   analystDashboardCopy,
+  analystHomePermissionAction,
   dashboardKpiTiles,
   dashboardWidgetCopy,
   dashboardWidgetOrder,
@@ -340,11 +341,11 @@ function widgetViews(units: AnalystDashboardUnits, copy: Record<DashboardWidgetK
 const widgetSpans: Partial<Record<DashboardWidgetKey, string>> = { recentActivity: 'lg:col-span-2' };
 
 /**
- * The analyst dashboard for a composed state. The page error shows only when the summary itself
- * failed; a refused read shows the permission state; otherwise every unit renders on its own.
+ * The analyst Home's review summary for a composed state. The page error shows only when the summary
+ * itself failed; a refused read shows the permission state; otherwise every unit renders on its own.
  */
 export function AnalystDashboard({ state }: { state: AnalystDashboardState }) {
-  if (state.kind === 'permission-denied') return <PermissionDeniedState area={analystDashboardCopy.area} />;
+  if (state.kind === 'permission-denied') return <PermissionDeniedState action={analystHomePermissionAction} area={analystDashboardCopy.area} />;
   if (state.kind === 'error') return <RetryableErrorState noun={analystDashboardCopy.area} />;
 
   const { dueSoonWindowDays, units } = state.dashboard;

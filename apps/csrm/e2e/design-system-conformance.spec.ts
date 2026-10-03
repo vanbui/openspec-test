@@ -9,10 +9,15 @@ import { harnessPort } from '../src/lib/testing/e2e-harness-ports';
 import { strapiHealthUrl } from './harness-urls';
 import { expectPortFree } from './helpers/ports';
 
-const auditedRoutes = ['/app', '/app/requests', '/app/risks', '/app/review/assessments', '/app/review/questionnaires', '/app/admin/controls'] as const;
+/*
+ * Audited as the Security Analyst. /app left this matrix when it became Home (D-16): the analyst's Home
+ * is in the Phase 7 matrix below, and the Requestor's Home in the dashboard state matrix.
+ */
+const auditedRoutes = ['/app/requests', '/app/risks', '/app/review/assessments', '/app/review/questionnaires', '/app/admin/controls'] as const;
 /*
  * Phase 7 routes join their own matrix as each screen lands (plan 05: Alerts; plans 07 and 08 add
- * the reports and the analyst dashboard), so the Phase 6 matrix keeps its ten-minute ceiling.
+ * the reports and the analyst dashboard, which is the analyst's Home at /app since plan 11-02), so the
+ * Phase 6 matrix keeps its ten-minute ceiling.
  */
 const phase7AuditedRoutes = [
   '/app/alerts',
@@ -21,20 +26,20 @@ const phase7AuditedRoutes = [
   '/app/reports/treatment-performance',
   '/app/reports/assessment-throughput',
   '/app/reports/control-effectiveness',
-  '/app/review',
+  '/app',
 ] as const;
 type Phase7AuditedRoute = typeof phase7AuditedRoutes[number];
 
 /*
  * What each Phase 7 route shows once its real content has rendered: a record link on Alerts, the
  * report cards on the index, a section table on each report, and the four KPI tiles on the analyst
- * dashboard. A type scan runs only after it.
+ * Home. A type scan runs only after it.
  */
 function phase7PopulatedContent(page: Page, route: Phase7AuditedRoute): Locator {
   if (route === '/app/alerts') return page.locator('a.record-link:visible').first();
   if (route === '/app/reports') return page.locator('[data-slot="report-card"] a:visible').first();
   // The fourth tile's figure; the loop also counts all four.
-  if (route === '/app/review') return page.locator('[data-slot="kpi-tile"] [data-slot="kpi-tile-value"]:visible').nth(3);
+  if (route === '/app') return page.locator('[data-slot="kpi-tile"] [data-slot="kpi-tile-value"]:visible').nth(3);
   return page.locator('[data-slot="report-section"] table:visible').first();
 }
 const states = ['populated', 'loading', 'empty', 'error', 'permission'] as const;
@@ -104,7 +109,10 @@ async function typographyViolations(page: Page) {
     .filter((actual) => !tokens.some((token) => token.size === actual.size && token.weight === actual.weight && (!token.tracking || Math.abs(actual.tracking - Number.parseFloat(token.tracking) * Number.parseFloat(token.size)) <= 0.05) && (!token.uppercase || actual.transform === 'uppercase'))), typographyTokens);
 }
 
-async function expectStateMeaning(page: Page, route: string, state: UiState, width: number) {
+type HomeActor = 'Security Analyst' | 'Requestor';
+
+/* `actor` matters only on /app, which is each actor's own Home (D-16); every other route has one meaning. */
+async function expectStateMeaning(page: Page, route: string, state: UiState, width: number, actor: HomeActor = 'Security Analyst') {
   const boundary = page.locator(`[data-ui-state="${state}"]`);
   await expect(boundary, `${route} ${state} ${width}px exposes its exact guarded marker`).toBeVisible();
   await expect(page.getByRole('main'), `${route} ${state} ${width}px retains the application landmark`).toBeVisible();
@@ -117,10 +125,13 @@ async function expectStateMeaning(page: Page, route: string, state: UiState, wid
     await expect(boundary.getByRole('heading').first(), `${route} ${state} ${width}px has visible failure copy`).toBeVisible();
     // Since 06.6 every list surface renders its states through the shared primitives, so
     // they share one recovery contract: a "Try again" button that refreshes in place, and a
-    // "Return to workspace" link on permission denial. The dashboard keeps its own recovery
-    // links. Only assert an href when the affordance is a link.
+    // "Return to workspace" link on permission denial. Home is where that link leads, so neither
+    // Home offers it: both refuse with "Return to sign in" (UI-D19); the analyst Home's error
+    // retries in place, and the Requestor Home keeps its own recovery link until plan 11-09.
+    // Only assert an href when the affordance is a link.
+    const homeRecovery = actor === 'Requestor' ? { name: 'View My Requests', href: '/app/requests' } : { name: 'Try again' };
     const recovery: { name: string; href?: string } | undefined = route === '/app'
-      ? state === 'permission' ? { name: 'Return to sign in', href: '/sign-in' } : { name: 'View My Requests', href: '/app/requests' }
+      ? state === 'permission' ? { name: 'Return to sign in', href: '/sign-in' } : homeRecovery
       : state === 'permission' ? { name: 'Return to workspace', href: '/app' } : { name: 'Try again' };
     if (recovery?.href) {
       await expect(boundary.getByRole('link', { name: recovery.name }), `${route} ${state} ${width}px preserves its visible recovery link`).toHaveAttribute('href', recovery.href);
@@ -148,11 +159,18 @@ test.describe('dashboard state matrix', () => {
   test('renders every guarded dashboard state, ordinary-server boundary, and partial-widget recovery', async ({ page, request, browser }) => {
     test.setTimeout(600_000);
     expect((await request.get(strapiHealthUrl)).ok()).toBe(true);
-    await signIn(page);
+    // The dashboard these states belong to is the Requestor Home at /app (D-16); the analyst's Home
+    // is in the Phase 7 matrix. Its type is scanned here, as the Phase 6 matrix scanned it before.
+    await signInAsRequestor(page);
+    for (const width of viewports) {
+      await page.setViewportSize({ width, height: 900 }); await page.goto('/app');
+      await expect(page.getByRole('region', { name: 'My Assessment Requests' }), `the Requestor Home renders its content at ${width}px before its type scan`).toBeVisible();
+      expect(await typographyViolations(page), `the Requestor Home at ${width}px contains typography outside the document contract`).toEqual([]);
+    }
     for (const width of viewports) for (const state of states) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(fixtureUrl('/app', state));
-      await expectStateMeaning(page, '/app', state, width);
+      await expectStateMeaning(page, '/app', state, width, 'Requestor');
       if (state === 'error' || state === 'permission') {
         await expect(page.locator('[aria-label$="items"]'), `${state} dashboard state must not expose populated widget counts`).toHaveCount(0);
         await expect(page.getByRole('link', { name: /REQ-|ASM-/ }), `${state} dashboard state must not expose populated records`).toHaveCount(0);
@@ -181,7 +199,7 @@ test.describe('dashboard state matrix', () => {
       await expect(ordinaryPage.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
       await context.close();
     } finally { server.kill(); }
-    await signIn(page);
+    await signInAsRequestor(page);
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/app?__e2eState=populated&__e2ePartial=draft-requests-error');
@@ -205,7 +223,7 @@ test.describe('dashboard state matrix', () => {
     await signIn(page);
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/app/review?__e2eState=populated&__e2ePartial=analyst-top-alerts-error');
+      await page.goto('/app?__e2eState=populated&__e2ePartial=analyst-top-alerts-error');
       await expect(page.locator('[data-ui-state="populated"]'), `the attested populated boundary renders at ${width}px`).toBeVisible();
       const topAlerts = page.getByRole('region', { name: 'Top alerts', exact: true });
       await expect(topAlerts.locator('[data-slot="state"][data-state-kind="error"]'), `the failed widget uses the shared error state at ${width}px`).toBeVisible();
@@ -254,7 +272,7 @@ test.describe('design-system type contract', () => {
       await page.setViewportSize({ width, height: 900 }); await page.goto(route);
       // Scan the populated screen, never an error state standing in for it.
       await expect(phase7PopulatedContent(page, route), `${route} at ${width}px renders its content before its type scan`).toBeVisible();
-      if (route === '/app/review') {
+      if (route === '/app') {
         await expect(page.locator('[data-slot="kpi-tile"]:visible'), `${route} at ${width}px shows its four KPI tiles before its type scan`).toHaveCount(4);
       }
       await expect(page.locator('[data-state-kind="error"]'), `${route} at ${width}px renders no error state before its type scan`).toHaveCount(0);
@@ -264,7 +282,9 @@ test.describe('design-system type contract', () => {
       await page.setViewportSize({ width, height: 900 }); await page.goto(fixtureUrl(route, state)); await expectStateMeaning(page, route, state, width);
     }
     await signInAsRequestor(page);
-    for (const route of phase7AuditedRoutes) {
+    // /app is the Requestor's own Home, not a refusal (D-16); its isolation from the analyst reads is
+    // proved by home-page.test.tsx and navigation-and-home.spec.ts.
+    for (const route of phase7AuditedRoutes.filter((audited) => audited !== '/app')) {
       await page.goto(fixtureUrl(route, 'error'));
       await expect(page.locator('[data-ui-state]'), `${route} Requestor denial must not expose a fixture boundary`).toHaveCount(0);
       await expect(page.getByRole('main').getByRole('alert'), `${route} Requestor denial is one permission alert`).toHaveCount(1);
@@ -275,7 +295,9 @@ test.describe('design-system type contract', () => {
   });
 
   test('asserts the documented repair points at mobile and desktop widths', async ({ page }) => {
-    await signIn(page);
+    // The released-assessment rating counts are on the Requestor Home (D-16), so they are read as the
+    // Requestor; the remaining repair points are the analyst's surfaces.
+    await signInAsRequestor(page);
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 }); await page.goto('/app');
       const roleNote = page.locator('.role-switcher p'); await expect(roleNote).toHaveCSS('font-size', '12px'); await expect(roleNote).toHaveCSS('font-weight', '400');
@@ -284,6 +306,10 @@ test.describe('design-system type contract', () => {
         await expect(count).toHaveCSS('font-size', '14px'); await expect(count).toHaveCSS('font-weight', '500'); await expect(count).toHaveCSS('font-variant-numeric', /tabular-nums/);
       }
       await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+    }
+    await signIn(page);
+    for (const width of viewports) {
+      await page.setViewportSize({ width, height: 900 });
       await page.goto('/app/admin/controls'); const administration = page.locator('aside.sidebar nav').getByText('Administration', { exact: true });
       await expect(administration).toHaveCSS('font-size', '11px'); await expect(administration).toHaveCSS('text-transform', 'uppercase');
       // DataTable renders its mobile card variant below md, so there is no table to assert

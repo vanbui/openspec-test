@@ -1,20 +1,14 @@
 'use client';
 
-import { PageHeader } from '@/components/shell/app-shell';
-import { Button } from '@/components/ui/button';
+import { ErrorState } from '@/components/states/states';
+import { HomePageHeader } from '@/features/home/home-page-header';
 
-export default function DashboardError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+/* retry re-fetches and re-renders the segment (Next.js 16.3), so Try again reloads Home. */
+export default function HomeError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description="Your authorised requests, questionnaires, and released assessment activity."
-      />
-      <section className="state" role="alert">
-        <h2>We couldn’t load your dashboard</h2>
-        <p>Try again. If the problem continues, contact your administrator.</p>
-        <Button type="button" onClick={reset}>Try again</Button>
-      </section>
+      <HomePageHeader withAction={false} />
+      <ErrorState retry={retry} />
     </>
   );
 }

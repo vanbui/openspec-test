@@ -74,7 +74,6 @@ const reports = [
  * real one is, so nothing tells the two apart (UI-SPEC §6.3).
  */
 const phase7Routes = [
-  { url: '/app/review', heading: 'Analyst dashboard', permission: 'You don’t have access to the analyst dashboard', documentTitle: 'Analyst Dashboard | IdamBox CSRM' },
   { url: '/app/alerts', heading: 'Alerts', permission: 'You don’t have access to alerts', documentTitle: 'Alerts | IdamBox CSRM' },
   { url: '/app/reports', heading: 'Reports', permission: 'You don’t have access to reports', documentTitle: 'Reports | IdamBox CSRM' },
   { url: '/app/reports/risk-exposure', heading: 'Reports', permission: 'You don’t have access to reports', documentTitle: 'Reports | IdamBox CSRM' },
@@ -461,13 +460,13 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, 'Security Analyst');
 
-  // The analyst reaches the dashboard from its item, directly above the review queues it heads.
+  // The analyst's Home is the review summary (D-16); the Home item reaches it from anywhere.
   const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
-  const dashboardItem = navigation.getByRole('link', { name: 'Analyst dashboard', exact: true });
-  await dashboardItem.click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Analyst dashboard' })).toBeVisible();
-  await expect(page).toHaveTitle('Analyst Dashboard | IdamBox CSRM');
-  await expect(dashboardItem).toHaveAttribute('aria-current', 'page');
+  const homeItem = navigation.getByRole('link', { name: 'Home', exact: true });
+  await homeItem.click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
+  await expect(page).toHaveTitle('Home | IdamBox CSRM');
+  await expect(homeItem).toHaveAttribute('aria-current', 'page');
   await expect(navigation.locator('[aria-current="page"]'), 'exactly one navigation item is current').toHaveCount(1);
 
   // Needs action first: four tiles, then the seven widgets in reading order.
@@ -483,11 +482,11 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   await expect(page).toHaveURL(/\/app\/review\/requests(\?|$)/);
   await expect(page.getByRole('combobox', { name: 'Filter by queue' })).toHaveValue('requires-attention');
   await expect(navigation.getByRole('link', { name: 'Assessment Requests', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(dashboardItem, 'the dashboard item is not current on a review queue').not.toHaveAttribute('aria-current', 'page');
+  await expect(homeItem, 'the Home item is not current on a review queue').not.toHaveAttribute('aria-current', 'page');
   expect(await displayedResultTotal(page), 'the Requires my attention tile equals the review queue').toBe(requiresAttention);
 
   // Overdue equals the overdue alert list.
-  await page.goto('/app/review');
+  await page.goto('/app');
   const overdueTile = needsAction.getByRole('link', { name: /^Overdue [\d,]+ / });
   const overdue = await tileValue(overdueTile);
   expect(overdue, 'the Phase 7 fixture holds overdue work').toBeGreaterThan(0);
@@ -498,7 +497,7 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   expect(await displayedResultTotal(page), 'the Overdue tile equals its alert list').toBe(overdue);
 
   // The Critical exposure row equals the open, Critical-residual Risk Register list.
-  await page.goto('/app/review');
+  await page.goto('/app');
   const criticalRow = page.getByRole('region', { name: 'Risk exposure', exact: true }).getByRole('link', { name: /^Critical: [\d,]+ open Risks? by residual rating$/ });
   const critical = await barValue(criticalRow);
   await criticalRow.click();
@@ -510,7 +509,7 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
 
   // Answers stay submitted after the Risk Assessment is drafted and released, so the Questionnaires row
   // counts finished work too. It reads Submitted, never waiting work, and equals the list it opens.
-  await page.goto('/app/review');
+  await page.goto('/app');
   const reviewQueue = page.getByRole('region', { name: 'Review queue', exact: true });
   await expect(reviewQueue.getByText(/ready for review|work waiting/i), 'no queue copy calls submitted Questionnaires waiting work').toHaveCount(0);
   const submittedRow = reviewQueue.getByRole('link', { name: /^Submitted: [\d,]+ Questionnaires?$/ });
@@ -523,7 +522,7 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
 
   // Every High and Critical row's Risk is in the open register it links to. Membership only: that
   // list holds every open Risk, High and Critical first (the register has no multi-rating filter).
-  await page.goto('/app/review');
+  await page.goto('/app');
   const highCritical = page.getByRole('region', { name: 'High and Critical residual Risks', exact: true });
   const highCriticalLinks = highCritical.locator('a.record-link');
   // A production build reveals a streamed widget after the document's load event, so the list is
@@ -543,7 +542,7 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   }
 
   // Top alerts lists a fixture Risk; Recent activity names the Security Analyst who released a Risk Assessment.
-  await page.goto('/app/review');
+  await page.goto('/app');
   const topAlerts = page.getByRole('region', { name: 'Top alerts', exact: true });
   await expect(topAlerts.locator('[data-slot="alert-row"]').first()).toBeVisible();
   await expect(topAlerts.getByRole('link', { name: /^RSK-E2E-P7-/ }).first(), 'a Phase 7 fixture Risk is among the top alerts').toBeVisible();
@@ -579,7 +578,7 @@ test('the Top alerts widget fails independently', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, 'Security Analyst');
 
-  await page.goto('/app/review?__e2eState=populated&__e2ePartial=analyst-top-alerts-error');
+  await page.goto('/app?__e2eState=populated&__e2ePartial=analyst-top-alerts-error');
   await expect(page.locator('[data-ui-state="populated"]')).toBeVisible();
   const topAlerts = page.getByRole('region', { name: 'Top alerts', exact: true });
   await expect(topAlerts.getByRole('heading', { level: 2, name: 'Top alerts' }), 'the failed widget keeps its heading').toBeVisible();
@@ -605,11 +604,11 @@ test('a Security Analyst goes from the dashboard to an alert to its source recor
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, 'Security Analyst');
   const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
-  const dashboardItem = navigation.getByRole('link', { name: 'Analyst dashboard', exact: true });
+  const homeItem = navigation.getByRole('link', { name: 'Home', exact: true });
 
-  // The dashboard, then every alert through the Top alerts footer.
-  await dashboardItem.click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Analyst dashboard' })).toBeVisible();
+  // Home (the review summary), then every alert through the Top alerts footer.
+  await homeItem.click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
   const topAlerts = page.getByRole('region', { name: 'Top alerts', exact: true });
   await expect(topAlerts.locator('[data-slot="alert-row"]').first(), 'Top alerts lists the most urgent alerts').toBeVisible();
   await topAlerts.getByRole('link', { name: 'View all alerts', exact: true }).click();
@@ -632,8 +631,8 @@ test('a Security Analyst goes from the dashboard to an alert to its source recor
   await expect(page.getByRole('heading', { level: 1, name: fixture.risks.overdue, exact: true }), 'the Risk detail shows the alert’s Risk').toBeVisible();
 
   // A tile opens a list whose total is the tile's own figure: Needs attention.
-  await dashboardItem.click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Analyst dashboard' })).toBeVisible();
+  await homeItem.click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
   const needsAction = page.getByRole('region', { name: 'Needs action', exact: true });
   await expect(needsAction.locator('[data-slot="kpi-tile"]'), 'the four Needs action tiles').toHaveCount(4);
   await expect(page.locator('[data-state-kind="error"]'), 'no dashboard unit failed').toHaveCount(0);
@@ -693,7 +692,7 @@ test('Requestor and Secondary Requestor see no analyst navigation and are refuse
   for (const role of ['Requestor', 'Secondary Requestor'] as const) {
     await signIn(page, role);
     const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
-    await expect(navigation.getByRole('link', { name: 'Workspace', exact: true }), `${role} navigation rendered`).toBeVisible();
+    await expect(navigation.getByRole('link', { name: 'Home', exact: true }), `${role} navigation rendered`).toBeVisible();
     for (const item of ['Analyst dashboard', 'Alerts', 'Reports'] as const) {
       await expect(navigation.getByRole('link', { name: item, exact: true }), `${role} has no ${item} link`).toHaveCount(0);
     }

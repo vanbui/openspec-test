@@ -450,7 +450,7 @@ const administration = (collection: string, label: string, plural: string, route
 ];
 
 const personalSteps: readonly SweepStep[] = [
-  { route: '/app', title: 'Dashboard | IdamBox CSRM', heading: 'Dashboard' },
+  { route: '/app', title: 'Home | IdamBox CSRM', heading: 'Home' },
   { route: '/app/requests', title: 'My Requests | IdamBox CSRM', heading: 'My Requests' },
   { route: '/app/requests/new', title: 'New Request | IdamBox CSRM', heading: 'New assessment request' },
   { route: '/app/questionnaires', title: 'My Questionnaires | IdamBox CSRM', heading: 'My Questionnaires' },
@@ -475,7 +475,7 @@ const missingRecordSteps: readonly SweepStep[] = [
 const analystSteps: readonly SweepStep[] = [
   ...personalSteps,
   firstOwnRequest,
-  { route: '/app/review', title: 'Analyst Dashboard | IdamBox CSRM', heading: 'Analyst dashboard' },
+  // The analyst's Home (/app, the review summary since D-16) is swept with personalSteps.
   { route: '/app/review/requests', title: 'Assessment Request Review | IdamBox CSRM', heading: 'Assessment request review' },
   { firstRecordOf: '/app/review/requests?queue=awaiting-requestor', link: /^\/app\/review\/requests\/[^/?#]+$/, title: 'Assessment Request Review | IdamBox CSRM' },
   { route: '/app/review/questionnaires', title: 'Questionnaire Review | IdamBox CSRM', heading: 'Questionnaire Review' },
@@ -503,7 +503,6 @@ const analystSteps: readonly SweepStep[] = [
 // A Requestor's refusal of an analyst surface keeps its page header and title and shows the shared
 // permission state, the Administration refusal included (08-12).
 const refusalSteps: readonly SweepStep[] = [
-  { route: '/app/review', title: 'Analyst Dashboard | IdamBox CSRM', heading: 'Analyst dashboard', state: 'permission' },
   { route: '/app/risks', title: 'Risk Register | IdamBox CSRM', heading: 'Risk Register', state: 'permission' },
   { route: '/app/alerts', title: 'Alerts | IdamBox CSRM', heading: 'Alerts', state: 'permission' },
   { route: '/app/reports', title: 'Reports | IdamBox CSRM', heading: 'Reports', state: 'permission' },
