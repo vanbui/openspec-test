@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cloneElement, isValidElement, Suspense, type ReactElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -52,6 +55,8 @@ vi.mock('@/lib/testing/e2e-ui-state', () => ({
   resolveE2eAnalystDashboardPartial: mocks.resolveE2eAnalystDashboardPartial,
 }));
 
+import HomeError from '../../../app/(app)/app/error';
+import HomeLoading from '../../../app/(app)/app/loading';
 import HomePage, { metadata } from '../../../app/(app)/app/page';
 import { emptyAnalystDashboard } from '../analyst-dashboard/analyst-dashboard-presentation';
 import { deriveRequestorDashboard } from '../dashboard/requestor-dashboard-service';
@@ -171,5 +176,33 @@ describe('Home at /app', () => {
     // Choosing the skeleton reads only the session: no data read happens before the boundary.
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
     expect(mocks.getRequestorDashboard).not.toHaveBeenCalled();
+  });
+
+  it('loads with the Home header alone: no action and no body, since the variant is not chosen yet (UI-D4)', () => {
+    render(<HomeLoading />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+    expect(within(pageHeader()).getByText(homeDescription)).toBeInTheDocument();
+    expect(pageHeader().querySelector('a, button')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Dashboard' })).toBeNull();
+  });
+
+  it('recovers from a route error under the Home header with Try again, which retries the segment', async () => {
+    const user = userEvent.setup();
+    const retry = vi.fn();
+
+    render(<HomeError error={new Error('boom')} retry={retry} />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+    expect(pageHeader().querySelector('a, button')).toBeNull();
+    const alert = screen.getByRole('alert');
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('heading', { name: 'Dashboard' })).toBeNull();
+
+    const source = readFileSync(resolve(process.cwd(), 'app/(app)/app/error.tsx'), 'utf8');
+    expect(source).toContain("'use client'");
+    expect(source).toMatch(/retry=\{retry\}/);
   });
 });

@@ -18,6 +18,7 @@ import {
   activityRows,
   alertWidgetNote,
   analystDashboardCopy,
+  analystHomePermissionAction,
   dashboardKpiTiles,
   dashboardWidgetCopy,
   dashboardWidgetOrder,
@@ -64,16 +65,19 @@ const treatmentAlert: AlertItem = {
   residualRating: 'High',
 };
 
-describe('analyst dashboard page copy', () => {
-  it('names the page, its loading label and the area its error and permission states identify', () => {
+describe('analyst Home copy', () => {
+  it('names its loading label and the area its error and permission states identify, and no page of its own', () => {
+    // The page heading and description are Home's (UI-SPEC §5.1); the analyst dashboard name retires.
     expect(analystDashboardCopy).toEqual({
-      title: 'Analyst dashboard',
-      description: 'Review queues, Risk exposure, due dates and alerts across your authorised scope.',
-      loadingLabel: 'Loading analyst dashboard',
-      area: 'the analyst dashboard',
+      loadingLabel: 'Loading Home',
+      area: 'the review summary',
       needsAction: 'Needs action',
       summaryCountsNoun: 'the summary counts',
     });
+  });
+
+  it('offers Return to sign in from its permission state, since Home would loop (UI-D19)', () => {
+    expect(analystHomePermissionAction).toEqual({ label: 'Return to sign in', href: '/sign-in' });
   });
 });
 

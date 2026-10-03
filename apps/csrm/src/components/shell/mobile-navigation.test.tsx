@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ActivityIcon, BellIcon, FileChartColumnIcon } from 'lucide-react';
+import { BellIcon, FileChartColumnIcon, HouseIcon } from 'lucide-react';
 import type { AnchorHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -37,12 +37,6 @@ const requestorGranted = new Set(['assessment-request:create', 'assessment-reque
  * the shipped order, which the "shipped" describes below pin. The Reports items are listed after the
  * Administration items on purpose: groups render in navigationGroups order, not list order.
  */
-const analystDashboardItem: NavigationItem = {
-  href: '/app/review',
-  label: 'Analyst dashboard',
-  capability: 'assessment:review',
-  icon: ActivityIcon,
-};
 const alertsItem: NavigationItem = {
   href: '/app/alerts',
   label: 'Alerts',
@@ -57,11 +51,10 @@ const reportsItem: NavigationItem = {
   icon: FileChartColumnIcon,
   group: 'Reports',
 };
-const phaseSevenItems = [analystDashboardItem, alertsItem, reportsItem];
+const phaseSevenItems = [alertsItem, reportsItem];
 const withoutPhaseSeven = navigation.filter((item) => !phaseSevenItems.some((extra) => extra.href === item.href));
 const phaseSevenNavigation: readonly NavigationItem[] = [
   ...withoutPhaseSeven.filter((item) => !item.group),
-  analystDashboardItem,
   ...withoutPhaseSeven.filter((item) => item.group === 'Administration'),
   alertsItem,
   reportsItem,
@@ -77,7 +70,7 @@ describe('activeNavigationHref', () => {
     ['/app/requests', '/app/requests'],
     ['/app/requests/new', '/app/requests/new'],
     ['/app/requests/request-7', '/app/requests'],
-    ['/app/review', '/app/review'],
+    ['/app/review/requests', '/app/review/requests'],
     ['/app/review/requests/request-42', '/app/review/requests'],
     ['/app/alerts', '/app/alerts'],
     ['/app/reports/risk-exposure', '/app/reports'],
@@ -91,8 +84,10 @@ describe('activeNavigationHref', () => {
     expect(activeNavigationHref('/app/reviewer/requests', phaseSevenNavigation)).toBeNull();
   });
 
-  it('lets Workspace match only itself, so an unlisted route marks nothing current', () => {
+  it('lets Home match only itself, so an unlisted route marks nothing current', () => {
     expect(activeNavigationHref('/app/unknown', phaseSevenNavigation)).toBeNull();
+    // The retired analyst dashboard address redirects to Home; no item claims it (D-17).
+    expect(activeNavigationHref('/app/review', phaseSevenNavigation)).toBeNull();
     expect(
       activeNavigationHref(
         '/app/admin/risk-types',
@@ -105,11 +100,10 @@ describe('activeNavigationHref', () => {
 describe('capability navigation current item', () => {
   it.each([
     ['/app/requests/new', 'New request'],
-    ['/app/review', 'Analyst dashboard'],
     ['/app/review/requests/request-42', 'Assessment Requests'],
     ['/app/review/requests', 'Assessment Requests'],
     ['/app/review/assessments/assessment-9', 'Risk Assessments'],
-    ['/app', 'Workspace'],
+    ['/app', 'Home'],
   ])('marks exactly one current item in the shipped navigation on %s', (pathname, label) => {
     usePathname.mockReturnValue(pathname);
 
@@ -122,7 +116,7 @@ describe('capability navigation current item', () => {
 
   it.each([
     ['/app/alerts', 'Alerts'],
-    ['/app/review', 'Analyst dashboard'],
+    ['/app', 'Home'],
     ['/app/review/requests/request-42', 'Assessment Requests'],
     ['/app/reports/risk-exposure', 'Reports'],
     ['/app/requests/new', 'New request'],
@@ -152,8 +146,8 @@ describe('capability navigation groups', () => {
     expect(within(reports).getAllByRole('link').map((link) => link.textContent)).toEqual(['Alerts', 'Reports']);
     expect(within(screen.getByRole('group', { name: 'Administration' })).queryByRole('link', { name: 'Alerts' })).toBeNull();
 
-    // The analyst dashboard is a primary item, outside every group.
-    expect(screen.getByRole('link', { name: 'Analyst dashboard' }).closest('[role="group"]')).toBeNull();
+    // Home is a primary item, outside every group.
+    expect(screen.getByRole('link', { name: 'Home' }).closest('[role="group"]')).toBeNull();
   });
 
   it('renders a group only when one of its items is visible', () => {
@@ -180,52 +174,52 @@ describe('capability navigation groups', () => {
   });
 });
 
-describe('shipped analyst dashboard navigation', () => {
-  it('ships Analyst dashboard directly above Assessment Requests, outside every group, gated by assessment:review', () => {
-    const analystDashboard = navigation.find((item) => item.href === '/app/review');
-
-    expect(analystDashboard).toEqual({ href: '/app/review', label: 'Analyst dashboard', capability: 'assessment:review', icon: ActivityIcon });
-    const index = navigation.indexOf(analystDashboard!);
-    expect(navigation[index + 1]?.href).toBe('/app/review/requests');
-    expect(navigation[index - 1]?.href).toBe('/app/requests/new');
+describe('shipped Home navigation', () => {
+  it('ships Home first for every actor, and no analyst dashboard item', () => {
+    // Home is /app for every actor (D-16); the analyst dashboard address redirects there (D-17).
+    expect(navigation[0]).toEqual({ href: '/app', label: 'Home', capability: 'assessment-request:read', icon: HouseIcon });
+    expect(navigation.find((item) => item.href === '/app/review')).toBeUndefined();
+    expect(navigation.map((item) => item.label)).not.toContain('Analyst dashboard');
+    expect(navigation.map((item) => item.label)).not.toContain('Workspace');
   });
 
-  it('renders Analyst dashboard immediately before the three review queues for the analyst', () => {
+  it('shows the analyst Home and the three review queues, with no Analyst dashboard link', () => {
     usePathname.mockReturnValue('/app');
 
     render(<CapabilityNavigation granted={granted} />);
 
     const labels = within(screen.getByRole('navigation', { name: 'Primary navigation' })).getAllByRole('link').map((link) => link.textContent);
-    const index = labels.indexOf('Analyst dashboard');
-    expect(labels.slice(index, index + 4)).toEqual(['Analyst dashboard', 'Assessment Requests', 'Questionnaires', 'Risk Assessments']);
-    expect(screen.getByRole('link', { name: 'Analyst dashboard' })).toHaveAttribute('href', '/app/review');
-    expect(screen.getByRole('link', { name: 'Analyst dashboard' }).closest('[role="group"]')).toBeNull();
+    expect(labels[0]).toBe('Home');
+    const index = labels.indexOf('Assessment Requests');
+    expect(labels.slice(index, index + 3)).toEqual(['Assessment Requests', 'Questionnaires', 'Risk Assessments']);
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/app');
+    expect(screen.queryByRole('link', { name: 'Analyst dashboard' })).not.toBeInTheDocument();
   });
 
-  it('marks Analyst dashboard alone current on /app/review, and never beside a review queue', () => {
-    usePathname.mockReturnValue('/app/review');
+  it('marks Home alone current on /app, and a review queue alone current under /app/review', () => {
+    usePathname.mockReturnValue('/app');
     const view = render(<CapabilityNavigation granted={granted} />);
     expect(currentLinks()).toHaveLength(1);
-    expect(currentLinks()[0]).toHaveAccessibleName('Analyst dashboard');
+    expect(currentLinks()[0]).toHaveAccessibleName('Home');
     view.unmount();
 
-    usePathname.mockReturnValue('/app/review/questionnaires/questionnaire-3');
+    usePathname.mockReturnValue('/app/review/requests');
     render(<CapabilityNavigation granted={granted} />);
     expect(currentLinks()).toHaveLength(1);
-    expect(currentLinks()[0]).toHaveAccessibleName('Questionnaires');
-    expect(screen.getByRole('link', { name: 'Analyst dashboard' })).not.toHaveAttribute('aria-current');
+    expect(currentLinks()[0]).toHaveAccessibleName('Assessment Requests');
+    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
   });
 
-  it('shows a Requestor no Analyst dashboard link, even on /app/review', () => {
-    usePathname.mockReturnValue('/app/review');
+  it('gives a Requestor the same Home item, and no Analyst dashboard link', () => {
+    usePathname.mockReturnValue('/app');
 
     render(<CapabilityNavigation granted={requestorGranted} />);
 
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Analyst dashboard' })).not.toBeInTheDocument();
-    expect(currentLinks()).toHaveLength(0);
   });
 
-  it('lists Analyst dashboard directly above Assessment Requests in the mobile navigation sheet', async () => {
+  it('lists Home first, and no Analyst dashboard, in the mobile navigation sheet', async () => {
     usePathname.mockReturnValue('/app');
     const user = userEvent.setup();
 
@@ -234,8 +228,9 @@ describe('shipped analyst dashboard navigation', () => {
 
     const sheet = screen.getByRole('dialog', { name: 'Navigation' });
     const labels = within(sheet).getAllByRole('link').map((link) => link.textContent);
-    expect(labels[labels.indexOf('Analyst dashboard') + 1]).toBe('Assessment Requests');
-    expect(within(sheet).getByRole('link', { name: 'Analyst dashboard' })).toHaveAttribute('href', '/app/review');
+    expect(labels[0]).toBe('Home');
+    expect(labels).not.toContain('Analyst dashboard');
+    expect(within(sheet).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/app');
   });
 });
 
@@ -346,7 +341,7 @@ describe('capability navigation', () => {
     expect(screen.getByRole('link', { name: 'Assessment Requests' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('link', { name: 'Risk Assessments' })).toHaveAttribute('href', '/app/review/assessments');
     expect(screen.getByRole('link', { name: 'My Risk Assessments' })).toHaveAttribute('href', '/app/assessments');
-    expect(screen.getByRole('link', { name: 'Workspace' }).getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBeNull();
   });
 
   it('hides analyst review navigation without the review capability', () => {

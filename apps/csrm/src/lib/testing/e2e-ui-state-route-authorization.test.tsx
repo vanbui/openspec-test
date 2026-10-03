@@ -122,7 +122,7 @@ describe('guarded route presentation fixtures', () => {
     ['alerts', async () => AlertsContent({ searchParams: params }), 'alerts'],
     ['reports index', async () => ReportIndexContent({ searchParams: params }), 'report-definitions'],
     ['report detail', async () => ReportDetailContent({ reportKey: 'control-effectiveness', searchParams: params }), 'report'],
-    ['analyst dashboard', async () => AnalystHomeContent({ searchParams: params }), 'analyst-dashboard'],
+    ['analyst Home', async () => AnalystHomeContent({ searchParams: params }), 'analyst-dashboard'],
   ] as const)('authorizes and loads %s before resolving its fixture', async (_name, route, service) => {
     render(await route());
     expect(calls.indexOf(service)).toBeGreaterThanOrEqual(0);
@@ -148,12 +148,12 @@ describe('guarded route presentation fixtures', () => {
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
   });
 
-  it('keeps authoritative analyst dashboard denial outside a fixture boundary and its partial selector', async () => {
+  it('keeps authoritative analyst Home denial outside a fixture boundary and its partial selector', async () => {
     // Any refused read makes the composed dashboard permission denied (D-34).
     mocks.getAnalystDashboard.mockResolvedValueOnce({ kind: 'permission-denied' });
     render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) }));
     expect(document.querySelector('[data-ui-state]')).toBeNull();
-    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
   });
@@ -194,7 +194,7 @@ describe('Requestor isolation on restricted routes', () => {
     expect(document.querySelector('a[href^="/app/risks/"], a[href^="/app/review/"]')).toBeNull();
   });
 
-  it('denies the analyst dashboard at its capability gate before any analyst read, fixture or partial selector', async () => {
+  it('denies the analyst Home content at its own capability gate before any analyst read, fixture or partial selector', async () => {
     signInAsRequestor();
     render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) }));
     expect(calls).toEqual(['capability']);
@@ -202,7 +202,7 @@ describe('Requestor isolation on restricted routes', () => {
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
     expect(document.querySelector('[data-ui-state]')).toBeNull();
-    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
     expect(document.querySelector('[data-slot="kpi-tile"]')).toBeNull();
     expect(document.querySelector('a[href^="/app/risks/"], a[href^="/app/review/"]')).toBeNull();
   });

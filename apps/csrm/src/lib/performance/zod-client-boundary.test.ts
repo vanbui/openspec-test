@@ -114,7 +114,6 @@ const routesWithoutClientValidation = [
   ['/app', '(app)/app'],
   ['/app/requests', '(app)/app/requests'],
   ['/app/requests/{documentId}', '(app)/app/requests/[documentId]'],
-  ['/app/review', '(app)/app/review/(analyst-dashboard)'],
   ['/app/review/assessments/{documentId}', '(app)/app/review/assessments/[documentId]'],
   ['/app/risks', '(app)/app/risks'],
   ['/app/risks/{documentId}', '(app)/app/risks/[documentId]'],

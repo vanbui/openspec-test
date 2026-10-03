@@ -472,7 +472,7 @@ describe('AnalystDashboard, page states', () => {
     render(<AnalystDashboard state={{ kind: 'error' }} />);
 
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('We couldn’t load the analyst dashboard');
+    expect(alert).toHaveTextContent('We couldn’t load the review summary');
     expect(alert).toHaveTextContent('Please try again. If the problem continues, contact your administrator.');
     await user.click(within(alert).getByRole('button', { name: 'Try again' }));
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
@@ -480,12 +480,13 @@ describe('AnalystDashboard, page states', () => {
     expect(document.querySelector('[data-slot="kpi-tile"]')).toBeNull();
   });
 
-  it('shows the permission state with Return to workspace, and nothing else', () => {
+  it('shows the permission state with Return to sign in, and nothing else', () => {
     render(<AnalystDashboard state={{ kind: 'permission-denied' }} />);
 
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('You don’t have access to the analyst dashboard');
-    expect(within(alert).getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(alert).toHaveTextContent('You don’t have access to the review summary');
+    // Home is where this state renders, so a link back to Home would loop (UI-D19).
+    expect(within(alert).getByRole('link', { name: 'Return to sign in' })).toHaveAttribute('href', '/sign-in');
     expect(screen.getAllByRole('link')).toHaveLength(1);
     expect(screen.queryByRole('region')).toBeNull();
   });
@@ -493,8 +494,8 @@ describe('AnalystDashboard, page states', () => {
   it('loads as a labelled skeleton of four tiles and seven widgets in the final layout', () => {
     render(<AnalystDashboardSkeleton />);
 
-    const status = screen.getByRole('status', { name: 'Loading analyst dashboard' });
-    expect(within(status).getByText('Loading analyst dashboard')).toHaveClass('sr-only');
+    const status = screen.getByRole('status', { name: 'Loading Home' });
+    expect(within(status).getByText('Loading Home')).toHaveClass('sr-only');
     expect(status.querySelectorAll('[data-slot="kpi-tile-skeleton"]')).toHaveLength(4);
     const widgets = status.querySelectorAll('[data-slot="dashboard-widget-skeleton"]');
     expect(widgets).toHaveLength(7);
@@ -505,7 +506,7 @@ describe('AnalystDashboard, page states', () => {
   });
 });
 
-describe('Analyst dashboard route content', () => {
+describe('Analyst Home content', () => {
   it('refuses a Requestor at the assessment:review gate before any analyst read or fixture', async () => {
     signInAsRequestor();
 
@@ -515,8 +516,8 @@ describe('Analyst dashboard route content', () => {
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
-    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
+    expect(screen.getByRole('link', { name: 'Return to sign in' })).toHaveAttribute('href', '/sign-in');
     expect(document.querySelector('[data-slot="kpi-tile"]')).toBeNull();
     expect(document.querySelector('a[href^="/app/review/requests/"], a[href^="/app/risks/"]')).toBeNull();
     expect(document.querySelector('[data-ui-state]')).toBeNull();
@@ -528,7 +529,7 @@ describe('Analyst dashboard route content', () => {
     render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
 
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
   });
 
   it('gates, reads, then resolves the fixture and the partial selector, in that order', async () => {
@@ -547,7 +548,7 @@ describe('Analyst dashboard route content', () => {
 
     render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
     expect(document.querySelector('[data-ui-state]')).toBeNull();
@@ -558,7 +559,7 @@ describe('Analyst dashboard route content', () => {
 
     render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load the analyst dashboard');
+    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load the review summary');
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(document.querySelector('[data-ui-state]')).toBeNull();
   });
@@ -596,12 +597,12 @@ describe('Analyst dashboard route content', () => {
     expect(boundary).not.toBeNull();
     expect(document.querySelector('[data-slot="kpi-tile"]')).toBeNull();
     expect(document.querySelector('a.record-link')).toBeNull();
-    if (state === 'loading') expect(within(boundary!).getByRole('status', { name: 'Loading analyst dashboard' })).toBeInTheDocument();
+    if (state === 'loading') expect(within(boundary!).getByRole('status', { name: 'Loading Home' })).toBeInTheDocument();
     if (state === 'error') {
-      expect(within(boundary!).getByRole('alert')).toHaveTextContent('We couldn’t load the analyst dashboard');
+      expect(within(boundary!).getByRole('alert')).toHaveTextContent('We couldn’t load the review summary');
       expect(within(boundary!).getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     }
-    if (state === 'permission') expect(within(boundary!).getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
+    if (state === 'permission') expect(within(boundary!).getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
   });
 
   it('fails only Top alerts under the attested partial selector, after the real reads succeeded', async () => {
