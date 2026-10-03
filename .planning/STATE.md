@@ -3,7 +3,7 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 11-03-PLAN.md
+stopped_at: "Paused at the operator's request after 11-03 (2026-10-03); next: 11-04"
 last_updated: "2026-10-03T01:47:09.621Z"
 last_activity: 2026-10-03
 last_activity_desc: Plan 11-03 complete
@@ -45,6 +45,7 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
   - verification: `10-VERIFICATION.md` `passed`, 6/6 success criteria and no gaps; the pilot accepted the three Manual-Only checks as residuals for the operator's UAT, recorded as deferred follow-ups in `10-UAT.md` (complete);
   - the final full gate, green at `00306ac` (below);
   - requirements: REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 complete; ADMIN-05 partial by decision, its Information Asset owner moved to Phase 22.
+- **Phase 11 (paused 2026-10-03, at the operator's request):** the planner revision passed (`a589569`), execution began at `9f95575`, and plans 11-01 to 11-03 are complete; 11-04 is next.
 - **Phase 11 (executing):** its fresh plan check passed (`a589569`). Plan 11-01 is complete (`1e36e6d` to `bc0b6eb`, SUMMARY `6d0a9e4`): X-6 to X-10 are in the design direction, and a released request reads "Released" through the one status mapping. `PHASE_11_BASE=9f95575` is recorded in `11-01-SUMMARY.md` for the 11-21 gate. Plan 11-02 is complete (`5a16e80` to `c0a9914`, SUMMARY `51bece1`): every actor lands on one Home at `/app`, chosen from the session's capabilities before any read; `/app/review` is a 307 to Home; the Analyst dashboard name, route group and nav item are gone; every E2E sign-in proves the level-one Home heading (full Playwright 96/96, web 2,870/2,870). Plan 11-03 is complete (`820fafb` to `1a8efca`, SUMMARY `8e71b03`): the analyst Home leads with the Review queue (D-18) with its tiles two by two below xl, so the queue starts within the first 375×812 screen (`UX08_ANALYST_PHONE_FIRST_SCREEN`); Recent activity dates are local (`LocalInstant`); every recovery link reads "Go to Home" and the copy guard refuses "workspace" (full Playwright 98/98, web 2,875/2,875). Plan 11-04 is next.
 
 Plan: 4 of 21
@@ -259,7 +260,7 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 ## Session Continuity
 
 **Last session:** 2026-10-03T01:46:50.640Z
-**Stopped At:** Completed 11-03-PLAN.md
+**Stopped At:** Paused at the operator's request on 2026-10-03, at a clean plan boundary. Phase 11 plans 11-01 to 11-03 are complete (`9f95575` to `805de68`), and 11-04 is next. The tree is clean, no dev server or test run is active, the GSD milestone lock is released, and everything is pushed.
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
@@ -268,18 +269,18 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
 
 **Resume prompt:** `.planning/prompts/post-demo-build.md`. Paste the launcher line the operator was given into a new session after the weekly reset.
-**Resume File:** None
+**Resume File:** `.planning/POST-DEMO-BRIEF.md` (the operator's prompt verbatim, the overrides, the dev-mode rules, the baseline gates, the host notes and the gate commands).
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
-2. Phase 10 is complete (2026-10-03), and the pilot pushes `post-demo` (the worker does not push).
-3. Phase 11 (Navigation, landing and list clarity) is next. Its fresh plan check is done and recorded (`11-PLAN-CHECK.md`, 2026-10-03): no blocker, and two plan warnings that the Phase 11 worker fixes first through a GSD planner revision (11-09: the analyst stepper takes `analystRequestLifecycle`; 11-20: the leave-guard proof aborts only the save's POST). Then `/gsd-execute-phase 11` through the worker, under the same gates as Phase 10 (code review, regression, `verify:post`, verification, and one final full gate). Plan 11-21 Task 2 is a blocking walkthrough for the pilot.
+2. Phase 10 is complete and pushed (2026-10-03).
+3. Phase 11 (Navigation, landing and list clarity) is executing, paused after 11-03. Its fresh plan check is recorded in `11-PLAN-CHECK.md`. The planner revision passed its re-check at iteration 3 (`a589569`); it touched 14 plans, not just 11-09 and 11-20, so skim its diff on resume. Execution began at `9f95575` (`PHASE_11_BASE`). Resume with a fresh worker running `/gsd-execute-phase 11`, which skips plans that have a SUMMARY, from 11-04, under the same gates as Phase 10: code review, regression, `verify:post`, verification, and one final full gate. Plan 11-21 Task 2 is a blocking walkthrough for the pilot.
 4. Carried from Phase 10 (`deferred-items.md`): assessment-side 409 reason codes (W-1) to Phase 17.1 (dated note in `17.1-CONTEXT.md`); the CPS 230 and CPS 234 PDF-extraction leftovers and the Information Asset owner to Phase 22; the RAR-E2E-P7 fixtures and the field-width token to Phase 11; the unload-safe answer save (IN-304) unowned; the unused `@radix-ui/react-dialog`; the Annex A 8.1 wording question for the operator; the three accepted residuals for the operator's UAT (`10-UAT.md`).
 5. Phase 20 stays whole at 23 plans. If execution shows a split is needed, its PLAN-CHECK names the seam (RISK-03 and ADMIN-06: plans 20-10 to 20-12 and 20-19 to 20-21).
 
 ## Next Action
 
-**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is complete (2026-10-03). Phase 11 is executing: plans 11-01 and 11-02 are complete and 11-03 is next (Session Continuity step 3).
+**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is complete and pushed. Phase 11 is paused after 11-03 at the operator's request (2026-10-03); resume at 11-04 (Session Continuity step 3).
 
 ## Accumulated Context
 
