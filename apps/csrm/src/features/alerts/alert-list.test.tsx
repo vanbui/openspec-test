@@ -292,7 +292,7 @@ describe('AlertList', () => {
     renderList({ alerts: [], pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 }, state: 'permission' });
 
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to alerts');
-    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByText(/results?$/)).not.toBeInTheDocument();

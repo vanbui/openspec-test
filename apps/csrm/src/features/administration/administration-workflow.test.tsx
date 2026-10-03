@@ -481,7 +481,7 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(alert).toHaveAttribute('data-state-kind', 'permission');
     // The heading comes first, so the permission state reads as the page's content, not its title.
     expect(headings[0]!.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
     expect(screen.queryByRole('link', { name: /create|import/i })).not.toBeInTheDocument();
   });
 

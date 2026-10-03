@@ -342,7 +342,7 @@ describe('Requestor dashboard contract', () => {
     cleanup();
     render(<RequestorDashboard state={{ kind: 'loading' }} />);
     expect(screen.getByRole('status')).toHaveAttribute('data-state-kind', 'loading');
-    expect(screen.getByRole('status')).toHaveTextContent('Loading workspace…');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
 
     cleanup();
     render(<RequestorDashboard state={{ kind: 'error' }} />);

@@ -106,7 +106,7 @@ describe('Alerts route content', () => {
     expect(mocks.listAlerts).not.toHaveBeenCalled();
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to alerts');
-    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(document.querySelector('a[href^="/app/risks/"]')).toBeNull();

@@ -17,7 +17,8 @@ import { describe, expect, it } from 'vitest';
  * - the development-only role switcher (`components/shell/role-switcher.tsx`): not shipped to production;
  * - service modules' type and client names (`createStrapiClient`, `StrapiClient`): identifiers, not copy.
  *
- * The list holds only files that are clean today. Each later Phase 10 plan adds the files it cleans, in order.
+ * The list holds only files that are clean today. Each later plan adds the files it cleans, in order: Phase 11 plan
+ * 11-03 adds both not-found pages and the Requests error boundary, whose recovery links now name Home.
  */
 
 const webRoot = process.cwd();
@@ -42,10 +43,16 @@ export const internalTerms = [
   'answer batch',
   'least-privilege',
   'Server validation',
+  // Phase 11 D-25 (UI-SPEC §2.4, §11.2): Home replaces the workspace in copy; identifiers such as
+  // AdministrationWorkspace are names, not copy, so the guard does not read them.
+  'workspace',
 ] as const;
 
 /** Paths relative to apps/csrm, sorted and unique. */
 export const guardedFiles = [
+  'app/(app)/app/review/requests/error.tsx',
+  'app/(app)/not-found.tsx',
+  'app/not-found.tsx',
   'src/components/csrm/confirm-dialog.tsx',
   'src/components/csrm/local-time.tsx',
   'src/components/csrm/navigation-guard.tsx',
@@ -174,6 +181,17 @@ describe('the interface copy guard', () => {
       [12, 'contextual'],
       [14, 'contextual'],
     ]);
+  });
+
+  it('reads "workspace" in copy and never in a name such as AdministrationWorkspace (UI-SPEC §11.2)', () => {
+    const source = [
+      "import { AdministrationWorkspace } from './administration-workspace';",
+      'export function View() {',
+      '  return <AdministrationWorkspace><a href="/app">Return to workspace</a></AdministrationWorkspace>;',
+      '}',
+    ].join('\n');
+
+    expect(findInternalTerms(source, 'in-memory.tsx').map(({ line, term }) => [line, term])).toEqual([[3, 'workspace']]);
   });
 
   it('matches case-insensitively and reports every term in a string', () => {

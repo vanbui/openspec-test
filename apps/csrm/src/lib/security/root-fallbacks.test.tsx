@@ -25,7 +25,7 @@ import RootNotFound, { metadata as rootNotFoundMetadata } from '../../../app/not
 
 /* The locked copy (UI-SPEC section 9.3). */
 const notFoundCopy = {
-  action: 'Return to workspace',
+  action: 'Go to Home',
   heading: 'Page not found',
   lead: 'The page you asked for doesn’t exist or has moved.',
   title: 'Page not found | IdamBox CSRM',
@@ -41,7 +41,7 @@ describe.each([
   ['root', RootNotFound as ComponentType, rootNotFoundMetadata],
   ['in-shell', ShellNotFound as ComponentType, shellNotFoundMetadata],
 ])('the %s not-found', (_name, NotFound, metadata) => {
-  it('states the locked copy under one level-one heading, with one way back to the workspace', () => {
+  it('states the locked copy under one level-one heading, with one way back to Home', () => {
     render(<NotFound />);
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);

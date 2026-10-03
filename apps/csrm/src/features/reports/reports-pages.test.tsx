@@ -193,7 +193,7 @@ describe('Report index route content', () => {
     expect(mocks.listReportDefinitions).not.toHaveBeenCalled();
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to reports');
-    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
     expect(document.querySelector('a[href^="/app/reports/"]')).toBeNull();
     expect(document.querySelector('[data-ui-state]')).toBeNull();

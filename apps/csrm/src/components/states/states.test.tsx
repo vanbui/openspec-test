@@ -16,25 +16,28 @@ describe('shell state components', () => {
   it('presents the locked loading and empty-state copy accessibly', () => {
     const { rerender } = render(<LoadingState />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading workspace…');
-    expect(screen.getByText('Preparing your authorised workspace.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+    expect(screen.getByRole('heading', { name: 'Loading…' })).toBeInTheDocument();
+    expect(screen.getByText('Getting this page ready.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveTextContent(/workspace/i);
 
     rerender(<EmptyState />);
     expect(screen.getByRole('heading', { name: 'Nothing to show yet' })).toBeInTheDocument();
     expect(screen.getByText('Items available to you will appear here. Try changing your filters or return when work has been assigned.')).toBeInTheDocument();
   });
 
-  it('announces errors, invokes retry, and returns denied users to the workspace', () => {
+  it('announces errors, invokes retry, and sends denied users to Home (D-25, UI-SPEC §2.4)', () => {
     const retry = vi.fn();
     const { rerender } = render(<ErrorState retry={retry} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load this workspace');
+    expect(screen.getByRole('heading', { name: 'We couldn’t load this page' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(retry).toHaveBeenCalledOnce();
 
     rerender(<PermissionDeniedState />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Your workspace shows the work you can open. If you think you should have access, contact your administrator.');
-    expect(screen.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('alert')).toHaveTextContent('Home shows the work you can open. If you think you should have access, contact your administrator.');
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('alert')).not.toHaveTextContent(/workspace/i);
   });
 
   it('owns parameterised list-state copy, actions, data markers, and compact density', () => {
@@ -58,7 +61,7 @@ describe('shell state components', () => {
 
     rerender(<PermissionDeniedState action={{ label: 'Open My Requests', href: '/app/requests' }} area="your dashboard" />);
     expect(screen.getByRole('link', { name: 'Open My Requests' })).toHaveAttribute('href', '/app/requests');
-    expect(screen.queryByRole('link', { name: 'Return to workspace' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Go to Home' })).not.toBeInTheDocument();
   });
 
   it('says a cleared list is clear, without "yet" and without an action', () => {

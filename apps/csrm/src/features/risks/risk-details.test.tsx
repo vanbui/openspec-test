@@ -593,6 +593,12 @@ describe('RiskDetails', () => {
       // D-45: the safe-state header describes the page without internal terms.
       expect(screen.getByText('View a Risk and the controls that mitigate it.')).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent(state === 'permission' ? 'You don’t have permission to view the Risk Register' : 'Risk not available');
+      if (state === 'permission') {
+        // D-25, UI-SPEC §2.3 and §2.4: the refusal names Home, never a workspace, and recovers to it.
+        expect(screen.getByRole('alert')).toHaveTextContent('The Risk Register is for Security Analysts. Home shows the work you can open.');
+        expect(within(screen.getByRole('alert')).getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
+        expect(screen.getByRole('alert')).not.toHaveTextContent(/workspace/i);
+      }
       expect(screen.queryByText('RSK-2026-001')).not.toBeInTheDocument();
       expect(screen.queryByText(detail.riskStatement!)).not.toBeInTheDocument();
       expect(screen.queryByText('Customer portal')).not.toBeInTheDocument();

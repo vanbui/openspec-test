@@ -95,7 +95,7 @@ describe('the Requestor request detail route', () => {
 
   it.each([
     ['permission', refused, 'You don’t have access to this area'],
-    ['error', failed, 'We couldn’t load this workspace'],
+    ['error', failed, 'We couldn’t load this page'],
   ] as const)('keeps the page heading above its %s state and names no record', async (kind, result, copy) => {
     mocks.getRequest.mockResolvedValue(result);
     const route = await detailRoute();
@@ -122,7 +122,7 @@ describe('the Requestor request edit route', () => {
 
   it.each([
     ['permission', refused, 'You don’t have access to this area'],
-    ['error', failed, 'We couldn’t load this workspace'],
+    ['error', failed, 'We couldn’t load this page'],
   ] as const)('keeps the page heading above its %s state', async (kind, result, copy) => {
     mocks.getRequest.mockResolvedValue(result);
     const route = await editRoute();
