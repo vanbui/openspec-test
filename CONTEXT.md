@@ -8,7 +8,7 @@ CSRM takes a Requestor's Assessment Request through a Questionnaire to a Risk As
 The product label for a `CsrmAssessment` whose `assessmentStatus` holds the JDL value `approved` (`CsrmAssessmentStatus.APPROVED`): a Security Analyst has released it to the Requestor, and it is read-only.
 _Avoid_: Approved (as the label of an assessment's status), Published
 
-Only the displayed label changes. The stored value `approved`, the `status=approved` query value and the request-status label `Approved` (`CsrmRequestStatus`) are unchanged.
+Only the displayed label changes. The stored value `approved` and the `status=approved` query value are unchanged, and a request whose stored status is `approved` (`CsrmRequestStatus`) also reads "Released".
 
 **Released for response (Risk Assessment stage)**:
 The stage in which a Security Analyst has shared an unreleased assessment with the Requestor and the nominated risk owners for their response, in numbered rounds (decision 3, G-12). It is not a release: nothing is final, and the analyst can still edit the assessment between rounds.
