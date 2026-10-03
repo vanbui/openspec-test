@@ -43,8 +43,8 @@ async function signIn(page: Page, actor: Actor) {
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
   await page.getByRole('button', { name: `Continue as ${actor}` }).click();
   // The sign-in URL itself ends in returnTo=/app, so a URL match alone returns before the
-  // session exists. Assert the shell instead: the Dashboard heading and the signed-in role.
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+  // session exists. Assert the shell instead: the level-one Home heading and the signed-in role.
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
   await expect(page.getByRole('banner').getByText(actor, { exact: true })).toBeVisible();
 }
 

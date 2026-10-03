@@ -284,7 +284,7 @@ const requestorAnsweringState = (page: Page): Guard => async (label) => {
 
 test('has no axe violations in the signed-in CSRM shell', async ({ page }) => {
   await attachCspCollector(page);
-  // signInAs asserts the shell (the Dashboard heading and the role in the banner), never the URL (D-15).
+  // signInAs asserts the shell (the level-one Home heading and the role in the banner), never the URL (D-15).
   await signInAs(page, 'Security Analyst');
   await expectAccessibleAtBothWidths(page, 'the signed-in shell', dashboard, lifecycleDashboard(page));
 });

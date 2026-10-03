@@ -1,17 +1,12 @@
-import { Suspense } from 'react';
-
 import { PermissionDeniedState } from '@/components/states/states';
 import { AnalystDashboard, AnalystDashboardSkeleton } from '@/features/analyst-dashboard/analyst-dashboard';
-import { AnalystDashboardPageHeader } from '@/features/analyst-dashboard/analyst-dashboard-page-header';
 import { analystDashboardCopy, emptyAnalystDashboard } from '@/features/analyst-dashboard/analyst-dashboard-presentation';
 import { getAnalystDashboard, type AnalystDashboard as AnalystDashboardData } from '@/features/analyst-dashboard/analyst-dashboard-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 import { E2eUiStateBoundary, resolveE2eAnalystDashboardPartial, resolveE2eUiState } from '@/lib/testing/e2e-ui-state';
 
-export const metadata = { title: 'Analyst Dashboard | IdamBox CSRM' };
-
-type AnalystDashboardPageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+type AnalystHomeContentProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 /** The guarded partial fixture: Top alerts alone is unavailable, exactly as a failed alert page leaves it. */
 function withFailedTopAlerts(dashboard: AnalystDashboardData): AnalystDashboardData {
@@ -19,11 +14,12 @@ function withFailedTopAlerts(dashboard: AnalystDashboardData): AnalystDashboardD
 }
 
 /**
- * The analyst dashboard (DASH-01, D-15). The capability check comes before any read, so a Requestor
- * sees the permission state and issues no analyst read (D-16). The check is presentation only:
- * Strapi authorises every read itself, and a refused read renders the same state.
+ * The analyst Home: the review summary (DASH-01, D-16, D-18). Home chooses it for `assessment:review`,
+ * and it keeps its own capability check before any read, so it never renders analyst data on its own
+ * say-so (T-11-14). Both checks are presentation only: Strapi authorises every read itself, and a
+ * refused read renders the same state.
  */
-export async function AnalystDashboardContent({ searchParams }: AnalystDashboardPageProps) {
+export async function AnalystHomeContent({ searchParams }: AnalystHomeContentProps) {
   const sessionAdapter = getSessionAdapter();
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
@@ -33,7 +29,7 @@ export async function AnalystDashboardContent({ searchParams }: AnalystDashboard
   // A refusal or a failed summary is authoritative: no fixture can stand in for it.
   if (state.kind !== 'ready') return <AnalystDashboard state={state} />;
 
-  // The guarded presentation fixtures resolve only after the real, authorised reads succeeded.
+  // The guarded presentation fixtures resolve only after the real, authorised reads succeed (D-23).
   const params = await searchParams;
   const fixtureState = resolveE2eUiState(params);
   const failTopAlerts = resolveE2eAnalystDashboardPartial(params);
@@ -47,15 +43,4 @@ export async function AnalystDashboardContent({ searchParams }: AnalystDashboard
   const shown = fixtureState === 'empty' ? emptyAnalystDashboard(state.dashboard.dueSoonWindowDays) : state.dashboard;
   const dashboard = <AnalystDashboard state={{ kind: 'ready', dashboard: failTopAlerts ? withFailedTopAlerts(shown) : shown }} />;
   return fixtureState ? <E2eUiStateBoundary state={fixtureState}>{dashboard}</E2eUiStateBoundary> : dashboard;
-}
-
-export default function AnalystDashboardPage({ searchParams }: AnalystDashboardPageProps) {
-  return (
-    <>
-      <AnalystDashboardPageHeader />
-      <Suspense fallback={<AnalystDashboardSkeleton />}>
-        <AnalystDashboardContent searchParams={searchParams} />
-      </Suspense>
-    </>
-  );
 }

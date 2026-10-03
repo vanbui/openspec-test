@@ -179,7 +179,7 @@ async function signIn(page: Page, role: DevelopmentRole): Promise<void> {
   await page.goto('/sign-in?returnTo=/app');
   await page.getByRole('button', { name: `Continue as ${role}`, exact: true }).click();
   // Assert the shell, never the URL: '/sign-in?returnTo=/app' also ends in '/app' (D-15).
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
   await expect(page.getByRole('banner').getByText(role, { exact: true })).toBeVisible();
 }
 

@@ -42,5 +42,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
+  /*
+   * The analyst dashboard is Home now (D-16, D-17), so its old address answers a temporary 307 to
+   * /app, keeping any query, before the proxy or any rendering. The source is the exact path and the
+   * destination is fixed, so nothing in the request chooses the target (T-11-13). The review queues
+   * under /app/review/ are separate routes and are unaffected.
+   */
+  async redirects() {
+    return [{ source: '/app/review', destination: '/app', permanent: false }];
+  },
 };
 export default nextConfig;

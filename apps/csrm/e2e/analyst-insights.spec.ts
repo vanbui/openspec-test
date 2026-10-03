@@ -92,7 +92,7 @@ async function signIn(page: Page, role: Role): Promise<void> {
    * Assert the shell, never the URL: '/sign-in?returnTo=/app' also ends in '/app', so a URL
    * check alone reports a click that never left sign-in as a success.
    */
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true }), `SIGN_IN_SHELL:${role}`).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true }), `SIGN_IN_SHELL:${role}`).toBeVisible();
   await expect(page.getByRole('banner').getByText(role, { exact: true }), `SIGN_IN_ROLE:${role}`).toBeVisible();
 }
 

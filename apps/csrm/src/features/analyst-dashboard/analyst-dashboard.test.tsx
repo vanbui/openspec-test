@@ -41,13 +41,12 @@ vi.mock('@/lib/testing/e2e-ui-state', () => ({
   resolveE2eUiState: mocks.resolveE2eUiState,
 }));
 
-import AnalystDashboardPage, { AnalystDashboardContent, metadata } from '../../../app/(app)/app/review/(analyst-dashboard)/page';
-import AnalystDashboardError from '../../../app/(app)/app/review/(analyst-dashboard)/error';
-import AnalystDashboardLoading from '../../../app/(app)/app/review/(analyst-dashboard)/loading';
+import HomePage from '../../../app/(app)/app/page';
+import { AnalystHomeContent } from '../home/analyst-home';
 import { AnalystDashboard, AnalystDashboardSkeleton } from './analyst-dashboard';
 import { emptyAnalystDashboard } from './analyst-dashboard-presentation';
 
-const pageDescription = 'Review queues, Risk exposure, due dates and alerts across your authorised scope.';
+const homeDescription = 'What needs your action, and where your work stands.';
 const widgetHeadings = [
   'Review queue',
   'Risk exposure',
@@ -510,7 +509,7 @@ describe('Analyst dashboard route content', () => {
   it('refuses a Requestor at the assessment:review gate before any analyst read or fixture', async () => {
     signInAsRequestor();
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'populated', __e2ePartial: 'analyst-top-alerts-error' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated', __e2ePartial: 'analyst-top-alerts-error' }) }));
 
     expect(calls).toEqual(['capability:assessment:review']);
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
@@ -526,14 +525,14 @@ describe('Analyst dashboard route content', () => {
   it('refuses a viewer with no session the same way', async () => {
     mocks.current.mockResolvedValue(null);
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({}) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
 
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
   });
 
   it('gates, reads, then resolves the fixture and the partial selector, in that order', async () => {
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({}) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
 
     expect(calls[0]).toBe('capability:assessment:review');
     expect(calls[1]).toBe('dashboard');
@@ -546,7 +545,7 @@ describe('Analyst dashboard route content', () => {
   it('renders the permission state, outside any fixture, when Strapi refuses a read', async () => {
     mocks.getAnalystDashboard.mockResolvedValue({ kind: 'permission-denied' });
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
@@ -557,7 +556,7 @@ describe('Analyst dashboard route content', () => {
   it('renders the page error, outside any fixture, when the summary fails', async () => {
     mocks.getAnalystDashboard.mockResolvedValue({ kind: 'error' });
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load the analyst dashboard');
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
@@ -567,7 +566,7 @@ describe('Analyst dashboard route content', () => {
   it('wraps the real dashboard in the guarded boundary for the populated fixture', async () => {
     mocks.resolveE2eUiState.mockReturnValue('populated');
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated' }) }));
 
     const boundary = document.querySelector<HTMLElement>('[data-ui-state="populated"]');
     expect(boundary).not.toBeNull();
@@ -578,7 +577,7 @@ describe('Analyst dashboard route content', () => {
   it('renders the safe empty dashboard for the empty fixture, never the records the read returned', async () => {
     mocks.resolveE2eUiState.mockReturnValue('empty');
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'empty' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'empty' }) }));
 
     const boundary = document.querySelector<HTMLElement>('[data-ui-state="empty"]');
     expect(boundary).not.toBeNull();
@@ -591,7 +590,7 @@ describe('Analyst dashboard route content', () => {
   it.each(['loading', 'error', 'permission'] as const)('renders the %s fixture inside its guarded boundary without figures or records', async (state) => {
     mocks.resolveE2eUiState.mockReturnValue(state);
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: state }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: state }) }));
 
     const boundary = document.querySelector<HTMLElement>(`[data-ui-state="${state}"]`);
     expect(boundary).not.toBeNull();
@@ -612,7 +611,7 @@ describe('Analyst dashboard route content', () => {
       return true;
     });
 
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'populated', __e2ePartial: 'analyst-top-alerts-error' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'populated', __e2ePartial: 'analyst-top-alerts-error' }) }));
 
     expect(calls.indexOf('partial')).toBeGreaterThan(calls.indexOf('dashboard'));
     const top = region('Top alerts');
@@ -625,70 +624,50 @@ describe('Analyst dashboard route content', () => {
   });
 
   it('leaves Top alerts alone when the partial selector does not resolve', async () => {
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2ePartial: 'analyst-top-alerts-error' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2ePartial: 'analyst-top-alerts-error' }) }));
 
     expect(within(region('Top alerts')).queryByRole('alert')).toBeNull();
     expect(within(region('Top alerts')).getAllByRole('link').length).toBeGreaterThan(0);
   });
 });
 
-describe('Analyst dashboard route files', () => {
-  const routeDirectory = 'app/(app)/app/review/(analyst-dashboard)';
-  const route = (file: string) => readFileSync(resolve(process.cwd(), `${routeDirectory}/${file}`), 'utf8');
+describe('Analyst Home route files', () => {
+  const source = (file: string) => readFileSync(resolve(process.cwd(), file), 'utf8');
 
-  it('keeps the page a synchronous, server-owned shell that gates before it reads and reads before any fixture', () => {
-    const page = route('page.tsx');
-    expect(metadata).toEqual({ title: 'Analyst Dashboard | IdamBox CSRM' });
+  it('chooses the analyst Home from the session at /app, before the boundary and any read', () => {
+    const page = source('app/(app)/app/page.tsx');
     expect(page).toContain("can('assessment:review'");
     expect(page).toContain('<Suspense');
     expect(page).not.toContain("'use client'");
     expect(page).not.toMatch(/\bfetch\s*\(/);
-    expect(page).not.toMatch(/export default async function/);
-    expect(page.indexOf("can('assessment:review'")).toBeLessThan(page.indexOf('getAnalystDashboard('));
-    expect(page.indexOf('getAnalystDashboard(')).toBeLessThan(page.indexOf('resolveE2eUiState('));
-    expect(page.indexOf('getAnalystDashboard(')).toBeLessThan(page.indexOf('resolveE2eAnalystDashboardPartial('));
-    expect(AnalystDashboardPage.constructor.name).not.toBe('AsyncFunction');
+    expect(page.indexOf("can('assessment:review'")).toBeLessThan(page.indexOf('<Suspense'));
+    // The page itself reads nothing: each Home's content makes its own authorised reads.
+    expect(page).not.toContain('getAnalystDashboard(');
+    expect(page).not.toContain('getRequestorDashboard(');
   });
 
-  it('renders the page header over the dashboard it streams', async () => {
-    render(await resolveServerTree(AnalystDashboardPage({ searchParams: Promise.resolve({}) })));
+  it('keeps the analyst Home gating before it reads and reading before any fixture', () => {
+    const content = source('src/features/home/analyst-home.tsx');
+    expect(content.indexOf("can('assessment:review'")).toBeGreaterThan(-1);
+    expect(content.indexOf("can('assessment:review'")).toBeLessThan(content.indexOf('getAnalystDashboard('));
+    expect(content.indexOf('getAnalystDashboard(')).toBeLessThan(content.indexOf('resolveE2eUiState('));
+    expect(content.indexOf('getAnalystDashboard(')).toBeLessThan(content.indexOf('resolveE2eAnalystDashboardPartial('));
+  });
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Analyst dashboard' })).toBeInTheDocument();
-    expect(screen.getByText(pageDescription)).toBeInTheDocument();
+  it('renders the Home header over the review summary it streams, with no header action', async () => {
+    render(await resolveServerTree(await HomePage({ searchParams: Promise.resolve({}) })));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByText(homeDescription)).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(region('Needs action')).toBeInTheDocument();
-    // No header action: the tiles are the entry points (UI-SPEC §2.1).
+    // No header action: the tiles are the entry points (D-24).
     expect(screen.getByRole('heading', { level: 1 }).closest('.page-header')?.querySelector('a, button')).toBeNull();
   });
 
-  it('gives the dashboard its own loading and error boundaries under the real header', async () => {
-    const user = userEvent.setup();
-    const retry = vi.fn();
-
-    const loading = render(<AnalystDashboardLoading />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Analyst dashboard' })).toBeInTheDocument();
-    expect(screen.getByText(pageDescription)).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading analyst dashboard' })).toBeInTheDocument();
-    // Never the Requestor dashboard's header or skeleton.
-    expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
-    loading.unmount();
-
-    render(<AnalystDashboardError error={new Error('boom')} retry={retry} />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Analyst dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load the analyst dashboard');
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(retry).toHaveBeenCalledTimes(1);
-
-    const error = route('error.tsx');
-    expect(error).toContain("'use client'");
-    expect(error).toMatch(/retry=\{retry\}/);
-  });
-
-  it('keeps those boundaries inside the dashboard route group, so no review queue inherits them', () => {
+  it('retires the analyst dashboard route group: /app/review is a redirect, not a page', () => {
     for (const file of ['page.tsx', 'loading.tsx', 'error.tsx']) {
-      expect(existsSync(resolve(process.cwd(), `${routeDirectory}/${file}`)), file).toBe(true);
-    }
-    for (const file of ['page.tsx', 'loading.tsx', 'error.tsx']) {
+      expect(existsSync(resolve(process.cwd(), `app/(app)/app/review/(analyst-dashboard)/${file}`)), `(analyst-dashboard)/${file}`).toBe(false);
       expect(existsSync(resolve(process.cwd(), `app/(app)/app/review/${file}`)), `review/${file}`).toBe(false);
     }
   });

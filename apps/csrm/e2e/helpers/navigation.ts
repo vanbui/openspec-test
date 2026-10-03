@@ -5,16 +5,16 @@ export type SignInRole = 'Requestor' | 'Secondary Requestor' | 'Security Analyst
 
 /*
  * Signs in through the development sign-in and proves the application shell (D-15): the level-one
- * Dashboard heading and the role in the banner. Never the URL: '/sign-in?returnTo=/app' also ends in
+ * Home heading and the role in the banner. Never the URL: '/sign-in?returnTo=/app' also ends in
  * '/app', so a URL match passes on a click that never left sign-in. The role proves the session is the
- * one asked for, since every actor's dashboard carries the same heading.
+ * one asked for, since every actor's Home carries the same heading.
  */
 export async function signInAs(page: Page, role: SignInRole): Promise<void> {
   const response = await page.goto('/sign-in?returnTo=/app');
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
 
   await page.getByRole('button', { name: `Continue as ${role}`, exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true }), `SIGN_IN_SHELL:${role}`).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true }), `SIGN_IN_SHELL:${role}`).toBeVisible();
   await expect(page.getByRole('banner').getByText(role, { exact: true }), `SIGN_IN_ROLE:${role}`).toBeVisible();
 }
 

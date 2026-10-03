@@ -68,7 +68,7 @@ async function signIn(page: Page) {
   const response = await page.goto('/sign-in?returnTo=/app');
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
   await page.getByRole('button', { name: 'Continue as Security Analyst' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
   await expect(page.getByRole('banner').getByText('Security Analyst', { exact: true })).toBeVisible();
 }
 
@@ -76,8 +76,8 @@ async function signInAsRequestor(page: Page) {
   const response = await page.goto('/sign-in?returnTo=/app');
   if (!response?.ok()) throw new Error(`AUTH_FIXTURE_SIGN_IN_UNAVAILABLE:${response?.status() ?? 'no-response'}`);
   await page.getByRole('button', { name: 'Continue as Requestor' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
-  // Wait for the banner to show the new role. Every actor's dashboard has the same heading, so only
+  await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
+  // Wait for the banner to show the new role. Every actor's Home has the same heading, so only
   // the role proves the previous Security Analyst session is gone; otherwise the denial proof could
   // silently run as the wrong actor and let an authorised render look like a pass.
   await expect(page.getByRole('banner').getByText('Requestor', { exact: true })).toBeVisible();
@@ -175,10 +175,10 @@ test.describe('dashboard state matrix', () => {
       await signIn(ordinaryPage); await ordinaryPage.goto('/app?__e2eState=error');
       await expect(ordinaryPage.locator('[data-ui-state]'), 'ordinary server must ignore the browser fixture query').toHaveCount(0);
       // exact: true - this spawned server has no Strapi credentials in its environment, so
-      // the dashboard also renders 'We couldn't load your dashboard' and a loose name match
-      // resolves to two headings. The load state is irrelevant here; the assertion above is
-      // the real one, proving the fixture query is ignored without an attested runtime.
-      await expect(ordinaryPage.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+      // Home's body renders its own load failure heading beneath the page heading. The load
+      // state is irrelevant here; the assertion above is the real one, proving the fixture
+      // query is ignored without an attested runtime.
+      await expect(ordinaryPage.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
       await context.close();
     } finally { server.kill(); }
     await signIn(page);
