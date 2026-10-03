@@ -20,16 +20,6 @@ export type RequestLifecycleStep = { key: RequestLifecycleStepKey; label: string
 export type RequestLifecycleNextAction = { actor: 'requestor' | 'analyst' | 'none'; summary: string; href?: string };
 export type RequestLifecycle = { currentKey: RequestLifecycleStepKey; currentLabel: string; terminal: boolean; nextAction: RequestLifecycleNextAction | null; steps: readonly RequestLifecycleStep[] };
 
-export const requestStatusPresentation = {
-  draft: { label: 'Draft', order: 0 },
-  submitted: { label: 'Submitted', order: 1 },
-  'questionnaire-in-progress': { label: 'Questionnaire in progress', order: 2 },
-  'risk-assessment-drafted': { label: 'Risk assessment drafted', order: 3 },
-  'under-review': { label: 'Under review', order: 4 },
-  approved: { label: 'Approved', order: 5 },
-  closed: { label: 'Closed', order: 6 },
-} satisfies Record<RequestStatus, { label: string; order: number }>;
-
 export const requestSortValues = [
   'updatedAt:desc',
   'updatedAt:asc',

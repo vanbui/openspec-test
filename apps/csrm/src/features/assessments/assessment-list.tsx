@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/stat
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { nativeSelectClassName } from '@/components/csrm/native-select';
-import { requestStatusPresentation, requestStatuses } from '@/features/requests/request-domain';
+import { requestStatuses, type RequestStatus } from '@/features/requests/request-domain';
 import { assessmentStatuses } from './assessment-domain';
 import type { AssessmentRequestQueueItem, AssessmentSummary } from './assessment-schema';
 import type { AssessmentCollectionQuery, AssessmentRequestReviewQuery, CollectionPagination } from './assessment-service';
@@ -250,7 +250,7 @@ export function AssessmentRequestList({
   // A refusal is the page header and the permission state alone, as the Risk Register's is (W-3).
   if (resolvedState === 'permission') return <PermissionDeniedState area="assessment requests" />;
   const queueLabels = { 'requires-attention': 'Requires my attention', 'awaiting-requestor': 'Awaiting Requestor', 'generation-in-progress': 'Generation in progress', released: 'Released' } as const;
-  const statuses = requestStatuses.map((status) => ({ value: status, label: requestStatusPresentation[status].label }));
+  const statuses = requestStatuses.map((status) => ({ value: status, label: statusLabel('request', status) }));
 
   return (
     <div className="space-y-3">
@@ -286,7 +286,7 @@ export function AssessmentRequestList({
           </article>
         )}
         state={resolvedState}
-        statusLabelFor={(status) => requestStatusPresentation[status as keyof typeof requestStatusPresentation]?.label ?? status}
+        statusLabelFor={(status) => statusLabel('request', status as RequestStatus)}
         totalCount={pagination?.total ?? requests.length}
       />
     </div>

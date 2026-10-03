@@ -5,7 +5,8 @@ import { getMyAssessmentRatingSummary, listMyReleasedAssessments } from '../asse
 import type { QuestionnaireSummary } from '../questionnaires/questionnaire-service';
 import { getMyQuestionnaireSummary, listMyQuestionnaires,} from '../questionnaires/questionnaire-service';
 import { availableAssessmentRequest, type QuestionnaireRequestRelationship } from '../questionnaires/questionnaire-domain';
-import { formatRequestDate, requestStatuses, requestStatusPresentation, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
+import { statusLabel } from '../../components/csrm/status-badge';
+import { formatRequestDate, requestStatuses, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
 import { getMyRequestStatusSummary, listDashboardRequests } from '../requests/request-service';
 import type { ContractResponseParser } from '../assessments/assessment-service';
 
@@ -142,7 +143,7 @@ export function deriveRequestorDashboard(
   return {
     requestLifecycleCounts: requestLifecycleCounts === null ? null : requestStatuses.map((status) => ({
       status,
-      label: requestStatusPresentation[status].label,
+      label: statusLabel('request', status),
       count: requestLifecycleCounts.find((entry) => entry.status === status)?.count ?? 0,
     })),
     draftRequests: { count: totals?.drafts ?? draftItems.length, items: draftItems },

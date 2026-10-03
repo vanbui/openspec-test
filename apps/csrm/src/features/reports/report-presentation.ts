@@ -1,5 +1,6 @@
 import type { AssessmentRating } from '../assessments/assessment-schema';
-import { requestStatuses, requestStatusPresentation, type RequestStatus } from '../requests/request-domain';
+import { statusLabel } from '../../components/csrm/status-badge';
+import { requestStatuses, type RequestStatus } from '../requests/request-domain';
 import type {
   AssessmentThroughputReport,
   ControlEffectivenessReport,
@@ -302,7 +303,7 @@ function isReviewScopeStatus(status: RequestStatus): status is Exclude<RequestSt
 export function requestLifecycleRows(counts: RequestStatusCounts): ReportTableRow[] {
   return requestStatuses
     .filter(isReviewScopeStatus)
-    .map((status) => ({ key: status, label: requestStatusPresentation[status].label, values: [counts[requestStatusCountKeys[status]]] }));
+    .map((status) => ({ key: status, label: statusLabel('request', status), values: [counts[requestStatusCountKeys[status]]] }));
 }
 
 /* ---------------------------------------------------- control effectiveness */

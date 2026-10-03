@@ -4,6 +4,7 @@ import {
   CircleCheckIcon,
   CircleDashedIcon,
   CircleDotIcon,
+  CircleIcon,
   CircleQuestionMarkIcon,
   CircleXIcon,
   ClipboardListIcon,
@@ -69,11 +70,14 @@ const requestFamily = {
   'questionnaire-in-progress': { icon: ClipboardListIcon, label: 'Questionnaire in progress', tone: 'info' },
   'risk-assessment-drafted': { icon: FileWarningIcon, label: 'Risk assessment drafted', tone: 'warning' },
   'under-review': { icon: SearchCheckIcon, label: 'Under review', tone: 'warning' },
-  approved: { icon: CircleCheckIcon, label: 'Approved', tone: 'success' },
+  approved: { icon: CircleCheckIcon, label: 'Released', tone: 'success' },
   closed: { icon: LockKeyholeIcon, label: 'Closed', tone: 'neutral' },
 } satisfies Record<RequestStatus, StatusPresentation>;
 
-/* The stored value approved is labelled Released (CONTEXT.md); drafted and in review are analyst work. */
+/*
+ * Both families label the stored value approved Released (CONTEXT.md, D-46): only the label changes, so the
+ * stored value and the status=approved query value stay approved. Drafted and in review are analyst work.
+ */
 const assessmentFamily = {
   draft: { icon: CircleDashedIcon, label: 'Draft', tone: 'warning' },
   'in-review': { icon: CircleDotIcon, label: 'In review', tone: 'warning' },
@@ -123,8 +127,23 @@ export const statusPresentation: {
   importRow: importRowFamily,
 };
 
+/*
+ * A value a family does not yet label: its words in sentence case, the neutral tone and a plain circle. Closed
+ * parsers refuse unknown values at the boundary, so this guards a value added to a vocabulary before its label
+ * (the G-13 seam); it never renders anything but the status value itself.
+ */
+function unknownStatusPresentation(value: string): StatusPresentation {
+  const words = value.replaceAll('-', ' ').trim();
+  return {
+    icon: CircleIcon,
+    label: words.charAt(0).toUpperCase() + words.slice(1),
+    tone: 'neutral',
+  };
+}
+
 function presentationOf<F extends StatusFamily>(family: F, value: StatusValue<F>): StatusPresentation {
-  return statusPresentation[family][value];
+  const entries: Readonly<Record<string, StatusPresentation>> = statusPresentation[family];
+  return Object.hasOwn(entries, value) ? entries[value] : unknownStatusPresentation(String(value));
 }
 
 /** The label a status value displays, for filter options and chips that are not badges. */
@@ -175,7 +194,7 @@ export function StatusBadge(props: StatusBadgeProps) {
   const { className, live = false } = props;
   const presentation = props.status === undefined
     ? presentationOf(props.family, props.value)
-    : statusPresentation.request[props.status];
+    : presentationOf('request', props.status);
   const tone: { className?: string; variant: BadgeVariant } = toneBadges[presentation.tone];
   const Icon = presentation.icon;
 

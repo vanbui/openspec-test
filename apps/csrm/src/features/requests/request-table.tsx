@@ -4,13 +4,12 @@ import type { SortingState } from '@tanstack/react-table';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, type FormEvent } from 'react';
 import { DataTable, type DataTableColumn, type DataTableFilter } from '@/components/csrm/data-table';
-import { StatusBadge } from '@/components/csrm/status-badge';
+import { StatusBadge, statusLabel } from '@/components/csrm/status-badge';
 import { RecordLink } from '@/components/csrm/record-link';
 import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/states/states';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  requestStatusPresentation,
   requestStatuses,
   type CsrmAssessmentRequest,
   type RequestListQuery,
@@ -105,7 +104,7 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
   const clearFilters = () => resetPage({ q: '', status: undefined });
   const filters = useMemo<DataTableFilter[]>(() => [
     ...(query.q ? [{ id: 'q', label: 'Search', value: query.q }] : []),
-    ...(query.status ? [{ id: 'status', label: 'Status', value: requestStatusPresentation[query.status].label }] : []),
+    ...(query.status ? [{ id: 'status', label: 'Status', value: statusLabel('request', query.status) }] : []),
   ], [query.q, query.status]);
   const resolvedState = outOfRange ? 'loading' : state ?? (requests.length > 0 ? 'populated' : 'empty');
 
@@ -135,7 +134,7 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
             onChange={(event) => resetPage({ status: event.target.value ? event.target.value as RequestListQuery['status'] : undefined })}
           >
             <option value="">All statuses</option>
-            {requestStatuses.map((status) => <option key={status} value={status}>{requestStatusPresentation[status].label}</option>)}
+            {requestStatuses.map((status) => <option key={status} value={status}>{statusLabel('request', status)}</option>)}
           </select>
         </label>
       </div>
