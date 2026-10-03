@@ -316,6 +316,7 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Section labels: `--text-micro` in `--color-text-inverse-muted`. Dividers: `--color-border-on-dark`. Focus: `--focus-ring-inverse`.
 - Top bar: `--spacing-header-h-sm` (56px) below 768px, `--spacing-header-h-md` (64px) from 768px, sticky; `--color-bg-page` at 95% + `backdrop-blur(8px)` + 1px `--color-border-default` bottom hairline. The role indicator is a neutral tag.
 - <768px: sidebar becomes an overlay drawer (260ms expo slide; reduced-motion: fade); 375px layouts are single-column.
+- **Sidebar sections, counts and primary action (CSRM extension, 2026-09-28).** Navigation is grouped into sections named by job. A section label is `--text-micro` in `--color-text-inverse-muted` above a `--color-border-on-dark` divider; the top section, holding Home, has no label. A section of personal or occasional work may collapse: its label row is a button of the nav item height with a 16px `ChevronRight` (collapsed) or `ChevronDown` (expanded) before the label, `aria-expanded` and `aria-controls`, the item hover fill and `--focus-ring-inverse`; it opens itself when the current page is one of its items, and its state is never persisted. A count on an item that holds work is the neutral tag on the sidebar at the item's end, `tabular-nums`, in the item's text colour; a zero, a failed read or a refused read shows no count, and the count with what it counts is part of the link's accessible name. A collapsed section's label row shows its items' count. An actor's primary action sits first in the navigation as a full-width light-filled pill: `--color-bg-page` fill, the label in `--color-text-primary` at `--text-button` with a 16px icon, `--shadow-button-light`, lifting 1px to `--shadow-button-light-hover` on hover; it never recolours.
 
 ### Buttons
 
@@ -329,6 +330,7 @@ More than two series are separated by dash or pattern plus direct labels, never 
   - **Link**: record-link treatment (below).
   - **Destructive**: `--color-danger-solid` fill, white text, same lift behaviour.
 - Disabled: 50% opacity, no lift, no shadow.
+- **Keyboard shortcut hint (CSRM extension, 2026-09-28).** A control with a keyboard shortcut may show it after its label as keys: each key a `kbd` in `--text-micro` and `--color-text-secondary`, with a 1px `--color-border-default` boundary, `--radius-sm` and 4px horizontal padding. The hint is `aria-hidden`, the control carries `aria-keyshortcuts`, the hint names the viewer's platform (`⌘` on Apple devices, `Ctrl` elsewhere) and renders after mount, and it is not shown below 768px. The header's search control sits beside the role indicator: from 768px an outline pill with a 16px `Search` icon, its visible label and the hint; below 768px an icon-only circle at the touch-target size. Its accessible name is its label at every width.
 
 ### Tags and chips
 
@@ -394,12 +396,17 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Page title in `--text-heading-lg` (Instrument Serif 400, 28px). An optional `--text-micro` eyebrow sits above it; the description below uses `--text-body` in `--color-text-secondary`.
 - Actions sit right on desktop and stack full-width below 768px.
 
+### Lifecycle stepper
+
+- **Compact lifecycle stepper (CSRM extension, 2026-09-28).** Below 768px a lifecycle stepper keeps its heading and shows, in order: `Step {n} of {m}` in `--text-body` at 500 with `tabular-nums`, the next action, and an outline disclosure button at the touch-target height, `Show all steps` or `Hide all steps`, with a `ChevronDown` or `ChevronUp` swapped with no transition, `aria-expanded` and `aria-controls`, which reveals the full ordered list below it. From 768px the full stepper shows and the compact lines do not. The next action is displayed once per width.
+
 ### Dialogs
 
 - Scrim `--color-bg-scrim`, fade 220ms. Panel: `--color-bg-surface`, `--radius-2xl`, 1px `--color-border-default` **+** `--shadow-overlay` (overlays float; in-page structure never does).
 - Enter: opacity 0→1 + scale 0.98→1, 220ms expo. Exit: 160ms `--ease-in`, fade + scale to 0.98.
 - Sizes: 480px (confirm), 640px (form), 800px (complex). Destructive confirms use the destructive pill + explicit noun ("Delete 3 assessments").
 - Focus trapped; initial focus on first meaningful control; Esc closes non-destructive dialogs.
+- **Quick find (CSRM extension, 2026-09-28).** A command dialog for finding records. From 768px it is the form size (640px), horizontally centred and anchored `--spacing-header-h-md` plus 48px below the top of the viewport, so its top edge never moves as results arrive; its list scrolls within the remaining viewport height less 48px. Below 768px it is a full-screen sheet with a visible title row and a Close control. The input row (a 16px `Search` icon, the input at `--text-body`, and a Clear control while it holds text) sits above a `--color-border-default` hairline and shows the focus ring while focused. Results are grouped under `.micro-label` headings with their totals; an option is two lines (`--text-body`, then `--text-caption` in `--color-text-secondary`), at least the touch-target height below 768px, and the active option is `--color-bg-inset`. From 768px a footer row shows the keys that move, open and close as keyboard shortcut hints. Loading rows are skeletons after 300ms; while a newer search runs, the previous results stay at the §5 pending opacity.
 
 ### Toasts
 
@@ -428,6 +435,7 @@ More than two series are separated by dash or pattern plus direct labels, never 
 - Record links use `--color-text-link` (ink), 500 weight, and a visible 1px underline at rest in `--text-link-decoration` with a 3px offset. Link and body text share a colour, so the at-rest underline is the non-colour cue and is never removed. On hover and `:focus-visible`, the underline becomes `--color-text-link`.
 - Only text-decoration colour transitions, using `--duration-micro` and `--ease-standard`. Context determines text size; the record-link contract does not.
 - **Block links (CSRM extension, 2026-09-24):** a link that is a whole tile, row or card is not underlined, so it carries a trailing `ChevronRight` in `--color-text-muted` as its non-colour cue on touch devices. A block link that contains a record identifier still opens through one keyboard target only.
+- **Figure links (CSRM extension, 2026-09-28).** A figure that opens the records behind it is a link whose list total equals the figure. A tile or a row is one block link (§4 Cards, block links); a figure in a table or a chip is a text link with the record-link treatment on the figure alone, right-aligned with `tabular-nums` like any numeric cell. A figure of zero in a table or a chip is plain text. A sum of linked parts stays plain. A row header may link to the records its row describes when its figures cannot, and its name says so. Each link's accessible name begins with its visible figure or label, then says what it counts.
 
 ### Iconography
 
