@@ -248,15 +248,17 @@ test('assessment list filters remain readable and independent across responsive 
   const queue = page.getByRole('combobox', { name: 'Filter by queue' });
   await expectAtBothWidths(page, requestStatus, 'Analyst request status filter');
   await expectAtBothWidths(page, queue, 'Analyst request queue filter');
+  // A released request reads Released, as its assessment does (D-46); the option's value stays approved.
   await expect(requestStatus.locator('option')).toHaveText([
     'All statuses', 'Draft', 'Submitted', 'Questionnaire in progress',
-    'Risk assessment drafted', 'Under review', 'Approved', 'Closed',
+    'Risk assessment drafted', 'Under review', 'Released', 'Closed',
   ]);
+  await expect(requestStatus.locator('option', { hasText: 'Released' })).toHaveAttribute('value', 'approved');
   await queue.selectOption('released');
   await expect(page).toHaveURL(/queue=released/);
   await expect(requestStatus.locator('option')).toHaveText([
     'All statuses', 'Draft', 'Submitted', 'Questionnaire in progress',
-    'Risk assessment drafted', 'Under review', 'Approved', 'Closed',
+    'Risk assessment drafted', 'Under review', 'Released', 'Closed',
   ]);
 
   await page.goto('/app/review/assessments');
@@ -283,17 +285,22 @@ test('an Analyst status choice outside the queue shows the empty filtered list, 
   await requestStatus.selectOption('approved');
   await expect(page).toHaveURL(/status=approved/);
   const noMatchingRequests = page.getByRole('heading', { name: 'No assessment requests match these filters' });
-  await expectAtBothWidths(page, noMatchingRequests, 'Approved in Requires my attention empty-filter state');
+  await expectAtBothWidths(page, noMatchingRequests, 'Released in Requires my attention empty-filter state');
   // The chip says what the list shows, on screen and on paper (verdict 4a); the table row and the empty state each clear it.
-  await expect(page.getByText('Status: Approved', { exact: true }), 'the status filter shows as a chip').toBeVisible();
+  await expect(page.getByText('Status: Released', { exact: true }), 'the status filter shows as a chip').toBeVisible();
   await expect(page.locator('[data-state-kind="empty"]').getByRole('button', { name: 'Clear filters' })).toBeVisible();
   await expect(page.locator('[data-state-kind="error"]')).toHaveCount(0);
 
   await queue.selectOption('released');
   await expect(page).toHaveURL(/queue=released/);
   await expect(requestStatus).toHaveValue('approved');
+  await expect(page).toHaveURL(/status=approved/);
   await expect(page.getByRole('link', { name: ownerRequestNumber })).toBeVisible();
   await expect(page.getByRole('main').locator('[data-state-kind]')).toHaveCount(0);
+  // The filtered list's own row reads Released for the released request, while the URL keeps the stored value.
+  const releasedRequestRow = page.getByRole('row').filter({ has: page.getByRole('link', { name: ownerRequestNumber }) });
+  await expect(releasedRequestRow.locator('[data-slot="badge"]'), 'UX09_RELEASED_REQUEST_LABEL').toHaveText('Released');
+  await expect(page.getByText('Status: Released', { exact: true }), 'the status filter shows as a chip').toBeVisible();
 
   await page.goto('/app/review/assessments');
   const assessmentStatus = page.getByRole('combobox', { name: 'Filter by status' });
