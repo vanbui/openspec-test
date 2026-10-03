@@ -33,7 +33,6 @@ import type {
  */
 
 const countFormat = new Intl.NumberFormat('en-AU');
-const dateFormat = new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeZone: 'UTC' });
 
 function formatCount(value: number): string {
   return countFormat.format(value);
@@ -127,14 +126,17 @@ export function dashboardKpiTiles(counts: DashboardKpiCounts, dueSoonWindowDays:
 
 export type DashboardWidgetKey = Exclude<keyof AnalystDashboardUnits, 'kpi'>;
 
-/** The widgets in DOM and reading order (UI-SPEC §2.2): action, exposure, time-bound work, alerts, activity. */
+/**
+ * The widgets in DOM and reading order (D-18, Phase 11 UI-SPEC §5.3): the queue first, then the
+ * deadlines and alerts, then exposure, then activity.
+ */
 export const dashboardWidgetOrder = [
   'reviewQueue',
-  'riskExposure',
-  'highCritical',
   'treatmentsDue',
   'upcomingDueDates',
   'topAlerts',
+  'riskExposure',
+  'highCritical',
   'recentActivity',
 ] as const satisfies readonly DashboardWidgetKey[];
 
@@ -445,8 +447,7 @@ export type ActivityRow = {
   linkText: string;
   href: string;
   phrase: string;
-  /** Absolute, en-AU, UTC (UI-D18). */
-  date: string;
+  /** The event's instant; the row renders it as a date in the viewer's time zone (D-55, X-3). */
   dateTime: string;
   /** "{record type} · {title}", the type alone when the title is the link or absent, or null when the link is the type. */
   secondary: string | null;
@@ -466,7 +467,6 @@ export function activityRows(activity: DashboardSummary['recentActivity']): Acti
       linkText,
       href: activityHref(item),
       phrase: activityPhrase(item),
-      date: dateFormat.format(new Date(item.occurredAt)),
       dateTime: item.occurredAt,
       secondary,
     };

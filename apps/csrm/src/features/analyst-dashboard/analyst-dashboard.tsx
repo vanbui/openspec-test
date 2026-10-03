@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { AlertUrgencyBadge } from '@/components/csrm/alert-urgency-badge';
 import { BarChart } from '@/components/csrm/bar-chart';
 import { KpiTile, KpiTileSkeleton, KpiTileStrip } from '@/components/csrm/kpi-tile';
+import { LocalInstant } from '@/components/csrm/local-time';
 import { RecordLink } from '@/components/csrm/record-link';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import { RetryableErrorState } from '@/components/states/retryable-error-state';
@@ -52,8 +53,11 @@ import type {
  * drop list semantics, and the row count with them, unless the role is explicit.
  */
 
-/* Tiles: one column below sm, two from sm, four from xl. The strip's subgrid aligns their lines. */
-const kpiStripClassName = 'sm:grid-cols-2 xl:grid-cols-4';
+/*
+ * Tiles: two by two below xl, so the Review queue starts within the first 375px screen, and four in a
+ * row from xl (UI-D20). The strip's subgrid aligns their lines, and long captions wrap inside it.
+ */
+const kpiStripClassName = 'grid-cols-2 xl:grid-cols-4';
 
 /* Widgets: one column, two from lg (the Requestor dashboard's grid), gaps at the grid gap (§3.9). */
 const widgetGridClassName = 'grid min-w-0 grid-cols-1 gap-gutter-xs sm:gap-gutter-sm lg:grid-cols-2';
@@ -276,7 +280,8 @@ function ActivityRowView({ row }: { row: ActivityRow }) {
         <span>{row.phrase}</span>
       </p>
       <p className="text-xs tabular-nums text-foreground-secondary @md:col-start-2 @md:row-start-1 @md:self-center @md:text-end">
-        <time dateTime={row.dateTime}>{row.date}</time>
+        {/* The viewer's date, in its own <time dateTime> (D-55, X-3). */}
+        <LocalInstant style="date" value={row.dateTime} />
       </p>
       {row.secondary ? (
         <p className="line-clamp-1 min-w-0 text-xs text-foreground-secondary @md:col-span-2 @md:row-start-2">{row.secondary}</p>
