@@ -176,14 +176,14 @@ Plans:
 5. Exposure widgets and reports say whether they include unreleased risks, and a released request reads "Released".
 6. Ctrl+K or ⌘K finds a request, questionnaire, assessment or risk by number or title and opens it, showing only records the user may read.
 
-**Plans:** 1/21 plans executed (one per wave; serialised by Playwright and shared files)
+**Plans:** 2/21 plans executed (one per wave; serialised by Playwright and shared files)
 
 Plans:
 **Wave 1**
 - [x] 11-01-PLAN.md — Record the UI-SPEC's extensions X-6 to X-10 in the design direction first (orchestrator constraint: the first Phase 11 plan records them before any implementing task). Then deliver D-46 end to end: th
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 11-02-PLAN.md — Make `/app` Home for both actors (D-16): the page reads the session's capabilities, renders the analyst Home (today's analyst dashboard content, moved) for `assessment:review` and the Requestor Home (
+- [x] 11-02-PLAN.md — Make `/app` Home for both actors (D-16): the page reads the session's capabilities, renders the analyst Home (today's analyst dashboard content, moved) for `assessment:review` and the Requestor Home (
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 11-03-PLAN.md — Reorder the analyst Home to lead with the queue, deadlines and alerts (D-18) and set its tiles two by two below xl so the queue is on the first 375px screen (UI-D20). Render Recent activity dates thro

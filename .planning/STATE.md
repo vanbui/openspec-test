@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-10-03T00:38:55.893Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-10-03T01:18:54.825Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 11-01 complete
-state_head: 6d0a9e433e5cc1e81d646ccfb6c80f488f0463e3
+last_activity_desc: Plan 11-02 complete
+state_head: 51bece1f48feeaea968dc80d511ae8e3e9cf7aa9
 progress:
   total_phases: 16
   completed_phases: 1
   total_plans: 290
-  completed_plans: 24
+  completed_plans: 25
   percent: 6
 current_phase: 11
 current_phase_name: Navigation, landing and list clarity
@@ -45,11 +45,11 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
   - verification: `10-VERIFICATION.md` `passed`, 6/6 success criteria and no gaps; the pilot accepted the three Manual-Only checks as residuals for the operator's UAT, recorded as deferred follow-ups in `10-UAT.md` (complete);
   - the final full gate, green at `00306ac` (below);
   - requirements: REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 complete; ADMIN-05 partial by decision, its Information Asset owner moved to Phase 22.
-- **Phase 11 (executing):** its fresh plan check passed (`a589569`). Plan 11-01 is complete (`1e36e6d` to `bc0b6eb`, SUMMARY `6d0a9e4`): X-6 to X-10 are in the design direction, and a released request reads "Released" through the one status mapping. `PHASE_11_BASE=9f95575` is recorded in `11-01-SUMMARY.md` for the 11-21 gate. Plan 11-02 is next.
+- **Phase 11 (executing):** its fresh plan check passed (`a589569`). Plan 11-01 is complete (`1e36e6d` to `bc0b6eb`, SUMMARY `6d0a9e4`): X-6 to X-10 are in the design direction, and a released request reads "Released" through the one status mapping. `PHASE_11_BASE=9f95575` is recorded in `11-01-SUMMARY.md` for the 11-21 gate. Plan 11-02 is complete (`5a16e80` to `c0a9914`, SUMMARY `51bece1`): every actor lands on one Home at `/app`, chosen from the session's capabilities before any read; `/app/review` is a 307 to Home; the Analyst dashboard name, route group and nav item are gone; every E2E sign-in proves the level-one Home heading (full Playwright 96/96, web 2,870/2,870). Plan 11-03 is next.
 
-Plan: 2 of 21
+Plan: 3 of 21
 Status: Ready to execute
-Last activity: 2026-10-03 — Plan 11-01 complete
+Last activity: 2026-10-03 — Plan 11-02 complete
 
 ## Milestone
 
@@ -159,6 +159,9 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 11]: 11-01: a request whose stored status is approved reads Released on every surface (badge, review queue and My requests options and chips, Requestor dashboard counts, throughput lifecycle row); the stored approved, status=approved and the API are unchanged (D-46). PHASE_11_BASE=9f95575.
 - [Phase 11]: 11-01: statusPresentation in components/csrm/status-badge.tsx is the only request status label source; requestStatusPresentation is retired and feature code calls statusLabel('request', status). presentationOf falls back to a sentence-case label, the neutral tone and CircleIcon for a value a family does not yet label (G-13 seam for Phase 17.1).
 - [Phase 11]: 11-01: X-6 to X-10 are recorded in the design direction verbatim from 11-UI-SPEC.md; X-9 sits under a new '### Lifecycle stepper' heading before '### Dialogs'.
+- [Phase 11]: 11-02: /app is Home for every actor (heading Home, title Home | IdamBox CSRM). The page reads the session's capabilities without a Strapi read and renders the analyst Home (the review summary, AnalystHomeContent with its own gate and guarded fixtures) for assessment:review, else the Requestor Home, each behind its own skeleton, before any data read (D-16, T-11-01).
+- [Phase 11]: 11-02: /app/review is a 307 to /app from next.config.ts redirects() (literal source, fixed destination, query kept); the (analyst-dashboard) route group, its header and the Analyst dashboard nav item are gone; the /app nav item is Home (HouseIcon); the analyst Home refuses with Return to sign in (D-17, UI-D19).
+- [Phase 11]: 11-02: every E2E sign-in proves the level-one Home heading and the role in the banner (HOME_HEADING guard). The Requestor Home's conformance state matrix, type scan and repair points run as the Requestor; the analyst Home replaces /app/review in the Phase 7 matrix; performance measures /app per actor. /app's error boundary uses Next 16.3 retry.
 
 ## Risks and Open Decisions
 
@@ -248,11 +251,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P22 | 43 min | 3 tasks | 7 files |
 | Phase 10 P23 | 48min gate + walkthrough rounds (2026-10-02 to 2026-10-03) | 3 tasks | 51 files |
 | Phase 11 P01 | 9 min | 2 tasks | 17 files |
+| Phase 11 P02 | 36 min | 2 tasks | 31 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-03T00:38:36.969Z
-**Stopped At:** Completed 11-01-PLAN.md
+**Last session:** 2026-10-03T01:18:41.255Z
+**Stopped At:** Completed 11-02-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
@@ -272,7 +276,7 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Next Action
 
-**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is complete (2026-10-03). Phase 11 is executing: plan 11-01 is complete and 11-02 is next (Session Continuity step 3).
+**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is complete (2026-10-03). Phase 11 is executing: plans 11-01 and 11-02 are complete and 11-03 is next (Session Continuity step 3).
 
 ## Accumulated Context
 
