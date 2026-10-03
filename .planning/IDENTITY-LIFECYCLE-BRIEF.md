@@ -1,0 +1,137 @@
+# Identity lifecycle brief: bring workers from an Identity Source into IdamBox
+
+**Status:** input for `/gsd-new-milestone` (v3.0 Identity Lifecycle). Agreed with the operator on 2026-10-03 through a grilling session; every decision below was accepted explicitly. Nothing here has been added to `ROADMAP.md`, `REQUIREMENTS.md` or `STATE.md` yet — the GSD milestone workflow does that.
+**Research:** `.planning/research/IDENTITY-SOURCE-PROVISIONING.md` (primary-source citations for every standards, hub and library claim below).
+**Depends on:** v2.0 Phase 22 (the Admin role, the change log and role-assignment recording, D-08). The milestone starts after v2.0, unless a customer deployment pulls it forward.
+**Sections:** 1 goal, 2 ground truth, 3 decisions I1–I22, 4 architecture, 5 model gaps, 6 requirements, 7 phases, 8 risks, 9 backlog, 10 out of scope.
+
+## 1. Goal
+
+As an IdamBox operator, I want the workforce in an authoritative Identity Source (typically the HR system) to appear in IdamBox automatically: the existing workers imported once, and every joiner, mover and leaver applied afterwards. So nobody keys users in by hand, and a leaver loses CSRM access without anyone remembering to do it.
+
+## 2. Ground truth (checked 2026-10-03; verify, don't assume)
+
+- `IdamBoxUser` (`apps/backend/src/api/idambox-user/content-types/idambox-user/schema.json`): `email` and `username` unique and required, `firstName`, `lastName`, `displayName` required, `accountStatus` `active|inactive`, `externalSubject` unique (the Keycloak user id), private `password`, `roles` manyToMany `Role`. No employee number, source key, source attribution, lifecycle dates, department or manager.
+- **Outbound to Keycloak already exists** (ADR 0002, `apps/backend/src/keycloak/`). With `IDAMBOX_KEYCLOAK_PROVISIONING=true`, a Document Service middleware creates or updates the Keycloak account in the same database transaction as the `IdamBoxUser` write; any Keycloak failure rolls the write back. Deletes do not propagate.
+- **Sign-in identity** (ADR 0004): Strapi verifies the Keycloak access token and maps `sub` to exactly one **active** `IdamBoxUser.externalSubject` on every request (`apps/backend/src/middlewares/csrm-keycloak-identity.ts:55`). An inactive Strapi record is refused immediately, whatever Keycloak says. Email linking was rejected.
+- Requestor is an implicit birthright role for any active `IdamBoxUser`; Security Analyst is explicit.
+- The datamodel is frozen (G-6): a content-type change writes its `docs/contract-gaps/` record first and waits for approval.
+- Phase 6's admin CSV import (`apps/backend/src/api/csrm-administration/services/csv-import.ts`) is the pattern to reuse for a dry-run import.
+- Keycloak runs 26.6.1. Its own SCIM API is experimental there (supported from 26.8) and inbound only, so it cannot be the hub that feeds Strapi.
+- There is no credible Strapi SCIM plugin. Usable Node building blocks: `scimmy` (MIT), `scim-patch` and `scim2-parse-filter` (Unlicense). `scimmy-routers` targets Express, not Strapi's Koa.
+
+## 3. Decisions (I1–I22)
+
+| # | Decision | Why |
+|---|---|---|
+| I1 | **Source-agnostic, multi-source.** One standard inbound contract; every user is tagged with the source it came from. One reference source for demos and tests. | Customers bring their own HR system. |
+| I2 | **Strapi is the hub.** HR (or a hub in front of it) pushes into Strapi; Strapi keeps provisioning Keycloak. No per-vendor pull connectors in IdamBox. | Keeps Strapi the authority for `IdamBoxUser` and the production API boundary. Hubs (Entra, Okta, JumpCloud, midPoint) already own HR connectors and effective dating. |
+| I3 | **Full joiner, mover and leaver lifecycle. Leavers are deactivated, never deleted.** | Leaver revocation is the security-critical part (NIST 800-53 AC-2, ISO 27001 A.5.16/A.5.18). Deactivation keeps every requestor/owner reference intact and already disables Keycloak. |
+| I4 | **HR owns identity attributes and employment status** (read-only in IdamBox for sourced users). **IdamBox owns roles.** Manual users stay allowed and are never touched by a source. | No two writers fight over a field; break-glass and non-HR users survive a sync. |
+| I5 | **Import the whole workforce the source sends.** Scoping happens at the source or hub, not in Strapi. Everyone imported gets birthright Requestor. | Matches the product intent: anyone can raise an assessment request. |
+| I6 | **A new milestone, v3.0 Identity Lifecycle, after v2.0.** | Depends on Phase 22; a separate capability from the assessment lifecycle. |
+| I7 | **Prove conformance with the Microsoft SCIM Validator and Okta's SCIM test suite.** Local development and CI use a scripted SCIM client fixture and a sample CSV; no live hub runs in CI. | Entra and Okta are what customers point at us. midPoint is a later demo add-on (backlog). |
+| I8 | **Correlation key = (identity source, `sourceExternalId`)**, with `employeeNumber` stored beside it. Pre-existing users are linked once, during the first import, through email matches proposed in a dry-run and confirmed by an admin. After that, only the source key links. A rehire with the same id reactivates the same user; a rehire with a new id becomes a new user, and the dry-run flags the email for review. | Email is mutable and was rejected for linking (ADR 0004). |
+| I9 | **Amend ADR 0002: a deactivation always commits in Strapi;** the Keycloak disable follows through an outbox with retry, and Keycloak sessions are ended once it is reachable. Creates and other updates stay blocking. Target: deactivated in Strapi within one hub cycle of the HR termination. | Under ADR 0002 a Keycloak outage rolls back the leaver. Strapi already refuses an inactive user on every request, so the remaining exposure is a Keycloak account that reaches no data. |
+| I10 | **Follow the `active` flag the source sends.** Start and end dates are stored for information only; IdamBox runs no effective-date scheduler. A CSV status column wins in the same way. | Hubs already handle pre-hires and future-dated terminations. |
+| I11 | **SCIM `DELETE` = deactivate and set `sourceDeletedAt`.** The record stays; SCIM reads answer 404 for it afterwards (what Entra expects after a hard delete). GDPR erasure is a separate, later admin action (backlog). | References from requests, risks and owners must survive. |
+| I12 | **No roles or groups from the source.** Birthright Requestor only; Security Analyst is always granted inside IdamBox. A mover keeps explicit roles, and the attribute change is recorded in the change log for access review. | An external system must not grant analyst rights around Role → Function governance. Hub groups → Role is backlog. |
+| I13 | **Each identity source has its own non-human `IdamBoxUser`** with an admin-issued, hashed, rotatable bearer token. The SCIM operations are catalogued as FunctionApis under an **Identity Provisioning** Function granted only to that service identity. A source can change only the users it owns. | Hubs expect one long-lived bearer token; every served operation stays traceable through the catalogue (AGENTS.md). |
+| I14 | **Full admin experience:** source badge and read-only HR fields on user screens; identity-source and token management; a provisioning activity log with per-user history; the CSV import page with dry-run diff and email-match confirmation. | The first import and I8's confirmation need a screen. Builds on Phase 22's Admin role. |
+| I15 | **Design and benchmark for 10k users.** The first load is a resumable background job: one transaction per user, 5–10 in parallel. A throughput figure is promised only after the benchmark. | Each user costs a Keycloak Admin API call inside a transaction. |
+| I16 | **CSV imports run in an explicit mode every time: snapshot or delta.** Snapshot deactivates the source's users missing from the file, shows the count in the dry-run, and is refused above a threshold (default 10% of the source's active users) without a second confirmation. CSV never touches manual users or another source's users. | A truncated file must not deactivate the workforce. |
+| I17 | **Model shape** (for the contract-gap record): see section 5. Provisioning activity goes into Phase 22's change log, not a new log. Cost centre and organisation wait until a feature needs them. | Smallest model that supports I1–I16. |
+| I18 | **Sourced users never get a password from provisioning** (the ADR 0002 password path is skipped). Production target: Keycloak identity brokering to the customer's corporate IdP (Entra ID, Okta, ADFS), linking by a stable attribute, not by email alone. Fallback for development and small customers: Keycloak's set-password email, with Mailpit as the local mailbox. | HR sends no passwords; workers should use their work account. |
+| I19 | **Leaver ownership is flagged, never reassigned automatically.** Deactivation records which records the person owned; analysts and admins see an "owned by an inactive user" list to reassign. | Auto-reassigning to the manager would make them accountable for risk decisions without knowing. |
+| I20 | **One fixed SCIM mapping for every source:** `userName` → `username`; primary `emails` → `email`; `name.givenName`/`familyName` → `firstName`/`lastName`; `displayName` → `displayName` (derived from the names when absent); `active` → `accountStatus`; `externalId` → `sourceExternalId`; Enterprise `employeeNumber`, `department`, `division`, `manager` → their fields. Hubs rename on their side. | No per-source mapping configuration in this milestone (backlog). |
+| I21 | **Phases 23–29** as in section 7, in that order. Phase 24 lands before any automated feed. | Leaver safety first. |
+| I22 | This brief and the research file are the inputs to `/gsd-new-milestone`; the GSD workflow writes the roadmap, requirements and state. | Planning files stay owned by the workflow. |
+
+## 4. Architecture (agreed)
+
+```
+HR system ──► hub (Entra / Okta / JumpCloud / midPoint)  ──SCIM 2.0 push──┐
+                                                                           ▼
+Admin ──CSV (snapshot | delta, dry-run)──►  Strapi  /scim/v2/Users  +  CSV import job
+                                               │
+                                     identity upsert service  (ownership rules, source key,
+                                               │               manual users protected)
+                                     Document Service write of IdamBoxUser
+                                               │
+                         ┌─────────────────────┴──────────────────────┐
+                 create / update: blocking                 deactivate: commits in Strapi,
+                 Keycloak provisioning (ADR 0002)          Keycloak disable + session end
+                                                           via KeycloakSyncOutbox (I9)
+```
+
+- SCIM scope is the hub subset: `GET/POST /Users`, `GET/PUT/PATCH/DELETE /Users/{id}`, `filter` with `eq`/`and` on `userName`, `externalId`, `emails.value` and the Enterprise `employeeNumber`, index pagination, `/ServiceProviderConfig` (`bulk.supported=false`), `/Schemas`, `/ResourceTypes`. Media type `application/scim+json`. PATCH ops match case-insensitively (Entra sends `Replace`). Duplicate creates answer 409 `uniqueness`; Keycloak unavailability answers 503 with `Retry-After`. No `/Groups`, no `/Bulk`.
+- Every write goes through the upsert service and the Document Service, never `strapi.db.query` (which would skip Keycloak provisioning). A test enforces it.
+- Allow-list hub source IPs where the hub publishes them (Entra's `AzureActiveDirectory` service tag); rate-limit the SCIM routes.
+
+## 5. Model gaps (the contract-gap record writes these first)
+
+**New collection `IdentitySource`:** `name` (unique), `kind` (`scim` | `csv`), `sourceStatus` (`active` | `inactive`), `serviceUser` (the source's non-human `IdamBoxUser`), `tokenHash`, `tokenRotatedAt`, `lastActivityAt`.
+
+**New `IdamBoxUser` fields:**
+
+| Field | Purpose |
+|---|---|
+| `identitySource` (manyToOne `IdentitySource`; empty = manual user) | Ownership (I4, I13) |
+| `sourceExternalId` (unique per source) | Correlation key (I8); never confused with `externalSubject`, which is Keycloak's id |
+| `employeeNumber` | HR matching and rehire review |
+| `department`, `division`, `jobTitle` | Context and mover detection (I12) |
+| `manager` (manyToOne `IdamBoxUser`) | Resolved after both users exist |
+| `startDate`, `endDate` | Information only (I10) |
+| `sourceDeletedAt` | SCIM `DELETE` (I11) |
+| `lastSyncedAt` | Audit and stale-record detection |
+
+**New collection `KeycloakSyncOutbox`:** the pending Keycloak disable and session-end work for I9, with attempts, last error code and next attempt time. One worker claims rows at a time, safe if Strapi ever runs more than one instance.
+
+Check `docs/references/idambox-datamodel.jdl` and `CONTEXT.md` for existing terms before naming; add "Identity Source", "Sourced user" and "Manual user" to the glossary.
+
+## 6. Requirements (draft IDs for `/gsd-new-milestone`)
+
+- **IDLC-01** An admin registers an identity source and issues, rotates and revokes its bearer token; the source acts only through its own service identity and Identity Provisioning Function.
+- **IDLC-02** A hub creates, reads, replaces, patches and deactivates users through SCIM 2.0 `/Users`, passing the Microsoft SCIM Validator and Okta's SCIM test suite.
+- **IDLC-03** A source can change only the users it owns; manual users and other sources' users are refused.
+- **IDLC-04** A leaver's deactivation commits in Strapi even while Keycloak is unavailable; Keycloak is disabled and sessions ended when it returns; the person is refused in the UI and the API immediately.
+- **IDLC-05** SCIM `DELETE` deactivates and marks the user source-deleted without removing the record.
+- **IDLC-06** An admin runs a CSV import in snapshot or delta mode with a dry-run diff (create, update, deactivate, conflict, proposed email matches) and the snapshot deactivation threshold.
+- **IDLC-07** An admin confirms proposed email matches to link pre-existing users to their source key once.
+- **IDLC-08** A first load of 10k users runs as a resumable background job with one transaction per user, and its measured throughput is recorded.
+- **IDLC-09** HR-owned fields are read-only for sourced users; user screens show the source.
+- **IDLC-10** Every provisioning change is recorded in the change log, including movers' attribute changes, and an admin sees a per-user provisioning history.
+- **IDLC-11** Analysts and admins see the records owned by inactive users and reassign them.
+- **IDLC-12** Sourced users sign in through the corporate IdP via Keycloak brokering, or set a password through Keycloak's email; provisioning never sets their password.
+- **IDLC-13** A Playwright journey proves: SCIM joiner → sign-in → Requestor → SCIM leaver → refused in the UI and the API, at 1440 and 375.
+
+## 7. Phases (v3.0 Identity Lifecycle)
+
+| # | Phase | Delivers | Requirements | Size |
+|---|---|---|---|---|
+| 23 | Identity-source contract and model | ADR "SCIM 2.0 is the inbound provisioning contract"; the contract-gap record and approved schema change (section 5); glossary and JDL terms; source service identity and the Identity Provisioning Function in both catalogue copies; the identity upsert service with ownership rules; the Document-Service-only test. No UI. | IDLC-03 (service), foundation for all | M |
+| 24 | Leaver-safe Keycloak sync | ADR 0002 amendment; `KeycloakSyncOutbox` and its worker; Keycloak session end on deactivation; no password path for sourced users. | IDLC-04 | M |
+| 25 | SCIM 2.0 `/Users` service | The endpoints, filter, pagination, discovery, PATCH, DELETE semantics, token auth, 409/503 behaviour, rate limits; conformance runs against both validators (recorded evidence). | IDLC-01 (API), IDLC-02, IDLC-03, IDLC-05 | L |
+| 26 | CSV first load and reconciliation | Resumable import job, dry-run diff, snapshot/delta with threshold, email-match proposals, 10k benchmark. Can run alongside 25. | IDLC-06, IDLC-07 (API), IDLC-08 | L |
+| 27 | Admin identity-source screens | Sources and tokens, activity log and per-user history, import page with dry-run and match confirmation, source badges, read-only HR fields. | IDLC-01 (UI), IDLC-07 (UI), IDLC-09, IDLC-10 | L |
+| 28 | Leaver ownership and mover review | "Owned by an inactive user" list and reassignment entry points; mover change-log entries. | IDLC-10 (movers), IDLC-11 | M |
+| 29 | Sign-in for sourced users and the end-to-end journey | Keycloak brokering to a corporate IdP with stable-attribute linking; set-password email with Mailpit in `idp/`; the Playwright journey. | IDLC-12, IDLC-13 | M |
+
+Order: 23 → 24 → 25 ∥ 26 → 27 → 28 → 29.
+
+## 8. Risks to plan for
+
+- **Keycloak throughput** bounds the first load; benchmark in Phase 26 before promising timings.
+- **Hub quarantine:** Entra drops a job to daily cycles after a high error rate and disables it after four weeks. Keep 503 for transient Keycloak failures and 4xx only for genuine data errors.
+- **Middleware bypass:** any write through `strapi.db.query` creates users without Keycloak accounts (guarded by the Phase 23 test).
+- **Truncated snapshot files** (guarded by I16's threshold).
+- **Token compromise** of a source: scope to its own users (I13), rotate, IP allow-list, log every write with the source identity.
+- **Dev-mode rules still apply:** provisioning and token-verification flags stay off in development; the SCIM and CSV paths must work with the development identity bridge and in tests with no Keycloak (the outbox simply queues).
+
+## 9. Backlog (captured, not in v3.0)
+
+GDPR erasure (pseudonymise a deactivated user); hub groups → IdamBox Role mapping with membership governance; an effective-date scheduler; midPoint as a reference hub in `idp/`; cost centre and organisation fields; per-source attribute mapping; RFC 9865 cursor pagination; RFC 9967 SCIM events and OpenID SSF/CAEP for faster revocation; upgrade to Keycloak 26.8.
+
+## 10. Out of scope
+
+Pull connectors to HR vendor APIs (Workday, SuccessFactors, etc.); accepting passwords from a source; hard deletes; roles from the source; SCIM `/Groups` and `/Bulk`.
