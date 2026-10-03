@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const calls = vi.hoisted(() => [] as string[]);
@@ -19,8 +19,10 @@ const mocks = vi.hoisted(() => ({
   listReportDefinitions: vi.fn(),
   getReport: vi.fn(),
   getAnalystDashboard: vi.fn(),
+  getRequestorDashboard: vi.fn(),
   notFound: vi.fn(),
   resolveE2eUiState: vi.fn(),
+  resolveE2eDashboardPartial: vi.fn(),
   resolveE2eAnalystDashboardPartial: vi.fn(),
 }));
 
@@ -34,9 +36,11 @@ vi.mock('@/features/administration/administration-service', async (importOrigina
 vi.mock('@/features/alerts/alert-service', () => ({ listAlerts: mocks.listAlerts }));
 vi.mock('@/features/reports/report-service', () => ({ getReport: mocks.getReport, listReportDefinitions: mocks.listReportDefinitions }));
 vi.mock('@/features/analyst-dashboard/analyst-dashboard-service', () => ({ getAnalystDashboard: mocks.getAnalystDashboard }));
+vi.mock('@/features/dashboard/requestor-dashboard-service', async (importOriginal) => ({ ...await importOriginal<typeof import('@/features/dashboard/requestor-dashboard-service')>(), getRequestorDashboard: mocks.getRequestorDashboard }));
 vi.mock('@/lib/testing/e2e-ui-state', () => ({
   E2eUiStateBoundary: ({ children, state }: { children: ReactNode; state: string }) => <section data-ui-state={state}>{children}</section>,
   resolveE2eAnalystDashboardPartial: mocks.resolveE2eAnalystDashboardPartial,
+  resolveE2eDashboardPartial: mocks.resolveE2eDashboardPartial,
   resolveE2eUiState: mocks.resolveE2eUiState,
 }));
 
@@ -49,8 +53,10 @@ import AdministrationCollectionPage from '../../../app/(app)/app/admin/[collecti
 import { AlertsContent } from '../../../app/(app)/app/alerts/page';
 import { ReportIndexContent } from '../../../app/(app)/app/reports/(report-index)/page';
 import ReportPage, { ReportDetailContent } from '../../../app/(app)/app/reports/[reportKey]/page';
-import { AnalystDashboardContent } from '../../../app/(app)/app/review/(analyst-dashboard)/page';
+import HomePage from '../../../app/(app)/app/page';
+import { AnalystHomeContent } from '@/features/home/analyst-home';
 import { emptyAnalystDashboard } from '../../features/analyst-dashboard/analyst-dashboard-presentation';
+import { deriveRequestorDashboard } from '../../features/dashboard/requestor-dashboard-service';
 
 const params = Promise.resolve({ __e2eState: 'error' });
 const success = { data: { records: [], pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }, error: null };
@@ -65,6 +71,22 @@ const reportSuccess = {
   },
   error: null,
 };
+
+/*
+ * jsdom renders client React, which cannot await a server component. This resolves every async
+ * component in a server-rendered tree first, so a test sees what the server streams to the page.
+ */
+async function resolveServerTree(node: ReactNode): Promise<ReactNode> {
+  if (Array.isArray(node)) return Promise.all(node.map((child) => resolveServerTree(child)));
+  if (!isValidElement(node)) return node;
+  const element = node as ReactElement<{ children?: ReactNode }>;
+  if (typeof element.type === 'function' && element.type.constructor.name === 'AsyncFunction') {
+    return resolveServerTree(await (element.type as (props: unknown) => Promise<ReactNode>)(element.props));
+  }
+  if (element.props.children === undefined) return element;
+  const children = await resolveServerTree(element.props.children);
+  return cloneElement(element, undefined, ...(Array.isArray(children) ? children : [children]));
+}
 
 beforeEach(() => {
   calls.length = 0;
@@ -82,6 +104,9 @@ beforeEach(() => {
   mocks.listReportDefinitions.mockImplementation(async () => { calls.push('report-definitions'); return reportDefinitionsSuccess; });
   mocks.getReport.mockImplementation(async () => { calls.push('report'); return reportSuccess; });
   mocks.getAnalystDashboard.mockImplementation(async () => { calls.push('analyst-dashboard'); return { kind: 'ready', dashboard: emptyAnalystDashboard(14) }; });
+  mocks.getRequestorDashboard.mockImplementation(async () => { calls.push('requestor-dashboard'); return { kind: 'ready', dashboard: deriveRequestorDashboard([], []) }; });
+  mocks.resolveE2eDashboardPartial.mockImplementation(() => { calls.push('requestor-partial'); return false; });
+  mocks.resolveE2eAnalystDashboardPartial.mockImplementation(() => { calls.push('analyst-partial'); return false; });
   mocks.notFound.mockImplementation(() => { calls.push('not-found'); throw new Error('NEXT_NOT_FOUND'); });
   mocks.resolveE2eUiState.mockImplementation(() => { calls.push('fixture'); return 'error'; });
 });
@@ -97,7 +122,7 @@ describe('guarded route presentation fixtures', () => {
     ['alerts', async () => AlertsContent({ searchParams: params }), 'alerts'],
     ['reports index', async () => ReportIndexContent({ searchParams: params }), 'report-definitions'],
     ['report detail', async () => ReportDetailContent({ reportKey: 'control-effectiveness', searchParams: params }), 'report'],
-    ['analyst dashboard', async () => AnalystDashboardContent({ searchParams: params }), 'analyst-dashboard'],
+    ['analyst dashboard', async () => AnalystHomeContent({ searchParams: params }), 'analyst-dashboard'],
   ] as const)('authorizes and loads %s before resolving its fixture', async (_name, route, service) => {
     render(await route());
     expect(calls.indexOf(service)).toBeGreaterThanOrEqual(0);
@@ -126,7 +151,7 @@ describe('guarded route presentation fixtures', () => {
   it('keeps authoritative analyst dashboard denial outside a fixture boundary and its partial selector', async () => {
     // Any refused read makes the composed dashboard permission denied (D-34).
     mocks.getAnalystDashboard.mockResolvedValueOnce({ kind: 'permission-denied' });
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) }));
     expect(document.querySelector('[data-ui-state]')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
@@ -171,7 +196,7 @@ describe('Requestor isolation on restricted routes', () => {
 
   it('denies the analyst dashboard at its capability gate before any analyst read, fixture or partial selector', async () => {
     signInAsRequestor();
-    render(await AnalystDashboardContent({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) }));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) }));
     expect(calls).toEqual(['capability']);
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
@@ -179,6 +204,21 @@ describe('Requestor isolation on restricted routes', () => {
     expect(document.querySelector('[data-ui-state]')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the analyst dashboard');
     expect(document.querySelector('[data-slot="kpi-tile"]')).toBeNull();
+    expect(document.querySelector('a[href^="/app/risks/"], a[href^="/app/review/"]')).toBeNull();
+  });
+
+  it('gives a Requestor at /app the Requestor Home before any analyst read, analyst fixture or partial selector', async () => {
+    signInAsRequestor();
+    render(await resolveServerTree(await HomePage({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) })));
+    // The variant is chosen from the session's capabilities first; only the Requestor's own read
+    // follows, and its fixture resolves after that read succeeded (T-11-01).
+    expect(calls[0]).toBe('capability');
+    expect(calls).not.toContain('analyst-dashboard');
+    expect(calls).not.toContain('analyst-partial');
+    expect(calls.indexOf('fixture')).toBeGreaterThan(calls.indexOf('requestor-dashboard'));
+    expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
+    expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-slot="kpi-tile"], [data-slot="analyst-dashboard"]')).toBeNull();
     expect(document.querySelector('a[href^="/app/risks/"], a[href^="/app/review/"]')).toBeNull();
   });
 

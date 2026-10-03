@@ -160,11 +160,12 @@ export default defineConfig({
   },
   /*
    * Six critical journeys run at 1440px and at 375px (D-14, D-41). `desktop` runs every spec at
-   * 1440×900. `mobile` runs again, at 375×812 with touch, only the tests titled `@journey` in the four
+   * 1440×900. `mobile` runs again, at 375×812 with touch, only the tests titled `@journey` in the five
    * files whose journeys can run twice against one database: the request journey creates its own
    * record, the Requestor read-only journey reads seeded records, the Risk Register journey toggles
-   * its edits between two values, and the CSV import names its records per project. A journey reads
-   * its starting width from its project (`primaryViewport` in `e2e/helpers/navigation.ts`).
+   * its edits between two values, the CSV import names its records per project, and the Home and
+   * navigation journeys (navigation-and-home.spec.ts) only read. A journey reads its starting width
+   * from its project (`primaryViewport` in `e2e/helpers/navigation.ts`).
    *
    * The questionnaire journey (questionnaire-workflow.spec.ts) and the release journey
    * (assessment-release-workflow.spec.ts) are desktop-only files. Each consumes a one-shot seeded
@@ -191,6 +192,7 @@ export default defineConfig({
         '**/assessment-navigation-lifecycle.spec.ts',
         '**/risk-register-workflow.spec.ts',
         '**/administration-workflow.spec.ts',
+        '**/navigation-and-home.spec.ts',
       ],
       grep: /@journey/,
     },

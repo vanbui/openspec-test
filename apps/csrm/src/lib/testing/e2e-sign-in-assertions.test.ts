@@ -9,13 +9,14 @@ import { describe, expect, it } from 'vitest';
  * sign-in. The security audit checked this with a one-off grep (observation O-2); this keeps it true.
  *
  * A sign-in is a click on a development identity's `Continue as …` button. The function that makes
- * the click must then assert the level-one Dashboard heading and the role in the banner. No spec may
- * assert the signed-in URL as `toHaveURL(/\/app$/)`, which is the URL-only form the audit searched for.
+ * the click must then assert the level-one Home heading (every actor lands on Home at /app, D-16) and
+ * the role in the banner. No spec may assert the signed-in URL as `toHaveURL(/\/app$/)`, which is the
+ * URL-only form the audit searched for.
  */
 
 const e2eDirectory = resolve(process.cwd(), 'e2e');
 const URL_ONLY_SIGN_IN = /toHaveURL\(\s*\/\\\/app\$\/\s*[,)]/;
-const DASHBOARD_HEADING = /getByRole\(\s*'heading',\s*\{[^}]*\bname:\s*'Dashboard'/;
+const HOME_HEADING = /getByRole\(\s*'heading',\s*\{[^}]*\bname:\s*'Home'/;
 const BANNER_ROLE = /getByRole\(\s*'banner'\s*\)/;
 
 function specModules(directory: string): string[] {
@@ -41,7 +42,7 @@ function signInFindings(fileName: string, source: string): string[] {
       let owner: ts.Node | undefined = node.parent;
       while (owner && !ts.isFunctionLike(owner)) owner = owner.parent;
       const body = (owner ?? file).getText(file);
-      if (!DASHBOARD_HEADING.test(body) || !BANNER_ROLE.test(body)) {
+      if (!HOME_HEADING.test(body) || !BANNER_ROLE.test(body)) {
         findings.push(`SIGN_IN_WITHOUT_SHELL ${fileName}:${lineOf(node)}`);
       }
     }
@@ -81,7 +82,7 @@ describe('browser sign-in assertions', () => {
     const headingOnly = `
       async function signIn(page: Page) {
         await page.getByRole('button', { name: 'Continue as Requestor' }).click();
-        await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
       }`;
     expect(signInFindings('e2e/heading-only.spec.ts', headingOnly)).toEqual(['SIGN_IN_WITHOUT_SHELL e2e/heading-only.spec.ts:3']);
   });
@@ -90,7 +91,7 @@ describe('browser sign-in assertions', () => {
     const shell = `
       export async function signInAs(page: Page, role: SignInRole): Promise<void> {
         await page.getByRole('button', { name: \`Continue as \${role}\`, exact: true }).click();
-        await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true })).toBeVisible();
         await expect(page.getByRole('banner').getByText(role, { exact: true })).toBeVisible();
       }`;
     expect(signInFindings('e2e/helpers/navigation.ts', shell)).toEqual([]);
