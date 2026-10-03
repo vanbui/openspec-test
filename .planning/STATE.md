@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
-status: planning
-stopped_at: "Phase 10 complete (verification passed with three accepted residuals; `phase.complete 10` recorded); Phase 11 is planned and not started, and the pilot starts it after pushing `post-demo`."
-last_updated: "2026-10-02T23:28:43.147Z"
+status: executing
+stopped_at: "Phase 11 executing: the fresh plan check revision passed on its third round (`a589569`); plan 11-01 is next."
+last_updated: "2026-10-03T00:25:13.095Z"
 last_activity: 2026-10-03
-last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: 65c2c007c40fd7d0cf240d872fbf7ec1fb7b1733
+last_activity_desc: Phase 11 execution started
+state_head: a5895693cf6967aaad657f160fcd891b42a22297
 progress:
   total_phases: 16
   completed_phases: 1
   total_plans: 290
   completed_plans: 23
   percent: 6
-current_phase: 11
 current_phase_name: Navigation, landing and list clarity
+current_phase: 11
 current_plan: 0
 ---
 
@@ -26,7 +26,7 @@ current_plan: 0
 See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 **Core value:** Make a complex cyber-risk workflow simple and auditable while keeping Security Analysts—not AI—in control of assessment review and release.
-**Current focus:** Phase 11 — Navigation, landing and list clarity, next and not started; the pilot starts it (post-demo Stage 3 on branch `post-demo`, under `.planning/POST-DEMO-BRIEF.md`)
+**Current focus:** Phase 11 — Navigation, landing and list clarity
 
 ## Current Position
 
@@ -47,9 +47,9 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
   - requirements: REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 complete; ADMIN-05 partial by decision, its Information Asset owner moved to Phase 22.
 - **Next:** Phase 11 (Navigation, landing and list clarity) is planned (21 plans, plan check written ahead) and not started. Its fresh plan check comes first, when the pilot starts it.
 
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-03 — Phase 10 complete, transitioned to Phase 11
+Plan: 1 of 21
+Status: Executing Phase 11
+Last activity: 2026-10-03 — Phase 11 execution started
 
 ## Milestone
 
