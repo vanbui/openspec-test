@@ -107,6 +107,28 @@ describe('RequestTable', () => {
     expect(replace).toHaveBeenLastCalledWith('/app/requests?view=cards&status=submitted&sort=updatedAt%3Adesc&pageSize=20', { scroll: false });
   });
 
+  it('labels a released request Released in its badge, the status options and the chip, while the URL keeps approved (D-46)', async () => {
+    const RequestTable = await loadRequestTable();
+    const user = userEvent.setup();
+    search.value = 'sort=updatedAt%3Adesc&pageSize=20';
+    const released: CsrmAssessmentRequest = { ...request, requestStatus: 'approved' };
+    const unfiltered = { ...query, q: '', status: undefined, page: 1 };
+    const view = render(<RequestTable requests={[released]} query={unfiltered} pagination={pagination} densityUserId="requestor" />);
+
+    const releasedOption = [...screen.getByRole('combobox', { name: 'Filter by status' }).querySelectorAll('option')].find((option) => option.value === 'approved');
+    expect(releasedOption?.textContent).toBe('Released');
+    expect(screen.getAllByText('Released').filter((element) => element.closest('[data-slot="data-table-mobile"], [data-slot="data-table-desktop"]'))).toHaveLength(2);
+
+    // Only the label changes: choosing Released still writes the stored value to the URL.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Filter by status' }), 'approved');
+    expect(replace).toHaveBeenLastCalledWith('/app/requests?status=approved&sort=updatedAt%3Adesc&pageSize=20', { scroll: false });
+
+    view.rerender(<RequestTable requests={[released]} query={{ ...unfiltered, status: 'approved' }} pagination={pagination} densityUserId="requestor" />);
+    expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveValue('approved');
+    expect(screen.getByText('Status: Released')).toBeInTheDocument();
+    expect(screen.queryByText(/Approved/)).not.toBeInTheDocument();
+  });
+
   it('reflects canonical date sorting and recovers a stale page', async () => {
     const RequestTable = await loadRequestTable();
     const view = render(<RequestTable requests={[request]} query={{ ...query, sort: 'dueDate:desc' }} pagination={pagination} densityUserId="requestor" />);

@@ -301,7 +301,7 @@ describe('assessment-throughput tiles and rows', () => {
       { key: 'questionnaire-in-progress', label: 'Questionnaire in progress', values: [2] },
       { key: 'risk-assessment-drafted', label: 'Risk assessment drafted', values: [1] },
       { key: 'under-review', label: 'Under review', values: [3] },
-      { key: 'approved', label: 'Approved', values: [5] },
+      { key: 'approved', label: 'Released', values: [5] },
       { key: 'closed', label: 'Closed', values: [1] },
     ]);
   });

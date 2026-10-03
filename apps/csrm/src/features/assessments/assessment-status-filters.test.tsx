@@ -146,7 +146,7 @@ describe('the Released queue', () => {
     });
   });
 
-  it('lists an approved request when Approved is chosen in the Released queue', async () => {
+  it('lists an approved request when Released is chosen in the Released queue', async () => {
     get.mockResolvedValueOnce(page([releasedRequest('approved', 1)]));
     render(await AssessmentRequestListContent({ searchParams: Promise.resolve({ queue: 'released', status: 'approved' }) }));
 
@@ -174,7 +174,7 @@ describe('an Analyst status choice that matches nothing', () => {
     });
     expect(screen.getByRole('heading', { name: 'No assessment requests match these filters' })).toBeInTheDocument();
     // The chip names the filter; the empty state and the chip row each clear it (verdict 4a).
-    expect(screen.getByText('Status: Approved')).toBeInTheDocument();
+    expect(screen.getByText('Status: Released')).toBeInTheDocument();
     expect(within(document.querySelector<HTMLElement>('[data-state-kind="empty"]')!).getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveValue('approved');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

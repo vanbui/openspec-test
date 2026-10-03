@@ -46,7 +46,7 @@ const requestStatuses: ReadonlyArray<readonly [RequestStatus, string]> = [
   ['questionnaire-in-progress', 'Questionnaire in progress'],
   ['risk-assessment-drafted', 'Risk assessment drafted'],
   ['under-review', 'Under review'],
-  ['approved', 'Approved'],
+  ['approved', 'Released'],
   ['closed', 'Closed'],
 ];
 

@@ -521,7 +521,7 @@ describe('assessment-throughput report', () => {
     const lifecycle = section('Assessment Requests by lifecycle state');
     expect(within(lifecycle).getByText('Current state of every Assessment Request in your review scope. Not limited to the period.')).toBeInTheDocument();
     const chart = lifecycle.querySelector('[data-slot="bar-chart"]')!;
-    expect(barLabels(chart)).toEqual(['Submitted 1', 'Questionnaire in progress 2', 'Risk assessment drafted 1', 'Under review 3', 'Approved 5', 'Closed 1']);
+    expect(barLabels(chart)).toEqual(['Submitted 1', 'Questionnaire in progress 2', 'Risk assessment drafted 1', 'Under review 3', 'Released 5', 'Closed 1']);
     const table = within(lifecycle).getByRole('table', { name: 'Assessment Requests by lifecycle state' });
     expect(columnHeaders(table)).toEqual(['Lifecycle state', 'Assessment Requests']);
     expect(within(table).queryByText('Draft')).not.toBeInTheDocument();

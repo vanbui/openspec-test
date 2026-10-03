@@ -2,7 +2,8 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReleasedAssessmentSummary } from '../assessments/assessment-schema';
-import { requestStatusPresentation, requestStatuses, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
+import { statusLabel } from '../../components/csrm/status-badge';
+import { requestStatuses, type CsrmAssessmentRequest, type RequestStatus } from '../requests/request-domain';
 import type { QuestionnaireSummary } from '../questionnaires/questionnaire-service';
 
 const listDashboardRequests = vi.hoisted(() => vi.fn());
@@ -154,7 +155,7 @@ describe('Requestor dashboard contract', () => {
       { status: 'questionnaire-in-progress', label: 'Questionnaire in progress', count: 0 },
       { status: 'risk-assessment-drafted', label: 'Risk assessment drafted', count: 0 },
       { status: 'under-review', label: 'Under review', count: 0 },
-      { status: 'approved', label: 'Approved', count: 0 },
+      { status: 'approved', label: 'Released', count: 0 },
       { status: 'closed', label: 'Closed', count: 0 },
     ]);
     expect(projection.draftRequests.items[0]).toMatchObject({
@@ -237,7 +238,7 @@ describe('Requestor dashboard contract', () => {
       { status: 'questionnaire-in-progress', label: 'Questionnaire in progress', count: 5 },
       { status: 'risk-assessment-drafted', label: 'Risk assessment drafted', count: 0 },
       { status: 'under-review', label: 'Under review', count: 2 },
-      { status: 'approved', label: 'Approved', count: 7 },
+      { status: 'approved', label: 'Released', count: 7 },
       { status: 'closed', label: 'Closed', count: 1 },
     ]);
     // D-22: one list read for the draft widget and one summary read for the
@@ -261,7 +262,7 @@ describe('Requestor dashboard contract', () => {
     const lifecycleRegion = screen.getByRole('region', { name: 'My Assessment Requests' });
     expect(within(lifecycleRegion).getByRole('list', { name: 'My Assessment Requests by lifecycle state' })).toBeInTheDocument();
     for (const status of ['draft', 'submitted', 'questionnaire-in-progress', 'risk-assessment-drafted', 'under-review', 'approved', 'closed']) {
-      expect(within(lifecycleRegion).getByRole('link', { name: new RegExp(requestStatusPresentation[status as RequestStatus].label) })).toHaveAttribute('href', `/app/requests?status=${status}`);
+      expect(within(lifecycleRegion).getByRole('link', { name: new RegExp(statusLabel('request', status as RequestStatus)) })).toHaveAttribute('href', `/app/requests?status=${status}`);
     }
     /*
      * Every lifecycle state is listed, including the ones with nothing in them,

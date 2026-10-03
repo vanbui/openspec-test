@@ -65,7 +65,7 @@ describe('filter chips on the analyst review lists', () => {
     render(<AssessmentRequestList query={{ q: 'portal', queue: 'released', sort: 'submittedDate:desc', page: 1, pageSize: 25, status: 'approved' }} requests={[assessmentRequest]} />);
 
     expect(screen.getByText('Search: portal')).toBeInTheDocument();
-    expect(screen.getByText('Status: Approved')).toBeInTheDocument();
+    expect(screen.getByText('Status: Released')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove Status filter' }));
     expect(navigationMocks.replace).toHaveBeenLastCalledWith('/app/review/assessments?q=portal&queue=released&sort=submittedDate%3Adesc&pageSize=25', { scroll: false });
     fireEvent.click(screen.getByRole('button', { name: 'Remove Search filter' }));
@@ -168,8 +168,10 @@ describe('assessment review list record navigation', () => {
   it('offers released statuses and a return to the default queue when empty', () => {
     render(<AssessmentRequestList query={{ q: '', queue: 'released', sort: 'submittedDate:desc', page: 1, pageSize: 25 }} requests={[]} />);
 
-    expect(screen.getByRole('option', { name: 'Approved' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Closed' })).toBeInTheDocument();
+    // The queue select has its own Released bucket, so the request status options are read inside their select.
+    const statusFilter = screen.getByRole('combobox', { name: 'Filter by status' });
+    expect(within(statusFilter).getByRole('option', { name: 'Released' })).toHaveValue('approved');
+    expect(within(statusFilter).getByRole('option', { name: 'Closed' })).toBeInTheDocument();
     expect(screen.getByText('No assessment requests match these filters')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(navigationMocks.replace).toHaveBeenLastCalledWith(
@@ -180,7 +182,7 @@ describe('assessment review list record navigation', () => {
 
   it('keeps complete human-readable request statuses independent of queue and applies shared select focus treatment', () => {
     const { rerender } = render(<AssessmentRequestList requests={[]} />);
-    const expectedLabels = ['Draft', 'Submitted', 'Questionnaire in progress', 'Risk assessment drafted', 'Under review', 'Approved', 'Closed'];
+    const expectedLabels = ['Draft', 'Submitted', 'Questionnaire in progress', 'Risk assessment drafted', 'Under review', 'Released', 'Closed'];
     const statusOptions = () => [...screen.getByRole('combobox', { name: 'Filter by status' }).querySelectorAll('option')].slice(1).map((option) => option.textContent);
 
     expect(statusOptions()).toEqual(expectedLabels);

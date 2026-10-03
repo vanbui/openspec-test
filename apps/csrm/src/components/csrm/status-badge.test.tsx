@@ -8,6 +8,7 @@ import {
   CircleDashedIcon,
   CircleDotIcon,
   CircleGaugeIcon,
+  CircleIcon,
   CircleQuestionMarkIcon,
   CircleXIcon,
   ClipboardListIcon,
@@ -31,7 +32,7 @@ import { describe, expect, it } from 'vitest';
 import { badgeVariants } from '@/components/ui/badge';
 import { csvRowStates } from '@/features/administration/csv-import-schema';
 import { assessmentStatuses } from '@/features/assessments/assessment-schema';
-import { requestStatuses } from '@/features/requests/request-domain';
+import { requestStatuses, type RequestStatus } from '@/features/requests/request-domain';
 import { riskRegisterTreatmentStatuses } from '@/features/risks/risk-schema';
 import { cn } from '@/lib/utils';
 
@@ -59,7 +60,7 @@ const families = {
     ['questionnaire-in-progress', 'Questionnaire in progress', 'info', ClipboardListIcon],
     ['risk-assessment-drafted', 'Risk assessment drafted', 'warning', FileWarningIcon],
     ['under-review', 'Under review', 'warning', SearchCheckIcon],
-    ['approved', 'Approved', 'success', CircleCheckIcon],
+    ['approved', 'Released', 'success', CircleCheckIcon],
     ['closed', 'Closed', 'neutral', LockKeyholeIcon],
   ],
   assessment: [
@@ -150,6 +151,42 @@ describe('statusPresentation', () => {
     expect(statusPresentation.treatment.Overdue.icon).toBe(ClockAlertIcon);
     // An ambiguous import row is a question, never the High severity triangle it used to share (WR-08).
     expect(statusPresentation.importRow.ambiguous.icon).toBe(CircleQuestionMarkIcon);
+  });
+});
+
+/*
+ * D-46 (UAT-065): a released request reads Released, as its assessment does; only the label changes, so the stored
+ * value stays approved. Every request and assessment status has its own entry in the one mapping, and a value
+ * added to a vocabulary before its label renders through a safe fallback instead of throwing (the G-13 seam).
+ */
+describe('the request and assessment labels', () => {
+  it('labels a released request Released, as a released assessment, and keeps Closed', () => {
+    expect(statusLabel('request', 'approved')).toBe('Released');
+    expect(statusLabel('assessment', 'approved')).toBe('Released');
+    expect(statusLabel('request', 'closed')).toBe('Closed');
+  });
+
+  it('gives every request and assessment status its own entry, in vocabulary order', () => {
+    expect(Object.keys(statusPresentation.request)).toEqual([...requestStatuses]);
+    for (const value of requestStatuses) expect(Object.hasOwn(statusPresentation.request, value), value).toBe(true);
+    for (const value of assessmentStatuses) expect(Object.hasOwn(statusPresentation.assessment, value), value).toBe(true);
+  });
+
+  it('labels a status outside the vocabulary in sentence case instead of throwing', () => {
+    const unknown = 'awaiting-acceptance' as RequestStatus;
+    expect(() => statusLabel('request', unknown)).not.toThrow();
+    expect(statusLabel('request', unknown)).toBe('Awaiting acceptance');
+  });
+
+  it('renders a status outside the vocabulary as the neutral badge with an icon and its label', () => {
+    expect(() => render(<StatusBadge status={'awaiting-acceptance' as RequestStatus} />)).not.toThrow();
+
+    const badge = screen.getByText('Awaiting acceptance', { exact: true });
+    expect(badge).toHaveAttribute('data-slot', 'badge');
+    expect(badge).toHaveAttribute('data-tone', 'neutral');
+    expect(badge).toHaveAttribute('data-variant', 'outline');
+    for (const tint of neutralTint) expect(badge.className).toContain(tint);
+    expect(badge.innerHTML).toBe(`${iconMarkup(CircleIcon)}Awaiting acceptance`);
   });
 });
 
