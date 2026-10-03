@@ -192,3 +192,38 @@ Iteration 2 found 0 blockers and 0 warnings, and one advisory info item: the 21 
 - **Warning 2 (11-20's `UX10_GUARD_BLOCKS` proof aborts every POST, which also kills quick find's Server Action):** to be revised before execution. Abort only the save's POST, matched by its `Next-Action` header, or hold the save pending. This is part of the same planner revision.
 - **Warning 3 (a dirty tree):** resolved. It was the pilot's temporary `.claude/launch.json` change for the Phase 10 walkthrough, restored before execution.
 - **Info:** the checker read every plan's frontmatter, dependency notes, interfaces and relevant tasks, and checked about 230 paths and 60 symbols, but did not read every line. The pilot accepted that depth: executors read their plans in full, and the 23-row Phase 10 dependency table covers the main drift risk.
+
+---
+
+## Planner revision and re-check before execution (2026-10-03, worker)
+
+The Phase 11 worker ran the pilot's Step 1: a `gsd-planner` revision on the fresh check's two plan warnings, then `gsd-plan-checker` re-checks until one passed. The deterministic probes, re-run after each round, found nothing: `verify-command-paths` returned `none` (not_applicable) for all 57 commands, and `verify-failure-directions` returned `none` (ok) for all 57.
+
+**Round 1 (11-09 and 11-20).**
+- **W1, 11-09 (resolved).** On the analyst request page the stepper now receives the `lifecycle` constant the hub already receives, `hubLifecycle(analystRequestLifecycle(request), awaitingRefresh)`, and the same `nextActionOverride`. Both next-action lines read one source, so no width names a next action the page does not offer. This covers Phase 10's walkthrough fix 4 (the pilot's disposition) and also keeps the WR-201 hold, which `analystRequestLifecycle(request)` alone would skip. The phone-width unit case asserts on the stepper's compact block (the `md:hidden` element; jsdom applies no media queries): for an `under-review` or `questionnaire-in-progress` request still served the Submitted step, the block holds no `Next action:` and `Generate the questionnaire.` appears nowhere. The WR-201 test asserts the same while the page awaits its refresh.
+- **W2, 11-20 (resolved, in Task 3, where `UX10_GUARD_BLOCKS` lives).** The proof aborts only the questionnaire save's Server Action POST, matched by the `Next-Action` id captured from a successful autosave (QUES09_AUTOSAVE_PERSISTS's predicate), and continues every other request. Before `Enter` it asserts the real failed save (`Your latest answers weren’t saved.`) and awaits quick find's own response (a different `Next-Action` id). It then proves the leave warning opens above quick find, `Keep answering` returns focus to the quick-find input, and `Leave questionnaire` navigates. The journey generates and releases its own questionnaire and never consumes the one-shot seeded draft.
+
+**Re-check 1: 0 blockers, 2 warnings, 1 info.** Both round-1 fixes held. New findings:
+- 11-09 Task 1's GREEN commit would have left `assessment-review-workflow.test.tsx` failing until Task 2 (two `Next action:` lines, and the raw lifecycle naming Generate).
+- The Playwright `mobile` project runs only the `@journey` tests in a four-file `testMatch` whitelist (`playwright.config.ts`), which 11-RESEARCH and 11-VALIDATION had described as "runs only `@journey` tests". So `@journey` phone proofs placed in other files would never have run at 375.
+- Info: a redundant `<fails_when>` clause in 11-09.
+
+**Worker decision (scope).** The mobile-project finding is one defect class across the phase, not specific to 11-09 and 11-20: a phone proof that never runs is a proxy (Phase 10 lessons). So round 2 fixed it in every affected plan, beyond the pilot's two-plan scope, and touched only that defect class.
+
+**Round 2 (14 plans and the VALIDATION Config row).**
+- 11-02, 11-06 and 11-19 add `navigation-and-home.spec.ts`, `review-lists.spec.ts` and `quick-find.spec.ts` to the mobile `testMatch` (and its comment) in the commit that creates each file. Each lists `playwright.config.ts` in `files_modified`.
+- A shared "Playwright projects" hard rule went into 11-02 to 11-07, 11-09, 11-11, 11-12, 11-13, 11-16, 11-19 and 11-20. A test inside a `@journey` describe runs twice against one database, so it creates its own records or only reads. A test that proves one width only, or must not run twice, sits outside the describe.
+- 11-09's `UX08_PHONE_STEPPER` and 11-16's 375 check set their own viewport in the desktop project. 11-16's 375 truth stays a walkthrough backstop (11-21 B1).
+- 11-18 and 11-19 no longer claim "both projects" for desktop-only specs.
+- `UX10_GUARD_BLOCKS` sits outside the `Quick find @journey` describe.
+- 11-09 Task 1 now carries the analyst wiring. Its RED adds the analyst compact-block assertions and the scoped locators; its GREEN wires the stepper on both pages, and its verify runs every unit file that renders the stepper, the hub or `AssessmentDetail`. Task 2 is the analyst's 375 browser proof.
+
+**Re-check 2: 0 blockers, 1 warning, 1 info.** VALIDATION rows 11-09-01 and 11-09-02 described the pre-revision behaviour. Three quick-find tests had no stated describe placement.
+
+**Round 3.** The two VALIDATION behaviour cells were reworded (their commands already matched). 11-19 and 11-20 now name each quick-find test's placement in their acceptance criteria:
+- inside `Quick find @journey`: `UX10_FIND_AND_OPEN`, `UX10_SCOPE_SECONDARY_REQUESTOR`, `UX10_KEYBOARD_PHONE` and `UX10_AXE_OPEN_DIALOG`;
+- outside, desktop only at 1440: `UX10_ANALYST_GROUPS`, `UX10_SHOW_ALL`, `UX10_ESCAPE_RESTORES_FOCUS` and `UX10_GUARD_BLOCKS`.
+
+**Re-check 3: VERIFICATION PASSED.** One info item needs no revision: row 11-09-02's closing clause ("no new field reaches the Requestor") rests on Task 1's wiring, which that row's unit and typecheck commands re-run.
+
+**Verdict: PASSED (revision loop iteration 3).** Changed by the revision: 11-02, 11-03, 11-04, 11-05, 11-06, 11-07, 11-09, 11-11, 11-12, 11-13, 11-16, 11-18, 11-19 and 11-20, plus three rows of 11-VALIDATION.md (Config, 11-09-01 and 11-09-02). Waves, dependencies, requirement coverage (UX-07, UX-08, UX-09, UX-10, DASH-03), the content-type freeze and the no-new-grant rule are unchanged.
