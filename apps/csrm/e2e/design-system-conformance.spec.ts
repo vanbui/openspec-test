@@ -125,14 +125,14 @@ async function expectStateMeaning(page: Page, route: string, state: UiState, wid
     await expect(boundary.getByRole('heading').first(), `${route} ${state} ${width}px has visible failure copy`).toBeVisible();
     // Since 06.6 every list surface renders its states through the shared primitives, so
     // they share one recovery contract: a "Try again" button that refreshes in place, and a
-    // "Return to workspace" link on permission denial. Home is where that link leads, so neither
+    // "Go to Home" link on permission denial. Home is where that link leads, so neither
     // Home offers it: both refuse with "Return to sign in" (UI-D19); the analyst Home's error
     // retries in place, and the Requestor Home keeps its own recovery link until plan 11-09.
     // Only assert an href when the affordance is a link.
     const homeRecovery = actor === 'Requestor' ? { name: 'View My Requests', href: '/app/requests' } : { name: 'Try again' };
     const recovery: { name: string; href?: string } | undefined = route === '/app'
       ? state === 'permission' ? { name: 'Return to sign in', href: '/sign-in' } : homeRecovery
-      : state === 'permission' ? { name: 'Return to workspace', href: '/app' } : { name: 'Try again' };
+      : state === 'permission' ? { name: 'Go to Home', href: '/app' } : { name: 'Try again' };
     if (recovery?.href) {
       await expect(boundary.getByRole('link', { name: recovery.name }), `${route} ${state} ${width}px preserves its visible recovery link`).toHaveAttribute('href', recovery.href);
     } else if (recovery) {
@@ -901,9 +901,9 @@ test.describe('components at the direction values', () => {
     }
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/app/admin/not-a-collection');
-    const returnLink = header.getByRole('link', { name: 'Return to workspace', exact: true });
+    const returnLink = header.getByRole('link', { name: 'Go to Home', exact: true });
     await expect(returnLink, 'the in-shell not-found offers its action').toBeVisible();
     const [notFoundHeader, returnBox] = await Promise.all([header.boundingBox(), returnLink.boundingBox()]);
-    expect(Math.abs((returnBox?.width ?? 0) - (notFoundHeader?.width ?? 0)), 'Return to workspace spans the header at 375px').toBeLessThanOrEqual(1);
+    expect(Math.abs((returnBox?.width ?? 0) - (notFoundHeader?.width ?? 0)), 'Go to Home spans the header at 375px').toBeLessThanOrEqual(1);
   });
 });

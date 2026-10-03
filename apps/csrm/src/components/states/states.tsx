@@ -8,6 +8,9 @@ type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 type StateDensity = 'default' | 'compact';
 type StateAction = { label: string; href: string };
 
+/* The default way out of a refusal: Home lists the work this person can open (D-25, UI-SPEC §2.4). */
+const goToHome: StateAction = { label: 'Go to Home', href: '/app' };
+
 type StateFrameProps = {
   children: ReactNode;
   density?: StateDensity;
@@ -50,8 +53,8 @@ function StateActionLink({ action }: { action: StateAction }) {
 
 export function LoadingState({ density, headingLevel }: { density?: StateDensity; headingLevel?: HeadingLevel } = {}) {
   return (
-    <StateFrame density={density} heading="Loading workspace…" headingLevel={headingLevel} icon={LoaderCircle} kind="loading" role="status">
-      <p className="text-sm text-foreground-secondary">Preparing your authorised workspace.</p>
+    <StateFrame density={density} heading="Loading…" headingLevel={headingLevel} icon={LoaderCircle} kind="loading" role="status">
+      <p className="text-sm text-foreground-secondary">Getting this page ready.</p>
     </StateFrame>
   );
 }
@@ -105,7 +108,7 @@ export type ErrorStateProps = {
 };
 
 export function ErrorState({ action, density, description, headingLevel, noun, retry }: ErrorStateProps = {}) {
-  const heading = noun ? `We couldn’t load ${noun}` : 'We couldn’t load this workspace';
+  const heading = noun ? `We couldn’t load ${noun}` : 'We couldn’t load this page';
   const detail = description ?? 'Please try again. If the problem continues, contact your administrator.';
 
   return (
@@ -126,12 +129,8 @@ export function PermissionDeniedState({ action, area, density, headingLevel }: {
 
   return (
     <StateFrame density={density} heading={heading} headingLevel={headingLevel} icon={LockKeyhole} kind="permission" role="alert">
-      <p className="text-sm text-foreground-secondary">Your workspace shows the work you can open. If you think you should have access, contact your administrator.</p>
-      {action ? <StateActionLink action={action} /> : (
-        <Link className={buttonVariants({ variant: 'outline' })} href="/app">
-          Return to workspace
-        </Link>
-      )}
+      <p className="text-sm text-foreground-secondary">Home shows the work you can open. If you think you should have access, contact your administrator.</p>
+      <StateActionLink action={action ?? goToHome} />
     </StateFrame>
   );
 }

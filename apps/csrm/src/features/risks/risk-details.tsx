@@ -154,14 +154,14 @@ export function RiskDetailsSkeleton() {
 
 function RiskDetailsState({ kind }: { kind: 'not-available' | 'error' | 'permission' }) {
   const content = kind === 'permission'
-    ? { title: 'You don’t have permission to view the Risk Register', body: 'The Risk Register is for Security Analysts. Your workspace shows the work you can open.' }
+    ? { title: 'You don’t have permission to view the Risk Register', body: 'The Risk Register is for Security Analysts. Home shows the work you can open.' }
     : kind === 'error'
       ? { title: 'We couldn’t load this Risk', body: 'Try again. If the problem continues, contact your CSRM administrator.' }
       : { title: 'Risk not available', body: 'This Risk may no longer exist or may not be available to you.' };
   return (
     <>
       {safeHeader}
-      <Alert role="alert"><AlertTitle>{content.title}</AlertTitle><AlertDescription>{content.body}</AlertDescription>{kind === 'permission' ? <Button asChild className="mt-4" variant="outline"><Link href="/app">Return to workspace</Link></Button> : null}{kind === 'error' ? <Button className="mt-4" type="button" variant="outline" onClick={() => window.location.reload()}>Try again</Button> : null}</Alert>
+      <Alert role="alert"><AlertTitle>{content.title}</AlertTitle><AlertDescription>{content.body}</AlertDescription>{kind === 'permission' ? <Button asChild className="mt-4" variant="outline"><Link href="/app">Go to Home</Link></Button> : null}{kind === 'error' ? <Button className="mt-4" type="button" variant="outline" onClick={() => window.location.reload()}>Try again</Button> : null}</Alert>
     </>
   );
 }

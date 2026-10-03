@@ -433,7 +433,7 @@ test('has no axe violations on the analyst lists, create forms, records and admi
       { route: collection.upload, surface: `analyst ${collection.plural} CSV import`, expected: { url: routeUrl(collection.upload), title: `Import ${collection.plural} CSV | IdamBox CSRM`, heading: `Import ${collection.plural} from CSV` }, guard: importGuidance(page) },
     ]),
     // An unknown collection raises notFound() in the shell; its streamed status stays 200 (08-09).
-    { route: '/app/admin/not-a-collection', surface: 'analyst in-shell not-found', expected: { url: /\/app\/admin\/not-a-collection$/, ...notFound }, guard: shows(page, 'Return to workspace', (current) => current.getByRole('main').getByRole('link', { name: 'Return to workspace', exact: true })) },
+    { route: '/app/admin/not-a-collection', surface: 'analyst in-shell not-found', expected: { url: /\/app\/admin\/not-a-collection$/, ...notFound }, guard: shows(page, 'Go to Home', (current) => current.getByRole('main').getByRole('link', { name: 'Go to Home', exact: true })) },
   ]);
 });
 
@@ -489,7 +489,7 @@ test('has no axe violations for the Secondary Requestor lists and the denials of
      * Jane's assessment: Strapi answers 404, so the page is the in-shell not-found, titled by it
      * (08-12). The status stays the streamed 200.
      */
-    { route: janesAssessment, surface: 'Secondary Requestor on Jane’s assessment', expected: { url: routeUrl(janesAssessment), ...notFound }, guard: shows(page, 'Return to workspace', (current) => main(current).getByRole('link', { name: 'Return to workspace', exact: true })) },
+    { route: janesAssessment, surface: 'Secondary Requestor on Jane’s assessment', expected: { url: routeUrl(janesAssessment), ...notFound }, guard: shows(page, 'Go to Home', (current) => main(current).getByRole('link', { name: 'Go to Home', exact: true })) },
     ...[...phase7Refusals, ...workspaceRefusals].map(({ route, heading, title, permission }): RouteVisit => ({
       route, surface: `Secondary Requestor ${route} permission`, expected: { url: routeUrl(route), title, heading }, guard: permissionState(page, permission),
     })),
@@ -501,7 +501,7 @@ test('has no axe violations on the signed-out sign-in and the root not-found pag
   await sweep(page, [
     { route: '/sign-in', surface: 'signed-out development sign-in', expected: { url: /\/sign-in$/, title: 'Development sign-in | IdamBox CSRM', heading: 'Development sign-in' }, guard: shows(page, 'the three fixture identities', (current) => current.getByRole('button', { name: /^Continue as / }).nth(2)) },
     // A URL no route matches renders the root card outside the shell, with a real 404 (08-09).
-    { route: '/app/this-route-does-not-exist', status: 404, surface: 'signed-out root not-found', expected: { url: /\/app\/this-route-does-not-exist$/, ...notFound }, guard: shows(page, 'the root card', (current) => current.locator('main.sign-in > section.sign-in-card').getByRole('link', { name: 'Return to workspace', exact: true })) },
+    { route: '/app/this-route-does-not-exist', status: 404, surface: 'signed-out root not-found', expected: { url: /\/app\/this-route-does-not-exist$/, ...notFound }, guard: shows(page, 'the root card', (current) => current.locator('main.sign-in > section.sign-in-card').getByRole('link', { name: 'Go to Home', exact: true })) },
   ]);
 });
 

@@ -96,7 +96,7 @@ async function expectDeniedWithoutDisclosure(page: Page, routes: string[], forbi
     await page.goto(route);
     // Since 06.6 the denial renders through the shared PermissionDeniedState.
     await expect(page.getByRole('alert').filter({ hasText: /don.t have access/i })).toContainText(/don.t have access to Administration records/i);
-    await expect(page.getByRole('link', { name: 'Return to workspace' })).toHaveAttribute('href', '/app');
+    await expect(page.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
     await expect(page.getByRole('search')).toHaveCount(0);
     await expect(page.getByText(/\d+ results/i)).toHaveCount(0);
     await expect(page.getByText(forbidden)).toHaveCount(0);

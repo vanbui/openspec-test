@@ -198,7 +198,7 @@ test.describe('cross-surface design contract', () => {
           expect(actual, `${surface.name} ${state} heading at ${width}px matches ${referenceSurface}`).toEqual(reference);
         }
         if (state === 'error') await expect(stateElement.getByRole('button', { name: 'Try again' }), `${surface.name} error recovers with Try again`).toBeVisible();
-        if (state === 'permission') await expect(stateElement.getByRole('link', { name: 'Return to workspace' }), `${surface.name} permission recovers with Return to workspace`).toHaveAttribute('href', '/app');
+        if (state === 'permission') await expect(stateElement.getByRole('link', { name: 'Go to Home' }), `${surface.name} permission recovers with Go to Home`).toHaveAttribute('href', '/app');
       }
     }
   });

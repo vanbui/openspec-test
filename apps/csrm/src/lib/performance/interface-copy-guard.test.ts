@@ -187,7 +187,7 @@ describe('the interface copy guard', () => {
     const source = [
       "import { AdministrationWorkspace } from './administration-workspace';",
       'export function View() {',
-      '  return <AdministrationWorkspace><a href="/app">Return to workspace</a></AdministrationWorkspace>;',
+      '  return <AdministrationWorkspace><a href="/app">Open your workspace</a></AdministrationWorkspace>;',
       '}',
     ].join('\n');
 

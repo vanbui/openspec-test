@@ -707,7 +707,7 @@ test('Requestor and Secondary Requestor see no analyst navigation and are refuse
         const alert = main.getByRole('alert');
         await expect(alert, `${role} ${url} shows exactly one alert`).toHaveCount(1);
         await expect(alert.getByRole('heading', { name: route.permission, exact: true }), `${role} is refused ${url}`).toBeVisible();
-        await expect(alert.getByRole('link', { name: 'Return to workspace', exact: true })).toHaveAttribute('href', '/app');
+        await expect(alert.getByRole('link', { name: 'Go to Home', exact: true })).toHaveAttribute('href', '/app');
         // One title for a real and an invented report key, so nothing tells them apart.
         await expect(page, `${role} ${url} title`).toHaveTitle(route.documentTitle);
         // No table, count, record link, filter, tile, widget, section, breadcrumb or fixture boundary.

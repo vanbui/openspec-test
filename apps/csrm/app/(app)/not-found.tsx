@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: 'Page not found | IdamBox CSRM' };
 export default function ShellNotFound() {
   return (
     <PageHeader
-      action={<Link className={buttonVariants()} href="/app">Return to workspace</Link>}
+      action={<Link className={buttonVariants()} href="/app">Go to Home</Link>}
       description="The page you asked for doesn’t exist or has moved."
       title="Page not found"
     />

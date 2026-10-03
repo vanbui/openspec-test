@@ -24,7 +24,7 @@ export default function NotFound() {
         </p>
         <h1>Page not found</h1>
         <p className="sign-in-lead">The page you asked for doesn’t exist or has moved.</p>
-        <Link className={buttonVariants({ className: 'h-control-h' })} href="/app">Return to workspace</Link>
+        <Link className={buttonVariants({ className: 'h-control-h' })} href="/app">Go to Home</Link>
       </section>
     </main>
   );

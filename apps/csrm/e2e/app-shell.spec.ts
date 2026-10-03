@@ -6,7 +6,7 @@ const wcagTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const notFound = {
   heading: 'Page not found',
   lead: 'The page you asked for doesn’t exist or has moved.',
-  action: 'Return to workspace',
+  action: 'Go to Home',
   title: 'Page not found | IdamBox CSRM',
 };
 

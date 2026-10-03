@@ -191,7 +191,7 @@ test('assessment navigation gives both actors lifecycle context and keeps an unr
     await expect(requestDenial, `D18_REQUEST_PERMISSION_STATE_${width}`).toBeVisible();
     await expect(requestDenial).toHaveAttribute('role', 'alert');
     await expect(requestDenial).toContainText('You don’t have access to this area');
-    await expect(requestDenial.getByRole('link', { name: 'Return to workspace', exact: true })).toHaveAttribute('href', '/app');
+    await expect(requestDenial.getByRole('link', { name: 'Go to Home', exact: true })).toHaveAttribute('href', '/app');
     await expect(nonOwnerPage.getByRole('banner').getByText('Secondary Requestor', { exact: true }), `D18_REQUEST_SHELL_KEPT_${width}`).toBeVisible();
     await expect(main.getByRole('region', { name: 'Request actions' }), `D18_REQUEST_NO_ACTIONS_${width}`).toHaveCount(0);
     await expect(main.getByRole('heading', { name: /^Current lifecycle state:/ }), `D18_REQUEST_NO_LIFECYCLE_${width}`).toHaveCount(0);
@@ -226,7 +226,7 @@ test('assessment navigation gives both actors lifecycle context and keeps an unr
     // The route's metadata makes the same read, so the title follows the not-found (WCAG 2.4.2, 08-12).
     await expect(nonOwnerPage, `NOT_FOUND_TITLE_${width}`).toHaveTitle('Page not found | IdamBox CSRM');
     await expect(main.getByText('The page you asked for doesn’t exist or has moved.', { exact: true })).toBeVisible();
-    await expect(main.getByRole('link', { name: 'Return to workspace', exact: true })).toHaveAttribute('href', '/app');
+    await expect(main.getByRole('link', { name: 'Go to Home', exact: true })).toHaveAttribute('href', '/app');
     await expect(nonOwnerPage.getByRole('banner').getByText('Secondary Requestor', { exact: true }), `SHELL_KEPT_${width}`).toBeVisible();
     await expect(nonOwnerPage.locator('section[aria-labelledby="assessment-lifecycle-heading"]')).toHaveCount(0);
     await expect(nonOwnerPage.locator('section[aria-labelledby="originating-request-label"]')).toHaveCount(0);
