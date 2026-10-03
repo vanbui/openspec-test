@@ -72,6 +72,53 @@ test.describe('Home and navigation @journey', () => {
   });
 
   /*
+   * UAT-001, D-18, UI-D20: the analyst Home leads with the queue. After the Needs action tiles the first
+   * widget is the Review queue at every width. Below xl the tiles sit two by two, so at 375×812 (the mobile
+   * project) the Review queue starts within the first screen; from xl (the desktop project, 1440×900) the
+   * four tiles share one row. The proof reads the real layout boxes at the project's own width, and no
+   * tile's caption or supporting line may push past its tile.
+   */
+  test('UX08_ANALYST_PHONE_FIRST_SCREEN: the analyst Home leads with the Review queue, within the first phone screen', async ({ page }) => {
+    await expectStrapiHealthy(page);
+    await signInAs(page, 'Security Analyst');
+    const main = page.getByRole('main');
+    const needsAction = page.getByRole('region', { name: 'Needs action', exact: true });
+    const tiles = needsAction.locator('[data-slot="kpi-tile"]');
+    await expect(tiles, 'the four Needs action tiles').toHaveCount(4);
+    const headings = main.getByRole('heading', { level: 2 });
+    await expect(headings.nth(0)).toHaveText('Needs action');
+    await expect(headings.nth(1), 'UX08_ANALYST_PHONE_FIRST_SCREEN: the first widget after the tiles').toHaveText('Review queue');
+    const reviewQueue = page.getByRole('region', { name: 'Review queue', exact: true });
+    await expect(reviewQueue).toBeVisible();
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    expect(await page.evaluate(() => window.scrollY), 'the first screen is measured from the top').toBe(0);
+    const viewport = page.viewportSize();
+    expect(viewport, 'the project sets a viewport').not.toBeNull();
+    const { height, width } = viewport!;
+
+    const tileBoxes = await tiles.evaluateAll((elements) => elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { top: Math.round(box.top), overflows: element.scrollWidth > element.clientWidth };
+    }));
+    const rows = new Set(tileBoxes.map((box) => box.top)).size;
+    // xl is 1280px: two by two below it, one row of four from it.
+    expect(rows, `UX08_ANALYST_PHONE_FIRST_SCREEN: tile rows at ${width}px`).toBe(width < 1280 ? 2 : 1);
+    expect(tileBoxes.filter((box) => box.overflows), `no tile text overflows its tile at ${width}px`).toEqual([]);
+
+    if (width < 768) {
+      const [regionBox, headingBox] = await Promise.all([
+        reviewQueue.boundingBox(),
+        reviewQueue.getByRole('heading', { level: 2, name: 'Review queue', exact: true }).boundingBox(),
+      ]);
+      expect(regionBox, 'the Review queue has a box').not.toBeNull();
+      expect(headingBox, 'the Review queue heading has a box').not.toBeNull();
+      expect(regionBox!.y, `UX08_ANALYST_PHONE_FIRST_SCREEN: the Review queue starts within the first ${height}px screen`).toBeLessThan(height);
+      expect(headingBox!.y + headingBox!.height, `UX08_ANALYST_PHONE_FIRST_SCREEN: its heading reads on the first ${height}px screen`).toBeLessThanOrEqual(height);
+    }
+  });
+
+  /*
    * D-17: the analyst dashboard's old address is a temporary redirect to Home from next.config.ts. It
    * answers before the proxy, so even a request with no session gets the 307 and not the sign-in
    * redirect, and the query is kept. A bookmark lands every actor on their own Home; the review queues

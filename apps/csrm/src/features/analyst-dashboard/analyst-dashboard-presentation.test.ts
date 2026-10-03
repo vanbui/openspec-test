@@ -135,14 +135,14 @@ describe('dashboardKpiTiles', () => {
 });
 
 describe('dashboard widgets', () => {
-  it('orders the seven widgets as UI-SPEC §2.2 sets them', () => {
+  it('leads with the queue, then deadlines and alerts, then exposure and activity (D-18, UI-SPEC §5.3)', () => {
     expect(dashboardWidgetOrder).toEqual([
       'reviewQueue',
-      'riskExposure',
-      'highCritical',
       'treatmentsDue',
       'upcomingDueDates',
       'topAlerts',
+      'riskExposure',
+      'highCritical',
       'recentActivity',
     ]);
   });
@@ -377,7 +377,7 @@ describe('recent activity', () => {
     expect(activityKinds).toHaveLength(7);
   });
 
-  it('links each event to the analyst route for its record, dated absolutely in UTC', () => {
+  it('links each event to the analyst route for its record and keeps its instant for the viewer’s zone (D-55)', () => {
     const rows = activityRows({
       rows: [
         activityOf({ occurredAt: '2026-09-24T23:30:00.000-05:00' }),
@@ -393,7 +393,6 @@ describe('recent activity', () => {
         linkText: 'RAR-2026-AB12CD',
         href: '/app/review/requests/request-1',
         phrase: 'submitted by Jane Doe',
-        date: '25 Sept 2026',
         dateTime: '2026-09-24T23:30:00.000-05:00',
         secondary: 'Assessment Request · Payroll platform assessment',
       },
@@ -402,7 +401,6 @@ describe('recent activity', () => {
         linkText: 'QUE-2026-0001',
         href: '/app/review/questionnaires/ques-1',
         phrase: 'released to the Requestor by Bob Doe',
-        date: '23 Sept 2026',
         dateTime: '2026-09-23T09:00:00.000Z',
         secondary: 'Questionnaire · Payroll questionnaire',
       },
@@ -411,7 +409,6 @@ describe('recent activity', () => {
         linkText: 'ASM-2026-AB12CD',
         href: '/app/review/assessments/asm%201',
         phrase: 'released by Bob Doe',
-        date: '4 Sept 2026',
         dateTime: '2026-09-04T09:00:00.000Z',
         secondary: 'Risk Assessment · Payroll platform assessment',
       },

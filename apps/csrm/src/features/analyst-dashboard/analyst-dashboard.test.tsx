@@ -43,17 +43,19 @@ vi.mock('@/lib/testing/e2e-ui-state', () => ({
 
 import HomePage from '../../../app/(app)/app/page';
 import { AnalystHomeContent } from '../home/analyst-home';
+import { TimeZoneProvider } from '@/components/csrm/local-time';
 import { AnalystDashboard, AnalystDashboardSkeleton } from './analyst-dashboard';
 import { emptyAnalystDashboard } from './analyst-dashboard-presentation';
 
 const homeDescription = 'What needs your action, and where your work stands.';
+/* D-18 (UI-SPEC §5.3): the queue, then deadlines and alerts, then exposure, then activity. */
 const widgetHeadings = [
   'Review queue',
-  'Risk exposure',
-  'High and Critical residual Risks',
   'Treatments due',
   'Upcoming due dates',
   'Top alerts',
+  'Risk exposure',
+  'High and Critical residual Risks',
   'Recent activity',
 ] as const;
 
@@ -192,7 +194,9 @@ describe('AnalystDashboard, populated', () => {
     expect(heading).toHaveClass('sr-only');
     const list = within(needsAction).getByRole('list');
     expect(heading.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(list).toHaveClass('sm:grid-cols-2', 'xl:grid-cols-4');
+    // Two by two below xl, so the Review queue starts within the first 375px screen; four in a row from xl (UI-D20).
+    expect(list).toHaveClass('grid-cols-2', 'xl:grid-cols-4');
+    expect(list).not.toHaveClass('sm:grid-cols-2');
     const tiles = within(list).getAllByRole('link');
     expect(tiles.map((tile) => tile.getAttribute('href'))).toEqual([
       '/app/review/requests',
@@ -207,7 +211,7 @@ describe('AnalystDashboard, populated', () => {
     expect(tiles[3]).toHaveAccessibleName('Needs attention 2 Untreated Critical Risks and ineffective Control Implementations');
   });
 
-  it('follows the tiles with the seven widgets in UI-SPEC §2.2 order, each a region named by its heading', () => {
+  it('follows the tiles with the seven widgets in D-18 order, led by the Review queue, each a region named by its heading', () => {
     render(<AnalystDashboard state={{ kind: 'ready', dashboard }} />);
 
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Needs action', ...widgetHeadings]);
@@ -357,7 +361,7 @@ describe('AnalystDashboard, populated', () => {
     expect(within(top).getByRole('link', { name: 'View all alerts' })).toHaveAttribute('href', '/app/alerts');
   });
 
-  it('words recent activity with its actor only when recorded, an absolute UTC date and one link per event', () => {
+  it('words recent activity with its actor only when recorded, an absolute date and one link per event', () => {
     render(<AnalystDashboard state={{ kind: 'ready', dashboard }} />);
 
     const activity = region('Recent activity');
@@ -380,6 +384,30 @@ describe('AnalystDashboard, populated', () => {
     expect(items[2]).not.toHaveTextContent(/approved|released|by /);
 
     expect(within(activity).getByText('Showing the 3 most recent events')).toBeInTheDocument();
+  });
+
+  it('dates recent activity in the viewer’s time zone, keeping the instant machine-readable (D-55, X-3)', () => {
+    const lateEvening = {
+      ...dashboard,
+      units: {
+        ...readyUnits,
+        recentActivity: {
+          status: 'ready' as const,
+          data: {
+            rows: [
+              { kind: 'assessment-released' as const, recordType: 'assessment' as const, documentId: 'asm-1', identifier: 'ASM-2026-AB12CD', title: 'Payroll platform assessment', actorDisplayName: 'Bob Doe', occurredAt: '2026-09-24T20:30:00.000Z' },
+            ],
+            truncated: false,
+          },
+        },
+      },
+    };
+    render(<TimeZoneProvider zone="Australia/Brisbane"><AnalystDashboard state={{ kind: 'ready', dashboard: lateEvening }} /></TimeZoneProvider>);
+
+    // 20:30 UTC on 24 September is 06:30 on 25 September in Brisbane: the date is the viewer's, not UTC's.
+    const time = within(region('Recent activity')).getByText('25 Sept 2026');
+    expect(time.tagName).toBe('TIME');
+    expect(time).toHaveAttribute('dateTime', '2026-09-24T20:30:00.000Z');
   });
 });
 
@@ -499,9 +527,12 @@ describe('AnalystDashboard, page states', () => {
     expect(status.querySelectorAll('[data-slot="kpi-tile-skeleton"]')).toHaveLength(4);
     const widgets = status.querySelectorAll('[data-slot="dashboard-widget-skeleton"]');
     expect(widgets).toHaveLength(7);
+    // The skeleton keeps the D-18 order's spans: only the last, Recent activity, spans both columns from lg.
     expect(widgets[6]).toHaveClass('lg:col-span-2');
+    for (const widget of Array.from(widgets).slice(0, 6)) expect(widget).not.toHaveClass('lg:col-span-2');
     for (const widget of widgets) expect(widget.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(6);
-    expect(status.querySelector('[data-slot="kpi-tile-strip"]')).toHaveClass('sm:grid-cols-2', 'xl:grid-cols-4');
+    expect(status.querySelector('[data-slot="kpi-tile-strip"]')).toHaveClass('grid-cols-2', 'xl:grid-cols-4');
+    expect(status.querySelector('[data-slot="kpi-tile-strip"]')).not.toHaveClass('sm:grid-cols-2');
     expect(screen.queryByRole('link')).toBeNull();
   });
 });

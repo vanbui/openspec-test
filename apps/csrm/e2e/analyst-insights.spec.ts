@@ -168,13 +168,14 @@ async function queueRowValue(row: Locator): Promise<number> {
   return value;
 }
 
+/* The analyst Home's widgets after Needs action, in D-18 order (UI-SPEC §5.3, E6). */
 const dashboardWidgets = [
   'Review queue',
-  'Risk exposure',
-  'High and Critical residual Risks',
   'Treatments due',
   'Upcoming due dates',
   'Top alerts',
+  'Risk exposure',
+  'High and Critical residual Risks',
   'Recent activity',
 ] as const;
 
