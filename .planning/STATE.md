@@ -3,19 +3,19 @@ gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Assessment Lifecycle and Oversight
 status: executing
-stopped_at: "Phase 11 executing: the fresh plan check revision passed on its third round (`a589569`); plan 11-01 is next."
-last_updated: "2026-10-03T00:25:13.095Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-10-03T00:38:55.893Z"
 last_activity: 2026-10-03
-last_activity_desc: Phase 11 execution started
-state_head: a5895693cf6967aaad657f160fcd891b42a22297
+last_activity_desc: Plan 11-01 complete
+state_head: 6d0a9e433e5cc1e81d646ccfb6c80f488f0463e3
 progress:
   total_phases: 16
   completed_phases: 1
   total_plans: 290
-  completed_plans: 23
+  completed_plans: 24
   percent: 6
-current_phase_name: Navigation, landing and list clarity
 current_phase: 11
+current_phase_name: Navigation, landing and list clarity
 current_plan: 0
 ---
 
@@ -45,11 +45,11 @@ Stage 2 of the post-demo brief is complete: every phase of v2.0 is planned, in e
   - verification: `10-VERIFICATION.md` `passed`, 6/6 success criteria and no gaps; the pilot accepted the three Manual-Only checks as residuals for the operator's UAT, recorded as deferred follow-ups in `10-UAT.md` (complete);
   - the final full gate, green at `00306ac` (below);
   - requirements: REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 complete; ADMIN-05 partial by decision, its Information Asset owner moved to Phase 22.
-- **Next:** Phase 11 (Navigation, landing and list clarity) is planned (21 plans, plan check written ahead) and not started. Its fresh plan check comes first, when the pilot starts it.
+- **Phase 11 (executing):** its fresh plan check passed (`a589569`). Plan 11-01 is complete (`1e36e6d` to `bc0b6eb`, SUMMARY `6d0a9e4`): X-6 to X-10 are in the design direction, and a released request reads "Released" through the one status mapping. `PHASE_11_BASE=9f95575` is recorded in `11-01-SUMMARY.md` for the 11-21 gate. Plan 11-02 is next.
 
-Plan: 1 of 21
-Status: Executing Phase 11
-Last activity: 2026-10-03 — Phase 11 execution started
+Plan: 2 of 21
+Status: Ready to execute
+Last activity: 2026-10-03 — Plan 11-01 complete
 
 ## Milestone
 
@@ -156,6 +156,9 @@ v1.0's decisions (`.planning/milestones/v1.0-STATE.md`) stay binding unless a v2
 - [Phase 10]: 10-23 Fix 3d: PSPF-130 reads 'Enabling appropriate access to official information and controlling supporting technology access', keeping the need-to-know 'appropriate' (pilot ruling); PSPF-042 and PSPF-095 keep their titles
 - [Phase 10]: 10-23 Fix 8 addendum: axe scrollable-region-focusable on an overflowing picker popup is accepted as the APG activedescendant combobox false positive, set aside only for that rule on the open popover content, only in the overflow test that proves ArrowDown reaches the last option in view; the container stays untabbable
 - [Phase 10]: 10-23 Task 3: REQ-07, QUES-08, QUES-09, ASSESS-06, ASSESS-07 and UX-06 delivered; ADMIN-05 delivered except the Information Asset owner, which moves to Phase 22 with a contract-gap record, so ADMIN-05 stays open
+- [Phase 11]: 11-01: a request whose stored status is approved reads Released on every surface (badge, review queue and My requests options and chips, Requestor dashboard counts, throughput lifecycle row); the stored approved, status=approved and the API are unchanged (D-46). PHASE_11_BASE=9f95575.
+- [Phase 11]: 11-01: statusPresentation in components/csrm/status-badge.tsx is the only request status label source; requestStatusPresentation is retired and feature code calls statusLabel('request', status). presentationOf falls back to a sentence-case label, the neutral tone and CircleIcon for a value a family does not yet label (G-13 seam for Phase 17.1).
+- [Phase 11]: 11-01: X-6 to X-10 are recorded in the design direction verbatim from 11-UI-SPEC.md; X-9 sits under a new '### Lifecycle stepper' heading before '### Dialogs'.
 
 ## Risks and Open Decisions
 
@@ -244,11 +247,12 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 | Phase 10 P21 | 12 min | 3 tasks | 10 files |
 | Phase 10 P22 | 43 min | 3 tasks | 7 files |
 | Phase 10 P23 | 48min gate + walkthrough rounds (2026-10-02 to 2026-10-03) | 3 tasks | 51 files |
+| Phase 11 P01 | 9 min | 2 tasks | 17 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-03
-**Stopped At:** Phase 10 complete (verification passed with three accepted residuals; `phase.complete 10` recorded); Phase 11 is planned and not started, and the pilot starts it after pushing `post-demo`.
+**Last session:** 2026-10-03T00:38:36.969Z
+**Stopped At:** Completed 11-01-PLAN.md
 
 **Planning gate record (2026-10-02, pilot):**
 - Every phase has plans and a passing plan check: 16 phases, 290 plans (`<phase>-PLAN-CHECK.md`). Phase 10 keeps its 2026-09-27 check and re-checks at the start of its execution, as every phase does.
@@ -257,7 +261,7 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 - `gsd-tools validate health`: 0 errors, 16 I001 (plans without summaries, expected before execution) and 3 W019 warnings, dispositioned and not renamed. W019 flags every root `.planning/` file GSD does not generate, and GSD has no allowlist. `POST-DEMO-BRIEF.md` and `NEXT-WAVE-DECISIONS.md` are named by the operator's brief and cited across the phases, and `APP-UI-REVIEW.md` is a v1 record (2026-09-10) that v1 documents cite by path.
 
 **Resume prompt:** `.planning/prompts/post-demo-build.md`. Paste the launcher line the operator was given into a new session after the weekly reset.
-**Resume File:** `.planning/POST-DEMO-BRIEF.md`
+**Resume File:** None
 
 **Exact next step to resume:**
 1. Re-read the brief and this file, confirm the branch is `post-demo` with a clean tree (apart from the brief's three operator items), and check usage.
@@ -268,7 +272,7 @@ Gate history: `.planning/milestones/v1.0-STATE.md`.
 
 ## Next Action
 
-**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is complete (2026-10-03). Next is Phase 11, when the pilot starts it: its fresh plan check, then execution (Session Continuity step 3).
+**Post-demo Stage 3 on branch `post-demo`:** Phase 10 is complete (2026-10-03). Phase 11 is executing: plan 11-01 is complete and 11-02 is next (Session Continuity step 3).
 
 ## Accumulated Context
 
