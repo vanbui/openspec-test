@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IdamBox SCIM resource: the Strapi SCIM 2.0 service (apps/backend, /scim/v2),
+  reached on the host at host.docker.internal:1337, as the dev Identity Source
+  "midPoint (dev)". The bearer token is rendered in from MIDPOINT_SCIM_TOKEN
+  (docker/midpoint/render.sh); it is never committed.
+
+  - Outbound only (D6): HR owns identity attributes and status; IdamBox owns roles,
+    so nothing here maps roles, passwords or the Keycloak subject (D17, D20).
+  - Fixed SCIM mapping (D19). The pinned connector does not send externalId on
+    writes; Enterprise employeeNumber carries the source key (P3-33, P4-10).
+  - Leaver = disable (D12). Deleting is switched off as a capability, and an
+    illegal or unassigned projection is disabled, never deleted (P4-16).
+  - A remote user is linked to an Identity automatically only by its source key
+    (externalId). An email or employeeNumber match of an unowned manual user opens
+    a correlation case; only an operator's decision links it (D13, P4-12).
+  - The connector pages full listings itself (pagination + importBatchSize), so
+    reconciliation and discovery see every user, not just the first 100 (P3-36).
+-->
+<resource xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3"
+          xmlns:ext="http://idambox.test/midpoint/extension"
+          xmlns:cfg="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/connector-scim2/com.exclamationlabs.connid.base.scim2.Scim2Connector"
+          oid="11000000-0000-4000-8000-000000000110">
+    <name>IdamBox (SCIM)</name>
+    <description>IdamBox Users in Strapi, provisioned through SCIM 2.0 as the Identity Source "midPoint (dev)".</description>
+    <connectorRef type="c:ConnectorType">
+        <filter>
+            <q:and>
+                <q:equal>
+                    <q:path>c:connectorType</q:path>
+                    <q:value>com.exclamationlabs.connid.base.scim2.Scim2Connector</q:value>
+                </q:equal>
+                <q:equal>
+                    <q:path>c:connectorVersion</q:path>
+                    <q:value>1.2.9</q:value>
+                </q:equal>
+            </q:and>
+        </filter>
+    </connectorRef>
+    <connectorConfiguration>
+        <icfc:legacySchema>false</icfc:legacySchema>
+        <icfc:configurationProperties>
+            <cfg:serviceUrl>http://host.docker.internal:1337/scim/v2</cfg:serviceUrl>
+            <cfg:token>
+                <t:clearValue>@@MIDPOINT_SCIM_TOKEN@@</t:clearValue>
+            </cfg:token>
+            <cfg:usersEndpointUrl>/Users</cfg:usersEndpointUrl>
+            <cfg:groupsEndpointUrl>/Groups</cfg:groupsEndpointUrl>
+            <cfg:enableStandardSchema>true</cfg:enableStandardSchema>
+            <cfg:enableEnterpriseUser>true</cfg:enableEnterpriseUser>
+            <cfg:enableAWSSchema>false</cfg:enableAWSSchema>
+            <cfg:enableSlackSchema>false</cfg:enableSlackSchema>
+            <cfg:enableDynamicSchema>false</cfg:enableDynamicSchema>
+            <cfg:deepGet>false</cfg:deepGet>
+            <cfg:deepImport>false</cfg:deepImport>
+            <cfg:pagination>true</cfg:pagination>
+            <cfg:importBatchSize>100</cfg:importBatchSize>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>IdamBox User</displayName>
+            <default>true</default>
+            <delineation>
+                <objectClass>ri:Scim2User</objectClass>
+            </delineation>
+            <focus>
+                <type>c:UserType</type>
+            </focus>
+
+            <attribute>
+                <ref>ri:userName</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>extension/ext:username</path></source>
+                </outbound>
+            </attribute>
+            <attribute>
+                <ref>ri:emails</ref>
+                <!-- The connector carries each SCIM email as a JSON string; IdamBox
+                     holds one primary email. The value is built exactly as the connector
+                     reads it back from Strapi ({"value":...,"primary":true}), so an
+                     unchanged email is never removed and re-added. Not tolerant: an
+                     HR change replaces it. -->
+                <tolerant>false</tolerant>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>emailAddress</path></source>
+                    <expression>
+                        <script>
+                            <code>
+                                if (emailAddress == null || emailAddress.trim().isEmpty()) {
+                                    return null
+                                }
+                                return groovy.json.JsonOutput.toJson([value: emailAddress.trim(), primary: true])
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+                <inbound>
+                    <!-- Correlation only: never writes the Identity. -->
+                    <use>correlation</use>
+                    <expression>
+                        <script>
+                            <code>
+                                if (input == null) {
+                                    return null
+                                }
+                                def parsed = new groovy.json.JsonSlurper().parseText(input.toString())
+                                return parsed instanceof Map ? parsed.value : null
+                            </code>
+                        </script>
+                    </expression>
+                    <target><path>emailAddress</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:name_givenName</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>givenName</path></source>
+                </outbound>
+            </attribute>
+            <attribute>
+                <ref>ri:name_familyName</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>familyName</path></source>
+                </outbound>
+            </attribute>
+            <attribute>
+                <ref>ri:displayName</ref>
+                <!-- Strong, so a claim and drift repair set it too. The pinned connector
+                     reads displayName back as the userName (connector V1.2.9 defect,
+                     ADR 0006), so every IdamBox reconciliation rewrites it: one extra PUT
+                     (and Keycloak update) per user and run, accepted for correctness
+                     (P4-11). Throttled users are retried by the task's retry trigger. -->
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>fullName</path></source>
+                </outbound>
+            </attribute>
+            <attribute>
+                <ref>ri:title</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>title</path></source>
+                </outbound>
+            </attribute>
+            <attribute>
+                <ref>ri:employeeNumber</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>personalNumber</path></source>
+                </outbound>
+                <inbound>
+                    <use>correlation</use>
+                    <target><path>personalNumber</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:externalId</ref>
+                <inbound>
+                    <!-- The source key Strapi returns for users this source owns. -->
+                    <use>correlation</use>
+                    <target><path>name</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:department</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <source><path>extension/ext:department</path></source>
+                </outbound>
+            </attribute>
+
+            <activation>
+                <existence>
+                    <outbound>
+                        <!-- An IdamBox User exists while its Identity does: a lost
+                             assignment disables it below instead of deleting it. -->
+                        <strength>weak</strength>
+                        <expression>
+                            <path>$focusExists</path>
+                        </expression>
+                    </outbound>
+                </existence>
+                <administrativeStatus>
+                    <outbound>
+                        <name>disable-instead-of-delete</name>
+                        <strength>strong</strength>
+                        <!-- Effective status: HR status and start/end dates together. -->
+                        <source><path>$focus/activation/effectiveStatus</path></source>
+                        <expression>
+                            <script>
+                                <code>
+                                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                    if (legal &amp;&amp; effectiveStatus == ActivationStatusType.ENABLED) {
+                                        return ActivationStatusType.ENABLED
+                                    }
+                                    return ActivationStatusType.DISABLED
+                                </code>
+                            </script>
+                        </expression>
+                    </outbound>
+                </administrativeStatus>
+            </activation>
+
+            <correlation>
+                <correlators>
+                    <items>
+                        <!-- Users this source owns: their source key is definite. -->
+                        <name>source-key</name>
+                        <item>
+                            <ref>name</ref>
+                        </item>
+                    </items>
+                    <items>
+                        <!-- Unowned manual users: candidates for a confirmed claim only. -->
+                        <name>employee-number</name>
+                        <item>
+                            <ref>personalNumber</ref>
+                        </item>
+                        <composition>
+                            <weight>0.9</weight>
+                        </composition>
+                    </items>
+                    <items>
+                        <name>email</name>
+                        <item>
+                            <ref>emailAddress</ref>
+                        </item>
+                        <composition>
+                            <weight>0.8</weight>
+                        </composition>
+                    </items>
+                </correlators>
+                <thresholds>
+                    <definite>1.0</definite>
+                    <candidate>0.1</candidate>
+                </thresholds>
+            </correlation>
+
+            <synchronization>
+                <reaction>
+                    <name>linked</name>
+                    <situation>linked</situation>
+                    <actions>
+                        <synchronize/>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <name>source-key-match</name>
+                    <situation>unlinked</situation>
+                    <actions>
+                        <link/>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <name>claim-candidate</name>
+                    <situation>disputed</situation>
+                    <actions>
+                        <createCorrelationCase/>
+                    </actions>
+                </reaction>
+                <!-- unmatched: no reaction. IdamBox never creates Identities. -->
+                <!-- deleted: no reaction. The Identity and its history stay. -->
+            </synchronization>
+        </objectType>
+    </schemaHandling>
+
+    <capabilities>
+        <configured>
+            <cap:delete>
+                <cap:enabled>false</cap:enabled>
+            </cap:delete>
+        </configured>
+    </capabilities>
+
+    <consistency>
+        <!-- Retry of writes midPoint records as pending operations (for example when
+             Strapi cannot be reached), by 330-task-idambox-pending-refresh.xml and no
+             sooner than this period. Strapi's 503 while Keycloak is unavailable reaches
+             midPoint as a generic connector error, which is not kept as a pending
+             operation: the HR tasks' retry-later reaction retries that person instead
+             (300-task-hr-live-sync.xml, ADR 0006). -->
+        <operationRetryPeriod>PT1M</operationRetryPeriod>
+        <operationRetryMaxAttempts>30</operationRetryMaxAttempts>
+    </consistency>
+</resource>

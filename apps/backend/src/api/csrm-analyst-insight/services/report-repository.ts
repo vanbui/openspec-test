@@ -1,7 +1,7 @@
 import type { Database } from "@strapi/database";
 
 import { RELEASED_REQUEST_STATUSES, REVIEWABLE_REQUEST_STATUSES } from "../../csrm-assessment-request/services/collection-scope";
-import { applyDisclosableParent } from "../../csrm-risk/services/risk-register";
+import { applyActiveRisk, applyDisclosableParent, applyReleasedParent, applyUnderAssessmentParent } from "../../csrm-risk/services/risk-register";
 import {
   EXPOSED_SYSTEMS_LIMIT,
   MOST_OVERDUE_TREATMENTS_LIMIT,
@@ -29,7 +29,8 @@ import {
   type TreatmentDueStateCounts,
   type TreatmentStatusCounts,
 } from "../../../csrm/insights/report-math";
-import { addUtcDays, isUtcDate, normalizeDateTime } from "../../../csrm/insights/utc-date";
+import { applyTreatmentDueStatePredicate, type TreatmentDueState } from "../../../csrm/insights/treatment-due-state";
+import { isUtcDate, normalizeDateTime } from "../../../csrm/insights/utc-date";
 import { createAlertRepository, projectAlertRow, type AlertItem } from "./alert-repository";
 import type { ThroughputPeriod } from "./report-query";
 
@@ -39,12 +40,19 @@ import type { ThroughputPeriod } from "./report-query";
  * scope; every list is capped by a named constant and says when it is
  * truncated, and the median reads a capped, flagged sample.
  *
- * Scope (D-14, D-36): Risk and Control Implementation figures count open
- * contextual Risks only, which is the Risk Register's applyDisclosableParent
- * plus `r.closure_date IS NULL`, the same predicate as the register's
- * `state=open` filter. Throughput counts only released Risk Assessments (the
- * complete release triple) and requests in the six review-scope statuses. No
- * figure widens those scopes.
+ * Scope (D-14, D-36, D-40 to D-43): every Risk figure reads the Risk Register's
+ * scope with its `state=open` predicate (`r.closure_date IS NULL`).
+ * - Risk exposure counts released open Risks only, through the register's
+ *   named released branch (applyReleasedParent), and counts the open Risks
+ *   under assessment apart through its other branch
+ *   (applyUnderAssessmentParent). The two are never added together, so each
+ *   figure equals the register list filtered by its stage (D-42).
+ * - Treatment performance and control effectiveness keep both stages
+ *   (applyDisclosableParent, the union of the two branches), as the alerts do
+ *   (D-43).
+ * Throughput counts only released Risk Assessments (the complete release
+ * triple) and requests in the six review-scope statuses. No figure widens
+ * those scopes.
  *
  * Every column and alias comes from a constant in this module and every value
  * is a bound parameter.
@@ -65,18 +73,25 @@ export type ExposedSystem = { documentId: string; name: string; critical: number
 export type ExposedSystems = {
   /** At most EXPOSED_SYSTEMS_LIMIT systems, most exposed first. */
   rows: ExposedSystem[];
-  /** Every Information System carrying at least one open High or Critical residual Risk. */
+  /** Every Information System carrying at least one released open High or Critical residual Risk. */
   total: number;
   truncated: boolean;
-  /** Open High or Critical residual Risks with no impacted Information System. */
+  /** Released open High or Critical residual Risks with no impacted Information System. */
   risksWithoutSystem: number;
 };
 
+/** D-42: the open Risks whose risk assessment is a draft or in review, counted apart from every released section. */
+export type RiskExposureUnderAssessment = { byResidualRating: RatingCounts };
+
 export type RiskExposureFigures = {
+  /** Released open Risks (D-40). */
   byResidualRating: RatingCounts;
   byInherentRating: RatingCounts;
+  /** Released open Risks whose treatment action is Accept; a draft's Accept is never counted (D-41). */
+  acceptedByResidualRating: RatingCounts;
   residualByTreatmentStatus: ResidualByTreatmentStatus;
   exposedSystems: ExposedSystems;
+  underAssessment: RiskExposureUnderAssessment;
 };
 
 export type ControlEffectivenessFigures = {
@@ -158,25 +173,50 @@ function requiredText(value: unknown): string {
   return value;
 }
 
-/** D-14, D-36: an open contextual Risk inside the Risk Register scope. The outer query aliases csrm_risks as `r`. */
-function openContextualRisks(connection: Knex): QueryBuilder {
-  return applyDisclosableParent(connection.queryBuilder().from("csrm_risks as r")).whereRaw("r.closure_date IS NULL");
+/** The open-Risk predicate of the register's `state=open` (D-36). The outer query aliases csrm_risks as `r`. */
+function openRisks(query: QueryBuilder): QueryBuilder {
+  return query.whereRaw("r.closure_date IS NULL");
 }
 
-/** A Control Implementation joined to its Risk, which must be an open contextual Risk (the ineffective-control alert scope). */
-function implementationsOnOpenContextualRisks(connection: Knex): QueryBuilder {
+/**
+ * The Risk table as the outer `r`, active Risks only (Phase 16 D-13, applyActiveRisk), as the register's default view
+ * reads it: every Risk figure below starts here, so a withdrawn Risk counts in no report.
+ */
+function activeRiskTable(connection: Knex): QueryBuilder {
+  return applyActiveRisk(connection.queryBuilder().from("csrm_risks as r"));
+}
+
+/** D-14, D-36, D-43: an open Risk in either stage of the Risk Register scope, for the figures that keep both. */
+function openDisclosableRisks(connection: Knex): QueryBuilder {
+  return openRisks(applyDisclosableParent(activeRiskTable(connection)));
+}
+
+/** D-40: an open Risk whose risk assessment is released, the register's `stage=released` branch. */
+function openReleasedRisks(connection: Knex): QueryBuilder {
+  return openRisks(applyReleasedParent(activeRiskTable(connection)));
+}
+
+/** D-40: an open Risk whose risk assessment is a draft or in review, the register's `stage=under-assessment` branch. */
+function openUnderAssessmentRisks(connection: Knex): QueryBuilder {
+  return openRisks(applyUnderAssessmentParent(activeRiskTable(connection)));
+}
+
+/** Counts a population by one stored rating column; ratingCounts folds null and off-ladder values into notRated. */
+function ratingRowsBy(query: QueryBuilder, column: "r.residual_rating" | "r.inherent_rating"): QueryBuilder {
+  return query.select(`${column} as rating`).countDistinct({ total: "r.id" }).groupBy(column);
+}
+
+/** A Control Implementation joined to its Risk, which must be open in either stage (the ineffective-control alert scope, D-43). */
+function implementationsOnOpenDisclosableRisks(connection: Knex): QueryBuilder {
   const query = connection.queryBuilder().from("csrm_control_implementations as ci")
     .join("csrm_control_implementations_risk_lnk as ci_risk", "ci_risk.csrm_control_implementation_id", "ci.id")
     .join("csrm_risks as r", "r.id", "ci_risk.csrm_risk_id");
-  return applyDisclosableParent(query).whereRaw("r.closure_date IS NULL");
+  // Phase 16 D-13: a Control Implementation on a withdrawn Risk counts in no report.
+  return openRisks(applyActiveRisk(applyDisclosableParent(query)));
 }
 
-/*
- * D-04, D-31: a treatment is open while its Risk has no closure date and its
- * status is not Complete. A NULL status records no treatment, so it is not
- * Complete; a bare `<>` would drop it. The status is a bound value.
- */
-const TREATMENT_NOT_COMPLETE = "(r.treatment_status IS NULL OR r.treatment_status <> ?)";
+/** The four due states of an open treatment the report partitions, in the shared rule's vocabulary (D-04). */
+const REPORT_DUE_STATES = Object.freeze(["overdue", "due-soon", "later", "no-target-date"] as const satisfies readonly TreatmentDueState[]);
 
 /**
  * A released Risk Assessment: the complete release triple of an approved
@@ -194,9 +234,9 @@ function releasedAssessments(connection: Knex): QueryBuilder {
     });
 }
 
-/** Open contextual Risks rated High or Critical, each joined to the Information System it impacts. */
+/** Released open Risks rated High or Critical, each joined to the Information System it impacts (D-42). */
 function highOrCriticalRisksWithSystem(connection: Knex): QueryBuilder {
-  return openContextualRisks(connection)
+  return openReleasedRisks(connection)
     .join("csrm_risks_information_system_impacted_lnk as risk_system", "risk_system.csrm_risk_id", "r.id")
     .join("csrm_information_systems as s", "s.id", "risk_system.csrm_information_system_id")
     .whereIn("r.residual_rating", [...HIGH_OR_CRITICAL]);
@@ -215,6 +255,11 @@ async function readRow(query: QueryBuilder): Promise<RecordValue> {
 
 function ratingKey(value: unknown): RatingKey {
   return normaliseRating(value) ?? "notRated";
+}
+
+/** Folds rating rows (rating, total) into the closed RatingCounts. */
+function ratingCountsOf(rows: readonly RecordValue[]): RatingCounts {
+  return ratingCounts(rows.map((row) => ({ rating: row.rating, total: row.total })));
 }
 
 /** Splits the residual rating by treatment status rows into one treatment-status partition per rating. */
@@ -249,17 +294,18 @@ export function createReportRepository(strapi: unknown): ReportRepository {
 
   return {
     async riskExposure() {
-      const [residualRows, inherentRows, systemRows, systemTotal, withoutSystem] = await Promise.all([
-        // (a) residual rating by treatment status.
-        readRows(openContextualRisks(connection)
+      const [residualRows, inherentRows, acceptedRows, underAssessmentRows, systemRows, systemTotal, withoutSystem] = await Promise.all([
+        // (a) released open Risks by residual rating and treatment status.
+        readRows(openReleasedRisks(connection)
           .select("r.residual_rating as rating", "r.treatment_status as status")
           .countDistinct({ total: "r.id" })
           .groupBy("r.residual_rating", "r.treatment_status")),
-        // (b) inherent rating.
-        readRows(openContextualRisks(connection)
-          .select("r.inherent_rating as rating")
-          .countDistinct({ total: "r.id" })
-          .groupBy("r.inherent_rating")),
+        // (b) released open Risks by inherent rating.
+        readRows(ratingRowsBy(openReleasedRisks(connection), "r.inherent_rating")),
+        // D-41: the register's treatmentAction=Accept on the released branch; the value is a bound constant.
+        readRows(ratingRowsBy(openReleasedRisks(connection).where("r.treatment_action", "Accept"), "r.residual_rating")),
+        // D-42: the open Risks under assessment, never added to a released figure.
+        readRows(ratingRowsBy(openUnderAssessmentRisks(connection), "r.residual_rating")),
         // (h) the most exposed systems, one more than the cap so truncation is known.
         readRows(highOrCriticalRisksWithSystem(connection)
           .select(
@@ -274,8 +320,8 @@ export function createReportRepository(strapi: unknown): ReportRepository {
           .limit(EXPOSED_SYSTEMS_LIMIT + 1)),
         // Every system that would be listed, however many the cap shows.
         readRow(highOrCriticalRisksWithSystem(connection).countDistinct({ total: "s.id" })),
-        // High or Critical Risks that impact no Information System.
-        readRow(openContextualRisks(connection)
+        // Released High or Critical Risks that impact no Information System.
+        readRow(openReleasedRisks(connection)
           .whereIn("r.residual_rating", [...HIGH_OR_CRITICAL])
           .whereNotExists((system) => {
             system.from("csrm_risks_information_system_impacted_lnk as risk_system")
@@ -287,8 +333,9 @@ export function createReportRepository(strapi: unknown): ReportRepository {
       ]);
       const systems = systemRows.map(projectExposedSystem);
       return {
-        byResidualRating: ratingCounts(residualRows.map((row) => ({ rating: row.rating, total: row.total }))),
-        byInherentRating: ratingCounts(inherentRows.map((row) => ({ rating: row.rating, total: row.total }))),
+        byResidualRating: ratingCountsOf(residualRows),
+        byInherentRating: ratingCountsOf(inherentRows),
+        acceptedByResidualRating: ratingCountsOf(acceptedRows),
         residualByTreatmentStatus: residualByTreatmentStatus(residualRows),
         exposedSystems: {
           rows: systems.slice(0, EXPOSED_SYSTEMS_LIMIT),
@@ -296,12 +343,13 @@ export function createReportRepository(strapi: unknown): ReportRepository {
           truncated: systems.length > EXPOSED_SYSTEMS_LIMIT,
           risksWithoutSystem: wholeCount(withoutSystem.total),
         },
+        underAssessment: { byResidualRating: ratingCountsOf(underAssessmentRows) },
       };
     },
 
     async controlEffectiveness() {
-      // (g) Control Implementations on open contextual Risks, by status and effectiveness together.
-      const rows = await readRows(implementationsOnOpenContextualRisks(connection)
+      // (g) Control Implementations on open Risks in either stage, by status and effectiveness together (D-43).
+      const rows = await readRows(implementationsOnOpenDisclosableRisks(connection)
         .select("ci.control_status as status", "ci.effectiveness_rating as rating")
         .countDistinct({ total: "ci.id" })
         .groupBy("ci.control_status", "ci.effectiveness_rating"));
@@ -313,23 +361,22 @@ export function createReportRepository(strapi: unknown): ReportRepository {
 
     async treatmentPerformance(today) {
       assertToday(today);
-      // Target dates are `date` columns stored as YYYY-MM-DD, so the window bounds bind as the same strings.
-      const windowEnd = addUtcDays(today, TREATMENT_REPORT_DUE_WINDOW_DAYS);
       const alerts = createAlertRepository(strapi);
       const overdueKinds = ["risk-treatment-overdue"] as const;
-      const [dueRow, statusRows, overdueRows, overdueTotal] = await Promise.all([
-        // (c) the due-state partition of open, not-Complete treatments, both window ends inclusive.
-        readRow(openContextualRisks(connection)
-          .whereRaw(TREATMENT_NOT_COMPLETE, ["Complete"])
-          .select(
-            connection.raw("SUM(CASE WHEN r.target_date < ? THEN 1 ELSE 0 END) AS ??", [today, "overdue"]),
-            connection.raw("SUM(CASE WHEN r.target_date >= ? AND r.target_date <= ? THEN 1 ELSE 0 END) AS ??", [today, windowEnd, "due_within_window"]),
-            connection.raw("SUM(CASE WHEN r.target_date > ? THEN 1 ELSE 0 END) AS ??", [windowEnd, "later"]),
-            connection.raw("SUM(CASE WHEN r.target_date IS NULL THEN 1 ELSE 0 END) AS ??", ["no_target_date"]),
-          )
-          .countDistinct({ total: "r.id" })),
-        // Every open contextual Risk by its recorded treatment status.
-        readRows(openContextualRisks(connection)
+      /*
+       * (c) The due-state partition of open treatments in either stage (D-43), one count per state, each read
+       * with the shared due-state rule over the product's due-soon window (D-38). Each figure therefore equals
+       * the Risk register's dueState list and, for overdue and due soon, the alert list it opens.
+       */
+      const dueStateCount = (state: typeof REPORT_DUE_STATES[number]) => readRow(
+        // Phase 20 (G-16) switches the governing date in treatment-due-state.ts; this figure follows it.
+        applyTreatmentDueStatePredicate(openDisclosableRisks(connection), state, { today, windowDays: TREATMENT_REPORT_DUE_WINDOW_DAYS })
+          .countDistinct({ total: "r.id" }),
+      );
+      const [dueRows, statusRows, overdueRows, overdueTotal] = await Promise.all([
+        Promise.all(REPORT_DUE_STATES.map(dueStateCount)),
+        // Every open Risk in either stage by its recorded treatment status (D-43).
+        readRows(openDisclosableRisks(connection)
           .select("r.treatment_status as status")
           .countDistinct({ total: "r.id" })
           .groupBy("r.treatment_status")),
@@ -337,15 +384,11 @@ export function createReportRepository(strapi: unknown): ReportRepository {
         alerts.listPage({ kinds: overdueKinds, page: 1, pageSize: MOST_OVERDUE_TREATMENTS_LIMIT, today }),
         alerts.count({ kinds: overdueKinds, today }),
       ]);
+      const [overdue, dueWithinWindow, later, noTargetDate] = dueRows.map((row) => wholeCount(row.total));
       return {
         dueWindowDays: TREATMENT_REPORT_DUE_WINDOW_DAYS,
-        dueState: treatmentDueStateCounts({
-          overdue: dueRow.overdue,
-          dueWithinWindow: dueRow.due_within_window,
-          later: dueRow.later,
-          noTargetDate: dueRow.no_target_date,
-          total: dueRow.total,
-        }),
+        // The four states partition the open treatments, so their sum is the total.
+        dueState: treatmentDueStateCounts({ overdue, dueWithinWindow, later, noTargetDate, total: overdue + dueWithinWindow + later + noTargetDate }),
         treatmentStatus: treatmentStatusCounts(statusRows.map((row) => ({ status: row.status, total: row.total }))),
         mostOverdue: {
           rows: overdueRows.map((row) => projectAlertRow(row, today)),

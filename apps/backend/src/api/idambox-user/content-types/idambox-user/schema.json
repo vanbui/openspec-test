@@ -47,6 +47,19 @@
       "minLength": 6,
       "private": true
     },
+    "identitySource": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::identity-source.identity-source"
+    },
+    "sourceExternalId": { "type": "string", "maxLength": 255 },
+    "sourceIdentityKey": { "type": "string", "private": true, "unique": true, "minLength": 64, "maxLength": 64 },
+    "employeeNumber": { "type": "string", "maxLength": 255 },
+    "department": { "type": "string", "maxLength": 255 },
+    "jobTitle": { "type": "string", "maxLength": 255 },
+    "sourceDeletedAt": { "type": "datetime" },
+    "lastSyncedAt": { "type": "datetime" },
+    "protected": { "type": "boolean", "required": true, "default": false },
     "roles": {
       "type": "relation",
       "relation": "manyToMany",

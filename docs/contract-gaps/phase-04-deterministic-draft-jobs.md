@@ -110,3 +110,21 @@ input snapshots, proposal sources, field-level human changes, prompt history, or
 job audit history. Phase 8 owns real durable provider infrastructure and any
 explicit provenance/audit model. Until then, UI and API projections must not
 imply stronger persistence, recovery, or attribution than this contract.
+
+## Phase 16 amendment (2026-10-01): targeted proposal operations
+
+Decided in Phase 16 (16-CONTEXT D-04 and D-24) and written on 2026-10-15 by plan 16-01. This contract is amended, not replaced. It narrows the Phase 04 decision "Treat a linked draft on a risk-assessment-drafted request as restart discovery and never invoke the provider" to the draft job itself, as the ROADMAP entry for Phase 16 says.
+
+- **The provider may be invoked again, only through the targeted operations.** An assessment linked to its draft may invoke the provider again, but only through `risk-suggestions` ("Suggest more risks") and `risk-rewrite` ("Rewrite this risk"). Each writes proposals into its own AI run and never replaces the assessment or any Risk: nothing reaches the assessment until a human Security Analyst decides each proposal. Their operations, runs, envelopes and decisions are recorded in `docs/contract-gaps/phase-12-ai-run-record-and-provenance.md`, "Phase 16 amendment (2026-10-01): risk proposals, decisions and per-field run references", and `docs/contract-gaps/phase-16-risk-withdrawal-and-history.md`.
+- **The draft job keeps every rule above.** Single flight per questionnaire, "Completed jobs are terminal", one one-to-one assessment, and restart discovery of a linked draft are unchanged: a draft job on a request that already holds an assessment still reports that assessment and never regenerates it.
+- **No whole-draft regeneration.** It would discard curation, as decision 4 rules for questionnaires (D-24). The catalogue's `regenerate_draft` intent (`function.risk_assessments.risk_assessment_details.api.05`) stays unserved, and its `docs/references/served-operations.json` reason is updated to name the two targeted operations.
+
+### Affected Workstreams
+
+`apps/backend` is shared by every workstream (`.planning/PROJECT.md`, "GSD Workstreams"). On 2026-10-15 that section's workstream table lists `csrm` and `iam`. `csrm`, whose application is `apps/csrm`, is the only caller of the draft job's operations and of the two targeted operations. `iam` reads none of them: on 2026-10-15, `grep -rlE "csrm-risk|CsrmRisk|risk_assessments|assessment_requests|csrm-assessment-request|AiRun|ai_runs|ai_proposal|/v1/risks|REQUEST_HAS|aiInputsChanged|contextSummary" .planning/workstreams/iam/` printed nothing (exit status 1).
+
+No existing endpoint, response or grant changes through this note: the draft job's operations (generation, job read and retry) and their responses are unchanged. Only the provider may now be invoked again for a drafted assessment, by the two new operations, which the Phase 12 amendment lists with the existing endpoints they change. The `regenerate_draft` entry stays unserved; only its served-operations reason text changes.
+
+Phase 16 amendment status: **approved by the pilot on 2026-10-15** (G-6).
+
+What the pilot checked (2026-10-15): the text against the frozen JDL (`docs/references/idambox-datamodel.jdl`: `CsrmRisk`, `CsrmAssessment`, `IdamBoxUser`, `CsrmTreatmentAction`; no competing entity or status, `closureDate` and `treatmentStatus` keep their meanings), `docs/references/specification.json` and the role-function catalogue (every new Function granted to `role.security_analyst` only, no existing grant changed), AGENTS.md (Strapi enforces every rule against the resolved IdamBox User; AI output is advisory and never accepts, releases or closes; JDL terminology; no hard delete; the released record stays immutable), 16-CONTEXT and the 2026-10-15 fresh plan check (iterations 2 to 4), and `.planning/PROJECT.md` "The shared backend": the Affected Workstreams section names `csrm` as the only reader, the `iam` grep is empty, and every changed endpoint stays backward compatible for existing callers. The draft job's single flight, terminal completion and restart discovery are unchanged, and `regenerate_draft` stays unserved.

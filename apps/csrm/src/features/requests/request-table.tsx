@@ -1,18 +1,25 @@
 'use client';
 
 import type { SortingState } from '@tanstack/react-table';
+import { MessageSquareDot } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, type FormEvent } from 'react';
 import { DataTable, type DataTableColumn, type DataTableFilter } from '@/components/csrm/data-table';
 import { StatusBadge, statusLabel } from '@/components/csrm/status-badge';
+import { LocalInstant } from '@/components/csrm/local-time';
 import { RecordLink } from '@/components/csrm/record-link';
 import { EmptyState, ErrorState, PermissionDeniedState } from '@/components/states/states';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  formatRequestDate,
+  myRequestNextStep,
+  requestHolderPresentation,
+  requestHolders,
   requestStatuses,
-  type CsrmAssessmentRequest,
-  type RequestListQuery,
+  shownInstant,
+  type MyRequestItem,
+  type MyRequestListQuery,
   type RequestPagination,
   type RequestSort,
 } from './request-domain';
@@ -20,8 +27,8 @@ import {
 type RequestTableState = 'populated' | 'loading' | 'empty' | 'error' | 'permission';
 
 export interface RequestTableProps {
-  requests: readonly CsrmAssessmentRequest[];
-  query: RequestListQuery;
+  requests: readonly MyRequestItem[];
+  query: MyRequestListQuery;
   pagination: RequestPagination;
   densityUserId: string;
   state?: RequestTableState;
@@ -44,7 +51,7 @@ function sortFor(sorting: SortingState): RequestSort {
   return allowed.includes(candidate) ? candidate as RequestSort : 'updatedAt:desc';
 }
 
-function nextSearchParameters(current: URLSearchParams, query: RequestListQuery): URLSearchParams {
+function nextSearchParameters(current: URLSearchParams, query: MyRequestListQuery): URLSearchParams {
   const next = new URLSearchParams();
   for (const key of safePassthroughParameters) {
     const value = current.get(key);
@@ -52,6 +59,8 @@ function nextSearchParameters(current: URLSearchParams, query: RequestListQuery)
   }
   if (query.q) next.set('q', query.q);
   if (query.status) next.set('status', query.status);
+  if (query.holder) next.set('holder', query.holder);
+  if (query.notes) next.set('notes', query.notes);
   next.set('sort', query.sort);
   if (query.page > 1) next.set('page', String(query.page));
   next.set('pageSize', String(query.pageSize));
@@ -62,7 +71,77 @@ function requestHref(documentId: string) {
   return `/app/requests/${encodeURIComponent(documentId)}`;
 }
 
-const columns: DataTableColumn<CsrmAssessmentRequest>[] = [
+/**
+ * Line 1 names whose turn it is; line 2 is the server's sentence, a link only for the viewer's own step (UI-SPEC §7.3).
+ * The sentence clamps to two lines in the table and three on a card, its full text kept in the DOM.
+ */
+function NextStep({ item, clamp, className }: { item: MyRequestItem; clamp: 'line-clamp-2' | 'line-clamp-3'; className?: string }) {
+  const nextStep = myRequestNextStep(item);
+  return (
+    <div className={className ? `space-y-0.5 ${className}` : 'space-y-0.5'}>
+      <p className="micro-label text-foreground-secondary">{requestHolderPresentation[item.holder].label}</p>
+      {nextStep ? (
+        nextStep.href
+          ? <RecordLink className={`${clamp} break-words`} href={nextStep.href}>{nextStep.summary}</RecordLink>
+          : <p className={`${clamp} break-words`}>{nextStep.summary}</p>
+      ) : null}
+    </div>
+  );
+}
+
+const countFormatter = new Intl.NumberFormat('en-AU');
+const NOT_PICKED_UP_YET = 'Not picked up yet';
+
+/** `{n} new {note|notes}`, written out (Voice; X-17). */
+function newNotesLine(unread: number): string {
+  return `${countFormatter.format(unread)} new ${unread === 1 ? 'note' : 'notes'}`;
+}
+
+/*
+ * The X-17 unread line (13-UI-SPEC §12.4, as §2.2): the notes new to the Requestor, a link to the request's thread,
+ * named for the request; nothing at zero. Unread is a personal fact, so it is ink with words, never a status hue.
+ */
+function UnreadLine({ item }: { item: MyRequestItem }) {
+  if (item.unreadNotes <= 0) return null;
+  const line = newNotesLine(item.unreadNotes);
+  return (
+    <RecordLink
+      aria-label={`${line} on ${item.requestNumber}`}
+      className="inline-flex min-h-6 items-center gap-1 text-xs font-medium tabular-nums text-foreground"
+      href={`${requestHref(item.documentId)}#notes`}
+    >
+      <MessageSquareDot aria-hidden="true" className="size-3 shrink-0" />
+      {line}
+    </RecordLink>
+  );
+}
+
+/** Who holds the request (D-17): the assigned Security Analyst's display name, or that nobody has picked it up yet. */
+function AssigneeName({ item }: { item: MyRequestItem }) {
+  return item.assignee
+    ? <span className="break-words">{item.assignee.displayName}</span>
+    : <span className="text-foreground-secondary">{NOT_PICKED_UP_YET}</span>;
+}
+
+/** The card's holder line (13-UI-SPEC §12.4): `Security Analyst: {name}` or `Not picked up yet`. */
+function CardAssignee({ item }: { item: MyRequestItem }) {
+  return item.assignee
+    ? <p className="break-words text-sm">Security Analyst: {item.assignee.displayName}</p>
+    : <p className="text-sm text-foreground-secondary">{NOT_PICKED_UP_YET}</p>;
+}
+
+function dueLabel(item: MyRequestItem): string {
+  const due = formatRequestDate(item.dueDate);
+  return due ? `Due ${due}` : 'No due date';
+}
+
+/** `Updated` with the instant in the viewer's time zone (D-55), or `No update date`. */
+function Updated({ item }: { item: MyRequestItem }) {
+  const updatedAt = shownInstant(item.updatedAt);
+  return updatedAt ? <>Updated <LocalInstant style="date" value={updatedAt} /></> : <>No update date</>;
+}
+
+const columns: DataTableColumn<MyRequestItem>[] = [
   {
     accessorKey: 'requestNumber',
     header: 'Request ID',
@@ -75,14 +154,19 @@ const columns: DataTableColumn<CsrmAssessmentRequest>[] = [
     header: 'Title',
     enableSorting: true,
     cell: (_value, request) => (
-      <RecordLink href={requestHref(request.documentId)}>
-        {request.title}
-      </RecordLink>
+      <div className="grid justify-items-start gap-1">
+        <RecordLink href={requestHref(request.documentId)}>
+          {request.title}
+        </RecordLink>
+        <UnreadLine item={request} />
+      </div>
     ),
   },
   { accessorKey: 'requestStatus', header: 'Status', cell: (_value, request) => <StatusBadge status={request.requestStatus} /> },
-  { id: 'dueDate', accessorKey: 'dueDateLabel', header: 'Due date', enableSorting: true, cell: (_value, request) => request.dueDateLabel ? `Due ${request.dueDateLabel}` : 'No due date' },
-  { id: 'updatedAt', accessorKey: 'updatedDateLabel', header: 'Updated', enableSorting: true, cell: (_value, request) => request.updatedDateLabel ? `Updated ${request.updatedDateLabel}` : 'No update date' },
+  { id: 'assignee', accessorKey: 'assignee', header: 'Security Analyst', cell: (_value, request) => <AssigneeName item={request} /> },
+  { id: 'nextStep', accessorKey: 'nextAction', header: 'Next step', wrap: true, cell: (_value, request) => <NextStep className="py-2" clamp="line-clamp-2" item={request} /> },
+  { id: 'dueDate', accessorKey: 'dueDate', header: 'Due date', enableSorting: true, cell: (_value, request) => dueLabel(request) },
+  { id: 'updatedAt', accessorKey: 'updatedAt', header: 'Updated', enableSorting: true, cell: (_value, request) => <Updated item={request} /> },
 ];
 
 export function RequestTable({ requests, query, pagination, densityUserId, state }: RequestTableProps) {
@@ -91,7 +175,7 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
   const currentSearchParams = useSearchParams();
   const outOfRange = pagination.total > 0 && query.page > Math.max(1, pagination.pageCount);
 
-  const navigate = (nextQuery: RequestListQuery) => {
+  const navigate = (nextQuery: MyRequestListQuery) => {
     const params = nextSearchParameters(new URLSearchParams(currentSearchParams.toString()), nextQuery);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
@@ -100,12 +184,18 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
       navigate({ ...query, page: Math.max(1, pagination.pageCount) });
     }
   }, [outOfRange, pagination.pageCount, query]);
-  const resetPage = (changes: Partial<RequestListQuery>) => navigate({ ...query, ...changes, page: 1 });
-  const clearFilters = () => resetPage({ q: '', status: undefined });
+  const resetPage = (changes: Partial<MyRequestListQuery>) => navigate({ ...query, ...changes, page: 1 });
+  const clearFilters = () => resetPage({ q: '', status: undefined, holder: undefined, notes: undefined });
+  const clearFilter = (id: string) => resetPage(
+    id === 'q' ? { q: '' } : id === 'holder' ? { holder: undefined } : id === 'notes' ? { notes: undefined } : { status: undefined },
+  );
   const filters = useMemo<DataTableFilter[]>(() => [
     ...(query.q ? [{ id: 'q', label: 'Search', value: query.q }] : []),
     ...(query.status ? [{ id: 'status', label: 'Status', value: statusLabel('request', query.status) }] : []),
-  ], [query.q, query.status]);
+    ...(query.holder ? [{ id: 'holder', label: 'Show', value: requestHolderPresentation[query.holder].label }] : []),
+    ...(query.notes ? [{ id: 'notes', label: 'Notes', value: 'New notes' }] : []),
+  ], [query.q, query.status, query.holder, query.notes]);
+  const filtered = Boolean(query.q || query.status || query.holder || query.notes);
   const resolvedState = outOfRange ? 'loading' : state ?? (requests.length > 0 ? 'populated' : 'empty');
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -131,10 +221,35 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
             className="block h-9 min-w-52 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={query.status ?? ''}
             disabled={resolvedState === 'loading'}
-            onChange={(event) => resetPage({ status: event.target.value ? event.target.value as RequestListQuery['status'] : undefined })}
+            onChange={(event) => resetPage({ status: event.target.value ? event.target.value as MyRequestListQuery['status'] : undefined })}
           >
             <option value="">All statuses</option>
             {requestStatuses.map((status) => <option key={status} value={status}>{statusLabel('request', status)}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-sm font-medium text-foreground">
+          Show
+          <select
+            aria-label="Show"
+            className="block h-9 min-w-52 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            value={query.holder ?? ''}
+            disabled={resolvedState === 'loading'}
+            onChange={(event) => resetPage({ holder: event.target.value ? event.target.value as MyRequestListQuery['holder'] : undefined })}
+          >
+            <option value="">All requests</option>
+            {requestHolders.map((holder) => <option key={holder} value={holder}>{requestHolderPresentation[holder].label}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-sm font-medium text-foreground">
+          Notes
+          <select
+            className="block h-9 min-w-52 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            value={query.notes ?? ''}
+            disabled={resolvedState === 'loading'}
+            onChange={(event) => resetPage({ notes: event.target.value ? event.target.value as MyRequestListQuery['notes'] : undefined })}
+          >
+            <option value="">All requests</option>
+            <option value="unread">With new notes</option>
           </select>
         </label>
       </div>
@@ -146,34 +261,38 @@ export function RequestTable({ requests, query, pagination, densityUserId, state
         densityUserId={densityUserId}
         filters={filters}
         getRowId={(request) => request.documentId}
-        onClearFilter={(id) => resetPage(id === 'q' ? { q: '' } : { status: undefined })}
+        onClearFilter={clearFilter}
         onClearFilters={clearFilters}
         onPageChange={(page) => navigate({ ...query, page })}
-        onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as RequestListQuery['pageSize'] })}
+        onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as MyRequestListQuery['pageSize'] })}
         onSortingChange={(sorting) => resetPage({ sort: sortFor(sorting) })}
         page={pagination.page}
         pageSize={pagination.pageSize}
         pageSizeOptions={[10, 20, 50]}
         renderMobileCard={(item) => (
           <article className="space-y-2">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 space-y-1">
+            {/*
+              * The row wraps and the column grows from a 6rem basis: the badge stays beside the number and title while
+              * the number fits, and drops below them when it would cover the number (WCAG 1.4.10).
+              */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 grow basis-24 space-y-1">
                 <RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={requestHref(item.documentId)}>{item.requestNumber}</RecordLink>
                 <RecordLink className="block break-words" href={requestHref(item.documentId)}>{item.title}</RecordLink>
               </div>
               <StatusBadge status={item.requestStatus} />
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>{item.dueDateLabel ? `Due ${item.dueDateLabel}` : 'No due date'}</span>
-              <span>{item.updatedDateLabel ? `Updated ${item.updatedDateLabel}` : 'No update date'}</span>
-            </div>
+            <NextStep clamp="line-clamp-3" item={item} />
+            <CardAssignee item={item} />
+            {item.unreadNotes > 0 ? <div><UnreadLine item={item} /></div> : null}
+            <p className="text-xs text-muted-foreground">{dueLabel(item)} · <Updated item={item} /></p>
           </article>
         )}
         sorting={sortingFor(query.sort)}
         state={resolvedState}
         loadingLabel="Loading assessment requests"
         stateSlots={{
-          empty: <EmptyState action={{ label: 'New request', href: '/app/requests/new' }} filtered={Boolean(query.q || query.status)} noun="assessment requests" onClearFilters={clearFilters} />,
+          empty: <EmptyState action={{ label: 'New request', href: '/app/requests/new' }} filtered={filtered} noun="assessment requests" onClearFilters={clearFilters} />,
           error: <ErrorState noun="assessment requests" retry={() => router.refresh()} />,
           permission: <PermissionDeniedState area="assessment requests" />,
         }}

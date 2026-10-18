@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as service from './assessment-service';
@@ -20,6 +23,7 @@ import {
   riskWritableFields,
   releaseReadinessSchema,
 } from './assessment-schema';
+import { analystAssessmentReadSchema, releasedAssessmentDetailForActorSchema } from './assessment-server-schema';
 import {
   assessmentRatingPresentation,
 } from './assessment-domain';
@@ -35,6 +39,7 @@ vi.mock('server-only', () => ({}));
 vi.mock('../../lib/api/transport/server-client', () => ({
   createStrapiClient: vi.fn(async () => ({ GET: get, POST: post, PATCH: patch, DELETE: remove })),
   normalizeTransportError,
+  normalizeResponseParserError: (operation: string) => ({ data: null, error: { message: 'contract', operation } }),
 }));
 
 afterEach(() => {
@@ -48,6 +53,8 @@ afterEach(() => {
 const timestamp = '2026-08-30T01:02:03.000Z';
 
 const analyst = { documentId: 'user-1', displayName: 'Alex Analyst' };
+/* D-18: every job state carries who started it, whether the viewer did, and whether the viewer may retry it. */
+const viewerFacts = { canRetry: false, initiatedBy: { documentId: 'user-2', displayName: 'Bob Doe' }, initiatedByViewer: false } as const;
 
 const assessment = {
   documentId: 'assessment-1',
@@ -115,7 +122,9 @@ const persistedRisk = { documentId: 'risk-1', riskNumber: 'RSK-0001', ...riskInp
 const analystDetail = {
   ...assessment,
   actor: 'analyst' as const,
-  risks: [persistedRisk],
+  risks: [{ ...persistedRisk, aiProvenance: null, withdrawal: null }],
+  generation: null,
+  aiProvenance: null,
   ownerLabels: [analyst],
   releaseReadiness: {
     ready: true,
@@ -141,7 +150,7 @@ const controlSummary = { documentId: 'control-1', controlNumber: 'AC-1', name: '
 
 describe('assessment contract schemas', () => {
   it('requires a populated questionnaire only for completed questionnaire generation jobs', () => {
-    const base = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: timestamp };
+    const base = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: timestamp, ...viewerFacts };
     expect(questionnaireGenerationJobSchema.safeParse({ ...base, status: 'queued' }).success).toBe(true);
     expect(questionnaireGenerationJobSchema.safeParse({ ...base, status: 'completed', startedAt: timestamp, completedAt: timestamp }).success).toBe(false);
     const questionnaire = { documentId: 'questionnaire-1', questionnaireNumber: 'QNR-2026-KX2AHV', title: 'Generated questionnaire', generatedDate: timestamp, generatedBy: { documentId: 'user-1', displayName: 'Alex Analyst' } };
@@ -160,13 +169,62 @@ describe('assessment contract schemas', () => {
   });
 
   it.each([
-    ['queued', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp }],
-    ['running', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, startedAt: timestamp }],
-    ['completed', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, startedAt: timestamp, completedAt: timestamp, assessmentId: 'assessment-1' }],
-    ['failed', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, startedAt: timestamp, completedAt: timestamp, failureCode: 'provider-failed', failureMessage: 'Draft generation failed.' }],
+    ['queued', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, ...viewerFacts }],
+    ['running', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, ...viewerFacts, startedAt: timestamp }],
+    ['completed', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, ...viewerFacts, startedAt: timestamp, completedAt: timestamp, assessmentId: 'assessment-1' }],
+    ['failed', { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, ...viewerFacts, startedAt: timestamp, completedAt: timestamp, failureCode: 'provider-failed', failureMessage: 'Draft generation failed.' }],
   ] as const)('parses the %s job state and rejects state-incompatible fields', (status, fields) => {
     expect(assessmentDraftJobSchema.parse({ status, ...fields }).status).toBe(status);
     expect(assessmentDraftJobSchema.safeParse({ status, ...fields, approvedBy: analyst }).success).toBe(false);
+  });
+
+  /* D-18: the three viewer facts are required in every questionnaire job state and every draft job variant. */
+  it.each(['canRetry', 'initiatedBy', 'initiatedByViewer'] as const)('requires %s in every questionnaire generation and draft job state', (field) => {
+    const without = <T extends Record<string, unknown>>(value: T) => Object.fromEntries(Object.entries(value).filter(([key]) => key !== field));
+    const questionnaire = { documentId: 'questionnaire-1', questionnaireNumber: 'QNR-2026-KX2AHV', title: 'Generated questionnaire', generatedDate: timestamp, generatedBy: null };
+    const generationBase = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: timestamp, ...viewerFacts };
+    const generationStates = [
+      { ...generationBase, status: 'queued' },
+      { ...generationBase, status: 'running', startedAt: timestamp },
+      { ...generationBase, status: 'completed', startedAt: timestamp, completedAt: timestamp, questionnaire },
+      { ...generationBase, status: 'failed', startedAt: timestamp, completedAt: timestamp, failureCode: 'PROVIDER_TIMEOUT', failureMessage: 'The provider timed out.' },
+    ];
+    const draftBase = { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, ...viewerFacts };
+    const draftStates = [
+      { ...draftBase, status: 'queued' },
+      { ...draftBase, status: 'running', startedAt: timestamp },
+      { ...draftBase, status: 'completed', startedAt: timestamp, completedAt: timestamp, assessmentId: 'assessment-1' },
+      { ...draftBase, status: 'failed', startedAt: timestamp, completedAt: timestamp, failureCode: 'PROVIDER_TIMEOUT', failureMessage: 'The provider timed out.' },
+    ];
+    for (const state of generationStates) {
+      expect(questionnaireGenerationJobSchema.safeParse(state).success, `${state.status} with ${field}`).toBe(true);
+      expect(questionnaireGenerationJobSchema.safeParse(without(state)).success, `${state.status} without ${field}`).toBe(false);
+    }
+    for (const state of draftStates) {
+      expect(assessmentDraftJobSchema.safeParse(state).success, `${state.status} with ${field}`).toBe(true);
+      expect(assessmentDraftJobSchema.safeParse(without(state)).success, `${state.status} without ${field}`).toBe(false);
+    }
+  });
+
+  it('parses a failed job naming the files its CONTEXT_TOO_LARGE failure counted, and refuses a file carrying more (D-33)', () => {
+    /* Phase 14 D-33: a CONTEXT_TOO_LARGE failure names the files it counted, as they are named now (null when gone). */
+    const failureAttachments = [{ documentId: 'attachment-1', fileName: 'access-review-q1.txt' }, { documentId: 'attachment-2', fileName: null }];
+    const failedDraft = { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, ...viewerFacts, status: 'failed', startedAt: timestamp, completedAt: timestamp, failureCode: 'CONTEXT_TOO_LARGE', failureMessage: 'The AI context is too large.' };
+    const failedGeneration = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: timestamp, ...viewerFacts, status: 'failed', startedAt: timestamp, completedAt: timestamp, failureCode: 'CONTEXT_TOO_LARGE', failureMessage: 'The AI context is too large.' };
+    for (const schema of [assessmentDraftJobSchema, questionnaireGenerationJobSchema] as const) {
+      const failed = schema === assessmentDraftJobSchema ? failedDraft : failedGeneration;
+      expect(schema.safeParse({ ...failed, failureAttachments }).success, 'failure naming its files').toBe(true);
+      expect(schema.safeParse(failed).success, 'failure naming no files').toBe(true);
+      expect(schema.safeParse({ ...failed, failureAttachments: [{ ...failureAttachments[0], text: 'Vendor access review.' }] }).success, 'a file carrying its text').toBe(false);
+      expect(schema.safeParse({ ...failed, failureAttachments: [{ documentId: 'attachment-1' }] }).success, 'a file without its name').toBe(false);
+    }
+  });
+
+  it('accepts a job whose initiator is no longer readable, and the viewer’s own job', () => {
+    const base = { jobId: 'job-1', questionnaireId: 'questionnaire-1', attempt: 1, queuedAt: timestamp, status: 'queued' as const };
+    expect(assessmentDraftJobSchema.safeParse({ ...base, canRetry: false, initiatedBy: null, initiatedByViewer: false }).success).toBe(true);
+    expect(assessmentDraftJobSchema.safeParse({ ...base, canRetry: false, initiatedBy: { documentId: 'user-1', displayName: 'Alex Analyst' }, initiatedByViewer: true }).success).toBe(true);
+    expect(assessmentDraftJobSchema.safeParse({ ...base, canRetry: false, initiatedBy: { documentId: 'user-1', displayName: 'Alex Analyst', email: 'alex@idambox.com' }, initiatedByViewer: true }).success).toBe(false);
   });
 
   it('keeps analyst and Requestor assessment projections separate and rejects partial release facts', () => {
@@ -193,6 +251,21 @@ describe('assessment contract schemas', () => {
     expect(releasedAssessmentDetailSchema.safeParse({ ...released, assessmentRequest: { ...assessment.assessmentRequest, requestor: analyst } }).success).toBe(false);
   });
 
+  it('parses each analyst Risk with its withdrawal block, null when active and closed when withdrawn (16-06, D-03 item 9)', () => {
+    const withdrawal = { at: timestamp, by: analyst, reason: 'Proposed under the wrong Risk Type' };
+    const withRisk = (risk: Record<string, unknown>) => ({ ...analystDetail, risks: [risk] });
+    const [activeRisk] = analystDetail.risks;
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal: null })).success).toBe(true);
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal })).success).toBe(true);
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal: { ...withdrawal, by: null } })).success).toBe(true);
+    const { withdrawal: _required, ...withoutWithdrawal } = activeRisk;
+    expect(analystAssessmentDetailSchema.safeParse(withRisk(withoutWithdrawal)).success).toBe(false);
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal: { ...withdrawal, undo: true } })).success).toBe(false);
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal: { ...withdrawal, reason: '' } })).success).toBe(false);
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal: { ...withdrawal, reason: 'x'.repeat(501) } })).success).toBe(false);
+    expect(analystAssessmentDetailSchema.safeParse(withRisk({ ...activeRisk, withdrawal: { ...withdrawal, at: 'yesterday' } })).success).toBe(false);
+  });
+
   it('requires the complete closed generated actor-specific detail projections', () => {
     expect(analystAssessmentDetailSchema.parse(analystDetail)).toEqual(analystDetail);
     expect(analystAssessmentDetailSchema.safeParse({ ...analystDetail, assessmentRequest: { ...assessment.assessmentRequest, requestor: analyst } }).success).toBe(false);
@@ -200,12 +273,102 @@ describe('assessment contract schemas', () => {
     expect(analystAssessmentDetailSchema.safeParse({ ...analystDetail, releaseReadiness: undefined }).success).toBe(false);
     expect(analystAssessmentDetailSchema.safeParse({ ...analystDetail, ownerLabels: Array.from({ length: 2_000 }, () => analyst) }).success).toBe(true);
     expect(analystAssessmentDetailSchema.safeParse({ ...analystDetail, ownerLabels: Array.from({ length: 2_001 }, () => analyst) }).success).toBe(false);
-    const requestorDetail = { ...assessment, actor: 'requestor' as const, assessmentStatus: 'approved' as const, assessmentDate: timestamp, approvalDate: timestamp, approvedBy: analyst };
+    const { generatedBy: _generator, ...requestorFacts } = assessment;
+    const requestorDetail = { ...requestorFacts, actor: 'requestor' as const, assessmentStatus: 'approved' as const, assessmentDate: timestamp, approvalDate: timestamp, approvedBy: analyst, aiAssisted: true };
     expect(requestorReleasedAssessmentDetailSchema.parse(requestorDetail)).toEqual(requestorDetail);
     expect(requestorReleasedAssessmentDetailSchema.safeParse({ ...requestorDetail, assessmentRequest: { ...assessment.assessmentRequest, questionnaire: 'questionnaire-1' } }).success).toBe(false);
     for (const forbidden of ['ownerLabels', 'releaseReadiness', 'risks'] as const) {
       expect(requestorReleasedAssessmentDetailSchema.safeParse({ ...requestorDetail, [forbidden]: forbidden === 'risks' ? [persistedRisk] : [] }).success).toBe(false);
     }
+    // D-23: the Requestor learns that AI assisted, and nothing else of it: not who generated the draft (WR-304, IN-107).
+    for (const forbidden of ['generation', 'aiProvenance', 'generatedBy'] as const) {
+      expect(requestorReleasedAssessmentDetailSchema.safeParse({ ...requestorDetail, [forbidden]: null }).success).toBe(false);
+    }
+    expect(requestorReleasedAssessmentDetailSchema.safeParse({ ...requestorDetail, generatedBy: analyst }).success).toBe(false);
+    const { aiAssisted: _aiAssisted, ...withoutFlag } = requestorDetail;
+    expect(requestorReleasedAssessmentDetailSchema.safeParse(withoutFlag).success).toBe(false);
+  });
+
+  /*
+   * D10, WR-304 (D-23): the released view's parse keeps exactly what ReleasedAssessmentDetailView renders, for either
+   * actor, so the route hands the client nothing else: not the generating analyst, not the analyst's aggregate, and of
+   * the AI facts only the Requestor's aiAssisted.
+   */
+  it('keeps exactly what the released view renders, never the generating analyst or the AI facts', () => {
+    const released = { assessmentStatus: 'approved' as const, assessmentDate: timestamp, approvalDate: timestamp, approvedBy: analyst };
+    const { generatedBy: _generator, ...requestorFacts } = assessment;
+    const requestorView = releasedAssessmentDetailForActorSchema.parse({ ...requestorFacts, ...released, actor: 'requestor', aiAssisted: true })!;
+    const analystView = releasedAssessmentDetailForActorSchema.parse({
+      ...analystDetail, ...released, released: true,
+      generation: { generatedAt: timestamp, generatedBy: { documentId: 'analyst-9', displayName: 'Gen Analyst' }, providerName: 'deterministic-assessment-draft', providerVersion: '2', runId: 'run-1', aiInputsChanged: null },
+      generatedBy: { documentId: 'analyst-9', displayName: 'Gen Analyst' },
+    })!;
+    const viewKeys = ['actor', 'approvalDate', 'approvedBy', 'assessmentDate', 'assessmentNumber', 'assessmentRequest', 'assessmentStatus',
+      'nextReviewDate', 'overallControlEffectiveness', 'overallRating', 'overallRiskRationale', 'recommendationsSummary', 'reviewedBy', 'summary'];
+    expect(Object.keys(requestorView).sort()).toEqual([...viewKeys, 'aiAssisted'].sort());
+    expect(requestorView).toMatchObject({ actor: 'requestor', aiAssisted: true });
+    // FE4-01 (19-UI-SPEC §4.3): the analyst's view keeps whether AI assisted, by Strapi's rule, so the paper discloses it.
+    expect(Object.keys(analystView).sort()).toEqual([...viewKeys, 'aiAssisted'].sort());
+    expect(analystView).toMatchObject({ actor: 'analyst', aiAssisted: true });
+    for (const view of [requestorView, analystView]) {
+      expect(JSON.stringify(view)).not.toMatch(/generatedBy|generatedDate|generation|Gen Analyst|providerName|deterministic|run-1|ownerLabels|releaseReadiness|aiProvenance/);
+    }
+  });
+
+  /* Phase 13 D-16, D-25: the analyst's request summary names the assignee, the pick-up state and the notes figures. */
+  it('accepts the request summary’s assignee and notes figures, or null for each, and refuses anything else in them', () => {
+    const assignment = { assignee: { documentId: 'analyst-1', displayName: 'Bob Doe' }, pickUp: 'allowed' as const };
+    const notes = { total: 3, unread: 0 };
+    const withSummary = (summary: Record<string, unknown>) => ({ ...analystDetail, assessmentRequest: { ...analystDetail.assessmentRequest, ...summary } });
+    expect(analystAssessmentDetailSchema.parse(withSummary({ assignment, notes })).assessmentRequest).toMatchObject({ assignment, notes });
+    expect(analystAssessmentDetailSchema.parse(withSummary({ assignment: null, notes: null })).assessmentRequest).toMatchObject({ assignment: null, notes: null });
+    for (const summary of [
+      { assignment: { ...assignment, pickUp: 'own' }, notes },
+      { assignment: { ...assignment, assignee: { ...assignment.assignee, email: 'bob@example.com' } }, notes },
+      { assignment, notes: { ...notes, closedReason: null } },
+    ]) {
+      expect(analystAssessmentDetailSchema.safeParse(withSummary(summary)).success).toBe(false);
+    }
+  });
+
+  /* Phase 14 D-27: and how many files the request holds and how many are in the AI inputs, closed. */
+  it('accepts the request summary’s files figures, or null, and refuses anything else in them', () => {
+    const withSummary = (summary: Record<string, unknown>) => ({ ...analystDetail, assessmentRequest: { ...analystDetail.assessmentRequest, ...summary } });
+    expect(analystAssessmentDetailSchema.parse(withSummary({ files: { count: 2, included: 1 } })).assessmentRequest).toMatchObject({ files: { count: 2, included: 1 } });
+    expect(analystAssessmentDetailSchema.parse(withSummary({ files: null })).assessmentRequest).toMatchObject({ files: null });
+    for (const files of [{ count: 2, included: 1, removed: 0 }, { included: 1 }, { count: 2, included: -1 }]) {
+      expect(analystAssessmentDetailSchema.safeParse(withSummary({ files })).success).toBe(false);
+    }
+  });
+
+  it('accepts the analyst’s resolved AI provenance and refuses an unknown key inside it (D-12, D-14, D-21)', () => {
+    const citation = { key: 'answer.payment-files', kind: 'answer', label: 'Are payment files signed?', section: 'Payment processing', classification: null } as const;
+    const provenance = {
+      runId: 'run-1',
+      proposalKey: 'risk-1',
+      fields: [
+        { field: 'riskStatement', state: 'edited', by: analyst, at: timestamp, sources: [citation, { key: 'system-1', kind: 'system', label: 'Source no longer available', section: null, classification: null }] },
+        { field: 'residualRating', state: 'proposed', by: null, at: null, sources: null },
+      ],
+      uncitedClaims: ['Payment files are exchanged daily.'],
+      suggestions: [{ key: 'risk-1-control-1', control: { documentId: 'control-1', controlNumber: 'CTL-001', name: 'File integrity verification', description: null }, rationale: 'Signing payment files prevents tampering.', state: 'present', by: null, at: null, implementation: null }],
+      adjustments: ['accept-with-suggested-controls'],
+      outstanding: 1,
+    } as const;
+    const detail = {
+      ...analystDetail,
+      risks: [{ ...persistedRisk, aiProvenance: provenance, withdrawal: null }],
+      generation: {
+        generatedAt: timestamp, generatedBy: analyst, providerName: 'deterministic-assessment-draft', providerVersion: '2', runId: 'run-1',
+        // Phase 13 D-29: a note marked since this draft's run, named by identity and change only.
+        aiInputsChanged: { count: 1, notes: [{ documentId: 'note-1', part: 'requestor', sequence: 1, postedAt: timestamp, change: 'marked' }], files: [] },
+      },
+      aiProvenance: { runId: 'run-1', fields: [{ field: 'summary', state: 'proposed', by: null, at: null, sources: [citation] }], adjustments: [], outstanding: 1 },
+    };
+    expect(analystAssessmentDetailSchema.parse(detail)).toEqual(detail);
+    expect(analystAssessmentDetailSchema.safeParse({ ...detail, risks: [{ ...persistedRisk, withdrawal: null, aiProvenance: { ...provenance, modelPrompt: 'hidden' } }] }).success).toBe(false);
+    expect(analystAssessmentDetailSchema.safeParse({ ...detail, risks: [{ ...persistedRisk, withdrawal: null, aiProvenance: { ...provenance, fields: [{ ...provenance.fields[0], confidence: 0.9 }] } }] }).success).toBe(false);
+    expect(analystAssessmentDetailSchema.safeParse({ ...detail, risks: [persistedRisk] }).success).toBe(false);
   });
 
   it('enumerates the complete frozen Risk writable surface and rejects server-owned fields', () => {
@@ -266,6 +429,7 @@ describe('assessment generated-client service boundary', () => {
     attempt: 1,
     queuedAt: timestamp,
     status: 'queued',
+    ...viewerFacts,
   };
   const summary = {
     documentId: assessment.documentId,
@@ -276,6 +440,9 @@ describe('assessment generated-client service boundary', () => {
     generatedDate: assessment.generatedDate,
     generatedBy: assessment.generatedBy,
     approvalDate: assessment.approvalDate,
+    requestTitle: 'Customer portal assessment',
+    riskCount: 1,
+    highestResidualRating: 'Moderate',
   };
   const risk = {
     documentId: 'risk-1', riskNumber: 'RSK-0001', riskStatement: riskInput.riskStatement,
@@ -304,16 +471,18 @@ describe('assessment generated-client service boundary', () => {
     controlOwner: analyst,
   };
 
+  const { generatedBy: _generator, ...releasedRequestorFacts } = assessment;
+
   it('uses only generated methods for queue, job, assessment, and Requestor reads', async () => {
     get
-      .mockResolvedValueOnce(response({ data: [{ documentId: 'request-1', requestNumber: 'REQ-0001', title: 'Review me', requestStatus: 'submitted', submittedDate: timestamp }], meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } } }))
+      .mockResolvedValueOnce(response({ data: [{ documentId: 'request-1', requestNumber: 'REQ-0001', title: 'Review me', requestStatus: 'submitted', submittedDate: timestamp, requestorName: 'Jane Doe', assessmentType: 'Project', businessCriticality: 'High', dueDate: '2026-10-30', daysSinceSubmission: 1, assignee: null, pickUp: 'allowed', unreadNotes: 0 }], meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 }, viewer: { documentId: 'bob-id', displayName: 'Bob Doe' } } }))
       .mockResolvedValueOnce(response({ data: job }))
       .mockResolvedValueOnce(response({ data: [summary], meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } } }))
       .mockResolvedValueOnce(response({ data: { draft: 1, inReview: 1, approved: 0, total: 2 } }))
-      .mockResolvedValueOnce(response({ data: analystDetail }))
+      .mockResolvedValueOnce(response({ data: { ...analystDetail, released: false } }))
       .mockResolvedValueOnce(response({ data: [{ ...summary, assessmentStatus: 'approved', approvalDate: timestamp }], meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } } }))
       .mockResolvedValueOnce(response({ data: { Low: 0, Moderate: 0, High: 1, Critical: 0, total: 1 } }))
-      .mockResolvedValueOnce(response({ data: { ...assessment, actor: 'requestor', assessmentStatus: 'approved', assessmentDate: timestamp, approvalDate: timestamp, approvedBy: analyst } }));
+      .mockResolvedValueOnce(response({ data: { ...releasedRequestorFacts, actor: 'requestor', assessmentStatus: 'approved', assessmentDate: timestamp, approvalDate: timestamp, approvedBy: analyst, aiAssisted: false } }));
     post
       .mockResolvedValueOnce(response({ data: job }, 202))
       .mockResolvedValueOnce(response({ data: { ...job, attempt: 2 } }, 202));
@@ -324,7 +493,7 @@ describe('assessment generated-client service boundary', () => {
     await expect(service.retryAssessmentDraftJob('job-1')).resolves.toMatchObject({ data: { attempt: 2 }, error: null });
     await expect(service.listAnalystAssessments()).resolves.toMatchObject({ data: [{ assessmentNumber: 'ASM-0001' }], error: null });
     await expect(service.getAssessmentStatusSummary()).resolves.toMatchObject({ data: { total: 2 }, error: null });
-    await expect(service.getAnalystAssessment('assessment-1')).resolves.toEqual({ data: analystDetail, error: null });
+    await expect(service.getAnalystAssessment('assessment-1')).resolves.toEqual({ data: { ...analystDetail, released: false }, error: null });
     await expect(service.listMyReleasedAssessments()).resolves.toMatchObject({ data: [{ assessmentStatus: 'approved' }], error: null });
     await expect(service.getMyAssessmentRatingSummary()).resolves.toMatchObject({ data: { High: 1, total: 1 }, error: null });
     await expect(service.getReleasedAssessment('assessment-1')).resolves.toMatchObject({ data: { actor: 'requestor', approvedBy: analyst }, error: null });
@@ -346,6 +515,19 @@ describe('assessment generated-client service boundary', () => {
       '/v1/risk_assessments/{assessmentId}',
     ]);
     expect(JSON.stringify([...get.mock.calls, ...post.mock.calls])).not.toMatch(/identity|requestor|email/i);
+  });
+
+  /* D-18: the request's jobs read carries who started each job, whether the viewer did, and whether they may retry it. */
+  it('parses the request generation jobs read with each job’s viewer facts', async () => {
+    const failedGeneration = { jobId: 'generation-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: timestamp, startedAt: timestamp, completedAt: timestamp, status: 'failed', failureCode: 'PROVIDER_TIMEOUT', failureMessage: 'The provider timed out.', canRetry: true, initiatedBy: { documentId: 'user-2', displayName: 'Bob Doe' }, initiatedByViewer: false };
+    const runningDraft = { ...job, status: 'running', startedAt: timestamp, initiatedByViewer: true };
+    const aiPolicy = { status: 'allowed', reason: null, requestClassification: 'Internal', classificationSource: 'default', ceiling: null };
+    get.mockResolvedValueOnce(response({ data: { questionnaireGeneration: { job: failedGeneration, canRetry: true }, assessmentDraft: { job: runningDraft, canRetry: false }, aiPolicy } }));
+
+    await expect(service.getRequestGenerationJobs('request-1')).resolves.toEqual({
+      data: { questionnaireGeneration: { job: failedGeneration, canRetry: true }, assessmentDraft: { job: runningDraft, canRetry: false }, aiPolicy },
+      error: null,
+    });
   });
 
   it('routes only exact assessment, Risk, and ControlImplementation bodies', async () => {
@@ -410,6 +592,57 @@ describe('assessment generated-client service boundary', () => {
     await expect(service.listAssessmentRequests()).resolves.toEqual(unavailable);
     await expect(service.searchActiveUsers('Alex')).resolves.toEqual(unavailable);
   });
+
+  /*
+   * 19-10 (D-14): the analyst detail says whether the assessment is released, decided by Strapi's one record-read check.
+   * Only server-only code parses the flag (assessment-server-schema.ts), so the client-loaded assessment-schema.ts gains
+   * no runtime code and the route budgets keep their headroom.
+   */
+  it('parses the analyst detail’s released flag in server-only code and refuses a detail without it', async () => {
+    const unavailable = { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', status: 503 } };
+    normalizeTransportError.mockImplementation(() => unavailable);
+    get
+      .mockResolvedValueOnce(response({ data: { ...analystDetail, released: true } }))
+      .mockResolvedValueOnce(response({ data: analystDetail }))
+      .mockResolvedValueOnce(response({ data: { ...analystDetail, released: 'yes' } }));
+
+    await expect(service.getAnalystAssessment('assessment-1')).resolves.toEqual({ data: { ...analystDetail, released: true }, error: null });
+    await expect(service.getAnalystAssessment('assessment-1')).resolves.toEqual(unavailable);
+    await expect(service.getAnalystAssessment('assessment-1')).resolves.toEqual(unavailable);
+
+    expect(analystAssessmentReadSchema.parse({ ...analystDetail, released: false })).toEqual({ ...analystDetail, released: false });
+    expect(analystAssessmentReadSchema.safeParse(analystDetail).success).toBe(false);
+    // The released page's parse still accepts both actors' details, and drops the flag from the view.
+    const releasedFacts = { assessmentStatus: 'approved' as const, assessmentDate: timestamp, approvalDate: timestamp, approvedBy: analyst };
+    const analystView = releasedAssessmentDetailForActorSchema.parse({ ...analystDetail, ...releasedFacts, released: true });
+    expect(analystView).toMatchObject({ actor: 'analyst', assessmentNumber: 'ASM-0001' });
+    expect(Object.prototype.hasOwnProperty.call(analystView, 'released')).toBe(false);
+    expect(releasedAssessmentDetailForActorSchema.safeParse({ ...analystDetail, ...releasedFacts }).success).toBe(false);
+    const { generatedBy: _generator, ...requestorFacts } = assessment;
+    expect(releasedAssessmentDetailForActorSchema.safeParse({ ...requestorFacts, ...releasedFacts, actor: 'requestor', aiAssisted: false }).success).toBe(true);
+
+    /*
+     * FE4-02 (19-UI-SPEC §4.4): an analyst's read of an assessment that is not released is the released read's missing
+     * record, as Strapi answers a Requestor: a 404, never a contract mismatch, so both released routes render the
+     * in-shell not-found and log nothing.
+     */
+    get.mockReset();
+    get
+      .mockResolvedValueOnce(response({ data: { ...analystDetail, released: false } }))
+      .mockResolvedValueOnce(response({ data: { ...analystDetail, ...releasedFacts, released: false } }));
+    for (let read = 0; read < 2; read += 1) {
+      const unreleased = await service.getReleasedAssessment('assessment-1');
+      expect(unreleased).toMatchObject({ data: null, error: { status: 404 } });
+      expect(unreleased.error).not.toHaveProperty('kind');
+      expect(unreleased.error).not.toHaveProperty('operation');
+    }
+
+    const schemaSource = readFileSync(resolve(process.cwd(), 'src/features/assessments/assessment-schema.ts'), 'utf8');
+    expect(schemaSource).not.toMatch(/released: z\.boolean\(\)/);
+    expect(schemaSource).not.toMatch(/releasedAssessmentDetailForActorSchema =/);
+    const serverSource = readFileSync(resolve(process.cwd(), 'src/features/assessments/assessment-server-schema.ts'), 'utf8');
+    expect(serverSource.startsWith("import 'server-only';")).toBe(true);
+  });
 });
 
 describe('the picker Risk Type list carries bounded applicable controls (D-31, D-02)', () => {
@@ -447,5 +680,142 @@ describe('the picker Risk Type list carries bounded applicable controls (D-31, D
     expect(accepts(riskType([applicableControl({ description: 'Not part of the summary' })]))).toBe(false);
     const { framework: _framework, ...withoutFramework } = applicableControl();
     expect(accepts(riskType([withoutFramework]))).toBe(false);
+  });
+});
+
+/*
+ * D-02 item 2: both assessment lists take the overall rating and the released date range from the URL and send them
+ * to Strapi exactly as given, and leave each out when absent. A hand-edited URL never reaches Strapi malformed.
+ */
+describe('countReviewQueue: the sidebar’s one-row queue count (D-11)', () => {
+  const response = (data: unknown) => ({ data, response: { status: 200 } });
+  const viewer = { documentId: 'bob-id', displayName: 'Bob Doe' };
+  const queueItem = { documentId: 'request-1', requestNumber: 'REQ-0001', title: 'Review me', requestStatus: 'submitted', submittedDate: timestamp, requestorName: 'Jane Doe', assessmentType: 'Project', businessCriticality: 'High', dueDate: '2026-10-30', daysSinceSubmission: 1, assignee: null, pickUp: 'allowed', unreadNotes: 0 };
+
+  it('reads one row of the Requires attention queue and returns the queue’s total', async () => {
+    get.mockResolvedValueOnce(response({ data: [queueItem], meta: { pagination: { page: 1, pageSize: 1, pageCount: 9, total: 9 }, viewer } }));
+
+    await expect(service.countReviewQueue('requires-attention')).resolves.toEqual({ data: 9, error: null });
+
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get.mock.calls[0]).toEqual(['/v1/assessment_requests', {
+      params: { query: { 'filters[queue]': 'requires-attention', 'pagination[page]': 1, 'pagination[pageSize]': 1 } },
+    }]);
+  });
+
+  it('counts an empty queue as zero', async () => {
+    get.mockResolvedValueOnce(response({ data: [], meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 }, viewer } }));
+
+    await expect(service.countReviewQueue('requires-attention')).resolves.toEqual({ data: 0, error: null });
+  });
+
+  /* D-13 (13-12): each item names its holder, whether the viewer may pick it up and the viewer's new notes; the read names its viewer. */
+  it('parses the queue item’s assignee, pick-up and new-note fields and the viewer the read names', async () => {
+    const held = { ...queueItem, documentId: 'request-2', assignee: { documentId: 'sam-id', displayName: 'Sam Analyst' }, pickUp: 'not-offered', unreadNotes: 2 };
+    const own = { ...queueItem, documentId: 'request-3', pickUp: 'own-request' };
+    get.mockResolvedValueOnce(response({ data: [queueItem, held, own], meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 3 }, viewer } }));
+
+    const result = await service.listAssessmentRequests({ q: '', queue: 'requires-attention', sort: 'submittedDate:desc', page: 1, pageSize: 25 });
+    expect(result.error).toBeNull();
+    expect(result.data?.viewer).toEqual(viewer);
+    expect(result.data?.records.map((record) => [record.assignee, record.pickUp, record.unreadNotes])).toEqual([
+      [null, 'allowed', 0],
+      [{ documentId: 'sam-id', displayName: 'Sam Analyst' }, 'not-offered', 2],
+      [null, 'own-request', 0],
+    ]);
+  });
+
+  it('refuses an item whose pick-up state or new-note count the contract does not allow, or a holder with an email', async () => {
+    const unavailable = { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.' } };
+    normalizeTransportError.mockReturnValue(unavailable);
+    for (const item of [
+      { ...queueItem, pickUp: 'claimed' },
+      { ...queueItem, unreadNotes: -1 },
+      { ...queueItem, unreadNotes: 1.5 },
+      { ...queueItem, assignee: { documentId: 'sam-id', displayName: 'Sam Analyst', email: 'sam@example.test' } },
+    ]) {
+      get.mockResolvedValueOnce(response({ data: [item], meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 }, viewer } }));
+      const result = await service.listAssessmentRequests({ q: '', queue: 'requires-attention', sort: 'submittedDate:desc', page: 1, pageSize: 25 });
+      expect(result, JSON.stringify(item)).toEqual(unavailable);
+    }
+  });
+
+  /* D-14 (13-13's counts): a count of one person's requests, or of those nobody has picked up, is one more filter. */
+  it('counts with the assignee filter when asked, and sends nothing else new', async () => {
+    get.mockResolvedValueOnce(response({ data: [], meta: { pagination: { page: 1, pageSize: 1, pageCount: 3, total: 3 }, viewer } }));
+    await expect(service.countReviewQueue('requires-attention', { assignee: 'unassigned' })).resolves.toEqual({ data: 3, error: null });
+    expect(get.mock.calls[0]).toEqual(['/v1/assessment_requests', {
+      params: { query: { 'filters[queue]': 'requires-attention', 'filters[assignee]': 'unassigned', 'pagination[page]': 1, 'pagination[pageSize]': 1 } },
+    }]);
+  });
+
+  it('sends the queue, assignee and notes filters of the Requests page, and reads them from its URL', async () => {
+    const query = service.parseAssessmentRequestReviewQuery({ queue: 'open', assignee: 'me', notes: 'unread', q: 'vendor' });
+    expect(query).toEqual({ q: 'vendor', queue: 'open', assignee: 'me', notes: 'unread', sort: 'submittedDate:desc', page: 1, pageSize: 25 });
+    // A hand-edited URL falls back to no filter rather than reaching Strapi malformed.
+    expect(service.parseAssessmentRequestReviewQuery({ assignee: 'second-analyst', notes: 'read' })).toEqual({ q: '', queue: 'requires-attention', sort: 'submittedDate:desc', page: 1, pageSize: 25 });
+
+    get.mockResolvedValueOnce(response({ data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 }, viewer } }));
+    await service.listAssessmentRequests(query);
+    expect(get.mock.calls[0]).toEqual(['/v1/assessment_requests', {
+      params: { query: { 'filters[q]': 'vendor', 'filters[queue]': 'open', 'filters[assignee]': 'me', 'filters[notes]': 'unread', sort: 'submittedDate:desc', 'pagination[page]': 1, 'pagination[pageSize]': 25 } },
+    }]);
+  });
+
+  it('passes a refusal on as the transport’s error, never a count', async () => {
+    const forbidden = { data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', status: 403 } };
+    normalizeTransportError.mockReturnValue(forbidden);
+    get.mockResolvedValueOnce({ error: { message: 'Forbidden' }, response: { status: 403 } });
+
+    await expect(service.countReviewQueue('requires-attention')).resolves.toEqual(forbidden);
+  });
+});
+
+describe('the assessment list filters', () => {
+  const empty = { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
+  const response = (data: unknown) => ({ data, response: { status: 200 } });
+  const base = { q: '', sort: 'generatedDate:desc' as const, page: 1, pageSize: 25 as const };
+
+  it('sends the overall rating and the released date range exactly as given on both lists', async () => {
+    get.mockResolvedValueOnce(response(empty)).mockResolvedValueOnce(response(empty));
+
+    await service.listAnalystAssessments({ ...base, overallRating: 'High', approvedFrom: '2026-09-01', approvedTo: '2026-09-30' });
+    await service.listMyReleasedAssessments({ ...base, q: 'payroll', overallRating: 'Critical' });
+
+    expect(get.mock.calls[0]).toEqual(['/v1/risk_assessments', {
+      params: { query: { sort: 'generatedDate:desc', page: 1, pageSize: 25, overallRating: 'High', approvedFrom: '2026-09-01', approvedTo: '2026-09-30' } },
+    }]);
+    expect(get.mock.calls[1]).toEqual(['/v1/my_risk_assessments', {
+      params: { query: { sort: 'generatedDate:desc', page: 1, pageSize: 25, q: 'payroll', overallRating: 'Critical' } },
+    }]);
+  });
+
+  it('leaves out each filter that is absent', async () => {
+    get.mockResolvedValueOnce(response(empty)).mockResolvedValueOnce(response(empty));
+
+    await service.listAnalystAssessments(base);
+    await service.listMyReleasedAssessments({ ...base, approvedTo: '2026-09-30' });
+
+    expect(Object.keys(get.mock.calls[0][1].params.query).sort()).toEqual(['page', 'pageSize', 'sort']);
+    expect(Object.keys(get.mock.calls[1][1].params.query).sort()).toEqual(['approvedTo', 'page', 'pageSize', 'sort']);
+  });
+
+  it('reads the overall rating and the released date range from the URL', () => {
+    expect(service.parseAssessmentCollectionQuery({ overallRating: 'High', approvedFrom: '2026-09-01', approvedTo: '2026-09-30' })).toEqual({
+      ...base, overallRating: 'High', approvedFrom: '2026-09-01', approvedTo: '2026-09-30',
+    });
+    expect(service.parseAssessmentCollectionQuery({ overallRating: ['Low', 'High'], approvedFrom: '2026-09-30', approvedTo: '2026-09-30' })).toEqual({
+      ...base, overallRating: 'Low', approvedFrom: '2026-09-30', approvedTo: '2026-09-30',
+    });
+  });
+
+  it('drops a rating off the ladder, a malformed or impossible date, and an inverted range from the URL', () => {
+    for (const overallRating of ['Extreme', 'high', '']) {
+      expect(service.parseAssessmentCollectionQuery({ overallRating }), overallRating).toEqual(base);
+    }
+    for (const date of ['2026-02-30', '2026-9-1', '20260930', '2026-09-30T00:00:00Z', '']) {
+      expect(service.parseAssessmentCollectionQuery({ approvedFrom: date, approvedTo: date }), date).toEqual(base);
+    }
+    expect(service.parseAssessmentCollectionQuery({ approvedFrom: '2026-09-21', approvedTo: '2026-09-20' })).toEqual(base);
   });
 });

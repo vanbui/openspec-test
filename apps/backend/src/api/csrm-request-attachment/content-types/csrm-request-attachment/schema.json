@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_request_attachments",
+  "info": {
+    "singularName": "csrm-request-attachment",
+    "pluralName": "csrm-request-attachments",
+    "displayName": "CSRM Request Attachment",
+    "description": "A supporting file attached to an assessment request by its requestor or a Security Analyst, screened, scanned and stored privately (Phase 14, docs/contract-gaps/phase-14-request-attachments.md)."
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "file": { "type": "media", "multiple": false, "required": false, "allowedTypes": ["files", "images"], "private": true },
+    "fileName": { "type": "string", "required": true, "minLength": 1, "maxLength": 255 },
+    "fileType": { "type": "enumeration", "enum": ["pdf", "docx", "xlsx", "pptx", "csv", "txt", "png", "jpeg"], "required": true },
+    "byteSize": { "type": "integer", "required": true, "min": 1, "max": 26214400 },
+    "sha256": { "type": "string", "required": true, "minLength": 64, "maxLength": 64 },
+    "uploaderPart": { "type": "enumeration", "enum": ["requestor", "security-analyst"], "required": true },
+    "uploadedAt": { "type": "datetime", "required": true },
+    "scanStatus": { "type": "enumeration", "enum": ["pending", "clean", "blocked"], "required": true },
+    "scanCheckedAt": { "type": "datetime" },
+    "scanEngine": { "type": "string", "maxLength": 255 },
+    "scanDetection": { "type": "string", "maxLength": 128 },
+    "scanAttempts": { "type": "integer", "default": 0, "min": 0 },
+    "removedAt": { "type": "datetime" },
+    "aiTextIncluded": { "type": "boolean", "required": true, "default": false },
+    "aiText": { "type": "text", "private": true },
+    "aiTextFacts": { "type": "json" },
+    "eventLog": { "type": "json" },
+    "assessmentRequest": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-assessment-request.csrm-assessment-request" },
+    "note": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-request-note.csrm-request-note" },
+    "uploadedBy": { "type": "relation", "relation": "manyToOne", "target": "api::idambox-user.idambox-user" },
+    "removedBy": { "type": "relation", "relation": "manyToOne", "target": "api::idambox-user.idambox-user" }
+  }
+}

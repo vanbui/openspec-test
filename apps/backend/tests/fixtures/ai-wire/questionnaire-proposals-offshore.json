@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "kind": "add",
+      "target": null,
+      "questionText": "In which country or countries is the offshore support team based?",
+      "helpText": "Name every country where the offshore support team works.",
+      "answerType": "Text",
+      "choices": [],
+      "required": true,
+      "sectionTitle": "Offshore support",
+      "visibleWhen": null,
+      "rationale": "A marked note says an offshore support team now works on the service, and no question covers it yet.",
+      "sources": ["note-1"]
+    },
+    {
+      "kind": "add",
+      "target": null,
+      "questionText": "Will the offshore support team have administrator access to your systems?",
+      "helpText": "Administrator access lets someone change settings, accounts or data, not just view them.",
+      "answerType": "Single select",
+      "choices": ["Yes", "No"],
+      "required": true,
+      "sectionTitle": "Offshore support",
+      "visibleWhen": null,
+      "rationale": "A marked note says an offshore support team now works on the service, and no question covers it yet.",
+      "sources": ["note-1"]
+    },
+    {
+      "kind": "add",
+      "target": null,
+      "questionText": "How is the offshore team's administrator access approved and logged?",
+      "helpText": "Describe who approves the access, how long it lasts, and how its use is recorded.",
+      "answerType": "Long text",
+      "choices": [],
+      "required": true,
+      "sectionTitle": "Offshore support",
+      "visibleWhen": null,
+      "rationale": "A marked note says an offshore support team now works on the service, and no question covers it yet.",
+      "sources": ["note-1"]
+    },
+    {
+      "kind": "change",
+      "target": "Q2",
+      "questionText": "Please confirm: Does a third party operate the payroll service?",
+      "helpText": null,
+      "answerType": null,
+      "choices": [],
+      "required": null,
+      "sectionTitle": null,
+      "visibleWhen": null,
+      "rationale": "The wording of this question could be clearer.",
+      "sources": []
+    },
+    {
+      "kind": "add",
+      "target": null,
+      "questionText": "What does the payroll service do for the business.",
+      "helpText": null,
+      "answerType": "Long text",
+      "choices": [],
+      "required": false,
+      "sectionTitle": "Service overview",
+      "visibleWhen": null,
+      "rationale": "This question may need asking again.",
+      "sources": []
+    }
+  ]
+}

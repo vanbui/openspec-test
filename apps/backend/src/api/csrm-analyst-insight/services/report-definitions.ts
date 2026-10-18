@@ -21,12 +21,12 @@ export const REPORT_DEFINITIONS: readonly ReportDefinition[] = Object.freeze([
   Object.freeze({
     key: "risk-exposure",
     title: "Risk exposure",
-    description: "Open contextual Risks by rating and treatment status, and the Information Systems carrying the most High and Critical residual Risks.",
+    description: "Released Risks by rating and treatment status, the most exposed Information Systems, and the Risks still under assessment.",
   }),
   Object.freeze({
     key: "treatment-performance",
     title: "Treatment performance",
-    description: "Risk treatments by due state and treatment status, and the most overdue treatments.",
+    description: "Risk treatments by due state and treatment status, and the most overdue treatments. Includes Risks under assessment.",
   }),
   Object.freeze({
     key: "assessment-throughput",
@@ -36,7 +36,7 @@ export const REPORT_DEFINITIONS: readonly ReportDefinition[] = Object.freeze([
   Object.freeze({
     key: "control-effectiveness",
     title: "Control effectiveness",
-    description: "Control Implementations on open contextual Risks by implementation status and effectiveness rating.",
+    description: "Mitigation controls on open Risks by implementation status and effectiveness rating. Includes Risks under assessment.",
   }),
 ] as const);
 

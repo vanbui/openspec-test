@@ -100,6 +100,70 @@ describe('the leave guard (D-12, UI-SPEC §6.3)', () => {
     expect(within(dialog).getByRole('button', { name: 'Leave questionnaire' })).toBeInTheDocument();
   });
 
+  /* 14-UI-SPEC §10: a page whose unsaved work is not answers registers its own words, as the upload queue does. */
+  it('asks in the words the blocking page registered', async () => {
+    const user = userEvent.setup();
+    const copy = { title: 'Leave while files are being added?', description: 'Your files are still being added. If you leave now, the files not yet added won’t be.', cancelLabel: 'Stay on page', confirmLabel: 'Leave page', pendingLabel: 'Leaving page…' };
+    function Files() {
+      useLeaveGuard(true, 'waiting', copy);
+      return <GuardedLink href="/app/requests">My requests</GuardedLink>;
+    }
+    render(<NavigationGuardProvider><Files /></NavigationGuardProvider>);
+
+    await user.click(screen.getByRole('link', { name: 'My requests' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Leave while files are being added?' });
+    expect(dialog).toHaveAccessibleDescription(copy.description);
+    expect(within(dialog).getByRole('button', { name: 'Stay on page' })).toHaveFocus();
+    expect(within(dialog).getByRole('button', { name: 'Leave page' })).toBeInTheDocument();
+  });
+
+  /*
+   * IN-501: the dialog's words follow a fixed priority, never the order the pages registered in. A failed save outranks a
+   * page that registered its own words while waiting (an upload queue), because leaving loses what was typed.
+   */
+  it.each([
+    ['the failed save registered first', true],
+    ['the files registered first', false],
+  ])('says the answers will be lost when a save failed while files are being added, %s', async (_order, failedFirst) => {
+    const user = userEvent.setup();
+    const copy = { title: 'Leave while files are being added?', description: 'Your files are still being added. If you leave now, the files not yet added won’t be.', cancelLabel: 'Stay on page', confirmLabel: 'Leave page', pendingLabel: 'Leaving page…' };
+    function Files() {
+      useLeaveGuard(true, 'waiting', copy);
+      return null;
+    }
+    const failed = <Questionnaire blocking key="failed" reason="failed" />;
+    render(
+      <NavigationGuardProvider>
+        {failedFirst ? [failed, <Files key="files" />] : [<Files key="files" />, failed]}
+        <GuardedLink href="/app/requests">My requests</GuardedLink>
+      </NavigationGuardProvider>,
+    );
+
+    await user.click(screen.getByRole('link', { name: 'My requests' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Leave this questionnaire?' });
+    expect(dialog).toHaveAccessibleDescription(failedDescription);
+    expect(within(dialog).getByRole('button', { name: 'Keep answering' })).toHaveFocus();
+    expect(within(dialog).getByRole('button', { name: 'Leave questionnaire' })).toBeInTheDocument();
+  });
+
+  it('keeps a waiting page’s own words over the default waiting words, whichever registered first (IN-501)', async () => {
+    const user = userEvent.setup();
+    const copy = { title: 'Leave while files are being added?', description: 'Your files are still being added. If you leave now, the files not yet added won’t be.', cancelLabel: 'Stay on page', confirmLabel: 'Leave page', pendingLabel: 'Leaving page…' };
+    function Files() {
+      useLeaveGuard(true, 'waiting', copy);
+      return null;
+    }
+    render(
+      <NavigationGuardProvider>
+        <Questionnaire blocking reason="waiting" />
+        <Files />
+        <GuardedLink href="/app/requests">My requests</GuardedLink>
+      </NavigationGuardProvider>,
+    );
+    await user.click(screen.getByRole('link', { name: 'My requests' }));
+    expect(screen.getByRole('alertdialog', { name: 'Leave while files are being added?' })).toHaveAccessibleDescription(copy.description);
+  });
+
   it('says the answers will be lost when the last save failed', async () => {
     const user = userEvent.setup();
     render(page(true, 'failed'));
@@ -186,9 +250,71 @@ describe('the leave guard (D-12, UI-SPEC §6.3)', () => {
     expect(screen.getByText('not blocking')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Home page' }));
     await user.click(screen.getByRole('link', { name: 'BProton, IdamBox CSRM home' }));
-    await user.click(screen.getByRole('link', { name: 'My Requests' }));
+    await user.click(screen.getByRole('link', { name: 'My requests' }));
     expect(navigations).toEqual(['/app', '/app', '/app/requests']);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('the programmatic entry point, navigate (D-51, UI-SPEC §4.6)', () => {
+  /** Stands in for quick find: a control that opens a result through the guard, as a selected option does. */
+  function ResultOpener({ onLeave }: { onLeave?: () => void }) {
+    const guard = useNavigationGuard();
+    return (
+      <button type="button" onClick={(event) => guard.navigate('/app/requests/r-1', { trigger: event.currentTarget, onLeave })}>
+        Open RAR-2026-X7K4Q2
+      </button>
+    );
+  }
+
+  function opener(blocking: boolean, onLeave?: () => void) {
+    return (
+      <NavigationGuardProvider>
+        <Questionnaire blocking={blocking}><ResultOpener onLeave={onLeave} /></Questionnaire>
+      </NavigationGuardProvider>
+    );
+  }
+
+  it('pushes the route at once when nothing is unsaved', async () => {
+    const user = userEvent.setup();
+    render(opener(false));
+
+    await user.click(screen.getByRole('button', { name: 'Open RAR-2026-X7K4Q2' }));
+    expect(push).toHaveBeenCalledWith('/app/requests/r-1');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('opens the leave warning instead while a save waits, and pushes nothing', async () => {
+    const user = userEvent.setup();
+    render(opener(true));
+
+    await user.click(screen.getByRole('button', { name: 'Open RAR-2026-X7K4Q2' }));
+    expect(screen.getByRole('alertdialog', { name: 'Leave this questionnaire?' })).toHaveAccessibleDescription(waitingDescription);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('Leave questionnaire runs onLeave, then pushes the route', async () => {
+    const user = userEvent.setup();
+    const onLeave = vi.fn();
+    render(opener(true, onLeave));
+
+    await user.click(screen.getByRole('button', { name: 'Open RAR-2026-X7K4Q2' }));
+    await user.click(screen.getByRole('button', { name: 'Leave questionnaire' }));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith('/app/requests/r-1');
+  });
+
+  it('Keep answering returns focus to the trigger and pushes nothing', async () => {
+    const user = userEvent.setup();
+    const onLeave = vi.fn();
+    render(opener(true, onLeave));
+    const trigger = screen.getByRole('button', { name: 'Open RAR-2026-X7K4Q2' });
+
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: 'Keep answering' }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
   });
 });
 
@@ -203,7 +329,7 @@ describe('the shell links consult the guard', () => {
       </NavigationGuardProvider>,
     );
 
-    await user.click(screen.getByRole('link', { name: 'My Requests' }));
+    await user.click(screen.getByRole('link', { name: 'My requests' }));
     expect(screen.getByRole('alertdialog', { name: 'Leave this questionnaire?' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Leave questionnaire' }));
     expect(push).toHaveBeenLastCalledWith('/app/requests');
@@ -225,7 +351,7 @@ describe('the shell links consult the guard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Menu' }));
     const sheet = screen.getByRole('dialog', { name: 'Navigation' });
-    const myRequests = within(sheet).getByRole('link', { name: 'My Requests' });
+    const myRequests = within(sheet).getByRole('link', { name: 'My requests' });
     await user.click(myRequests);
 
     // The warning hides the page behind it from assistive technology, the sheet included, but the sheet stays open.
@@ -251,7 +377,7 @@ describe('the shell links consult the guard', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Menu' }));
-    await user.click(within(screen.getByRole('dialog', { name: 'Navigation' })).getByRole('link', { name: 'My Requests' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Navigation' })).getByRole('link', { name: 'My requests' }));
     await user.click(screen.getByRole('button', { name: 'Leave questionnaire' }));
 
     expect(push).toHaveBeenCalledWith('/app/requests');
@@ -270,7 +396,7 @@ describe('the shell links consult the guard', () => {
 
     const menu = screen.getByRole('button', { name: 'Menu' });
     await user.click(menu);
-    await user.click(within(screen.getByRole('dialog', { name: 'Navigation' })).getByRole('link', { name: 'My Requests' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Navigation' })).getByRole('link', { name: 'My requests' }));
 
     expect(navigations).toEqual(['/app/requests']);
     expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument();

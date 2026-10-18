@@ -1,0 +1,32 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_ai_runs",
+  "info": {
+    "singularName": "csrm-ai-run",
+    "pluralName": "csrm-ai-runs",
+    "displayName": "CSRM AI Run"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "operation": { "type": "string", "required": true, "maxLength": 64 },
+    "status": { "type": "enumeration", "enum": ["running", "completed", "failed", "interrupted"], "required": true },
+    "startedAt": { "type": "datetime", "required": true },
+    "completedAt": { "type": "datetime" },
+    "initiatedBy": { "type": "relation", "relation": "manyToOne", "target": "api::idambox-user.idambox-user" },
+    "providerName": { "type": "string", "required": true },
+    "providerVersion": { "type": "string", "required": true },
+    "jobId": { "type": "string" },
+    "attempt": { "type": "integer" },
+    "assessmentRequest": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-assessment-request.csrm-assessment-request" },
+    "questionnaire": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-questionnaire.csrm-questionnaire" },
+    "assessment": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-assessment.csrm-assessment" },
+    "risk": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-risk.csrm-risk" },
+    "instruction": { "type": "text" },
+    "contextSummary": { "type": "json" },
+    "proposal": { "type": "json" },
+    "decisions": { "type": "json" },
+    "failureCode": { "type": "string" },
+    "failureMessage": { "type": "string" }
+  }
+}

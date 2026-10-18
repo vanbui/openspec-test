@@ -167,3 +167,17 @@ test("the access operation still needs the API token", async () => {
 
   assert.equal(response.status, 401);
 });
+
+test("an already signed-in identity is refused on the next request after internal deactivation", async () => {
+  const harness = await harnessPromise;
+  const headers = { "x-csrm-identity-token": await accessToken(keycloakSubjects.owner) };
+  assert.equal((await get(harness, ACCESS, headers)).status, 200);
+  try {
+    await harness.setUserAccountStatusFixture(harness.users.owner, "inactive");
+    assert.equal((await get(harness, ACCESS, headers)).status, 403);
+    assert.equal((await get(harness, `/api/csrm-assessment-requests/${harness.requests.owner}`, headers)).status, 403);
+  } finally {
+    await harness.setUserAccountStatusFixture(harness.users.owner, "active");
+  }
+  assert.equal((await get(harness, ACCESS, headers)).status, 200);
+});

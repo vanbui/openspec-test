@@ -2,211 +2,33 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "CSRM Runtime Architecture",
+    "title": "IdamBox Identity and Product Platform",
     "quality_profile": "showcase"
   },
   "components": [
-    {
-      "id": "browser",
-      "type": "external",
-      "label": "Browser",
-      "sublabel": "Requestor / Analyst",
-      "pos": [
-        40,
-        300
-      ],
-      "size": [
-        130,
-        64
-      ]
-    },
-    {
-      "id": "web",
-      "type": "frontend",
-      "label": "Next.js Web",
-      "sublabel": "App Router, RSC",
-      "pos": [
-        250,
-        300
-      ],
-      "size": [
-        130,
-        64
-      ],
-      "tag": "apps/csrm"
-    },
-    {
-      "id": "policy",
-      "type": "security",
-      "label": "Authz Policy",
-      "sublabel": "Role, Function, API",
-      "pos": [
-        460,
-        300
-      ],
-      "size": [
-        130,
-        64
-      ],
-      "tag": "csrm-authorization"
-    },
-    {
-      "id": "services",
-      "type": "backend",
-      "label": "Workflow Services",
-      "sublabel": "Strapi domain APIs",
-      "pos": [
-        670,
-        300
-      ],
-      "size": [
-        130,
-        64
-      ],
-      "tag": "apps/backend"
-    },
-    {
-      "id": "db",
-      "type": "database",
-      "label": "Database",
-      "sublabel": "Postgres / MySQL / SQLite",
-      "pos": [
-        880,
-        300
-      ],
-      "size": [
-        150,
-        64
-      ]
-    },
-    {
-      "id": "idp",
-      "type": "security",
-      "label": "Keycloak",
-      "sublabel": "OIDC, planned",
-      "pos": [
-        250,
-        120
-      ],
-      "size": [
-        130,
-        64
-      ],
-      "tag": "not wired"
-    },
-    {
-      "id": "ai",
-      "type": "external",
-      "label": "AI Provider",
-      "sublabel": "OpenAI-compatible",
-      "pos": [
-        670,
-        470
-      ],
-      "size": [
-        130,
-        64
-      ],
-      "tag": "advisory only"
-    }
-  ],
-  "boundaries": [
-    {
-      "kind": "region",
-      "label": "CSRM server side",
-      "wraps": [
-        "web",
-        "policy",
-        "services",
-        "db"
-      ]
-    },
-    {
-      "kind": "security-group",
-      "label": "Strapi API boundary",
-      "wraps": [
-        "policy",
-        "services",
-        "db"
-      ]
-    }
+    { "id": "source", "type": "external", "label": "Identity Source", "sublabel": "HR / directory", "pos": [40, 210], "size": [155, 64] },
+    { "id": "connectors", "type": "backend", "label": "ConnId connectors", "sublabel": "CSV / LDAP / DB / SCIM2", "pos": [290, 210], "size": [190, 64], "tag": "SCIM2 discovery proven" },
+    { "id": "midpoint", "type": "backend", "label": "midPoint", "sublabel": "Identity engine · 4.8 LTS", "pos": [575, 210], "size": [190, 64] },
+    { "id": "repository", "type": "database", "label": "midPoint repository", "sublabel": "PostgreSQL 16 · audit", "pos": [575, 420], "size": [190, 64] },
+    { "id": "strapi", "type": "backend", "label": "IdamBox Platform", "sublabel": "Strapi · shared product APIs", "pos": [865, 210], "size": [220, 70], "tag": "apps/backend" },
+    { "id": "platform-db", "type": "database", "label": "Platform database", "sublabel": "Strapi-managed records", "pos": [865, 420], "size": [190, 64] },
+    { "id": "keycloak", "type": "security", "label": "Keycloak", "sublabel": "OIDC · user provisioning", "pos": [1160, 420], "size": [190, 64] },
+    { "id": "csrm", "type": "frontend", "label": "CSRM", "sublabel": "First IdamBox product", "pos": [1160, 210], "size": [190, 64], "tag": "apps/csrm" },
+    { "id": "products", "type": "frontend", "label": "More products", "sublabel": "Planned on platform", "pos": [1160, 560], "size": [190, 64], "tag": "planned" }
   ],
   "connections": [
-    {
-      "id": "browser-web",
-      "from": "browser",
-      "to": "web",
-      "label": "HTTPS",
-      "variant": "emphasis"
-    },
-    {
-      "id": "web-policy",
-      "from": "web",
-      "to": "policy",
-      "label": "REST + token",
-      "variant": "emphasis"
-    },
-    {
-      "id": "policy-services",
-      "from": "policy",
-      "to": "services",
-      "variant": "emphasis"
-    },
-    {
-      "id": "services-db",
-      "from": "services",
-      "to": "db",
-      "label": "SQL",
-      "variant": "emphasis"
-    },
-    {
-      "id": "idp-web",
-      "from": "idp",
-      "to": "web",
-      "label": "OIDC sign-in",
-      "variant": "dashed",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "labelDy": 50
-    },
-    {
-      "id": "services-ai",
-      "from": "services",
-      "to": "ai",
-      "label": "draft prompts",
-      "variant": "dashed",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "labelDy": 66
-    }
+    { "id": "source-read", "from": "source", "to": "connectors", "label": "Read source records", "labelDy": -38 },
+    { "id": "connector-engine", "from": "connectors", "to": "midpoint", "label": "ConnId", "labelDy": -38 },
+    { "id": "engine-repository", "from": "midpoint", "to": "repository", "label": "Identity state + audit", "fromSide": "bottom", "toSide": "top", "labelDx": 95, "labelDy": 60 },
+    { "id": "planned-scim", "from": "midpoint", "to": "strapi", "label": "SCIM 2.0 · planned", "variant": "dashed", "labelDy": -50 },
+    { "id": "strapi-keycloak", "from": "strapi", "to": "keycloak", "label": "Create / update users", "fromSide": "right", "toSide": "left", "via": [[1110, 245], [1110, 452]], "labelDy": 38 },
+    { "id": "strapi-db", "from": "strapi", "to": "platform-db", "label": "Document Service · SQL", "fromSide": "bottom", "toSide": "top", "labelDx": 0, "labelDy": 70 },
+    { "id": "csrm-api", "from": "csrm", "to": "strapi", "label": "Typed API · caller token", "labelDy": -42 },
+    { "id": "csrm-oidc", "from": "keycloak", "to": "csrm", "label": "OIDC sign-in", "fromSide": "top", "toSide": "bottom", "labelDx": 90 }
   ],
   "cards": [
-    {
-      "dot": "cyan",
-      "title": "Primary path",
-      "items": [
-        "Server Components call Strapi only through the typed API layer",
-        "API token and caller identity stay server-side, never in the browser",
-        "Strapi is the single production API boundary: no frontend facade"
-      ]
-    },
-    {
-      "dot": "rose",
-      "title": "Trust boundaries",
-      "items": [
-        "Policy enforces Role, Function, FunctionAPI plus record ownership",
-        "Release and questionnaire governance: human Security Analyst only",
-        "Navigation visibility is never authorisation"
-      ]
-    },
-    {
-      "dot": "amber",
-      "title": "External dependencies",
-      "items": [
-        "Keycloak hook is commented out; dev identity header is used today",
-        "AI questionnaire and assessment drafts run in-process in Strapi",
-        "CSRM_AI_PROVIDER defaults to a deterministic offline provider"
-      ]
-    }
+    { "dot": "cyan", "title": "Identity lifecycle", "items": ["midPoint is the identity engine; ConnId connectors link source systems", "The SCIM2 connector loads and passed discovery against a test stub", "Strapi owns IdamBox Users and is the only Keycloak writer"] },
+    { "dot": "violet", "title": "Product platform", "items": ["Strapi provides the shared production API and authorization boundary", "CSRM is the first product built on the IdamBox platform", "The platform is designed to support additional products"] },
+    { "dot": "rose", "title": "Authorization", "items": ["Strapi enforces Role → Function → FunctionAPI and record-level access", "Identity Source owns identity attributes; IdamBox owns product roles", "AI assistance cannot automatically release a CSRM assessment"] }
   ]
 }

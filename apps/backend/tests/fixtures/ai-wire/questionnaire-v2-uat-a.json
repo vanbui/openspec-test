@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "title": "Payroll platform questionnaire",
+  "description": "Questions about the payroll platform change.",
+  "questions": [
+    { "questionText": "What is the service used for?", "helpText": "Describe the main business purpose.", "answerType": "Long text", "sectionTitle": "Context", "required": true, "choices": [] },
+    { "questionText": "Is an external provider involved?", "helpText": "Include providers that handle payroll information.", "answerType": "Single select", "sectionTitle": "Context", "required": true, "choices": ["Yes", "No"] },
+    { "questionText": "What information does the provider receive?", "helpText": "Describe the kinds of information shared.", "answerType": "Long text", "sectionTitle": "Context", "required": false, "choices": [] },
+    { "questionText": "Which groups can see payroll records?", "helpText": "Select each group with access.", "answerType": "Multi select", "sectionTitle": "Access", "required": true, "choices": ["Payroll team", "Provider"] },
+    { "questionText": "How is access approved?", "helpText": "Describe who grants access.", "answerType": "Long text", "sectionTitle": "Access", "required": true, "choices": [] },
+    { "questionText": "When was recovery tested?", "helpText": "Give the most recent test date if known.", "answerType": "Date", "sectionTitle": "Recovery", "required": false, "choices": [] },
+    { "questionText": "Can payroll continue during an outage?", "helpText": "Describe the fallback process.", "answerType": "Long text", "sectionTitle": "Recovery", "required": true, "choices": [] },
+    { "questionText": "Have regulatory duties been reviewed?", "helpText": "Consider the Privacy Act 1988.", "answerType": "Single select", "sectionTitle": "Recovery", "required": false, "choices": ["Yes", "No", "Not sure"] }
+  ]
+}

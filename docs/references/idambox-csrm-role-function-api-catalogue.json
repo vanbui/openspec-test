@@ -18,10 +18,15 @@
     "Risk Register mitigation-control screens use CsrmControlImplementation because this entity represents a control contextualized for a particular CsrmRisk. Administration control screens use CsrmControl because it represents the reusable control catalogue.",
     "API paths are proposed application APIs inferred from the UI functions and JDL model; they are not existing endpoints declared by the JDL.",
     "The JDL does not currently contain an explicit assessment release flag or release date. The proposed release endpoint requires either a new field/state or a separate publication record to enforce Requestor read-only visibility after release.",
-    "The JDL does not contain persisted Alert, ReportDefinition, Attachment, Comment, or Activity/Audit entities. The proposed report and alert endpoints may initially be computed services; persisted workflow collaboration, file uploads, alerts, and audit history require model extensions.",
+    "The JDL does not contain persisted Alert, ReportDefinition, Attachment, Comment, or Activity/Audit entities. The proposed report and alert endpoints may initially be computed services; persisted workflow collaboration, file uploads, alerts, and audit history require model extensions. Phase 13 records the request note as the recorded collaboration entity of an assessment request: CsrmRequestNote, an attributed, append-only, plain-text note by the request's requestor or a Security Analyst, and CsrmRequestNoteReadState, each person's read state of a request's notes (docs/contract-gaps/phase-13-request-notes.md), reached only through function.risk_assessment_requests.notes_api. Phase 14 records the request attachment as the recorded file entity of an assessment request: CsrmRequestAttachment, a supporting file added by the request's requestor or a Security Analyst, checked by content, scanned for malware and stored privately (docs/contract-gaps/phase-14-request-attachments.md), reached only through function.risk_assessment_requests.attachments_api, granted to role.requestor and role.security_analyst and never to role.security_analyst_agent. A human Security Analyst's choice of which attachment text the AI may read, and the preview of that text, are reached only through function.risk_assessment_requests.attachment_ai_input_api, granted to role.security_analyst alone and listed among the human analyst-only operations, so neither the Requestor nor the Security Analyst Agent steers the AI inputs. Comments on questionnaires, questions, assessments and Risks stay future work (COLLAB-03).",
     "Phase 3 serves only the eight questionnaire workflow operations represented in the authoritative OpenAPI contract. Review-comment, complete-review, and assessment-generation FunctionApi entries remain future catalogue intents and are not Phase 3 served routes.",
-    "Phase 7 serves GET /api/v1/dashboard/summary, GET /api/v1/alerts, GET /api/v1/alerts/summary, GET /api/v1/reports and GET /api/v1/reports/{reportKey} through five human Security Analyst-only API Functions, computed on read from existing records; their reserved FunctionApi entries moved from the Dashboard, Reports and Alerts menu Functions with their names, URLs and descriptions unchanged. GET /api/v1/dashboard/reports and GET /api/v1/dashboard/alerts stay unserved because the dedicated report and alert operations serve them. GET /api/v1/alerts/{alertId} stays unserved because a derived alert links straight to its source record. PATCH /api/v1/alerts/{alertId}/acknowledge stays unserved because acknowledgement needs persisted per-analyst state, a datamodel change deferred beyond this milestone. POST /api/v1/reports/{reportKey}/export stays unserved because report export is deferred beyond this milestone. GET /api/v1/my_requests/status_summary is served as reserved, under the Requestor's My Requests Function.",
-    "Phase 8 records every catalogued FunctionApi no router serves in docs/references/served-operations.json with its reason, regenerated from the mounted Strapi by the served-operations test and read by the web chain guard: the five Phase 7 D-06 entries of note 8; the review-comment and complete-review intents of note 7 and the Phase 4 approve, submit_for_approval, regenerate_draft and due_for_review intents, superseded by the served release triple, the draft jobs and the analyst review list; the /api/v1 request aliases (my_requests, assessment_requests create, get, patch and submit, form_metadata, overdue, status_summary and the per-request information_systems and information_assets reads and writes), served through the core /api/csrm-assessment-requests routes, the /api/v1/information_* selectors and GET /api/v1/my_requests/status_summary; the control_implementations collection, detail, overdue and status_summary intents, served under their Risk; and the Risk export and close intents, deferred beyond this milestone, with the Risk overdue and status_summary intents superseded by the Phase 7 alerts and dashboard. The IAM content types (application, function, function-api, idambox-user and role) and the generic GET /api/csrm-information-systems and GET /api/csrm-information-assets reads are administered by IdamBox and unmounted from this API surface (D-36, D-44); their grants and OpenAPI entries stay for traceability, the served /api/v1/information_* selectors are the only reference-data read surface, and GET /api/applications is an intentionally unserved OpenAPI operation with no caller. Users & Permissions registration is disabled at bootstrap, while POST /api/auth/local and GET /api/users/me remain plugin routes recorded as an accepted residual until INT-02 (D-37)."
+    "Phase 7 serves GET /api/v1/dashboard/summary, GET /api/v1/alerts, GET /api/v1/alerts/summary, GET /api/v1/reports and GET /api/v1/reports/{reportKey} through five human Security Analyst-only API Functions, computed on read from existing records; their reserved FunctionApi entries moved from the Dashboard, Reports and Alerts menu Functions with their names, URLs and descriptions unchanged. GET /api/v1/dashboard/reports and GET /api/v1/dashboard/alerts stay unserved because the dedicated report and alert operations serve them. GET /api/v1/alerts/{alertId} stays unserved because a derived alert links straight to its source record. PATCH /api/v1/alerts/{alertId}/acknowledge stays unserved because acknowledgement needs persisted per-analyst state, a datamodel change deferred beyond this milestone. POST /api/v1/reports/{reportKey}/export, deferred here, is served by Phase 19 (note 14). GET /api/v1/my_requests/status_summary is served as reserved, under the Requestor's My Requests Function.",
+    "Phase 8 records every catalogued FunctionApi no router serves in docs/references/served-operations.json with its reason, regenerated from the mounted Strapi by the served-operations test and read by the web chain guard: the five Phase 7 D-06 entries of note 8; the review-comment and complete-review intents of note 7 and the Phase 4 approve, submit_for_approval, regenerate_draft and due_for_review intents, superseded by the served release triple, the draft jobs and the analyst review list; the /api/v1 request aliases (assessment_requests create, get, patch and submit, form_metadata, overdue, status_summary and the per-request information_systems and information_assets reads and writes), served through the core /api/csrm-assessment-requests routes, the /api/v1/information_* selectors and GET /api/v1/my_requests/status_summary; the control_implementations collection, detail, overdue and status_summary intents, served under their Risk; and the Risk close intent, deferred beyond this milestone (the Risk export intent is served by Phase 19, note 14), with the Risk overdue and status_summary intents superseded by the Phase 7 alerts and dashboard. The IAM content types (application, function, function-api, idambox-user and role) and the generic GET /api/csrm-information-systems and GET /api/csrm-information-assets reads are administered by IdamBox and unmounted from this API surface (D-36, D-44); their grants and OpenAPI entries stay for traceability, the served /api/v1/information_* selectors are the only reference-data read surface, and GET /api/applications is an intentionally unserved OpenAPI operation with no caller. Users & Permissions registration is disabled at bootstrap, while POST /api/auth/local and GET /api/users/me remain plugin routes recorded as an accepted residual until INT-02 (D-37). Phase 11 serves GET /api/v1/my_requests as reserved, under the Requestor's My Requests Function, owner-scoped by the policy; it lists the caller's own requests with their lifecycle holder.",
+    "Phase 12 makes every AI run name an accountable human: draft generation, its job read and its retry move from the Questionnaire Details and Risk Assessment Details Functions into three human Security Analyst-only API Functions (function.assessment_draft.generate_api, .job_read_api and .retry_api) with their names, URLs and descriptions unchanged, as Phase 7 moved its insight operations. GET /api/v1/ai_runs/{runId} is served through the human Security Analyst-only function.ai_runs.read_api, and POST /api/v1/risk_assessments/{assessmentId}/ai_proposal_decisions through the human Security Analyst-only function.ai_proposals.decide_api, which plan 12-12 added. The Security Analyst Agent role no longer holds the assessment-request core, delete or reference-data Functions, which no agent workflow needs (R-08-42); the role itself stays for the Phase 22 role review.",
+    "Phase 13 serves PUT /api/v1/assessment_requests/{requestId}/assignee, the only writer of a request's assignment (the assigned analyst, when and by whom, and an append-only history), through the human Security Analyst-only function.risk_assessment_requests.assignment_api, granted to role.security_analyst alone and listed among the human analyst-only operations, so the Security Analyst Agent can never pick up, assign or hold a request (G-1). The same Function serves GET /api/v1/assessment_requests/{requestId}/assignable_analysts, the eligible-analyst read, which is human analyst-only too. The request notes are reached through function.risk_assessment_requests.notes_api (the collaboration note above), and PUT /api/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input, the AI-input mark on a note, is served through function.risk_assessment_requests.note_ai_input_api, granted to role.security_analyst alone and listed among the human analyst-only operations, so only a human Security Analyst chooses which note text reaches the AI provider. The Security Analyst Agent role holds none of Phase 13's Functions.",
+    "Phase 15 serves the questionnaire AI operations: starting a questionnaire-wide proposal and a question rewrite (function.questionnaire_ai.propose_api), reading and retrying a proposal job (function.questionnaire_ai.job_read_api and function.questionnaire_ai.retry_api), reading a questionnaire's proposals (function.questionnaire_ai.proposals_read_api) and deciding them (function.questionnaire_ai.decide_api). Each is an API-only Function granted to role.security_analyst alone, through its roleIds and the role's functionIds, and listed among the human analyst-only operations, so the Security Analyst Agent can never steer the AI or decide its proposals. A Security Analyst on a request they raised is refused by record with OWN_REQUEST (G-1).",
+    "Phase 16 serves risk curation: withdrawing the Risks of an unreleased risk assessment and reinstating them, each with a reason and an Undo (function.risk_curation.withdraw_api), and reading a Risk's append-only history (function.risk_curation.history_read_api). Each is an API-only Function granted to role.security_analyst alone, through its roleIds and the role's functionIds, and listed among the human analyst-only operations, so the Security Analyst Agent can never withdraw, reinstate or read history. Risk curation is human-analyst-only, and no route deletes a Risk: a withdrawn Risk keeps its number, fields, control implementations, AI provenance and history (D-16). Phase 16 also serves the risk AI proposals: asking the AI to suggest more risks and to rewrite one risk (function.risk_ai_proposals.propose_api), following and retrying a risk proposal job (function.risk_ai_proposals.job_read_api and function.risk_ai_proposals.retry_api) and reading an assessment's AI proposals (function.risk_ai_proposals.proposals_read_api). Each is an API-only Function granted to role.security_analyst alone and listed among the human analyst-only operations, so every AI run names an accountable human analyst and the Security Analyst Agent can never steer the AI. A requesting analyst is refused by record with OWN_REQUEST (G-1).",
+    "Phase 19 serves the reserved risk register and report exports at their catalogued URLs and adds the list, released-assessment, template and error-report operations of docs/contract-gaps/phase-19-exports-and-export-log.md and phase-19-import-tolerance.md. Their FunctionApis sit in human-only API Functions (function.risk_register.export_api, function.reports.export_api, function.analyst_exports.list_export_api), a Requestor-birthright API Function for own records (function.my_exports.list_export_api), one Function granted to role.security_analyst and role.requestor for the released assessment (function.risk_assessments.export_api), and the four Administration Functions for reference data; the reserved entries moved with their names, URLs and descriptions unchanged. Every export also requires its list read, and the policy refuses the service identity on every export whatever it holds (SERVICE_IDENTITY_REFUSED_OPERATIONS)."
   ],
   "roles": [
     {
@@ -59,6 +64,27 @@
         "function.questionnaire_generation.job_read_api",
         "function.questionnaire_generation.request_jobs_read_api",
         "function.questionnaire_generation.retry_api",
+        "function.assessment_draft.generate_api",
+        "function.assessment_draft.job_read_api",
+        "function.assessment_draft.retry_api",
+        "function.ai_runs.read_api",
+        "function.ai_proposals.decide_api",
+        "function.questionnaire_ai.proposals_read_api",
+        "function.questionnaire_ai.propose_api",
+        "function.questionnaire_ai.job_read_api",
+        "function.questionnaire_ai.retry_api",
+        "function.questionnaire_ai.decide_api",
+        "function.risk_curation.withdraw_api",
+        "function.risk_curation.history_read_api",
+        "function.risk_ai_proposals.propose_api",
+        "function.risk_ai_proposals.job_read_api",
+        "function.risk_ai_proposals.retry_api",
+        "function.risk_ai_proposals.proposals_read_api",
+        "function.risk_assessment_requests.assignment_api",
+        "function.risk_assessment_requests.notes_api",
+        "function.risk_assessment_requests.note_ai_input_api",
+        "function.risk_assessment_requests.attachments_api",
+        "function.risk_assessment_requests.attachment_ai_input_api",
         "function.questionnaire_governance.release_api",
         "function.questionnaire_governance.return_to_review_api",
         "function.questionnaire_governance.add_question_api",
@@ -69,6 +95,10 @@
         "function.alerts.summary_api",
         "function.reports.list_api",
         "function.reports.run_api",
+        "function.risk_register.export_api",
+        "function.analyst_exports.list_export_api",
+        "function.reports.export_api",
+        "function.risk_assessments.export_api",
         "function.current_user.access_api"
       ]
     },
@@ -90,9 +120,6 @@
         "function.risk_register.mitigation_control_details",
         "function.reports.reports",
         "function.reports.alerts",
-        "function.risk_assessment_requests.core_api",
-        "function.risk_assessment_requests.delete_api",
-        "function.risk_assessment_requests.reference_data_api",
         "function.current_user.access_api"
       ]
     },
@@ -112,8 +139,20 @@
         "function.risk_assessment_requests.core_api",
         "function.risk_assessment_requests.revert_to_draft_api",
         "function.risk_assessment_requests.reference_data_api",
+        "function.risk_assessment_requests.notes_api",
+        "function.risk_assessment_requests.attachments_api",
         "function.questionnaire.revert_to_draft_api",
+        "function.my_exports.list_export_api",
+        "function.risk_assessments.export_api",
         "function.current_user.access_api"
+      ]
+    },
+    {
+      "id": "role.identity_provisioning",
+      "name": "Identity Provisioning",
+      "description": "Dedicated Identity Source provisioning capability, with no CSRM grants.",
+      "functionIds": [
+        "function.identity_provisioning.api"
       ]
     }
   ],
@@ -178,6 +217,351 @@
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire"
+      ]
+    },
+    {
+      "id": "function.assessment_draft.generate_api",
+      "name": "Generate Assessment Draft API",
+      "description": "Human analyst-only draft generation grant: every AI run names an accountable human. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.assessment_draft.generate_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAssessment",
+        "CsrmRiskType",
+        "CsrmRisk",
+        "CsrmControl",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.assessment_draft.job_read_api",
+      "name": "Assessment Draft Job Read API",
+      "description": "Human analyst-only draft job status grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.assessment_draft.job_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.assessment_draft.retry_api",
+      "name": "Retry Assessment Draft API",
+      "description": "Human analyst-only failed draft job retry grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.assessment_draft.retry_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.ai_runs.read_api",
+      "name": "Read AI Run API",
+      "description": "Human analyst-only AI run read. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.ai_runs.read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAiRun",
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.proposals_read_api",
+      "name": "Read Questionnaire AI Proposals API",
+      "description": "Human analyst-only questionnaire AI proposals read. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_ai.proposals_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.propose_api",
+      "name": "Ask the AI about a Questionnaire API",
+      "description": "Human analyst-only questionnaire AI proposal and question rewrite grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_ai.propose_api.api.01",
+        "function.questionnaire_ai.propose_api.api.02"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.job_read_api",
+      "name": "Questionnaire AI Proposal Job Read API",
+      "description": "Human analyst-only proposal job status grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_ai.job_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.retry_api",
+      "name": "Retry Questionnaire AI Proposal Job API",
+      "description": "Human analyst-only proposal job retry grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_ai.retry_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.decide_api",
+      "name": "Decide Questionnaire AI Proposals API",
+      "description": "Human analyst-only questionnaire AI proposal decision grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.questionnaire_ai.decide_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_curation.withdraw_api",
+      "name": "Withdraw and Reinstate Risks API",
+      "description": "Human analyst-only withdrawal and reinstatement of the Risks of an unreleased risk assessment, each with a reason and an Undo. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_curation.withdraw_api.api.01",
+        "function.risk_curation.withdraw_api.api.02"
+      ],
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.risk_curation.history_read_api",
+      "name": "Read Risk History API",
+      "description": "Human analyst-only read of a Risk's append-only history. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_curation.history_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.propose_api",
+      "name": "Ask the AI about Risks API",
+      "description": "Human analyst-only grant to ask the AI to suggest more risks for an editable risk assessment or to rewrite one risk. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_ai_proposals.propose_api.api.01",
+        "function.risk_ai_proposals.propose_api.api.02"
+      ],
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.job_read_api",
+      "name": "Risk AI Proposal Job Read API",
+      "description": "Human analyst-only risk proposal job status grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_ai_proposals.job_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.retry_api",
+      "name": "Retry Risk AI Proposal Job API",
+      "description": "Human analyst-only risk proposal job retry grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_ai_proposals.retry_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.proposals_read_api",
+      "name": "Read Risk AI Proposals API",
+      "description": "Human analyst-only read of a risk assessment's AI proposals, their runs, states and decisions. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_ai_proposals.proposals_read_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.ai_proposals.decide_api",
+      "name": "Decide Proposals API",
+      "description": "Human analyst-only proposal decisions. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.ai_proposals.decide_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAiRun",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControl",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.assignment_api",
+      "name": "Assessment Request Assignment API",
+      "description": "Human analyst-only request assignment. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.assignment_api.api.01",
+        "function.risk_assessment_requests.assignment_api.api.02"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.notes_api",
+      "name": "Assessment Request Notes API",
+      "description": "Requestor and Security Analyst request notes. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.notes_api.api.01",
+        "function.risk_assessment_requests.notes_api.api.02",
+        "function.risk_assessment_requests.notes_api.api.03"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestNote",
+        "CsrmRequestNoteReadState"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.note_ai_input_api",
+      "name": "Assessment Request Note AI Input API",
+      "description": "Human analyst-only AI-input mark on request notes. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.note_ai_input_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmRequestNote",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachments_api",
+      "name": "Assessment Request Attachments API",
+      "description": "Requestor and Security Analyst request attachments. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachments_api.api.01",
+        "function.risk_assessment_requests.attachments_api.api.02",
+        "function.risk_assessment_requests.attachments_api.api.03",
+        "function.risk_assessment_requests.attachments_api.api.04"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachment_ai_input_api",
+      "name": "Assessment Request Attachment AI Input API",
+      "description": "Security Analyst choice of which attachment text the AI may read. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachment_ai_input_api.api.01",
+        "function.risk_assessment_requests.attachment_ai_input_api.api.02"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
       ]
     },
     {
@@ -347,6 +731,104 @@
       ]
     },
     {
+      "id": "function.risk_register.export_api",
+      "name": "Risk Register Export API",
+      "description": "Human analyst-only risk register export grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.risk_register.export_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmRisk",
+        "CsrmRiskType",
+        "CsrmAssessment",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.analyst_exports.list_export_api",
+      "name": "Analyst List Export API",
+      "description": "Human analyst-only export grant for the review lists and alerts. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.analyst_exports.list_export_api.api.01",
+        "function.analyst_exports.list_export_api.api.02",
+        "function.analyst_exports.list_export_api.api.03",
+        "function.analyst_exports.list_export_api.api.04"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "IdamBoxUser",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.my_exports.list_export_api",
+      "name": "My List Export API",
+      "description": "Requestor birthright export grant for the caller's own records. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.my_exports.list_export_api.api.01",
+        "function.my_exports.list_export_api.api.02",
+        "function.my_exports.list_export_api.api.03"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "IdamBoxUser",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.reports.export_api",
+      "name": "Report Export API",
+      "description": "Human analyst-only report export grant. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "functionApiIds": [
+        "function.reports.export_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.risk_assessments.export_api",
+      "name": "Risk Assessment Export API",
+      "description": "Export grant for a released risk assessment; the record-read check decides which assessments each caller may export. This API-only Function intentionally has no menuPath.",
+      "roleIds": [
+        "role.security_analyst",
+        "role.requestor"
+      ],
+      "functionApiIds": [
+        "function.risk_assessments.export_api.api.01"
+      ],
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmAssessmentRequest",
+        "CsrmRisk",
+        "CsrmControlImplementation",
+        "CsrmControl",
+        "IdamBoxUser"
+      ]
+    },
+    {
       "id": "function.dashboard.dashboard",
       "name": "Dashboard",
       "description": "Shows role-aware workload summaries, risk and control metrics, report tiles, and current alerts.",
@@ -367,7 +849,6 @@
       "description": "Server-side operation grants for the four non-delete served assessment-request REST routes. This API-only Function intentionally has no menuPath.",
       "roleIds": [
         "role.security_analyst",
-        "role.security_analyst_agent",
         "role.requestor"
       ],
       "functionApiIds": [
@@ -400,8 +881,7 @@
       "name": "Assessment Request Delete API",
       "description": "Server-side elevated operation grant for the served assessment-request delete route. This API-only Function intentionally has no menuPath.",
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "functionApiIds": [
         "function.risk_assessment_requests.delete_api.api.01"
@@ -416,7 +896,6 @@
       "description": "Server-side read grants for the information-system and information-asset reference data used by assessment-request screens. This API-only Function intentionally has no menuPath.",
       "roleIds": [
         "role.security_analyst",
-        "role.security_analyst_agent",
         "role.requestor"
       ],
       "functionApiIds": [
@@ -622,8 +1101,7 @@
         "function.questionnaires.questionnaire_details.api.01",
         "function.questionnaires.questionnaire_details.api.02",
         "function.questionnaires.questionnaire_details.api.03",
-        "function.questionnaires.questionnaire_details.api.04",
-        "function.questionnaires.questionnaire_details.api.05"
+        "function.questionnaires.questionnaire_details.api.04"
       ],
       "sourceEntities": [
         "CsrmQuestionnaire",
@@ -689,8 +1167,6 @@
         "function.risk_assessments.risk_assessment_details.api.06",
         "function.risk_assessments.risk_assessment_details.api.07",
         "function.risk_assessments.risk_assessment_details.api.08",
-        "function.risk_assessments.risk_assessment_details.api.09",
-        "function.risk_assessments.risk_assessment_details.api.10",
         "function.risk_assessments.risk_assessment_details.api.11",
         "function.risk_assessments.risk_assessment_details.api.12"
       ],
@@ -716,8 +1192,7 @@
       "functionApiIds": [
         "function.risk_register.risk_register.api.01",
         "function.risk_register.risk_register.api.02",
-        "function.risk_register.risk_register.api.03",
-        "function.risk_register.risk_register.api.04"
+        "function.risk_register.risk_register.api.03"
       ],
       "sourceEntities": [
         "CsrmRisk",
@@ -807,7 +1282,10 @@
         "function.administration.risk_types.api.01",
         "function.administration.risk_types.api.02",
         "function.administration.risk_types.api.03",
-        "function.administration.risk_types.api.04"
+        "function.administration.risk_types.api.04",
+        "function.administration.risk_types.api.05",
+        "function.administration.risk_types.api.06",
+        "function.administration.risk_types.api.07"
       ],
       "sourceEntities": [
         "CsrmRiskType"
@@ -842,7 +1320,10 @@
         "function.administration.controls.api.01",
         "function.administration.controls.api.02",
         "function.administration.controls.api.03",
-        "function.administration.controls.api.04"
+        "function.administration.controls.api.04",
+        "function.administration.controls.api.05",
+        "function.administration.controls.api.06",
+        "function.administration.controls.api.07"
       ],
       "sourceEntities": [
         "CsrmControl"
@@ -878,7 +1359,10 @@
         "function.administration.information_systems.api.01",
         "function.administration.information_systems.api.02",
         "function.administration.information_systems.api.03",
-        "function.administration.information_systems.api.04"
+        "function.administration.information_systems.api.04",
+        "function.administration.information_systems.api.05",
+        "function.administration.information_systems.api.06",
+        "function.administration.information_systems.api.07"
       ],
       "sourceEntities": [
         "CsrmInformationSystem"
@@ -913,7 +1397,10 @@
         "function.administration.information_assets.api.01",
         "function.administration.information_assets.api.02",
         "function.administration.information_assets.api.03",
-        "function.administration.information_assets.api.04"
+        "function.administration.information_assets.api.04",
+        "function.administration.information_assets.api.05",
+        "function.administration.information_assets.api.06",
+        "function.administration.information_assets.api.07"
       ],
       "sourceEntities": [
         "CsrmInformationAsset"
@@ -945,9 +1432,7 @@
         "role.security_analyst",
         "role.security_analyst_agent"
       ],
-      "functionApiIds": [
-        "function.reports.reports.api.03"
-      ],
+      "functionApiIds": [],
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire",
@@ -994,6 +1479,41 @@
         "Role",
         "Function",
         "FunctionApi"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api",
+      "name": "Identity Provisioning",
+      "description": "Source provisioning capability owned by IdamBox IAM; API-only, with no menu path.",
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.01",
+        "function.identity_provisioning.api.api.02",
+        "function.identity_provisioning.api.api.03",
+        "function.identity_provisioning.api.api.04",
+        "function.identity_provisioning.api.api.05",
+        "function.identity_provisioning.api.api.06",
+        "function.identity_provisioning.api.api.07",
+        "function.identity_provisioning.api.api.08",
+        "function.identity_provisioning.api.api.09",
+        "function.identity_provisioning.api.api.10",
+        "function.identity_provisioning.api.api.11",
+        "function.identity_provisioning.api.api.12",
+        "function.identity_provisioning.api.api.13",
+        "function.identity_provisioning.api.api.14",
+        "function.identity_provisioning.api.api.15",
+        "function.identity_provisioning.api.api.16",
+        "function.identity_provisioning.api.api.17",
+        "function.identity_provisioning.api.api.18",
+        "function.identity_provisioning.api.api.19",
+        "function.identity_provisioning.api.api.20",
+        "function.identity_provisioning.api.api.21"
+      ],
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
       ]
     }
   ],
@@ -1229,7 +1749,9 @@
       "description": "Returns bounded Information System selector summaries for exact selected identifiers.",
       "url": "POST:/api/v1/information_systems/selected",
       "functionId": "function.risk_assessment_requests.new_request",
-      "sourceEntities": ["CsrmInformationSystem"]
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
     },
     {
       "id": "function.risk_assessment_requests.new_request.api.11",
@@ -1237,7 +1759,9 @@
       "description": "Returns bounded Information Asset selector summaries for exact selected identifiers.",
       "url": "POST:/api/v1/information_assets/selected",
       "functionId": "function.risk_assessment_requests.new_request",
-      "sourceEntities": ["CsrmInformationAsset"]
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
     },
     {
       "id": "function.risk_assessment_requests.request_details.api.01",
@@ -1517,11 +2041,11 @@
       ]
     },
     {
-      "id": "function.questionnaires.questionnaire_details.api.05",
+      "id": "function.assessment_draft.generate_api.api.01",
       "name": "Generate Initial Risk Assessment",
       "description": "Invokes the agentic workflow to create an initial assessment and contextualized risks from the request and reviewed questionnaire.",
       "url": "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",
-      "functionId": "function.questionnaires.questionnaire_details",
+      "functionId": "function.assessment_draft.generate_api",
       "sourceEntities": [
         "CsrmAssessmentRequest",
         "CsrmQuestionnaire",
@@ -1662,25 +2186,349 @@
       ]
     },
     {
-      "id": "function.risk_assessments.risk_assessment_details.api.09",
+      "id": "function.assessment_draft.job_read_api.api.01",
       "name": "Get Assessment Draft Job",
       "description": "Returns the bounded volatile state of an authorised assessment draft job.",
       "url": "GET:/api/v1/assessment_draft_jobs/{jobId}",
-      "functionId": "function.risk_assessments.risk_assessment_details",
+      "functionId": "function.assessment_draft.job_read_api",
       "sourceEntities": [
         "CsrmQuestionnaire",
         "CsrmAssessment"
       ]
     },
     {
-      "id": "function.risk_assessments.risk_assessment_details.api.10",
+      "id": "function.assessment_draft.retry_api.api.01",
       "name": "Retry Assessment Draft Job",
       "description": "Retries an authorised failed assessment draft job without creating a release fact.",
       "url": "POST:/api/v1/assessment_draft_jobs/{jobId}/retry",
-      "functionId": "function.risk_assessments.risk_assessment_details",
+      "functionId": "function.assessment_draft.retry_api",
       "sourceEntities": [
         "CsrmQuestionnaire",
         "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.ai_runs.read_api.api.01",
+      "name": "Get AI Run",
+      "description": "Returns what an AI run used: its facts, context summary and outcome, never the proposal or any Requestor free text.",
+      "url": "GET:/api/v1/ai_runs/{runId}",
+      "functionId": "function.ai_runs.read_api",
+      "sourceEntities": [
+        "CsrmAiRun",
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.proposals_read_api.api.01",
+      "name": "List Questionnaire AI Proposals",
+      "description": "Returns a questionnaire's AI proposals, their run facts and decisions, and what the analyst may do now, only for a human Security Analyst who did not raise the request.",
+      "url": "GET:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+      "functionId": "function.questionnaire_ai.proposals_read_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.propose_api.api.01",
+      "name": "Start Questionnaire AI Proposals",
+      "description": "Queues questionnaire-wide AI proposals, optionally steered by an instruction, only for a human Security Analyst who did not raise the request.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+      "functionId": "function.questionnaire_ai.propose_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.propose_api.api.02",
+      "name": "Start Question Rewrite",
+      "description": "Queues an AI rewrite of one unanswered question, in plain language by default, only for a human Security Analyst who did not raise the request.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}/rewrite",
+      "functionId": "function.questionnaire_ai.propose_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.job_read_api.api.01",
+      "name": "Get Questionnaire AI Proposal Job",
+      "description": "Returns a retained questionnaire AI proposal or rewrite job.",
+      "url": "GET:/api/v1/questionnaire_proposal_jobs/{jobId}",
+      "functionId": "function.questionnaire_ai.job_read_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.retry_api.api.01",
+      "name": "Retry Questionnaire AI Proposal Job",
+      "description": "Retries a failed questionnaire AI proposal or rewrite job as the retrying analyst's attempt.",
+      "url": "POST:/api/v1/questionnaire_proposal_jobs/{jobId}/retry",
+      "functionId": "function.questionnaire_ai.retry_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.questionnaire_ai.decide_api.api.01",
+      "name": "Decide Questionnaire AI Proposals",
+      "description": "Confirms, rejects or undoes questionnaire AI proposals, all or nothing, only for a human Security Analyst who did not raise the request.",
+      "url": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposal_decisions",
+      "functionId": "function.questionnaire_ai.decide_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmQuestion",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_curation.withdraw_api.api.01",
+      "name": "Withdraw Risks",
+      "description": "Withdraws 1 to 200 Risks of one unreleased risk assessment with one reason, or with the reason held before their reinstatement when undoing it, keeping each Risk with its history; only for a human Security Analyst.",
+      "url": "POST:/api/v1/risk_assessments/{assessmentId}/risk_withdrawals",
+      "functionId": "function.risk_curation.withdraw_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.risk_curation.withdraw_api.api.02",
+      "name": "Reinstate Risks",
+      "description": "Reinstates withdrawn Risks of one unreleased risk assessment with one reason, or with the fixed reason Withdrawal undone when undoing their withdrawal; only for a human Security Analyst.",
+      "url": "POST:/api/v1/risk_assessments/{assessmentId}/risk_reinstatements",
+      "functionId": "function.risk_curation.withdraw_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.risk_curation.history_read_api.api.01",
+      "name": "Read Risk History",
+      "description": "Returns one page of a Risk's history newest first, a withdrawn Risk's included, with the date its history is recorded from; only for a human Security Analyst.",
+      "url": "GET:/api/v1/risks/{riskId}/history",
+      "functionId": "function.risk_curation.history_read_api",
+      "sourceEntities": [
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.propose_api.api.01",
+      "name": "Suggest More Risks",
+      "description": "Starts a recorded AI job that proposes at most 8 risks missing from an editable risk assessment, optionally steered by an instruction; nothing reaches the assessment until an analyst confirms an item; only for a human Security Analyst who did not raise the request.",
+      "url": "POST:/api/v1/risk_assessments/{assessmentId}/risk_suggestions",
+      "functionId": "function.risk_ai_proposals.propose_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.propose_api.api.02",
+      "name": "Rewrite This Risk",
+      "description": "Starts a recorded AI job that proposes field changes to one active Risk of an editable risk assessment, optionally steered by an instruction and a focus; nothing changes until an analyst confirms a change; only for a human Security Analyst who did not raise the request.",
+      "url": "POST:/api/v1/risks/{riskId}/rewrite",
+      "functionId": "function.risk_ai_proposals.propose_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.job_read_api.api.01",
+      "name": "Read Risk AI Proposal Job",
+      "description": "Returns a risk AI proposal job's status, run and failure for any human Security Analyst who did not raise the request.",
+      "url": "GET:/api/v1/risk_proposal_jobs/{jobId}",
+      "functionId": "function.risk_ai_proposals.job_read_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.retry_api.api.01",
+      "name": "Retry Risk AI Proposal Job",
+      "description": "Retries a failed risk AI proposal job as the retrying analyst's new run, re-checking the assessment, the Risk, the run cap and the AI data policy; only for a human Security Analyst who did not raise the request.",
+      "url": "POST:/api/v1/risk_proposal_jobs/{jobId}/retry",
+      "functionId": "function.risk_ai_proposals.retry_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.risk_ai_proposals.proposals_read_api.api.01",
+      "name": "Read Risk AI Proposals",
+      "description": "Returns a risk assessment's open and recently decided AI proposals with their runs, states, sources and decisions, the derived open counts and what the analyst may do now; only for a human Security Analyst who did not raise the request.",
+      "url": "GET:/api/v1/risk_assessments/{assessmentId}/ai_proposals",
+      "functionId": "function.risk_ai_proposals.proposals_read_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmAiRun"
+      ]
+    },
+    {
+      "id": "function.ai_proposals.decide_api.api.01",
+      "name": "Decide Proposals",
+      "description": "Records attributed analyst proposal decisions.",
+      "url": "POST:/api/v1/risk_assessments/{assessmentId}/ai_proposal_decisions",
+      "functionId": "function.ai_proposals.decide_api",
+      "sourceEntities": [
+        "CsrmAiRun",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControl",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.assignment_api.api.01",
+      "name": "Change Assessment Request Assignee",
+      "description": "Picks up, assigns, reassigns or unassigns a submitted request, compared against the assignee the caller last saw, and records the change in the request's assignment history.",
+      "url": "PUT:/api/v1/assessment_requests/{requestId}/assignee",
+      "functionId": "function.risk_assessment_requests.assignment_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.assignment_api.api.02",
+      "name": "List Assignable Security Analysts",
+      "description": "Lists, by display name only, the active human Security Analysts who may hold a submitted request: never the Security Analyst Agent, an inactive user or the request's own requestor. Searchable by name and bounded at 50 people.",
+      "url": "GET:/api/v1/assessment_requests/{requestId}/assignable_analysts",
+      "functionId": "function.risk_assessment_requests.assignment_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.notes_api.api.01",
+      "name": "List Assessment Request Notes",
+      "description": "Lists a request's notes oldest first, a page of at most 50 before a sequence cursor, each with its author's display name, part and server posting time, with the caller's unread count. Reachable by the request's requestor and any human Security Analyst only; anyone else is told the request was not found.",
+      "url": "GET:/api/v1/assessment_requests/{requestId}/notes",
+      "functionId": "function.risk_assessment_requests.notes_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestNote",
+        "CsrmRequestNoteReadState"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.notes_api.api.02",
+      "name": "Add Assessment Request Note",
+      "description": "Adds an attributed, append-only, plain-text note to a submitted request while it is open to notes. Notes are never edited or deleted.",
+      "url": "POST:/api/v1/assessment_requests/{requestId}/notes",
+      "functionId": "function.risk_assessment_requests.notes_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestNote",
+        "CsrmRequestNoteReadState"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.notes_api.api.03",
+      "name": "Mark Assessment Request Notes Read",
+      "description": "Marks the caller's own read state of a request's notes through one note; it only ever advances.",
+      "url": "POST:/api/v1/assessment_requests/{requestId}/notes/read",
+      "functionId": "function.risk_assessment_requests.notes_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestNote",
+        "CsrmRequestNoteReadState"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.note_ai_input_api.api.01",
+      "name": "Set Request Note AI Input Mark",
+      "description": "Marks or unmarks one note on a request as changing what the AI should use, by a human Security Analyst who did not raise the request, while the request accepts notes. Each change is appended to the note's AI-input history; setting the value the note already has changes nothing.",
+      "url": "PUT:/api/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input",
+      "functionId": "function.risk_assessment_requests.note_ai_input_api",
+      "sourceEntities": [
+        "CsrmRequestNote",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachments_api.api.01",
+      "name": "List Assessment Request Attachments",
+      "description": "Lists a request's files newest first, at most 60, each with its name, type, size, uploader's display name and part, upload time, note link, state and the actions the caller may take, with whether and how the caller may add a file now. Reachable by the request's requestor and any human Security Analyst only; anyone else is told the request was not found.",
+      "url": "GET:/api/v1/assessment_requests/{requestId}/attachments",
+      "functionId": "function.risk_assessment_requests.attachments_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachments_api.api.02",
+      "name": "Upload Assessment Request Attachment",
+      "description": "Adds one file to a request: the requestor at intake, the requestor and any human Security Analyst after submission with the caller's own recent note. The file is checked by content against the allowed types, limited to 25 MB and 20 active files, scanned for malware, and stored privately; a file the scanner cannot check waits in quarantine.",
+      "url": "POST:/api/v1/assessment_requests/{requestId}/attachments",
+      "functionId": "function.risk_assessment_requests.attachments_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachments_api.api.03",
+      "name": "Download Assessment Request Attachment",
+      "description": "Sends one of a request's files to its requestor or any human Security Analyst; anyone else is told the request was not found. Only a clean file that has not been removed is sent, after its stored bytes are checked against the digest recorded at upload; a file waiting for its malware check, blocked, removed, gone from storage or altered is refused with its reason. The file is always sent as a download, never shown inline, and each download is recorded as a security event.",
+      "url": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content",
+      "functionId": "function.risk_assessment_requests.attachments_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachments_api.api.04",
+      "name": "Set Assessment Request Attachment Removal",
+      "description": "Removes one of a request's files softly, or restores it. Removal records who removed the file and when, takes it out of the list's main section and out of downloads, ends its AI inclusion and keeps its bytes for the request's retention; a restore is recorded and never includes the file in the AI inputs again. The uploader removes their own files and any human Security Analyst who did not raise the request removes any file after submission; only the person who removed a file restores it, and only while the request takes files. Reachable by the request's requestor and any human Security Analyst only; anyone else is told the request was not found.",
+      "url": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal",
+      "functionId": "function.risk_assessment_requests.attachments_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachment_ai_input_api.api.01",
+      "name": "Set Assessment Request Attachment AI Input",
+      "description": "Includes one of a request's files in what the AI may read, or excludes it, by a human Security Analyst who did not raise the request, from submission until release or closure. Including extracts the file's text and keeps at most 20,000 characters with how many the file has; excluding deletes the stored text. Only a clean file that has not been removed and carries text (PDF, DOCX, XLSX, PPTX, CSV or TXT) can be included, and never while the request's AI data policy refuses. Each change is appended to the file's history and recorded as a security event; setting the value the file already has changes nothing.",
+      "url": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_input",
+      "functionId": "function.risk_assessment_requests.attachment_ai_input_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
+      ]
+    },
+    {
+      "id": "function.risk_assessment_requests.attachment_ai_input_api.api.02",
+      "name": "Read Assessment Request Attachment AI Text",
+      "description": "Returns the stored text an included file sends to the AI, exactly as it would be sent, with how many characters the file has and how many were kept, to a human Security Analyst who did not raise the request. A file that is not included has no stored text.",
+      "url": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_text",
+      "functionId": "function.risk_assessment_requests.attachment_ai_input_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmRequestAttachment"
       ]
     },
     {
@@ -1727,16 +2575,125 @@
       ]
     },
     {
-      "id": "function.risk_register.risk_register.api.04",
+      "id": "function.risk_register.export_api.api.01",
       "name": "Export Risk Register",
       "description": "Exports the current authorized and filtered risk register view.",
       "url": "GET:/api/v1/risks/export?format={format}",
-      "functionId": "function.risk_register.risk_register",
+      "functionId": "function.risk_register.export_api",
       "sourceEntities": [
         "CsrmRisk",
         "CsrmRiskType",
         "CsrmAssessment",
         "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.analyst_exports.list_export_api.api.01",
+      "name": "Export Requests",
+      "description": "Exports the current authorized request queue view in the requested supported format.",
+      "url": "GET:/api/v1/assessment_requests/export",
+      "functionId": "function.analyst_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.analyst_exports.list_export_api.api.02",
+      "name": "Export Questionnaires",
+      "description": "Exports the current authorized questionnaire review view in the requested supported format.",
+      "url": "GET:/api/v1/questionnaires/export",
+      "functionId": "function.analyst_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.analyst_exports.list_export_api.api.03",
+      "name": "Export Alerts",
+      "description": "Exports the current authorized alert view in the requested supported format.",
+      "url": "GET:/api/v1/alerts/export",
+      "functionId": "function.analyst_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.analyst_exports.list_export_api.api.04",
+      "name": "Export Risk Assessments",
+      "description": "Exports the current authorized risk assessment review view in the requested supported format.",
+      "url": "GET:/api/v1/risk_assessments/export",
+      "functionId": "function.analyst_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmAssessmentRequest",
+        "CsrmRisk",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.my_exports.list_export_api.api.01",
+      "name": "Export My Requests",
+      "description": "Exports the caller's own requests in the current view.",
+      "url": "GET:/api/v1/my_requests/export",
+      "functionId": "function.my_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.my_exports.list_export_api.api.02",
+      "name": "Export My Questionnaires",
+      "description": "Exports the caller's own questionnaires in the current view.",
+      "url": "GET:/api/v1/my_questionnaires/export",
+      "functionId": "function.my_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmQuestionnaire",
+        "CsrmAssessmentRequest"
+      ]
+    },
+    {
+      "id": "function.my_exports.list_export_api.api.03",
+      "name": "Export My Risk Assessments",
+      "description": "Exports the caller's own released risk assessments in the current view.",
+      "url": "GET:/api/v1/my_risk_assessments/export",
+      "functionId": "function.my_exports.list_export_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmAssessmentRequest",
+        "CsrmRisk"
+      ]
+    },
+    {
+      "id": "function.reports.export_api.api.01",
+      "name": "Export Report",
+      "description": "Generates an export of a selected report in the requested supported format.",
+      "url": "POST:/api/v1/reports/{reportKey}/export",
+      "functionId": "function.reports.export_api",
+      "sourceEntities": [
+        "CsrmAssessmentRequest",
+        "CsrmQuestionnaire",
+        "CsrmAssessment",
+        "CsrmRisk",
+        "CsrmControlImplementation"
+      ]
+    },
+    {
+      "id": "function.risk_assessments.export_api.api.01",
+      "name": "Export Risk Assessment",
+      "description": "Exports a released risk assessment in the requested supported format.",
+      "url": "GET:/api/v1/risk_assessments/{assessmentId}/export",
+      "functionId": "function.risk_assessments.export_api",
+      "sourceEntities": [
+        "CsrmAssessment",
+        "CsrmAssessmentRequest",
+        "CsrmRisk",
+        "CsrmControlImplementation",
+        "CsrmControl",
+        "IdamBoxUser"
       ]
     },
     {
@@ -1938,6 +2895,36 @@
       ]
     },
     {
+      "id": "function.administration.risk_types.api.05",
+      "name": "Download Risk Types Import Template",
+      "description": "Generates the risk types import template in the requested supported format.",
+      "url": "GET:/api/v1/risk_types/import/template",
+      "functionId": "function.administration.risk_types",
+      "sourceEntities": [
+        "CsrmRiskType"
+      ]
+    },
+    {
+      "id": "function.administration.risk_types.api.06",
+      "name": "Download Risk Types Import Error Report",
+      "description": "Rebuilds the rows of an uploaded risk types file that were not imported, with their issues.",
+      "url": "POST:/api/v1/risk_types/import/error_report",
+      "functionId": "function.administration.risk_types",
+      "sourceEntities": [
+        "CsrmRiskType"
+      ]
+    },
+    {
+      "id": "function.administration.risk_types.api.07",
+      "name": "Export Risk Types",
+      "description": "Exports the risk types list in the requested supported format, with its import columns.",
+      "url": "GET:/api/v1/risk_types/export?format={format}",
+      "functionId": "function.administration.risk_types",
+      "sourceEntities": [
+        "CsrmRiskType"
+      ]
+    },
+    {
       "id": "function.administration.risk_type_details.api.01",
       "name": "Get Risk Type",
       "description": "Returns a reusable risk definition and its applicable controls.",
@@ -1999,6 +2986,36 @@
       ]
     },
     {
+      "id": "function.administration.controls.api.05",
+      "name": "Download Controls Import Template",
+      "description": "Generates the controls import template in the requested supported format.",
+      "url": "GET:/api/v1/controls/import/template",
+      "functionId": "function.administration.controls",
+      "sourceEntities": [
+        "CsrmControl"
+      ]
+    },
+    {
+      "id": "function.administration.controls.api.06",
+      "name": "Download Controls Import Error Report",
+      "description": "Rebuilds the rows of an uploaded controls file that were not imported, with their issues.",
+      "url": "POST:/api/v1/controls/import/error_report",
+      "functionId": "function.administration.controls",
+      "sourceEntities": [
+        "CsrmControl"
+      ]
+    },
+    {
+      "id": "function.administration.controls.api.07",
+      "name": "Export Controls",
+      "description": "Exports the controls list in the requested supported format, with its import columns.",
+      "url": "GET:/api/v1/controls/export?format={format}",
+      "functionId": "function.administration.controls",
+      "sourceEntities": [
+        "CsrmControl"
+      ]
+    },
+    {
       "id": "function.administration.control_details.api.01",
       "name": "Get Control",
       "description": "Returns a reusable control definition and reference information.",
@@ -2053,6 +3070,36 @@
       "name": "Preview Information System Import",
       "description": "Validates and classifies a bounded Information System CSV before confirmation.",
       "url": "POST:/api/v1/information_systems/import/preview",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems.api.05",
+      "name": "Download Information Systems Import Template",
+      "description": "Generates the information systems import template in the requested supported format.",
+      "url": "GET:/api/v1/information_systems/import/template",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems.api.06",
+      "name": "Download Information Systems Import Error Report",
+      "description": "Rebuilds the rows of an uploaded information systems file that were not imported, with their issues.",
+      "url": "POST:/api/v1/information_systems/import/error_report",
+      "functionId": "function.administration.information_systems",
+      "sourceEntities": [
+        "CsrmInformationSystem"
+      ]
+    },
+    {
+      "id": "function.administration.information_systems.api.07",
+      "name": "Export Information Systems",
+      "description": "Exports the information systems list in the requested supported format, with its import columns.",
+      "url": "GET:/api/v1/information_systems/export?format={format}",
       "functionId": "function.administration.information_systems",
       "sourceEntities": [
         "CsrmInformationSystem"
@@ -2121,6 +3168,36 @@
       ]
     },
     {
+      "id": "function.administration.information_assets.api.05",
+      "name": "Download Information Assets Import Template",
+      "description": "Generates the information assets import template in the requested supported format.",
+      "url": "GET:/api/v1/information_assets/import/template",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_assets.api.06",
+      "name": "Download Information Assets Import Error Report",
+      "description": "Rebuilds the rows of an uploaded information assets file that were not imported, with their issues.",
+      "url": "POST:/api/v1/information_assets/import/error_report",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
+      "id": "function.administration.information_assets.api.07",
+      "name": "Export Information Assets",
+      "description": "Exports the information assets list in the requested supported format, with its import columns.",
+      "url": "GET:/api/v1/information_assets/export?format={format}",
+      "functionId": "function.administration.information_assets",
+      "sourceEntities": [
+        "CsrmInformationAsset"
+      ]
+    },
+    {
       "id": "function.administration.information_asset_details.api.01",
       "name": "Get Information Asset",
       "description": "Returns an information asset and its related assessment context.",
@@ -2169,20 +3246,6 @@
         "CsrmRisk",
         "CsrmControlImplementation",
         "IdamBoxUser"
-      ]
-    },
-    {
-      "id": "function.reports.reports.api.03",
-      "name": "Export Report",
-      "description": "Generates an export of a selected report in the requested supported format.",
-      "url": "POST:/api/v1/reports/{reportKey}/export",
-      "functionId": "function.reports.reports",
-      "sourceEntities": [
-        "CsrmAssessmentRequest",
-        "CsrmQuestionnaire",
-        "CsrmAssessment",
-        "CsrmRisk",
-        "CsrmControlImplementation"
       ]
     },
     {
@@ -2261,7 +3324,7 @@
     {
       "id": "function.questionnaire_generation.job_read_api.api.01",
       "name": "Get Questionnaire Generation Job",
-      "description": "Returns an initiating analyst's retained questionnaire generation job.",
+      "description": "Returns a retained questionnaire generation job.",
       "url": "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
       "functionId": "function.questionnaire_generation.job_read_api",
       "sourceEntities": [
@@ -2284,7 +3347,7 @@
     {
       "id": "function.questionnaire_generation.retry_api.api.01",
       "name": "Retry Questionnaire Generation Job",
-      "description": "Retries an initiating analyst's failed questionnaire generation job.",
+      "description": "Retries a failed questionnaire generation job.",
       "url": "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
       "functionId": "function.questionnaire_generation.retry_api",
       "sourceEntities": [
@@ -2365,6 +3428,222 @@
         "Role",
         "Function",
         "FunctionApi"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.01",
+      "name": "SCIM GET /scim/v2/Users",
+      "description": "Source-scoped User read/search; protected, service, foreign and tombstoned records are hidden; permitted manual correlation candidates may be visible. Scope applies before counts and pagination. Query accepts only the documented subset, rejects repeated/unknown keys.",
+      "url": "GET:/scim/v2/Users",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.02",
+      "name": "SCIM POST /scim/v2/Users",
+      "description": "Create a source-owned user. externalId or Enterprise employeeNumber is required. active defaults true; blank displayName derives from name parts then userName. No source may assign Roles or private identity fields. Bodies are limited to 1 MiB.",
+      "url": "POST:/scim/v2/Users",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.03",
+      "name": "SCIM GET /scim/v2/Users/{id}",
+      "description": "Source-scoped User read/search; protected, service, foreign and tombstoned records are hidden; permitted manual correlation candidates may be visible. Scope applies before counts and pagination. Query accepts only the documented subset, rejects repeated/unknown keys.",
+      "url": "GET:/scim/v2/Users/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.04",
+      "name": "SCIM PUT /scim/v2/Users/{id}",
+      "description": "PUT replaces asserted source attributes under the shared user lock; omitted attributes keep current values, including active, emails, name parts and Enterprise fields. Explicit null clears optional fields. An asserted source key remains immutable. A manual candidate can be claimed only with an asserted externalId or Enterprise employeeNumber after upstream operator-confirmed correlation; knowing an id is not claim confirmation. Protected, foreign, service and tombstoned records remain hidden. No restoration, unclaim or Role writes.",
+      "url": "PUT:/scim/v2/Users/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.05",
+      "name": "SCIM PATCH /scim/v2/Users/{id}",
+      "description": "Atomic ordered add/replace/remove against the frozen public projection inside the shared user lock; at most 100 operations and 1 MiB. Paths cover supported source attributes and selected-email equality only, never private fields or Roles. primary accepts boolean or true/false string. Added primary replaces the stored email; validated non-primary additions are not stored. emails[value eq \"address\"] removal of a missing address is a no-op; removing the stored address requires a new primary in the same batch. Unknown paths fail invalidPath, unmatched selection noTarget, immutable/required removal mutability; any failure rolls back the batch.",
+      "url": "PATCH:/scim/v2/Users/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.06",
+      "name": "SCIM DELETE /scim/v2/Users/{id}",
+      "description": "Retain the user and references, set inactive and first tombstone, enqueue durable leaver synchronization. Owning-source repeated DELETE is idempotent 204. Later reads and writes hide the tombstone; no restoration.",
+      "url": "DELETE:/scim/v2/Users/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource",
+        "IdamBoxUser"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.07",
+      "name": "SCIM GET /scim/v2/ServiceProviderConfig",
+      "description": "Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support.",
+      "url": "GET:/scim/v2/ServiceProviderConfig",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.08",
+      "name": "SCIM GET /scim/v2/Schemas",
+      "description": "Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support.",
+      "url": "GET:/scim/v2/Schemas",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.09",
+      "name": "SCIM GET /scim/v2/Schemas/{id}",
+      "description": "Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support.",
+      "url": "GET:/scim/v2/Schemas/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.10",
+      "name": "SCIM GET /scim/v2/ResourceTypes",
+      "description": "Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support.",
+      "url": "GET:/scim/v2/ResourceTypes",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.11",
+      "name": "SCIM GET /scim/v2/ResourceTypes/{id}",
+      "description": "Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support.",
+      "url": "GET:/scim/v2/ResourceTypes/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.12",
+      "name": "SCIM GET /scim/v2/Groups",
+      "description": "Authenticated empty Groups list; no membership or Role authority.",
+      "url": "GET:/scim/v2/Groups",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.13",
+      "name": "SCIM GET /scim/v2/Groups/{id}",
+      "description": "Authenticated Group resource read always returns 404; no Groups are stored or managed.",
+      "url": "GET:/scim/v2/Groups/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.14",
+      "name": "SCIM POST /scim/v2/Groups",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "POST:/scim/v2/Groups",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.15",
+      "name": "SCIM PUT /scim/v2/Groups",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "PUT:/scim/v2/Groups",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.16",
+      "name": "SCIM PATCH /scim/v2/Groups",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "PATCH:/scim/v2/Groups",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.17",
+      "name": "SCIM DELETE /scim/v2/Groups",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "DELETE:/scim/v2/Groups",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.18",
+      "name": "SCIM POST /scim/v2/Groups/{id}",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "POST:/scim/v2/Groups/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.19",
+      "name": "SCIM PUT /scim/v2/Groups/{id}",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "PUT:/scim/v2/Groups/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.20",
+      "name": "SCIM PATCH /scim/v2/Groups/{id}",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "PATCH:/scim/v2/Groups/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
+      ]
+    },
+    {
+      "id": "function.identity_provisioning.api.api.21",
+      "name": "SCIM DELETE /scim/v2/Groups/{id}",
+      "description": "Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships.",
+      "url": "DELETE:/scim/v2/Groups/{id}",
+      "functionId": "function.identity_provisioning.api",
+      "sourceEntities": [
+        "IdentitySource"
       ]
     }
   ]

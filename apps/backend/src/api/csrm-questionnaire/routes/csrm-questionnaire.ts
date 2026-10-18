@@ -37,9 +37,36 @@ const generationPolicies = (operation: string, requestScope = false) => [
   { name: "global::csrm-authorization", config: { operation, ...(requestScope ? { requireRequestOwnership: true } : {}) } },
 ];
 
+/*
+ * Phase 19 (D-04, D-13, D-16): a list's export is token-only, as every export is, and takes its list's policy config
+ * plus the list read it discloses, which the caller must hold through the path that admitted the export.
+ */
+const exportRouteConfig = (operation: string, scope: "collection" | "review-collection", underlyingRead: string) => ({
+  auth: { strategies: ["content-api-token"] },
+  policies: [
+    "global::csrm-app-enabled",
+    {
+      name: "global::csrm-authorization",
+      config: {
+        operation,
+        requireQuestionnaireCollectionScope: true,
+        ...(scope === "review-collection" ? { allowAnalystQuestionnaireReviewScope: true } : {}),
+        underlyingRead,
+      },
+    },
+  ],
+});
+
 const config: Core.RouterConfig = {
   type: "content-api",
   routes: [
+    {
+      // Before every /v1/questionnaires/:questionnaireId route, so "export" is never read as a questionnaire id.
+      method: "GET",
+      path: "/v1/questionnaires/export",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.exportQuestionnaires",
+      config: exportRouteConfig(CSRM_QUESTIONNAIRE_OPERATIONS.exportAll, "review-collection", CSRM_QUESTIONNAIRE_OPERATIONS.listAll),
+    },
     {
       method: "POST",
       path: "/v1/questionnaires/:questionnaireId/questions",
@@ -85,6 +112,42 @@ const config: Core.RouterConfig = {
     },
     {
       method: "POST",
+      path: "/v1/questionnaires/:questionnaireId/ai_proposals",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.startAiProposals",
+      config: { policies: policies(CSRM_QUESTIONNAIRE_OPERATIONS.startAiProposals, "resource") },
+    },
+    {
+      method: "POST",
+      path: "/v1/questionnaires/:questionnaireId/questions/:questionId/rewrite",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.startQuestionRewrite",
+      config: { policies: policies(CSRM_QUESTIONNAIRE_OPERATIONS.startQuestionRewrite, "resource") },
+    },
+    {
+      method: "GET",
+      path: "/v1/questionnaire_proposal_jobs/:jobId",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.getProposalJob",
+      config: { policies: generationPolicies(CSRM_QUESTIONNAIRE_OPERATIONS.getProposalJob) },
+    },
+    {
+      method: "POST",
+      path: "/v1/questionnaire_proposal_jobs/:jobId/retry",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.retryProposalJob",
+      config: { policies: generationPolicies(CSRM_QUESTIONNAIRE_OPERATIONS.retryProposalJob) },
+    },
+    {
+      method: "POST",
+      path: "/v1/questionnaires/:questionnaireId/ai_proposal_decisions",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.decideAiProposals",
+      config: { policies: policies(CSRM_QUESTIONNAIRE_OPERATIONS.decideAiProposals, "resource") },
+    },
+    {
+      method: "GET",
+      path: "/v1/questionnaires/:questionnaireId/ai_proposals",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.listAiProposals",
+      config: { policies: policies(CSRM_QUESTIONNAIRE_OPERATIONS.listAiProposals, "resource") },
+    },
+    {
+      method: "POST",
       path: "/v1/questionnaires/:questionnaireId/release",
       handler: "api::csrm-questionnaire.csrm-questionnaire.release",
       config: { policies: policies(CSRM_QUESTIONNAIRE_OPERATIONS.release, "resource") },
@@ -106,6 +169,13 @@ const config: Core.RouterConfig = {
       path: "/v1/questionnaires/:questionnaireId/generate_assessment",
       handler: "api::csrm-questionnaire.csrm-questionnaire.generateAssessment",
       config: { auth: { strategies: ["content-api-token"] }, policies: policies(CSRM_QUESTIONNAIRE_OPERATIONS.generateAssessment, "resource") },
+    },
+    {
+      // Before /v1/my_questionnaires/status_summary, beside the list it exports.
+      method: "GET",
+      path: "/v1/my_questionnaires/export",
+      handler: "api::csrm-questionnaire.csrm-questionnaire.exportMyQuestionnaires",
+      config: exportRouteConfig(CSRM_QUESTIONNAIRE_OPERATIONS.exportMine, "collection", CSRM_QUESTIONNAIRE_OPERATIONS.listMine),
     },
     {
       method: "GET",

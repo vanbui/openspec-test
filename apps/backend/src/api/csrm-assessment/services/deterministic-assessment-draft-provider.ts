@@ -1,170 +1,164 @@
-import {
-  parseAssessmentDraftProposal,
-  sortRiskProposals,
-  type AssessmentDraftAnswerValue,
-  type AssessmentDraftContext,
-  type AssessmentDraftProposal,
-  type AssessmentDraftProvider,
-  type AssessmentRiskDraftProposal,
-} from "./assessment-draft-provider";
-import type { AssessmentRating } from "./assessment-workflow";
+import { deriveRating, highestRating, type Consequence, type Likelihood } from "../../../csrm/risk-scale";
+import type { AssessmentContext, AssessmentContextRecords } from "../../../csrm/ai/assessment-context";
+import { parseAssessmentDraftProposal, sortRiskProposals, STATEMENT_FIELDS, type AssessmentDraftProvider, type AssessmentRiskDraftProposal } from "./assessment-draft-provider";
 
-const RATING_ORDER: Record<AssessmentRating, number> = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
-export const DETERMINISTIC_ASSESSMENT_RISK_TYPE_NAMES = [
-  "Internet Exposure", "Personal Information Handling", "Third-Party Dependency",
-] as const;
+export const DETERMINISTIC_ASSESSMENT_RISK_TYPE_NAMES = ["Internet Exposure", "Personal Information Handling", "Third-Party Dependency"] as const;
 export type DeterministicAssessmentRiskTypeName = typeof DETERMINISTIC_ASSESSMENT_RISK_TYPE_NAMES[number];
-
-type NormalizedContext = {
-  answers: ReadonlyMap<string, AssessmentDraftAnswerValue>;
-  controlsByRiskType: ReadonlyMap<string, string[]>;
+const string = (value: unknown): string => typeof value === "string" ? value : "";
+const truthy = (value: unknown): boolean => value === true || value === "yes" || value === "Yes";
+const answerSources = (answers: ReadonlyMap<string, unknown>, ...keys: string[]): string[] => keys.filter((key) => answers.has(key)).map((key) => `answer.${key}`);
+type BuildInput = { context: AssessmentContext; records: AssessmentContextRecords };
+type RiskInput = Pick<AssessmentRiskDraftProposal, "riskTypeName" | "issueStatement" | "riskStatement" | "riskCategory" | "riskSubCategory" | "riskCause" | "potentialImpact" | "inherentRatingRationale" | "residualRatingRationale"> & {
+  inherentLikelihood: Likelihood; highestInherentConsequence: Consequence; residualLikelihood: Likelihood; highestResidualConsequence: Consequence;
+  informationSystem?: string | null; informationAsset?: string | null; treatmentAction?: "Accept" | "Treat"; treatmentPlan?: string;
+  cited?: string[]; uncitedClaims?: string[]; uncitedField?: "potentialImpact";
 };
-
-function nonBlank(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function includesValue(value: unknown, expected: string): boolean {
-  return Array.isArray(value) && value.includes(expected);
-}
-
-function normalizeContext(context: AssessmentDraftContext): NormalizedContext {
-  if (!context || !Array.isArray(context.answers) || !Array.isArray(context.riskTypes)
-    || context.answers.length > 10_000 || context.riskTypes.length > 1_000) {
-    throw new Error("CSRM assessment draft context is invalid.");
-  }
-  const answers = new Map<string, AssessmentDraftAnswerValue>();
-  for (const entry of context.answers) {
-    if (!entry || typeof entry.questionKey !== "string" || !entry.questionKey.trim() || entry.questionKey.length > 120
-      || answers.has(entry.questionKey)) throw new Error("CSRM assessment draft context is invalid.");
-    const value = entry.value;
-    if (!(value === null || typeof value === "boolean" || typeof value === "string"
-      || (Array.isArray(value) && value.length <= 1_000 && value.every((item) => typeof item === "string")))) {
-      throw new Error("CSRM assessment draft context is invalid.");
-    }
-    answers.set(entry.questionKey, Array.isArray(value) ? [...value].sort() : value);
-  }
-  const controlsByRiskType = new Map<string, string[]>();
-  for (const riskType of context.riskTypes) {
-    if (!riskType || typeof riskType.name !== "string" || !DETERMINISTIC_ASSESSMENT_RISK_TYPE_NAMES.includes(riskType.name as never)
-      || controlsByRiskType.has(riskType.name) || !Array.isArray(riskType.applicableControls)
-      || riskType.applicableControls.length > 100) throw new Error("CSRM assessment draft context is invalid.");
-    const controls = (riskType.applicableControls as readonly { controlNumber: string }[])
-      .map(({ controlNumber }) => controlNumber);
-    if (controls.some((control) => typeof control !== "string" || !control.trim() || control.length > 255)
-      || new Set(controls).size !== controls.length) throw new Error("CSRM assessment draft context is invalid.");
-    controlsByRiskType.set(riskType.name, [...controls].sort());
-  }
-  return { answers, controlsByRiskType };
-}
-
-function baseRisk(
-  riskTypeName: string,
-  rating: AssessmentRating,
-  values: Omit<AssessmentRiskDraftProposal,
-    "riskTypeName" | "inherentRating" | "residualRating" | "treatmentAction" | "treatmentPlan" | "suggestedControlNumbers">,
-  suggestedControlNumbers: string[],
-): AssessmentRiskDraftProposal {
-  const treatmentPlan = suggestedControlNumbers.length > 0
-    ? `Suggested reusable controls: ${suggestedControlNumbers.join(", ")}. Review these suggestions and record the analyst-approved treatment plan.`
-    : "No reusable controls were suggested. Select appropriate controls and record the analyst-approved treatment plan.";
+function makeRisk(input: BuildInput, values: RiskInput): AssessmentRiskDraftProposal {
+  const { context, records } = input;
+  const { cited, uncitedField, uncitedClaims, ...draftValues } = values;
+  const asset = Object.values(context.allowed.assets).find((item) => item.documentId === values.informationAsset);
+  const type = records.riskTypes.find((row) => row.name === values.riskTypeName);
+  const applicable = Array.isArray(type?.applicableControls) ? type.applicableControls : [];
+  const candidates = context.allowed.controlCandidates;
+  const numbers = values.treatmentAction === "Accept" ? [] : values.riskTypeName === null
+    ? Object.keys(candidates).slice(0, 2)
+    : applicable.map((row) => string(row.controlNumber)).filter((number) => number in candidates).slice(0, 5);
+  const suggestedControls = [...new Set(numbers)].map((controlNumber) => ({
+    controlNumber, control: candidates[controlNumber].documentId,
+    rationale: `Applicable to ${values.riskTypeName ?? "untyped"} risks: ${candidates[controlNumber].name}.`,
+  }));
+  const sources = Object.fromEntries(STATEMENT_FIELDS.map((field) => [field, field === uncitedField ? [] : cited ?? []])) as AssessmentRiskDraftProposal["sources"];
   return {
-    riskTypeName,
-    ...values,
-    inherentRating: rating,
-    residualRating: rating,
-    treatmentAction: "Treat",
-    treatmentPlan,
-    suggestedControlNumbers,
+    proposalKey: "", ...draftValues, informationSystem: values.informationSystem ?? null, informationAsset: values.informationAsset ?? null,
+    dataClassification: asset?.classification ?? null,
+    inherentRating: deriveRating(values.inherentLikelihood, values.highestInherentConsequence),
+    residualRating: deriveRating(values.residualLikelihood, values.highestResidualConsequence),
+    treatmentAction: values.treatmentAction ?? "Treat",
+    treatmentPlan: values.treatmentPlan ?? "Review the suggested controls and record the analyst-approved treatment plan.",
+    sources, uncitedClaims: uncitedClaims ?? [], suggestedControls, adjustments: [],
   };
 }
-
-function buildRisks(context: NormalizedContext): AssessmentRiskDraftProposal[] {
+type SelectedRecord = Record<string, unknown>;
+/* A system a provider runs for the organisation, so a third-party dependency concerns it. */
+const PROVIDER_RUN_DEPLOYMENT_MODELS = ["SaaS", "Cloud"];
+/*
+ * Verifier W-1 (success criterion 1, D-13): every Risk links the selected system or asset it concerns, chosen only from
+ * the request's own selection and in the order the context gives it (by name), never in a relation populate's order.
+ * The service's system is its internet-facing system, else its first selected system: the Internet Exposure and
+ * untested-recovery Risks link it. The Third-Party Dependency Risk links the first selected system a provider runs, else
+ * the service's system. A personal-information Risk links the selected asset holding personal data, else the service's
+ * system. A Risk links nothing only when the request selected nothing it concerns.
+ */
+function selectedRecords({ context, records }: BuildInput) {
+  const inContextOrder = (documentIds: string[], rows: SelectedRecord[]) => documentIds.flatMap((documentId) => rows.filter((row) => row.documentId === documentId));
+  const systems = inContextOrder(Object.values(context.allowed.systems), records.systems);
+  const assets = inContextOrder(Object.values(context.allowed.assets).map(({ documentId }) => documentId), records.assets);
+  const internetSystem = systems.find((row) => truthy(row.internetFacing));
+  const serviceSystem = internetSystem ?? systems[0];
+  return {
+    internetSystem, serviceSystem,
+    providerSystem: systems.find((row) => PROVIDER_RUN_DEPLOYMENT_MODELS.includes(string(row.deploymentModel))) ?? serviceSystem,
+    personalAsset: assets.find((row) => truthy(row.containsPersonalData)),
+  };
+}
+const linkTo = (row: SelectedRecord | undefined): string | null => string(row?.documentId) || null;
+function buildRisks(input: BuildInput): AssessmentRiskDraftProposal[] {
+  const { context, records } = input;
+  const answers = new Map((records.answers ?? []).map((item) => [item.questionKey, item.value]));
   const risks: AssessmentRiskDraftProposal[] = [];
-  const hosting = context.answers.get("hosting-model");
-  const internetFacing = context.answers.get("internet-facing") === true
-    || nonBlank(context.answers.get("production-url"))
-    || ["cloud", "hybrid", "third-party"].includes(String(hosting));
-  if (internetFacing && context.controlsByRiskType.has("Internet Exposure")) {
-    risks.push(baseRisk("Internet Exposure", "High", {
-      issueStatement: "The service has an externally reachable or externally hosted access path.",
-      riskStatement: "Internet exposure may increase the likelihood of unauthorised access to the service.",
-      riskCategory: "Cyber security",
-      riskSubCategory: "Internet exposure",
-      riskCause: "The service uses an internet-reachable or externally hosted delivery model.",
-      potentialImpact: "Unauthorised access may affect the confidentiality, integrity, or availability of the service.",
-      inherentLikelihood: "Likely",
-      highestInherentConsequence: "Major",
-      inherentRatingRationale: "An externally reachable delivery path creates a material attack surface for analyst review.",
-      residualLikelihood: "Possible",
-      highestResidualConsequence: "Major",
-      residualRatingRationale: "Residual exposure remains until the analyst confirms applicable controls and their effectiveness.",
-    }, context.controlsByRiskType.get("Internet Exposure") ?? []));
-  }
-
-  const personalTypes = context.answers.get("personal-data-types");
-  const handlesPersonal = context.answers.get("handles-personal-data") === true
-    || (Array.isArray(personalTypes) && personalTypes.length > 0);
-  if (handlesPersonal && context.controlsByRiskType.has("Personal Information Handling")) {
-    const rating: AssessmentRating = includesValue(personalTypes, "sensitive") || includesValue(personalTypes, "financial") ? "Critical" : "High";
-    risks.push(baseRisk("Personal Information Handling", rating, {
+  const hosting = answers.get("hosting-model");
+  const { internetSystem, serviceSystem, providerSystem, personalAsset } = selectedRecords(input);
+  const internet = truthy(answers.get("internet-facing")) || !!string(answers.get("production-url")).trim() || ["cloud", "hybrid", "third-party"].includes(string(hosting)) || !!internetSystem;
+  if (internet && "Internet Exposure" in context.allowed.riskTypes) risks.push(makeRisk(input, {
+    riskTypeName: "Internet Exposure", informationSystem: linkTo(serviceSystem),
+    issueStatement: "The service has an externally reachable or externally hosted access path.",
+    riskStatement: "Internet exposure may increase the likelihood of unauthorised access to the service.",
+    riskCategory: "Cyber security", riskSubCategory: "Internet exposure",
+    riskCause: "The service uses an internet-reachable or externally hosted delivery model.",
+    potentialImpact: "Unauthorised access may affect the confidentiality, integrity, or availability of the service.",
+    inherentLikelihood: "Likely", highestInherentConsequence: "Major", residualLikelihood: "Possible", highestResidualConsequence: "Major",
+    inherentRatingRationale: "An externally reachable delivery path creates a material attack surface for analyst review.",
+    residualRatingRationale: "Residual exposure remains until the analyst confirms applicable controls and their effectiveness.",
+    cited: [...answerSources(answers, "internet-facing", "production-url", "hosting-model"), ...(internetSystem ? [Object.entries(context.allowed.systems).find(([, id]) => id === internetSystem.documentId)?.[0] ?? ""] : [])].filter(Boolean),
+  }));
+  const personalTypes = answers.get("personal-data-types");
+  const personal = truthy(answers.get("handles-personal-data")) || (Array.isArray(personalTypes) && personalTypes.length > 0) || !!personalAsset;
+  const personalInformationLinks = { informationAsset: linkTo(personalAsset), informationSystem: personalAsset ? null : linkTo(serviceSystem) };
+  if (personal && "Personal Information Handling" in context.allowed.riskTypes) {
+    const sensitive = Array.isArray(personalTypes) && personalTypes.some((value) => value === "sensitive" || value === "financial");
+    const assetKey = Object.entries(context.allowed.assets).find(([, item]) => item.documentId === personalAsset?.documentId)?.[0];
+    risks.push(makeRisk(input, {
+      riskTypeName: "Personal Information Handling", ...personalInformationLinks,
       issueStatement: "The service handles personal information.",
       riskStatement: "Inadequate protection of personal information may result in unauthorised disclosure or misuse.",
-      riskCategory: "Privacy",
-      riskSubCategory: "Personal information handling",
+      riskCategory: "Privacy", riskSubCategory: "Personal information handling",
       riskCause: "Personal information is collected, stored, processed, or transmitted by the service.",
       potentialImpact: "A privacy incident may harm individuals and create regulatory, financial, or reputational consequences.",
-      inherentLikelihood: "Possible",
-      highestInherentConsequence: rating === "Critical" ? "Severe" : "Major",
+      inherentLikelihood: sensitive ? "Likely" : "Possible", highestInherentConsequence: sensitive ? "Severe" : "Major",
+      residualLikelihood: "Possible", highestResidualConsequence: "Major",
       inherentRatingRationale: "The declared personal-information categories require explicit privacy and security control review.",
-      residualLikelihood: "Possible",
-      highestResidualConsequence: rating === "Critical" ? "Severe" : "Major",
       residualRatingRationale: "Residual privacy risk remains until the analyst validates the proposed safeguards.",
-    }, context.controlsByRiskType.get("Personal Information Handling") ?? []));
+      cited: [...answerSources(answers, "handles-personal-data", "personal-data-types"), ...(assetKey ? [assetKey] : [])],
+    }));
   }
-
-  const thirdParty = context.answers.get("third-party-involvement") === true
-    || nonBlank(context.answers.get("third-party-providers"))
-    || hosting === "third-party";
-  if (thirdParty && context.controlsByRiskType.has("Third-Party Dependency")) {
-    risks.push(baseRisk("Third-Party Dependency", "Moderate", {
-      issueStatement: "External organisations contribute to service delivery or data handling.",
-      riskStatement: "Third-party dependency may reduce direct control over service resilience and information protection.",
-      riskCategory: "Third party",
-      riskSubCategory: "Supplier dependency",
-      riskCause: "A provider operates, supports, hosts, or receives information from the service.",
-      potentialImpact: "Provider failure or control weakness may disrupt the service or expose information.",
-      inherentLikelihood: "Possible",
-      highestInherentConsequence: "Moderate",
-      inherentRatingRationale: "The declared provider dependency requires assurance and continuity review.",
-      residualLikelihood: "Possible",
-      highestResidualConsequence: "Moderate",
-      residualRatingRationale: "Residual dependency remains until the analyst confirms supplier controls and treatment ownership.",
-    }, context.controlsByRiskType.get("Third-Party Dependency") ?? []));
-  }
-  // The parser checks this order, so the draft is sorted by the same shared rule.
-  return sortRiskProposals(risks);
+  if (/privacy|personal/i.test(string(records.request.regulatoryRequirements)) && "Personal Information Handling" in context.allowed.riskTypes) risks.push(makeRisk(input, {
+    riskTypeName: "Personal Information Handling", ...personalInformationLinks,
+    issueStatement: "The service is subject to personal information obligations.",
+    riskStatement: "Failure to meet privacy obligations may result in regulatory action.",
+    riskCategory: "Privacy", riskSubCategory: "Regulatory compliance", riskCause: "Regulatory requirements apply to the service.",
+    potentialImpact: "Non-compliance may create financial and reputational consequences.",
+    inherentLikelihood: "Possible", highestInherentConsequence: "Major", residualLikelihood: "Possible", highestResidualConsequence: "Major",
+    inherentRatingRationale: "The declared obligations require compliance review.",
+    residualRatingRationale: "Residual regulatory exposure remains until safeguards are confirmed.",
+    cited: ["request.regulatoryRequirements"],
+  }));
+  const thirdParty = truthy(answers.get("third-party-involvement")) || !!string(answers.get("third-party-providers")).trim() || hosting === "third-party" || truthy(records.request.thirdPartyInvolvement);
+  if (thirdParty && "Third-Party Dependency" in context.allowed.riskTypes) risks.push(makeRisk(input, {
+    riskTypeName: "Third-Party Dependency", informationSystem: linkTo(providerSystem),
+    issueStatement: "External organisations contribute to service delivery or data handling.",
+    riskStatement: "Third-party dependency may reduce direct control over service resilience and information protection.",
+    riskCategory: "Third party", riskSubCategory: "Supplier dependency",
+    riskCause: "A provider operates, supports, hosts, or receives information from the service.",
+    potentialImpact: "Provider failure or control weakness may disrupt the service or expose information.",
+    inherentLikelihood: "Possible", highestInherentConsequence: "Moderate", residualLikelihood: "Possible", highestResidualConsequence: "Moderate",
+    inherentRatingRationale: "The declared provider dependency requires assurance and continuity review.",
+    residualRatingRationale: "Residual dependency remains until the analyst confirms supplier controls and treatment ownership.",
+    treatmentAction: "Accept", treatmentPlan: "Review supplier assurance and document why this moderate residual risk is accepted.",
+    cited: [...answerSources(answers, "third-party-involvement", "third-party-providers"), ...(["request.thirdPartyDetails", "request.thirdPartyInvolvement"].filter((key) => context.allowed.sourceKeys.includes(key)))],
+  }));
+  if (["no", "not-sure"].includes(string(answers.get("recovery-tested")))) risks.push(makeRisk(input, {
+    riskTypeName: null, informationSystem: linkTo(serviceSystem), issueStatement: "Recovery has not been tested.",
+    riskStatement: "Untested recovery may delay restoration of the service.", riskCategory: "Resilience", riskSubCategory: "Recovery",
+    riskCause: "Recovery arrangements have not been validated.", potentialImpact: "An outage may last longer than expected.",
+    inherentLikelihood: "Possible", highestInherentConsequence: "Major", residualLikelihood: "Possible", highestResidualConsequence: "Major",
+    inherentRatingRationale: "The answer indicates uncertainty in recovery readiness.",
+    residualRatingRationale: "Risk remains until the recovery process is tested.",
+    cited: ["answer.recovery-tested"], uncitedField: "potentialImpact",
+    uncitedClaims: ["Recovery time objectives for the service are not documented."],
+  }));
+  return sortRiskProposals(risks).map((risk, index) => ({ ...risk, proposalKey: `risk-${index + 1}` }));
 }
-
+/*
+ * Walk D12: a Requestor reads these statements once the assessment is released (in development and in demos), so they
+ * read as an assessment's own, with no back-end or review-process term.
+ */
+function draftSummary(count: number): string {
+  return count === 0
+    ? "This assessment identifies no risks from the request, its questionnaire answers or its selected systems and information assets."
+    : `This assessment identifies ${count} ${count === 1 ? "risk" : "risks"} from the request, its questionnaire answers and its selected systems and information assets.`;
+}
 export const deterministicAssessmentDraftProvider: AssessmentDraftProvider = {
-  name: "deterministic-assessment-draft",
-  version: "1",
-  async generate(context): Promise<AssessmentDraftProposal> {
-    const risks = buildRisks(normalizeContext(context));
-    const overallRating = risks.reduce<AssessmentRating>((highest, risk) =>
-      RATING_ORDER[risk.inherentRating] > RATING_ORDER[highest] ? risk.inherentRating : highest, "Low");
-    const hasRisks = risks.length > 0;
-    return parseAssessmentDraftProposal({
-      schemaVersion: 1,
-      summary: hasRisks
-        ? `Deterministic assessment assistance identified ${risks.length} reviewable risk ${risks.length === 1 ? "proposal" : "proposals"}.`
-        : "Deterministic assessment assistance found no applicable risk mappings. Human risk identification is required.",
-      overallRating,
-      overallRiskRationale: hasRisks
-        ? "The overall draft rating reflects the highest applicable deterministic risk mapping and remains subject to analyst review."
-        : "No deterministic rating was inferred; the placeholder Low rating remains subject to analyst review and cannot be released without a completed Risk.",
-      recommendationsSummary: "Review every proposal, select appropriate reusable controls, edit contextual details, and explicitly release only after completing human review.",
-      risks,
-    });
+  name: "deterministic-assessment-draft", version: "2",
+  async generate(input) {
+    const risks = buildRisks(input);
+    const proposal = {
+      schemaVersion: 2 as const,
+      summary: draftSummary(risks.length),
+      summarySources: [], overallRating: highestRating(risks.map((risk) => risk.residualRating)) ?? "Low" as const,
+      overallRiskRationale: "The overall rating is the highest residual rating among the risks identified, or Low when there are none.",
+      overallRiskRationaleSources: [], recommendationsSummary: "Carry out each risk's treatment plan, and confirm that the controls each risk relies on are in place.",
+      recommendationsSummarySources: [], adjustments: [], risks,
+    };
+    return parseAssessmentDraftProposal(proposal, input.context.allowed);
   },
 };

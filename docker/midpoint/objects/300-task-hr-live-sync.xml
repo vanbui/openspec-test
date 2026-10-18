@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every 5 minutes (D18): applies HR CSV changes since the last run. Joiners,
+  movers and leavers reach Strapi through the IdamBox SCIM resource.
+-->
+<task xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      oid="11000000-0000-4000-8000-000000000300">
+    <name>HR live sync</name>
+    <ownerRef oid="00000000-0000-0000-0000-000000000002" type="c:UserType"/>
+    <executionState>runnable</executionState>
+    <schedulingState>ready</schedulingState>
+    <schedule>
+        <recurrence>recurring</recurrence>
+        <interval>300</interval>
+        <misfireAction>executeImmediately</misfireAction>
+    </schedule>
+    <activity>
+        <work>
+            <liveSynchronization>
+                <resourceObjects>
+                    <resourceRef oid="11000000-0000-4000-8000-000000000100"/>
+                    <kind>account</kind>
+                    <intent>default</intent>
+                </resourceObjects>
+            </liveSynchronization>
+        </work>
+        <controlFlow>
+            <errorHandling>
+                <!-- One person's failed change must not halt the workforce feed (the
+                     default for live sync is to stop). The person is retried later: a
+                     durable retry trigger on their HR row, fired by midPoint's trigger
+                     scanner, first after 5 minutes and then every 15 minutes, so a write
+                     Strapi refused with 503 (Keycloak unavailable) completes on its own
+                     once Keycloak is back (LIFE-04). -->
+                <entry>
+                    <situation>
+                        <status>partial_error</status>
+                        <status>fatal_error</status>
+                    </situation>
+                    <reaction>
+                        <retryLater>
+                            <initialInterval>PT5M</initialInterval>
+                            <nextInterval>PT15M</nextInterval>
+                        </retryLater>
+                    </reaction>
+                </entry>
+            </errorHandling>
+        </controlFlow>
+    </activity>
+</task>

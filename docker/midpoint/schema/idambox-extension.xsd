@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IdamBox extension of midPoint's user schema, for the Identity Source values the
+  IdamBox SCIM resource sends that have no single-valued home in UserType:
+  - username: a user's name is the source's employeeNumber (the correlator), so
+    the username (SCIM userName) needs a property of its own;
+  - department: UserType's organizationalUnit is multi-valued, and an HR move must
+    replace the department, not add a second one (SCIM Enterprise department).
+
+  Installed into midPoint's home (var/schema) by docker/midpoint/init.sh; a change
+  takes effect when the midpoint container restarts.
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:a="http://prism.evolveum.com/xml/ns/public/annotation-3"
+            xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+            xmlns:tns="http://idambox.test/midpoint/extension"
+            targetNamespace="http://idambox.test/midpoint/extension"
+            elementFormDefault="qualified">
+
+    <xsd:complexType name="UserExtensionType">
+        <xsd:annotation>
+            <xsd:appinfo>
+                <a:extension ref="c:UserType"/>
+            </xsd:appinfo>
+        </xsd:annotation>
+        <xsd:sequence>
+            <xsd:element name="username" type="xsd:string" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo>
+                        <a:indexed>true</a:indexed>
+                        <a:displayName>Username (Identity Source)</a:displayName>
+                        <a:displayOrder>100</a:displayOrder>
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="department" type="xsd:string" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo>
+                        <a:indexed>true</a:indexed>
+                        <a:displayName>Department (Identity Source)</a:displayName>
+                        <a:displayOrder>110</a:displayOrder>
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+</xsd:schema>

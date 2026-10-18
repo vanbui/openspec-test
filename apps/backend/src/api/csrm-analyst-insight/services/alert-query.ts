@@ -83,6 +83,20 @@ export function parseAlertListQuery(query: unknown): AlertListQuery {
   };
 }
 
+/** The alert export's parsed query: the list's filters, never a page (Phase 19 D-05). */
+export type AlertExportQuery = Pick<AlertListQuery, "kinds" | "urgency">;
+
+const EXPORT_QUERY_KEYS: ReadonlySet<string> = new Set(["kind", "urgency"]);
+
+/**
+ * GET /api/v1/alerts/export (Phase 19 D-04, D-05): the alert list's own closed `kind` and `urgency` parsing, with
+ * `page` and `pageSize` refused like any other unknown key, so the export reads exactly what the list pages through.
+ */
+export function parseAlertExportQuery(query: unknown): AlertExportQuery {
+  if (!isRecord(query) || Object.keys(query).some((key) => !EXPORT_QUERY_KEYS.has(key))) throw new AlertQueryError();
+  return { kinds: parseKinds(query.kind), urgency: parseUrgency(query.urgency) };
+}
+
 /** An insight operation that takes no query refuses every key before it reads anything. */
 export function assertEmptyInsightQuery(query: unknown): void {
   if (!isRecord(query) || Object.keys(query).length > 0) throw new AlertQueryError();

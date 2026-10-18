@@ -14,8 +14,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { clearAllSessionDrafts, hasSessionDrafts } from '@/lib/session-drafts/session-drafts';
+
 import { signOutOfSession } from '../../../app/actions/session';
-import { useNavigationGuard } from '../csrm/navigation-guard';
+import { useNavigationGuard, type LeaveCopy } from '../csrm/navigation-guard';
 import { accountInitials } from './account-initials';
 
 interface AccountMenuProps {
@@ -24,6 +26,15 @@ interface AccountMenuProps {
 }
 
 const AVATAR_FALLBACK_CLASS = 'bg-muted text-foreground text-xs font-medium';
+
+/* Signing out with unsent text kept in the session (13-UI-SPEC §9.3; WR-401). */
+const discardOnSignOut: LeaveCopy = {
+  title: 'Sign out and discard unsent text?',
+  description: 'Signing out discards the note text and assignment reasons you haven’t sent.',
+  cancelLabel: 'Stay signed in',
+  confirmLabel: 'Sign out',
+  pendingLabel: 'Signing out…',
+};
 
 /**
  * The OIDC-mode account control (ADR 0003): a circular initials button at the top right of the
@@ -73,9 +84,17 @@ export function AccountMenu({ displayName, email }: AccountMenuProps) {
         <form
           action={signOutOfSession}
           onSubmit={(event) => {
-            if (leaveChosen.current || !guard.blocking) return;
+            /*
+             * 13-UI-SPEC §9.3, UI-D31 (T-13-32): signing out leaves no unsent note or reason for the next person. While
+             * any is kept, it asks first (WR-401); the text is discarded only once the person chooses Sign out.
+             */
+            if (leaveChosen.current || (!guard.blocking && !hasSessionDrafts())) {
+              clearAllSessionDrafts();
+              return;
+            }
             const trigger = (event.nativeEvent as SubmitEvent).submitter;
             guard.guardLink(event, {
+              ...(guard.blocking ? {} : { ask: discardOnSignOut }),
               trigger: trigger instanceof HTMLElement ? trigger : null,
               onLeave: () => {
                 leaveChosen.current = true;

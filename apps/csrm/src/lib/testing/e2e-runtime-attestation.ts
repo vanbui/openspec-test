@@ -5,15 +5,16 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 /*
- * The attestation is written once, when the Playwright configuration loads, and
- * every request re-checks its age. The window must therefore outlast a whole
- * suite run. At ten minutes the guarded fixtures silently stopped resolving
- * partway through a run that now takes about fourteen: the state boundary
- * vanished from every later spec, which then failed with no sign of why, and
- * the cause was recorded as a load-sensitive flake. An hour covers the suite
- * with room to grow while keeping the harness unreachable from any
- * longer-lived process, which is what this freshness check exists to guarantee
- * alongside the nonce and the isolated runtime root.
+ * The attestation is written when the Playwright configuration loads, and every
+ * request re-checks its age. At ten minutes the guarded fixtures silently
+ * stopped resolving partway through a run that then took about fourteen; an
+ * hour later fell short too, because a full run on Windows takes about 1.9 hours
+ * (2026-10-18), and every spec after the hour landed on "Sign-in unavailable".
+ * So the window no longer has to outlast a run: the runner rewrites `createdAt`
+ * every five minutes while it is alive (`e2e-attestation-writer.ts`). The hour
+ * is now how long a process that outlives the runner keeps the harness, which is
+ * what this freshness check exists to bound alongside the nonce and the
+ * isolated runtime root.
  */
 export const E2E_ATTESTATION_MAX_AGE_MS = 60 * 60 * 1000;
 

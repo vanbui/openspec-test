@@ -27,6 +27,7 @@ const questionnaire = {
   state: 'draft',
   progress: { answered: 1, total: 2, percent: 50 },
   assessmentRequest: request,
+  aiAssisted: false,
   updatedAt: '2026-08-29T10:00:00.000Z',
 };
 const question = {
@@ -280,5 +281,83 @@ describe('questionnaire service contract', () => {
     expect(parse('getQuestionnaire', { ...questionnaire, events: [{ kind: 'regenerated', at: '2026-09-03T00:00:00.000Z' }] })).toBe(true);
     const release = { releasedAt: '2026-09-01T00:00:00.000Z', releasedBy: { documentId: 'analyst-1', displayName: 'Morgan Analyst' } };
     expect(parse('addQuestionnaireQuestion', { ...questionnaire, release, events: [{ schemaVersion: 1, kind: 'regenerated', at: '2026-09-03T00:00:00.000Z', by: 'analyst-1', explanation }] })).toBe(true);
+  });
+
+  /* Phase 15 D-26: the analyst's timeline and a governance result carry the AI proposal kinds and keys, parsed closed. */
+  it('accepts an AI proposal event with its keys on the timeline and in a governance result, and refuses an unknown key', () => {
+    const parse = (label: string, data: unknown) => service.contractResponseParsers.find((entry) => entry.label === label)?.parser.safeParse({ data }).success;
+    const aiKeys = { runId: 'run-1', scope: 'questionnaire', instruction: 'Add questions about the offshore support team', providerName: 'deterministic-questionnaire-proposals', providerVersion: '1', itemCount: 3 };
+    const timelineEvent = { kind: 'ai-proposal', at: '2026-09-03T00:00:00.000Z', by: { documentId: 'analyst-1', displayName: 'Bob Doe' }, ...aiKeys };
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [timelineEvent] })).toBe(true);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ ...timelineEvent, instruction: undefined, instructionSource: 'default-task', itemCount: 0 }] })).toBe(true);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ kind: 'question-edited', at: '2026-09-04T00:00:00.000Z', by: null, questionKey: 'hosting', questionText: 'Where?', runId: 'run-1', itemKey: 'i-2', aiEdited: true, aiUndo: true }] })).toBe(true);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ kind: 'question-restored', at: '2026-09-04T00:00:00.000Z', questionKey: 'hosting' }] })).toBe(true);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ ...timelineEvent, model: 'unknown-key' }] })).toBe(false);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ ...timelineEvent, itemCount: 31 }] })).toBe(false);
+    expect(parse('getQuestionnaire', { ...questionnaire, events: [{ ...timelineEvent, instruction: 'a'.repeat(501) }] })).toBe(false);
+    const release = { releasedAt: '2026-09-01T00:00:00.000Z', releasedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' } };
+    const stored = { schemaVersion: 1, kind: 'ai-proposal', at: '2026-09-03T00:00:00.000Z', by: 'analyst-1', ...aiKeys };
+    expect(parse('addQuestionnaireQuestion', { ...questionnaire, release, events: [stored] })).toBe(true);
+    expect(parse('addQuestionnaireQuestion', { ...questionnaire, release, events: [{ ...stored, model: 'unknown-key' }] })).toBe(false);
+  });
+});
+
+/*
+ * CR-401 (D-23, 12-UI-SPEC §9.3): the Requestor sees no marker, provider, model, run or analyst name for the AI.
+ * Strapi serves a questionnaire's generation facts and each question's AI origin on analyst reads only, so the
+ * Requestor's reads drop both whatever is served: neither can reach her page or its client payload. The analyst's
+ * reads keep them for the provenance header and the question origin markers.
+ */
+describe('the Requestor’s questionnaire reads carry no AI internals (CR-401)', () => {
+  const generation = {
+    generatedAt: '2026-08-29T09:00:00.000Z',
+    generatedBy: { documentId: 'analyst-1', displayName: 'Bob Analyst' },
+    providerName: 'deterministic-questionnaire-generation',
+    providerVersion: '2',
+    runId: 'run-1',
+    // Phase 13 D-29: the AI-inputs signal is analyst-only, so the Requestor's reads drop it with the rest of the facts.
+    aiInputsChanged: { count: 1, notes: [{ documentId: 'note-1', part: 'requestor', sequence: 1, postedAt: '2026-10-06T00:00:00.000Z', change: 'marked' }], files: [] },
+  };
+  const assisted = { ...questionnaire, aiAssisted: true };
+  const aiQuestion = { ...question, aiOrigin: 'generated', answered: true };
+  const internals = /generation|deterministic-questionnaire-generation|Bob Analyst|run-1|aiOrigin|aiInputsChanged|note-1/;
+
+  it('drops the generation facts from the Requestor’s questionnaire and list, and keeps them on the analyst’s read', async () => {
+    get
+      .mockResolvedValueOnce({ data: { data: [{ ...assisted, generation }], meta: { pagination } }, response: { status: 200 } })
+      .mockResolvedValueOnce({ data: { data: { ...assisted, generation } }, response: { status: 200 } })
+      .mockResolvedValueOnce({ data: { data: { ...assisted, generation } }, response: { status: 200 } });
+
+    const list = await service.listMyQuestionnaires();
+    expect(list).toEqual({ data: [assisted], error: null });
+    expect(JSON.stringify(list)).not.toMatch(internals);
+    const requestor = await service.getRequestorQuestionnaire('questionnaire-1');
+    expect(requestor).toEqual({ data: assisted, error: null });
+    expect(JSON.stringify(requestor)).not.toMatch(internals);
+    await expect(service.getQuestionnaire('questionnaire-1')).resolves.toEqual({ data: { ...assisted, generation }, error: null });
+    expect(get.mock.calls[1]).toEqual(['/v1/questionnaires/{questionnaireId}', { params: { path: { questionnaireId: 'questionnaire-1' } } }]);
+  });
+
+  it('drops each question’s AI origin from the Requestor’s questions and answer saves, and keeps it on the analyst’s review', async () => {
+    const saved = { questionnaireId: 'questionnaire-1', state: 'draft', progress: { answered: 1, total: 1, percent: 100 }, answers: [aiQuestion], updatedAt: '2026-08-29T10:00:00.000Z' };
+    get
+      .mockResolvedValueOnce({ data: { data: [aiQuestion] }, response: { status: 200 } })
+      .mockResolvedValueOnce({ data: { data: [aiQuestion] }, response: { status: 200 } });
+    patch.mockResolvedValueOnce({ data: { data: saved }, response: { status: 200 } });
+    post.mockResolvedValueOnce({ data: { data: { ...saved, state: 'submitted', submittedAt: '2026-08-29T10:01:00.000Z' } }, response: { status: 200 } });
+
+    const questions = await service.getQuestionnaireQuestions('questionnaire-1');
+    expect(questions.data).toHaveLength(1);
+    expect(questions.data?.[0]).not.toHaveProperty('aiOrigin');
+    expect(questions.data?.[0]).not.toHaveProperty('answered');
+    const draft = await service.saveQuestionnaireDraft('questionnaire-1', [{ questionKey: 'internet-facing', value: true }]);
+    expect(draft.data?.answers[0]).not.toHaveProperty('aiOrigin');
+    expect(draft.data?.answers[0]).not.toHaveProperty('answered');
+    const submitted = await service.submitQuestionnaire('questionnaire-1');
+    expect(submitted.data?.answers[0]).not.toHaveProperty('aiOrigin');
+    expect(submitted.data?.answers[0]).not.toHaveProperty('answered');
+    for (const result of [questions, draft, submitted]) expect(JSON.stringify(result)).not.toMatch(internals);
+    const review = await service.getQuestionnaireGovernanceQuestions('questionnaire-1');
+    expect(review.data?.definition[0]).toMatchObject({ questionKey: 'internet-facing', aiOrigin: 'generated', answered: true });
   });
 });

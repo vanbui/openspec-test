@@ -2,22 +2,33 @@
 
 import { SlidersHorizontal } from 'lucide-react';
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
-import { statusLabel } from '@/components/csrm/status-badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import {
+  riskRegisterEffectivenessLabels,
+  riskRegisterEffectivenessValues,
+  riskRegisterMitigationStatusLabels,
   riskRegisterMitigationStatuses,
-  riskRegisterRatings,
+  riskRegisterRatingFilterLabel,
+  riskRegisterRatingFilterValues,
+  riskRegisterStageLabels,
+  riskRegisterStages,
+  riskRegisterStateDefaultLabel,
   riskRegisterStateLabels,
   riskRegisterStates,
-  riskRegisterTreatmentStatuses,
+  riskRegisterTreatmentStatusFilterValues,
+  riskTreatmentActions,
+  riskTreatmentDueStateLabels,
+  riskTreatmentDueStates,
   type RiskPickerOption,
 } from './risk-domain';
 import type { RiskRegisterQuery } from './risk-schema';
 import type { RiskRelationSearchResult } from './risk-actions';
+import { treatmentStatusFilterLabel } from './risk-register-chips';
 
 export type RiskRegisterPickerOptions = {
   owners: readonly RiskPickerOption[];
@@ -36,6 +47,7 @@ type RiskRegisterFiltersProps = {
 };
 
 type RelationKind = 'owners' | 'assessments' | 'systems' | 'assets';
+
 
 const selectClassName = 'block h-11 w-full rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-9';
 
@@ -111,20 +123,55 @@ function MoreFilterFields({ disabled, onChange, pickerOptions, query, searchRela
       <RelationCombobox kind="owners" label="Risk owner" value={query.riskOwner} options={pickerOptions.owners} disabled={disabled} searchRelations={searchRelations} onChange={(riskOwner) => onChange({ riskOwner })} />
       <RelationCombobox kind="owners" label="Treatment owner" value={query.treatmentOwner} options={pickerOptions.owners} disabled={disabled} searchRelations={searchRelations} onChange={(treatmentOwner) => onChange({ treatmentOwner })} />
       <RelationCombobox kind="assessments" label="Related assessment" value={query.assessment} options={pickerOptions.assessments} disabled={disabled} searchRelations={searchRelations} onChange={(assessment) => onChange({ assessment })} />
-      <RelationCombobox kind="systems" label="Impacted system" value={query.system} options={pickerOptions.systems} disabled={disabled} searchRelations={searchRelations} onChange={(system) => onChange({ system })} />
+      <div className="grid gap-1">
+        {/* Choosing a system clears No impacted system, and the reverse: the two never travel together (D-35). */}
+        <RelationCombobox kind="systems" label="Impacted system" value={query.system} options={pickerOptions.systems} disabled={disabled} searchRelations={searchRelations} onChange={(system) => onChange({ system, impactedSystem: undefined })} />
+        <label className="flex min-h-11 items-center gap-2 text-sm text-foreground md:min-h-9">
+          <Checkbox checked={query.impactedSystem === 'none'} disabled={disabled} onCheckedChange={(checked) => onChange(checked === true ? { impactedSystem: 'none', system: undefined } : { impactedSystem: undefined })} />
+          No impacted system
+        </label>
+      </div>
       <RelationCombobox kind="assets" label="Impacted asset" value={query.asset} options={pickerOptions.assets} disabled={disabled} searchRelations={searchRelations} onChange={(asset) => onChange({ asset })} />
       <label className="grid gap-1.5 text-sm font-medium text-foreground">
         Mitigation-control status
         <select aria-label="Mitigation-control status" className={selectClassName} disabled={disabled} value={query.mitigationStatus ?? ''} onChange={(event) => onChange({ mitigationStatus: event.target.value ? event.target.value as RiskRegisterQuery['mitigationStatus'] : undefined })}>
           <option value="">All</option>
-          {riskRegisterMitigationStatuses.map((status) => <option key={status} value={status}>{status === 'none' ? 'No mitigation controls' : status}</option>)}
+          {riskRegisterMitigationStatuses.map((status) => <option key={status} value={status}>{riskRegisterMitigationStatusLabels[status]}</option>)}
         </select>
       </label>
       <label className="grid gap-1.5 text-sm font-medium text-foreground">
         Risk state
         <select aria-label="Risk state" className={selectClassName} disabled={disabled} value={query.state ?? ''} onChange={(event) => onChange({ state: event.target.value ? event.target.value as RiskRegisterQuery['state'] : undefined })}>
-          <option value="">All</option>
+          <option value="">{riskRegisterStateDefaultLabel}</option>
           {riskRegisterStates.map((state) => <option key={state} value={state}>{riskRegisterStateLabels[state]}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
+        Stage
+        <select aria-label="Stage" className={selectClassName} disabled={disabled} value={query.stage ?? ''} onChange={(event) => onChange({ stage: event.target.value ? event.target.value as RiskRegisterQuery['stage'] : undefined })}>
+          <option value="">All</option>
+          {riskRegisterStages.map((stage) => <option key={stage} value={stage}>{riskRegisterStageLabels[stage]}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
+        Treatment action
+        <select aria-label="Treatment action" className={selectClassName} disabled={disabled} value={query.treatmentAction ?? ''} onChange={(event) => onChange({ treatmentAction: event.target.value ? event.target.value as RiskRegisterQuery['treatmentAction'] : undefined })}>
+          <option value="">All</option>
+          {riskTreatmentActions.map((action) => <option key={action} value={action}>{action}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
+        Due state
+        <select aria-label="Due state" className={selectClassName} disabled={disabled} value={query.dueState ?? ''} onChange={(event) => onChange({ dueState: event.target.value ? event.target.value as RiskRegisterQuery['dueState'] : undefined })}>
+          <option value="">All</option>
+          {riskTreatmentDueStates.map((dueState) => <option key={dueState} value={dueState}>{riskTreatmentDueStateLabels[dueState]}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1.5 text-sm font-medium text-foreground">
+        Mitigation-control effectiveness
+        <select aria-label="Mitigation-control effectiveness" className={selectClassName} disabled={disabled} value={query.mitigationEffectiveness ?? ''} onChange={(event) => onChange({ mitigationEffectiveness: event.target.value ? event.target.value as RiskRegisterQuery['mitigationEffectiveness'] : undefined })}>
+          <option value="">All</option>
+          {riskRegisterEffectivenessValues.map((rating) => <option key={rating} value={rating}>{riskRegisterEffectivenessLabels[rating]}</option>)}
         </select>
       </label>
       <fieldset className="grid gap-2 border-0 p-0">
@@ -156,21 +203,21 @@ function CoreFilterFields({ disabled, labelClassName, onChange, query }: Pick<Ri
         Treatment status
         <select aria-label="Treatment status" className={selectClassName} disabled={disabled} value={query.treatmentStatus ?? ''} onChange={(event) => onChange({ treatmentStatus: event.target.value ? event.target.value as RiskRegisterQuery['treatmentStatus'] : undefined })}>
           <option value="">All</option>
-          {riskRegisterTreatmentStatuses.map((status) => <option key={status} value={status}>{statusLabel('treatment', status)}</option>)}
+          {riskRegisterTreatmentStatusFilterValues.map((status) => <option key={status} value={status}>{treatmentStatusFilterLabel(status)}</option>)}
         </select>
       </label>
       <label className={labelClass}>
         Inherent rating
         <select aria-label="Inherent rating" className={selectClassName} disabled={disabled} value={query.inherentRating ?? ''} onChange={(event) => onChange({ inherentRating: event.target.value ? event.target.value as RiskRegisterQuery['inherentRating'] : undefined })}>
           <option value="">All</option>
-          {riskRegisterRatings.map((rating) => <option key={rating} value={rating}>{rating}</option>)}
+          {riskRegisterRatingFilterValues.map((rating) => <option key={rating} value={rating}>{riskRegisterRatingFilterLabel(rating)}</option>)}
         </select>
       </label>
       <label className={labelClass}>
         Residual rating
         <select aria-label="Residual rating" className={selectClassName} disabled={disabled} value={query.residualRating ?? ''} onChange={(event) => onChange({ residualRating: event.target.value ? event.target.value as RiskRegisterQuery['residualRating'] : undefined })}>
           <option value="">All</option>
-          {riskRegisterRatings.map((rating) => <option key={rating} value={rating}>{rating}</option>)}
+          {riskRegisterRatingFilterValues.map((rating) => <option key={rating} value={rating}>{riskRegisterRatingFilterLabel(rating)}</option>)}
         </select>
       </label>
     </>
@@ -209,7 +256,7 @@ export function RiskRegisterFilters({ activeCount, disabled, onChange, pickerOpt
         <Popover>
           <PopoverTrigger asChild><Button className="hidden md:inline-flex" disabled={disabled} type="button" variant="outline"><SlidersHorizontal aria-hidden="true" />More filters</Button></PopoverTrigger>
           {/* More filters takes focus into its fields, so it is a dialog, named by its title. */}
-          <PopoverContent align="start" aria-labelledby={moreFiltersTitleId} className="w-80">
+          <PopoverContent align="start" aria-labelledby={moreFiltersTitleId} className="max-h-[var(--radix-popover-content-available-height)] w-80 overflow-y-auto">
             <PopoverTitle className="mb-3" id={moreFiltersTitleId}>More filters</PopoverTitle>
             <MoreFilterFields disabled={disabled} onChange={onChange} pickerOptions={pickerOptions} query={query} searchRelations={searchRelations} />
           </PopoverContent>
@@ -217,7 +264,7 @@ export function RiskRegisterFilters({ activeCount, disabled, onChange, pickerOpt
         <Sheet>
           <SheetTrigger asChild><Button className="md:hidden" disabled={disabled} type="button" variant="outline"><SlidersHorizontal aria-hidden="true" />Filters ({activeCount})</Button></SheetTrigger>
           <SheetContent className="w-full overflow-y-auto sm:max-w-md" side="right">
-            <SheetHeader><SheetTitle>Risk Register filters</SheetTitle><SheetDescription>Search and filter authorised contextual Risks.</SheetDescription></SheetHeader>
+            <SheetHeader><SheetTitle>Risk register filters</SheetTitle><SheetDescription>Search and filter Risks.</SheetDescription></SheetHeader>
             <div className="space-y-4 px-4 pb-6">
               <form className="grid gap-2" role="search" onSubmit={submitSearch}>
                 <label className="grid gap-1.5 text-sm font-medium text-foreground">Search Risks<Input aria-label="Search Risks" defaultValue={query.q} disabled={disabled} key={query.q} name="q" type="search" /></label>

@@ -30,6 +30,8 @@ const transportModules = walk(join(src, 'lib', 'api', 'transport')).filter(isSou
 // return-to.ts is excluded by D-22: a pure path validator that holds nothing secret.
 const authModules = walk(join(src, 'lib', 'auth')).filter(isSourceModule).filter((path) => !path.endsWith(`${sep}return-to.ts`));
 const gateModules = [
+  // The sidebar counts' reads run through feature services, so the composition is server-only too (11-13).
+  ['components', 'shell', 'navigation-counts.ts'],
   ['lib', 'capabilities', 'analyst-review-gate.ts'],
   ['lib', 'capabilities', 'development-capabilities.ts'],
   ['lib', 'capabilities', 'server-guard.ts'],
@@ -63,6 +65,7 @@ describe('the server-only boundary', () => {
   it('covers the transport, the auth modules, the capability and E2E gates, and every feature service', () => {
     expect(serviceModules.length).toBeGreaterThanOrEqual(9);
     expect(guardedModules.map(display)).toEqual(expect.arrayContaining([
+      'src/components/shell/navigation-counts.ts',
       'src/lib/api/transport/server-client.ts',
       'src/lib/auth/development-runtime.ts',
       'src/lib/auth/development-session-adapter.ts',

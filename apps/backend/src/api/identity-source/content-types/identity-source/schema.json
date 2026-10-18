@@ -1,0 +1,19 @@
+{
+  "kind": "collectionType",
+  "collectionName": "identity_sources",
+  "info": {
+    "singularName": "identity-source",
+    "pluralName": "identity-sources",
+    "displayName": "Identity Source"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "name": { "type": "string", "required": true, "unique": true, "maxLength": 255 },
+    "sourceStatus": { "type": "enumeration", "enum": ["active", "inactive"], "required": true, "default": "active" },
+    "serviceUser": { "type": "relation", "relation": "oneToOne", "target": "api::idambox-user.idambox-user", "required": true },
+    "tokenHash": { "type": "string", "private": true, "maxLength": 255 },
+    "tokenRotatedAt": { "type": "datetime", "private": true },
+    "lastActivityAt": { "type": "datetime" }
+  }
+}

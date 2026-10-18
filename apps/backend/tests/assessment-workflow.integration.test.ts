@@ -3,9 +3,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test, { after } from "node:test";
 
+import { UAT_A_LIKE_NOTE_SENTINELS, uatALikeNotes } from "./fixtures/uat-a-like-context";
 import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
 import { projectReleaseReadiness, validateReleaseReadiness } from "../src/api/csrm-assessment/services/assessment-workflow";
 import { updateControlImplementation as updateControlImplementationDocument } from "../src/api/csrm-control-implementation/services/control-implementation-workflow";
+import { parseRiskAiProvenance, parseAssessmentAiProvenance } from "../src/api/csrm-assessment/services/ai-provenance";
 
 const harnessPromise = startAuthorizationHttpHarness();
 after(async () => (await harnessPromise).close());
@@ -23,6 +25,14 @@ const ASSESSMENT_RISK_LIST_ITEM_KEYS = [
   "inherentLikelihood", "highestInherentConsequence", "inherentRating", "residualLikelihood", "highestResidualConsequence",
   "residualRating", "treatmentAction", "treatmentPlan", "treatmentStatus", "riskOwner", "treatmentOwner", "targetDate",
 ].sort();
+/*
+ * D-02 item 2, D-31: an assessment list item (AssessmentSummary) on both list operations names its request's title,
+ * how many Risks the assessment holds and the highest residual rating among them.
+ */
+const ASSESSMENT_SUMMARY_KEYS = [
+  "approvalDate", "assessmentNumber", "assessmentStatus", "documentId", "generatedBy", "generatedDate", "highestResidualRating",
+  "overallRating", "requestTitle", "riskCount", "summary",
+];
 
 async function request(path: string, identity?: string, init: RequestInit = {}) {
   const harness = await harnessPromise;
@@ -171,13 +181,23 @@ test("mounted analyst review queue is exact, bounded, and follows existing detai
   assert.ok(queueRows.some((row) => row.documentId === requestFixtures.requests.illegalTransition), "UNEXPECTED_DRAFTED_REQUEST_ABSENT");
   assert.ok(queueRows.some((row) => row.documentId === assessmentFixtures.requests.concurrent), "UNEXPECTED_UNDER_REVIEW_REQUEST_ABSENT");
   assert.equal(queueRows.some((row) => row.documentId === requestFixtures.requests.editable), false, "UNEXPECTED_DRAFT_REQUEST_DISCLOSURE");
+  // The thirteen published queue item keys (D-02 item 1; Phase 13 D-13): identity, status, the triage facts, the
+  // holder, the viewer's pick-up state and new notes, and no requestor relation.
   assert.ok(queueRows.every((row) => [
     "documentId",
     "requestNumber",
     "requestStatus",
     "submittedDate",
     "title",
-  ].every((key) => key in row) && Object.keys(row).length === 5), "UNEXPECTED_ASSESSMENT_QUEUE_PROJECTION");
+    "requestorName",
+    "assessmentType",
+    "businessCriticality",
+    "dueDate",
+    "daysSinceSubmission",
+    "assignee",
+    "pickUp",
+    "unreadNotes",
+  ].every((key) => key in row) && Object.keys(row).length === 13 && !("requestor" in row)), "UNEXPECTED_ASSESSMENT_QUEUE_PROJECTION");
   // The review queue is paged now, so it carries pagination meta. The row
   // projection above is what keeps it bounded.
   const queueMeta = (queueBody.meta as { pagination?: Record<string, unknown> } | undefined)?.pagination;
@@ -211,7 +231,8 @@ test("mounted analyst review queue is exact, bounded, and follows existing detai
   assert.equal(rows(filteredBody).length, 1, "UNEXPECTED_FILTERED_QUEUE_SIZE");
   assert.deepEqual(
     filteredBody.meta,
-    { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+    // The read names its viewer, Bob, as a documentId and a display name only (13-12).
+    { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 }, viewer: { documentId: harness.users.analyst, displayName: "Bob Doe" } },
     "UNEXPECTED_FILTERED_QUEUE_META",
   );
 
@@ -337,7 +358,12 @@ test("mounted analyst review queue intersects every request status with the sele
       }
 
       if (requestStatus && !queueStatuses.includes(requestStatus)) {
-        assert.deepEqual(body.meta, { pagination: { page: 1, pageSize: 100, pageCount: 0, total: 0 } }, `OUTSIDE_QUEUE_STATUS_NOT_EMPTY_${label}`);
+        // The read still names its viewer (13-12), whatever it finds.
+        assert.deepEqual(body.meta, {
+          pagination: { page: 1, pageSize: 100, pageCount: 0, total: 0 },
+          viewer: (body.meta as { viewer?: unknown }).viewer,
+        }, `OUTSIDE_QUEUE_STATUS_NOT_EMPTY_${label}`);
+        assert.equal(typeof ((body.meta as { viewer?: { documentId?: unknown } }).viewer?.documentId), "string", `OUTSIDE_QUEUE_VIEWER_MISSING_${label}`);
         assert.deepEqual(found, [], `OUTSIDE_QUEUE_STATUS_RETURNED_ROWS_${label}`);
       }
       // A status the queue reads still reads: the intersection is not a blanket empty answer.
@@ -407,7 +433,7 @@ test("mounted assessment draft generation exposes a bounded analyst-owned lifecy
   assert.equal(typeof completed.assessmentId, "string");
   generatedAssessmentId = String(completed.assessmentId);
   assert.deepEqual(Object.keys(completed).sort(), [
-    "assessmentId", "attempt", "completedAt", "jobId", "questionnaireId", "queuedAt", "startedAt", "status",
+    "assessmentId", "attempt", "canRetry", "completedAt", "initiatedBy", "initiatedByViewer", "jobId", "questionnaireId", "queuedAt", "startedAt", "status",
   ]);
   assert.doesNotMatch(JSON.stringify(completed), /answer|provider|initiating|diagnostic/i);
 
@@ -416,7 +442,7 @@ test("mounted assessment draft generation exposes a bounded analyst-owned lifecy
   assert.match(String(assessment?.assessmentNumber), /^ASM-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/);
   assert.equal(typeof assessment?.generatedDate, "string");
   assert.equal(assessment?.providerName, "deterministic-assessment-draft");
-  assert.equal(assessment?.providerVersion, "1");
+  assert.equal(assessment?.providerVersion, "2");
   assert.ok(assessment?.generatedBy && typeof assessment.generatedBy === "object", "ASSESSMENT_GENERATING_ANALYST_MISSING");
   assert.equal(assessment?.approvedBy, null);
   assert.equal(assessment?.approvalDate, null);
@@ -426,8 +452,13 @@ test("mounted assessment draft generation exposes a bounded analyst-owned lifecy
   const risks = Array.isArray(assessment?.risks) ? assessment.risks as Record<string, unknown>[] : [];
   assert.ok(risks.length > 0);
   assert.ok(risks.every((risk) => /^RSK-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(String(risk.riskNumber))));
-  assert.ok(risks.every((risk) => /Suggested reusable controls: MOUNTED-CTRL-001/.test(String(risk.treatmentPlan))),
-    "DETERMINISTIC_CONTROL_SUGGESTIONS_NOT_PERSISTED");
+  assert.ok(risks.every((risk) => typeof risk.treatmentPlan === "string" && risk.treatmentPlan.length > 0),
+    "DETERMINISTIC_TREATMENT_PLAN_MISSING");
+  // IN-208: exactly one run per provider call, so a duplicate or a run left open is seen: the failed first attempt, then the retry.
+  const runs = (await harness.listAiRunsForRequest(String(requestDocumentId))).filter((run) => run.operation === "assessment-draft");
+  assert.deepEqual(runs.map((run) => [run.attempt, run.status]), [[1, "failed"], [2, "completed"]], "ASSESSMENT_DRAFT_RUNS_NOT_ONE_PER_ATTEMPT");
+  const completedRun = runs[1];
+  assert.ok(risks.every((risk) => (risk.aiProvenance as Record<string, unknown>)?.runId === completedRun.documentId));
 
   const discovered = await request(
     `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`,
@@ -439,11 +470,20 @@ test("mounted assessment draft generation exposes a bounded analyst-owned lifecy
 
   const discoveredBySecondAnalyst = await request(
     `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`,
-    harness.identities.serviceAnalystAgent,
+    harness.identities.secondAnalyst,
     { method: "POST" },
   );
   assert.equal(discoveredBySecondAnalyst.status, 202, "SECOND_AUTHORISED_ANALYST_IDEMPOTENT_JOB_DENIED");
   assert.equal(((await payload(discoveredBySecondAnalyst)).data as Record<string, unknown>).jobId, queuedJob.jobId);
+
+  // Phase 12 D-32: every AI run names an accountable human, so the service agent cannot start or join a draft.
+  const refusedAgent = await request(
+    `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`,
+    harness.identities.serviceAnalystAgent,
+    { method: "POST" },
+  );
+  assert.equal(refusedAgent.status, 403, "SERVICE_AGENT_DRAFT_NOT_REFUSED");
+  assert.ok(!(await refusedAgent.text()).includes(String(queuedJob.jobId)), "SERVICE_AGENT_DRAFT_REFUSAL_DISCLOSED_JOB");
 
   const bodyParserEmptyObject = await request(
     `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`,
@@ -472,9 +512,7 @@ test("mounted analyst assessment metadata routes are bounded and transition the 
   const listRows = rows(listBody);
   const listRow = listRows.find((row) => row.documentId === assessmentId);
   assert.ok(listRow, "GENERATED_ASSESSMENT_MISSING_FROM_LIST");
-  assert.deepEqual(Object.keys(listRow).sort(), [
-    "approvalDate", "assessmentNumber", "assessmentStatus", "documentId", "generatedBy", "generatedDate", "overallRating", "summary",
-  ]);
+  assert.deepEqual(Object.keys(listRow).sort(), ASSESSMENT_SUMMARY_KEYS);
 
   const summaryResponse = await request("/api/v1/risk_assessments/status_summary", harness.identities.analyst);
   assert.equal(summaryResponse.status, 200, "ASSESSMENT_STATUS_SUMMARY_ROUTE_MISSING");
@@ -487,9 +525,12 @@ test("mounted analyst assessment metadata routes are bounded and transition the 
   assert.equal(detailResponse.status, 200, "ASSESSMENT_DETAIL_ROUTE_MISSING");
   const detail = (await payload(detailResponse)).data as Record<string, unknown>;
   assert.deepEqual(Object.keys(detail).sort(), [
-    "actor", "approvalDate", "approvedBy", "assessmentDate", "assessmentNumber", "assessmentRequest", "assessmentStatus", "documentId", "generatedBy", "generatedDate",
-    "nextReviewDate", "overallControlEffectiveness", "overallRating", "overallRiskRationale", "ownerLabels", "recommendationsSummary", "releaseReadiness", "reviewedBy", "risks", "summary",
+    "actor", "aiProvenance", "approvalDate", "approvedBy", "assessmentDate", "assessmentNumber", "assessmentRequest", "assessmentStatus", "documentId", "generatedBy", "generatedDate", "generation",
+    "nextReviewDate", "overallControlEffectiveness", "overallRating", "overallRiskRationale", "ownerLabels", "recommendationsSummary", "releaseReadiness",
+    // 19-10 (D-14): whether the assessment is released, by the one record-read check.
+    "released", "reviewedBy", "risks", "summary",
   ]);
+  assert.equal(detail.released, false, "A_DRAFT_READS_AS_RELEASED");
   assert.equal(detail.actor, "analyst");
   const analystDocumentId = (detail.generatedBy as Record<string, unknown>)?.documentId;
   assert.equal(typeof analystDocumentId, "string", "GENERATING_ANALYST_PROJECTION_MISSING");
@@ -594,7 +635,9 @@ test("mounted assessment metadata update rejects hostile fields, invalid values,
       body: JSON.stringify({ summary: "Hostile post-release mutation" }),
     });
     assert.equal(immutable.status, 409, `RELEASE_FACT_WAS_MUTABLE_${assessmentId}`);
-    assert.doesNotMatch(await immutable.text(), /SQL|stack|database/i);
+    const immutableBody = await immutable.text();
+    assert.doesNotMatch(immutableBody, /SQL|stack|database/i);
+    assert.deepEqual(JSON.parse(immutableBody).error.details, { reason: "ASSESSMENT_NOT_MUTABLE" });
     assert.deepEqual(await harness.getAssessment(assessmentId), beforeAssessment, `REJECTED_ASSESSMENT_PATCH_PERSISTED_${assessmentId}`);
   }
 
@@ -781,18 +824,25 @@ test("mounted contextual Risk routes cover the frozen writable surface and bound
   }
   assert.deepEqual(
     Object.keys(reloaded).sort(),
-    ["documentId", "riskNumber", ...Object.keys(writableRisk)].sort(),
+    ["documentId", "riskNumber", ...Object.keys(writableRisk), "aiProvenance", "withdrawal"].sort(),
     "ANALYST_DETAIL_RISK_PROJECTION_IS_NOT_CLOSED",
   );
+  // Phase 16 D-03 item 9: an active Risk carries the withdrawal block as null.
+  assert.equal(reloaded.withdrawal, null, "ANALYST_DETAIL_ACTIVE_RISK_WITHDRAWAL_IS_NOT_NULL");
   assert.ok(Array.isArray(assessmentAfter.ownerLabels), "ANALYST_DETAIL_OWNER_LABELS_MISSING");
   // Readiness is still server-owned; it is now the complete named requirement
   // set rather than the validator's raw list of missing paths.
+  const persistedAssessmentAfter = await harness.getAssessment(generatedAssessmentId);
+  const storedRisks = new Map(((persistedAssessmentAfter?.risks as Array<Record<string, unknown>> | undefined) ?? [])
+    .map((risk) => [risk.documentId, risk.aiProvenance]));
   assert.deepEqual(
     assessmentAfter.releaseReadiness,
-    projectReleaseReadiness({ ...assessmentAfter, risks: reloadedRisks }),
+    projectReleaseReadiness({ ...assessmentAfter, aiProvenance: persistedAssessmentAfter?.aiProvenance,
+      risks: reloadedRisks.map((risk) => ({ ...risk, aiProvenance: storedRisks.get(risk.documentId) })) },
+    // Phase 16 D-42: no risk AI proposal run, so none is open.
+    { openAiProposals: 0 }),
     "ANALYST_DETAIL_READINESS_MUST_BE_SERVER_OWNED",
   );
-  const persistedAssessmentAfter = await harness.getAssessment(generatedAssessmentId);
   const linkedRequestId = (persistedAssessmentAfter?.assessmentRequest as Record<string, unknown> | undefined)?.documentId;
   assert.equal((await harness.getRequest(String(linkedRequestId)))?.requestStatus, "under-review");
 });
@@ -1282,6 +1332,9 @@ test("mounted provider failures are safe, observable, and retryable without enum
     assert.equal(failed.failureCode, "DRAFT_GENERATION_FAILED");
     assert.equal(failed.failureMessage, "Assessment draft generation failed safely.");
     assert.doesNotMatch(JSON.stringify(failed), /injected|answer|stack|database/i);
+    // IN-102: the run records the job's own code and message for the same failure, so the hub and a count of failed runs agree.
+    assert.deepEqual(await draftRunOutcomes(fixtures.jobTargets.providerFailure), [["failed", "DRAFT_GENERATION_FAILED", "Assessment draft generation failed safely."]],
+      "DRAFT_RUN_AND_JOB_RECORD_DIFFERENT_FAILURES");
   });
 
   const deniedLookup = await request(`/api/v1/assessment_draft_jobs/${encodeURIComponent(jobId)}`, harness.identities.owner);
@@ -1291,6 +1344,60 @@ test("mounted provider failures are safe, observable, and retryable without enum
   const retry = await request(`/api/v1/assessment_draft_jobs/${encodeURIComponent(jobId)}/retry`, harness.identities.analyst, { method: "POST" });
   assert.equal(retry.status, 202);
   assert.equal(((await payload(retry)).data as Record<string, unknown>).attempt, 2);
+});
+
+/*
+ * D-18, G-3: any human Security Analyst on the request follows and retries its draft job. The second analyst reads
+ * Bob's failed draft job by id (told Bob started it and that they may retry it), the generation-jobs read agrees,
+ * and their retry is their own attempt: the job then reads as theirs, and the draft's generatedBy and the new run's
+ * initiatedBy name them. The Requestor and the service agent stay refused, and an unknown job stays 404.
+ */
+test("mounted second analyst follows and retries Bob's failed draft job and the retry is theirs (D-18)", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const { requestId, questionnaireId } = await seedSubmittedSingleAnswerQuestionnaire("D18-COLLEAGUE-RETRY");
+  const bob = { documentId: harness.users.analyst, displayName: "Bob Doe" };
+  let jobId = "";
+  await harness.withProviderFailure(async () => {
+    const queued = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`, harness.identities.analyst, { method: "POST" });
+    assert.equal(queued.status, 202, "BOB_DRAFT_NOT_QUEUED");
+    jobId = String(((await payload(queued)).data as Record<string, unknown>).jobId);
+    await waitForJob(jobId, "failed");
+  });
+  const jobPath = `/api/v1/assessment_draft_jobs/${encodeURIComponent(jobId)}`;
+
+  const colleagueRead = await request(jobPath, harness.identities.secondAnalyst);
+  assert.equal(colleagueRead.status, 200, "SECOND_ANALYST_DRAFT_JOB_READ_REFUSED");
+  const colleague = (await payload(colleagueRead)).data as Record<string, unknown>;
+  assert.equal(colleague.status, "failed", "SECOND_ANALYST_DRAFT_JOB_NOT_FAILED");
+  assert.deepEqual(colleague.initiatedBy, bob, "SECOND_ANALYST_DRAFT_JOB_INITIATOR_NOT_NAMED");
+  assert.equal(colleague.initiatedByViewer, false, "SECOND_ANALYST_TOLD_THEY_STARTED_BOBS_DRAFT");
+  assert.equal(colleague.canRetry, true, "SECOND_ANALYST_MAY_NOT_RETRY_A_FAILED_DRAFT");
+  const own = (await payload(await request(jobPath, harness.identities.analyst))).data as Record<string, unknown>;
+  assert.equal(own.initiatedByViewer, true, "BOB_NOT_TOLD_HE_STARTED_THE_DRAFT");
+  const jobsRead = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/generation_jobs`, harness.identities.secondAnalyst);
+  assert.equal(jobsRead.status, 200, "SECOND_ANALYST_GENERATION_JOBS_READ_REFUSED");
+  const draftEntry = ((await payload(jobsRead)).data as Record<string, unknown>).assessmentDraft as Record<string, unknown>;
+  assert.equal(draftEntry.canRetry, true, "SECOND_ANALYST_GENERATION_JOBS_DRAFT_NOT_RETRYABLE");
+
+  for (const identity of [harness.identities.owner, harness.identities.serviceAnalystAgent]) {
+    assert.equal((await request(jobPath, identity)).status, 403, `DRAFT_JOB_READ_NOT_REFUSED_${identity}`);
+    assert.equal((await request(`${jobPath}/retry`, identity, { method: "POST" })).status, 403, `DRAFT_JOB_RETRY_NOT_REFUSED_${identity}`);
+  }
+  assert.equal((await request("/api/v1/assessment_draft_jobs/not-a-real-job", harness.identities.secondAnalyst)).status, 404, "SECOND_ANALYST_UNKNOWN_DRAFT_JOB_NOT_404");
+
+  const retry = await request(`${jobPath}/retry`, harness.identities.secondAnalyst, { method: "POST" });
+  assert.equal(retry.status, 202, "SECOND_ANALYST_DRAFT_RETRY_REFUSED");
+  const retried = (await payload(retry)).data as Record<string, unknown>;
+  assert.equal(retried.attempt, 2, "DRAFT_RETRY_NOT_A_NEW_ATTEMPT");
+  assert.equal(retried.initiatedByViewer, true, "RETRIED_DRAFT_NOT_THE_RETRIERS");
+  assert.deepEqual(retried.initiatedBy, { documentId: harness.users.secondAnalyst, displayName: "Second Analyst" }, "RETRIED_DRAFT_NOT_CREDITED_TO_THE_RETRIER");
+  const completed = await waitForJob(jobId, "completed");
+  const assessment = await harness.getAssessment(String(completed.assessmentId));
+  assert.equal((assessment?.generatedBy as Record<string, unknown> | undefined)?.documentId, harness.users.secondAnalyst, "DRAFT_GENERATED_BY_NOT_THE_RETRIER");
+  const runs = (await harness.listAiRunsForRequest(requestId)).filter((run) => run.operation === "assessment-draft");
+  assert.deepEqual(runs.map((run) => [run.attempt, run.status, (run.initiatedBy as Record<string, unknown> | null)?.documentId]),
+    [[1, "failed", harness.users.analyst], [2, "completed", harness.users.secondAnalyst]], "DRAFT_RUN_INITIATORS_NOT_BOB_THEN_THE_RETRIER");
 });
 
 test("mounted typed provider failures preserve safe taxonomy in the analyst job response", async () => {
@@ -1309,8 +1416,20 @@ test("mounted typed provider failures preserve safe taxonomy in the analyst job 
     assert.equal(failed.failureCode, "PROVIDER_RATE_LIMITED");
     assert.equal(failed.failureMessage, safeMessage);
     assert.doesNotMatch(JSON.stringify(failed), /127\.0\.0\.1|stack|at \w+ \(/i);
+    assert.deepEqual(await draftRunOutcomes(fixtures.jobTargets.providerFailureCode), [["failed", "PROVIDER_RATE_LIMITED", safeMessage]],
+      "DRAFT_RUN_AND_JOB_RECORD_DIFFERENT_FAILURES");
   });
 });
+
+/** The status, failure code and failure message of every draft run for a questionnaire's request, oldest first. */
+async function draftRunOutcomes(questionnaireId: string): Promise<unknown[][]> {
+  const harness = await harnessPromise;
+  const questionnaire = await harness.getQuestionnaire(questionnaireId);
+  const requestId = String((questionnaire?.assessmentRequest as Record<string, unknown> | undefined)?.documentId);
+  return (await harness.listAiRunsForRequest(requestId))
+    .filter((run) => run.operation === "assessment-draft")
+    .map((run) => [run.status, run.failureCode, run.failureMessage]);
+}
 
 test("mounted zero-mapping draft generation persists an unreleasable assessment for human review", async () => {
   const harness = await harnessPromise;
@@ -1408,7 +1527,29 @@ async function completeMountedReleaseReadiness(assessmentId: string): Promise<Ar
     assert.equal(riskUpdate.status, 200, `RELEASE_READINESS_RISK_UPDATE_FAILED_${risk.documentId}`);
   }
 
-  // D-13: once every field above is complete the assessment is release-ready, so
+  const assessment = await harness.getAssessment(assessmentId);
+  const assessmentFields = Object.entries(parseAssessmentAiProvenance(assessment?.aiProvenance)?.fields ?? {})
+    .filter(([, fact]) => fact?.state === "proposed").map(([field]) => field);
+  const decisions: Array<{ target: { kind: "assessment" } | { kind: "risk"; riskId: string }; action: "accept"; fields: string[] }> = [];
+  if (assessmentFields.length) decisions.push({ target: { kind: "assessment" }, action: "accept", fields: assessmentFields });
+  for (const risk of risks) {
+    const riskId = String(risk.documentId);
+    const stored = await harness.getRisk(riskId);
+    const fields = Object.entries(parseRiskAiProvenance(stored?.aiProvenance)?.fields ?? {})
+      .filter(([, fact]) => fact?.state === "proposed").map(([field]) => field);
+    if (fields.length) decisions.push({ target: { kind: "risk", riskId }, action: "accept", fields });
+  }
+  if (decisions.length) {
+    const outstanding = projectReleaseReadiness(assessment);
+    assert.equal(outstanding.ready, false, "UNREVIEWED_PROPOSALS_WERE_RELEASE_READY");
+    assert.ok(outstanding.requirements.some((item) => item.key === "aiProposalsReviewed" && item.state === "outstanding"), "AI_REVIEW_REQUIREMENT_MISSING");
+    const reviewed = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/ai_proposal_decisions`, harness.identities.analyst, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ decisions }),
+    });
+    assert.equal(reviewed.status, 200, "RELEASE_READINESS_PROPOSALS_NOT_CONFIRMED");
+  }
+
+  // D-13: once every required field and review decision is complete the assessment is release-ready, so
   // any further accepted edit withdraws the completed review and stores `draft`.
   // Completing the last already-complete Risk is exactly such an edit, so this
   // helper ends by taking the fresh-review pass whenever it observes the
@@ -1538,6 +1679,233 @@ test("mounted explicit release is readiness-gated, atomic, and concurrent-safe",
   }
 });
 
+/** A request whose released questionnaire holds one submitted answer, from which the deterministic draft proposes a Risk. */
+async function seedSubmittedSingleAnswerQuestionnaire(key: string): Promise<{ requestId: string; questionnaireId: string }> {
+  const harness = await harnessPromise;
+  const at = "2026-10-01T00:00:00.000Z";
+  const requestId = await harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+    requestNumber: `REQ-${key}`, title: `Single answer draft ${key}`, requestStatus: "questionnaire-in-progress", requestor: harness.users.owner,
+  });
+  const questionnaireId = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: `QUES-${key}`, title: `Single answer questionnaire ${key}`, assessmentRequest: requestId,
+    releasedAt: at, releasedBy: harness.users.analyst, governanceLog: [{ schemaVersion: 1, kind: "released", at, by: harness.users.analyst }],
+  });
+  await harness.createFixtureDocument("api::csrm-question.csrm-question", {
+    questionText: "Is the service reachable from the internet?", answerType: "Boolean", questionnaire: questionnaireId,
+    options: { schemaVersion: 1, questionKey: "internet-facing", section: { key: "hosting", title: "Hosting", order: 1 }, order: 1, required: true },
+    answer: { schemaVersion: 1, value: true, state: "submitted", updatedAt: at, submittedAt: at },
+  });
+  return { requestId, questionnaireId };
+}
+
+/*
+ * CR-01: release fails closed on an AI review record that is present but can't be read. An AI-generated assessment
+ * that is otherwise release-ready is refused with a 409, and nothing is written, while its own record is unreadable,
+ * and again while one Risk's is. With both records readable again, the same assessment releases.
+ */
+test("mounted release refuses an AI-generated assessment whose AI review record can't be read and writes nothing", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const { requestId, questionnaireId } = await seedSubmittedSingleAnswerQuestionnaire("CR01-UNREADABLE-REVIEW");
+  const queued = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`, harness.identities.analyst, { method: "POST" });
+  assert.equal(queued.status, 202, await queued.clone().text());
+  const job = await waitForJob(String(((await payload(queued)).data as Record<string, unknown>).jobId), "completed");
+  const assessmentId = String(job.assessmentId);
+  await completeMountedReleaseReadiness(assessmentId);
+  const readinessOf = async () => {
+    const detail = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`, harness.identities.analyst);
+    assert.equal(detail.status, 200);
+    return ((await payload(detail)).data as { releaseReadiness: { ready: boolean; requirements: Array<Record<string, unknown>> } }).releaseReadiness;
+  };
+  assert.equal((await readinessOf()).ready, true, "CR01_FIXTURE_NOT_RELEASE_READY");
+
+  const ready = await harness.getAssessment(assessmentId);
+  assert.ok(ready);
+  const assessmentRecord = parseAssessmentAiProvenance(ready.aiProvenance);
+  assert.ok(assessmentRecord, "CR01_FIXTURE_HAS_NO_ASSESSMENT_REVIEW_RECORD");
+  const riskId = String((ready.risks as Array<Record<string, unknown>>)[0]?.documentId);
+  const riskRecord = parseRiskAiProvenance((await harness.getRisk(riskId))?.aiProvenance);
+  assert.ok(riskRecord, "CR01_FIXTURE_HAS_NO_RISK_REVIEW_RECORD");
+  const snapshot = () => harness.snapshot([() => harness.getAssessment(assessmentId), () => harness.getRequest(requestId), () => harness.getRisk(riskId)]);
+  // Present, and naming the run, but no longer a record the parser can read.
+  const unreadable = { schemaVersion: 1, runId: assessmentRecord.runId };
+
+  for (const [scope, uid, documentId, readable] of [
+    ["assessment", "api::csrm-assessment.csrm-assessment", assessmentId, assessmentRecord],
+    ["risk", "api::csrm-risk.csrm-risk", riskId, riskRecord],
+  ] as const) {
+    await harness.updateFixtureDocument(uid, documentId, { aiProvenance: unreadable });
+    const before = await snapshot();
+    const refused = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/release`, harness.identities.analyst, { method: "POST" });
+    assert.equal(refused.status, 409, `CR01_UNREADABLE_${scope.toUpperCase()}_RECORD_RELEASED`);
+    assert.deepEqual(await snapshot(), before, `CR01_UNREADABLE_${scope.toUpperCase()}_RECORD_REFUSAL_WROTE`);
+    const readiness = await readinessOf();
+    assert.equal(readiness.ready, false, `CR01_UNREADABLE_${scope.toUpperCase()}_RECORD_SHOWN_READY`);
+    assert.deepEqual(
+      readiness.requirements.filter((item) => item.key === "aiProposalsReviewed" && item.state === "outstanding").map((item) => item.scope),
+      [scope],
+      `CR01_UNREADABLE_${scope.toUpperCase()}_RECORD_REVIEW_NOT_OUTSTANDING`,
+    );
+    await harness.updateFixtureDocument(uid, documentId, { aiProvenance: readable });
+  }
+
+  const released = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/release`, harness.identities.analyst, { method: "POST" });
+  assert.equal(released.status, 200, `CR01_READABLE_RECORDS_NOT_RELEASED: ${await released.clone().text()}`);
+  // Walk D13(a): once released, the assessment can no longer change, so the analyst's read presents no release requirement.
+  assert.deepEqual(await readinessOf(), { ready: false, requirements: [] }, "D13A_RELEASED_ASSESSMENT_PRESENTS_RELEASE_REQUIREMENTS");
+});
+
+/*
+ * WR-206 and IN-103 (D-20: every provider call has exactly one run, which completes or fails). The request gains an
+ * assessment from elsewhere after the draft's run is created, while the provider answers. The draft saves nothing and
+ * leaves that assessment as it is, the job reports the assessment the request holds (as its pre-check would), and the
+ * run is closed as failed with the closed code ASSESSMENT_ALREADY_EXISTS rather than left running.
+ */
+test("a draft whose request gains an assessment while the provider answers saves nothing and closes its run as failed", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const { requestId, questionnaireId } = await seedSubmittedSingleAnswerQuestionnaire("WR206-ASSESSMENT-EXISTS");
+  const draftRuns = async () => (await harness.listAiRunsForRequest(requestId)).filter((run) => run.operation === "assessment-draft");
+  let jobId = "";
+  let otherAssessmentId = "";
+  await harness.withHeldAssessmentDraftProvider(async (reached) => {
+    const queued = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`, harness.identities.analyst, { method: "POST" });
+    assert.equal(queued.status, 202, await queued.clone().text());
+    jobId = String(((await payload(queued)).data as Record<string, unknown>).jobId);
+    await reached;
+    assert.deepEqual((await draftRuns()).map((run) => run.status), ["running"], "WR206_NO_OPEN_RUN_WHILE_THE_PROVIDER_ANSWERS");
+    otherAssessmentId = await harness.createAssessmentFixture({ assessmentNumber: "ASSESS-WR206-OTHER", assessmentStatus: "draft", assessmentRequest: requestId });
+  });
+
+  const job = await waitForJob(jobId, "completed");
+  assert.equal(job.assessmentId, otherAssessmentId, "WR206_JOB_DID_NOT_REPORT_THE_REQUEST_ASSESSMENT");
+  const runs = await draftRuns();
+  assert.equal(runs.length, 1, "WR206_DRAFT_RUNS_NOT_ONE_PER_PROVIDER_CALL");
+  assert.equal(runs[0].status, "failed", "WR206_RUN_NOT_CLOSED");
+  assert.equal(runs[0].failureCode, "ASSESSMENT_ALREADY_EXISTS", "WR206_RUN_FAILURE_CODE");
+  assert.equal(runs[0].failureMessage, "An assessment already exists for this request, so this draft was not saved.", "WR206_RUN_FAILURE_MESSAGE");
+  assert.ok(runs[0].completedAt, "WR206_RUN_NOT_DATED");
+  assert.equal(runs[0].proposal, null, "WR206_RUN_KEPT_A_DISCARDED_PROPOSAL");
+  assert.equal((await harness.getAiRun(String(runs[0].documentId)))?.assessment, null, "WR206_RUN_LINKED_TO_THE_OTHER_ASSESSMENT");
+  assert.equal(await harness.countRisksForAssessment(otherAssessmentId), 0, "WR206_DRAFT_WROTE_INTO_THE_OTHER_ASSESSMENT");
+  const after = await harness.getRequest(requestId);
+  assert.equal((after?.assessment as Record<string, unknown> | null)?.documentId, otherAssessmentId, "WR206_REQUEST_LOST_ITS_ASSESSMENT");
+  assert.equal(after?.requestStatus, "questionnaire-in-progress", "WR206_DRAFT_MOVED_THE_REQUEST");
+});
+
+/*
+ * WR-104 (D-06): a draft within the parser's bounds but over the run record's 1 MB proposal bound (50 risks whose
+ * statements are 2,000 characters in a non-Latin script) is refused as invalid provider output before the transaction
+ * that would save it: nothing is saved, and its run records that code rather than the generic draft failure.
+ */
+test("a draft over the run record's proposal bound fails as invalid provider output and saves nothing", async () => {
+  const harness = await harnessPromise;
+  // The seeded Risk Types the deterministic draft maps to, so its proposal has risks to inflate.
+  await harness.seedAssessmentWorkflowFixtures();
+  const fixture = await harness.seedUatALikeRequest("OVERSIZED-DRAFT");
+  const long = "€".repeat(2_000);
+  const inflate = (proposal: Record<string, unknown>) => {
+    const first = (proposal.risks as Array<Record<string, unknown>>)[0];
+    const risks = Array.from({ length: 50 }, (_, index) => ({ ...first, proposalKey: `risk-${index + 1}`, issueStatement: long, riskStatement: long, riskCause: long, potentialImpact: long, inherentRatingRationale: long, residualRatingRationale: long, treatmentPlan: long }));
+    return { ...proposal, overallRating: first.residualRating, risks };
+  };
+  await harness.withAssessmentDraftProviderOutput(inflate, async () => {
+    await assert.rejects(harness.runAssessmentDraftJobFixture(fixture.questionnaireId, harness.users.analyst), { code: "PROVIDER_OUTPUT_INVALID" }, "OVERSIZED_DRAFT_NOT_INVALID_OUTPUT");
+  });
+  const runs = (await harness.listAiRunsForRequest(fixture.requestId)).filter((run) => run.operation === "assessment-draft");
+  assert.deepEqual(runs.map((run) => [run.status, run.failureCode, run.proposal]), [["failed", "PROVIDER_OUTPUT_INVALID", null]], "OVERSIZED_DRAFT_RUN");
+  const after = await harness.getRequest(fixture.requestId);
+  assert.equal(after?.assessment ?? null, null, "OVERSIZED_DRAFT_SAVED_AN_ASSESSMENT");
+  assert.equal(after?.requestStatus, "questionnaire-in-progress", "OVERSIZED_DRAFT_MOVED_THE_REQUEST");
+});
+
+/*
+ * WR-205 (D-06): a request past a context bound (here 101 information assets, one more than the draft may send) is too
+ * large for the draft. Run directly or through the registry, the draft fails with CONTEXT_TOO_LARGE before any run or
+ * provider call, and nothing is saved.
+ */
+test("a draft whose request selects 101 information assets fails as too large before a run or a provider call", async () => {
+  const harness = await harnessPromise;
+  const at = "2026-10-01T00:00:00.000Z";
+  const assets: string[] = [];
+  for (let index = 0; index < 101; index += 1) {
+    assets.push(await harness.createFixtureDocument("api::csrm-information-asset.csrm-information-asset", { name: `Context bound asset ${index}`, dataClassification: "Internal" }));
+  }
+  const requestId = await harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+    requestNumber: "REQ-CONTEXT-TOO-LARGE", title: "Context bound", requestStatus: "questionnaire-in-progress", requestor: harness.users.owner, informationAssets: assets,
+  });
+  const questionnaireId = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: "QUES-CONTEXT-TOO-LARGE", title: "Context bound questionnaire", assessmentRequest: requestId,
+    releasedAt: at, releasedBy: harness.users.analyst, governanceLog: [{ schemaVersion: 1, kind: "released", at, by: harness.users.analyst }],
+  });
+  await harness.createFixtureDocument("api::csrm-question.csrm-question", {
+    questionText: "Describe the service.", answerType: "Text", questionnaire: questionnaireId,
+    options: { schemaVersion: 1, questionKey: "service", section: { key: "context", title: "Context", order: 1 }, order: 1, required: true },
+    answer: { schemaVersion: 1, value: "A payroll service", state: "submitted", updatedAt: at, submittedAt: at },
+  });
+  const persisted = () => harness.snapshot([() => harness.getRequest(requestId), () => harness.getQuestionnaire(questionnaireId)]);
+  const before = await persisted();
+  await harness.withProviderCallRecorder(async (counts) => {
+    await assert.rejects(harness.runAssessmentDraftJobFixture(questionnaireId, harness.users.analyst), { code: "CONTEXT_TOO_LARGE" }, "DIRECT_DRAFT_NOT_TOO_LARGE");
+    const response = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`, harness.identities.analyst, { method: "POST" });
+    assert.equal(response.status, 202, await response.clone().text());
+    const job = await waitForJob(String(((await payload(response)).data as Record<string, unknown>).jobId), "failed");
+    assert.deepEqual([job.failureCode, job.failureMessage], ["CONTEXT_TOO_LARGE", "The request is too large for this operation."], "DRAFT_JOB_NOT_TOO_LARGE");
+    assert.equal(counts.assessment(), 0, "CONTEXT_TOO_LARGE_CALLED_THE_PROVIDER");
+  });
+  assert.deepEqual(await harness.listAiRunsForRequest(requestId), [], "CONTEXT_TOO_LARGE_CREATED_A_RUN");
+  assert.deepEqual(await persisted(), before, "CONTEXT_TOO_LARGE_SAVED_SOMETHING");
+});
+
+/*
+ * Phase 13 D-27 and D-28 (COLLAB-01 criterion 3; G-3): draft generation builds its context through the same builder, so
+ * it sends Jane's marked note, never Bob's unmarked reply, and its run's v2 summary names the note without its text.
+ */
+test("mounted draft generation sends the marked note and records it in the draft run's v2 summary", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const fixture = await harness.seedUatALikeRequest("NOTES-DRAFT");
+  const [jane, bob] = uatALikeNotes();
+  const [janeId] = await harness.seedRequestNotes(fixture.requestId, [jane, bob]);
+  const { context } = await harness.buildAssessmentContextFixture({ operation: "assessment-draft", requestId: fixture.requestId, questionnaireId: fixture.questionnaireId });
+  assert.ok(context.userPrompt.includes(UAT_A_LIKE_NOTE_SENTINELS.jane), "DRAFT_CONTEXT_WITHOUT_THE_MARKED_NOTE");
+  assert.ok(!context.userPrompt.includes(UAT_A_LIKE_NOTE_SENTINELS.bob), "DRAFT_CONTEXT_WITH_THE_UNMARKED_NOTE");
+  await harness.runAssessmentDraftJobFixture(fixture.questionnaireId, harness.users.analyst);
+  const runs = (await harness.listAiRunsForRequest(fixture.requestId)).filter((run) => run.operation === "assessment-draft");
+  assert.deepEqual(runs.map((run) => run.status), ["completed"], "NOTES_DRAFT_RUN");
+  const summary = runs[0].contextSummary as Record<string, unknown>;
+  assert.equal(summary.schemaVersion, 5, "DRAFT_RUN_SUMMARY_NOT_V5");
+  assert.equal(summary.digest, context.digest, "DRAFT_RUN_DID_NOT_SEND_THE_CONTEXT_WITH_THE_MARKED_NOTE");
+  assert.deepEqual(summary.notes, { included: [{ documentId: janeId, part: "requestor", sequence: 1, postedAt: jane.postedAt, characters: jane.body.length }], marked: 1, bound: 50 }, "DRAFT_RUN_SUMMARY_NOTES");
+  for (const [part, stored] of [["SUMMARY", runs[0].contextSummary], ["PROPOSAL", runs[0].proposal]] as const) {
+    for (const sentinel of Object.values(UAT_A_LIKE_NOTE_SENTINELS)) assert.equal(JSON.stringify(stored).includes(sentinel), false, `DRAFT_RUN_${part}_KEPT_NOTE_TEXT: ${sentinel}`);
+  }
+});
+
+/*
+ * Phase 13 D-27 (T-13-53): with 51 notes marked, the draft fails with CONTEXT_TOO_LARGE before any run or provider call,
+ * run directly or through the registry, and the job's message names the marked notes so the analyst can unmark some.
+ */
+test("a draft with 51 marked notes fails as too large, naming them, before a run or a provider call", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const fixture = await harness.seedUatALikeRequest("NOTES-BOUND");
+  await harness.seedRequestNotes(fixture.requestId, Array.from({ length: 51 }, (_, index) => ({ part: "requestor" as const, sequence: index + 1, postedAt: new Date(Date.UTC(2026, 8, 1, 0, 0, index)).toISOString(), body: `Marked note ${index + 1}.`, changesAiInputs: true })));
+  const message = "The AI context is too large. 51 notes are marked as changing the AI inputs (notes 1 to 51); unmark some and try again.";
+  const persisted = () => harness.snapshot([() => harness.getRequest(fixture.requestId), () => harness.getQuestionnaire(fixture.questionnaireId)]);
+  const before = await persisted();
+  await harness.withProviderCallRecorder(async (counts) => {
+    await assert.rejects(harness.runAssessmentDraftJobFixture(fixture.questionnaireId, harness.users.analyst), { code: "CONTEXT_TOO_LARGE", safeMessage: message }, "DIRECT_NOTES_DRAFT_NOT_TOO_LARGE");
+    const response = await request(`/api/v1/questionnaires/${encodeURIComponent(fixture.questionnaireId)}/generate_assessment`, harness.identities.analyst, { method: "POST" });
+    assert.equal(response.status, 202, await response.clone().text());
+    const job = await waitForJob(String(((await payload(response)).data as Record<string, unknown>).jobId), "failed");
+    assert.deepEqual([job.failureCode, job.failureMessage], ["CONTEXT_TOO_LARGE", message], "NOTES_DRAFT_JOB_NOT_TOO_LARGE");
+    assert.equal(counts.assessment(), 0, "MARKED_NOTES_BOUND_CALLED_THE_PROVIDER");
+  });
+  assert.deepEqual(await harness.listAiRunsForRequest(fixture.requestId), [], "MARKED_NOTES_BOUND_CREATED_A_RUN");
+  assert.deepEqual(await persisted(), before, "MARKED_NOTES_BOUND_SAVED_SOMETHING");
+});
+
 test("mounted Requestor reads require owner scope and the complete release aggregate", async () => {
   const harness = await harnessPromise;
   const fixtures = await harness.seedAssessmentWorkflowFixtures();
@@ -1558,6 +1926,10 @@ test("mounted Requestor reads require owner scope and the complete release aggre
 
   const otherList = rows(await payload(await request("/api/v1/my_risk_assessments", harness.identities.otherRequestor)));
   assert.deepEqual(otherList.map((assessment) => assessment.documentId), [fixtures.releaseFacts.crossOwnerComplete]);
+  // D-23, WR-304, D10: the Requestor's own list never names who generated a draft, the drafted release included.
+  for (const assessment of [...ownerList, ...otherList]) {
+    assert.equal(assessment.generatedBy, null, `OWNER_LIST_DISCLOSED_THE_GENERATOR_${String(assessment.documentId)}`);
+  }
   const rating = (await payload(await request("/api/v1/my_risk_assessments/rating_summary", harness.identities.owner))).data;
   assert.deepEqual(Object.keys(rating as Record<string, unknown>).sort(), ["Critical", "High", "Low", "Moderate", "total"]);
   assert.equal((rating as Record<string, unknown>).total, ownerList.length);
@@ -1576,21 +1948,44 @@ test("mounted Requestor reads require owner scope and the complete release aggre
     requestNumber: detailFixtures.owner.request.requestNumber,
     title: detailFixtures.owner.request.title,
     requestStatus: detailFixtures.owner.request.requestStatus,
+    // Phase 13 D-16, D-25 and Phase 14 D-27: the assignee, the notes and the files figures are the analyst's; the
+    // Requestor's read carries null.
+    assignment: null,
+    notes: null,
+    files: null,
   }, "OWNER_BOUNDED_REQUEST_SUMMARY_MISMATCH");
-  assert.deepEqual(Object.keys(ownerDetail.assessmentRequest as Record<string, unknown>).sort(), ["documentId", "requestNumber", "requestStatus", "title"], "OWNER_REQUEST_SUMMARY_NOT_BOUNDED");
+  assert.deepEqual(Object.keys(ownerDetail.assessmentRequest as Record<string, unknown>).sort(), ["assignment", "documentId", "files", "notes", "requestNumber", "requestStatus", "title"], "OWNER_REQUEST_SUMMARY_NOT_BOUNDED");
+  // D-23: a seeded release was not drafted with AI; a drafted one says so, and nothing else of the AI facts.
+  assert.equal(ownerDetail.aiAssisted, false, "SEEDED_RELEASE_AI_ASSISTED");
+  const drafted = await request(`/api/v1/risk_assessments/${encodeURIComponent(generatedAssessmentId)}`, harness.identities.owner);
+  assert.equal(drafted.status, 200, "OWNER_DRAFTED_RELEASE_DETAIL_MISSING");
+  const draftedBody = await drafted.text();
+  assert.equal((JSON.parse(draftedBody) as { data: Record<string, unknown> }).data.aiAssisted, true, "DRAFTED_RELEASE_NOT_AI_ASSISTED");
+  // WR-304, IN-107 (D-23, UAT-032): nor who generated the draft. The stored record names one, so the read withholds it.
+  const draftingAnalyst = ((await harness.getAssessment(generatedAssessmentId))?.generatedBy as Record<string, unknown> | null)?.documentId;
+  assert.ok(typeof draftingAnalyst === "string" && draftingAnalyst.length > 0, "DRAFTED_RELEASE_HAS_NO_GENERATOR_TO_WITHHOLD");
+  for (const forbidden of ['"generation"', '"aiProvenance"', '"runId"', "deterministic-assessment-draft", "providerName", "providerVersion", '"generatedBy"']) {
+    assert.ok(!draftedBody.includes(forbidden), `REQUESTOR_SAW_${forbidden}`);
+  }
 
   const analystDetailResponse = await request(`/api/v1/risk_assessments/${encodeURIComponent(detailFixtures.analyst.assessmentId)}`, harness.identities.analyst);
   assert.equal(analystDetailResponse.status, 200, "ANALYST_ASSESSMENT_DETAIL_MISSING");
   const analystDetail = (await payload(analystDetailResponse)).data as Record<string, unknown>;
-  assert.deepEqual(analystDetail.assessmentRequest, {
+  const { assignment: analystAssignment, notes: analystNotes, files: analystFiles, ...analystRequest } = analystDetail.assessmentRequest as Record<string, unknown>;
+  assert.deepEqual(analystRequest, {
     documentId: detailFixtures.analyst.request.documentId,
     requestNumber: detailFixtures.analyst.request.requestNumber,
     title: detailFixtures.analyst.request.title,
     requestStatus: detailFixtures.analyst.request.requestStatus,
   }, "ANALYST_BOUNDED_REQUEST_SUMMARY_MISMATCH");
+  // Phase 13 D-16, D-25: the analyst's read names who holds the request and its notes figures (the closed shapes only).
+  assert.deepEqual(Object.keys(analystAssignment as Record<string, unknown>).sort(), ["assignee", "pickUp"], "ANALYST_REQUEST_SUMMARY_ASSIGNMENT");
+  assert.deepEqual(Object.keys(analystNotes as Record<string, unknown>).sort(), ["total", "unread"], "ANALYST_REQUEST_SUMMARY_NOTES");
+  // Phase 14 D-27: and how many files the request holds and how many are in the AI inputs.
+  assert.deepEqual(Object.keys(analystFiles as Record<string, unknown>).sort(), ["count", "included"], "ANALYST_REQUEST_SUMMARY_FILES");
   assert.notEqual(ownerDetail.assessmentDate, null, "RELEASED_DETAIL_ASSESSMENT_DATE_MISSING");
   assert.equal(ownerDetail.actor, "requestor");
-  for (const analystOnlyKey of ["ownerLabels", "releaseReadiness", "risks"]) {
+  for (const analystOnlyKey of ["ownerLabels", "releaseReadiness", "risks", "generatedBy"]) {
     assert.equal(Object.prototype.hasOwnProperty.call(ownerDetail, analystOnlyKey), false, `OWNER_DETAIL_DISCLOSED_${analystOnlyKey}`);
   }
   const risks = rows(await payload(await request(
@@ -1637,6 +2032,56 @@ test("mounted Requestor reads require owner scope and the complete release aggre
     const denied = await request("/api/v1/my_risk_assessments", identity);
     assert.equal(denied.status, 403, `UNEXPECTED_RELEASED_COLLECTION_ACTOR_${identity ?? "missing"}`);
   }
+});
+
+/*
+ * Phase 19 D-14 (19-10): one module (released-assessment-read.ts) decides who may read a released assessment. Moving
+ * My risk assessments, its rating summary and the three released reads onto it changes none of them, and the analyst's
+ * detail says whether the assessment is released by the same rule.
+ */
+test("the one record-read check keeps My risk assessments and its rating summary to the caller's own releases, and the analyst detail says whether it is released", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await harness.seedAssessmentWorkflowFixtures();
+  const ratingOf = (assessments: Array<Record<string, unknown>>) => {
+    const summary: Record<string, number> = { Low: 0, Moderate: 0, High: 0, Critical: 0, total: assessments.length };
+    for (const assessment of assessments) {
+      if (typeof assessment.overallRating === "string" && assessment.overallRating in summary) summary[assessment.overallRating] += 1;
+    }
+    return summary;
+  };
+
+  for (const [label, identity, own, foreign] of [
+    ["JANE", harness.identities.owner, fixtures.releaseFacts.complete, fixtures.releaseFacts.crossOwnerComplete],
+    ["SECONDARY_REQUESTOR", harness.identities.otherRequestor, fixtures.releaseFacts.crossOwnerComplete, fixtures.releaseFacts.complete],
+  ] as const) {
+    const list = rows(await payload(await request("/api/v1/my_risk_assessments?pageSize=100", identity)));
+    const ids = list.map((assessment) => assessment.documentId);
+    assert.ok(ids.includes(own), `${label}_OWN_RELEASE_MISSING`);
+    assert.equal(ids.includes(foreign), false, `${label}_LISTS_ANOTHER_REQUESTORS_RELEASE`);
+    assert.equal(ids.includes(fixtures.releaseFacts.unreleased), false, `${label}_LISTS_AN_UNRELEASED_ASSESSMENT`);
+    for (const assessment of list) assert.equal(assessment.assessmentStatus, "approved", `${label}_LISTS_${String(assessment.assessmentStatus)}`);
+
+    // The rating summary counts exactly the caller's released assessments, by overall rating, in today's shape.
+    const rating = (await payload(await request("/api/v1/my_risk_assessments/rating_summary", identity))).data;
+    assert.deepEqual(rating, ratingOf(list), `${label}_RATING_SUMMARY_NOT_THE_OWN_RELEASES`);
+  }
+
+  // D-14: the analyst detail carries the record-read check's answer for the analyst viewer.
+  for (const [assessmentId, expected] of [
+    [fixtures.releaseFacts.complete, true],
+    [fixtures.releaseFacts.crossOwnerComplete, true],
+    [fixtures.releaseFacts.unreleased, false],
+    [fixtures.releaseFacts.approvedOnly, false],
+    [fixtures.releaseFacts.approvedAndApprover, false],
+  ] as const) {
+    const response = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`, harness.identities.analyst);
+    assert.equal(response.status, 200, `ANALYST_DETAIL_${assessmentId}`);
+    const detail = (await payload(response)).data as Record<string, unknown>;
+    assert.equal(detail.released, expected, `ANALYST_DETAIL_RELEASED_FLAG_${assessmentId}`);
+  }
+  // The Requestor's released read stays as it was: no released flag, which only the analyst's detail carries.
+  const ownerDetail = (await payload(await request(`/api/v1/risk_assessments/${encodeURIComponent(fixtures.releaseFacts.complete)}`, harness.identities.owner))).data as Record<string, unknown>;
+  assert.equal(Object.prototype.hasOwnProperty.call(ownerDetail, "released"), false, "REQUESTOR_DETAIL_GAINED_A_RELEASED_FLAG");
 });
 
 test("Requestor release capability remains read-only at every aggregate route", async () => {
@@ -1961,4 +2406,646 @@ test("mounted released risk list carries each Risk's treatment and ownership for
     assert.equal(response.status, 404, `CROSS_OWNER_RELEASED_RISK_LIST_${identity}`);
     assert.doesNotMatch(await response.text(), /Released treated risk|phishing-resistant|Jane Doe|Bob Doe|Workflow system/, `CROSS_OWNER_RELEASED_RISK_FACTS_${identity}`);
   }
+});
+
+/*
+ * D-02 item 2, D-31: both assessment lists name each assessment's request title, count its Risks and show the
+ * highest residual rating among them, from one grouped aggregate over the page. A Risk with no residual rating, or
+ * one off the Low to Critical ladder, counts but never rates; an assessment with no rated Risk reads null.
+ */
+test("assessment lists carry the request title, the Risk count and the highest residual rating", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const ratedRequestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "ASSESSMENT-LIST-AGG1",
+    title: "Brightwage payroll aggregate fixture",
+    requestStatus: "approved",
+    requestor: "owner",
+  });
+  const ratedAssessmentId = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "ASM-2026-AGGLIST1",
+    assessmentStatus: "approved",
+    summary: "Aggregate fixture with rated Risks",
+    overallRating: "High",
+    assessmentRequest: ratedRequestId,
+    generatedBy: harness.users.analyst,
+    generatedDate: "2026-09-26T00:30:00.000Z",
+    approvedBy: harness.users.analyst,
+    approvalDate: "2026-09-27T00:30:00.000Z",
+    assessmentDate: "2026-09-27T00:30:00.000Z",
+  });
+  for (const [index, residualRating] of ["Moderate", "Critical", null, "Extreme"].entries()) {
+    await harness.createRiskRegisterFixture(ratedAssessmentId, {
+      riskNumber: `RSK-2026-AGGLIST${index + 1}`,
+      riskStatement: `Aggregate list risk ${index + 1}`,
+      ...(residualRating === null ? {} : { residualRating }),
+    });
+  }
+  const emptyRequestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "ASSESSMENT-LIST-AGG2",
+    title: "Aggregate fixture without Risks",
+    requestStatus: "submitted",
+    requestor: "owner",
+  });
+  const emptyAssessmentId = await harness.createAssessmentFixture({
+    assessmentNumber: "ASM-2026-AGGLIST2",
+    assessmentStatus: "draft",
+    assessmentRequest: emptyRequestId,
+  });
+
+  const analystResponse = await request("/api/v1/risk_assessments?q=ASM-2026-AGGLIST&pageSize=100", harness.identities.analyst);
+  assert.equal(analystResponse.status, 200, "ASSESSMENT_LIST_AGGREGATE_READ_FAILED");
+  const analystRows = rows(await payload(analystResponse));
+  const rated = analystRows.find((row) => row.documentId === ratedAssessmentId);
+  const empty = analystRows.find((row) => row.documentId === emptyAssessmentId);
+  assert.ok(rated && empty, "ASSESSMENT_LIST_AGGREGATE_FIXTURES_MISSING");
+  for (const row of [rated, empty]) assert.deepEqual(Object.keys(row).sort(), ASSESSMENT_SUMMARY_KEYS, "ASSESSMENT_LIST_ITEM_KEYS");
+  assert.deepEqual(
+    { requestTitle: rated.requestTitle, riskCount: rated.riskCount, highestResidualRating: rated.highestResidualRating },
+    { requestTitle: "Brightwage payroll aggregate fixture", riskCount: 4, highestResidualRating: "Critical" },
+    "ASSESSMENT_LIST_RISK_AGGREGATE_WRONG",
+  );
+  assert.deepEqual(
+    { requestTitle: empty.requestTitle, riskCount: empty.riskCount, highestResidualRating: empty.highestResidualRating },
+    { requestTitle: "Aggregate fixture without Risks", riskCount: 0, highestResidualRating: null },
+    "ASSESSMENT_LIST_EMPTY_AGGREGATE_WRONG",
+  );
+
+  // The owner's released list carries the same projection for the same assessment, and nothing unreleased, except the
+  // generating analyst: only the analyst list names who generated a draft ("Draft initiated by"); the Requestor's own
+  // list serves null (D-23, WR-304, D10).
+  assert.equal((rated.generatedBy as Record<string, unknown> | null)?.documentId, harness.users.analyst, "ANALYST_LIST_LOST_THE_GENERATOR");
+  const ownerResponse = await request("/api/v1/my_risk_assessments?q=ASM-2026-AGGLIST&pageSize=100", harness.identities.owner);
+  assert.equal(ownerResponse.status, 200, "OWNER_ASSESSMENT_LIST_AGGREGATE_READ_FAILED");
+  const ownerRows = rows(await payload(ownerResponse));
+  assert.deepEqual(ownerRows.map((row) => row.documentId), [ratedAssessmentId], "OWNER_ASSESSMENT_LIST_SCOPE_WRONG");
+  assert.deepEqual(ownerRows[0], { ...rated, generatedBy: null }, "OWNER_ASSESSMENT_LIST_PROJECTION_DIFFERS");
+});
+
+/*
+ * D-02 item 2 and T-11-04: q on both assessment lists also matches the request title; overallRating, approvedFrom
+ * and approvedTo narrow both lists, the dates bounding the approval instant's UTC date inclusively. The owner list's
+ * released, owner-scoped predicate sits in the same conjunction as every filter, so a filter only ever narrows it.
+ */
+async function buildAssessmentListFilterFixture() {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const released = async (suffix: string, title: string, overallRating: string, approvalDate: string) => {
+    const requestId = await harness.createAssessmentRequestFixture({
+      requestNumber: `ASSESSMENT-LIST-${suffix}`,
+      title,
+      requestStatus: "approved",
+      requestor: "owner",
+    });
+    return harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+      assessmentNumber: `ASM-2026-${suffix}`,
+      assessmentStatus: "approved",
+      summary: `Filter fixture ${suffix}`,
+      overallRating,
+      assessmentRequest: requestId,
+      approvedBy: harness.users.analyst,
+      approvalDate,
+      assessmentDate: approvalDate,
+    });
+  };
+  // The approval instant late on 10 September UTC, which is 11 September in Brisbane: the filter reads the UTC date.
+  const highReleased = await released("FLTHIGH", "Quokka ledger filter fixture", "High", "2026-09-10T23:30:00.000Z");
+  const lowReleased = await released("FLTLOW", "Wombat roster filter fixture", "Low", "2026-09-20T00:00:00.000Z");
+  const draftRequestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "ASSESSMENT-LIST-FLTDRAFT",
+    title: "Quokka draft filter fixture",
+    requestStatus: "submitted",
+    requestor: "owner",
+  });
+  const highDraft = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "ASM-2026-FLTDRAFT",
+    assessmentStatus: "draft",
+    summary: "Filter fixture draft",
+    overallRating: "High",
+    assessmentRequest: draftRequestId,
+  });
+  return { highReleased, lowReleased, highDraft };
+}
+
+let assessmentListFilterFixture: Promise<{ highReleased: string; lowReleased: string; highDraft: string }> | null = null;
+
+/** The filter fixtures, built once for the four filter proofs below. */
+function assessmentListFilterFixtures() {
+  assessmentListFilterFixture ??= buildAssessmentListFilterFixture();
+  return assessmentListFilterFixture;
+}
+
+async function listedFilterFixtures(path: "/api/v1/risk_assessments" | "/api/v1/my_risk_assessments", query: string, identity: string, fixtureIds: readonly string[]) {
+  const response = await request(`${path}?${query}${query ? "&" : ""}pageSize=100`, identity);
+  assert.equal(response.status, 200, `ASSESSMENT_LIST_FILTER_READ_FAILED_${path}?${query}`);
+  const listed = rows(await payload(response));
+  return { listed, ids: listed.map((row) => String(row.documentId)).filter((id) => fixtureIds.includes(id)).sort() };
+}
+
+test("both assessment lists find an assessment by a word of its request title", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await assessmentListFilterFixtures();
+  const all = Object.values(fixtures);
+
+  const analyst = await listedFilterFixtures("/api/v1/risk_assessments", "q=quokka", harness.identities.analyst, all);
+  assert.deepEqual(analyst.ids, [fixtures.highReleased, fixtures.highDraft].sort(), "ANALYST_REQUEST_TITLE_SEARCH_WRONG");
+  const owner = await listedFilterFixtures("/api/v1/my_risk_assessments", "q=quokka", harness.identities.owner, all);
+  assert.deepEqual(owner.ids, [fixtures.highReleased], "OWNER_REQUEST_TITLE_SEARCH_WRONG");
+  // The number and the summary still match, as before.
+  const byNumber = await listedFilterFixtures("/api/v1/risk_assessments", "q=ASM-2026-FLTLOW", harness.identities.analyst, all);
+  assert.deepEqual(byNumber.ids, [fixtures.lowReleased], "ANALYST_NUMBER_SEARCH_WRONG");
+  const bySummary = await listedFilterFixtures("/api/v1/risk_assessments", "q=Filter%20fixture%20draft", harness.identities.analyst, all);
+  assert.deepEqual(bySummary.ids, [fixtures.highDraft], "ANALYST_SUMMARY_SEARCH_WRONG");
+});
+
+test("both assessment lists narrow by overall rating and by the approval's UTC date, inclusively", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await assessmentListFilterFixtures();
+  const all = Object.values(fixtures);
+  const analyst = (query: string) => listedFilterFixtures("/api/v1/risk_assessments", query, harness.identities.analyst, all);
+  const owner = (query: string) => listedFilterFixtures("/api/v1/my_risk_assessments", query, harness.identities.owner, all);
+
+  const high = await analyst("q=ASM-2026-FLT&overallRating=High");
+  assert.deepEqual(high.ids, [fixtures.highReleased, fixtures.highDraft].sort(), "ANALYST_OVERALL_RATING_FILTER_WRONG");
+  assert.ok(high.listed.every((row) => row.overallRating === "High"), "ANALYST_OVERALL_RATING_FILTER_LEAKED");
+  assert.deepEqual((await analyst("q=ASM-2026-FLT&overallRating=Low")).ids, [fixtures.lowReleased], "ANALYST_LOW_RATING_FILTER_WRONG");
+  assert.deepEqual((await owner("overallRating=High")).ids, [fixtures.highReleased], "OWNER_OVERALL_RATING_FILTER_WRONG");
+
+  const dateCases: ReadonlyArray<readonly [string, readonly string[]]> = [
+    ["approvedFrom=2026-09-10&approvedTo=2026-09-10", [fixtures.highReleased]],
+    ["approvedFrom=2026-09-11", [fixtures.lowReleased]],
+    ["approvedTo=2026-09-19", [fixtures.highReleased]],
+    ["approvedFrom=2026-09-20&approvedTo=2026-09-20", [fixtures.lowReleased]],
+    ["approvedFrom=2026-09-01&approvedTo=2026-09-30", [fixtures.highReleased, fixtures.lowReleased].sort()],
+    ["approvedFrom=2026-09-21", []],
+  ];
+  for (const [query, expected] of dateCases) {
+    assert.deepEqual((await analyst(`q=ASM-2026-FLT&${query}`)).ids, expected, `ANALYST_RELEASE_DATE_FILTER_WRONG_${query}`);
+    assert.deepEqual((await owner(query)).ids, expected, `OWNER_RELEASE_DATE_FILTER_WRONG_${query}`);
+  }
+});
+
+test("an invalid rating, a malformed date or an inverted release range is refused on both lists", async () => {
+  const harness = await harnessPromise;
+  await assessmentListFilterFixtures();
+  const refusedQueries = [
+    "overallRating=Extreme",
+    "overallRating=high",
+    "overallRating=High&overallRating=Low",
+    "overallRating%5B%24eq%5D=High",
+    "approvedFrom=2026-02-30",
+    "approvedFrom=2026-9-1",
+    "approvedTo=20260930",
+    "approvedTo=2026-09-30T00%3A00%3A00Z",
+    "approvedFrom=2026-09-21&approvedTo=2026-09-20",
+    "approvedFrom=",
+  ];
+  const lists: ReadonlyArray<readonly [string, string]> = [
+    ["/api/v1/risk_assessments", harness.identities.analyst],
+    ["/api/v1/my_risk_assessments", harness.identities.owner],
+  ];
+  for (const query of refusedQueries) {
+    for (const [path, identity] of lists) {
+      const response = await request(`${path}?${query}`, identity);
+      assert.equal(response.status, 400, `ASSESSMENT_LIST_FILTER_NOT_REFUSED_${path}?${query}`);
+      assert.doesNotMatch(await response.text(), /Quokka|Wombat|ASM-2026-FLT/, `ASSESSMENT_LIST_FILTER_REFUSAL_DISCLOSED_${path}?${query}`);
+    }
+  }
+});
+
+test("no filter combination widens the owner list: a second Requestor sees none of the owner's assessments and the owner no unreleased one", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await assessmentListFilterFixtures();
+  const all = Object.values(fixtures);
+  const combinations = [
+    "",
+    "q=quokka",
+    "q=ASM-2026-FLT",
+    "overallRating=High",
+    "overallRating=Low",
+    "approvedFrom=2026-09-01&approvedTo=2026-09-30",
+    "q=quokka&overallRating=High&approvedFrom=2026-09-01&approvedTo=2026-09-30",
+    "status=approved&overallRating=High&approvedTo=2026-09-30",
+    "status=draft&q=quokka&overallRating=High",
+  ];
+  for (const query of combinations) {
+    for (const identity of [harness.identities.otherRequestor, harness.identities.analystAgent]) {
+      const other = await listedFilterFixtures("/api/v1/my_risk_assessments", query, identity, all);
+      assert.deepEqual(other.ids, [], `SECOND_REQUESTOR_SAW_OWNER_ASSESSMENT_${identity}_${query}`);
+      assert.doesNotMatch(JSON.stringify(other.listed), /Quokka|Wombat|ASM-2026-FLT/, `SECOND_REQUESTOR_FACTS_DISCLOSED_${identity}_${query}`);
+    }
+    const owner = await listedFilterFixtures("/api/v1/my_risk_assessments", query, harness.identities.owner, all);
+    assert.equal(owner.ids.includes(fixtures.highDraft), false, `OWNER_SAW_UNRELEASED_ASSESSMENT_${query}`);
+    assert.ok(owner.listed.every((row) => row.assessmentStatus === "approved" && row.approvalDate !== null), `OWNER_LIST_NOT_RELEASED_ONLY_${query}`);
+  }
+});
+
+test("mounted full-context draft records linked risks, provenance and a completed run", async () => {
+  const harness = await harnessPromise;
+  await harness.seedAssessmentWorkflowFixtures();
+  const fixture = await harness.seedUatALikeFixture();
+  const response = await request(`/api/v1/questionnaires/${fixture.questionnaireId}/generate_assessment`, harness.identities.analyst, { method: "POST" });
+  assert.equal(response.status, 202);
+  const queued = (await payload(response)).data as Record<string, unknown>;
+  const job = await waitForJob(String(queued.jobId), "completed");
+  const assessment = await harness.getAssessment(String(job.assessmentId));
+  assert.ok(assessment);
+  /* WR-210: the Risks in an explicit order, each found by what it is, never by where a relation populate put it. */
+  const risks = await harness.listRisksForAssessment(String(job.assessmentId));
+  const typeOf = (risk: Record<string, unknown>) => (risk.riskType as Record<string, unknown> | null)?.name ?? null;
+  // WR-204: the untested pay-run fallback adds a Risk of no type.
+  assert.deepEqual(risks.map((risk) => typeOf(risk) ?? "(no type)").sort(), [
+    "(no type)", "Internet Exposure", "Personal Information Handling", "Personal Information Handling", "Third-Party Dependency",
+  ], "FULL_CONTEXT_RISK_TYPES");
+  const riskWhere = (name: string, predicate: (risk: Record<string, unknown>) => boolean) => {
+    const found = risks.filter(predicate);
+    assert.equal(found.length, 1, `FULL_CONTEXT_RISK_${name}`);
+    return found[0];
+  };
+  const internetRisk = riskWhere("INTERNET_EXPOSURE", (risk) => typeOf(risk) === "Internet Exposure");
+  const personalRisk = riskWhere("PERSONAL_DATA", (risk) => typeOf(risk) === "Personal Information Handling" && risk.riskSubCategory === "Personal information handling");
+  const acceptRisk = riskWhere("THIRD_PARTY", (risk) => typeOf(risk) === "Third-Party Dependency");
+  const recoveryRisk = riskWhere("RECOVERY", (risk) => typeOf(risk) === null);
+  /*
+   * WR-204 (success criterion 2, UAT-042): the draft cites the fallback answer, and lists the claim no source supports
+   * as uncited, field by field in the stored record.
+   */
+  const recoveryFacts = recoveryRisk.aiProvenance as { fields: Record<string, { sources?: string[] }>; uncitedClaims: string[] };
+  assert.deepEqual(recoveryFacts.fields.issueStatement?.sources, ["answer.recovery-tested"], "DRAFT_CITES_NO_ANSWER");
+  assert.deepEqual(recoveryFacts.fields.potentialImpact?.sources, [], "THE_UNCITED_FIELD_GAINED_A_SOURCE");
+  assert.deepEqual(recoveryFacts.uncitedClaims, ["Recovery time objectives for the service are not documented."], "DRAFT_LISTS_NO_UNCITED_CLAIM");
+  assert.equal((internetRisk.informationSystemImpacted as Record<string, unknown>)?.documentId, fixture.systemIds[0]);
+  assert.equal((internetRisk.informationSystemImpacted as Record<string, unknown>)?.name, "HR and payroll platform");
+  assert.equal((personalRisk.informationAssetImpacted as Record<string, unknown>)?.documentId, fixture.assetIds[0]);
+  assert.equal(personalRisk.dataClassification, "Restricted");
+  /*
+   * IN-203 and verifier W-1 (success criterion 1, D-13): the draft links each Risk to a system or an asset the request
+   * selected, and every link it makes is to the request's own selection. The UAT-A-like request's HR and payroll platform
+   * is the service's internet-facing system, run as SaaS, so the third-party and untested-recovery Risks link it too.
+   */
+  for (const risk of risks) {
+    const links = ([
+      ["system", (risk.informationSystemImpacted as Record<string, unknown> | null)?.documentId],
+      ["asset", (risk.informationAssetImpacted as Record<string, unknown> | null)?.documentId],
+    ] as const).filter(([, documentId]) => documentId);
+    assert.ok(links.length > 0, `A_RISK_LINKS_NO_SELECTED_SYSTEM_OR_ASSET_${typeOf(risk) ?? "(no type)"}_${String(risk.riskSubCategory)}`);
+    for (const [kind, documentId] of links) {
+      assert.ok((kind === "system" ? fixture.systemIds : fixture.assetIds).includes(String(documentId)), `LINKED_A_${kind.toUpperCase()}_THE_REQUEST_DID_NOT_SELECT`);
+    }
+  }
+  for (const [name, risk] of [["THIRD_PARTY", acceptRisk], ["RECOVERY", recoveryRisk]] as const) {
+    assert.equal((risk.informationSystemImpacted as Record<string, unknown> | null)?.documentId, fixture.systemIds[0], `${name}_RISK_DOES_NOT_LINK_THE_PAYROLL_PLATFORM`);
+  }
+  assert.equal(acceptRisk.treatmentAction, "Accept");
+  assert.ok(risks.every((risk) => parseRiskAiProvenance(risk.aiProvenance)));
+  const registerRead = await request(`/api/v1/risks?assessment=${assessment.documentId}`, harness.identities.analyst);
+  assert.equal(registerRead.status, 200);
+  const registerRisks = rows(await payload(registerRead));
+  assert.ok(registerRisks.some((risk) => risk.documentId === internetRisk.documentId));
+  assert.ok(registerRisks.every((risk) => !("aiProvenance" in risk)));
+  assert.ok(risks.every((risk) => Object.values((risk.aiProvenance as { fields: Record<string, { state: string }> }).fields)
+    .every((field) => field.state === "proposed")));
+  assert.ok(risks.every((risk) => Array.isArray(risk.controlImplementations) && risk.controlImplementations.length === 0));
+  assert.ok(parseAssessmentAiProvenance(assessment.aiProvenance));
+  // IN-208: one provider call, one run, and it is the one the assessment links.
+  const requestRuns = (await harness.listAiRunsForRequest(fixture.requestId)).filter((item) => item.operation === "assessment-draft");
+  assert.deepEqual(requestRuns.map((item) => item.status), ["completed"], "FULL_CONTEXT_DRAFT_RUNS_NOT_ONE");
+  const runs = await harness.listAiRunsForAssessment(String(job.assessmentId));
+  assert.equal(runs.length, 1, "FULL_CONTEXT_ASSESSMENT_RUNS_NOT_ONE");
+  const run = runs[0];
+  assert.equal(run.documentId, requestRuns[0].documentId, "FULL_CONTEXT_ASSESSMENT_RUN_NOT_THE_REQUEST_RUN");
+  assert.ok(risks.every((risk) => (risk.aiProvenance as Record<string, unknown>).runId === run.documentId));
+  assert.equal((assessment.aiProvenance as Record<string, unknown>).runId, run.documentId);
+  assert.equal(acceptRisk.aiProvenance && (acceptRisk.aiProvenance as Record<string, unknown>).suggestions instanceof Array, true);
+  const riskId = String(personalRisk.documentId);
+  const changedStatement = await request(`/api/v1/risks/${riskId}`, harness.identities.analyst, {
+    method: "PATCH", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ riskStatement: "Analyst revised the risk statement", riskCategory: personalRisk.riskCategory }),
+  });
+  assert.equal(changedStatement.status, 200, await changedStatement.clone().text());
+  const revisedRisk = await harness.getRisk(riskId);
+  assert.ok(revisedRisk);
+  const riskFacts = (revisedRisk.aiProvenance as { fields: Record<string, { state: string; by?: string; at?: string }> }).fields;
+  assert.equal(riskFacts.riskStatement.state, "edited");
+  assert.equal(riskFacts.riskStatement.by, harness.users.analyst);
+  assert.ok(Date.parse(String(riskFacts.riskStatement.at)));
+  assert.equal(riskFacts.riskCategory.state, "proposed");
+  const alternateAsset = await harness.createFixtureDocument("api::csrm-information-asset.csrm-information-asset", {
+    name: "Analyst selected asset", dataClassification: "Restricted",
+  });
+  const changedAsset = await request(`/api/v1/risks/${riskId}`, harness.identities.analyst, {
+    method: "PATCH", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ informationAssetImpacted: alternateAsset, comments: "Analyst context" }),
+  });
+  assert.equal(changedAsset.status, 200, await changedAsset.clone().text());
+  const assetRisk = await harness.getRisk(riskId);
+  assert.ok(assetRisk);
+  const assetFacts = (assetRisk.aiProvenance as { fields: Record<string, { state: string }> }).fields;
+  assert.equal(assetFacts.informationAssetImpacted.state, "edited");
+  assert.equal(assetFacts.riskCategory.state, "proposed");
+
+  const changedAssessment = await request(`/api/v1/risk_assessments/${assessment.documentId}`, harness.identities.analyst, {
+    method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ summary: "Analyst revised the summary" }),
+  });
+  assert.equal(changedAssessment.status, 200, await changedAssessment.clone().text());
+  const revisedAssessment = await harness.getAssessment(String(assessment.documentId));
+  assert.ok(revisedAssessment);
+  const assessmentFacts = (revisedAssessment.aiProvenance as { fields: Record<string, { state: string; by?: string; at?: string }> }).fields;
+  assert.equal(assessmentFacts.summary.state, "edited");
+  assert.equal(assessmentFacts.summary.by, harness.users.analyst);
+  assert.equal(assessmentFacts.overallRating.state, "proposed");
+  const revisedRun = await harness.getAiRun(String(run.documentId));
+  assert.ok(revisedRun);
+  const events = revisedRun.decisions as Array<{ kind: string; target: string; fields: string[] }>;
+  assert.deepEqual(events.slice(-3).map((event) => [event.kind, event.target, event.fields]), [
+    ["edited", riskId, ["riskStatement"]], ["edited", riskId, ["informationAssetImpacted"]], ["edited", "assessment", ["summary"]],
+  ]);
+
+  // D-12, D-14, D-21, D-23 and D-25: the analyst's read resolves the review state, sources and suggestions.
+  type Review = { field: string; state: string; by: { documentId: string; displayName: string } | null; sources: Array<{ kind: string; label: string }> | null };
+  type RiskReview = { runId: string; fields: Review[]; uncitedClaims: string[]; suggestions: Array<{ control: { controlNumber: string; name: string }; state: string }>; outstanding: number };
+  const detailRead = await request(`/api/v1/risk_assessments/${assessment.documentId}`, harness.identities.analyst);
+  assert.equal(detailRead.status, 200, "ANALYST_PROVENANCE_DETAIL_READ");
+  const detail = (await payload(detailRead)).data as Record<string, unknown>;
+  const generation = detail.generation as Record<string, unknown>;
+  assert.equal(generation.runId, run.documentId, "ANALYST_GENERATION_RUN");
+  assert.equal((generation.generatedBy as Record<string, unknown>).documentId, harness.users.analyst, "ANALYST_GENERATION_ACTOR");
+  assert.equal(generation.providerName, "deterministic-assessment-draft", "ANALYST_GENERATION_PROVIDER");
+  assert.equal(generation.providerVersion, "2", "ANALYST_GENERATION_VERSION");
+  const assessmentReview = detail.aiProvenance as { fields: Review[]; outstanding: number };
+  assert.equal(assessmentReview.fields.length, 4, "ANALYST_ASSESSMENT_FIELDS");
+  assert.equal(assessmentReview.outstanding, 3, "ANALYST_ASSESSMENT_OUTSTANDING");
+  const summaryReview = assessmentReview.fields.find((field) => field.field === "summary");
+  assert.equal(summaryReview?.state, "edited", "ANALYST_SUMMARY_STATE");
+  assert.equal(summaryReview?.by?.documentId, harness.users.analyst, "ANALYST_SUMMARY_ACTOR");
+  assert.ok(summaryReview?.by?.displayName, "ANALYST_SUMMARY_ACTOR_NAME");
+  const detailRisks = detail.risks as Array<{ documentId: string; aiProvenance: RiskReview | null }>;
+  assert.equal(detailRisks.length, 5, "ANALYST_DETAIL_RISKS");
+  const citations = detailRisks.flatMap((risk) => risk.aiProvenance?.fields.flatMap((field) => field.sources ?? []) ?? []);
+  assert.ok(citations.length > 0, "ANALYST_NO_CITATIONS");
+  assert.ok(citations.every((source) => source.label !== "Source no longer available"), "ANALYST_CITATION_UNRESOLVED");
+  assert.ok(citations.some((source) => source.kind === "system" && source.label === "HR and payroll platform"), "ANALYST_SYSTEM_CITATION");
+  assert.ok(citations.some((source) => source.kind === "request" && source.label === "Regulatory requirements"), "ANALYST_REQUEST_CITATION");
+  // WR-204: an answer source reads as an answer, named by its question's current text, which the read resolves (WR-105).
+  assert.deepEqual(citations.find((source) => source.kind === "answer"), {
+    key: "answer.recovery-tested", kind: "answer", label: "Has the pay-run fallback been tested?", section: "Payment processing", classification: null,
+  }, "ANALYST_ANSWER_CITATION");
+  assert.deepEqual(detailRisks.find((risk) => risk.documentId === recoveryRisk.documentId)?.aiProvenance?.uncitedClaims,
+    ["Recovery time objectives for the service are not documented."], "ANALYST_UNCITED_CLAIM");
+  // IN-207: the UAT-A-like library's own Risk Types and controls reach the draft: each typed Treat Risk suggests its type's controls.
+  const suggestedFor = (riskId: unknown) => detailRisks.find((risk) => risk.documentId === riskId)?.aiProvenance?.suggestions.map((suggestion) => suggestion.control.controlNumber) ?? [];
+  for (const [name, riskId, controlNumbers] of [
+    ["INTERNET_EXPOSURE", internetRisk.documentId, ["UATA-001", "UATA-002", "UATA-003"]],
+    ["PERSONAL_DATA", personalRisk.documentId, ["UATA-002", "UATA-003", "UATA-004"]],
+  ] as const) {
+    for (const controlNumber of controlNumbers) assert.ok(suggestedFor(riskId).includes(controlNumber), `${name}_DOES_NOT_SUGGEST_${controlNumber}`);
+  }
+  assert.deepEqual(suggestedFor(acceptRisk.documentId), [], "AN_AI_ACCEPT_GAINED_A_SUGGESTION");
+  for (const risk of detailRisks) {
+    const review = risk.aiProvenance;
+    assert.ok(review, `ANALYST_RISK_PROVENANCE_${risk.documentId}`);
+    assert.equal(review.runId, run.documentId, "ANALYST_RISK_RUN");
+    assert.equal(review.outstanding, review.fields.filter((field) => field.state === "proposed").length, "ANALYST_RISK_OUTSTANDING");
+    assert.ok(review.suggestions.every((suggestion) => suggestion.control.controlNumber && suggestion.control.name), "ANALYST_SUGGESTION_CONTROL");
+  }
+  const editedRisk = detailRisks.find((risk) => risk.documentId === riskId)!.aiProvenance!;
+  const statementReview = editedRisk.fields.find((field) => field.field === "riskStatement");
+  assert.equal(statementReview?.state, "edited", "ANALYST_RISK_STATEMENT_STATE");
+  assert.ok(statementReview?.by?.displayName, "ANALYST_RISK_STATEMENT_ACTOR_NAME");
+});
+
+test("mounted analyst detail projects missing or malformed provenance as null without failing the read", async () => {
+  const harness = await harnessPromise;
+  const fixtures = await harness.seedAssessmentWorkflowFixtures();
+  const response = await request(`/api/v1/risk_assessments/${encodeURIComponent(fixtures.aggregate.assessment)}`, harness.identities.analyst);
+  assert.equal(response.status, 200, "SEEDED_DETAIL_READ");
+  const detail = (await payload(response)).data as Record<string, unknown>;
+  assert.equal(detail.aiProvenance, null, "SEEDED_ASSESSMENT_PROVENANCE");
+  assert.ok((detail.risks as Array<Record<string, unknown>>).every((risk) => risk.aiProvenance === null), "SEEDED_RISK_PROVENANCE");
+
+  const requestId = await harness.createAssessmentRequestFixture({ requestNumber: "REQ-PROVENANCE-MALFORMED", title: "Malformed provenance", requestStatus: "risk-assessment-drafted", requestor: "owner" });
+  const assessmentId = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "ASSESS-PROVENANCE-MALFORMED", assessmentStatus: "draft", assessmentRequest: requestId,
+    generatedDate: "2026-09-01T00:00:00.000Z", providerName: "legacy-provider", providerVersion: "1", aiProvenance: { schemaVersion: 99 },
+  });
+  await harness.createRiskRegisterFixture(assessmentId, { riskNumber: "RSK-PROVENANCE-MALFORMED", riskStatement: "Existing risk", aiProvenance: { schemaVersion: 1, runId: "run-x" } });
+  const malformed = await request(`/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`, harness.identities.analyst);
+  assert.equal(malformed.status, 200, "MALFORMED_DETAIL_READ");
+  const malformedDetail = (await payload(malformed)).data as Record<string, unknown>;
+  assert.equal(malformedDetail.aiProvenance, null, "MALFORMED_ASSESSMENT_PROVENANCE");
+  assert.equal((malformedDetail.generation as Record<string, unknown>).runId, null, "MALFORMED_GENERATION_RUN");
+  assert.ok((malformedDetail.risks as Array<Record<string, unknown>>).every((risk) => risk.aiProvenance === null), "MALFORMED_RISK_PROVENANCE");
+});
+
+/*
+ * Phase 13 D-29, D-16 and D-25: after a draft generated with no note marked, marking Jane's note makes Bob's assessment
+ * read list it, measured against the run the assessment's aiProvenance names (the read's generation.runId), and the
+ * request read's aiInputs.assessment agrees. An assessment generated before run records compares by its generation date.
+ * The analyst's request summary names the assignee, whether Bob may pick the request up, and the notes figures.
+ */
+test("mounted assessment read says which notes changed its AI inputs since the draft, and names the assignee and the notes (D-29, D-16, D-25)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  await harness.seedAssessmentWorkflowFixtures();
+  const fixture = await harness.seedUatALikeRequest("AI-INPUTS");
+  const { assessmentId } = await harness.runAssessmentDraftJobFixture(fixture.questionnaireId, harness.users.analyst);
+  const assessmentPath = `/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`;
+  const read = async (path: string, identity: string, diagnostic: string) => {
+    const response = await request(path, identity);
+    assert.equal(response.status, 200, diagnostic);
+    return (await payload(response)).data as Record<string, unknown>;
+  };
+  const json = (method: string, body: unknown): RequestInit => ({ method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const addNote = async (requestId: string, body: string) => {
+    const response = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes`, owner, json("POST", { data: { body } }));
+    assert.equal(response.status, 200, "AI_INPUTS_JANE_NOTE");
+    return (await payload(response)).data as Record<string, unknown>;
+  };
+  const markNote = async (requestId: string, noteId: unknown) => {
+    const response = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes/${encodeURIComponent(String(noteId))}/ai_input`, analyst, json("PUT", { data: { changesAiInputs: true } }));
+    assert.equal(response.status, 200, "AI_INPUTS_MARK");
+  };
+  const draftRuns = (await harness.listAiRunsForAssessment(assessmentId)).filter((run) => run.operation === "assessment-draft" && run.status === "completed");
+  assert.equal(draftRuns.length, 1, "AI_INPUTS_DRAFT_RUN");
+
+  const first = await read(assessmentPath, analyst, "AI_INPUTS_ASSESSMENT_READ_BEFORE");
+  const firstGeneration = first.generation as Record<string, unknown>;
+  assert.equal(firstGeneration.runId, draftRuns[0].documentId, "AI_INPUTS_BASELINE_IS_NOT_THE_PROVENANCE_RUN");
+  assert.equal(firstGeneration.aiInputsChanged, null, "AI_INPUTS_CHANGED_BEFORE_ANY_NOTE");
+  assert.deepEqual((first.assessmentRequest as Record<string, unknown>).assignment, { assignee: null, pickUp: "allowed" }, "AI_INPUTS_SUMMARY_ASSIGNMENT_BEFORE");
+  assert.deepEqual((first.assessmentRequest as Record<string, unknown>).notes, { total: 0, unread: 0 }, "AI_INPUTS_SUMMARY_NOTES_BEFORE");
+
+  const note = await addNote(fixture.requestId, "The payroll processor now also stores files offshore.");
+  await markNote(fixture.requestId, note.documentId);
+  const pickUp = await request(`/api/v1/assessment_requests/${encodeURIComponent(fixture.requestId)}/assignee`, analyst, json("PUT", { data: { analyst: harness.users.analyst, expectedAnalyst: null } }));
+  assert.equal(pickUp.status, 200, "AI_INPUTS_PICK_UP");
+
+  const marked = { count: 1, notes: [{ documentId: note.documentId, part: "requestor", sequence: 1, postedAt: note.postedAt, change: "marked" }], files: [] };
+  const after = await read(assessmentPath, analyst, "AI_INPUTS_ASSESSMENT_READ_AFTER");
+  assert.equal((after.generation as Record<string, unknown>).runId, draftRuns[0].documentId, "AI_INPUTS_RUN_MOVED");
+  assert.deepEqual((after.generation as Record<string, unknown>).aiInputsChanged, marked, "AI_INPUTS_MARKED_NOTE_NOT_LISTED");
+  // WR-202: the Security Analyst Agent reads the analyst assessment too, but the signal is human analyst work only.
+  const agentResponse = await request(assessmentPath, harness.identities.serviceAnalystAgent);
+  assert.equal(agentResponse.status, 200, "AI_INPUTS_AGENT_ASSESSMENT_READ");
+  const agentText = await agentResponse.text();
+  const agentGeneration = (JSON.parse(agentText) as { data: Record<string, unknown> }).data.generation as Record<string, unknown> | null;
+  assert.ok(agentGeneration !== null && typeof agentGeneration === "object", "AI_INPUTS_AGENT_ASSESSMENT_GENERATION_MISSING");
+  assert.equal(agentGeneration.aiInputsChanged, null, "AI_INPUTS_AGENT_ASSESSMENT_SIGNAL");
+  assert.ok(!agentText.includes(String(note.documentId)), "AI_INPUTS_AGENT_ASSESSMENT_SAW_THE_NOTE");
+  assert.deepEqual((after.assessmentRequest as Record<string, unknown>).assignment, { assignee: { documentId: harness.users.analyst, displayName: "Bob Doe" }, pickUp: "not-offered" }, "AI_INPUTS_SUMMARY_ASSIGNMENT_AFTER");
+  assert.deepEqual((after.assessmentRequest as Record<string, unknown>).notes, { total: 1, unread: 1 }, "AI_INPUTS_SUMMARY_NOTES_AFTER");
+  const requestRead = await read(`/api/csrm-assessment-requests/${encodeURIComponent(fixture.requestId)}`, analyst, "AI_INPUTS_REQUEST_READ");
+  assert.deepEqual((requestRead.aiInputs as Record<string, unknown>).assessment, marked, "AI_INPUTS_REQUEST_READ_DISAGREES");
+
+  // Generated before run records existed: no aiProvenance, so the generation date is the baseline.
+  const legacyRequest = await harness.createAssessmentRequestFixture({ requestNumber: "REQ-AI-INPUTS-LEGACY", title: "AI inputs legacy draft", requestStatus: "risk-assessment-drafted", requestor: "owner" });
+  const legacyAssessment = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "ASSESS-AI-INPUTS-LEGACY", assessmentStatus: "draft", assessmentRequest: legacyRequest,
+    generatedDate: "2026-09-01T00:00:00.000Z", providerName: "legacy-provider", providerVersion: "1",
+  });
+  const legacyNote = await addNote(legacyRequest, "A note after the legacy draft.");
+  await markNote(legacyRequest, legacyNote.documentId);
+  const legacy = await read(`/api/v1/risk_assessments/${encodeURIComponent(legacyAssessment)}`, analyst, "AI_INPUTS_LEGACY_ASSESSMENT_READ");
+  assert.equal((legacy.generation as Record<string, unknown>).runId, null, "AI_INPUTS_LEGACY_HAS_A_RUN");
+  assert.deepEqual((legacy.generation as Record<string, unknown>).aiInputsChanged, {
+    count: 1, notes: [{ documentId: legacyNote.documentId, part: "requestor", sequence: 1, postedAt: legacyNote.postedAt, change: "marked" }], files: [],
+  }, "AI_INPUTS_LEGACY_MARKED_NOTE_NOT_LISTED");
+});
+
+const ATTACHMENT_FIXTURES = path.resolve(__dirname, "..", "..", "..", "tests", "fixtures", "attachments");
+
+/*
+ * Phase 14 D-27 (14-UI-SPEC §6.1): the analyst's assessment read's request summary says how many files the request holds
+ * and how many are included in the AI inputs, for the page to server-render under the request link; Jane's carries neither.
+ */
+test("mounted analyst assessment read's request summary counts the request's files and those in the AI inputs; Jane's carries none (D-27)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const requestId = await harness.createAssessmentRequestFixture({ requestNumber: "REQ-FILES-SUMMARY", title: "Files summary draft", requestStatus: "risk-assessment-drafted", submittedDate: "2026-09-01T00:00:00.000Z", requestor: "owner" });
+  const assessmentId = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "ASSESS-FILES-SUMMARY", assessmentStatus: "draft", assessmentRequest: requestId,
+    generatedDate: "2026-09-01T00:00:00.000Z", providerName: "legacy-provider", providerVersion: "1",
+  });
+  const assessmentPath = `/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}`;
+  const attachmentsPath = `/api/v1/assessment_requests/${encodeURIComponent(requestId)}/attachments`;
+  const send = async (path: string, identity: string, init: RequestInit, status: number, diagnostic: string) => {
+    const response = await request(path, identity, init);
+    assert.equal(response.status, status, `${diagnostic}: ${await response.clone().text()}`);
+    return (await payload(response)).data as Record<string, unknown>;
+  };
+  const addFile = async (fileName: string) => {
+    const note = await send(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes`, owner, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { body: `${fileName} is attached.` } }) }, 200, "FILES_NOTE");
+    const form = new FormData();
+    form.set("file", new File([await readFile(path.join(ATTACHMENT_FIXTURES, fileName))], fileName));
+    form.set("noteId", String(note.documentId));
+    return String((await send(attachmentsPath, owner, { method: "POST", body: form }, 201, `FILES_UPLOAD_${fileName}`)).documentId);
+  };
+  const put = (attachmentId: string, action: string, identity: string, data: Record<string, unknown>) => send(
+    `${attachmentsPath}/${encodeURIComponent(attachmentId)}/${action}`, identity, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data }) }, 200, `FILES_${action.toUpperCase()}`,
+  );
+  const filesFor = async (diagnostic: string) => ((await send(assessmentPath, analyst, {}, 200, diagnostic)).assessmentRequest as Record<string, unknown>).files;
+
+  assert.deepEqual(await filesFor("FILES_BOB_BEFORE_ANY_FILE"), { count: 0, included: 0 }, "FILES_BEFORE_ANY_FILE");
+  const packId = await addFile("vendor-security-pack.pdf");
+  const dataFlowId = await addFile("data-flow.docx");
+  await put(packId, "ai_input", analyst, { included: true });
+  assert.deepEqual(await filesFor("FILES_BOB_TWO_FILES"), { count: 2, included: 1 }, "FILES_TWO_FILES_ONE_INCLUDED");
+  // A removed file no longer counts.
+  await put(dataFlowId, "removal", owner, { removed: true });
+  assert.deepEqual(await filesFor("FILES_BOB_AFTER_REMOVAL"), { count: 1, included: 1 }, "FILES_AFTER_REMOVAL");
+
+  // Jane reads her assessment only once it is released, and that read's summary serves files null (the released-read
+  // shape test above, OWNER_BOUNDED_REQUEST_SUMMARY_MISMATCH).
+  assert.equal((await request(assessmentPath, owner)).status, 404, "FILES_JANE_READ_THE_DRAFT");
+});
+
+/*
+ * Phase 15 (15-08 Task 2; D-08): the assessment draft waits for every AI proposal on its questionnaire, refused before
+ * queueing and failed inside the job's transaction when an item is open; after the items are decided it generates.
+ */
+
+const GATE_OFFSHORE_NOTE = "Jane: the vendor now uses an offshore support team with administrator access to the payroll system.";
+
+async function draftGateRequest(path: string, identity: string, method = "POST"): Promise<Response> {
+  return (await harnessPromise).request({ path, identity, init: { method } });
+}
+
+async function terminalDraftGateJob(jobId: string): Promise<Record<string, unknown>> {
+  const harness = await harnessPromise;
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const response = await draftGateRequest(`/api/v1/assessment_draft_jobs/${encodeURIComponent(jobId)}`, harness.identities.analyst, "GET");
+    assert.equal(response.status, 200, "ASSESSMENT_DRAFT_JOB_UNREADABLE");
+    const data = ((await response.json()) as { data: Record<string, unknown> }).data;
+    if (data.status === "completed" || data.status === "failed") return data;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.fail("ASSESSMENT_DRAFT_JOB_DID_NOT_REACH_TERMINAL_STATE");
+}
+
+test("mounted assessment draft is refused with AI_PROPOSALS_OPEN while an AI proposal item is open, fails in its transaction when an item reopens while it runs, and generates once every item is decided (D-08)", async () => {
+  const harness = await harnessPromise;
+  const { requestId, questionnaireId } = await harness.seedUatALikeRequest("DRAFT-GATE");
+  await harness.seedRequestNotes(requestId, [{ part: "requestor", sequence: 1, postedAt: "2026-09-01T00:00:00.000Z", body: GATE_OFFSHORE_NOTE, changesAiInputs: true }]);
+  const started = await harness.startQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId);
+  assert.equal(started.status, 202, `PROPOSALS_NOT_STARTED: ${JSON.stringify(started)}`);
+  const ended = await harness.waitForProposalJobFixture(String(started.data?.jobId));
+  assert.equal(ended.status, "completed");
+  const runId = String(ended.runId);
+  const draftPath = `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/generate_assessment`;
+
+  const refused = await draftGateRequest(draftPath, harness.identities.analyst);
+  assert.equal(refused.status, 409, `DRAFT_NOT_REFUSED: ${await refused.clone().text()}`);
+  assert.equal(((await refused.json()) as { error?: { details?: { reason?: unknown } } }).error?.details?.reason, "AI_PROPOSALS_OPEN");
+
+  const rejected = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: ["i-1", "i-2", "i-3"].map((item) => ({ runId, item, action: "reject" })) });
+  assert.equal(rejected.status, 200, `REJECT_REMAINING_FAILED: ${JSON.stringify(rejected)}`);
+
+  // An item reopened while the draft job runs: the job fails in its transaction and creates no assessment.
+  const heldJobId = await harness.withHeldAssessmentDraftProvider(async (reached) => {
+    const queued = await draftGateRequest(draftPath, harness.identities.analyst);
+    assert.equal(queued.status, 202, `DRAFT_NOT_QUEUED: ${await queued.clone().text()}`);
+    await reached;
+    await harness.appendAiRunDecisionsFixture(runId, [{ schemaVersion: 2, at: new Date().toISOString(), by: harness.users.analyst, item: "i-1", action: "restored" } as never]);
+    return String(((await queued.json()) as { data: Record<string, unknown> }).data.jobId);
+  });
+  const failed = await terminalDraftGateJob(heldJobId);
+  assert.deepEqual([failed.status, failed.failureCode], ["failed", "AI_PROPOSALS_OPEN"], "HELD_DRAFT_DID_NOT_FAIL_ON_THE_OPEN_ITEM");
+  assert.equal((await harness.getRequest(requestId))?.assessment ?? null, null, "HELD_DRAFT_CREATED_AN_ASSESSMENT");
+
+  const rejectedAgain = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: [{ runId, item: "i-1", action: "reject" }] });
+  assert.equal(rejectedAgain.status, 200);
+  // The failed job is the questionnaire's job until it is retried (13-08): the retry generates the draft.
+  const retried = await draftGateRequest(`/api/v1/assessment_draft_jobs/${encodeURIComponent(heldJobId)}/retry`, harness.identities.analyst);
+  assert.equal(retried.status, 202, `DRAFT_RETRY_NOT_QUEUED: ${await retried.clone().text()}`);
+  const completed = await terminalDraftGateJob(heldJobId);
+  assert.equal(completed.status, "completed", `DRAFT_AFTER_DECISIONS_FAILED: ${String(completed.failureCode)}`);
+});
+
+/*
+ * Phase 16 D-42 (16-10): release readiness takes the assessment's open risk AI proposal count as a fact. While it is above
+ * zero, `aiProposalsDecided` ("Decisions on AI proposals", destination `ai-proposals`) is outstanding and the assessment is
+ * not ready; at zero it is met. Without the fact (the pre-edit transition's field completeness), nothing changes.
+ */
+test("release readiness gains Decisions on AI proposals, outstanding while any risk AI proposal is open (D-42)", () => {
+  const ready = {
+    documentId: "assessment-ready", assessmentStatus: "in-review", reviewedBy: { documentId: "bob" },
+    summary: "Summary", overallRating: "Moderate", overallRiskRationale: "Rationale", aiProvenance: null,
+    risks: [{
+      documentId: "risk-ready", riskNumber: "RSK-2026-AAAAAAAA", riskStatement: "Statement", inherentLikelihood: "Likely",
+      highestInherentConsequence: "Major", inherentRating: "High", residualLikelihood: "Possible", highestResidualConsequence: "Moderate",
+      residualRating: "Moderate", riskOwner: { documentId: "owner" }, treatmentAction: "Accept", targetDate: "2027-08-30", aiProvenance: null,
+    }],
+  };
+  assert.deepEqual(validateReleaseReadiness(ready), { ready: true, missing: [] });
+  assert.deepEqual(validateReleaseReadiness(ready, { openAiProposals: 0 }), { ready: true, missing: [] });
+  assert.deepEqual(validateReleaseReadiness(ready, { openAiProposals: 3 }), { ready: false, missing: ["aiProposalsDecided"] });
+
+  const outstanding = projectReleaseReadiness(ready, { openAiProposals: 2 });
+  assert.equal(outstanding.ready, false);
+  assert.deepEqual(outstanding.requirements.find((item) => item.key === "aiProposalsDecided"),
+    { scope: "assessment", key: "aiProposalsDecided", label: "Decisions on AI proposals", state: "outstanding", destination: "ai-proposals" });
+  const met = projectReleaseReadiness(ready, { openAiProposals: 0 });
+  assert.equal(met.ready, true);
+  assert.equal(met.requirements.find((item) => item.key === "aiProposalsDecided")?.state, "met");
+  assert.equal(projectReleaseReadiness(ready).requirements.some((item) => item.key === "aiProposalsDecided"), false, "REQUIREMENT_WITHOUT_THE_FACT");
 });

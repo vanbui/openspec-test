@@ -4,6 +4,234 @@
  */
 
 export interface paths {
+    "/scim/v2/Users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List users
+         * @description Source-scoped User read/search; protected, service, foreign and tombstoned records are hidden; permitted manual correlation candidates may be visible. Scope applies before counts and pagination. Query accepts only the documented subset, rejects repeated/unknown keys. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/list-users"];
+        put?: never;
+        /**
+         * Create user
+         * @description Create a source-owned user. externalId or Enterprise employeeNumber is required. active defaults true; blank displayName derives from name parts then userName. No source may assign Roles or private identity fields. Bodies are limited to 1 MiB. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        post: operations["scim/create-user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read user
+         * @description Source-scoped User read/search; protected, service, foreign and tombstoned records are hidden; permitted manual correlation candidates may be visible. Scope applies before counts and pagination. Query accepts only the documented subset, rejects repeated/unknown keys. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/read-user"];
+        /**
+         * Replace user
+         * @description PUT replaces asserted source attributes under the shared user lock; omitted attributes keep current values, including active, emails, name parts and Enterprise fields. Explicit null clears optional fields. An asserted source key remains immutable. A manual candidate can be claimed only with an asserted externalId or Enterprise employeeNumber after upstream operator-confirmed correlation; knowing an id is not claim confirmation. Protected, foreign, service and tombstoned records remain hidden. No restoration, unclaim or Role writes. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        put: operations["scim/replace-user"];
+        post?: never;
+        /**
+         * Delete user
+         * @description Retain the user and references, set inactive and first tombstone, enqueue durable leaver synchronization. Owning-source repeated DELETE is idempotent 204. Later reads and writes hide the tombstone; no restoration. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        delete: operations["scim/delete-user"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch user
+         * @description Atomic ordered add/replace/remove against the frozen public projection inside the shared user lock; at most 100 operations and 1 MiB. Paths cover supported source attributes and selected-email equality only, never private fields or Roles. primary accepts boolean or true/false string. Added primary replaces the stored email; validated non-primary additions are not stored. emails[value eq "address"] removal of a missing address is a no-op; removing the stored address requires a new primary in the same batch. Unknown paths fail invalidPath, unmatched selection noTarget, immutable/required removal mutability; any failure rolls back the batch. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        patch: operations["scim/patch-user"];
+        trace?: never;
+    };
+    "/scim/v2/ServiceProviderConfig": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Service provider config
+         * @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/service-provider-config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List schemas
+         * @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/list-schemas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Schemas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read schema
+         * @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/read-schema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/ResourceTypes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List resource types
+         * @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/list-resource-types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/ResourceTypes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read resource type
+         * @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/read-resource-type"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List groups
+         * @description Authenticated empty Groups list; no membership or Role authority. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/list-groups"];
+        /**
+         * Put groups
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        put: operations["scim/put-groups"];
+        /**
+         * Post groups
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        post: operations["scim/post-groups"];
+        /**
+         * Delete groups
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        delete: operations["scim/delete-groups"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch groups
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        patch: operations["scim/patch-groups"];
+        trace?: never;
+    };
+    "/scim/v2/Groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read group
+         * @description Authenticated Group resource read always returns 404; no Groups are stored or managed. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        get: operations["scim/read-group"];
+        /**
+         * Put group
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        put: operations["scim/put-group"];
+        /**
+         * Post group
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        post: operations["scim/post-group"];
+        /**
+         * Delete group
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        delete: operations["scim/delete-group"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch group
+         * @description Authenticated unsupported Group write; always 501. Sources cannot grant Roles or memberships. Source bearer authentication is independent of human CSRM identities. Responses prefer application/scim+json and negotiate application/json for compatible clients.
+         */
+        patch: operations["scim/patch-group"];
+        trace?: never;
+    };
     "/v1/assessment_requests/{requestId}/revert_to_draft": {
         parameters: {
             query?: never;
@@ -15,6 +243,214 @@ export interface paths {
         put?: never;
         /** Return an eligible submitted assessment request to draft */
         post: operations["assessment-workflow/revert-assessment-request-to-draft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Pick up, assign, reassign or unassign a submitted assessment request (human Security Analyst only)
+         * @description The only writer of a request's assignment. The caller names the new analyst (an IdamBox User documentId, or null to unassign) and the assignee they last saw; the server derives the action (pick-up, assign, reassign or unassign) and, under the request lock, refuses a request the caller raised (403), a draft, an assignee who changed since the caller saw it, an ineligible target and the unassignment of a released request (409), each with its closed reason. Naming the current assignee changes nothing and records nothing.
+         */
+        put: operations["assessment-workflow/put-assessment-request-assignee"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/assignable_analysts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Security Analysts who may hold a submitted assessment request (human Security Analyst only)
+         * @description Exactly the people the assignment operation would accept as the request's assignee: active human Security Analysts, never the Security Analyst Agent, an inactive user or the request's own requestor. People are a documentId and a display name only, ordered by display name, at most 50, searchable by name with q. The current assignee is listed. A Security Analyst who raised the request is refused with 403 OWN_REQUEST, and a draft with 409 REQUEST_NOT_SUBMITTED.
+         */
+        get: operations["assessment-workflow/get-assignable-analysts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an assessment request's notes, oldest first, with the caller's unread count
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, and a missing request, is answered 404 with the same message. A page holds the newest notes before the before sequence (all notes when absent), at most limit (default 20, at most 50), returned oldest first; meta.hasEarlier says whether earlier notes exist. A note is unread for the caller when it was written in the other part, not by the caller, and above the caller's lastReadSequence. Listing never marks anything read. changesAiInputs is served to a human Security Analyst only.
+         */
+        get: operations["assessment-workflow/list-request-notes"];
+        put?: never;
+        /**
+         * Add an attributed, append-only note to a submitted assessment request
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, and a missing request, is answered 404 with the same message. The body is plain text, trimmed, with CRLF and CR normalised to LF, 1 to 5,000 characters, no control character other than tab and newline. The server assigns the sequence (the request's highest plus one, under the request lock), the posting time and the author's part. A note can never be edited or deleted.
+         */
+        post: operations["assessment-workflow/add-request-note"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/notes/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an assessment request's notes read through one note
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, a missing request and a note that is not on the request are answered 404. Under the request lock the caller's one read state for the request advances to the named note's sequence; it only ever increases, so naming an earlier note changes nothing and succeeds. The read state is the caller's own and is never shown to anyone else.
+         */
+        post: operations["assessment-workflow/mark-request-notes-read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mark or unmark a note on an assessment request as changing the AI inputs
+         * @description Human Security Analyst only (D-26, D-30): the Requestor, the Security Analyst Agent and every other caller are refused 403 before anything is read. An analyst who raised the request is refused 403 with the closed reason OWN_REQUEST (G-1). A missing request and a note that is not on the request are answered 404. Under the request lock the note is re-read; while the request accepts notes the mark is set to the given value and one event is appended to the note's AI-input history, in the same write. Setting the value the note already has succeeds and writes nothing; Undo is a second change. A request that takes no new note (released, closed or returned to draft) answers 409 NOTES_CLOSED, and a note whose history is full (200 events) or cannot be read answers 409 HISTORY_UNAVAILABLE, with nothing written. The mark chooses inputs only; it never generates, accepts or releases anything.
+         */
+        put: operations["assessment-workflow/set-request-note-ai-input"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an assessment request's files, newest first, with whether the caller may add one
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, and a missing request, is answered 404 with the same message. Lists every file of the request, removed and blocked ones included, newest first, at most 60 (the lifetime bound). Each file names its uploader by display name and part, its upload time, the note it came with, its state and the actions the caller may take now. meta.add says whether the caller may add a file now, with the closed reason when not, whether a note is needed, what remains of the limits, the limits and the allowed types. No storage address, digest or extracted text is served. Listing writes nothing.
+         */
+        get: operations["assessment-workflow/list-request-attachments"];
+        put?: never;
+        /**
+         * Add one file to an assessment request
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, and a missing request, is answered 404 with the same message. Multipart with exactly one file part and an optional noteId part; any other part is 400 with nothing written. On a draft only its requestor adds, with no note (an analyst is refused 409 REQUEST_NOT_SUBMITTED; a noteId is refused 409 ATTACHMENT_NOTE_INVALID). After submission, until release or closure, the requestor and any human Security Analyst add, each file with the caller's own note on the same request posted within the last 60 minutes (409 ATTACHMENT_NOTE_REQUIRED without one, ATTACHMENT_NOTE_INVALID for any other). A released or closed request takes none (409 ATTACHMENTS_CLOSED). The file is checked by its content and extension against PDF, DOCX, XLSX, PPTX, CSV, TXT, PNG and JPEG (415). A DOCX, XLSX or PPTX packaged in a way CSRM will not read (an archive comment, more than 10,000 parts, more than 1 GiB declared, a part declaring more than 200 times its compressed size, ZIP64, or a compression method other than stored or deflate) is refused 415 ATTACHMENT_UNSUPPORTED_STRUCTURE, and one carrying active content beyond macros (an external linked object, template, frame or subdocument, or an ActiveX control) 415 ATTACHMENT_ACTIVE_CONTENT. The file must hold 1 to 26,214,400 bytes (400 ATTACHMENT_EMPTY, 413 ATTACHMENT_TOO_LARGE) and is scanned for malware (422 ATTACHMENT_MALWARE_FOUND with details.detection). At most 20 active and 60 stored files per request, counted under the request lock (409 ATTACHMENT_LIMIT_REACHED, ATTACHMENT_LIFETIME_LIMIT_REACHED). While the file checks are busy, the upload is refused at once with 503 ATTACHMENT_BUSY and may be retried. Nothing of a refused file is kept. A file the scanner cannot check is stored in quarantine with state pending and cannot be downloaded until a scan passes.
+         */
+        post: operations["assessment-workflow/upload-request-attachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download one of an assessment request's files
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, a missing request and a file id that is not on this request are answered 404 with the same message. Only a clean file that has not been removed is sent. A reader asking for any other file is answered 409 with its closed reason: ATTACHMENT_QUARANTINED while it waits for its malware check, ATTACHMENT_BLOCKED after the check found malware, ATTACHMENT_REMOVED after its removal, and ATTACHMENT_UNAVAILABLE when its stored bytes are gone. Strapi reads the stored bytes and checks them against the SHA-256 recorded at upload before sending any; bytes that no longer match are refused with ATTACHMENT_INTEGRITY_FAILED and recorded as a security event. The file is sent as an attachment under its recorded type's media type, never inline, never cached and sandboxed. Each download is recorded as a security event.
+         */
+        get: operations["assessment-workflow/download-request-attachment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Remove one of an assessment request's files, or restore it
+         * @description Reachable by the request's requestor and any human Security Analyst; anyone else, a missing request and a file id that is not on this request are answered 404 with the same message. The body is exactly { data: { removed } }; any other key is 400. removed true removes the file softly: it records who removed it and when, takes it out of the main list and out of downloads, and ends its AI inclusion, deleting its stored text; its bytes are kept, and the record follows the request's retention. removed false restores it, recorded as an event; a restore never includes it in the AI inputs again. No reason or confirmation is asked. The uploader removes their own files; any human Security Analyst who did not raise the request removes any file from submission until release or closure; anyone else is refused 403 NOT_UPLOADER. Only the person who removed a file restores it (403 NOT_REMOVER). On a draft only its requestor acts (409 REQUEST_NOT_SUBMITTED); a released or closed request is read-only (409 ATTACHMENTS_CLOSED). A blocked file is never restored (409 ATTACHMENT_BLOCKED), a restore that would make a 21st active file is refused (409 ATTACHMENT_LIMIT_REACHED), and a file whose history is full or unreadable is not changed (409 HISTORY_UNAVAILABLE). Removing a removed file, or restoring one that is not removed, changes nothing and answers the file as it is. Every removal and restore is recorded as a security event.
+         */
+        put: operations["assessment-workflow/set-request-attachment-removal"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Include one of an assessment request's files in what the AI may read, or exclude it
+         * @description Human Security Analyst only (D-30, D-38): the Requestor, the Security Analyst Agent and every other caller are refused 403 before anything is read. An analyst who raised the request is refused 403 with the closed reason OWN_REQUEST (G-1). A missing request and a file id that is not on this request are answered 404. The body is exactly { data: { included } }; any other key is 400. Inclusion is off by default. Including a file extracts its text in a bounded worker, outside the request lock, and stores at most 20,000 characters with the characters available, the characters kept, whether the text was cut, the extractor's version and when it ran; excluding deletes the stored text and its facts. Each change is appended to the file's history and recorded as a security event, never with the text or the file's name. A change is accepted only from submission until release or closure: 409 REQUEST_NOT_SUBMITTED on a draft and 409 ATTACHMENTS_CLOSED on a released or closed request. Excluding is always allowed while the request takes changes. Including needs a clean file that has not been removed and carries text (PDF, DOCX, XLSX, PPTX, CSV or TXT): 409 ATTACHMENT_REMOVED, ATTACHMENT_BLOCKED, ATTACHMENT_QUARANTINED, ATTACHMENT_UNAVAILABLE or ATTACHMENT_NOT_TEXT_BEARING otherwise; stored bytes that no longer match their digest are 409 ATTACHMENT_INTEGRITY_FAILED, and a file with no text the extractor can read is 409 ATTACHMENT_TEXT_UNAVAILABLE. Including is refused while the request's AI data policy refuses, so the inclusion never promises what generation would refuse: 409 AI_CLASSIFICATION_ABOVE_CEILING or AI_POLICY_NOT_CONFIGURED. Setting the value the file already has changes nothing, and a file whose history is full or unreadable is not changed (409 HISTORY_UNAVAILABLE). While text extraction is busy, an inclusion is refused at once with 503 ATTACHMENT_BUSY and may be retried; nothing is changed. The inclusion chooses inputs only; it never generates, accepts or releases anything.
+         */
+        put: operations["assessment-workflow/set-request-attachment-ai-input"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the stored text an included file sends to the AI
+         * @description Human Security Analyst only (D-31, D-38): the Requestor, the Security Analyst Agent and every other caller are refused 403 before anything is read; an analyst who raised the request is refused 403 with the closed reason OWN_REQUEST (G-1). A missing request and a file id that is not on this request are answered 404. Returns the stored text exactly as it would be sent to the AI, at most 20,000 characters, with its facts. A file that is not included has no stored text: 409 ATTACHMENT_TEXT_UNAVAILABLE. Reading writes nothing.
+         */
+        get: operations["assessment-workflow/get-request-attachment-ai-text"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -67,6 +503,92 @@ export interface paths {
         put?: never;
         /** Release an analyst-only questionnaire to its Requestor */
         post: operations["questionnaire-workflow/release-questionnaire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/questionnaires/{questionnaireId}/ai_proposal_decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm, reject or undo questionnaire AI proposals, all or nothing (human Security Analyst only) */
+        post: operations["questionnaire-ai/decide-ai-proposals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/questionnaire_proposal_jobs/{jobId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry a failed questionnaire AI proposal or rewrite job as the retrying analyst's attempt */
+        post: operations["questionnaire-ai/retry-proposal-job"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/questionnaire_proposal_jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a retained questionnaire AI proposal or rewrite job (human Security Analyst only) */
+        get: operations["questionnaire-ai/get-proposal-job"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/questionnaires/{questionnaireId}/questions/{questionId}/rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the AI to rewrite one unanswered question, in plain language by default (human Security Analyst only) */
+        post: operations["questionnaire-ai/start-question-rewrite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/questionnaires/{questionnaireId}/ai_proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a questionnaire's AI proposals, their run facts and decisions, and what the analyst may do now (human Security Analyst only) */
+        get: operations["questionnaire-ai/list-ai-proposals"];
+        put?: never;
+        /** Ask the AI for questionnaire-wide proposals, optionally steered by an instruction (human Security Analyst only) */
+        post: operations["questionnaire-ai/start-ai-proposals"];
         delete?: never;
         options?: never;
         head?: never;
@@ -827,6 +1349,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/my_questionnaires/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the signed-in actor's own questionnaires as a CSV or XLSX file
+         * @description Phase 19 (D-03, D-04, D-06, D-07, D-13, D-16 to D-18). The caller's own questionnaires, whole: My questionnaires' own query parameters without page and pageSize, parsed by its own closed parser, in its own owner scope, status filter and order. Every person exports only the questionnaires of requests whose requestor is the signed-in actor, a Security Analyst included, each read from the Requestor's side, so only released questionnaires; it needs GET /api/v1/my_questionnaires as well, both held through the Requestor birthright, and the service identity is refused whatever it holds. A questionnaire's questions, answers and description are never a column. More than 10,000 matching questionnaires is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["questionnaire-workflow/export-my-questionnaires"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/my_questionnaires/status_summary": {
         parameters: {
             query?: never;
@@ -853,6 +1395,26 @@ export interface paths {
         };
         /** List questionnaires available for Security Analyst review */
         get: operations["questionnaire-workflow/get-questionnaires-for-review"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/questionnaires/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the Security Analyst's questionnaire review list as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-03, D-04, D-05, D-07, D-13, D-16 to D-18). The questionnaire review list, whole: the list's own query parameters without page and pageSize, parsed by its own closed parser, in its own review scope, status filter and order. Only a human Security Analyst holding both the export and GET /api/v1/questionnaires may export; the service identity is refused whatever it holds. A questionnaire's questions, answers and description are never a column. More than 10,000 matching questionnaires is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["questionnaire-workflow/export-questionnaires-for-review"];
         put?: never;
         post?: never;
         delete?: never;
@@ -981,6 +1543,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/assessment_requests/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the analyst review queue as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-03, D-04, D-05, D-07, D-13, D-16 to D-18). The review queue, whole: the queue's own query parameters without pagination, parsed by its own closed parser, in its own queue, filters (Phase 13's assignee and notes filters included, read for the resolved IdamBox User) and order. Only a human Security Analyst holding both the export and GET /api/v1/assessment_requests may export; the service identity is refused whatever it holds. A request's notes are never a column. More than 10,000 matching requests is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["assessment-workflow/export-assessment-request-queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/my_requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the signed-in actor's own assessment requests with who holds each one
+         * @description Lists only the assessment requests whose requestor is the signed-in actor, for every actor, a Security Analyst included, each read from the Requestor's side. Each item names its lifecycle stage and who holds it (holder): the Requestor for a draft or a released questionnaire not yet submitted with no Risk Assessment, nobody once the request is approved or closed, otherwise the Security Analyst. Each item names the Security Analyst who holds it by display name alone (assignee, null when nobody has picked it up) and counts the notes new to the caller as its Requestor (unreadNotes). An item never carries a Risk Assessment field. Any query key outside these parameters, a repeated parameter or a value outside its schema is rejected with 400.
+         */
+        get: operations["assessment-workflow/get-my-requests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/my_requests/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the signed-in actor's own assessment requests as a CSV or XLSX file
+         * @description Phase 19 (D-03, D-04, D-06, D-07, D-13, D-16 to D-18). The caller's own requests, whole: My requests' own query parameters without page and pageSize, parsed by its own closed parser, in its own owner scope and order. Every person exports only the requests whose requestor is the signed-in actor, a Security Analyst included, each read from the Requestor's side; it needs GET /api/v1/my_requests as well, both held through the Requestor birthright, and the service identity is refused whatever it holds. A request's notes are never a column. More than 10,000 matching requests is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["assessment-workflow/export-my-requests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/my_requests/status_summary": {
         parameters: {
             query?: never;
@@ -990,7 +1612,7 @@ export interface paths {
         };
         /**
          * Get the signed-in actor's own assessment request counts by status
-         * @description Counts only the assessment requests whose requestor is the signed-in actor, for every actor, a Security Analyst included. The operation takes no query parameters: any query key is rejected with 400.
+         * @description Counts only the assessment requests whose requestor is the signed-in actor, for every actor, a Security Analyst included, and how many of them have notes new to the caller as their Requestor. The operation takes no query parameters: any query key is rejected with 400.
          */
         get: operations["assessment-workflow/get-my-request-status-summary"];
         put?: never;
@@ -1044,9 +1666,26 @@ export interface paths {
         };
         /**
          * Get a request's current generation jobs for a human Security Analyst
-         * @description Returns the request's questionnaire generation job (the active one, else the most recent retained) and the assessment draft job for its questionnaire, each with whether the viewing analyst initiated it (only its initiator may retry it, once it has failed). Jobs are process-local, so after a restart both entries are null.
+         * @description Returns the request's questionnaire generation job (the active one, else the most recent retained) and the assessment draft job for its questionnaire, each with whether the viewing analyst may retry it (the job failed and any human Security Analyst who may read the request may retry it) and who started it. Jobs are process-local, so after a restart both entries are null.
          */
         get: operations["questionnaire-generation/get-request-generation-jobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai_runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read what an AI run used: its facts, context summary and outcome (human Security Analyst only) */
+        get: operations["ai-runs/get-ai-run"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1062,7 +1701,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get an actor-scoped questionnaire generation job */
+        /** Get a retained questionnaire generation job for a human Security Analyst */
         get: operations["questionnaire-generation/get-questionnaire-generation-job"];
         put?: never;
         post?: never;
@@ -1140,6 +1779,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/risk_assessments/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the analyst Risk assessments list as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-03, D-04 to D-07, D-13, D-16 to D-18). Every assessment the analyst Risk assessments list would show across all its pages, whole: the list's own query parameters without page and pageSize, parsed by its own closed parser, in its own scope and order, each row its own projection. Risks and Highest residual rating are the list's own figures, which count and rate active Risks only, so a withdrawn Risk sets neither. Only a human Security Analyst holding the export and GET /api/v1/risk_assessments may export; the service identity is refused whatever it holds. More than 10,000 matching assessments is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["assessment-workflow/export-risk-assessments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_assessments/{assessmentId}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export a released risk assessment as an XLSX workbook or one of its tables as a CSV file
+         * @description Phase 19 (D-03 group 2, D-13 to D-16, D-18, D-21; UI-D5). The released risk assessment exactly as its released reads disclose it, read through the one released-assessment record-read check: XLSX holds a Summary sheet (the assessment and request numbers, the request title, the Released date and who released it, the overall rating and control effectiveness, the summary, the overall rationale, the recommendations and the next review date), a Risks sheet (one row per Risk the released risks read returns, so no withdrawn Risk) and a Mitigation controls sheet (one row per control implementation of those Risks, keyed by risk number), then an About this export sheet that carries the AI assistance notice when AI assisted; CSV holds the Risks or the Mitigation controls table the table parameter names. The export takes no columns parameter (UI-D5). A Requestor exports only a released assessment of a request they raised: another person's, or their own unreleased one, is the missing record's 404. A Security Analyst exports any released assessment, with the same tables a Requestor gets; an unreleased one is 409 ASSESSMENT_NOT_RELEASED. It needs GET /api/v1/risk_assessments/{assessmentId} as well, and the service identity is refused whatever it holds. Each admitted attempt is recorded as one security event naming the exporter, the view (released-assessment), the assessment, the format, the table and the row count, never a cell value.
+         */
+        get: operations["assessment-workflow/export-released-risk-assessment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/risk_assessments/{assessmentId}": {
         parameters: {
             query?: never;
@@ -1156,6 +1835,23 @@ export interface paths {
         head?: never;
         /** Update allowlisted assessment review fields */
         patch: operations["assessment-workflow/update-risk-assessment"];
+        trace?: never;
+    };
+    "/v1/risk_assessments/{assessmentId}/ai_proposal_decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record analyst proposal decisions */
+        post: operations["assessment-workflow/decide-ai-proposals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/risk_assessments/{assessmentId}/risks": {
@@ -1185,6 +1881,26 @@ export interface paths {
         };
         /** List authorised contextual risks */
         get: operations["risk-register/get-risks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risks/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the filtered Risk register as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-03, D-05, D-13, D-16 to D-18). The Risk register, whole: the register's own query parameters without page and pageSize, parsed by its own closed parser, in its own scope and order, active Risks by default and the withdrawn Risks alone for state=withdrawn. Only a human Security Analyst holding both the export and GET /api/v1/risks may export; the service identity is refused whatever it holds. More than 10,000 matching Risks is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["risk-register/export-risk-register"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1317,6 +2033,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/my_risk_assessments/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the signed-in actor's own released risk assessments as a CSV or XLSX file
+         * @description Phase 19 (D-03, D-04, D-06, D-07, D-13, D-14, D-16 to D-18). The caller's own released assessments, whole: My risk assessments' own query parameters without page and pageSize, parsed by its own closed parser, in its own owner scope and order. Every person exports only the released assessments of requests they raised, as the released-assessment record-read check decides, a Security Analyst included, each projected as the Requestor's list projects it (who generated a draft is never named); it needs GET /api/v1/my_risk_assessments as well, both held through the Requestor birthright, and the service identity is refused whatever it holds. More than 10,000 matching assessments is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["assessment-workflow/export-my-released-risk-assessments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/my_risk_assessments": {
         parameters: {
             query?: never;
@@ -1386,6 +2122,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/risk_types/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Risk Types import template as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-31, D-12, D-13, D-18). The Risk Types import template, generated on request from the import contract: the import columns' display labels in contract order and one example row whose reserved natural key the import skips, every cell text (the @ format in a workbook). An XLSX adds a Notes sheet naming each column's label, API name, whether it is required, its format and allowed values and what a blank cell does, then six rules. No dropdowns. A template is not an export of records and writes no export event.
+         */
+        get: operations["administration/download-risk-types-import-template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_types/import/error_report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Download the Risk Types rows that were not imported, with their issues (human Security Analyst only)
+         * @description Phase 19 (D-32, D-11, D-13, D-18). Rebuilt by the server from the uploaded file and its own retained record of that file for the same analyst and collection: the preview record (previewDigest, at Review) or the result record (resultToken, at Results), each kept for five minutes. Exactly one of the two is sent, and the file's SHA-256 must equal the record's. The file holds the original header row as typed, then every row not (or not yet) imported, its cells as typed and neutralised, and a last Issues column naming each problem by its column's label, each prefixed Row {n}: and separated by "; ". Imported rows, unchanged rows and the analyst's own skipped similar rows are excluded. The format follows the upload: CSV (UTF-8 with a BOM) or XLSX. Issues are never accepted from the client. An error report is not an export of records and writes no export event.
+         */
+        post: operations["administration/download-risk-types-import-error-report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_types/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the filtered Risk Types list as a CSV or XLSX file in its import shape (human Security Analyst only)
+         * @description Phase 19 (D-04, D-05, D-13, D-16 to D-18, D-33). The Risk Types list, whole: the list's own query parameters without page and pageSize, parsed by its own closed parser, in its own order. The file holds the import columns under the import template's labels, then the list's read-only columns, which an import of the file notes and ignores, so an exported list, edited and imported again, updates by natural key. Only a human Security Analyst holding both the export and GET /api/v1/risk_types may export; the service identity is refused whatever it holds. More than 10,000 matching records is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["administration/export-risk-types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/risk_types/import": {
         parameters: {
             query?: never;
@@ -1432,6 +2228,66 @@ export interface paths {
         put?: never;
         /** Preview a bounded Control CSV import */
         post: operations["administration/preview-controls-import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/controls/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Controls import template as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-31, D-12, D-13, D-18). The Controls import template, generated on request from the import contract: the import columns' display labels in contract order and one example row whose reserved natural key the import skips, every cell text (the @ format in a workbook). An XLSX adds a Notes sheet naming each column's label, API name, whether it is required, its format and allowed values and what a blank cell does, then six rules. No dropdowns. A template is not an export of records and writes no export event.
+         */
+        get: operations["administration/download-controls-import-template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/controls/import/error_report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Download the Controls rows that were not imported, with their issues (human Security Analyst only)
+         * @description Phase 19 (D-32, D-11, D-13, D-18). Rebuilt by the server from the uploaded file and its own retained record of that file for the same analyst and collection: the preview record (previewDigest, at Review) or the result record (resultToken, at Results), each kept for five minutes. Exactly one of the two is sent, and the file's SHA-256 must equal the record's. The file holds the original header row as typed, then every row not (or not yet) imported, its cells as typed and neutralised, and a last Issues column naming each problem by its column's label, each prefixed Row {n}: and separated by "; ". Imported rows, unchanged rows and the analyst's own skipped similar rows are excluded. The format follows the upload: CSV (UTF-8 with a BOM) or XLSX. Issues are never accepted from the client. An error report is not an export of records and writes no export event.
+         */
+        post: operations["administration/download-controls-import-error-report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/controls/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the filtered Controls list as a CSV or XLSX file in its import shape (human Security Analyst only)
+         * @description Phase 19 (D-04, D-05, D-13, D-16 to D-18, D-33). The Controls list, whole: the list's own query parameters without page and pageSize, parsed by its own closed parser, in its own order. The file holds the import columns under the import template's labels, then the list's read-only columns, which an import of the file notes and ignores, so an exported list, edited and imported again, updates by natural key. Only a human Security Analyst holding both the export and GET /api/v1/controls may export; the service identity is refused whatever it holds. More than 10,000 matching records is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["administration/export-controls"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1525,6 +2381,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/information_systems/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Information Systems import template as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-31, D-12, D-13, D-18). The Information Systems import template, generated on request from the import contract: the import columns' display labels in contract order and one example row whose reserved natural key the import skips, every cell text (the @ format in a workbook). An XLSX adds a Notes sheet naming each column's label, API name, whether it is required, its format and allowed values and what a blank cell does, then six rules. No dropdowns. A template is not an export of records and writes no export event.
+         */
+        get: operations["administration/download-information-systems-import-template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/information_systems/import/error_report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Download the Information Systems rows that were not imported, with their issues (human Security Analyst only)
+         * @description Phase 19 (D-32, D-11, D-13, D-18). Rebuilt by the server from the uploaded file and its own retained record of that file for the same analyst and collection: the preview record (previewDigest, at Review) or the result record (resultToken, at Results), each kept for five minutes. Exactly one of the two is sent, and the file's SHA-256 must equal the record's. The file holds the original header row as typed, then every row not (or not yet) imported, its cells as typed and neutralised, and a last Issues column naming each problem by its column's label, each prefixed Row {n}: and separated by "; ". Imported rows, unchanged rows and the analyst's own skipped similar rows are excluded. The format follows the upload: CSV (UTF-8 with a BOM) or XLSX. Issues are never accepted from the client. An error report is not an export of records and writes no export event.
+         */
+        post: operations["administration/download-information-systems-import-error-report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/information_systems/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the filtered Information Systems list as a CSV or XLSX file in its import shape (human Security Analyst only)
+         * @description Phase 19 (D-04, D-05, D-13, D-16 to D-18, D-33). The Information Systems list, whole: the list's own query parameters without page and pageSize, parsed by its own closed parser, in its own order. The file holds the import columns under the import template's labels, then the list's read-only columns, which an import of the file notes and ignores, so an exported list, edited and imported again, updates by natural key. Only a human Security Analyst holding both the export and GET /api/v1/information_systems may export; the service identity is refused whatever it holds. More than 10,000 matching records is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["administration/export-information-systems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/information_systems/import": {
         parameters: {
             query?: never;
@@ -1612,6 +2528,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/information_assets/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Information Assets import template as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-31, D-12, D-13, D-18). The Information Assets import template, generated on request from the import contract: the import columns' display labels in contract order and one example row whose reserved natural key the import skips, every cell text (the @ format in a workbook). An XLSX adds a Notes sheet naming each column's label, API name, whether it is required, its format and allowed values and what a blank cell does, then six rules. No dropdowns. A template is not an export of records and writes no export event.
+         */
+        get: operations["administration/download-information-assets-import-template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/information_assets/import/error_report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Download the Information Assets rows that were not imported, with their issues (human Security Analyst only)
+         * @description Phase 19 (D-32, D-11, D-13, D-18). Rebuilt by the server from the uploaded file and its own retained record of that file for the same analyst and collection: the preview record (previewDigest, at Review) or the result record (resultToken, at Results), each kept for five minutes. Exactly one of the two is sent, and the file's SHA-256 must equal the record's. The file holds the original header row as typed, then every row not (or not yet) imported, its cells as typed and neutralised, and a last Issues column naming each problem by its column's label, each prefixed Row {n}: and separated by "; ". Imported rows, unchanged rows and the analyst's own skipped similar rows are excluded. The format follows the upload: CSV (UTF-8 with a BOM) or XLSX. Issues are never accepted from the client. An error report is not an export of records and writes no export event.
+         */
+        post: operations["administration/download-information-assets-import-error-report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/information_assets/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the filtered Information Assets list as a CSV or XLSX file in its import shape (human Security Analyst only)
+         * @description Phase 19 (D-04, D-05, D-13, D-16 to D-18, D-33). The Information Assets list, whole: the list's own query parameters without page and pageSize, parsed by its own closed parser, in its own order. The file holds the import columns under the import template's labels, then the list's read-only columns, which an import of the file notes and ignores, so an exported list, edited and imported again, updates by natural key. Only a human Security Analyst holding both the export and GET /api/v1/information_assets may export; the service identity is refused whatever it holds. More than 10,000 matching records is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["administration/export-information-assets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/information_assets/import": {
         parameters: {
             query?: never;
@@ -1658,7 +2634,7 @@ export interface paths {
         };
         /**
          * Summarise the analyst's workload for the analyst dashboard
-         * @description Every figure is computed on read inside the Security Analyst's review and Risk Register scopes, with the predicate of the list it opens: each review queue count equals that queue's total, the Questionnaire and Risk Assessment counts equal their review lists filtered by status, each exposure count equals the Risk Register filtered by that residual rating and state=open, and each treatment count equals the total of the matching treatment alert list. Recent activity lists the most recent workflow events, newest first. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.
+         * @description Every figure is computed on read inside the Security Analyst's review and Risk Register scopes, with the predicate of the list it opens: each review queue count equals that queue's total, the Questionnaire and Risk Assessment counts equal their review lists filtered by status, each exposure count equals the Risk Register filtered by that residual rating (none for not rated), state=open and its stage (stage=released, with treatmentAction=Accept for the accepted counts, or stage=under-assessment), and each treatment count equals the total of the matching treatment alert list. Recent activity lists the most recent workflow events, newest first. The operation takes no query parameters: any query key is rejected with 400. Human Security Analyst only.
          */
         get: operations["analyst-insights/get-dashboard-summary"];
         put?: never;
@@ -1681,6 +2657,26 @@ export interface paths {
          * @description Alerts are conditions derived on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored. The list is ordered by urgency (overdue, due soon, attention), then dated before undated, then governing date ascending, source identifier, kind and source documentId. Human Security Analyst only.
          */
         get: operations["analyst-insights/get-alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/alerts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the derived analyst alerts as a CSV or XLSX file (human Security Analyst only)
+         * @description Phase 19 (D-03, D-04, D-05, D-07, D-13, D-16 to D-18; G-16). The alert list, whole: the list's own kind and urgency parameters without page and pageSize, parsed by its own closed parser and derived on read by the list's own derivation, in its order (urgency, dated before undated, governing date, source identifier, kind, source documentId). Each row's urgency, condition and date are the list's own; the export never recomputes a due state, and a withdrawn Risk raises no row. Only a human Security Analyst holding the export, GET /api/v1/alerts and the analyst insight scope's underlying reads may export; the service identity is refused whatever it holds. More than 10,000 matching alerts is refused before anything is generated. Each admitted attempt is recorded as one security event naming the exporter, the view, the parsed filters and the row count, never a cell value.
+         */
+        get: operations["analyst-insights/export-alerts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1729,6 +2725,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/risk_assessments/{assessmentId}/risk_withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw Risks of an unreleased risk assessment
+         * @description Human Security Analyst only (Phase 16 D-05, D-06, D-09, D-11, D-43). Withdraws the named Risks of one unreleased assessment in one transaction under the assessment's editable guard: each Risk that is active gets withdrawnAt, withdrawnBy and withdrawalReason and one `withdrawn` history row, and keeps its number, fields, control implementations and AI provenance. An already withdrawn Risk is reported in `unchanged` with no history row. `{ riskIds, reason }` records the typed reason; `{ riskIds, undo: true }` restores the reason the Risk held before its reinstatement (400 when it has none) and marks the history row as an Undo. An Undo applies only while each Risk it would withdraw has, as its most recent history row, a `reinstated` row by the acting analyst; otherwise the whole batch is 409 RISK_CURATION_UNDO_UNAVAILABLE and nothing is written. A Risk that does not exist or belongs to another assessment refuses the whole batch with 404. A batch that withdraws something takes the accepted-edit transition (a release-ready in-review assessment returns to draft); one that withdraws nothing changes nothing. A released or otherwise not editable assessment is 409 ASSESSMENT_NOT_MUTABLE.
+         */
+        post: operations["risk-curation/withdraw-risks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_assessments/{assessmentId}/risk_reinstatements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reinstate withdrawn Risks of an unreleased risk assessment
+         * @description Human Security Analyst only (Phase 16 D-10, D-11, D-43). Reinstates the named withdrawn Risks of one unreleased assessment in one transaction under the assessment's editable guard: each withdrawn Risk has withdrawnAt, withdrawnBy and withdrawalReason cleared and gets one `reinstated` history row. An active Risk in a mixed batch is reported in `unchanged`; a batch whose Risks are all active is 409 RISK_NOT_WITHDRAWN and changes nothing. `{ riskIds, reason }` records the typed reason; `{ riskIds, undo: true }` is the withdrawal's Undo and records the fixed reason `Withdrawal undone` with the history row marked as an Undo. An Undo applies only while each withdrawn Risk's current withdrawal is the acting analyst's (withdrawnBy) and its most recent history row is that `withdrawn` row; otherwise the whole batch is 409 RISK_CURATION_UNDO_UNAVAILABLE and nothing is written. A Risk that does not exist or belongs to another assessment refuses the whole batch with 404. A batch that reinstates something takes the accepted-edit transition. A released or otherwise not editable assessment is 409 ASSESSMENT_NOT_MUTABLE.
+         */
+        post: operations["risk-curation/reinstate-risks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risks/{riskId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one Risk's history
+         * @description Human Security Analyst only in this phase (Phase 16 D-21, D-43). One page of the Risk's append-only history, newest first (occurredAt, then the event, descending), a withdrawn Risk's included. Each event names its kind, time, actor, source, AI run and proposal item when an AI run proposed the change, the withdrawal or reinstatement reason and whether it was an Undo, and its change envelope (null when a stored envelope cannot be read). `meta.recordedFrom` is the earliest event's time, or null when the Risk has none: history is recorded from Phase 16 on and never backfilled. The query is closed to `page` and `pageSize`; anything else, or a value out of range, is a 400. An unknown Risk is 404.
+         */
+        get: operations["risk-curation/get-risk-history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_assessments/{assessmentId}/risk_suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the AI to suggest more risks for an editable risk assessment (human Security Analyst only)
+         * @description Phase 16 D-24 to D-27, D-30, D-43. Starts a job that records one AI run (operation risk-suggestions) naming the analyst, the instruction, the time, the provider and the context summary, and writes at most 8 proposed risks into the run; nothing reaches the assessment until an analyst confirms an item. One job per assessment while it is queued or running: a second start returns that job. Refused with 403 OWN_REQUEST to an analyst who raised the request, 409 ASSESSMENT_NOT_MUTABLE on an assessment that cannot change (released, for example), 400 with the instruction's reason, 409 AI_PROPOSAL_RUN_LIMIT at 100 completed risk proposal runs and 409 with the AI data policy's reason; nothing is queued when refused.
+         */
+        post: operations["risk-ai-proposals/start-risk-suggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risks/{riskId}/rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the AI to rewrite one active risk of an editable risk assessment (human Security Analyst only)
+         * @description Phase 16 D-24 to D-27, D-34 to D-38, D-43. Starts a job that records one AI run (operation risk-rewrite, naming the Risk) and writes the proposed changes into the run as units the analyst decides one by one; nothing changes on the Risk until an analyst confirms a unit. An optional focus (statement, ratings, treatment) narrows the units kept. One job per Risk while it is queued or running: a second start returns that job. A newer rewrite that completes with a change supersedes the older open changes of the same Risk. Refused with 404 for an unknown Risk, 403 OWN_REQUEST to an analyst who raised the request, 409 ASSESSMENT_NOT_MUTABLE on an assessment that cannot change, 409 RISK_WITHDRAWN for a withdrawn Risk, 400 for the instruction or the focus, 409 AI_PROPOSAL_RUN_LIMIT and 409 with the AI data policy's reason; nothing is queued when refused.
+         */
+        post: operations["risk-ai-proposals/start-risk-rewrite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_proposal_jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Follow a risk AI proposal job (human Security Analyst only)
+         * @description Phase 16 D-26 (Phase 13 D-18). Any human Security Analyst follows a retained job, whoever started it, except on a request they raised (403 OWN_REQUEST). Jobs are process-local: an unknown or expired job is 404.
+         */
+        get: operations["risk-ai-proposals/get-risk-proposal-job"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_proposal_jobs/{jobId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry a failed risk AI proposal job as the retrying analyst's new run (human Security Analyst only)
+         * @description Phase 16 D-26 (Phase 13 D-18). Any human Security Analyst who may follow the job retries a failed job whose target has no active job; the new attempt records a new run naming the retrying analyst. The start's checks apply again before anything is queued: 409 for a job that did not fail or whose target is busy, ASSESSMENT_NOT_MUTABLE, RISK_WITHDRAWN, AI_PROPOSAL_RUN_LIMIT and the AI data policy; 400 when the instruction now repeats the Requestor's text; 403 OWN_REQUEST to an analyst who raised the request; 404 for an unknown or expired job.
+         */
+        post: operations["risk-ai-proposals/retry-risk-proposal-job"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/risk_assessments/{assessmentId}/ai_proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a risk assessment's AI proposals, their runs and states, and what the analyst may do now (human Security Analyst only)
+         * @description Phase 16 D-41. The open items first, grouped by run newest first, then the 50 most recently decided items, with each run's facts, each item's state folded from its decision events, staleness for an open change, similarity, sources, decision facts, the derived open count and per-risk open counts, the viewer's actions, and the active and recently failed jobs. Nothing beyond the immutable proposal and its append-only decisions is stored. Refused with 403 OWN_REQUEST to an analyst who raised the request.
+         */
+        get: operations["risk-ai-proposals/list-risk-ai-proposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reports/{reportKey}": {
         parameters: {
             query?: never;
@@ -1738,7 +2894,7 @@ export interface paths {
         };
         /**
          * Compute one analyst report from current records
-         * @description Each report is computed on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored and no report widens that scope. Risk and Control Implementation figures count open contextual Risks, those with no closure date. Only assessment-throughput takes a query parameter, period; a period on any other report, or any other query key, is rejected with 400. A key that names no report answers 404. Human Security Analyst only.
+         * @description Each report is computed on read from existing records inside the Security Analyst's Risk Register and review scopes; nothing is stored and no report widens that scope. Every Risk figure counts open Risks, those with no closure date. risk-exposure counts released open Risks and, apart, the open Risks still under assessment; treatment-performance and control-effectiveness count open Risks in both stages. Only assessment-throughput takes a query parameter, period; a period on any other report, or any other query key, is rejected with 400. A key that names no report answers 404. Human Security Analyst only.
          */
         get: operations["analyst-insights/get-report"];
         put?: never;
@@ -1749,10 +2905,514 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/{reportKey}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export one analyst report's tables as an XLSX workbook or one table as a CSV file (human Security Analyst only)
+         * @description Phase 19 (D-03, D-13, D-16 to D-18, D-22; UI-D5). The report is computed exactly as GET /api/v1/reports/{reportKey} computes it, with the report's own query parser, figures and windows, and shaped as the tables its page shows. XLSX holds one sheet per report table, in page order, then an About this export sheet with the report's As at date and, for assessment-throughput, its Period; CSV holds the one table the body names. A report export takes no columns (UI-D5). Only a human Security Analyst holding the export, GET /api/v1/reports/{reportKey} and the analyst insight scope's underlying reads may export; the service identity is refused whatever it holds. Each admitted attempt is recorded as one security event naming the exporter, the view (report:{reportKey}), the format, the table and the row count, never a cell value.
+         */
+        post: operations["analyst-insights/export-report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A related record as it was named when the change was recorded. */
+        RiskHistoryRelationValue: {
+            documentId: string;
+            label: string | null;
+        };
+        /** @description A recorded value: a scalar as stored, or a related record with its label at the time. */
+        RiskHistoryValue: string | number | boolean | null | components["schemas"]["RiskHistoryRelationValue"];
+        RiskHistoryFieldChange: {
+            field: string;
+            from: components["schemas"]["RiskHistoryValue"];
+            to: components["schemas"]["RiskHistoryValue"];
+        };
+        /** @description The control a control implementation event concerns. */
+        RiskHistoryControl: {
+            documentId: string;
+            controlNumber: string;
+            name: string;
+        };
+        /** @description The change envelope v1. `control` is present only on the control implementation kinds; withdrawn and reinstated events list no fields. */
+        RiskHistoryChanges: {
+            /** @constant */
+            schemaVersion: 1;
+            fields: components["schemas"]["RiskHistoryFieldChange"][];
+            control?: components["schemas"]["RiskHistoryControl"];
+        };
+        RiskHistoryEvent: {
+            id: string;
+            /** @enum {string} */
+            kind: "created" | "updated" | "withdrawn" | "reinstated" | "control-implementation-added" | "control-implementation-updated" | "control-implementation-removed";
+            /** Format: date-time */
+            occurredAt: string | null;
+            actor: components["schemas"]["ActiveUserSummary"] | null;
+            /** @enum {string} */
+            sourceKind: "analyst" | "ai-run";
+            aiRunId: string | null;
+            proposalItem: string | null;
+            reason: string | null;
+            undo: boolean;
+            changes: components["schemas"]["RiskHistoryChanges"] | null;
+        };
+        RiskHistoryResponse: {
+            data: components["schemas"]["RiskHistoryEvent"][];
+            meta: {
+                pagination: {
+                    page: number;
+                    pageSize: number;
+                    pageCount: number;
+                    total: number;
+                };
+                /**
+                 * Format: date-time
+                 * @description The earliest event's time, or null when the Risk has no history (History recorded from {date}).
+                 */
+                recordedFrom: string | null;
+            };
+        };
+        /** @description An optional instruction to the AI for Suggest more risks (Phase 16 D-27, Phase 15's bounds): at most 500 characters, no control or bidirectional characters, and not a repeat of the Requestor's text. */
+        RiskSuggestionsRequest: {
+            instruction?: string | null;
+        };
+        /** @description An optional instruction to the AI for Rewrite this risk (Phase 16 D-27, Phase 15's bounds) and an optional focus: the parts of the Risk the rewrite may change (absent or null: every part). A focus, when given, names one to three distinct parts. */
+        RiskRewriteRequest: {
+            instruction?: string | null;
+            focus?: ("statement" | "ratings" | "treatment")[] | null;
+        };
+        RiskProposalJobResponse: {
+            data: components["schemas"]["RiskProposalJob"];
+        };
+        /** @description A risk AI proposal job (Phase 16 D-26), as a human Security Analyst reads it. Jobs are process-local. riskId is the rewritten Risk, null for Suggest more risks. initiatedBy names who started the job or its latest retry; canRetry is whether this viewer may retry it now. */
+        RiskProposalJob: {
+            jobId: string;
+            /** @enum {string} */
+            operation: "risk-suggestions" | "risk-rewrite";
+            assessmentId: string;
+            riskId: string | null;
+            /** @enum {string} */
+            status: "queued" | "running" | "completed" | "failed";
+            attempt: number;
+            /** Format: date-time */
+            queuedAt: string;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            runId: string | null;
+            failureCode: string | null;
+            failureMessage: string | null;
+            /** @description For a CONTEXT_TOO_LARGE failure with files included in the AI inputs: those files in upload order by their current names. Absent otherwise. */
+            failureAttachments?: components["schemas"]["GenerationJobFailureAttachment"][];
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            initiatedByViewer: boolean;
+            canRetry: boolean;
+        };
+        RiskAiProposalsResponse: {
+            data: components["schemas"]["RiskAiProposals"];
+        };
+        /** @description Phase 16 D-41: a risk assessment's AI proposals. openCount and openByRisk are derived from the folded item states on read; lastAskedAt is the latest completed risk proposal run's completion time. items lists the open items, grouped by run newest first, then the 50 most recently decided. jobs lists the active job per target and the latest failed job of a target with none active, while this process retains it. */
+        RiskAiProposals: {
+            assessmentId: string;
+            /** @description Whether the assessment passes the editable guard for the viewer now (Phase 16 D-22). */
+            editable: boolean;
+            openCount: number;
+            openByRisk: components["schemas"]["RiskAiOpenByRisk"][];
+            /** Format: date-time */
+            lastAskedAt: string | null;
+            actions: {
+                suggest: components["schemas"]["RiskAiAction"];
+                rewrite: components["schemas"]["RiskAiAction"];
+                decide: components["schemas"]["RiskAiAction"];
+            };
+            runs: components["schemas"]["RiskAiRunFacts"][];
+            items: components["schemas"]["RiskAiProposalItem"][];
+            jobs: components["schemas"]["RiskProposalJob"][];
+        };
+        /** @description Whether the viewer may take a risk AI action now. Asking (suggest, rewrite) needs the editable guard, the run cap and the AI data policy; deciding needs only the guard. */
+        RiskAiAction: {
+            allowed: boolean;
+            /** @description Why the act is not allowed now: ASSESSMENT_NOT_MUTABLE, AI_PROPOSAL_RUN_LIMIT or an AI data policy reason, or null when it is allowed. */
+            reason: string | null;
+        };
+        /** @description How many open proposed changes one Risk has. */
+        RiskAiOpenByRisk: {
+            riskId: string;
+            count: number;
+        };
+        /** @description One completed risk proposal run: who asked, when, with which provider and instruction (and a rewrite's focus and Risk), its outcome, its item counts and its adjustments by code. */
+        RiskAiRunFacts: {
+            runId: string;
+            /** @enum {string} */
+            operation: "risk-suggestions" | "risk-rewrite";
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            providerName: string | null;
+            providerVersion: string | null;
+            instruction: string | null;
+            focus: ("statement" | "ratings" | "treatment")[] | null;
+            riskId: string | null;
+            /** @enum {string} */
+            outcome: "items" | "no-change";
+            counts: {
+                items: number;
+                open: number;
+            };
+            adjustments: {
+                /** @enum {string} */
+                code: "near-duplicate-active" | "near-duplicate-withdrawn" | "near-duplicate-rejected" | "near-duplicate-proposed" | "invalid-item" | "over-limit" | "accept-not-permitted" | "accept-with-planned-control" | "sources-dropped" | "suggestions-dropped" | "suggestions-capped" | "outside-focus" | "no-change";
+                count: number;
+            }[];
+        };
+        /** @description The closest stored record a suggested risk resembles (Phase 16 D-32): an active or withdrawn Risk by its id and number, or a rejected or open earlier suggestion by its run and item key, with the similarity score. */
+        RiskAiSimilarity: {
+            /** @enum {string} */
+            kind: "active" | "withdrawn" | "rejected" | "open";
+            riskId: string | null;
+            riskNumber: string | null;
+            runId: string | null;
+            itemKey: string | null;
+            score: number;
+        };
+        /** @description How a closed item was decided: the last decision event's action, who (null for the system or a person who cannot be read), when, a rejection's reason and a supersession's or lapse's cause. */
+        RiskAiDecisionFacts: {
+            /** @enum {string} */
+            action: "accepted" | "rejected" | "restored" | "superseded" | "lapsed";
+            by: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            at: string;
+            reason: string | null;
+            cause: {
+                /** @enum {string} */
+                kind: "newer-rewrite" | "risk-withdrawn" | "assessment-not-editable";
+                runId: string | null;
+                riskId: string | null;
+            } | null;
+        };
+        /** @description One proposed item: a suggested risk (kind risk, keyed s-1 to s-8) or one unit of a rewrite (kind change, keyed by its unit). state is folded from the item's decision events. stale is set for an open change only: whether the Risk no longer holds the values the change was proposed against (or is withdrawn). acceptBlocked says whether a proposed Accept would be refused now (Phase 16 D-38). */
+        RiskAiProposalItem: {
+            runId: string;
+            itemKey: string;
+            /** @enum {string} */
+            kind: "risk" | "change";
+            /** @enum {string} */
+            state: "open" | "accepted" | "rejected" | "superseded" | "lapsed";
+            stale: boolean | null;
+            riskId: string | null;
+            unitKey: string | null;
+            fields: string[];
+            current: {
+                [key: string]: string | null;
+            } | null;
+            /** @description Field values by AI-writable Risk field name, as the analyst reads them: text as stored, a Risk Type, system or asset by its record's name (No longer available when the record is gone), null for no value. */
+            proposed: {
+                [key: string]: string | null;
+            };
+            similarTo: components["schemas"]["RiskAiSimilarity"] | null;
+            aiAccept: boolean;
+            /** @enum {string|null} */
+            acceptBlocked: "accept-not-permitted" | "accept-with-planned-control" | null;
+            sources: components["schemas"]["AiSourceCitation"][];
+            uncited: string[];
+            suggestedControls: {
+                controlNumber: string;
+                name: string;
+                rationale: string;
+            }[];
+            decision: components["schemas"]["RiskAiDecisionFacts"] | null;
+            addedRisk: {
+                riskId: string;
+                riskNumber: string | null;
+            } | null;
+            canUndo: boolean;
+        };
+        /** @description A withdrawal or reinstatement with a typed reason. A typed reason never marks an Undo, whatever its words. */
+        RiskCurationReasonRequest: {
+            /** @description 1 to 200 unique Risk documentIds, every one of the path's assessment; a repeated id is refused, never merged. */
+            riskIds: string[];
+            /** @description Plain text, trimmed, 1 to 500 characters. */
+            reason: string;
+        };
+        /** @description The Undo of the previous withdrawal or reinstatement (D-11): on reinstatements the server records the fixed reason `Withdrawal undone`; on withdrawals it restores the reason the Risk held before its reinstatement. The history row records `undo: true`. An Undo reverses only the acting analyst's own latest act on each Risk: on reinstatements the Risk's current withdrawal must be theirs and its most recent history row; on withdrawals its most recent history row must be their reinstatement. Otherwise the whole batch is 409 RISK_CURATION_UNDO_UNAVAILABLE and nothing is written. */
+        RiskCurationUndoRequest: {
+            /** @description 1 to 200 unique Risk documentIds, every one of the path's assessment; a repeated id is refused, never merged. */
+            riskIds: string[];
+            /** @enum {boolean} */
+            undo: true;
+        };
+        /** @description Exactly one of a reason or `undo: true`. An Undo reverses only the acting analyst's own latest act on each Risk (409 RISK_CURATION_UNDO_UNAVAILABLE otherwise). */
+        RiskCurationRequest: components["schemas"]["RiskCurationReasonRequest"] | components["schemas"]["RiskCurationUndoRequest"];
+        RiskCurationResult: {
+            /** @description The Risks the operation changed, each with one history row. */
+            applied: string[];
+            /** @description The Risks already in the requested state, left as they were with no history row. */
+            unchanged: string[];
+        };
+        RiskCurationResponse: {
+            data: components["schemas"]["RiskCurationResult"];
+        };
+        /** @description Create a source-owned user. externalId or Enterprise employeeNumber is required. active defaults true; blank displayName derives from name parts then userName. No source may assign Roles or private identity fields. Bodies are limited to 1 MiB. */
+        ScimCreateUser: {
+            /** @description Must contain urn:ietf:params:scim:schemas:core:2.0:User. Other urn: values, including the connector Slack profile URN, are ignored; body fields remain closed. */
+            schemas: string[];
+            userName: string;
+            /** @description Exact opaque case-sensitive source key. Immutable after ownership is established; when absent on input, falls back to Enterprise employeeNumber. */
+            externalId?: string;
+            name?: {
+                givenName?: string | null;
+                familyName?: string | null;
+            } | null;
+            displayName?: string | null;
+            active?: boolean;
+            /** @description Select exactly one marked primary, or the sole unmarked address. Ambiguous selections fail. Only the selected email persists. */
+            emails: {
+                /** Format: email */
+                value: string;
+                /** @description Boolean or case-insensitive true/false string from the pinned connector. */
+                primary?: boolean | string;
+                type?: string;
+                display?: string;
+            }[];
+            title?: string | null;
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: {
+                employeeNumber?: string | null;
+                department?: string | null;
+            } | null;
+            /** @description Empty connector echo only; any membership fails mutability. */
+            groups?: unknown[];
+        };
+        /** @description PUT replaces asserted source attributes under the shared user lock; omitted attributes keep current values, including active, emails, name parts and Enterprise fields. Explicit null clears optional fields. An asserted source key remains immutable. A manual candidate can be claimed only with an asserted externalId or Enterprise employeeNumber after upstream operator-confirmed correlation; knowing an id is not claim confirmation. Protected, foreign, service and tombstoned records remain hidden. No restoration, unclaim or Role writes. */
+        ScimReplaceUser: {
+            /** @description Must contain urn:ietf:params:scim:schemas:core:2.0:User. Other urn: values, including the connector Slack profile URN, are ignored; body fields remain closed. */
+            schemas: string[];
+            userName?: string;
+            /** @description Exact opaque case-sensitive source key. Immutable after ownership is established; when absent on input, falls back to Enterprise employeeNumber. */
+            externalId?: string;
+            name?: {
+                givenName?: string | null;
+                familyName?: string | null;
+            } | null;
+            displayName?: string | null;
+            active?: boolean;
+            /** @description Select exactly one marked primary, or the sole unmarked address. Ambiguous selections fail. Only the selected email persists. */
+            emails?: {
+                /** Format: email */
+                value: string;
+                /** @description Boolean or case-insensitive true/false string from the pinned connector. */
+                primary?: boolean | string;
+                type?: string;
+                display?: string;
+            }[];
+            title?: string | null;
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: {
+                employeeNumber?: string | null;
+                department?: string | null;
+            } | null;
+            /** @description Empty connector echo only; any membership fails mutability. */
+            groups?: unknown[];
+            /** @description Read-only echo must match target id. */
+            id?: string;
+            /** @description Read-only echo ignored. */
+            meta?: Record<string, never>;
+        };
+        /** @description Public allowlist only, without persistence relations, credentials, invented timestamps or ETag/version. Unassigned optional values are omitted. */
+        ScimUser: {
+            schemas: string[];
+            userName: string;
+            /** @description Exact immutable source key; absent for manual correlation candidates. */
+            readonly externalId?: string;
+            name?: {
+                givenName?: string;
+                familyName?: string;
+            };
+            displayName: string;
+            active: boolean;
+            emails: {
+                /** Format: email */
+                value: string;
+                /** @constant */
+                primary: true;
+            }[];
+            title?: string;
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: {
+                employeeNumber?: string;
+                department?: string;
+            };
+            readonly id: string;
+            meta: {
+                /** @constant */
+                resourceType: "User";
+                location: string;
+            };
+        };
+        /** @description Atomic ordered add/replace/remove against the frozen public projection inside the shared user lock; at most 100 operations and 1 MiB. Paths cover supported source attributes and selected-email equality only, never private fields or Roles. primary accepts boolean or true/false string. Added primary replaces the stored email; validated non-primary additions are not stored. emails[value eq "address"] removal of a missing address is a no-op; removing the stored address requires a new primary in the same batch. Unknown paths fail invalidPath, unmatched selection noTarget, immutable/required removal mutability; any failure rolls back the batch. */
+        ScimPatchRequest: {
+            schemas: "urn:ietf:params:scim:api:messages:2.0:PatchOp"[];
+            Operations: {
+                /** @description Case-insensitive operation. */
+                op: string;
+                path?: string;
+                value?: unknown;
+            }[];
+        };
+        ScimError: {
+            schemas: "urn:ietf:params:scim:api:messages:2.0:Error"[];
+            status: string;
+            detail: string;
+            /** @enum {string} */
+            scimType?: "invalidValue" | "invalidSyntax" | "invalidFilter" | "invalidPath" | "noTarget" | "mutability" | "uniqueness";
+        };
+        ScimUserList: {
+            schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+            totalResults: number;
+            startIndex: number;
+            itemsPerPage: number;
+            Resources?: components["schemas"]["ScimProjectedUser"][];
+        };
+        ScimSchemaAttribute: {
+            name: string;
+            type: string;
+            multiValued: boolean;
+            description: string;
+            required: boolean;
+            mutability: string;
+            returned: string;
+            caseExact?: boolean;
+            uniqueness?: string;
+            subAttributes?: components["schemas"]["ScimSchemaAttribute"][];
+            referenceTypes?: string[];
+            canonicalValues?: string[];
+        };
+        ScimSchema: {
+            schemas: string[];
+            id: string;
+            name: string;
+            description: string;
+            attributes: components["schemas"]["ScimSchemaAttribute"][];
+            meta: {
+                resourceType: string;
+                location: string;
+            };
+        };
+        ScimSchemaList: {
+            schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+            totalResults: number;
+            startIndex: number;
+            itemsPerPage: number;
+            Resources?: components["schemas"]["ScimSchema"][];
+        };
+        ScimResourceType: {
+            schemas: string[];
+            id: string;
+            name: string;
+            endpoint: string;
+            schema: string;
+            schemaExtensions?: {
+                schema: string;
+                required: boolean;
+            }[];
+            meta: {
+                resourceType: string;
+                location: string;
+            };
+        };
+        ScimResourceTypeList: {
+            schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+            totalResults: number;
+            startIndex: number;
+            itemsPerPage: number;
+            Resources?: components["schemas"]["ScimResourceType"][];
+        };
+        ScimServiceProviderConfig: {
+            schemas: string[];
+            patch: {
+                supported: boolean;
+            };
+            bulk: {
+                supported: boolean;
+                maxOperations: number;
+                maxPayloadSize: number;
+            };
+            filter: {
+                supported: boolean;
+                /** @constant */
+                maxResults: 500;
+            };
+            changePassword: {
+                supported: boolean;
+            };
+            sort: {
+                supported: boolean;
+            };
+            etag: {
+                supported: boolean;
+            };
+            authenticationSchemes: {
+                name: string;
+                description: string;
+                type: string;
+                primary: boolean;
+            }[];
+            meta: {
+                resourceType: string;
+                location: string;
+            };
+        };
+        /** @description Groups are not supported. Always totalResults=0, startIndex=1, itemsPerPage=0, Resources=[]. */
+        ScimEmptyGroupList: {
+            schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+            totalResults: number;
+            startIndex: number;
+            itemsPerPage: number;
+            Resources?: unknown[];
+        };
+        /** @description Read projection; schemas and id are always retained, with other fields selected by attributes/excludedAttributes. */
+        ScimProjectedUser: {
+            schemas: string[];
+            userName?: string;
+            /** @description Exact immutable source key; absent for manual correlation candidates. */
+            readonly externalId?: string;
+            name?: {
+                givenName?: string;
+                familyName?: string;
+            };
+            displayName?: string;
+            active?: boolean;
+            emails?: {
+                /** Format: email */
+                value?: string;
+                /** @constant */
+                primary?: true;
+            }[];
+            title?: string;
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: {
+                employeeNumber?: string;
+                department?: string;
+            };
+            readonly id: string;
+            meta?: {
+                /** @constant */
+                resourceType?: "User";
+                location?: string;
+            };
+        };
         RevertReasonRequest: {
             reason: string;
         };
@@ -1774,6 +3434,341 @@ export interface components {
         };
         AssessmentRequestRevertResponse: {
             data: components["schemas"]["AssessmentRequestRevert"];
+        };
+        AssessmentRequestAssigneeChangeRequest: {
+            data: {
+                /** @description The IdamBox User documentId of the analyst who is to hold the request, or null to return it to the queue. */
+                analyst: string | null;
+                /** @description The documentId of the assignee the caller last saw, or null when they saw the request unassigned. A different current assignee refuses the change with 409 ASSIGNMENT_CHANGED. */
+                expectedAnalyst: string | null;
+                /** @description Optional plain text recorded with the change, trimmed; control characters other than the newline are refused. */
+                reason?: string;
+            };
+        };
+        /**
+         * @description An assignment change the viewing analyst may make now. Empty for the request's own Requestor, for anyone who is not a human Security Analyst and on a draft; a released request offers no unassign.
+         * @enum {string}
+         */
+        AssessmentRequestAssignmentAction: "pick-up" | "assign" | "assign-to-me" | "reassign" | "unassign";
+        AssessmentRequestAssignmentEvent: {
+            /** @enum {string} */
+            action: "pick-up" | "assign" | "reassign" | "unassign";
+            by: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            at: string;
+            from: components["schemas"]["ActiveUserSummary"] | null;
+            to: components["schemas"]["ActiveUserSummary"] | null;
+            reason: string | null;
+        };
+        /** @description A request's assignment as an analyst sees it. People are a documentId and a display name only. history is newest first, or null when the stored history cannot be read. viewer is the analyst reading it, whom a pick-up or an assign-to-me sends as the analyst. */
+        AssessmentRequestAssignment: {
+            assignee: components["schemas"]["ActiveUserSummary"] | null;
+            assignedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            assignedAt: string | null;
+            actions: components["schemas"]["AssessmentRequestAssignmentAction"][];
+            ownRequest: boolean;
+            history: components["schemas"]["AssessmentRequestAssignmentEvent"][] | null;
+            viewer: components["schemas"]["ActiveUserSummary"];
+        };
+        AssessmentRequestAssignmentResponse: {
+            data: components["schemas"]["AssessmentRequestAssignment"];
+        };
+        /** @description A request's assignment as the Requestor sees it: the assignee's display name, or null when nobody holds the request. */
+        AssessmentRequestRequestorAssignment: {
+            assignee: {
+                displayName: string;
+            } | null;
+        };
+        /** @description The Security Analysts who may hold a request, by documentId and display name only, ordered by display name. */
+        AssignableAnalystListResponse: {
+            data: components["schemas"]["ActiveUserSummary"][];
+        };
+        /**
+         * @description The author's part on the request: the request's requestor (whatever role they hold), or a Security Analyst.
+         * @enum {string}
+         */
+        RequestNotePart: "requestor" | "security-analyst";
+        /** @description One note on an assessment request. The author is a documentId and a display name only, or null when the author can no longer be read. */
+        RequestNote: {
+            documentId: string;
+            /** @description 1, 2, 3 and so on per request, assigned by the server: the thread's order and the unread rule's key. */
+            sequence: number;
+            /** @description Plain text; never HTML or Markdown. */
+            body: string;
+            authorPart: components["schemas"]["RequestNotePart"];
+            author: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            postedAt: string;
+            /** @description Whether the note is unread for the caller. */
+            unread: boolean;
+            /** @description Served to a human Security Analyst only: whether the note is marked as changing the AI inputs. */
+            changesAiInputs?: boolean;
+        };
+        RequestNoteListMeta: {
+            /** @description Every note on the request. */
+            total: number;
+            /** @description The notes on the request unread for the caller. */
+            unread: number;
+            /** @description The sequence through which the caller has read the thread; 0 when never. */
+            lastReadSequence: number;
+            /** @description Whether notes earlier than this page exist. */
+            hasEarlier: boolean;
+            /** @description Whether the request takes a new note now. */
+            accepting: boolean;
+            /**
+             * @description Why the request takes no new note, or null while it does.
+             * @enum {string|null}
+             */
+            closedReason: "not-submitted" | "returned-to-draft" | "released" | null;
+            viewerPart: components["schemas"]["RequestNotePart"];
+            /** @description Whether the caller may mark a note as changing the AI inputs: a human Security Analyst who did not raise the request, while the request takes notes. */
+            canMarkAiInputs: boolean;
+        };
+        RequestNoteListResponse: {
+            data: components["schemas"]["RequestNote"][];
+            meta: components["schemas"]["RequestNoteListMeta"];
+        };
+        RequestNoteCreateRequest: {
+            data: {
+                /** @description Plain text, trimmed, with CRLF and CR normalised to LF; 1 to 5,000 characters after trimming, no control character other than tab and newline. */
+                body: string;
+                /** @description A human Security Analyst who did not raise the request may mark the note as changing the AI inputs (off when absent). A Requestor's create carrying it is refused with 400, and a Security Analyst's on a request they raised with 403 OWN_REQUEST. */
+                changesAiInputs?: boolean;
+            };
+        };
+        RequestNoteResponse: {
+            data: components["schemas"]["RequestNote"];
+        };
+        RequestNotesReadRequest: {
+            data: {
+                /** @description The documentId of the note on this request through which the caller has read the thread. */
+                throughNoteId: string;
+            };
+        };
+        RequestNoteAiInputRequest: {
+            data: {
+                /** @description Whether the note changes what the AI should use. */
+                changesAiInputs: boolean;
+            };
+        };
+        /** @description A request's notes as one viewer reads them (Phase 13 D-24, D-25): unread counts the notes written in the other part, by someone else, above the viewer's read state. */
+        RequestNotesSummary: {
+            total: number;
+            unread: number;
+            accepting: boolean;
+            /**
+             * @description Why the request takes no new note, or null while it does.
+             * @enum {string|null}
+             */
+            closedReason: "not-submitted" | "returned-to-draft" | "released" | null;
+        };
+        RequestNotesReadState: {
+            lastReadSequence: number;
+            unread: number;
+        };
+        RequestNotesReadResponse: {
+            data: components["schemas"]["RequestNotesReadState"];
+        };
+        /**
+         * @description The type the content check confirmed. A .jpg and a .jpeg file are both jpeg.
+         * @enum {string}
+         */
+        RequestAttachmentType: "pdf" | "docx" | "xlsx" | "pptx" | "csv" | "txt" | "png" | "jpeg";
+        /**
+         * @description available: clean and downloadable; pending: waiting for the malware check, in quarantine; blocked: the malware check found malware after upload, and the bytes are gone; removed: removed by a reader, kept on the record; unavailable: the stored bytes are gone.
+         * @enum {string}
+         */
+        RequestAttachmentState: "available" | "pending" | "blocked" | "removed" | "unavailable";
+        /**
+         * @description The uploader's part on the request: the request's requestor (whatever role they hold), or a Security Analyst.
+         * @enum {string}
+         */
+        RequestAttachmentPart: "requestor" | "security-analyst";
+        /** @description What the caller may do with the file now, as the server decides it. */
+        RequestAttachmentActions: {
+            download: boolean;
+            remove: boolean;
+            restore: boolean;
+        };
+        /** @description One file on an assessment request. People are a documentId and a display name only, or null when they can no longer be read. ai is served to a human Security Analyst only; a Requestor's file carries no AI key. */
+        RequestAttachment: {
+            documentId: string;
+            /** @description The sanitised original name; plain text, displayed escaped. */
+            fileName: string;
+            fileType: components["schemas"]["RequestAttachmentType"];
+            byteSize: number;
+            state: components["schemas"]["RequestAttachmentState"];
+            uploadedBy: components["schemas"]["ActiveUserSummary"] | null;
+            uploaderPart: components["schemas"]["RequestAttachmentPart"];
+            /**
+             * Format: date-time
+             * @description The server's time of the upload.
+             */
+            uploadedAt: string;
+            note: {
+                documentId: string;
+                /** Format: date-time */
+                postedAt: string;
+            } | null;
+            removedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            removedAt: string | null;
+            /** @description The malware check's detection name, served for a blocked file only, under the same pattern as the 422's details.detection; null when the recorded name does not match it. */
+            detection: string | null;
+            actions: components["schemas"]["RequestAttachmentActions"];
+            ai?: components["schemas"]["RequestAttachmentAi"];
+        };
+        /** @description Whether, and how, the caller may add a file to the request now. */
+        RequestAttachmentAddFacts: {
+            canAdd: boolean;
+            /**
+             * @description Why the caller may not add a file now, or null while they may.
+             * @enum {string|null}
+             */
+            refusal: "ATTACHMENTS_NOT_CONFIGURED" | "ATTACHMENTS_CLOSED" | "REQUEST_NOT_SUBMITTED" | "ATTACHMENT_LIMIT_REACHED" | "ATTACHMENT_LIFETIME_LIMIT_REACHED" | null;
+            /**
+             * @description intake: a draft, its requestor adds with no note; after-submission: from submission until release or closure, each file with the caller's own note; closed: released or closed, read-only.
+             * @enum {string}
+             */
+            window: "intake" | "after-submission" | "closed";
+            /** @description Whether a file must be posted with the caller's own note. */
+            needsNote: boolean;
+            /** @description How many more files the request takes before either limit. */
+            remaining: number;
+            /** @description The files available or waiting for the malware check, not removed. */
+            activeCount: number;
+            /** @description Every file of the request, removed and blocked ones included. */
+            storedCount: number;
+            limits: {
+                maxBytes: number;
+                maxActive: number;
+                maxStored: number;
+            };
+            allowedTypes: components["schemas"]["RequestAttachmentType"][];
+        };
+        RequestAttachmentListMeta: {
+            /** @description The files not removed: the main list's count. */
+            total: number;
+            /** @description The files removed from the request, listed in its removed group. */
+            removed: number;
+            add: components["schemas"]["RequestAttachmentAddFacts"];
+            aiPolicy?: components["schemas"]["RequestAttachmentAiPolicy"];
+        };
+        RequestAttachmentListResponse: {
+            data: components["schemas"]["RequestAttachment"][];
+            meta: components["schemas"]["RequestAttachmentListMeta"];
+        };
+        RequestAttachmentResponse: {
+            data: components["schemas"]["RequestAttachment"];
+        };
+        RequestAttachmentUploadRequest: {
+            /** Format: binary */
+            file: string;
+            /** @description After submission: the caller's own note on this request, posted within the last 60 minutes. */
+            noteId?: string;
+        };
+        /** @description A request's files as one viewer may act on them, on the request read (Phase 14 D-04 item 7): the count of files not removed and the add facts of RequestAttachmentAddFacts. */
+        RequestAttachmentSummary: {
+            /** @description The files not removed: the main list's count. */
+            count: number;
+            canAdd: boolean;
+            /**
+             * @description Why the caller may not add a file now, or null while they may.
+             * @enum {string|null}
+             */
+            refusal: "ATTACHMENTS_NOT_CONFIGURED" | "ATTACHMENTS_CLOSED" | "REQUEST_NOT_SUBMITTED" | "ATTACHMENT_LIMIT_REACHED" | "ATTACHMENT_LIFETIME_LIMIT_REACHED" | null;
+            /**
+             * @description intake: a draft, its requestor adds with no note; after-submission: from submission until release or closure, each file with the caller's own note; closed: released or closed, read-only.
+             * @enum {string}
+             */
+            window: "intake" | "after-submission" | "closed";
+            /** @description Whether a file must be posted with the caller's own note. */
+            needsNote: boolean;
+            /** @description How many more files the request takes before either limit. */
+            remaining: number;
+            /** @description The files available or waiting for the malware check, not removed. */
+            activeCount: number;
+            /** @description Every file of the request, removed and blocked ones included. */
+            storedCount: number;
+            limits: {
+                maxBytes: number;
+                maxActive: number;
+                maxStored: number;
+            };
+            allowedTypes: components["schemas"]["RequestAttachmentType"][];
+        };
+        /** @description Remove a file softly, or restore it. The only key the removal accepts. */
+        RequestAttachmentRemovalRequest: {
+            data: {
+                /** @description true removes the file; false restores it. */
+                removed: boolean;
+            };
+        };
+        /** @description Include a file's text in what the AI may read, or exclude it. The only key the AI inclusion accepts. */
+        RequestAttachmentAiInputRequest: {
+            data: {
+                /** @description true includes the file's text in what the AI may read; false excludes it and deletes the stored text. */
+                included: boolean;
+            };
+        };
+        /** @description The size of an included file's stored text: the characters the file has, the characters kept (at most 20,000), and whether the text was cut. Truncation is never silent. */
+        RequestAttachmentAiFacts: {
+            available: number;
+            kept: number;
+            truncated: boolean;
+        };
+        /** @description A file's AI inclusion, for a human Security Analyst only (D-28, D-30). */
+        RequestAttachmentAi: {
+            /** @description Whether the file's text is in what the AI may read. Off by default. */
+            included: boolean;
+            /** @description The stored text's size while the file is included; null otherwise. */
+            facts: components["schemas"]["RequestAttachmentAiFacts"] | null;
+            /**
+             * @description Why the file's text cannot be included whoever asks: an image carries no text the AI can read, and a file waiting for its malware check is never read. null otherwise.
+             * @enum {string|null}
+             */
+            unavailableReason: "ATTACHMENT_NOT_TEXT_BEARING" | "ATTACHMENT_QUARANTINED" | null;
+            /** @description Whether this viewer may change the file's inclusion now, as the server decides it. */
+            canChange: boolean;
+        };
+        /** @description Whether this human Security Analyst may include files in the AI inputs on this request now, and why not (D-28, D-30). Served to a human Security Analyst only; a Requestor's list carries no AI policy. */
+        RequestAttachmentAiPolicy: {
+            /** @description Whether a clean text-bearing file can be included now. Excluding an included file stays allowed while the request takes changes. */
+            canChange: boolean;
+            /**
+             * @description Why no file can be included now: the analyst raised the request (OWN_REQUEST, G-1), the request is a draft or released, or the request's AI data policy refuses. null while files can be included.
+             * @enum {string|null}
+             */
+            refusal: "OWN_REQUEST" | "REQUEST_NOT_SUBMITTED" | "ATTACHMENTS_CLOSED" | "AI_CLASSIFICATION_ABOVE_CEILING" | "AI_POLICY_NOT_CONFIGURED" | null;
+            /**
+             * @description The request's information classification, which governs what may be included (Phase 12 D-26).
+             * @enum {string}
+             */
+            classification: "Public" | "Internal" | "Restricted" | "Critical Infrastructure Sensitive";
+            /**
+             * @description The highest classification the AI provider is approved for, or null when none is configured.
+             * @enum {string|null}
+             */
+            ceiling: "Public" | "Internal" | "Restricted" | "Critical Infrastructure Sensitive" | null;
+        };
+        RequestAttachmentAiTextResponse: {
+            /** @description The stored text an included file sends to the AI, exactly as it would be sent, with its facts. */
+            data: {
+                /** @description Untrusted text extracted from the file; display it as plain text. */
+                text: string;
+                facts: {
+                    /** @description The characters the file has after normalisation. */
+                    available: number;
+                    /** @description The characters stored and sent: the first kept of available. */
+                    kept: number;
+                    truncated: boolean;
+                    /** @description The extractor's version, so a change of extractor is visible in the facts it produced. */
+                    extractor: string;
+                    /** Format: date-time */
+                    extractedAt: string;
+                };
+            };
         };
         QuestionnaireRevertActor: {
             documentId: string;
@@ -1803,11 +3798,12 @@ export interface components {
             choices?: components["schemas"]["QuestionnaireChoiceDefinition"][];
             visibility?: components["schemas"]["QuestionnaireVisibilityDefinition"] | null;
         };
+        /** @description A stored governance event as a governance result serves it. Phase 15 (D-26): the ai-proposal and question-restored kinds and the AI keys (runId, itemKey, aiEdited, aiUndo, scope, instruction, instructionSource, providerName, providerVersion, itemCount) appear in the analyst projection only; the Requestor projection never carries an AI kind or key. */
         QuestionnaireGovernanceEvent: {
             /** @constant */
             schemaVersion: 1;
             /** @enum {string} */
-            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared" | "regenerated";
+            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared" | "regenerated" | "ai-proposal" | "question-restored";
             /** Format: date-time */
             at: string;
             by: string;
@@ -1815,6 +3811,38 @@ export interface components {
             questionKey?: string;
             questionText?: string;
             explanation?: string;
+            /** @description The AI run's documentId: on ai-proposal, and on a question change a confirmation or its Undo wrote. */
+            runId?: string;
+            /**
+             * @description The proposal item a confirmation or its Undo applied, with runId.
+             * @example i-1
+             */
+            itemKey?: string;
+            /** @description The analyst edited the proposal before confirming it, with runId and itemKey. */
+            aiEdited?: boolean;
+            /**
+             * @description The event reverses a confirmed AI proposal.
+             * @constant
+             */
+            aiUndo?: true;
+            /**
+             * @description On ai-proposal: proposals for the questionnaire, or a plain-language rewrite of one question (named by questionKey and questionText).
+             * @enum {string}
+             */
+            scope?: "questionnaire" | "question";
+            /** @description The analyst's instruction to the AI, on ai-proposal and regenerated. */
+            instruction?: string;
+            /**
+             * @description Written in place of an instruction when none was given: on ai-proposal exactly one of instruction and instructionSource is present; regenerated carries only default-task.
+             * @enum {string}
+             */
+            instructionSource?: "plain-language-preset" | "default-task";
+            /** @description On ai-proposal: the run's provider. */
+            providerName?: string;
+            /** @description On ai-proposal: the run's provider version (the model). */
+            providerVersion?: string;
+            /** @description On ai-proposal: the proposals the run kept. */
+            itemCount?: number;
         };
         QuestionnaireClearedAnswer: {
             questionKey: string;
@@ -1844,6 +3872,7 @@ export interface components {
             revision?: components["schemas"]["QuestionnaireRevision"] | null;
             events: components["schemas"]["QuestionnaireGovernanceEvent"][];
             clearedAnswers?: components["schemas"]["QuestionnaireClearedAnswer"][];
+            aiAssisted: boolean;
             /** Format: date-time */
             updatedAt: string;
         };
@@ -1857,8 +3886,16 @@ export interface components {
             state: "completed" | "current" | "future";
         };
         AssessmentRequestLifecycleNextAction: {
-            /** @enum {string} */
+            /**
+             * @description The viewer the sentence is written for.
+             * @enum {string}
+             */
             actor: "requestor" | "analyst" | "none";
+            /**
+             * @description Who holds the work at this lifecycle step, the same for every viewer: the Requestor at draft and questionnaire-released, nobody once the assessment is released, otherwise the Security Analyst. A client links the summary only when holder equals actor and href is present.
+             * @enum {string}
+             */
+            holder: "requestor" | "analyst" | "none";
             summary: string;
             href?: string;
         };
@@ -1893,11 +3930,49 @@ export interface components {
             revertedBy?: components["schemas"]["QuestionnaireReleaseActor"] | null;
             release: components["schemas"]["QuestionnaireRelease"];
             revision?: components["schemas"]["QuestionnaireRevision"] | null;
+            aiAssisted: boolean;
             /** Format: date-time */
             updatedAt: string;
         };
         QuestionnaireReleaseResponse: {
             data: components["schemas"]["QuestionnaireReleaseResult"];
+        };
+        /** @description One review decision on the AI proposals of the assessment details or of one Risk. A field decision leaves out `suggestion`: `accept` confirms the named `fields`, or, without `fields`, every field still proposed, so sent again once none is left it changes nothing; `restore` returns the named `fields` to proposed and must name them, so a field `restore` without `fields` is refused as invalid (400); `dismiss` applies only to a suggestion. A suggestion decision names one Risk's `suggestion` and leaves out `fields`. */
+        AiProposalDecision: {
+            target: {
+                /** @constant */
+                kind: "assessment";
+            } | {
+                /** @constant */
+                kind: "risk";
+                riskId: string;
+            };
+            /** @enum {string} */
+            action: "accept" | "dismiss" | "restore";
+            fields?: string[];
+            suggestion?: string;
+        };
+        AiProposalDecisionRequest: {
+            decisions: (components["schemas"]["AiProposalDecision"] | components["schemas"]["AiProposalRunDecision"])[];
+        };
+        /** @description Phase 16 D-39: one human decision on a risk AI proposal item of a completed `risk-suggestions` or `risk-rewrite` run of this assessment. `accept` adds a suggested risk ("Add to assessment") or confirms one change; `reject` records the decision with an optional reason and changes nothing; `restore` undoes a rejection, or a confirmed change while the risk still holds what it confirmed (otherwise 409 AI_PROPOSAL_UNDO_UNAVAILABLE). An added risk has no undo. A run of another assessment refuses the whole batch with 404, and an item the run does not hold is a 400. `reject` and `reason` belong to this entry alone, and `dismiss` only to a suggested control. */
+        AiProposalRunDecision: {
+            target: {
+                /** @constant */
+                kind: "proposal";
+                runId: string;
+                item: string;
+            };
+            /** @enum {string} */
+            action: "accept" | "reject" | "restore";
+            /** @description Only with `reject`; trimmed. */
+            reason?: string;
+        };
+        AiProposalDecisionResponse: {
+            data: {
+                applied: number;
+                unchanged: number;
+            };
         };
         AssessmentWorkflowErrorResponse: {
             error: {
@@ -1906,10 +3981,41 @@ export interface components {
                 message: string;
                 details?: {
                     /**
-                     * @description The one rule that refused a workflow conflict (409). Closed list; a client that does not know a value falls back to its generic message.
+                     * @description The one rule that refused the operation: a workflow conflict (409), an identity-relative refusal (403: OWN_REQUEST, a request the caller raised; NOT_UPLOADER and NOT_REMOVER for a file), or a request attachment refusal (400 ATTACHMENT_EMPTY; 413 ATTACHMENT_TOO_LARGE; 415 ATTACHMENT_TYPE_NOT_ALLOWED, ATTACHMENT_CONTENT_MISMATCH, ATTACHMENT_MACRO_ENABLED, ATTACHMENT_ENCRYPTED, ATTACHMENT_LEGACY_OFFICE, ATTACHMENT_UNSUPPORTED_STRUCTURE (a ZIP-based file packaged in a way CSRM will not read) and ATTACHMENT_ACTIVE_CONTENT (an Office file carrying active content beyond macros); 422 ATTACHMENT_MALWARE_FOUND; 503 ATTACHMENT_BUSY, retryable (the file checks are busy, so nothing was done); 400 INSTRUCTION_TOO_LONG, INSTRUCTION_CHARACTERS_NOT_ALLOWED and INSTRUCTION_REPEATS_REQUESTOR_TEXT (an instruction to the AI that is too long, holds characters it may not, or repeats the Requestor's text); 409 for the others, among them Phase 16's risk curation refusals RISK_WITHDRAWN (the Risk is withdrawn, so it is read-only until reinstated), RISK_NOT_WITHDRAWN (every Risk named for reinstatement is already active), AI_ACCEPT_NOT_PERMITTED (confirming an AI-proposed Accept would leave the residual rating High or Critical) and REQUEST_HAS_ASSESSMENT (a request that holds a risk assessment is never deleted), and RISK_CURATION_UNDO_UNAVAILABLE (an Undo of a withdrawal or reinstatement that is no longer the acting analyst's own latest act on a named Risk); and Phase 19's 422 EXPORT_ROW_LIMIT (the export would hold more rows than the cap; served with details.rowCount and details.rowCap), 409 ASSESSMENT_NOT_RELEASED (an unreleased risk assessment the caller can read cannot be exported), 422 EXPORT_CELL_TOO_LONG (an xlsx export would hold a text cell longer than Excel's 32,767-character cell limit; served with details.column and details.cellLimit; the CSV holds the value whole), the import file refusals, served with details.found where it applies (415 IMPORT_FILE_TYPE, not a CSV or .xlsx file; 413 IMPORT_FILE_TOO_LARGE, more than 5 MB; 422 IMPORT_TOO_MANY_ROWS, more than 5,000 rows; 422 IMPORT_ENCODING_WINDOWS_1252, IMPORT_ENCODING_UTF16 and IMPORT_ENCODING_UNKNOWN, a file that is not UTF-8 text; 422 IMPORT_DELIMITER, columns separated by semicolons or tabs; 422 IMPORT_LEGACY_XLS, IMPORT_MACRO_WORKBOOK, IMPORT_ENCRYPTED_WORKBOOK and IMPORT_WORKBOOK_TOO_LARGE, a workbook CSRM will not open; 422 IMPORT_NO_HEADER, IMPORT_NO_ROWS, IMPORT_DUPLICATE_HEADER and IMPORT_MISSING_COLUMN, a header row CSRM cannot use), and the import commit's 409 IMPORT_DECISION_MISSING (a row matched by similar name has no decision) and 409 IMPORT_REVIEW_EXPIRED (the reviewed preview has expired or is unknown), and 422 IMPORT_CSV_MALFORMED (a CSV file the parser cannot read: an unclosed quote, an invalid closing quote, or a row with a different number of columns from the header; served with details.found.line when the parser reports the line)). Closed list; a client that does not know a value falls back to its generic message.
                      * @enum {string}
                      */
-                    reason?: "REQUEST_NOT_SUBMITTED" | "REQUEST_WORK_STARTED" | "REQUEST_NOT_ELIGIBLE" | "ASSESSMENT_STARTED" | "QUESTIONNAIRE_NOT_SUBMITTED" | "QUESTIONNAIRE_NOT_ANSWERABLE" | "QUESTIONNAIRE_ALREADY_SUBMITTED" | "QUESTIONNAIRE_INCOMPLETE" | "QUESTIONNAIRE_HAS_NO_QUESTIONS" | "QUESTIONNAIRE_RELEASED" | "ALREADY_IN_ANALYST_REVIEW" | "DEFINITION_INVALID" | "DEFINITION_CONFLICT" | "HISTORY_UNAVAILABLE" | "QUESTION_REMOVED" | "QUESTION_HAS_DEPENDENTS" | "LAST_ACTIVE_QUESTION" | "ANSWER_DATA_INVALID";
+                    reason?: "REQUEST_NOT_SUBMITTED" | "REQUEST_WORK_STARTED" | "REQUEST_NOT_ELIGIBLE" | "ASSESSMENT_STARTED" | "ASSESSMENT_NOT_MUTABLE" | "QUESTIONNAIRE_NOT_SUBMITTED" | "QUESTIONNAIRE_NOT_ANSWERABLE" | "QUESTIONNAIRE_ALREADY_SUBMITTED" | "QUESTIONNAIRE_INCOMPLETE" | "QUESTIONNAIRE_HAS_NO_QUESTIONS" | "QUESTIONNAIRE_RELEASED" | "ALREADY_IN_ANALYST_REVIEW" | "DEFINITION_INVALID" | "DEFINITION_CONFLICT" | "HISTORY_UNAVAILABLE" | "QUESTION_REMOVED" | "QUESTION_HAS_DEPENDENTS" | "LAST_ACTIVE_QUESTION" | "ANSWER_DATA_INVALID" | "AI_CLASSIFICATION_ABOVE_CEILING" | "AI_POLICY_NOT_CONFIGURED" | "AI_PROPOSAL_ALREADY_DECIDED" | "AI_SUGGESTION_CONTROL_CHANGED" | "AI_ACCEPT_WITH_PLANNED_CONTROL" | "AI_RUN_RECORD_UNAVAILABLE" | "OWN_REQUEST" | "ASSIGNMENT_CHANGED" | "ASSIGNEE_NOT_ELIGIBLE" | "ASSIGNMENT_REQUIRED" | "NOTES_CLOSED" | "NOTES_LIMIT_REACHED" | "REQUEST_HAS_NOTES" | "NOT_REQUEST_REQUESTOR" | "ATTACHMENTS_NOT_CONFIGURED" | "ATTACHMENTS_CLOSED" | "ATTACHMENT_NOTE_REQUIRED" | "ATTACHMENT_NOTE_INVALID" | "ATTACHMENT_LIMIT_REACHED" | "ATTACHMENT_LIFETIME_LIMIT_REACHED" | "ATTACHMENT_QUARANTINED" | "ATTACHMENT_BLOCKED" | "ATTACHMENT_REMOVED" | "ATTACHMENT_UNAVAILABLE" | "ATTACHMENT_INTEGRITY_FAILED" | "ATTACHMENT_TEXT_UNAVAILABLE" | "ATTACHMENT_NOT_TEXT_BEARING" | "REQUEST_HAS_ATTACHMENTS" | "ATTACHMENT_TOO_LARGE" | "ATTACHMENT_EMPTY" | "ATTACHMENT_TYPE_NOT_ALLOWED" | "ATTACHMENT_CONTENT_MISMATCH" | "ATTACHMENT_MACRO_ENABLED" | "ATTACHMENT_ENCRYPTED" | "ATTACHMENT_LEGACY_OFFICE" | "ATTACHMENT_MALWARE_FOUND" | "NOT_UPLOADER" | "NOT_REMOVER" | "ATTACHMENT_UNSUPPORTED_STRUCTURE" | "ATTACHMENT_ACTIVE_CONTENT" | "ATTACHMENT_BUSY" | "AI_PROPOSALS_OPEN" | "AI_PROPOSAL_STALE" | "QUESTIONNAIRE_HAS_ANALYST_CHANGES" | "QUESTION_ANSWERED" | "ASSESSMENT_DRAFT_IN_PROGRESS" | "AI_PROPOSAL_RUN_LIMIT" | "AI_PROPOSAL_UNDO_UNAVAILABLE" | "ANSWERED_QUESTION_AFFECTED" | "QUESTIONNAIRE_ANSWERED" | "INSTRUCTION_TOO_LONG" | "INSTRUCTION_CHARACTERS_NOT_ALLOWED" | "INSTRUCTION_REPEATS_REQUESTOR_TEXT" | "RISK_WITHDRAWN" | "RISK_NOT_WITHDRAWN" | "AI_ACCEPT_NOT_PERMITTED" | "REQUEST_HAS_ASSESSMENT" | "RISK_CURATION_UNDO_UNAVAILABLE" | "EXPORT_ROW_LIMIT" | "ASSESSMENT_NOT_RELEASED" | "EXPORT_CELL_TOO_LONG" | "IMPORT_FILE_TYPE" | "IMPORT_FILE_TOO_LARGE" | "IMPORT_TOO_MANY_ROWS" | "IMPORT_ENCODING_WINDOWS_1252" | "IMPORT_ENCODING_UTF16" | "IMPORT_ENCODING_UNKNOWN" | "IMPORT_DELIMITER" | "IMPORT_LEGACY_XLS" | "IMPORT_MACRO_WORKBOOK" | "IMPORT_ENCRYPTED_WORKBOOK" | "IMPORT_WORKBOOK_TOO_LARGE" | "IMPORT_NO_HEADER" | "IMPORT_NO_ROWS" | "IMPORT_DUPLICATE_HEADER" | "IMPORT_MISSING_COLUMN" | "IMPORT_DECISION_MISSING" | "IMPORT_REVIEW_EXPIRED" | "IMPORT_CSV_MALFORMED";
+                    /** @description The scanner's name for the malware it found. Served only beside ATTACHMENT_MALWARE_FOUND (422), and shown to the person as data. */
+                    detection?: string;
+                    /** @description The number of rows the refused export would hold. Served only beside EXPORT_ROW_LIMIT (422). */
+                    rowCount?: number;
+                    /** @description The most rows one export may hold. Served only beside EXPORT_ROW_LIMIT (422). */
+                    rowCap?: number;
+                    /** @description The key of the first column whose text cell is longer than Excel allows, from the export's closed column vocabulary; never a value. Served only beside EXPORT_CELL_TOO_LONG (422). */
+                    column?: string;
+                    /**
+                     * @description The most characters one xlsx text cell may hold, the neutraliser's mark included (Excel's limit). Served only beside EXPORT_CELL_TOO_LONG (422).
+                     * @constant
+                     */
+                    cellLimit?: 32767;
+                    /** @description What a refused import file was found to hold, so the refusal can name the fix. Served only beside an IMPORT_ reason; never holds a cell value. */
+                    found?: {
+                        /** @description The file's own column headers the refusal concerns, as typed, with control characters removed. */
+                        headers?: string[];
+                        /** @description The display labels of the columns the refusal concerns. */
+                        labels?: string[];
+                        /**
+                         * @description The separator the header line uses in place of a comma.
+                         * @enum {string}
+                         */
+                        delimiter?: "semicolon" | "tab";
+                        /** @description The data rows the file holds. */
+                        rows?: number;
+                        /** @description The size of the file in bytes. */
+                        bytes?: number;
+                        /** @description The 1-based source line on which the CSV parser failed. Served only beside IMPORT_CSV_MALFORMED, and only when the parser reports one; never the line's content. */
+                        line?: number;
+                    };
                 };
             };
         };
@@ -1926,6 +4032,38 @@ export interface components {
             requestStatus: "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
             /** Format: date-time */
             submittedDate: string | null;
+            /** @description The requestor's display name, or null when the request records no requestor. No other requestor field is served. */
+            requestorName: string | null;
+            /** @enum {string|null} */
+            assessmentType: "BAU" | "Project" | "Other" | null;
+            /**
+             * @description The business criticality the Requestor recorded: a business attribute, not a risk rating.
+             * @enum {string|null}
+             */
+            businessCriticality: "Low" | "Moderate" | "High" | "Critical" | null;
+            /** Format: date */
+            dueDate: string | null;
+            /** @description Whole UTC calendar days from the submission date to the server's UTC today, never negative; null when the request has no submission date. */
+            daysSinceSubmission: number | null;
+            /** @description The Security Analyst who holds the request, as a documentId and a display name only, or null when nobody has picked it up (D-13). */
+            assignee: components["schemas"]["ActiveUserSummary"] | null;
+            /**
+             * @description Whether the viewer may pick the request up, decided by the assignment operation's own rules (D-13, D-16): allowed for a human Security Analyst on an unassigned request they did not raise; own-request when the viewer raised it, so it is never theirs to pick up (D-07); not-offered otherwise (held by someone, or a viewer who is not a human Security Analyst). The assignment operation decides again on every change.
+             * @enum {string}
+             */
+            pickUp: "allowed" | "own-request" | "not-offered";
+            /** @description How many of the request's notes are new to the viewer (D-24): written in the other part, not by the viewer, and after the viewer's read state. 0 for a viewer who may not use the request's notes. */
+            unreadNotes: number;
+        };
+        /** @description The queue read's pagination, and its viewer: the analyst reading it, as a documentId and a display name, whom the queue's Pick up sends as the analyst (13-12). */
+        AssessmentRequestQueueMeta: {
+            pagination: {
+                page: number;
+                pageSize: number;
+                pageCount: number;
+                total: number;
+            };
+            viewer: components["schemas"]["ActiveUserSummary"];
         };
         CollectionMeta: {
             pagination: {
@@ -1937,7 +4075,7 @@ export interface components {
         };
         AssessmentRequestQueueResponse: {
             data: components["schemas"]["AssessmentRequestQueueItem"][];
-            meta: components["schemas"]["CollectionMeta"];
+            meta: components["schemas"]["AssessmentRequestQueueMeta"];
         };
         AssessmentDraftJobQueued: {
             jobId: string;
@@ -1947,6 +4085,12 @@ export interface components {
             queuedAt: string;
             /** @constant */
             status: "queued";
+            /** @description Whether the job failed and the viewing analyst may retry it (D-18). Any human Security Analyst who may read the request may retry a failed job. */
+            canRetry: boolean;
+            /** @description The analyst who started the job, or who started its latest retry; null when that person can no longer be read (D-18). */
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** @description Whether the viewing analyst started the job or its latest retry (D-18). */
+            initiatedByViewer: boolean;
         };
         AssessmentDraftJobRunning: {
             jobId: string;
@@ -1958,6 +4102,12 @@ export interface components {
             startedAt: string;
             /** @constant */
             status: "running";
+            /** @description Whether the job failed and the viewing analyst may retry it (D-18). Any human Security Analyst who may read the request may retry a failed job. */
+            canRetry: boolean;
+            /** @description The analyst who started the job, or who started its latest retry; null when that person can no longer be read (D-18). */
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** @description Whether the viewing analyst started the job or its latest retry (D-18). */
+            initiatedByViewer: boolean;
         };
         AssessmentDraftJobCompleted: {
             jobId: string;
@@ -1972,6 +4122,12 @@ export interface components {
             assessmentId: string;
             /** @constant */
             status: "completed";
+            /** @description Whether the job failed and the viewing analyst may retry it (D-18). Any human Security Analyst who may read the request may retry a failed job. */
+            canRetry: boolean;
+            /** @description The analyst who started the job, or who started its latest retry; null when that person can no longer be read (D-18). */
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** @description Whether the viewing analyst started the job or its latest retry (D-18). */
+            initiatedByViewer: boolean;
         };
         AssessmentDraftJobFailed: {
             jobId: string;
@@ -1987,6 +4143,14 @@ export interface components {
             failureMessage: string;
             /** @constant */
             status: "failed";
+            /** @description Phase 14 D-33: for a CONTEXT_TOO_LARGE failure with files included in the AI inputs, those files in upload order, by their current names; absent otherwise. */
+            failureAttachments?: components["schemas"]["GenerationJobFailureAttachment"][];
+            /** @description Whether the job failed and the viewing analyst may retry it (D-18). Any human Security Analyst who may read the request may retry a failed job. */
+            canRetry: boolean;
+            /** @description The analyst who started the job, or who started its latest retry; null when that person can no longer be read (D-18). */
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** @description Whether the viewing analyst started the job or its latest retry (D-18). */
+            initiatedByViewer: boolean;
         };
         AssessmentDraftJob: components["schemas"]["AssessmentDraftJobQueued"] | components["schemas"]["AssessmentDraftJobRunning"] | components["schemas"]["AssessmentDraftJobCompleted"] | components["schemas"]["AssessmentDraftJobFailed"];
         AssessmentDraftJobResponse: {
@@ -1995,6 +4159,452 @@ export interface components {
         ActiveUserSummary: {
             documentId: string;
             displayName: string;
+        };
+        AiRunResponse: {
+            data: components["schemas"]["AiRun"];
+        };
+        /** @description What an AI run used and how it ended (Phase 12 D-25). Never the proposal and never Requestor free text. Phase 15 adds the questionnaire-proposals and question-rewrite operations; Phase 16 adds risk-suggestions ("Suggest more risks") and risk-rewrite ("Rewrite this risk", whose targets.risk is the rewritten Risk). instruction is the exact validated instruction a Security Analyst gave, or null (a rewrite on CSRM's plain-language preset stores none). */
+        AiRun: {
+            documentId: string;
+            /** @enum {string} */
+            operation: "questionnaire-generation" | "assessment-draft" | "questionnaire-proposals" | "question-rewrite" | "risk-suggestions" | "risk-rewrite";
+            /** @enum {string} */
+            status: "running" | "completed" | "failed" | "interrupted";
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            providerName: string;
+            providerVersion: string;
+            instruction: string | null;
+            contextSummary: components["schemas"]["AiRunContextSummary"] | null;
+            failureCode: string | null;
+            failureMessage: string | null;
+            targets: {
+                assessmentRequest: string | null;
+                questionnaire: string | null;
+                assessment: string | null;
+                risk: string | null;
+            };
+        };
+        /** @description The closed summary of the context an AI run used. The stored summary holds no Requestor, note or file free text (a file is named by its documentId and digest); on the read, each file's current name is resolved from its attachment record. digest is sha256 over the exact prompt. Version 2 (Phase 13) adds the notes the run used; a version 1 summary, written before notes reached the context, is served with an empty notes section. Version 3 (Phase 14) adds the files the run used; a version 1 or 2 summary, written before files reached the context, is served with an empty attachments section. Version 4 (Phase 15) adds questionnaire, what a questionnaire proposal or rewrite run was shown of the questionnaire (null for questionnaire generation and the draft), and instruction, what steered the run by its source only (null for the draft); a version 1 to 3 summary is served with both null. Version 5 (Phase 16) adds riskProposals, what a risk-suggestions or risk-rewrite run listed, as counts and closed values only (null for every other operation); a version 1 to 4 summary is served with it null. None holds the instruction's text, a Risk's text or any Requestor text. */
+        AiRunContextSummary: {
+            /** @enum {integer} */
+            schemaVersion: 1 | 2 | 3 | 4 | 5;
+            /** @enum {string} */
+            operation: "questionnaire-generation" | "assessment-draft" | "questionnaire-proposals" | "question-rewrite" | "risk-suggestions" | "risk-rewrite";
+            request: {
+                fields: {
+                    key: string;
+                    label: string;
+                    characters: number;
+                }[];
+            };
+            questions: {
+                included: number;
+                answered: number;
+                sources: {
+                    key: string;
+                    label: string;
+                    section: string;
+                }[];
+            };
+            systems: {
+                key: string;
+                documentId: string;
+                name: string;
+            }[];
+            assets: {
+                key: string;
+                documentId: string;
+                name: string;
+                classification: string | null;
+            }[];
+            riskTypes: {
+                offered: number;
+                total: number;
+                names: string[];
+            };
+            controlCandidates: {
+                offered: number;
+                total: number;
+            };
+            classification: {
+                level: string;
+                /** @enum {string} */
+                source: "assets" | "default";
+                ceiling: string | null;
+                /** @enum {string} */
+                decision: "allowed" | "refused";
+            };
+            characters: number;
+            budget: number;
+            digest: string;
+            notes: components["schemas"]["AiRunContextNotes"];
+            attachments: components["schemas"]["AiRunContextAttachments"];
+            questionnaire: components["schemas"]["AiRunContextQuestionnaire"] | null;
+            instruction: components["schemas"]["AiRunContextInstruction"] | null;
+            riskProposals: components["schemas"]["AiRunContextRiskProposals"] | null;
+        };
+        /** @description The request files an AI run used (Phase 14 D-35): those a Security Analyst included in the AI inputs when its context was built, in upload order, at most 20. Each is named by its documentId and digest, never its text; its name is resolved when the run is read. bound is the characters of file text one run of the operation may send (30,000 for questionnaire generation, questionnaire proposals and a question rewrite, 60,000 for an assessment draft and the two risk proposal operations). */
+        AiRunContextAttachments: {
+            included: components["schemas"]["AiRunContextAttachment"][];
+            /** @enum {integer} */
+            bound: 30000 | 60000;
+        };
+        /** @description What a questionnaire proposal or rewrite run was shown of the questionnaire (Phase 15 D-14), as counts and closed values only. scope is questionnaire for questionnaire proposals and question for a rewrite. questionsOffered counts the questions sent and answered those answered, which the AI treats as fixed. answerContent is included only when every active, visible question held a submitted answer; a rewrite sends no answers. The open, rejected and removed items listed are bounded; the rejected items are the most recent, and rejectedItemsTotal counts them all. */
+        AiRunContextQuestionnaire: {
+            /** @enum {string} */
+            scope: "questionnaire" | "question";
+            questionsOffered: number;
+            answered: number;
+            /** @enum {string} */
+            answerContent: "included" | "withheld";
+            openItemsListed: number;
+            rejectedItemsListed: number;
+            rejectedItemsTotal: number;
+            removedListed: number;
+        };
+        /** @description What a risk proposal run listed (Phase 16 D-25, D-31, D-35), as counts and closed values only: never a Risk's text, a reason or the instruction's text. scope is assessment for risk-suggestions and risk for risk-rewrite. risksListed counts the active Risks listed (already in the assessment; for a rewrite, the assessment's other active Risks); withdrawnListed, rejectedListed and openListed count the withdrawn Risks and the rejected and open suggestions listed (zero for a rewrite). Together they are at most 200. controlsListed counts the rewritten Risk's control implementations and focus is the rewrite's focus (null for every part); both are null for risk-suggestions. */
+        AiRunContextRiskProposals: {
+            /** @enum {string} */
+            scope: "assessment" | "risk";
+            risksListed: number;
+            withdrawnListed: number;
+            rejectedListed: number;
+            openListed: number;
+            controlsListed: number | null;
+            focus: ("statement" | "ratings" | "treatment")[] | null;
+        };
+        /** @description What steered an AI run (Phase 15 D-17), by its source only, never its text: analyst (the run's instruction), plain-language-preset (CSRM's own rewrite request) or default-task (no instruction; the operation's own task). */
+        AiRunContextInstruction: {
+            /** @enum {string} */
+            source: "analyst" | "plain-language-preset" | "default-task";
+        };
+        /** @description One file an AI run used: its documentId, digest, type, the part that uploaded it, the characters sent and available and whether the text sent was truncated; never its text. fileName, requestId and removed are what the attachment record says when the run is read: its current name and request (null when the record no longer exists) and whether it has been removed since. */
+        AiRunContextAttachment: {
+            documentId: string;
+            sha256: string;
+            /** @enum {string} */
+            type: "pdf" | "docx" | "xlsx" | "pptx" | "csv" | "txt";
+            /** @enum {string} */
+            part: "requestor" | "security-analyst";
+            charactersSent: number;
+            charactersAvailable: number;
+            truncated: boolean;
+            fileName: string | null;
+            requestId: string | null;
+            removed: boolean;
+        };
+        QuestionnaireAiProposalsResponse: {
+            data: components["schemas"]["QuestionnaireAiProposals"];
+        };
+        /** @description Phase 15 D-03 item 4: the questionnaire's open AI proposal items, newest run first, then the 50 most recently decided items; the runs' facts; the active jobs; the answered (fixed) questions in analyst review and on a submitted questionnaire (null otherwise); and what the viewing analyst may do now. */
+        QuestionnaireAiProposals: {
+            questionnaireId: string;
+            /** @enum {string} */
+            state: "analyst-review" | "awaiting-submission" | "submitted" | "draft-in-progress" | "assessment-started";
+            openCount: number;
+            actions: {
+                start: components["schemas"]["QuestionnaireAiAction"];
+                rewrite: components["schemas"]["QuestionnaireAiAction"];
+                confirm: components["schemas"]["QuestionnaireAiAction"];
+                reject: components["schemas"]["QuestionnaireAiAction"];
+                replace: components["schemas"]["QuestionnaireAiAction"];
+            };
+            runs: components["schemas"]["QuestionnaireAiRunFacts"][];
+            items: components["schemas"]["QuestionnaireAiProposalItem"][];
+            jobs: components["schemas"]["QuestionnaireProposalJob"][];
+            fixedQuestions: {
+                questionId: string;
+                questionText: string;
+            }[] | null;
+        };
+        /** @description One proposed addition, change or removal. `stale` is null while the Requestor is answering and for a decided item. */
+        QuestionnaireAiProposalItem: {
+            runId: string;
+            itemKey: string;
+            /** @enum {string} */
+            kind: "add" | "change" | "remove";
+            /** @enum {string} */
+            state: "open" | "accepted" | "rejected" | "superseded" | "lapsed";
+            stale: boolean | null;
+            target: {
+                questionId: string;
+                questionText: string;
+                available: boolean;
+            } | null;
+            current: components["schemas"]["QuestionnaireAiQuestionValues"] | null;
+            proposed: components["schemas"]["QuestionnaireAiQuestionValues"] | null;
+            placement: {
+                sectionTitle: string;
+                newSection: boolean;
+                visibility: {
+                    controllerText: string | null;
+                    /** @enum {string} */
+                    operator: "equals" | "notEquals" | "includes" | "notIncludes";
+                    value: string | boolean;
+                } | null;
+            } | null;
+            rationale: string;
+            sources: {
+                /** @enum {string} */
+                kind: "request-field" | "note" | "file" | "answered-question" | "instruction";
+                ref: string;
+                label: string;
+                note: {
+                    documentId: string;
+                    /** @enum {string} */
+                    part: "requestor" | "security-analyst";
+                    /** Format: date-time */
+                    postedAt: string | null;
+                } | null;
+            }[];
+            decision: {
+                /** @enum {string} */
+                action: "accepted" | "rejected" | "restored" | "superseded" | "lapsed";
+                by: components["schemas"]["ActiveUserSummary"] | null;
+                /** Format: date-time */
+                at: string;
+                reason: string | null;
+                edited: boolean;
+            } | null;
+            canUndo: boolean;
+        };
+        /** @description One completed proposal or rewrite run: who asked, when, the provider, the instruction or what steered it, and what the adapter left out (by code and count). */
+        QuestionnaireAiRunFacts: {
+            runId: string;
+            /** @enum {string} */
+            operation: "questionnaire-proposals" | "question-rewrite";
+            /** @enum {string} */
+            scope: "questionnaire" | "question";
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            providerName: string | null;
+            providerVersion: string | null;
+            instruction: string | null;
+            /** @enum {string|null} */
+            instructionSource: "analyst" | "plain-language-preset" | "default-task" | null;
+            targetQuestion: {
+                questionId: string | null;
+                questionText: string;
+            } | null;
+            /** @enum {string} */
+            outcome: "items" | "no-change";
+            counts: {
+                items: number;
+                open: number;
+            };
+            adjustments: {
+                code: string;
+                count: number;
+            }[];
+            sourcesDropped: number;
+        };
+        QuestionnaireAiQuestionValues: {
+            questionText: string;
+            helpText: string | null;
+            /** @enum {string} */
+            answerType: "Text" | "Long text" | "Boolean" | "Single select" | "Multi select" | "Date" | "File upload";
+            choices: {
+                value: string;
+                label: string;
+            }[];
+            required: boolean;
+        };
+        QuestionnaireAiAction: {
+            allowed: boolean;
+            /** @description Why the act is not allowed now: a closed conflict reason, or null when it is allowed. */
+            reason: string | null;
+        };
+        QuestionnaireProposalJobResponse: {
+            data: components["schemas"]["QuestionnaireProposalJob"];
+        };
+        /** @description A questionnaire AI proposal or question rewrite job (Phase 15 D-16), as a human Security Analyst reads it. Jobs are process-local. */
+        QuestionnaireProposalJob: {
+            jobId: string;
+            questionnaireId: string;
+            /** @enum {string} */
+            operation: "questionnaire-proposals" | "question-rewrite";
+            questionId: string | null;
+            /** @enum {string} */
+            status: "queued" | "running" | "completed" | "failed";
+            attempt: number;
+            /** Format: date-time */
+            queuedAt: string;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            runId: string | null;
+            failureCode: string | null;
+            failureMessage: string | null;
+            /** @description For a CONTEXT_TOO_LARGE failure with files included in the AI inputs: those files in upload order by their current names. Absent otherwise. */
+            failureAttachments?: components["schemas"]["GenerationJobFailureAttachment"][];
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            initiatedByViewer: boolean;
+            canRetry: boolean;
+        };
+        QuestionnaireAiProposalDecisionResponse: {
+            data: {
+                applied: number;
+                unchanged: number;
+            };
+        };
+        QuestionnaireAiProposalDecisionRequest: {
+            decisions: {
+                runId: string;
+                item: string;
+                /**
+                 * @description accept is shown as Confirm; restore undoes a confirmation or a rejection.
+                 * @enum {string}
+                 */
+                action: "accept" | "reject" | "restore";
+                /** @description Edit, then confirm: the fields the analyst changed before confirming, each held to the manual question edit's rule. `section` applies to an addition only. */
+                edits?: {
+                    questionText?: string;
+                    helpText?: string | null;
+                    /** @enum {string} */
+                    answerType?: "Text" | "Long text" | "Boolean" | "Single select" | "Multi select" | "Date";
+                    choices?: {
+                        value: string;
+                        label: string;
+                    }[];
+                    required?: boolean;
+                    section?: {
+                        /** @constant */
+                        kind: "existing";
+                        key: string;
+                    } | {
+                        /** @constant */
+                        kind: "new";
+                        title: string;
+                    };
+                };
+                /** @description reject only. */
+                reason?: string;
+            }[];
+        };
+        /** @description An optional instruction to the AI (Phase 15 D-17 to D-19): at most 500 characters, no control or bidirectional characters, and not a repeat of the Requestor's text. */
+        QuestionnaireAiInstructionRequest: {
+            instruction?: string | null;
+        };
+        /** @description A file a CONTEXT_TOO_LARGE generation failure counted (Phase 14 D-33): one included in the AI inputs when the context was refused, by its documentId and its current name (null when the record no longer exists), so the analyst can exclude it. */
+        GenerationJobFailureAttachment: {
+            documentId: string;
+            fileName: string | null;
+        };
+        /** @description The request notes an AI run used: those marked as changing the AI inputs when its context was built, at most 50. Each is named without its text. */
+        AiRunContextNotes: {
+            included: components["schemas"]["AiRunContextNote"][];
+            marked: number;
+            /** @enum {integer} */
+            bound: 50;
+        };
+        /** @description One note an AI run used, by its documentId, part, sequence, posting time and length in characters; never its text. */
+        AiRunContextNote: {
+            documentId: string;
+            /** @enum {string} */
+            part: "requestor" | "security-analyst";
+            sequence: number;
+            /** Format: date-time */
+            postedAt: string;
+            characters: number;
+        };
+        /** @description Who generated a record through an AI provider, when, with which provider, and the run behind the latest generation (null for one generated before run records existed). Analyst reads only. */
+        AiGenerationFacts: {
+            /** Format: date-time */
+            generatedAt: string | null;
+            generatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            providerName: string | null;
+            providerVersion: string | null;
+            runId: string | null;
+            /** @description Phase 13 D-29 and Phase 14 D-36: the notes whose AI-input mark changed since this generation (marked since, or included and since unmarked) and the files whose inclusion changed (included, excluded or removed since), for a human Security Analyst; null when nothing changed, the record has no baseline, or the viewer is not a human Security Analyst. */
+            aiInputsChanged: components["schemas"]["AiInputsChanged"] | null;
+            /** @description Questionnaire reads only (Phase 15 D-28, D-32): how many AI proposal items on the questionnaire wait for an analyst's decision, for a human Security Analyst who did not raise the request; null for any other analyst. Absent from an assessment's generation facts. */
+            openProposals?: number | null;
+        };
+        /** @description Phase 13 D-29 and Phase 14 D-36: AI inputs changed since the last generation. The notes whose current AI-input mark differs from what the record's baseline (the completed context-wide run its generation.runId names, or the generation date of a record generated before run records existed) included, in sequence order, and the files whose current inclusion in the AI inputs differs from the same baseline's, in upload order; never their text. count is the notes changed plus the files changed. The signal is served when either list has an item, so one list may be empty but never both. Advisory and analyst-only. */
+        AiInputsChanged: {
+            count: number;
+            notes: components["schemas"]["AiInputsChangedNote"][];
+            files: components["schemas"]["AiInputsChangedFile"][];
+        };
+        /** @description One note whose AI-input mark changed since the baseline: marked (marked now, not used then) or unmarked (used then, no longer marked). Named by documentId, part, sequence and posting time only. */
+        AiInputsChangedNote: {
+            documentId: string;
+            /** @enum {string} */
+            part: "requestor" | "security-analyst";
+            sequence: number;
+            /** Format: date-time */
+            postedAt: string;
+            /** @enum {string} */
+            change: "marked" | "unmarked";
+        };
+        /** @description Phase 14 D-36: one file whose inclusion in the AI inputs changed since the baseline: included (in the inputs now, not used then), excluded (used then, excluded since or no longer scanned clean) or removed (used then, removed since). Named by documentId and current name only; never its text or digest. */
+        AiInputsChangedFile: {
+            documentId: string;
+            fileName: string;
+            /** @enum {string} */
+            change: "included" | "excluded" | "removed";
+        };
+        /** @description Phase 13 D-29 and Phase 14 D-36: the AI-inputs signal (notes and files) for each target of a request; a target is null when it does not exist, has no baseline, or nothing changed. */
+        RequestAiInputs: {
+            questionnaire: components["schemas"]["AiInputsChanged"] | null;
+            assessment: components["schemas"]["AiInputsChanged"] | null;
+        };
+        /** @description A context source an AI-written statement cites, resolved from the proposing run's catalogue. A source the catalogue no longer holds reads Source no longer available. */
+        AiSourceCitation: {
+            key: string;
+            /** @enum {string} */
+            kind: "request" | "answer" | "system" | "asset";
+            label: string;
+            section: string | null;
+            classification: string | null;
+        };
+        /** @description One AI-written field's review state; sources are given only for statement fields. */
+        AiFieldReview: {
+            field: string;
+            /** @enum {string} */
+            state: "proposed" | "accepted" | "edited";
+            by: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            at: string | null;
+            sources: components["schemas"]["AiSourceCitation"][] | null;
+        };
+        /** @description A suggested mitigation control and its review state; present means the control already mitigates the risk. */
+        AiSuggestionReview: {
+            key: string;
+            control: components["schemas"]["ControlSummary"];
+            rationale: string;
+            /** @enum {string} */
+            state: "proposed" | "added" | "dismissed" | "present";
+            by: components["schemas"]["ActiveUserSummary"] | null;
+            /** Format: date-time */
+            at: string | null;
+            implementation: string | null;
+        };
+        /** @description A risk's AI review state for the analyst (Phase 12 D-12, D-14, D-21). */
+        RiskAiProvenance: {
+            runId: string;
+            proposalKey: string;
+            fields: components["schemas"]["AiFieldReview"][];
+            uncitedClaims: string[];
+            suggestions: components["schemas"]["AiSuggestionReview"][];
+            adjustments: string[];
+            /** @description How many AI-written fields are still proposed. */
+            outstanding: number;
+        };
+        /** @description The assessment's own AI review state for the analyst. */
+        AssessmentAiProvenance: {
+            runId: string;
+            fields: components["schemas"]["AiFieldReview"][];
+            adjustments: string[];
+            outstanding: number;
         };
         AssessmentSummary: {
             documentId: string;
@@ -2005,9 +4615,16 @@ export interface components {
             overallRating: components["schemas"]["AssessmentRating"] | null;
             /** Format: date-time */
             generatedDate: string | null;
+            /** @description The Security Analyst who initiated the draft, on the analyst list. Null on the Requestor's own list (GET /v1/my_risk_assessments): who generated a draft is analyst-only (D-23). */
             generatedBy: components["schemas"]["ActiveUserSummary"] | null;
             /** Format: date-time */
             approvalDate: string | null;
+            /** @description The title of the assessment's Assessment Request, or null when the assessment records no request or the title is blank. */
+            requestTitle: string | null;
+            /** @description How many Risks the assessment holds. */
+            riskCount: number;
+            /** @description The highest residual rating, Low to Critical, among the assessment's Risks. A Risk with no residual rating, or one outside that scale, is counted in riskCount but never rates; null when no Risk is rated. */
+            highestResidualRating: components["schemas"]["AssessmentRating"] | null;
         };
         AssessmentListResponse: {
             data: components["schemas"]["AssessmentSummary"][];
@@ -2024,7 +4641,7 @@ export interface components {
         MyRequestStatusSummaryResponse: {
             data: components["schemas"]["MyRequestStatusSummary"];
         };
-        /** @description The signed-in actor's own assessment requests counted by requestStatus, one key per status. total is the sum of the seven status counts. */
+        /** @description The signed-in actor's own assessment requests counted by requestStatus, one key per status. total is the sum of the seven status counts. byHolder counts the same requests by who holds them, and its three counts also sum to total. withUnreadNotes counts the requests with at least one note new to the caller as their Requestor, equal to the total of GET /v1/my_requests?notes=unread. */
         MyRequestStatusSummary: {
             draft: number;
             submitted: number;
@@ -2034,6 +4651,67 @@ export interface components {
             approved: number;
             closed: number;
             total: number;
+            byHolder: components["schemas"]["MyRequestHolderCounts"];
+            /** @description The caller's own requests with at least one note new to them as the Requestor (D-24). */
+            withUnreadNotes: number;
+        };
+        /** @description The signed-in actor's own assessment requests counted by holder, with the same definition as GET /v1/my_requests?holder=: requestor (waiting on the caller as its Requestor), analyst (with the Security Analyst) and none (released or closed). */
+        MyRequestHolderCounts: {
+            requestor: number;
+            analyst: number;
+            none: number;
+        };
+        MyRequestListResponse: {
+            data: components["schemas"]["MyRequestItem"][];
+            meta: components["schemas"]["CollectionMeta"];
+        };
+        /** @description One of the signed-in actor's own assessment requests, read from the Requestor's side. It carries no Risk Assessment field: an unreleased assessment's identity is never disclosed. */
+        MyRequestItem: {
+            documentId: string;
+            requestNumber: string;
+            title: string;
+            /** @enum {string} */
+            requestStatus: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
+            /** Format: date-time */
+            submittedDate: string | null;
+            /** Format: date */
+            dueDate: string | null;
+            /** Format: date-time */
+            updatedAt: string | null;
+            /** @description Whole UTC calendar days from the submission date to the server's UTC today, never negative; null when the request has no submission date. */
+            daysSinceSubmission: number | null;
+            /**
+             * @description Who holds the request at its lifecycle stage, equal to the lifecycle next action's holder: the Requestor at draft and questionnaire-released, nobody once the assessment is released or the request is closed, otherwise the Security Analyst.
+             * @enum {string}
+             */
+            holder: "requestor" | "analyst" | "none";
+            stage: {
+                /** @enum {string} */
+                key: "draft" | "submitted" | "questionnaire-generated" | "questionnaire-released" | "questionnaire-submitted" | "assessment-drafted" | "assessment-reviewed" | "assessment-released";
+                label: string;
+            };
+            nextAction: {
+                summary: string;
+                href?: string;
+            } | null;
+            returned: {
+                reason: string | null;
+                /** Format: date-time */
+                at: string;
+            } | null;
+            questionnaire: {
+                documentId: string;
+                answered: number;
+                total: number;
+            } | null;
+            /** @description The Security Analyst who holds the request, by display name alone, or null when nobody has picked it up (D-17). */
+            assignee: components["schemas"]["MyRequestAssignee"] | null;
+            /** @description How many of the request's notes are new to the caller as its Requestor (D-24): written by a Security Analyst, not by the caller, and after the caller's read state. */
+            unreadNotes: number;
+        };
+        /** @description The Security Analyst who holds one of the caller's requests, as the Requestor sees them: the display name and nothing more (D-17). */
+        MyRequestAssignee: {
+            displayName: string;
         };
         CurrentUserAccessResponse: {
             data: components["schemas"]["CurrentUserAccess"];
@@ -2057,12 +4735,12 @@ export interface components {
             today: string;
             dueSoonWindowDays: number;
             reviewQueue: components["schemas"]["DashboardReviewQueue"];
-            riskExposure: components["schemas"]["RatingCounts"];
+            riskExposure: components["schemas"]["DashboardRiskExposure"];
             highCriticalRisks: components["schemas"]["DashboardHighCriticalRisks"];
             treatmentsDue: components["schemas"]["DashboardTreatmentsDue"];
             recentActivity: components["schemas"]["DashboardRecentActivity"];
         };
-        /** @description Work waiting in each analyst review list, each count equal to that list's total. requiresAttention, awaitingRequestor and generationInProgress are the Assessment Request queues. questionnairesReadyForReview counts the questionnaires whose answers are submitted. assessmentsDraft and assessmentsInReview count Risk Assessments by status. */
+        /** @description Work waiting in each analyst review list, each count equal to that list's total. requiresAttention, awaitingRequestor and generationInProgress are the team's Assessment Request queues. questionnairesReadyForReview counts the questionnaires whose answers are submitted. assessmentsDraft and assessmentsInReview count Risk Assessments by status. mine counts the requests the viewer holds (Phase 13 D-15). unassigned counts the requests that require attention and that nobody holds, equal to the requires-attention queue filtered by assignee=unassigned. */
         DashboardReviewQueue: {
             requiresAttention: number;
             awaitingRequestor: number;
@@ -2070,14 +4748,29 @@ export interface components {
             questionnairesReadyForReview: number;
             assessmentsDraft: number;
             assessmentsInReview: number;
+            mine: components["schemas"]["DashboardReviewQueueMine"];
+            unassigned: number;
         };
-        /** @description Open contextual Risks rated High or Critical after treatment: Critical first, then target date ascending with undated Risks last, then Risk number. total counts every such Risk and truncated says rows is capped. */
+        /** @description The viewer's own Assessment Request counts (Phase 13 D-15), the viewer being the IdamBox User the policy resolved. requiresAttention, awaitingRequestor and generationInProgress each equal that queue filtered by assignee=me; withUnreadNotes equals the open queue filtered by assignee=me and notes=unread. */
+        DashboardReviewQueueMine: {
+            requiresAttention: number;
+            awaitingRequestor: number;
+            generationInProgress: number;
+            withUnreadNotes: number;
+        };
+        /** @description Open Risks by residual rating, in the Risk Register's two stages, never added together. released counts the open Risks whose risk assessment is released (approved, with an approval date and an approver); releasedAccepted counts those among them whose treatment action is Accept; underAssessment counts the open Risks whose risk assessment is a draft or in review, with no release facts. A draft's Accept never counts as accepted. Each count equals the Risk Register filtered by that residual rating, state=open and stage=released (with treatmentAction=Accept) or stage=under-assessment. */
+        DashboardRiskExposure: {
+            released: components["schemas"]["RatingCounts"];
+            releasedAccepted: components["schemas"]["RatingCounts"];
+            underAssessment: components["schemas"]["RatingCounts"];
+        };
+        /** @description Released open Risks rated High or Critical after treatment, where the risk assessment is released (approved, with an approval date and an approver); a Risk under assessment is never listed. Critical first, then target date ascending with undated Risks last, then Risk number. total counts every such Risk, equal to the Risk Register filtered by residualRating=Critical and by residualRating=High, each with state=open and stage=released, and truncated says rows is capped. */
         DashboardHighCriticalRisks: {
             rows: components["schemas"]["DashboardRiskRow"][];
             total: number;
             truncated: boolean;
         };
-        /** @description One open High or Critical residual Risk. treatmentDueState is derived by the server on its UTC calendar date. */
+        /** @description One released open High or Critical residual Risk. treatmentDueState is derived by the server on its UTC calendar date. */
         DashboardRiskRow: {
             documentId: string;
             riskNumber: string;
@@ -2262,7 +4955,7 @@ export interface components {
             closed: number;
             total: number;
         };
-        /** @description Open contextual Risks by residual rating, each split by recorded treatment status. notRated holds the Risks with no rating on the ladder. */
+        /** @description Released open Risks by residual rating, each split by recorded treatment status. notRated holds the Risks with no rating on the ladder. */
         ResidualByTreatmentStatus: {
             Critical: components["schemas"]["TreatmentStatusCounts"];
             High: components["schemas"]["TreatmentStatusCounts"];
@@ -2270,7 +4963,7 @@ export interface components {
             Low: components["schemas"]["TreatmentStatusCounts"];
             notRated: components["schemas"]["TreatmentStatusCounts"];
         };
-        /** @description One Information System with the open High and Critical residual Risks that impact it. */
+        /** @description One Information System with the released open High and Critical residual Risks that impact it. */
         ExposedSystem: {
             documentId: string;
             name: string;
@@ -2278,14 +4971,14 @@ export interface components {
             high: number;
             total: number;
         };
-        /** @description The Information Systems carrying the most open High and Critical residual Risks: most Critical first, then most in total, then by name. total counts every such system and truncated says rows is capped. risksWithoutSystem counts the open High and Critical residual Risks that impact no Information System. */
+        /** @description The Information Systems carrying the most released open High and Critical residual Risks: most Critical first, then most in total, then by name. total counts every such system and truncated says rows is capped. risksWithoutSystem counts the released open High and Critical residual Risks that impact no Information System. */
         ExposedSystems: {
             rows: components["schemas"]["ExposedSystem"][];
             total: number;
             truncated: boolean;
             risksWithoutSystem: number;
         };
-        /** @description Open treatments that are not Complete, by due state on the server's today: overdue has a target date before today, dueWithinWindow one from today to today plus dueWindowDays inclusive, later one after that, and noTargetDate none. The parts add up to total. */
+        /** @description Open treatments that are not Complete, by due state on the server's today: overdue has a target date before today, dueWithinWindow one from today to today plus dueWindowDays inclusive, later one after that, and noTargetDate none. Each part equals the Risk Register filtered by its dueState (overdue, due-soon, later, no-target-date), and overdue and dueWithinWindow equal the risk-treatment-overdue and risk-treatment-due-soon alert lists. The parts add up to total. */
         TreatmentDueStateCounts: {
             overdue: number;
             dueWithinWindow: number;
@@ -2317,7 +5010,11 @@ export interface components {
             sampleSize: number;
             truncated: boolean;
         };
-        /** @description Open contextual Risks by residual and by inherent rating, residual rating by treatment status, and the most exposed Information Systems. today is the UTC calendar date the report was computed on. */
+        /** @description The open Risks whose risk assessment is a draft or in review, with no release facts, by residual rating. They are counted apart from every released section and never added to one. Each count equals the Risk Register filtered by that residual rating (none for notRated), state=open and stage=under-assessment. */
+        RiskExposureUnderAssessment: {
+            byResidualRating: components["schemas"]["RatingCounts"];
+        };
+        /** @description Released open Risks (those whose risk assessment is approved, with an approval date and an approver) by residual and by inherent rating, the accepted ones among them by residual rating, residual rating by treatment status, and the most exposed Information Systems; and, apart, the open Risks still under assessment. Each released count equals the Risk Register filtered by that rating (none for notRated), state=open and stage=released, with treatmentAction=Accept for acceptedByResidualRating; a draft's Accept never counts as accepted. today is the UTC calendar date the report was computed on. */
         RiskExposureReport: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2328,10 +5025,12 @@ export interface components {
             today: string;
             byResidualRating: components["schemas"]["RatingCounts"];
             byInherentRating: components["schemas"]["RatingCounts"];
+            acceptedByResidualRating: components["schemas"]["RatingCounts"];
             residualByTreatmentStatus: components["schemas"]["ResidualByTreatmentStatus"];
             exposedSystems: components["schemas"]["ExposedSystems"];
+            underAssessment: components["schemas"]["RiskExposureUnderAssessment"];
         };
-        /** @description Open treatments by due state over a window of dueWindowDays, open contextual Risks by recorded treatment status, and the most overdue treatments. today is the UTC calendar date the report was computed on. */
+        /** @description Open treatments by due state, read with the one shared due-state rule over a window of dueWindowDays (the product's due-soon window, the alerts' window), open Risks by recorded treatment status, and the most overdue treatments; every figure includes Risks under assessment as well as released ones. today is the UTC calendar date the report was computed on. */
         TreatmentPerformanceReport: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2362,7 +5061,7 @@ export interface components {
             medianDaysToRelease: components["schemas"]["MedianDaysToRelease"];
             requestsByStatus: components["schemas"]["RequestStatusCounts"];
         };
-        /** @description Control Implementations on open contextual Risks by implementation status and by effectiveness rating. today is the UTC calendar date the report was computed on. */
+        /** @description Control Implementations on open Risks, released or under assessment, by implementation status and by effectiveness rating. today is the UTC calendar date the report was computed on. */
         ControlEffectivenessReport: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2383,6 +5082,12 @@ export interface components {
             title: string;
             /** @enum {string} */
             requestStatus: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
+            /** @description Phase 13 D-16: who holds the request and whether the viewer may pick it up, on a human Security Analyst's assessment read; null on every other read, a Requestor's included. */
+            assignment: components["schemas"]["RequestSummaryAssignment"] | null;
+            /** @description Phase 13 D-25: the request's notes figures for the viewer, on a human Security Analyst's assessment read; null on every other read, a Requestor's included. */
+            notes: components["schemas"]["RequestSummaryNotes"] | null;
+            /** @description Phase 14 D-27: the request's files figures, on a human Security Analyst's assessment read; null on every other read, a Requestor's included. */
+            files: components["schemas"]["RequestSummaryFiles"] | null;
         };
         AssessmentDetail: {
             documentId: string;
@@ -2494,6 +5199,14 @@ export interface components {
             questionnaire: components["schemas"]["RequestQuestionnaireRelation"];
             assessment: components["schemas"]["RequestAssessmentRelation"];
         };
+        /** @description Why, when and by whom a Risk was withdrawn from its assessment (Phase 16 D-05, D-06). Shown to Security Analysts only. */
+        RiskWithdrawal: {
+            /** Format: date-time */
+            at: string;
+            /** @description The withdrawing analyst; null when the person can no longer be named. */
+            by: components["schemas"]["ActiveUserSummary"] | null;
+            reason: string;
+        };
         AnalystRiskDetail: {
             documentId: string;
             riskNumber: string;
@@ -2542,6 +5255,10 @@ export interface components {
             treatmentResolveDate: string | null;
             /** @enum {string|null} */
             treatmentStatus: "Not Started" | "In Progress" | "Overdue" | "Complete" | null;
+            /** @description The risk's AI review state for the analyst; null when no AI proposal wrote it or its record cannot be read. */
+            aiProvenance: components["schemas"]["RiskAiProvenance"] | null;
+            /** @description Null on an active Risk. A withdrawn Risk stays on the analyst's assessment, out of its release readiness and counts, and never reaches a Requestor. */
+            withdrawal: components["schemas"]["RiskWithdrawal"] | null;
         };
         AnalystAssessmentDetail: {
             /**
@@ -2574,6 +5291,11 @@ export interface components {
             risks: components["schemas"]["AnalystRiskDetail"][];
             ownerLabels: components["schemas"]["ActiveUserSummary"][];
             releaseReadiness: components["schemas"]["ReleaseReadiness"];
+            /** @description Null when the assessment was never generated. */
+            generation: components["schemas"]["AiGenerationFacts"] | null;
+            aiProvenance: components["schemas"]["AssessmentAiProvenance"] | null;
+            /** @description Phase 19 (D-14): whether the assessment is released, decided by the one released-assessment record-read check for an analyst: approved with its complete release facts, on an approved request. The analyst page offers the export and the print report only when it is true. */
+            released: boolean;
         };
         RequestorReleasedAssessmentDetail: {
             /**
@@ -2600,9 +5322,10 @@ export interface components {
             recommendationsSummary: string | null;
             overallRiskRationale: string | null;
             assessmentRequest: components["schemas"]["AssessmentRequestSummary"];
-            generatedBy: components["schemas"]["ActiveUserSummary"] | null;
             reviewedBy: components["schemas"]["ActiveUserSummary"] | null;
             approvedBy: components["schemas"]["ActiveUserSummary"];
+            /** @description True when the assessment was drafted with an AI provider. The Requestor learns nothing else of the AI facts, including who generated the draft. */
+            aiAssisted: boolean;
         };
         AssessmentUpdateRequest: {
             summary?: string;
@@ -2636,6 +5359,18 @@ export interface components {
             targetDate: string | null;
             treatmentDueState: components["schemas"]["TreatmentDueState"];
             assessment: components["schemas"]["RiskRegisterAssessment"];
+            /**
+             * @description released: the Risk's assessment carries the complete release facts. under-assessment: its assessment is a draft or in review with no release facts.
+             * @enum {string}
+             */
+            stage: "released" | "under-assessment";
+            /**
+             * @description The Risk's recorded treatment action, or null when none is recorded. Accepted is a released, open Risk whose treatment action is Accept.
+             * @enum {string|null}
+             */
+            treatmentAction: "Accept" | "Treat" | null;
+            /** @description Server-derived D-41 marker: true only for a released, open Risk whose treatment action is Accept. A Complete treatment without a closure date is still open. */
+            accepted: boolean;
         };
         /**
          * @description The server-derived treatment due state on the server's UTC calendar date. complete-or-closed: the treatment is Complete or the Risk has a closure date. no-target-date: an open treatment with no target date. overdue: the target date is before today. due-soon: the target date is today or within the next 14 days. later: the target date is further out. The stored Overdue treatment status is never read.
@@ -2759,6 +5494,8 @@ export interface components {
             informationAssetImpacted: components["schemas"]["RiskDetailNamedRelation"] | null;
             assessment: components["schemas"]["RiskDetailAssessment"];
             controlImplementations: components["schemas"]["RiskDetailControlImplementation"][];
+            /** @description Null on an active Risk. Who withdrew the Risk, when and why; a withdrawn Risk is listed only under the register's withdrawn state and counts in no figure (Phase 16 D-08, D-45). */
+            withdrawal: components["schemas"]["RiskWithdrawal"] | null;
         };
         RiskDetailResponse: {
             data: components["schemas"]["RiskDetail"];
@@ -2953,10 +5690,10 @@ export interface components {
                 message: string;
                 details?: {
                     /**
-                     * @description The one rule that refused a workflow conflict (409). Closed list; a client that does not know a value falls back to its generic message.
+                     * @description The one rule that refused the operation: a workflow conflict (409), an identity-relative refusal (403: OWN_REQUEST, a request the caller raised; NOT_UPLOADER and NOT_REMOVER for a file), or a request attachment refusal (400 ATTACHMENT_EMPTY; 413 ATTACHMENT_TOO_LARGE; 415 ATTACHMENT_TYPE_NOT_ALLOWED, ATTACHMENT_CONTENT_MISMATCH, ATTACHMENT_MACRO_ENABLED, ATTACHMENT_ENCRYPTED, ATTACHMENT_LEGACY_OFFICE, ATTACHMENT_UNSUPPORTED_STRUCTURE (a ZIP-based file packaged in a way CSRM will not read) and ATTACHMENT_ACTIVE_CONTENT (an Office file carrying active content beyond macros); 422 ATTACHMENT_MALWARE_FOUND; 503 ATTACHMENT_BUSY, retryable (the file checks are busy, so nothing was done); 400 INSTRUCTION_TOO_LONG, INSTRUCTION_CHARACTERS_NOT_ALLOWED and INSTRUCTION_REPEATS_REQUESTOR_TEXT (an instruction to the AI that is too long, holds characters it may not, or repeats the Requestor's text); 409 for the others, among them Phase 16's risk curation refusals RISK_WITHDRAWN (the Risk is withdrawn, so it is read-only until reinstated), RISK_NOT_WITHDRAWN (every Risk named for reinstatement is already active), AI_ACCEPT_NOT_PERMITTED (confirming an AI-proposed Accept would leave the residual rating High or Critical) and REQUEST_HAS_ASSESSMENT (a request that holds a risk assessment is never deleted), and RISK_CURATION_UNDO_UNAVAILABLE (an Undo of a withdrawal or reinstatement that is no longer the acting analyst's own latest act on a named Risk); and Phase 19's 422 EXPORT_ROW_LIMIT (the export would hold more rows than the cap; served with details.rowCount and details.rowCap), 409 ASSESSMENT_NOT_RELEASED (an unreleased risk assessment the caller can read cannot be exported), 422 EXPORT_CELL_TOO_LONG (an xlsx export would hold a text cell longer than Excel's 32,767-character cell limit; served with details.column and details.cellLimit; the CSV holds the value whole), the import file refusals, served with details.found where it applies (415 IMPORT_FILE_TYPE, not a CSV or .xlsx file; 413 IMPORT_FILE_TOO_LARGE, more than 5 MB; 422 IMPORT_TOO_MANY_ROWS, more than 5,000 rows; 422 IMPORT_ENCODING_WINDOWS_1252, IMPORT_ENCODING_UTF16 and IMPORT_ENCODING_UNKNOWN, a file that is not UTF-8 text; 422 IMPORT_DELIMITER, columns separated by semicolons or tabs; 422 IMPORT_LEGACY_XLS, IMPORT_MACRO_WORKBOOK, IMPORT_ENCRYPTED_WORKBOOK and IMPORT_WORKBOOK_TOO_LARGE, a workbook CSRM will not open; 422 IMPORT_NO_HEADER, IMPORT_NO_ROWS, IMPORT_DUPLICATE_HEADER and IMPORT_MISSING_COLUMN, a header row CSRM cannot use), and the import commit's 409 IMPORT_DECISION_MISSING (a row matched by similar name has no decision) and 409 IMPORT_REVIEW_EXPIRED (the reviewed preview has expired or is unknown), and 422 IMPORT_CSV_MALFORMED (a CSV file the parser cannot read: an unclosed quote, an invalid closing quote, or a row with a different number of columns from the header; served with details.found.line when the parser reports the line)). Closed list; a client that does not know a value falls back to its generic message.
                      * @enum {string}
                      */
-                    reason?: "REQUEST_NOT_SUBMITTED" | "REQUEST_WORK_STARTED" | "REQUEST_NOT_ELIGIBLE" | "ASSESSMENT_STARTED" | "QUESTIONNAIRE_NOT_SUBMITTED" | "QUESTIONNAIRE_NOT_ANSWERABLE" | "QUESTIONNAIRE_ALREADY_SUBMITTED" | "QUESTIONNAIRE_INCOMPLETE" | "QUESTIONNAIRE_HAS_NO_QUESTIONS" | "QUESTIONNAIRE_RELEASED" | "ALREADY_IN_ANALYST_REVIEW" | "DEFINITION_INVALID" | "DEFINITION_CONFLICT" | "HISTORY_UNAVAILABLE" | "QUESTION_REMOVED" | "QUESTION_HAS_DEPENDENTS" | "LAST_ACTIVE_QUESTION" | "ANSWER_DATA_INVALID";
+                    reason?: "REQUEST_NOT_SUBMITTED" | "REQUEST_WORK_STARTED" | "REQUEST_NOT_ELIGIBLE" | "ASSESSMENT_STARTED" | "ASSESSMENT_NOT_MUTABLE" | "QUESTIONNAIRE_NOT_SUBMITTED" | "QUESTIONNAIRE_NOT_ANSWERABLE" | "QUESTIONNAIRE_ALREADY_SUBMITTED" | "QUESTIONNAIRE_INCOMPLETE" | "QUESTIONNAIRE_HAS_NO_QUESTIONS" | "QUESTIONNAIRE_RELEASED" | "ALREADY_IN_ANALYST_REVIEW" | "DEFINITION_INVALID" | "DEFINITION_CONFLICT" | "HISTORY_UNAVAILABLE" | "QUESTION_REMOVED" | "QUESTION_HAS_DEPENDENTS" | "LAST_ACTIVE_QUESTION" | "ANSWER_DATA_INVALID" | "AI_CLASSIFICATION_ABOVE_CEILING" | "AI_POLICY_NOT_CONFIGURED" | "AI_PROPOSAL_ALREADY_DECIDED" | "AI_SUGGESTION_CONTROL_CHANGED" | "AI_ACCEPT_WITH_PLANNED_CONTROL" | "AI_RUN_RECORD_UNAVAILABLE" | "OWN_REQUEST" | "ASSIGNMENT_CHANGED" | "ASSIGNEE_NOT_ELIGIBLE" | "ASSIGNMENT_REQUIRED" | "NOTES_CLOSED" | "NOTES_LIMIT_REACHED" | "REQUEST_HAS_NOTES" | "NOT_REQUEST_REQUESTOR" | "ATTACHMENTS_NOT_CONFIGURED" | "ATTACHMENTS_CLOSED" | "ATTACHMENT_NOTE_REQUIRED" | "ATTACHMENT_NOTE_INVALID" | "ATTACHMENT_LIMIT_REACHED" | "ATTACHMENT_LIFETIME_LIMIT_REACHED" | "ATTACHMENT_QUARANTINED" | "ATTACHMENT_BLOCKED" | "ATTACHMENT_REMOVED" | "ATTACHMENT_UNAVAILABLE" | "ATTACHMENT_INTEGRITY_FAILED" | "ATTACHMENT_TEXT_UNAVAILABLE" | "ATTACHMENT_NOT_TEXT_BEARING" | "REQUEST_HAS_ATTACHMENTS" | "ATTACHMENT_TOO_LARGE" | "ATTACHMENT_EMPTY" | "ATTACHMENT_TYPE_NOT_ALLOWED" | "ATTACHMENT_CONTENT_MISMATCH" | "ATTACHMENT_MACRO_ENABLED" | "ATTACHMENT_ENCRYPTED" | "ATTACHMENT_LEGACY_OFFICE" | "ATTACHMENT_MALWARE_FOUND" | "NOT_UPLOADER" | "NOT_REMOVER" | "ATTACHMENT_UNSUPPORTED_STRUCTURE" | "ATTACHMENT_ACTIVE_CONTENT" | "ATTACHMENT_BUSY" | "AI_PROPOSALS_OPEN" | "AI_PROPOSAL_STALE" | "QUESTIONNAIRE_HAS_ANALYST_CHANGES" | "QUESTION_ANSWERED" | "ASSESSMENT_DRAFT_IN_PROGRESS" | "AI_PROPOSAL_RUN_LIMIT" | "AI_PROPOSAL_UNDO_UNAVAILABLE" | "ANSWERED_QUESTION_AFFECTED" | "QUESTIONNAIRE_ANSWERED" | "INSTRUCTION_TOO_LONG" | "INSTRUCTION_CHARACTERS_NOT_ALLOWED" | "INSTRUCTION_REPEATS_REQUESTOR_TEXT" | "RISK_WITHDRAWN" | "RISK_NOT_WITHDRAWN" | "AI_ACCEPT_NOT_PERMITTED" | "REQUEST_HAS_ASSESSMENT" | "RISK_CURATION_UNDO_UNAVAILABLE" | "EXPORT_ROW_LIMIT" | "ASSESSMENT_NOT_RELEASED" | "EXPORT_CELL_TOO_LONG" | "IMPORT_FILE_TYPE" | "IMPORT_FILE_TOO_LARGE" | "IMPORT_TOO_MANY_ROWS" | "IMPORT_ENCODING_WINDOWS_1252" | "IMPORT_ENCODING_UTF16" | "IMPORT_ENCODING_UNKNOWN" | "IMPORT_DELIMITER" | "IMPORT_LEGACY_XLS" | "IMPORT_MACRO_WORKBOOK" | "IMPORT_ENCRYPTED_WORKBOOK" | "IMPORT_WORKBOOK_TOO_LARGE" | "IMPORT_NO_HEADER" | "IMPORT_NO_ROWS" | "IMPORT_DUPLICATE_HEADER" | "IMPORT_MISSING_COLUMN" | "IMPORT_DECISION_MISSING" | "IMPORT_REVIEW_EXPIRED" | "IMPORT_CSV_MALFORMED";
                 } & {
                     [key: string]: unknown;
                 };
@@ -2978,7 +5715,15 @@ export interface components {
             completedAt?: string;
             failureCode?: string;
             failureMessage?: string;
+            /** @description Phase 14 D-33: for a CONTEXT_TOO_LARGE failure with files included in the AI inputs, those files in upload order, by their current names; absent otherwise. */
+            failureAttachments?: components["schemas"]["GenerationJobFailureAttachment"][];
             questionnaire?: components["schemas"]["GeneratedQuestionnaireSummary"];
+            /** @description Whether the job failed and the viewing analyst may retry it (D-18). Any human Security Analyst who may read the request may retry a failed job. */
+            canRetry: boolean;
+            /** @description The analyst who started the job, or who started its latest retry; null when that person can no longer be read (D-18). */
+            initiatedBy: components["schemas"]["ActiveUserSummary"] | null;
+            /** @description Whether the viewing analyst started the job or its latest retry (D-18). */
+            initiatedByViewer: boolean;
         };
         GeneratedQuestionnaireSummary: {
             documentId: string;
@@ -2996,17 +5741,29 @@ export interface components {
         };
         RequestQuestionnaireGenerationJob: {
             job: components["schemas"]["QuestionnaireGenerationJob"];
-            /** @description Whether the viewing analyst initiated the job, whatever its status. Only the initiating analyst may retry a job, and only once it has failed. */
+            /** @description Whether the job failed and the viewing analyst may retry it, the job's own canRetry (D-18). Any human Security Analyst who may read the request may retry a failed job; who started it is the job's initiatedBy and initiatedByViewer. */
             canRetry: boolean;
         };
         RequestAssessmentDraftJob: {
             job: components["schemas"]["AssessmentDraftJob"];
-            /** @description Whether the viewing analyst initiated the job, whatever its status. Only the initiating analyst may retry a job, and only once it has failed. */
+            /** @description Whether the job failed and the viewing analyst may retry it, the job's own canRetry (D-18). Any human Security Analyst who may read the request may retry a failed job; who started it is the job's initiatedBy and initiatedByViewer. */
             canRetry: boolean;
         };
         RequestGenerationJobs: {
             questionnaireGeneration: components["schemas"]["RequestQuestionnaireGenerationJob"] | null;
             assessmentDraft: components["schemas"]["RequestAssessmentDraftJob"] | null;
+            aiPolicy: components["schemas"]["AiPolicyStatus"];
+        };
+        /** @description D-29: the AI data policy the next generation for this request would apply. A refused status names its closed reason; the hub shows it in place of the action. */
+        AiPolicyStatus: {
+            /** @enum {string} */
+            status: "allowed" | "refused";
+            reason: ("AI_CLASSIFICATION_ABOVE_CEILING" | "AI_POLICY_NOT_CONFIGURED") | null;
+            /** @enum {string} */
+            requestClassification: "Public" | "Internal" | "Restricted" | "Critical Infrastructure Sensitive";
+            /** @enum {string} */
+            classificationSource: "assets" | "default";
+            ceiling: ("Public" | "Internal" | "Restricted" | "Critical Infrastructure Sensitive") | null;
         };
         RequestGenerationJobsResponse: {
             data: components["schemas"]["RequestGenerationJobs"];
@@ -3022,6 +5779,28 @@ export interface components {
             requestNumber: string;
             title: string;
             requestStatus: string;
+            /** @description Phase 13 D-16: who holds the request and whether the viewer may pick it up, on a human Security Analyst's questionnaire read; null on every other read, a Requestor's included. */
+            assignment: components["schemas"]["RequestSummaryAssignment"] | null;
+            /** @description Phase 13 D-25: the request's notes figures for the viewer, on a human Security Analyst's questionnaire read; null on every other read, a Requestor's included. */
+            notes: components["schemas"]["RequestSummaryNotes"] | null;
+            /** @description Phase 14 D-27: the request's files figures, on a human Security Analyst's questionnaire read; null on every other read, a Requestor's included. */
+            files: components["schemas"]["RequestSummaryFiles"] | null;
+        };
+        /** @description Phase 13 D-16 (REQ-08 criterion 1): who holds the request, as a documentId and a display name, or null when nobody does; and whether the viewer may pick it up, by the review queue's rule (own-request: the viewer raised it). */
+        RequestSummaryAssignment: {
+            assignee: components["schemas"]["ActiveUserSummary"] | null;
+            /** @enum {string} */
+            pickUp: "allowed" | "own-request" | "not-offered";
+        };
+        /** @description Phase 13 D-25: how many notes the request holds, and how many are new to the viewer, by the request read's unread rule. */
+        RequestSummaryNotes: {
+            total: number;
+            unread: number;
+        };
+        /** @description Phase 14 D-27: how many files the request holds (not removed), and how many of them are included in the AI inputs (included, scanned clean and not removed). Never a file's name, text or digest. */
+        RequestSummaryFiles: {
+            count: number;
+            included: number;
         };
         QuestionnaireAssessmentRequestAbsent: {
             /**
@@ -3058,12 +5837,16 @@ export interface components {
             release?: components["schemas"]["QuestionnaireRelease"] | null;
             revision?: components["schemas"]["QuestionnaireRevision"] | null;
             events?: components["schemas"]["QuestionnaireRevisionTimelineEvent"][];
+            /** @description True when the questionnaire was generated through an AI provider. */
+            aiAssisted: boolean;
+            generation?: components["schemas"]["AiGenerationFacts"];
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description An event of the revision timeline as the reader's projection serves it. Phase 15 (D-26): the ai-proposal and question-restored kinds and the AI keys (runId, itemKey, aiEdited, aiUndo, scope, instruction, instructionSource, providerName, providerVersion, itemCount) appear in the analyst projection only; the Requestor projection never carries an AI kind or key. */
         QuestionnaireRevisionTimelineEvent: {
             /** @enum {string} */
-            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared" | "regenerated";
+            kind: "released" | "returned-to-review" | "question-added" | "question-edited" | "question-deleted" | "answer-cleared" | "regenerated" | "ai-proposal" | "question-restored";
             /** Format: date-time */
             at: string;
             by?: components["schemas"]["QuestionnaireReleaseActor"] | null;
@@ -3071,6 +5854,38 @@ export interface components {
             questionKey?: string;
             questionText?: string;
             explanation?: string;
+            /** @description The AI run's documentId: on ai-proposal, and on a question change a confirmation or its Undo wrote. */
+            runId?: string;
+            /**
+             * @description The proposal item a confirmation or its Undo applied, with runId.
+             * @example i-1
+             */
+            itemKey?: string;
+            /** @description The analyst edited the proposal before confirming it, with runId and itemKey. */
+            aiEdited?: boolean;
+            /**
+             * @description The event reverses a confirmed AI proposal.
+             * @constant
+             */
+            aiUndo?: true;
+            /**
+             * @description On ai-proposal: proposals for the questionnaire, or a plain-language rewrite of one question (named by questionKey and questionText).
+             * @enum {string}
+             */
+            scope?: "questionnaire" | "question";
+            /** @description The analyst's instruction to the AI, on ai-proposal and regenerated. */
+            instruction?: string;
+            /**
+             * @description Written in place of an instruction when none was given: on ai-proposal exactly one of instruction and instructionSource is present; regenerated carries only default-task.
+             * @enum {string}
+             */
+            instructionSource?: "plain-language-preset" | "default-task";
+            /** @description On ai-proposal: the run's provider. */
+            providerName?: string;
+            /** @description On ai-proposal: the run's provider version (the model). */
+            providerVersion?: string;
+            /** @description On ai-proposal: the proposals the run kept. */
+            itemCount?: number;
         };
         QuestionnaireListResponse: {
             data: components["schemas"]["QuestionnaireSummary"][];
@@ -3135,10 +5950,19 @@ export interface components {
         QuestionnaireQuestion: {
             documentId: string;
             questionText: string;
+            /** @description Plain-language help shown with the question to every reader; null when the question has none. */
+            helpText: string | null;
             /** @enum {string} */
             answerType: "Text" | "Long text" | "Boolean" | "Single select" | "Multi select" | "Date" | "File upload";
             options: components["schemas"]["QuestionnaireQuestionOptions"];
             answer: components["schemas"]["QuestionnaireAnswerEnvelope"] | null;
+            /**
+             * @description Analyst reads only, and only when the latest generation has a run: whether the question is still as generated, was edited by an analyst, was added by one, or came from a confirmed AI proposal (proposal-edited when the analyst edited the proposal before confirming it; Phase 15 D-27).
+             * @enum {string|null}
+             */
+            aiOrigin?: "generated" | "generated-edited" | "analyst-added" | "proposal-confirmed" | "proposal-edited" | null;
+            /** @description Analyst reads only, and only in analyst review or on a submitted questionnaire (Phase 15 D-30): whether the question holds an answer by the progress count's rule. Answered questions are fixed: no AI proposal may change them. Absent while the Requestor is still answering and for every Requestor read. */
+            answered?: boolean;
         };
         QuestionnaireQuestionsResponse: {
             data: components["schemas"]["QuestionnaireQuestion"][];
@@ -3847,8 +6671,11 @@ export interface components {
         AdministrationListMeta: {
             pagination: components["schemas"]["AdministrationPagination"];
         };
-        /** @enum {string} */
-        AdministrationImportState: "create" | "update" | "unchanged" | "rejected" | "ambiguous";
+        /**
+         * @description An import row's state. similar (Matched by similar name): the row's natural key equals a stored record's only after NFKC, lower case and collapsed whitespace; it is neither created nor updated until the commit carries a decision for it (D-30).
+         * @enum {string}
+         */
+        AdministrationImportState: "create" | "update" | "unchanged" | "rejected" | "ambiguous" | "similar";
         AdministrationImportLimits: {
             /** @constant */
             maxBytes: 5242880;
@@ -3861,6 +6688,7 @@ export interface components {
             unchanged: number;
             rejected: number;
             ambiguous: number;
+            similar: number;
         };
         AdministrationImportResultSummary: {
             create: number;
@@ -3868,6 +6696,8 @@ export interface components {
             unchanged: number;
             rejected: number;
             ambiguous: number;
+            /** @description Rows matched by similar name that the Security Analyst decided to skip. A similar row decided update counts under update. */
+            skipped: number;
         };
         AdministrationImportIssue: {
             code: string;
@@ -3915,19 +6745,26 @@ export interface components {
         AdministrationImportPreviewRow: {
             rowNumber: number;
             /** @enum {string} */
-            state: "create" | "update" | "unchanged" | "rejected" | "ambiguous";
+            state: "create" | "update" | "unchanged" | "rejected" | "ambiguous" | "similar";
             naturalKey: string | null;
             matchedDocumentId: string | null;
+            /** @description The matched record's stored natural key (its name, or a Control's control number) for an update, unchanged or similar row; null otherwise. */
+            matchedName: string | null;
             values: components["schemas"]["AdministrationImportValues"];
             changes: components["schemas"]["AdministrationImportChange"][];
             issues: components["schemas"]["AdministrationImportIssue"][];
         };
-        /** @description documentId is returned only when state is create or update; unchanged, rejected, and ambiguous rows have no write result. */
+        /** @description documentId is returned only when state is create or update, or similar with decision update; unchanged, rejected, ambiguous and skipped similar rows have no write result. A similar row keeps its state and carries the decision it was committed with. */
         AdministrationImportResultRow: {
             rowNumber: number;
             /** @enum {string} */
-            state: "create" | "update" | "unchanged" | "rejected" | "ambiguous";
+            state: "create" | "update" | "unchanged" | "rejected" | "ambiguous" | "similar";
             naturalKey: string | null;
+            /**
+             * @description The Security Analyst's decision for a similar row; present only when state is similar.
+             * @enum {string}
+             */
+            decision?: "update" | "skip";
             documentId?: string;
             issues: components["schemas"]["AdministrationImportIssue"][];
         };
@@ -3942,12 +6779,20 @@ export interface components {
             previewDigest: string;
             /** @constant */
             confirmed: true;
+            /** @description Optional. A JSON object of row number (a string of 1 to 5 digits) to update or skip, at most 5,000 entries. Every similar row of the reviewed preview needs one (else 409 IMPORT_DECISION_MISSING); a decision for any other row, or a malformed field, is 400. */
+            decisions?: string;
         };
         AdministrationImportPreviewData: {
             fileName: string;
             previewDigest: string;
             limits: components["schemas"]["AdministrationImportLimits"];
             summary: components["schemas"]["AdministrationImportSummary"];
+            /** @description The file's headers that match no import column, as typed (controls removed), in file order: ignored, and named so the person sees them (D-27). */
+            warnings: string[];
+            /** @description Informational notes, each at most once: issues-column (the error report's Issues column, ignored), read-only-columns (a reference export's read-only columns, ignored; named in readOnlyColumns) and example-row (the template's example row, skipped). */
+            notes: ("issues-column" | "read-only-columns" | "example-row")[];
+            /** @description The display labels of the reference export's read-only columns the file carries, ignored (D-33). */
+            readOnlyColumns: string[];
             rows: components["schemas"]["AdministrationImportPreviewRow"][];
         };
         AdministrationImportPreviewResponse: {
@@ -3956,6 +6801,8 @@ export interface components {
         AdministrationImportResultData: {
             fileName: string;
             previewDigest: string;
+            /** @description An opaque token for the commit's result record, bound to the actor and collection for five minutes (D-32). */
+            resultToken: string;
             limits: components["schemas"]["AdministrationImportLimits"];
             summary: components["schemas"]["AdministrationImportResultSummary"];
             previewChanged: number;
@@ -4325,6 +7172,2418 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "scim/list-users": {
+        parameters: {
+            query?: {
+                /** @description Only eq comparisons of userName, externalId, emails.value and employeeNumber (bare or Enterprise URN-qualified), joined with and. At most 4096 characters, 20 terms, 255 characters per JSON string literal. Attribute names/operators are case-insensitive; externalId values exact, others case-insensitive. No or, sort, parentheses or value-path filters. */
+                filter?: string;
+                /** @description One-based; integers below 1 normalize to 1. */
+                startIndex?: number;
+                /** @description Default 100; negatives normalize to 0, above 500 clamp to 500. count=0 returns counts without Resources. */
+                count?: number;
+                /** @description Comma-separated public fields/subattributes only; schemas/id always retained. Mutually exclusive with excludedAttributes. */
+                attributes?: string;
+                /** @description Comma-separated public fields/subattributes to omit. Unknown, repeated or simultaneous projection keys fail 400. */
+                excludedAttributes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source-scoped User read/search; protected, service, foreign and tombstoned records are hidden; permitted manual correlation candidates may be visible. Scope applies before counts and pagination. Query accepts only the documented subset, rejects repeated/unknown keys. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserList"];
+                    "application/json": components["schemas"]["ScimUserList"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/create-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimCreateUser"];
+                "application/json": components["schemas"]["ScimCreateUser"];
+            };
+        };
+        responses: {
+            /** @description Create a source-owned user. externalId or Enterprise employeeNumber is required. active defaults true; blank displayName derives from name parts then userName. No source may assign Roles or private identity fields. Bodies are limited to 1 MiB. */
+            201: {
+                headers: {
+                    /** @description Rooted /scim/v2/Users/{id} location. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUser"];
+                    "application/json": components["schemas"]["ScimUser"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Uniqueness conflict; no private conflict details. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Blocking identity synchronization unavailable; mutation and claim rolled back. */
+            503: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/read-user": {
+        parameters: {
+            query?: {
+                /** @description Only eq comparisons of userName, externalId, emails.value and employeeNumber (bare or Enterprise URN-qualified), joined with and. At most 4096 characters, 20 terms, 255 characters per JSON string literal. Attribute names/operators are case-insensitive; externalId values exact, others case-insensitive. No or, sort, parentheses or value-path filters. */
+                filter?: string;
+                /** @description One-based; integers below 1 normalize to 1. */
+                startIndex?: number;
+                /** @description Default 100; negatives normalize to 0, above 500 clamp to 500. count=0 returns counts without Resources. */
+                count?: number;
+                /** @description Comma-separated public fields/subattributes only; schemas/id always retained. Mutually exclusive with excludedAttributes. */
+                attributes?: string;
+                /** @description Comma-separated public fields/subattributes to omit. Unknown, repeated or simultaneous projection keys fail 400. */
+                excludedAttributes?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source-scoped User read/search; protected, service, foreign and tombstoned records are hidden; permitted manual correlation candidates may be visible. Scope applies before counts and pagination. Query accepts only the documented subset, rejects repeated/unknown keys. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimProjectedUser"];
+                    "application/json": components["schemas"]["ScimProjectedUser"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/replace-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimReplaceUser"];
+                "application/json": components["schemas"]["ScimReplaceUser"];
+            };
+        };
+        responses: {
+            /** @description PUT replaces asserted source attributes under the shared user lock; omitted attributes keep current values, including active, emails, name parts and Enterprise fields. Explicit null clears optional fields. An asserted source key remains immutable. A manual candidate can be claimed only with an asserted externalId or Enterprise employeeNumber after upstream operator-confirmed correlation; knowing an id is not claim confirmation. Protected, foreign, service and tombstoned records remain hidden. No restoration, unclaim or Role writes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUser"];
+                    "application/json": components["schemas"]["ScimUser"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Uniqueness conflict; no private conflict details. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Blocking identity synchronization unavailable; mutation and claim rolled back. */
+            503: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/delete-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retain the user and references, set inactive and first tombstone, enqueue durable leaver synchronization. Owning-source repeated DELETE is idempotent 204. Later reads and writes hide the tombstone; no restoration. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Blocking identity synchronization unavailable; mutation and claim rolled back. */
+            503: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/patch-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimPatchRequest"];
+                "application/json": components["schemas"]["ScimPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Atomic ordered add/replace/remove against the frozen public projection inside the shared user lock; at most 100 operations and 1 MiB. Paths cover supported source attributes and selected-email equality only, never private fields or Roles. primary accepts boolean or true/false string. Added primary replaces the stored email; validated non-primary additions are not stored. emails[value eq "address"] removal of a missing address is a no-op; removing the stored address requires a new primary in the same batch. Unknown paths fail invalidPath, unmatched selection noTarget, immutable/required removal mutability; any failure rolls back the batch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUser"];
+                    "application/json": components["schemas"]["ScimUser"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Uniqueness conflict; no private conflict details. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Blocking identity synchronization unavailable; mutation and claim rolled back. */
+            503: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/service-provider-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimServiceProviderConfig"];
+                    "application/json": components["schemas"]["ScimServiceProviderConfig"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/list-schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimSchemaList"];
+                    "application/json": components["schemas"]["ScimSchemaList"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/read-schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimSchema"];
+                    "application/json": components["schemas"]["ScimSchema"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/list-resource-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimResourceTypeList"];
+                    "application/json": components["schemas"]["ScimResourceTypeList"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/read-resource-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated discovery of supported Core/Enterprise User and standard Group descriptors. No bulk, sorting, password change or ETag support. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimResourceType"];
+                    "application/json": components["schemas"]["ScimResourceType"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/list-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated empty Groups list; no membership or Role authority. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimEmptyGroupList"];
+                    "application/json": components["schemas"]["ScimEmptyGroupList"];
+                };
+            };
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/put-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/post-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/delete-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/patch-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/read-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or hidden resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/put-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/post-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/delete-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
+    "scim/patch-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Exact resource identifier; User ids are stable documentIds, Schema ids are URNs. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invalid input, syntax, filter, path, noTarget or mutability. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing/invalid/revoked source bearer or invalid binding; identical response. */
+            401: {
+                headers: {
+                    /** @description Bearer */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Authenticated source lacks the exact operation grant. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Neither SCIM JSON nor application/json is acceptable. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Body exceeds 1 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Unsupported request media type; use application/scim+json or application/json. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Per-instance IP/source budget exceeded. Shared aggregate limits required for multiple instances. */
+            429: {
+                headers: {
+                    /** @description 30 seconds for 503; integer seconds until the window resets for 429. */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Safe unexpected failure. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Group writes are unsupported. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                    "application/json": components["schemas"]["ScimError"];
+                };
+            };
+        };
+    };
     "assessment-workflow/revert-assessment-request-to-draft": {
         parameters: {
             query?: never;
@@ -4351,6 +9610,430 @@ export interface operations {
                 };
             };
             400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/put-assessment-request-assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssessmentRequestAssigneeChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description The request's assignment after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentRequestAssignmentResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/get-assignable-analysts": {
+        parameters: {
+            query?: {
+                /** @description Part of a display name, matched case-insensitively; 1 to 100 characters after trimming */
+                q?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Security Analysts who may hold the request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableAnalystListResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/list-request-notes": {
+        parameters: {
+            query?: {
+                /** @description Return only notes whose sequence is below this one (the earlier-notes cursor) */
+                before?: number;
+                /** @description The most notes to return; 20 when absent */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the request's notes and the caller's read state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestNoteListResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+        };
+    };
+    "assessment-workflow/add-request-note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestNoteCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The note as added */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestNoteResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/mark-request-notes-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestNotesReadRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's read state after the call */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestNotesReadResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+        };
+    };
+    "assessment-workflow/set-request-note-ai-input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+                /** @description The opaque documentId of a note on the request */
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestNoteAiInputRequest"];
+            };
+        };
+        responses: {
+            /** @description The note after the call, as a Security Analyst sees it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestNoteResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/list-request-attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request's files and the caller's add facts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestAttachmentListResponse"];
+                };
+            };
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+        };
+    };
+    "assessment-workflow/upload-request-attachment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["RequestAttachmentUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description The file as added: available, or pending while it waits for the malware check */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestAttachmentResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+            /** @description The file is larger than 25 MB (ATTACHMENT_TOO_LARGE) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The file's type is not allowed, or its content does not match its extension, is macro-enabled, encrypted or an old Office format (ATTACHMENT_TYPE_NOT_ALLOWED, ATTACHMENT_CONTENT_MISMATCH, ATTACHMENT_MACRO_ENABLED, ATTACHMENT_ENCRYPTED, ATTACHMENT_LEGACY_OFFICE), is packaged in a way CSRM will not read (ATTACHMENT_UNSUPPORTED_STRUCTURE) or carries active content beyond macros (ATTACHMENT_ACTIVE_CONTENT) */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The malware check found malware in the file (ATTACHMENT_MALWARE_FOUND, with details.detection) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The file checks are busy, so the file was refused at once and nothing was kept; try again (ATTACHMENT_BUSY) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "assessment-workflow/download-request-attachment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+                /** @description The opaque request attachment documentId */
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file's bytes, verified against its recorded digest, under its recorded type's media type */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of the file's name */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation": string;
+                    "text/csv": string;
+                    "text/plain": string;
+                    "image/png": string;
+                    "image/jpeg": string;
+                };
+            };
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/set-request-attachment-removal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+                /** @description The opaque request attachment documentId */
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestAttachmentRemovalRequest"];
+            };
+        };
+        responses: {
+            /** @description The file as the caller now sees it, with its removal facts and actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestAttachmentResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/set-request-attachment-ai-input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+                /** @description The opaque request attachment documentId */
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestAttachmentAiInputRequest"];
+            };
+        };
+        responses: {
+            /** @description The file as the caller now sees it, with its AI facts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestAttachmentResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+            /** @description Text extraction is busy, so the inclusion was refused at once and nothing changed; try again (ATTACHMENT_BUSY) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "assessment-workflow/get-request-attachment-ai-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opaque assessment request documentId */
+                requestId: string;
+                /** @description The opaque request attachment documentId */
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored text and its facts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestAttachmentAiTextResponse"];
+                };
+            };
             403: components["responses"]["AssessmentForbidden"];
             404: components["responses"]["AssessmentNotFound"];
             409: components["responses"]["AssessmentConflict"];
@@ -4468,6 +10151,175 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionnaireReleaseResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
+            409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-ai/decide-ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionnaireId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionnaireAiProposalDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description How many decisions changed something and how many were exact repeats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireAiProposalDecisionResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
+            409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-ai/retry-proposal-job": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposal job retry accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
+            409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-ai/get-proposal-job": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposal job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
+            409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-ai/start-question-rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionnaireId: string;
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QuestionnaireAiInstructionRequest"];
+            };
+        };
+        responses: {
+            /** @description Rewrite job accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
+            409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-ai/list-ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionnaireId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The questionnaire's AI proposals */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireAiProposalsResponse"];
+                };
+            };
+            400: components["responses"]["QuestionnaireBadRequest"];
+            403: components["responses"]["QuestionnaireForbidden"];
+            404: components["responses"]["QuestionnaireNotFound"];
+            409: components["responses"]["QuestionnaireConflict"];
+        };
+    };
+    "questionnaire-ai/start-ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionnaireId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QuestionnaireAiInstructionRequest"];
+            };
+        };
+        responses: {
+            /** @description Proposal job accepted; a start while one is active returns that job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireProposalJobResponse"];
                 };
             };
             400: components["responses"]["QuestionnaireBadRequest"];
@@ -6107,7 +11959,8 @@ export interface operations {
         parameters: {
             query?: {
                 fields?: ("requestNumber" | "title" | "description" | "assessmentType" | "division" | "businessUnit" | "businessPurpose" | "businessCriticality" | "thirdPartyInvolvement" | "thirdPartyDetails" | "regulatoryRequirements" | "submittedDate" | "dueDate" | "requestStatus" | "createdAt" | "updatedAt" | "publishedAt" | "revertReason" | "revertedAt")[];
-                populate?: "*" | ("informationSystems" | "informationAssets" | "questionnaire" | "assessment" | "revertedBy") | ("informationSystems" | "informationAssets" | "questionnaire" | "assessment" | "revertedBy")[];
+                /** @description Populate only informationSystems, informationAssets, questionnaire or assessment, one level deep. Every person on the request is projected by the server (revertedBy, assignment); no IdamBox User relation can be populated (Phase 13 D-04). */
+                populate?: ("informationSystems" | "informationAssets" | "questionnaire" | "assessment") | ("informationSystems" | "informationAssets" | "questionnaire" | "assessment")[];
                 filters?: {
                     [key: string]: unknown;
                 };
@@ -6186,10 +12039,10 @@ export interface operations {
                              * @default 2026-08-08T10:27:09.768Z
                              */
                             publishedAt: string;
-                            /** @description A relational field */
-                            requestor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
-                            /** @description A relational field */
-                            sponsor?: components["schemas"]["ApiIdamboxUserIdamboxUserDocument"];
+                            /** @description The requestor, by display name only (Phase 13 D-04) */
+                            requestor?: {
+                                displayName: string;
+                            };
                             /** @description A relational field */
                             informationAssets?: components["schemas"]["ApiCsrmInformationAssetCsrmInformationAssetDocument"][];
                             /** @description A relational field */
@@ -6200,6 +12053,16 @@ export interface operations {
                             assessment?: components["schemas"]["ApiCsrmAssessmentCsrmAssessmentDocument"];
                             relationships?: components["schemas"]["AssessmentRequestRelationships"];
                             lifecycle?: components["schemas"]["AssessmentRequestLifecycle"];
+                            /** @description Who last returned the request to draft, by documentId and display name only, or null (Phase 13 D-04) */
+                            revertedBy?: components["schemas"]["AssessmentRequestRevertActor"] | null;
+                            /** @description Who holds the request (Phase 13 D-09, D-16, D-17): the analyst view for a human Security Analyst reading through the analyst grant, and the assignee's display name alone for everyone else. */
+                            assignment?: components["schemas"]["AssessmentRequestAssignment"] | components["schemas"]["AssessmentRequestRequestorAssignment"];
+                            /** @description The viewer's notes summary (Phase 13 D-24, D-25): for the request's requestor and the human Security Analysts, how many notes the request holds, how many are new to the viewer, and whether it takes a new note; null for anyone else. Reading the request marks nothing read. */
+                            notes: components["schemas"]["RequestNotesSummary"] | null;
+                            /** @description Phase 13 D-29: for a human Security Analyst reading through the analyst grant, which notes changed each target's AI inputs since that record was last generated; null for anyone else. Advisory: it gates nothing. */
+                            aiInputs: components["schemas"]["RequestAiInputs"] | null;
+                            /** @description Phase 14 D-04 item 7, D-18: the viewer's file summary, only for a reader of the request's attachments (its requestor and the human Security Analysts); absent for anyone else. How many files the request holds that are not removed, whether this viewer may add a file now with the closed reason when not, whether a note is needed, the window, what remains, the limits and the allowed types. */
+                            attachments?: components["schemas"]["RequestAttachmentSummary"];
                         };
                     };
                 };
@@ -6393,12 +12256,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Forbidden */
+            /** @description Forbidden. An analyst submitting a request they did not raise is refused with the closed reason NOT_REQUEST_REQUESTOR (Phase 13 D-20); nothing is written. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
             };
             /** @description Not found */
             404: {
@@ -6537,6 +12402,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Conflict. A request that holds a note or a file, removed and blocked files included, is never deleted: the closed reason REQUEST_HAS_NOTES (Phase 13 D-21) or REQUEST_HAS_ATTACHMENTS (Phase 14 D-04 item 11), and nothing is deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
             };
             /** @description Internal server error */
             500: {
@@ -14000,6 +19874,77 @@ export interface operations {
             403: components["responses"]["QuestionnaireForbidden"];
         };
     };
+    "questionnaire-workflow/export-my-questionnaires": {
+        parameters: {
+            query: {
+                /** @description One search term matched, case-insensitively, against the questionnaire number or the title. */
+                q?: string;
+                /** @description The questionnaire state to filter by, derived from its answers as the list derives it. */
+                status?: "not-started" | "draft" | "submitted";
+                /** @description The order of the list; the questionnaire id breaks every tie. */
+                sort?: "updatedAt:asc" | "updatedAt:desc" | "questionnaireNumber:asc" | "questionnaireNumber:desc" | "title:asc" | "title:desc" | "state:asc" | "state:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the My questionnaires sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the My questionnaires closed export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: the list's visible columns (Questionnaire ID, Title, Assessment request, Progress, Status). An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own questionnaires as a file download: every questionnaire the list would show across all its pages, in its order, with the chosen columns as display values. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of my-questionnaires-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export its questionnaires: it lacks the export or the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
     "questionnaire-workflow/get-my-questionnaire-status-summary": {
         parameters: {
             query?: never;
@@ -14048,6 +19993,77 @@ export interface operations {
             };
             400: components["responses"]["QuestionnaireBadRequest"];
             403: components["responses"]["QuestionnaireForbidden"];
+        };
+    };
+    "questionnaire-workflow/export-questionnaires-for-review": {
+        parameters: {
+            query: {
+                /** @description One search term matched, case-insensitively, against the questionnaire number or the title. */
+                q?: string;
+                /** @description The questionnaire state to filter by, derived from its answers as the list derives it. */
+                status?: "not-started" | "draft" | "submitted";
+                /** @description The order of the list; the questionnaire id breaks every tie. */
+                sort?: "updatedAt:asc" | "updatedAt:desc" | "questionnaireNumber:asc" | "questionnaireNumber:desc" | "title:asc" | "title:desc" | "state:asc" | "state:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Questionnaires sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Questionnaires closed export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: the list's visible columns (Questionnaire ID, Title, Assessment request, Status). An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole questionnaire review list as a file download: every questionnaire the list would show across all its pages, in its order, with the chosen columns as display values (an unreleased questionnaire's Status reads Analyst review). A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of questionnaires-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the questionnaire review list: it is not a human Security Analyst holding both the export and the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
         };
     };
     "questionnaire-workflow/get-questionnaire-review-summary": {
@@ -14243,12 +20259,19 @@ export interface operations {
     "assessment-workflow/get-assessment-request-queue": {
         parameters: {
             query?: {
-                "filters[queue]"?: "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "released";
-                /** @description Request status to filter by. Every request status is accepted in every queue, and the filter intersects the selected queue rather than widening it. The requires-attention, awaiting-requestor and generation-in-progress queues read only submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests; the released queue reads only approved and closed requests; no queue reads a draft. A status outside the selected queue returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                /** @description The review queue. The four lifecycle queues are requires-attention (the default), awaiting-requestor, generation-in-progress and released; open reads every submitted request not yet released, at any step; all reads every request in the analyst's review scope, reviewable and released, and never a draft. */
+                "filters[queue]"?: "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "open" | "released" | "all";
+                /** @description Request status to filter by. Every request status is accepted in every queue, and the filter intersects the selected queue rather than widening it. The requires-attention, awaiting-requestor, generation-in-progress and open queues read only submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests; the released queue reads only approved and closed requests; the all queue reads both sets; no queue reads a draft. A status outside the selected queue returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
                 "filters[requestStatus]"?: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
+                /** @description One search term matched, case-insensitively and literally, against the request number or the title, so a search for a request number finds the request. */
+                "filters[q]"?: string;
                 "filters[title]"?: string;
                 "filters[requestNumber]"?: string;
                 "filters[dueDate]"?: string;
+                /** @description Who holds the request (D-13), orthogonal to the queue: me reads the requests assigned to the caller, unassigned the requests nobody has picked up; absent reads anyone's. The caller is the resolved IdamBox User, never a query value, and no value names another analyst. Any other value is rejected with 400. */
+                "filters[assignee]"?: "me" | "unassigned";
+                /** @description unread reads only the requests with notes new to the caller (D-24): written in the other part, not by the caller, and after the caller's read state. Any other value is rejected with 400. */
+                "filters[notes]"?: "unread";
                 sort?: string;
                 "pagination[page]"?: number;
                 "pagination[pageSize]"?: number;
@@ -14270,6 +20293,195 @@ export interface operations {
             };
             400: components["responses"]["AssessmentBadRequest"];
             403: components["responses"]["AssessmentForbidden"];
+        };
+    };
+    "assessment-workflow/export-assessment-request-queue": {
+        parameters: {
+            query: {
+                /** @description The review queue. The four lifecycle queues are requires-attention (the default), awaiting-requestor, generation-in-progress and released; open reads every submitted request not yet released, at any step; all reads every request in the analyst's review scope, reviewable and released, and never a draft. */
+                "filters[queue]"?: "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "open" | "released" | "all";
+                /** @description Request status to filter by. Every request status is accepted in every queue, and the filter intersects the selected queue rather than widening it. The requires-attention, awaiting-requestor, generation-in-progress and open queues read only submitted, questionnaire-in-progress, risk-assessment-drafted and under-review requests; the released queue reads only approved and closed requests; the all queue reads both sets; no queue reads a draft. A status outside the selected queue returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                "filters[requestStatus]"?: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
+                /** @description One search term matched, case-insensitively and literally, against the request number or the title, so a search for a request number finds the request. */
+                "filters[q]"?: string;
+                "filters[title]"?: string;
+                "filters[requestNumber]"?: string;
+                "filters[dueDate]"?: string;
+                /** @description Who holds the request (D-13), orthogonal to the queue: me reads the requests assigned to the caller, unassigned the requests nobody has picked up; absent reads anyone's. The caller is the resolved IdamBox User, never a query value, and no value names another analyst. Any other value is rejected with 400. */
+                "filters[assignee]"?: "me" | "unassigned";
+                /** @description unread reads only the requests with notes new to the caller (D-24): written in the other part, not by the caller, and after the caller's read state. Any other value is rejected with 400. */
+                "filters[notes]"?: "unread";
+                sort?: string;
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Requests sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Requests closed export vocabulary, 1 to 40 unique keys, written in the queue's canonical order whatever order is named. Absent: the queue's visible columns (Request, Title, Requestor, Assessment type, Business criticality, Status, Assigned to, Due date, Age, Submitted). An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole review queue as a file download: every request the queue would list across all its pages, in its order, with the chosen columns as display values (an approved request's Status reads Released; an unassigned request's Assigned to is empty). A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of requests-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a queue filter, search or sort the list refuses, pagination, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the review queue: it is not a human Security Analyst holding both the export and the queue read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "assessment-workflow/get-my-requests": {
+        parameters: {
+            query?: {
+                /** @description One search term matched, case-insensitively and literally, against the request number or the title. */
+                q?: string;
+                /** @description Request status to filter by. */
+                status?: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
+                /** @description Who holds the request: requestor (it waits on the caller as its Requestor), analyst (it is with the Security Analyst) or none (it is released or closed). */
+                holder?: "requestor" | "analyst" | "none";
+                /** @description unread reads only the requests with notes new to the caller as their Requestor (D-24): written by a Security Analyst, not by the caller, and after the caller's read state. Its total equals the status summary's withUnreadNotes. Any other value is rejected with 400. */
+                notes?: "unread";
+                /** @description The order of the page; the request id breaks every tie, and a missing value sorts first ascending and last descending. */
+                sort?: "updatedAt:desc" | "updatedAt:asc" | "dueDate:asc" | "dueDate:desc" | "requestNumber:asc" | "requestNumber:desc" | "title:asc" | "title:desc";
+                page?: number;
+                pageSize?: 10 | 20 | 50;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own assessment requests with their holder */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyRequestListResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+        };
+    };
+    "assessment-workflow/export-my-requests": {
+        parameters: {
+            query: {
+                /** @description One search term matched, case-insensitively and literally, against the request number or the title. */
+                q?: string;
+                /** @description Request status to filter by. */
+                status?: "draft" | "submitted" | "questionnaire-in-progress" | "risk-assessment-drafted" | "under-review" | "approved" | "closed";
+                /** @description Who holds the request: requestor (it waits on the caller as its Requestor), analyst (it is with the Security Analyst) or none (it is released or closed). */
+                holder?: "requestor" | "analyst" | "none";
+                /** @description unread reads only the requests with notes new to the caller as their Requestor (D-24): written by a Security Analyst, not by the caller, and after the caller's read state. Its total equals the status summary's withUnreadNotes. Any other value is rejected with 400. */
+                notes?: "unread";
+                /** @description The order of the page; the request id breaks every tie, and a missing value sorts first ascending and last descending. */
+                sort?: "updatedAt:desc" | "updatedAt:asc" | "dueDate:asc" | "dueDate:desc" | "requestNumber:asc" | "requestNumber:desc" | "title:asc" | "title:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the My requests sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the My requests closed export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: the list's visible columns (Request ID, Title, Status, Security Analyst, Next step, Due date, Updated); holder adds who holds each request. An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own requests as a file download: every request the list would show across all its pages, in its order, with the chosen columns as display values. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of my-requests-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export its requests: it lacks the export or the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
         };
     };
     "assessment-workflow/get-my-request-status-summary": {
@@ -14333,6 +20545,8 @@ export interface operations {
             content: {
                 "application/json": {
                     replaceUnansweredQuestionnaire?: boolean;
+                    /** @description An optional instruction to the AI (Phase 15 D-12), validated as the proposal instructions are: a 400 with INSTRUCTION_TOO_LONG, INSTRUCTION_CHARACTERS_NOT_ALLOWED or INSTRUCTION_REPEATS_REQUESTOR_TEXT, and a 403 OWN_REQUEST for a Security Analyst on a request they raised. Recorded on the run and on a replacement's regenerated event. */
+                    instruction?: string | null;
                 };
             };
         };
@@ -14375,6 +20589,31 @@ export interface operations {
             400: components["responses"]["QuestionnaireBadRequest"];
             403: components["responses"]["QuestionnaireForbidden"];
             404: components["responses"]["QuestionnaireNotFound"];
+        };
+    };
+    "ai-runs/get-ai-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AI run */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiRunResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
         };
     };
     "questionnaire-generation/get-questionnaire-generation-job": {
@@ -14458,9 +20697,16 @@ export interface operations {
     "assessment-workflow/get-risk-assessments": {
         parameters: {
             query?: {
+                /** @description Matches the assessment number, the summary or the title of the assessment's Assessment Request, case-insensitively. */
                 q?: string;
                 /** @description Assessment status to filter by. Every assessment status, closed included, is within the analyst assessment scope. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
                 status?: "draft" | "in-review" | "approved" | "closed";
+                /** @description Overall rating to filter by. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                overallRating?: "Low" | "Moderate" | "High" | "Critical";
+                /** @description The first UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that follows approvedTo, is rejected with 400. */
+                approvedFrom?: string;
+                /** @description The last UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that precedes approvedFrom, is rejected with 400. */
+                approvedTo?: string;
                 sort?: "generatedDate:asc" | "generatedDate:desc" | "approvalDate:asc" | "approvalDate:desc" | "assessmentNumber:asc" | "assessmentNumber:desc" | "assessmentStatus:asc" | "assessmentStatus:desc";
                 page?: number;
                 pageSize?: number;
@@ -14504,6 +20750,168 @@ export interface operations {
             };
             400: components["responses"]["AssessmentBadRequest"];
             403: components["responses"]["AssessmentForbidden"];
+        };
+    };
+    "assessment-workflow/export-risk-assessments": {
+        parameters: {
+            query: {
+                /** @description Matches the assessment number, the summary or the title of the assessment's Assessment Request, case-insensitively. */
+                q?: string;
+                /** @description Assessment status to filter by. Every assessment status, closed included, is within the analyst assessment scope. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                status?: "draft" | "in-review" | "approved" | "closed";
+                /** @description Overall rating to filter by. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                overallRating?: "Low" | "Moderate" | "High" | "Critical";
+                /** @description The first UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that follows approvedTo, is rejected with 400. */
+                approvedFrom?: string;
+                /** @description The last UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that precedes approvedFrom, is rejected with 400. */
+                approvedTo?: string;
+                sort?: "generatedDate:asc" | "generatedDate:desc" | "approvalDate:asc" | "approvalDate:desc" | "assessmentNumber:asc" | "assessmentNumber:desc" | "assessmentStatus:asc" | "assessmentStatus:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Risk assessments sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Risk assessments closed export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: the list's visible columns (Assessment, Request title, Status, Risks, Highest residual rating, Draft initiated by, Released). An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date, the Released dates and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Risk assessments list as a file download: every assessment the list would show across all its pages, in its order, with the chosen columns as display values (Released for an approved assessment). A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of risk-assessments-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the Risk assessments list: it is not a human Security Analyst holding the export and the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "assessment-workflow/export-released-risk-assessment": {
+        parameters: {
+            query: {
+                /** @description The file format: xlsx (a workbook with the Summary, Risks and Mitigation controls sheets and an About this export sheet) or csv (UTF-8 with a BOM, the one table named by table). */
+                format: "csv" | "xlsx";
+                /** @description The table a CSV holds: required for csv, refused for xlsx. */
+                table?: "risks" | "mitigation-controls";
+                /** @description The viewer's IANA time zone, used for the file name's local date, the Released date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the assessment */
+                assessmentId: components["parameters"]["AssessmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The released assessment as a file download, its values as the released reads disclose them. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of {assessment number, lower case}-risk-assessment-{local date YYYY-MM-DD}.xlsx, or {assessment number, lower case}-risks-{local date}.csv or -mitigation-controls-{local date}.csv for one table */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds (the one-row Summary not counted) */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a key other than format, table and timeZone (columns included), a missing or unknown format, a table missing for csv, given for xlsx or not one of the two record tables, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export risk assessments: it lacks the export or any of the three released reads it discloses (the detail, the released risks read and the control implementations read), or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description No released assessment the caller may read has this id: for a Requestor, another person's assessment or their own unreleased one; for an analyst, no assessment. No file is written and no export event recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description ASSESSMENT_NOT_RELEASED: the analyst can read the assessment, but it is not released, so it cannot be exported */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
         };
     };
     "assessment-workflow/get-risk-assessment": {
@@ -14555,6 +20963,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssessmentDetailResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "assessment-workflow/decide-ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the assessment */
+                assessmentId: components["parameters"]["AssessmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProposalDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Decision counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalDecisionResponse"];
                 };
             };
             400: components["responses"]["AssessmentBadRequest"];
@@ -14624,17 +21063,31 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
-                treatmentStatus?: "Not Started" | "In Progress" | "Overdue" | "Complete";
-                inherentRating?: components["schemas"]["AssessmentRating"];
-                residualRating?: components["schemas"]["AssessmentRating"];
+                /** @description none: no treatment status is recorded, or one outside Not Started, In Progress, Overdue and Complete. */
+                treatmentStatus?: "Not Started" | "In Progress" | "Overdue" | "Complete" | "none";
+                /** @description none: no inherent rating is recorded, or one outside Low, Moderate, High and Critical. */
+                inherentRating?: "Low" | "Moderate" | "High" | "Critical" | "none";
+                /** @description none: no residual rating is recorded, or one outside Low, Moderate, High and Critical. */
+                residualRating?: "Low" | "Moderate" | "High" | "Critical" | "none";
                 riskOwner?: string;
                 treatmentOwner?: string;
                 assessment?: string;
                 system?: string;
                 asset?: string;
-                mitigationStatus?: "Existing" | "Planned" | "Implemented" | "Retired" | "none";
-                /** @description open: no closure date recorded. closed: a closure date is recorded. Absent returns both. */
-                state?: "open" | "closed";
+                /** @description released: the Risk's assessment carries the complete release facts. under-assessment: its assessment is a draft or in review with no release facts. Absent returns both, which is every Risk the register lists. */
+                stage?: "released" | "under-assessment";
+                /** @description The Risk's recorded treatment action. Absent returns every Risk, including those with no treatment action recorded. */
+                treatmentAction?: "Accept" | "Treat";
+                /** @description The Risk's treatment due state on the server's UTC today, by the one rule that derives each row's treatmentDueState: complete-or-closed when a closure date is recorded or the treatment is Complete; otherwise no-target-date without a target date, overdue when the target date is before today, due-soon when it is from today to 14 days ahead inclusive, and later after that. Absent returns every Risk. */
+                dueState?: "overdue" | "due-soon" | "later" | "no-target-date" | "complete-or-closed";
+                /** @description Risks with at least one mitigation control of this effectiveness rating. none: at least one mitigation control with no effectiveness rating recorded, or one outside the four. Absent returns every Risk. */
+                mitigationEffectiveness?: "Effective" | "Partially Effective" | "Ineffective" | "Not Assessed" | "none";
+                /** @description none: Risks with no impacted Information System. A request that also names system is refused. */
+                impactedSystem?: "none";
+                /** @description Risks with at least one mitigation control of this status. none: no mitigation control. any: at least one mitigation control, whatever its status. */
+                mitigationStatus?: "Existing" | "Planned" | "Implemented" | "Retired" | "none" | "any";
+                /** @description open: an active Risk with no closure date recorded. closed: an active Risk with a closure date recorded. Absent returns both, active Risks only. withdrawn: the Risks withdrawn from their assessment, and only those (Phase 16 D-08); no figure links to it and no default view includes them. */
+                state?: "open" | "closed" | "withdrawn";
                 targetDateFrom?: string;
                 targetDateTo?: string;
                 sort?: "riskNumber:asc" | "riskNumber:desc" | "riskStatement:asc" | "riskStatement:desc" | "inherentRating:asc" | "inherentRating:desc" | "residualRating:asc" | "residualRating:desc" | "treatmentStatus:asc" | "treatmentStatus:desc" | "treatmentOwner:asc" | "treatmentOwner:desc" | "targetDate:asc" | "targetDate:desc" | "assessment:asc" | "assessment:desc";
@@ -14658,6 +21111,100 @@ export interface operations {
             };
             400: components["responses"]["RiskRegisterBadRequest"];
             403: components["responses"]["RiskRegisterForbidden"];
+        };
+    };
+    "risk-register/export-risk-register": {
+        parameters: {
+            query: {
+                q?: string;
+                /** @description none: no treatment status is recorded, or one outside Not Started, In Progress, Overdue and Complete. */
+                treatmentStatus?: "Not Started" | "In Progress" | "Overdue" | "Complete" | "none";
+                /** @description none: no inherent rating is recorded, or one outside Low, Moderate, High and Critical. */
+                inherentRating?: "Low" | "Moderate" | "High" | "Critical" | "none";
+                /** @description none: no residual rating is recorded, or one outside Low, Moderate, High and Critical. */
+                residualRating?: "Low" | "Moderate" | "High" | "Critical" | "none";
+                riskOwner?: string;
+                treatmentOwner?: string;
+                assessment?: string;
+                system?: string;
+                asset?: string;
+                /** @description released: the Risk's assessment carries the complete release facts. under-assessment: its assessment is a draft or in review with no release facts. Absent returns both, which is every Risk the register lists. */
+                stage?: "released" | "under-assessment";
+                /** @description The Risk's recorded treatment action. Absent returns every Risk, including those with no treatment action recorded. */
+                treatmentAction?: "Accept" | "Treat";
+                /** @description The Risk's treatment due state on the server's UTC today, by the one rule that derives each row's treatmentDueState: complete-or-closed when a closure date is recorded or the treatment is Complete; otherwise no-target-date without a target date, overdue when the target date is before today, due-soon when it is from today to 14 days ahead inclusive, and later after that. Absent returns every Risk. */
+                dueState?: "overdue" | "due-soon" | "later" | "no-target-date" | "complete-or-closed";
+                /** @description Risks with at least one mitigation control of this effectiveness rating. none: at least one mitigation control with no effectiveness rating recorded, or one outside the four. Absent returns every Risk. */
+                mitigationEffectiveness?: "Effective" | "Partially Effective" | "Ineffective" | "Not Assessed" | "none";
+                /** @description none: Risks with no impacted Information System. A request that also names system is refused. */
+                impactedSystem?: "none";
+                /** @description Risks with at least one mitigation control of this status. none: no mitigation control. any: at least one mitigation control, whatever its status. */
+                mitigationStatus?: "Existing" | "Planned" | "Implemented" | "Retired" | "none" | "any";
+                /** @description open: an active Risk with no closure date recorded. closed: an active Risk with a closure date recorded. Absent returns both, active Risks only. withdrawn: the Risks withdrawn from their assessment, and only those (Phase 16 D-08); no figure links to it and no default view includes them. */
+                state?: "open" | "closed" | "withdrawn";
+                targetDateFrom?: string;
+                targetDateTo?: string;
+                sort?: "riskNumber:asc" | "riskNumber:desc" | "riskStatement:asc" | "riskStatement:desc" | "inherentRating:asc" | "inherentRating:desc" | "residualRating:asc" | "residualRating:desc" | "treatmentStatus:asc" | "treatmentStatus:desc" | "treatmentOwner:asc" | "treatmentOwner:desc" | "targetDate:asc" | "targetDate:desc" | "assessment:asc" | "assessment:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Risk register sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Risk register's closed export vocabulary, 1 to 40 unique keys, written in the register's canonical order whatever order is named. Absent: the register's visible columns. An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole filtered Risk register as a file download: every Risk the register would list across all its pages, in its order, with the chosen columns as display values. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of risk-register-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a register filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the Risk register: it is not a human Security Analyst holding both the export and the register read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
         };
     };
     "risk-register/get-risk": {
@@ -15039,12 +21586,95 @@ export interface operations {
             409: components["responses"]["AssessmentConflict"];
         };
     };
-    "assessment-workflow/get-my-released-risk-assessments": {
+    "assessment-workflow/export-my-released-risk-assessments": {
         parameters: {
-            query?: {
+            query: {
+                /** @description Matches the assessment number, the summary or the title of the assessment's Assessment Request, case-insensitively. */
                 q?: string;
                 /** @description Assessment status to filter by. This collection holds only the Requestor's completely released assessments, so the filter intersects that scope: any status other than approved returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
                 status?: "draft" | "in-review" | "approved" | "closed";
+                /** @description Overall rating to filter by. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                overallRating?: "Low" | "Moderate" | "High" | "Critical";
+                /** @description The first UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that follows approvedTo, is rejected with 400. */
+                approvedFrom?: string;
+                /** @description The last UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that precedes approvedFrom, is rejected with 400. */
+                approvedTo?: string;
+                sort?: "generatedDate:asc" | "generatedDate:desc" | "approvalDate:asc" | "approvalDate:desc" | "assessmentNumber:asc" | "assessmentNumber:desc" | "assessmentStatus:asc" | "assessmentStatus:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the My risk assessments sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the My risk assessments closed export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: the list's visible columns (Assessment, Request title, Overall rating, Released). An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date, the Released dates and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own released assessments as a file download: every assessment the list would show across all its pages, in its order, with the chosen columns as display values. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of my-risk-assessments-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export its risk assessments: it lacks the export or the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "assessment-workflow/get-my-released-risk-assessments": {
+        parameters: {
+            query?: {
+                /** @description Matches the assessment number, the summary or the title of the assessment's Assessment Request, case-insensitively. */
+                q?: string;
+                /** @description Assessment status to filter by. This collection holds only the Requestor's completely released assessments, so the filter intersects that scope: any status other than approved returns an empty page with a total of 0. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                status?: "draft" | "in-review" | "approved" | "closed";
+                /** @description Overall rating to filter by. A value outside this enum, a repeated parameter or an operator object is rejected with 400. */
+                overallRating?: "Low" | "Moderate" | "High" | "Critical";
+                /** @description The first UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that follows approvedTo, is rejected with 400. */
+                approvedFrom?: string;
+                /** @description The last UTC calendar date, inclusive, of the approval (release) instant. A value that is not an existing YYYY-MM-DD date, or that precedes approvedFrom, is rejected with 400. */
+                approvedTo?: string;
                 sort?: "generatedDate:asc" | "generatedDate:desc" | "approvalDate:asc" | "approvalDate:desc" | "assessmentNumber:asc" | "assessmentNumber:desc" | "assessmentStatus:asc" | "assessmentStatus:desc";
                 page?: number;
                 pageSize?: number;
@@ -15232,8 +21862,67 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-risk-types-import-template": {
+        parameters: {
+            query: {
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (the template sheet and a Notes sheet). No other query parameter is accepted. */
+                format: "csv" | "xlsx";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The risk types import template as a file download, named risk-types-import-template.csv or .xlsx, with no date. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of risk-types-import-template.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The query is invalid: a missing, repeated or unknown format, or any other parameter */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15241,13 +21930,181 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
-            415: {
+            /** @description The signed-in identity is not a human Security Analyst holding the template operation */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-risk-types-import-error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The same CSV (UTF-8) or .xlsx file that was previewed or committed
+                     */
+                    file: string;
+                    /** @description The preview's token, at Review. Exactly one of previewDigest and resultToken. */
+                    previewDigest?: string;
+                    /** @description The commit's resultToken, at Results. Exactly one of previewDigest and resultToken. */
+                    resultToken?: string;
+                    /** @description The viewer's IANA time zone, for the file name's local date. Absent: UTC. A zone the server does not know is a 400. */
+                    timeZone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The rows to correct as a file download in the uploaded file's format, named risk-types-import-issues-{local date YYYY-MM-DD}.csv or .xlsx. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of risk-types-import-issues-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The request is invalid: not exactly one file, neither or both of previewDigest and resultToken, a malformed token, any other field (issues are never accepted), an unknown time zone, or a file other than the one the record holds */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity is not a human Security Analyst holding the error report operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description IMPORT_REVIEW_EXPIRED: the preview or result record is unknown, expired, another analyst's or another collection's */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/export-risk-types": {
+        parameters: {
+            query: {
+                q?: string;
+                sort?: "name:asc" | "name:desc" | "updatedAt:asc" | "updatedAt:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Risk Types sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Risk Types export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: every column, the import columns then the read-only columns. An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole filtered Risk Types list as a file download: every record the list would page through, in its order. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text, and the import removes it; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of risk-types-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the Risk Types list: it is not a human Security Analyst holding both the export and the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
         };
@@ -15292,31 +22149,40 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description preview digest mismatch */
+            /** @description IMPORT_PREVIEW_CHANGED (the file differs from the reviewed one) or IMPORT_RECORD_LIMIT_EXCEEDED in the Administration envelope's code; IMPORT_REVIEW_EXPIRED (the reviewed preview has expired or is unknown) or IMPORT_DECISION_MISSING (a row matched by similar name has no decision) in details.reason */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AdministrationErrorResponse"] | components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
             415: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
             /** @description import outcome unknown */
@@ -15472,8 +22338,67 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-controls-import-template": {
+        parameters: {
+            query: {
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (the template sheet and a Notes sheet). No other query parameter is accepted. */
+                format: "csv" | "xlsx";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The controls import template as a file download, named controls-import-template.csv or .xlsx, with no date. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of controls-import-template.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The query is invalid: a missing, repeated or unknown format, or any other parameter */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15481,13 +22406,183 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
-            415: {
+            /** @description The signed-in identity is not a human Security Analyst holding the template operation */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-controls-import-error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The same CSV (UTF-8) or .xlsx file that was previewed or committed
+                     */
+                    file: string;
+                    /** @description The preview's token, at Review. Exactly one of previewDigest and resultToken. */
+                    previewDigest?: string;
+                    /** @description The commit's resultToken, at Results. Exactly one of previewDigest and resultToken. */
+                    resultToken?: string;
+                    /** @description The viewer's IANA time zone, for the file name's local date. Absent: UTC. A zone the server does not know is a 400. */
+                    timeZone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The rows to correct as a file download in the uploaded file's format, named controls-import-issues-{local date YYYY-MM-DD}.csv or .xlsx. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of controls-import-issues-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The request is invalid: not exactly one file, neither or both of previewDigest and resultToken, a malformed token, any other field (issues are never accepted), an unknown time zone, or a file other than the one the record holds */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity is not a human Security Analyst holding the error report operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description IMPORT_REVIEW_EXPIRED: the preview or result record is unknown, expired, another analyst's or another collection's */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/export-controls": {
+        parameters: {
+            query: {
+                q?: string;
+                framework?: string;
+                controlType?: "Preventive" | "Detective" | "Corrective" | "Compensating";
+                sort?: "controlNumber:asc" | "controlNumber:desc" | "name:asc" | "name:desc" | "framework:asc" | "framework:desc" | "updatedAt:asc" | "updatedAt:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Controls sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Controls export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: every column, the import columns then the read-only columns. An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole filtered Controls list as a file download: every record the list would page through, in its order. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text, and the import removes it; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of controls-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the Controls list: it is not a human Security Analyst holding both the export and the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
         };
@@ -15532,31 +22627,40 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description preview digest mismatch */
+            /** @description IMPORT_PREVIEW_CHANGED (the file differs from the reviewed one) or IMPORT_RECORD_LIMIT_EXCEEDED in the Administration envelope's code; IMPORT_REVIEW_EXPIRED (the reviewed preview has expired or is unknown) or IMPORT_DECISION_MISSING (a row matched by similar name has no decision) in details.reason */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AdministrationErrorResponse"] | components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
             415: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
             /** @description import outcome unknown */
@@ -15852,8 +22956,67 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-information-systems-import-template": {
+        parameters: {
+            query: {
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (the template sheet and a Notes sheet). No other query parameter is accepted. */
+                format: "csv" | "xlsx";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The information systems import template as a file download, named information-systems-import-template.csv or .xlsx, with no date. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of information-systems-import-template.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The query is invalid: a missing, repeated or unknown format, or any other parameter */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15861,13 +23024,185 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
-            415: {
+            /** @description The signed-in identity is not a human Security Analyst holding the template operation */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-information-systems-import-error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The same CSV (UTF-8) or .xlsx file that was previewed or committed
+                     */
+                    file: string;
+                    /** @description The preview's token, at Review. Exactly one of previewDigest and resultToken. */
+                    previewDigest?: string;
+                    /** @description The commit's resultToken, at Results. Exactly one of previewDigest and resultToken. */
+                    resultToken?: string;
+                    /** @description The viewer's IANA time zone, for the file name's local date. Absent: UTC. A zone the server does not know is a 400. */
+                    timeZone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The rows to correct as a file download in the uploaded file's format, named information-systems-import-issues-{local date YYYY-MM-DD}.csv or .xlsx. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of information-systems-import-issues-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The request is invalid: not exactly one file, neither or both of previewDigest and resultToken, a malformed token, any other field (issues are never accepted), an unknown time zone, or a file other than the one the record holds */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity is not a human Security Analyst holding the error report operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description IMPORT_REVIEW_EXPIRED: the preview or result record is unknown, expired, another analyst's or another collection's */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/export-information-systems": {
+        parameters: {
+            query: {
+                q?: string;
+                environment?: "Production" | "Non-production";
+                deploymentModel?: "On-prem" | "Cloud" | "SaaS";
+                lifecycleState?: "New" | "Changed" | "Existing" | "Decommissioning";
+                internetFacing?: boolean;
+                sort?: "name:asc" | "name:desc" | "systemType:asc" | "systemType:desc" | "environment:asc" | "environment:desc" | "lifecycleState:asc" | "lifecycleState:desc" | "updatedAt:asc" | "updatedAt:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Information Systems sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Information Systems export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: every column, the import columns then the read-only columns. An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole filtered Information Systems list as a file download: every record the list would page through, in its order. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text, and the import removes it; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of information-systems-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the Information Systems list: it is not a human Security Analyst holding both the export and the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
         };
@@ -15912,31 +23247,40 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description preview digest mismatch */
+            /** @description IMPORT_PREVIEW_CHANGED (the file differs from the reviewed one) or IMPORT_RECORD_LIMIT_EXCEEDED in the Administration envelope's code; IMPORT_REVIEW_EXPIRED (the reviewed preview has expired or is unknown) or IMPORT_DECISION_MISSING (a row matched by similar name has no decision) in details.reason */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AdministrationErrorResponse"] | components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
             415: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
             /** @description import outcome unknown */
@@ -16232,8 +23576,67 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-information-assets-import-template": {
+        parameters: {
+            query: {
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (the template sheet and a Notes sheet). No other query parameter is accepted. */
+                format: "csv" | "xlsx";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The information assets import template as a file download, named information-assets-import-template.csv or .xlsx, with no date. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of information-assets-import-template.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The query is invalid: a missing, repeated or unknown format, or any other parameter */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16241,13 +23644,185 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
-            415: {
+            /** @description The signed-in identity is not a human Security Analyst holding the template operation */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/download-information-assets-import-error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The same CSV (UTF-8) or .xlsx file that was previewed or committed
+                     */
+                    file: string;
+                    /** @description The preview's token, at Review. Exactly one of previewDigest and resultToken. */
+                    previewDigest?: string;
+                    /** @description The commit's resultToken, at Results. Exactly one of previewDigest and resultToken. */
+                    resultToken?: string;
+                    /** @description The viewer's IANA time zone, for the file name's local date. Absent: UTC. A zone the server does not know is a 400. */
+                    timeZone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The rows to correct as a file download in the uploaded file's format, named information-assets-import-issues-{local date YYYY-MM-DD}.csv or .xlsx. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of information-assets-import-issues-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The request is invalid: not exactly one file, neither or both of previewDigest and resultToken, a malformed token, any other field (issues are never accepted), an unknown time zone, or a file other than the one the record holds */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity is not a human Security Analyst holding the error report operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                };
+            };
+            /** @description IMPORT_REVIEW_EXPIRED: the preview or result record is unknown, expired, another analyst's or another collection's */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
+    "administration/export-information-assets": {
+        parameters: {
+            query: {
+                q?: string;
+                dataClassification?: "Public" | "Internal" | "Restricted" | "Critical Infrastructure Sensitive";
+                containsPersonalData?: boolean;
+                containsLegalData?: boolean;
+                containsCreditCardData?: boolean;
+                sort?: "name:asc" | "name:desc" | "dataClassification:asc" | "dataClassification:desc" | "type:asc" | "type:desc" | "updatedAt:asc" | "updatedAt:desc";
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Information Assets sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Information Assets export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: every column, the import columns then the read-only columns. An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole filtered Information Assets list as a file download: every record the list would page through, in its order. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text, and the import removes it; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of information-assets-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a filter, search or sort the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the Information Assets list: it is not a human Security Analyst holding both the export and the list read, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
         };
@@ -16292,31 +23867,40 @@ export interface operations {
                     "application/json": components["schemas"]["AdministrationErrorResponse"];
                 };
             };
-            /** @description preview digest mismatch */
+            /** @description IMPORT_PREVIEW_CHANGED (the file differs from the reviewed one) or IMPORT_RECORD_LIMIT_EXCEEDED in the Administration envelope's code; IMPORT_REVIEW_EXPIRED (the reviewed preview has expired or is unknown) or IMPORT_DECISION_MISSING (a row matched by similar name has no decision) in details.reason */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AdministrationErrorResponse"] | components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description import limit exceeded */
+            /** @description IMPORT_FILE_TOO_LARGE: the file is larger than 5 MB (details.found.bytes) */
             413: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
-            /** @description unsupported media type */
+            /** @description IMPORT_FILE_TYPE: not a CSV or .xlsx file, or content that does not match its extension */
             415: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdministrationErrorResponse"];
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description An import file CSRM cannot read: one closed IMPORT_ reason in details.reason, with the safe details.found where the import record names them; never a cell value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
                 };
             };
             /** @description import outcome unknown */
@@ -16402,6 +23986,74 @@ export interface operations {
             403: components["responses"]["AnalystInsightForbidden"];
         };
     };
+    "analyst-insights/export-alerts": {
+        parameters: {
+            query: {
+                /** @description One or more alert kinds, each at most once. Absent exports every kind. */
+                kind?: components["schemas"]["AlertKind"][];
+                urgency?: components["schemas"]["AlertUrgency"];
+                /** @description The file format: csv (UTF-8 with a BOM) or xlsx (a workbook with the Alerts sheet and an About this export sheet). */
+                format: "csv" | "xlsx";
+                /** @description Comma-separated column keys of the Alerts closed export vocabulary, 1 to 40 unique keys, written in the list's canonical order whatever order is named. Absent: the list's visible columns (Urgency, Residual rating, Condition, Record, Date). An unknown or repeated key is a 400. */
+                columns?: string;
+                /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                timeZone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole alert list as a file download: every alert the list would show across all its pages, in its order, with the chosen columns as display values (the urgency and the condition in the list's words, the governing date as a date, an undated alert's Date empty). A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of alerts-{local date YYYY-MM-DD}.csv or .xlsx */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export query is invalid: a kind or urgency the list refuses, a page or pageSize, a missing or unknown format, an unknown or repeated column, or an unknown time zone. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the alerts: it is not a human Security Analyst holding the export, the alert read and the insight scope's underlying reads, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+        };
+    };
     "analyst-insights/get-alert-summary": {
         parameters: {
             query?: never;
@@ -16446,6 +24098,243 @@ export interface operations {
             403: components["responses"]["AnalystInsightForbidden"];
         };
     };
+    "risk-curation/withdraw-risks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the assessment */
+                assessmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RiskCurationRequest"];
+            };
+        };
+        responses: {
+            /** @description The Risks the operation changed and the ones it left unchanged, in the request's order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskCurationResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-curation/reinstate-risks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the assessment */
+                assessmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RiskCurationRequest"];
+            };
+        };
+        responses: {
+            /** @description The Risks the operation changed and the ones it left unchanged, in the request's order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskCurationResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-curation/get-risk-history": {
+        parameters: {
+            query?: {
+                /** @description The page, from 1. */
+                page?: number;
+                /** @description Events per page, 1 to 100; 25 when absent. */
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the contextual risk */
+                riskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the Risk's history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskHistoryResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-ai-proposals/start-risk-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the risk assessment */
+                assessmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RiskSuggestionsRequest"];
+            };
+        };
+        responses: {
+            /** @description Risk proposal job accepted; a start while one is active for the assessment returns that job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-ai-proposals/start-risk-rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the contextual risk */
+                riskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RiskRewriteRequest"];
+            };
+        };
+        responses: {
+            /** @description Risk proposal job accepted; a start while one is active for the Risk returns that job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-ai-proposals/get-risk-proposal-job": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The risk proposal job's identifier */
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The risk proposal job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-ai-proposals/retry-risk-proposal-job": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The risk proposal job's identifier */
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Risk proposal job retry accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskProposalJobResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
+    "risk-ai-proposals/list-risk-ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Strapi documentId of the risk assessment */
+                assessmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The risk assessment's AI proposals */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskAiProposalsResponse"];
+                };
+            };
+            400: components["responses"]["AssessmentBadRequest"];
+            403: components["responses"]["AssessmentForbidden"];
+            404: components["responses"]["AssessmentNotFound"];
+            409: components["responses"]["AssessmentConflict"];
+        };
+    };
     "analyst-insights/get-report": {
         parameters: {
             query?: {
@@ -16472,6 +24361,85 @@ export interface operations {
             400: components["responses"]["AnalystInsightBadRequest"];
             403: components["responses"]["AnalystInsightForbidden"];
             404: components["responses"]["ReportNotFound"];
+        };
+    };
+    "analyst-insights/export-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportKey: components["schemas"]["ReportKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description The file format: xlsx (a workbook of the report's tables and an About this export sheet) or csv (UTF-8 with a BOM, the one table named by table).
+                     * @enum {string}
+                     */
+                    format: "csv" | "xlsx";
+                    /** @description One of the report's table keys (risk-exposure: ratings, residual-by-treatment-status, exposed-systems, under-assessment; treatment-performance: due-state, treatment-status; assessment-throughput: released-per-month, request-lifecycle; control-effectiveness: implementation-status, effectiveness-rating). Required when format is csv; refused (400) when format is xlsx. */
+                    table?: string;
+                    /** @description The viewer's IANA time zone, used for the file name's local date and the exported-at time. Absent: UTC, noted in the file. A zone the server does not know is a 400. */
+                    timeZone?: string;
+                    /** @description The report's own query parameters as strings, parsed by the report's own parser: only assessment-throughput takes one, period ("6" or "12"; absent means 6). Any other key, or a value the report refuses, is a 400. */
+                    query?: {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description The report as a file download: its tables as display values (counts as numbers, ratings, statuses and months in the page's words), computed from the same figures the report read returns. A text value beginning with =, +, -, @, a tab or a line break starts with an apostrophe so it opens as text; an XLSX cell is always a typed value, never a formula. */
+            200: {
+                headers: {
+                    /** @description attachment, with an ASCII filename and the RFC 5987 UTF-8 filename* of {reportKey}-report-{local date YYYY-MM-DD}.xlsx, or {reportKey}-{table slug}-{local date YYYY-MM-DD}.csv for one table */
+                    "Content-Disposition": string;
+                    /** @description nosniff */
+                    "X-Content-Type-Options": "nosniff";
+                    /** @description no-store */
+                    "Cache-Control": "no-store";
+                    /** @description default-src 'none'; sandbox */
+                    "Content-Security-Policy": "default-src 'none'; sandbox";
+                    /** @description The data rows the file holds */
+                    "X-CSRM-Row-Count": number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=utf-8": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description The export body is invalid: not a JSON object, a key other than format, table, timeZone and query (columns included), a missing or unknown format, a table missing for csv, given for xlsx or not one of the report's tables, an unknown time zone, or a query the report refuses. No reason is named. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            /** @description The signed-in identity may not export the report: it is not a human Security Analyst holding the export, the report read and the insight scope's underlying reads, or it is an automation identity, which every export refuses */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
+            404: components["responses"]["ReportNotFound"];
+            /** @description The export would hold more rows than one export may (EXPORT_ROW_LIMIT, with details.rowCount and details.rowCap); or EXPORT_CELL_TOO_LONG when format is xlsx and a text cell is longer than Excel's 32,767-character limit (with details.column and details.cellLimit), and the CSV holds the value whole. No file is written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentWorkflowErrorResponse"];
+                };
+            };
         };
     };
 }

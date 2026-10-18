@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 
 import { tableHeaderMicroClassName } from '@/components/csrm/data-table';
+import { RecordLink } from '@/components/csrm/record-link';
 import {
   horizontalOverflowAttributes,
   horizontalScrollRegionFocusClassName,
@@ -16,7 +17,18 @@ import { cn } from '@/lib/utils';
  * server component cannot read a plain value from a client module. Every prop is plain data.
  */
 
-export type ReportTableRowData = { key: string; label: string; values: readonly number[] };
+/** A figure or row header that opens the records it counts or describes, with the name that says so (X-10). */
+export type ReportTableLink = { href: string; accessibleName: string };
+
+export type ReportTableRowData = {
+  key: string;
+  label: string;
+  values: readonly number[];
+  /** Opens the records the row describes, when its figures cannot (UI-SPEC §8.1 rule 6). */
+  header?: ReportTableLink;
+  /** One per figure, aligned with `values`: a figure above zero with a link opens its list; null stays plain. */
+  cells?: readonly (ReportTableLink | null)[];
+};
 
 export type ReportTableProps = {
   /** Visually hidden caption that names the table; it repeats the section caption. */
@@ -52,10 +64,20 @@ function numericClassName(index: number, count: number) {
   return index === count - 1 ? lastNumericColumnClassName : numericColumnClassName;
 }
 
+/*
+ * A figure link carries the record-link treatment on the figure alone (X-10). A zero is plain text even when
+ * its position has a link, so no link ever opens an empty list from a table.
+ */
+function ReportFigure({ link, value }: { link: ReportTableLink | null | undefined; value: number }) {
+  const text = countFormat.format(value);
+  return link && value > 0 ? <RecordLink aria-label={link.accessibleName} href={link.href}>{text}</RecordLink> : text;
+}
+
 /**
  * A report's text equivalent (UI-SPEC §4.3): a static table with a hidden caption, `th scope="col"`
  * micro-label headers, `th scope="row"` categories and right-aligned tabular figures. Rows are
- * static, so they have no hover.
+ * static, so they have no hover. A row may carry figure and row-header links, built with their names in
+ * the presentation module (UI-SPEC §8.1); a row without them renders plain.
  */
 export function ReportTable({ caption, columns, rowHeader, rows, scrollLabel }: ReportTableProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -96,7 +118,7 @@ export function ReportTable({ caption, columns, rowHeader, rows, scrollLabel }: 
               )}
               scope="row"
             >
-              {row.label}
+              {row.header ? <RecordLink aria-label={row.header.accessibleName} href={row.header.href}>{row.label}</RecordLink> : row.label}
             </TableHead>
             {row.values.map((value, index) => (
               <TableCell
@@ -104,7 +126,7 @@ export function ReportTable({ caption, columns, rowHeader, rows, scrollLabel }: 
                 // Figures sit in fixed column positions, so the index is the column's identity.
                 key={index}
               >
-                {countFormat.format(value)}
+                <ReportFigure link={row.cells?.[index]} value={value} />
               </TableCell>
             ))}
           </TableRow>

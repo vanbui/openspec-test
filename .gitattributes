@@ -5,5 +5,26 @@ apps/backend/types/generated/*.d.ts text eol=lf
 apps/csrm/app/fonts/*.woff2 binary
 apps/csrm/app/fonts/*.txt -text
 
+# Attachment fixtures (14-02): byte-for-byte their builders' output, so line-ending conversion must never touch them.
+# Only the fixture types are binary: the folder's README.md stays text, so diffs show it and a text-only search (git grep -I) no longer skips it (WR-305, IN-706)
+apps/backend/tests/fixtures/attachments/*.pdf binary
+apps/backend/tests/fixtures/attachments/*.docx binary
+apps/backend/tests/fixtures/attachments/*.xlsx binary
+apps/backend/tests/fixtures/attachments/*.pptx binary
+apps/backend/tests/fixtures/attachments/*.png binary
+apps/backend/tests/fixtures/attachments/*.jpg binary
+
+# SCIM evidence fixtures (iam Phases 3 and 4): their bytes are digest-pinned by manifest.json and the replay tests,
+# so line-ending conversion must never touch them
+apps/backend/tests/fixtures/iam-scim/*.json -text
+.planning/workstreams/iam/phases/*/evidence/connector-capture/*.json -text
+
 # Scripts are always text, so a stray control character cannot make git store one with CRLF endings (WR-103)
 scripts/*.mjs text
+
+# midPoint container scripts and fixtures run inside Linux containers: keep LF on every checkout (iam Phase 1)
+docker/midpoint/*.sh text eol=lf
+docker/midpoint/**/*.sh text eol=lf
+docker/midpoint/Dockerfile text eol=lf
+docker/midpoint/scim-stub/* text eol=lf
+docker/.env.example text eol=lf

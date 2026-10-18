@@ -82,6 +82,16 @@ function ReportSections({ report }: { report: Report }) {
 
 const summaryHeadingId = 'report-summary-heading';
 
+/**
+ * The Summary strip's columns for a number of tiles: two or three tiles share one row from sm; five
+ * tiles take two columns below sm, three from sm and five from xl, so no caption, value or supporting
+ * line is squeezed at 1024 or 1280 (UI-D38).
+ */
+function kpiStripClassName(tiles: number): string {
+  if (tiles > 3) return 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5';
+  return tiles > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2';
+}
+
 /** A report as the server computed it: the as-at line, the Summary tiles, then the sections. */
 export function ReportDetailFrame({ report }: { report: Report }) {
   const asAt = asAtLabel(report.today);
@@ -97,7 +107,7 @@ export function ReportDetailFrame({ report }: { report: Report }) {
         </p>
         <section aria-labelledby={summaryHeadingId}>
           <h2 className="sr-only" id={summaryHeadingId}>Summary</h2>
-          <KpiTileStrip className={tiles.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}>
+          <KpiTileStrip className={kpiStripClassName(tiles.length)}>
             {tiles.map((tile) => (
               <KpiTile caption={tile.caption} href={tile.href} key={tile.key} supportingText={tile.supportingText} value={tile.value} />
             ))}
@@ -111,10 +121,10 @@ export function ReportDetailFrame({ report }: { report: Report }) {
 
 /** The skeleton shape of each report: its tiles, whether they carry a supporting line, and its sections. */
 const reportSkeletonShapes = {
-  'risk-exposure': { tiles: 3, supportingText: false, sections: 3 },
+  'risk-exposure': { tiles: 5, supportingText: true, sections: 4 },
   'treatment-performance': { tiles: 3, supportingText: false, sections: 3 },
   'assessment-throughput': { tiles: 2, supportingText: true, sections: 2 },
-  'control-effectiveness': { tiles: 2, supportingText: false, sections: 2 },
+  'control-effectiveness': { tiles: 2, supportingText: true, sections: 2 },
 } as const satisfies Record<ReportKey, { tiles: number; supportingText: boolean; sections: number }>;
 
 const genericSkeletonShape = { tiles: 3, supportingText: false, sections: 2 } as const;
@@ -132,7 +142,7 @@ export function ReportDetailSkeleton({ reportKey }: { reportKey?: ReportKey }) {
       <span className="sr-only">Loading report</span>
       <div className="space-y-4">
         <Skeleton className="h-4 w-64 max-w-full" />
-        <KpiTileStrip className={shape.tiles > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}>
+        <KpiTileStrip className={kpiStripClassName(shape.tiles)}>
           {Array.from({ length: shape.tiles }, (_, index) => <KpiTileSkeleton hasSupportingText={shape.supportingText} key={index} />)}
         </KpiTileStrip>
       </div>

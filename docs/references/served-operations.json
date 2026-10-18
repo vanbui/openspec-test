@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T07:46:03.301Z",
+  "generatedAt": "2026-10-18T04:03:20.267Z",
   "served": [
     {
       "method": "DELETE",
@@ -18,8 +18,7 @@
         "function.risk_assessment_requests.delete_api.api.01"
       ],
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "csrm-assessment-request/delete/csrm_assessment_requests_by_id"
     },
@@ -74,6 +73,72 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/scim/v2/Groups",
+      "catalogueUrl": "DELETE:/scim/v2/Groups",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "DELETE:/scim/v2/Groups",
+      "policyConfig": {
+        "operation": "DELETE:/scim/v2/Groups"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.17"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/delete-groups"
+    },
+    {
+      "method": "DELETE",
+      "path": "/scim/v2/Groups/:id",
+      "catalogueUrl": "DELETE:/scim/v2/Groups/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "DELETE:/scim/v2/Groups/{id}",
+      "policyConfig": {
+        "operation": "DELETE:/scim/v2/Groups/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.21"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/delete-group"
+    },
+    {
+      "method": "DELETE",
+      "path": "/scim/v2/Users/:id",
+      "catalogueUrl": "DELETE:/scim/v2/Users/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "DELETE:/scim/v2/Users/{id}",
+      "policyConfig": {
+        "operation": "DELETE:/scim/v2/Users/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.06"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/delete-user"
+    },
+    {
       "method": "GET",
       "path": "/api/csrm-assessment-requests",
       "catalogueUrl": "GET:/api/csrm-assessment-requests",
@@ -91,13 +156,9 @@
       ],
       "roleIds": [
         "role.requestor",
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
-      "specOperationId": "csrm-assessment-request/get/csrm_assessment_requests",
-      "webCallers": [
-        "src/features/requests/request-service.ts"
-      ]
+      "specOperationId": "csrm-assessment-request/get/csrm_assessment_requests"
     },
     {
       "method": "GET",
@@ -117,12 +178,36 @@
       ],
       "roleIds": [
         "role.requestor",
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "csrm-assessment-request/get/csrm_assessment_requests_by_id",
       "webCallers": [
         "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai_runs/:runId",
+      "catalogueUrl": "GET:/api/v1/ai_runs/{runId}",
+      "apiName": "csrm-ai-run",
+      "routerFile": "csrm-ai-run/routes/ai-runs.ts",
+      "handler": "api::csrm-ai-run.csrm-ai-run.findRun",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/ai_runs/{runId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/ai_runs/{runId}"
+      },
+      "functionApiIds": [
+        "function.ai_runs.read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "ai-runs/get-ai-run",
+      "webCallers": [
+        "src/features/ai-assistance/ai-assistance-service.ts"
       ]
     },
     {
@@ -147,6 +232,33 @@
         "role.security_analyst"
       ],
       "specOperationId": "analyst-insights/get-alerts",
+      "webCallers": [
+        "src/features/alerts/alert-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alerts/export",
+      "catalogueUrl": "GET:/api/v1/alerts/export",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/alerts.ts",
+      "handler": "api::csrm-analyst-insight.alerts.exportAlerts",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/alerts/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/alerts/export",
+        "requireAnalystInsightScope": true,
+        "underlyingRead": "GET:/api/v1/alerts"
+      },
+      "functionApiIds": [
+        "function.analyst_exports.list_export_api.api.03"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/export-alerts",
       "webCallers": [
         "src/features/alerts/alert-service.ts"
       ]
@@ -192,11 +304,10 @@
         "operation": "GET:/api/v1/assessment_draft_jobs/{jobId}"
       },
       "functionApiIds": [
-        "function.risk_assessments.risk_assessment_details.api.09"
+        "function.assessment_draft.job_read_api.api.01"
       ],
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "assessment-workflow/get-assessment-draft-job",
       "webCallers": [
@@ -230,6 +341,135 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/assessment_requests/export",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/export",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/csrm-assessment-request.ts",
+      "handler": "api::csrm-assessment-request.csrm-assessment-request.exportReviewRequests",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_requests/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/export",
+        "requireAnalystRequestCollectionScope": true,
+        "underlyingRead": "GET:/api/v1/assessment_requests"
+      },
+      "functionApiIds": [
+        "function.analyst_exports.list_export_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/export-assessment-request-queue",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests/:requestId/assignable_analysts",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/assignable_analysts",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/request-assignment.ts",
+      "handler": "api::csrm-assessment-request.request-assignment.listAssignableAnalysts",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_requests/{requestId}/assignable_analysts",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/{requestId}/assignable_analysts"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.assignment_api.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/get-assignable-analysts",
+      "webCallers": [
+        "src/features/request-assignment/assignment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests/:requestId/attachments",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/attachments",
+      "apiName": "csrm-request-attachment",
+      "routerFile": "csrm-request-attachment/routes/request-attachments.ts",
+      "handler": "api::csrm-request-attachment.request-attachments.list",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_requests/{requestId}/attachments",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/{requestId}/attachments"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachments_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/list-request-attachments",
+      "webCallers": [
+        "src/features/attachments/attachments-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests/:requestId/attachments/:attachmentId/ai_text",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_text",
+      "apiName": "csrm-request-attachment",
+      "routerFile": "csrm-request-attachment/routes/request-attachments.ts",
+      "handler": "api::csrm-request-attachment.request-attachments.getAiText",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_text",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_text"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachment_ai_input_api.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/get-request-attachment-ai-text",
+      "webCallers": [
+        "src/features/attachments/attachments-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests/:requestId/attachments/:attachmentId/content",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content",
+      "apiName": "csrm-request-attachment",
+      "routerFile": "csrm-request-attachment/routes/request-attachments.ts",
+      "handler": "api::csrm-request-attachment.request-attachments.download",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachments_api.api.03"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/download-request-attachment",
+      "webCallers": [
+        "src/features/attachments/attachments-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/assessment_requests/:requestId/generation_jobs",
       "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
       "apiName": "csrm-questionnaire",
@@ -250,6 +490,32 @@
       "specOperationId": "questionnaire-generation/get-request-generation-jobs",
       "webCallers": [
         "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment_requests/:requestId/notes",
+      "catalogueUrl": "GET:/api/v1/assessment_requests/{requestId}/notes",
+      "apiName": "csrm-request-note",
+      "routerFile": "csrm-request-note/routes/request-notes.ts",
+      "handler": "api::csrm-request-note.request-notes.list",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/assessment_requests/{requestId}/notes",
+      "policyConfig": {
+        "operation": "GET:/api/v1/assessment_requests/{requestId}/notes"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.notes_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/list-request-notes",
+      "webCallers": [
+        "src/features/request-notes/notes-service.ts"
       ]
     },
     {
@@ -280,6 +546,59 @@
         "src/features/administration/administration-service.ts",
         "src/features/assessments/assessment-service.ts",
         "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/controls/export",
+      "catalogueUrl": "GET:/api/v1/controls/export",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.exportControls",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/controls/export?format={format}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/controls/export?format={format}",
+        "requireAnalystAdministrationScope": true,
+        "underlyingRead": "GET:/api/v1/controls"
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.07"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/export-controls",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/controls/import/template",
+      "catalogueUrl": "GET:/api/v1/controls/import/template",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadControlsImportTemplate",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/controls/import/template",
+      "policyConfig": {
+        "operation": "GET:/api/v1/controls/import/template",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.05"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-controls-import-template",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
       ]
     },
     {
@@ -366,6 +685,59 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/information_assets/export",
+      "catalogueUrl": "GET:/api/v1/information_assets/export",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.exportInformationAssets",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_assets/export?format={format}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_assets/export?format={format}",
+        "requireAnalystAdministrationScope": true,
+        "underlyingRead": "GET:/api/v1/information_assets"
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.07"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/export-information-assets",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_assets/import/template",
+      "catalogueUrl": "GET:/api/v1/information_assets/import/template",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadInformationAssetsImportTemplate",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_assets/import/template",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_assets/import/template",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.05"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-information-assets-import-template",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/information_assets/:informationAssetId",
       "catalogueUrl": "GET:/api/v1/information_assets/{informationAssetId}",
       "apiName": "csrm-administration",
@@ -418,6 +790,59 @@
         "src/features/administration/administration-service.ts",
         "src/features/requests/request-service.ts",
         "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_systems/export",
+      "catalogueUrl": "GET:/api/v1/information_systems/export",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.exportInformationSystems",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_systems/export?format={format}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_systems/export?format={format}",
+        "requireAnalystAdministrationScope": true,
+        "underlyingRead": "GET:/api/v1/information_systems"
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.07"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/export-information-systems",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/information_systems/import/template",
+      "catalogueUrl": "GET:/api/v1/information_systems/import/template",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadInformationSystemsImportTemplate",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/information_systems/import/template",
+      "policyConfig": {
+        "operation": "GET:/api/v1/information_systems/import/template",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.05"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-information-systems-import-template",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
       ]
     },
     {
@@ -499,6 +924,33 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my_questionnaires/export",
+      "catalogueUrl": "GET:/api/v1/my_questionnaires/export",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.exportMyQuestionnaires",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_questionnaires/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_questionnaires/export",
+        "requireQuestionnaireCollectionScope": true,
+        "underlyingRead": "GET:/api/v1/my_questionnaires"
+      },
+      "functionApiIds": [
+        "function.my_exports.list_export_api.api.02"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "questionnaire-workflow/export-my-questionnaires",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my_questionnaires/status_summary",
       "catalogueUrl": "GET:/api/v1/my_questionnaires/status_summary",
       "apiName": "csrm-questionnaire",
@@ -519,6 +971,59 @@
       "specOperationId": "questionnaire-workflow/get-my-questionnaire-status-summary",
       "webCallers": [
         "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_requests",
+      "catalogueUrl": "GET:/api/v1/my_requests",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/my-requests.ts",
+      "handler": "api::csrm-assessment-request.my-requests.list",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_requests",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_requests",
+        "requireRequestCollectionScope": true
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.my_requests.api.01"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-workflow/get-my-requests",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my_requests/export",
+      "catalogueUrl": "GET:/api/v1/my_requests/export",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/my-requests.ts",
+      "handler": "api::csrm-assessment-request.my-requests.exportMyRequests",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_requests/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_requests/export",
+        "requireRequestCollectionScope": true,
+        "underlyingRead": "GET:/api/v1/my_requests"
+      },
+      "functionApiIds": [
+        "function.my_exports.list_export_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-workflow/export-my-requests",
+      "webCallers": [
+        "src/features/requests/request-service.ts"
       ]
     },
     {
@@ -575,6 +1080,33 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my_risk_assessments/export",
+      "catalogueUrl": "GET:/api/v1/my_risk_assessments/export",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.exportMyAssessments",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/my_risk_assessments/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/my_risk_assessments/export",
+        "requireAssessmentOwnerCollectionScope": true,
+        "underlyingRead": "GET:/api/v1/my_risk_assessments"
+      },
+      "functionApiIds": [
+        "function.my_exports.list_export_api.api.03"
+      ],
+      "roleIds": [
+        "role.requestor"
+      ],
+      "specOperationId": "assessment-workflow/export-my-released-risk-assessments",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my_risk_assessments/rating_summary",
       "catalogueUrl": "GET:/api/v1/my_risk_assessments/rating_summary",
       "apiName": "csrm-assessment",
@@ -624,6 +1156,29 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/questionnaire_proposal_jobs/:jobId",
+      "catalogueUrl": "GET:/api/v1/questionnaire_proposal_jobs/{jobId}",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.getProposalJob",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaire_proposal_jobs/{jobId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaire_proposal_jobs/{jobId}"
+      },
+      "functionApiIds": [
+        "function.questionnaire_ai.job_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-ai/get-proposal-job",
+      "webCallers": [
+        "src/features/questionnaire-ai/questionnaire-ai-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/questionnaires",
       "catalogueUrl": "GET:/api/v1/questionnaires",
       "apiName": "csrm-questionnaire",
@@ -644,6 +1199,34 @@
         "role.security_analyst_agent"
       ],
       "specOperationId": "questionnaire-workflow/get-questionnaires-for-review",
+      "webCallers": [
+        "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaires/export",
+      "catalogueUrl": "GET:/api/v1/questionnaires/export",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.exportQuestionnaires",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/questionnaires/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaires/export",
+        "requireQuestionnaireCollectionScope": true,
+        "allowAnalystQuestionnaireReviewScope": true,
+        "underlyingRead": "GET:/api/v1/questionnaires"
+      },
+      "functionApiIds": [
+        "function.analyst_exports.list_export_api.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-workflow/export-questionnaires-for-review",
       "webCallers": [
         "src/features/questionnaires/questionnaire-service.ts"
       ]
@@ -700,6 +1283,30 @@
       "specOperationId": "questionnaire-workflow/get-questionnaire",
       "webCallers": [
         "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/questionnaires/:questionnaireId/ai_proposals",
+      "catalogueUrl": "GET:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.listAiProposals",
+      "authStrategies": null,
+      "policyOperation": "GET:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+      "policyConfig": {
+        "operation": "GET:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_ai.proposals_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-ai/list-ai-proposals",
+      "webCallers": [
+        "src/features/questionnaire-ai/questionnaire-ai-service.ts"
       ]
     },
     {
@@ -811,6 +1418,32 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/risk_assessments/export",
+      "catalogueUrl": "GET:/api/v1/risk_assessments/export",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.exportAssessments",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments/export",
+        "underlyingRead": "GET:/api/v1/risk_assessments"
+      },
+      "functionApiIds": [
+        "function.analyst_exports.list_export_api.api.04"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/export-risk-assessments",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/risk_assessments/status_summary",
       "catalogueUrl": "GET:/api/v1/risk_assessments/status_summary",
       "apiName": "csrm-assessment",
@@ -865,6 +1498,62 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/risk_assessments/:assessmentId/ai_proposals",
+      "catalogueUrl": "GET:/api/v1/risk_assessments/{assessmentId}/ai_proposals",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/risk-proposals.ts",
+      "handler": "api::csrm-assessment.risk-proposals.listProposals",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments/{assessmentId}/ai_proposals",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments/{assessmentId}/ai_proposals"
+      },
+      "functionApiIds": [
+        "function.risk_ai_proposals.proposals_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-ai-proposals/list-risk-ai-proposals",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_assessments/:assessmentId/export",
+      "catalogueUrl": "GET:/api/v1/risk_assessments/{assessmentId}/export",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.exportReleasedAssessment",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_assessments/{assessmentId}/export",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_assessments/{assessmentId}/export",
+        "underlyingRead": "GET:/api/v1/risk_assessments/{assessmentId}",
+        "additionalUnderlyingReads": [
+          "GET:/api/v1/risk_assessments/{assessmentId}/risks",
+          "GET:/api/v1/risks/{riskId}/control_implementations"
+        ]
+      },
+      "functionApiIds": [
+        "function.risk_assessments.export_api.api.01"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/export-released-risk-assessment",
+      "webCallers": [
+        "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/risk_assessments/:assessmentId/risks",
       "catalogueUrl": "GET:/api/v1/risk_assessments/{assessmentId}/risks",
       "apiName": "csrm-assessment",
@@ -889,6 +1578,31 @@
       "specOperationId": "assessment-workflow/get-assessment-risks",
       "webCallers": [
         "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_proposal_jobs/:jobId",
+      "catalogueUrl": "GET:/api/v1/risk_proposal_jobs/{jobId}",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/risk-proposals.ts",
+      "handler": "api::csrm-assessment.risk-proposals.getJob",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_proposal_jobs/{jobId}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_proposal_jobs/{jobId}"
+      },
+      "functionApiIds": [
+        "function.risk_ai_proposals.job_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-ai-proposals/get-risk-proposal-job",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
       ]
     },
     {
@@ -919,6 +1633,59 @@
         "src/features/administration/administration-service.ts",
         "src/features/assessments/assessment-service.ts",
         "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_types/export",
+      "catalogueUrl": "GET:/api/v1/risk_types/export",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.exportRiskTypes",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_types/export?format={format}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_types/export?format={format}",
+        "requireAnalystAdministrationScope": true,
+        "underlyingRead": "GET:/api/v1/risk_types"
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.07"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/export-risk-types",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risk_types/import/template",
+      "catalogueUrl": "GET:/api/v1/risk_types/import/template",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadRiskTypesImportTemplate",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risk_types/import/template",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risk_types/import/template",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.05"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-risk-types-import-template",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
       ]
     },
     {
@@ -970,6 +1737,33 @@
         "role.security_analyst_agent"
       ],
       "specOperationId": "risk-register/get-risks",
+      "webCallers": [
+        "src/features/risks/risk-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/risks/export",
+      "catalogueUrl": "GET:/api/v1/risks/export",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/csrm-risk.ts",
+      "handler": "api::csrm-risk.csrm-risk.exportRiskRegister",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risks/export?format={format}",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risks/export?format={format}",
+        "requireAnalystRiskRegisterScope": true,
+        "underlyingRead": "GET:/api/v1/risks"
+      },
+      "functionApiIds": [
+        "function.risk_register.export_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-register/export-risk-register",
       "webCallers": [
         "src/features/risks/risk-service.ts"
       ]
@@ -1031,6 +1825,31 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/risks/:riskId/history",
+      "catalogueUrl": "GET:/api/v1/risks/{riskId}/history",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/risk-curation.ts",
+      "handler": "api::csrm-risk.risk-curation.history",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "GET:/api/v1/risks/{riskId}/history",
+      "policyConfig": {
+        "operation": "GET:/api/v1/risks/{riskId}/history"
+      },
+      "functionApiIds": [
+        "function.risk_curation.history_read_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-curation/get-risk-history",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/users",
       "catalogueUrl": "GET:/api/v1/users",
       "apiName": "csrm-risk",
@@ -1057,6 +1876,204 @@
         "src/features/assessments/assessment-service.ts",
         "src/features/risks/risk-service.ts"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "catalogueUrl": "GET:/scim/v2/Groups",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/Groups",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/Groups"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.12"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/list-groups"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/Groups/:id",
+      "catalogueUrl": "GET:/scim/v2/Groups/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/Groups/{id}",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/Groups/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.13"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/read-group"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "catalogueUrl": "GET:/scim/v2/ResourceTypes",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/ResourceTypes",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/ResourceTypes"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.10"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/list-resource-types"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes/:id",
+      "catalogueUrl": "GET:/scim/v2/ResourceTypes/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/ResourceTypes/{id}",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/ResourceTypes/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.11"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/read-resource-type"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/Schemas",
+      "catalogueUrl": "GET:/scim/v2/Schemas",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/Schemas",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/Schemas"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.08"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/list-schemas"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/Schemas/:id",
+      "catalogueUrl": "GET:/scim/v2/Schemas/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/Schemas/{id}",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/Schemas/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.09"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/read-schema"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/ServiceProviderConfig",
+      "catalogueUrl": "GET:/scim/v2/ServiceProviderConfig",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/ServiceProviderConfig",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/ServiceProviderConfig"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.07"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/service-provider-config"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/Users",
+      "catalogueUrl": "GET:/scim/v2/Users",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/Users",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/Users"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.01"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/list-users"
+    },
+    {
+      "method": "GET",
+      "path": "/scim/v2/Users/:id",
+      "catalogueUrl": "GET:/scim/v2/Users/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "GET:/scim/v2/Users/{id}",
+      "policyConfig": {
+        "operation": "GET:/scim/v2/Users/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.03"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/read-user"
     },
     {
       "method": "PATCH",
@@ -1290,6 +2307,72 @@
       ]
     },
     {
+      "method": "PATCH",
+      "path": "/scim/v2/Groups",
+      "catalogueUrl": "PATCH:/scim/v2/Groups",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "PATCH:/scim/v2/Groups",
+      "policyConfig": {
+        "operation": "PATCH:/scim/v2/Groups"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.16"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/patch-groups"
+    },
+    {
+      "method": "PATCH",
+      "path": "/scim/v2/Groups/:id",
+      "catalogueUrl": "PATCH:/scim/v2/Groups/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "PATCH:/scim/v2/Groups/{id}",
+      "policyConfig": {
+        "operation": "PATCH:/scim/v2/Groups/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.20"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/patch-group"
+    },
+    {
+      "method": "PATCH",
+      "path": "/scim/v2/Users/:id",
+      "catalogueUrl": "PATCH:/scim/v2/Users/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "PATCH:/scim/v2/Users/{id}",
+      "policyConfig": {
+        "operation": "PATCH:/scim/v2/Users/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.05"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/patch-user"
+    },
+    {
       "method": "POST",
       "path": "/api/csrm-assessment-requests",
       "catalogueUrl": "POST:/api/csrm-assessment-requests",
@@ -1306,8 +2389,7 @@
       ],
       "roleIds": [
         "role.requestor",
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "csrm-assessment-request/post/csrm_assessment_requests",
       "webCallers": [
@@ -1329,15 +2411,40 @@
         "operation": "POST:/api/v1/assessment_draft_jobs/{jobId}/retry"
       },
       "functionApiIds": [
-        "function.risk_assessments.risk_assessment_details.api.10"
+        "function.assessment_draft.retry_api.api.01"
       ],
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "assessment-workflow/retry-assessment-draft-job",
       "webCallers": [
         "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment_requests/:requestId/attachments",
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/attachments",
+      "apiName": "csrm-request-attachment",
+      "routerFile": "csrm-request-attachment/routes/request-attachments.ts",
+      "handler": "api::csrm-request-attachment.request-attachments.upload",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/assessment_requests/{requestId}/attachments",
+      "policyConfig": {
+        "operation": "POST:/api/v1/assessment_requests/{requestId}/attachments"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachments_api.api.02"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/upload-request-attachment",
+      "webCallers": [
+        "src/features/attachments/attachments-service.ts"
       ]
     },
     {
@@ -1362,6 +2469,58 @@
       "specOperationId": "questionnaire-generation/generate-questionnaire",
       "webCallers": [
         "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment_requests/:requestId/notes",
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/notes",
+      "apiName": "csrm-request-note",
+      "routerFile": "csrm-request-note/routes/request-notes.ts",
+      "handler": "api::csrm-request-note.request-notes.create",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/assessment_requests/{requestId}/notes",
+      "policyConfig": {
+        "operation": "POST:/api/v1/assessment_requests/{requestId}/notes"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.notes_api.api.02"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/add-request-note",
+      "webCallers": [
+        "src/features/request-notes/notes-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment_requests/:requestId/notes/read",
+      "catalogueUrl": "POST:/api/v1/assessment_requests/{requestId}/notes/read",
+      "apiName": "csrm-request-note",
+      "routerFile": "csrm-request-note/routes/request-notes.ts",
+      "handler": "api::csrm-request-note.request-notes.markRead",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/assessment_requests/{requestId}/notes/read",
+      "policyConfig": {
+        "operation": "POST:/api/v1/assessment_requests/{requestId}/notes/read"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.notes_api.api.03"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/mark-request-notes-read",
+      "webCallers": [
+        "src/features/request-notes/notes-service.ts"
       ]
     },
     {
@@ -1443,6 +2602,32 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/controls/import/error_report",
+      "catalogueUrl": "POST:/api/v1/controls/import/error_report",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadControlsImportErrorReport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/controls/import/error_report",
+      "policyConfig": {
+        "operation": "POST:/api/v1/controls/import/error_report",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.controls.api.06"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-controls-import-error-report",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/controls/import/preview",
       "catalogueUrl": "POST:/api/v1/controls/import/preview",
       "apiName": "csrm-administration",
@@ -1515,6 +2700,32 @@
         "role.security_analyst"
       ],
       "specOperationId": "administration/commit-information-assets-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/information_assets/import/error_report",
+      "catalogueUrl": "POST:/api/v1/information_assets/import/error_report",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadInformationAssetsImportErrorReport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_assets/import/error_report",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_assets/import/error_report",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_assets.api.06"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-information-assets-import-error-report",
       "webCallers": [
         "src/features/administration/administration-service.ts"
       ]
@@ -1625,6 +2836,32 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/information_systems/import/error_report",
+      "catalogueUrl": "POST:/api/v1/information_systems/import/error_report",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadInformationSystemsImportErrorReport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/information_systems/import/error_report",
+      "policyConfig": {
+        "operation": "POST:/api/v1/information_systems/import/error_report",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.information_systems.api.06"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-information-systems-import-error-report",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/information_systems/import/preview",
       "catalogueUrl": "POST:/api/v1/information_systems/import/preview",
       "apiName": "csrm-administration",
@@ -1700,6 +2937,77 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/questionnaire_proposal_jobs/:jobId/retry",
+      "catalogueUrl": "POST:/api/v1/questionnaire_proposal_jobs/{jobId}/retry",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.retryProposalJob",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaire_proposal_jobs/{jobId}/retry",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaire_proposal_jobs/{jobId}/retry"
+      },
+      "functionApiIds": [
+        "function.questionnaire_ai.retry_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-ai/retry-proposal-job",
+      "webCallers": [
+        "src/features/questionnaire-ai/questionnaire-ai-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/ai_proposal_decisions",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposal_decisions",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.decideAiProposals",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposal_decisions",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposal_decisions",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_ai.decide_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-ai/decide-ai-proposals",
+      "webCallers": [
+        "src/features/questionnaire-ai/questionnaire-ai-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/ai_proposals",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.startAiProposals",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_ai.propose_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-ai/start-ai-proposals",
+      "webCallers": [
+        "src/features/questionnaire-ai/questionnaire-ai-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/questionnaires/:questionnaireId/generate_assessment",
       "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/generate_assessment",
       "apiName": "csrm-questionnaire",
@@ -1714,11 +3022,10 @@
         "requireQuestionnaireOwnership": true
       },
       "functionApiIds": [
-        "function.questionnaires.questionnaire_details.api.05"
+        "function.assessment_draft.generate_api.api.01"
       ],
       "roleIds": [
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "assessment-workflow/generate-assessment-draft",
       "webCallers": [
@@ -1747,6 +3054,30 @@
       "specOperationId": "questionnaire-workflow/add-questionnaire-question",
       "webCallers": [
         "src/features/questionnaires/questionnaire-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/questionnaires/:questionnaireId/questions/:questionId/rewrite",
+      "catalogueUrl": "POST:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}/rewrite",
+      "apiName": "csrm-questionnaire",
+      "routerFile": "csrm-questionnaire/routes/csrm-questionnaire.ts",
+      "handler": "api::csrm-questionnaire.csrm-questionnaire.startQuestionRewrite",
+      "authStrategies": null,
+      "policyOperation": "POST:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}/rewrite",
+      "policyConfig": {
+        "operation": "POST:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}/rewrite",
+        "requireQuestionnaireOwnership": true
+      },
+      "functionApiIds": [
+        "function.questionnaire_ai.propose_api.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "questionnaire-ai/start-question-rewrite",
+      "webCallers": [
+        "src/features/questionnaire-ai/questionnaire-ai-service.ts"
       ]
     },
     {
@@ -1850,6 +3181,59 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/reports/:reportKey/export",
+      "catalogueUrl": "POST:/api/v1/reports/{reportKey}/export",
+      "apiName": "csrm-analyst-insight",
+      "routerFile": "csrm-analyst-insight/routes/reports.ts",
+      "handler": "api::csrm-analyst-insight.reports.export",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/reports/{reportKey}/export",
+      "policyConfig": {
+        "operation": "POST:/api/v1/reports/{reportKey}/export",
+        "requireAnalystInsightScope": true,
+        "underlyingRead": "GET:/api/v1/reports/{reportKey}"
+      },
+      "functionApiIds": [
+        "function.reports.export_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "analyst-insights/export-report",
+      "webCallers": [
+        "src/features/reports/report-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_assessments/:assessmentId/ai_proposal_decisions",
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/ai_proposal_decisions",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/csrm-assessment.ts",
+      "handler": "api::csrm-assessment.csrm-assessment.decideAiProposals",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_assessments/{assessmentId}/ai_proposal_decisions",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_assessments/{assessmentId}/ai_proposal_decisions"
+      },
+      "functionApiIds": [
+        "function.ai_proposals.decide_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/decide-ai-proposals",
+      "webCallers": [
+        "src/features/ai-assistance/ai-assistance-service.ts",
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/risk_assessments/:assessmentId/release",
       "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/release",
       "apiName": "csrm-assessment",
@@ -1876,6 +3260,81 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/risk_assessments/:assessmentId/risk_reinstatements",
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/risk_reinstatements",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/risk-curation.ts",
+      "handler": "api::csrm-risk.risk-curation.reinstate",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_assessments/{assessmentId}/risk_reinstatements",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_assessments/{assessmentId}/risk_reinstatements"
+      },
+      "functionApiIds": [
+        "function.risk_curation.withdraw_api.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-curation/reinstate-risks",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_assessments/:assessmentId/risk_suggestions",
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/risk_suggestions",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/risk-proposals.ts",
+      "handler": "api::csrm-assessment.risk-proposals.startSuggestions",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_assessments/{assessmentId}/risk_suggestions",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_assessments/{assessmentId}/risk_suggestions"
+      },
+      "functionApiIds": [
+        "function.risk_ai_proposals.propose_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-ai-proposals/start-risk-suggestions",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_assessments/:assessmentId/risk_withdrawals",
+      "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/risk_withdrawals",
+      "apiName": "csrm-risk",
+      "routerFile": "csrm-risk/routes/risk-curation.ts",
+      "handler": "api::csrm-risk.risk-curation.withdraw",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_assessments/{assessmentId}/risk_withdrawals",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_assessments/{assessmentId}/risk_withdrawals"
+      },
+      "functionApiIds": [
+        "function.risk_curation.withdraw_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-curation/withdraw-risks",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/risk_assessments/:assessmentId/risks",
       "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/risks",
       "apiName": "csrm-risk",
@@ -1898,6 +3357,31 @@
       "specOperationId": "assessment-workflow/create-assessment-risk",
       "webCallers": [
         "src/features/assessments/assessment-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_proposal_jobs/:jobId/retry",
+      "catalogueUrl": "POST:/api/v1/risk_proposal_jobs/{jobId}/retry",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/risk-proposals.ts",
+      "handler": "api::csrm-assessment.risk-proposals.retryJob",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_proposal_jobs/{jobId}/retry",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_proposal_jobs/{jobId}/retry"
+      },
+      "functionApiIds": [
+        "function.risk_ai_proposals.retry_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-ai-proposals/retry-risk-proposal-job",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
       ]
     },
     {
@@ -1948,6 +3432,32 @@
         "role.security_analyst"
       ],
       "specOperationId": "administration/commit-risk-types-import",
+      "webCallers": [
+        "src/features/administration/administration-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/risk_types/import/error_report",
+      "catalogueUrl": "POST:/api/v1/risk_types/import/error_report",
+      "apiName": "csrm-administration",
+      "routerFile": "csrm-administration/routes/csrm-administration.ts",
+      "handler": "api::csrm-administration.csrm-administration.downloadRiskTypesImportErrorReport",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risk_types/import/error_report",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risk_types/import/error_report",
+        "requireAnalystAdministrationScope": true
+      },
+      "functionApiIds": [
+        "function.administration.risk_types.api.06"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "administration/download-risk-types-import-error-report",
       "webCallers": [
         "src/features/administration/administration-service.ts"
       ]
@@ -2005,6 +3515,97 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/risks/:riskId/rewrite",
+      "catalogueUrl": "POST:/api/v1/risks/{riskId}/rewrite",
+      "apiName": "csrm-assessment",
+      "routerFile": "csrm-assessment/routes/risk-proposals.ts",
+      "handler": "api::csrm-assessment.risk-proposals.startRewrite",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "POST:/api/v1/risks/{riskId}/rewrite",
+      "policyConfig": {
+        "operation": "POST:/api/v1/risks/{riskId}/rewrite"
+      },
+      "functionApiIds": [
+        "function.risk_ai_proposals.propose_api.api.02"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "risk-ai-proposals/start-risk-rewrite",
+      "webCallers": [
+        "src/features/risk-curation/risk-curation-service.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/scim/v2/Groups",
+      "catalogueUrl": "POST:/scim/v2/Groups",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "POST:/scim/v2/Groups",
+      "policyConfig": {
+        "operation": "POST:/scim/v2/Groups"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.14"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/post-groups"
+    },
+    {
+      "method": "POST",
+      "path": "/scim/v2/Groups/:id",
+      "catalogueUrl": "POST:/scim/v2/Groups/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "POST:/scim/v2/Groups/{id}",
+      "policyConfig": {
+        "operation": "POST:/scim/v2/Groups/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.18"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/post-group"
+    },
+    {
+      "method": "POST",
+      "path": "/scim/v2/Users",
+      "catalogueUrl": "POST:/scim/v2/Users",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "POST:/scim/v2/Users",
+      "policyConfig": {
+        "operation": "POST:/scim/v2/Users"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.02"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/create-user"
+    },
+    {
       "method": "PUT",
       "path": "/api/csrm-assessment-requests/:id",
       "catalogueUrl": "PUT:/api/csrm-assessment-requests/{id}",
@@ -2022,13 +3623,179 @@
       ],
       "roleIds": [
         "role.requestor",
-        "role.security_analyst",
-        "role.security_analyst_agent"
+        "role.security_analyst"
       ],
       "specOperationId": "csrm-assessment-request/put/csrm_assessment_requests_by_id",
       "webCallers": [
         "src/features/requests/request-service.ts"
       ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/assessment_requests/:requestId/assignee",
+      "catalogueUrl": "PUT:/api/v1/assessment_requests/{requestId}/assignee",
+      "apiName": "csrm-assessment-request",
+      "routerFile": "csrm-assessment-request/routes/request-assignment.ts",
+      "handler": "api::csrm-assessment-request.request-assignment.changeAssignee",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PUT:/api/v1/assessment_requests/{requestId}/assignee",
+      "policyConfig": {
+        "operation": "PUT:/api/v1/assessment_requests/{requestId}/assignee"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.assignment_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/put-assessment-request-assignee",
+      "webCallers": [
+        "src/features/request-assignment/assignment-service.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/assessment_requests/:requestId/attachments/:attachmentId/ai_input",
+      "catalogueUrl": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_input",
+      "apiName": "csrm-request-attachment",
+      "routerFile": "csrm-request-attachment/routes/request-attachments.ts",
+      "handler": "api::csrm-request-attachment.request-attachments.setAiInput",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_input",
+      "policyConfig": {
+        "operation": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_input"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachment_ai_input_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/set-request-attachment-ai-input",
+      "webCallers": [
+        "src/features/attachments/attachments-service.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/assessment_requests/:requestId/attachments/:attachmentId/removal",
+      "catalogueUrl": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal",
+      "apiName": "csrm-request-attachment",
+      "routerFile": "csrm-request-attachment/routes/request-attachments.ts",
+      "handler": "api::csrm-request-attachment.request-attachments.setRemoval",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal",
+      "policyConfig": {
+        "operation": "PUT:/api/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.attachments_api.api.04"
+      ],
+      "roleIds": [
+        "role.requestor",
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/set-request-attachment-removal",
+      "webCallers": [
+        "src/features/attachments/attachments-service.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/assessment_requests/:requestId/notes/:noteId/ai_input",
+      "catalogueUrl": "PUT:/api/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input",
+      "apiName": "csrm-request-note",
+      "routerFile": "csrm-request-note/routes/request-notes.ts",
+      "handler": "api::csrm-request-note.request-notes.setAiInput",
+      "authStrategies": [
+        "content-api-token"
+      ],
+      "policyOperation": "PUT:/api/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input",
+      "policyConfig": {
+        "operation": "PUT:/api/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input"
+      },
+      "functionApiIds": [
+        "function.risk_assessment_requests.note_ai_input_api.api.01"
+      ],
+      "roleIds": [
+        "role.security_analyst"
+      ],
+      "specOperationId": "assessment-workflow/set-request-note-ai-input",
+      "webCallers": [
+        "src/features/request-notes/notes-service.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/scim/v2/Groups",
+      "catalogueUrl": "PUT:/scim/v2/Groups",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "PUT:/scim/v2/Groups",
+      "policyConfig": {
+        "operation": "PUT:/scim/v2/Groups"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.15"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/put-groups"
+    },
+    {
+      "method": "PUT",
+      "path": "/scim/v2/Groups/:id",
+      "catalogueUrl": "PUT:/scim/v2/Groups/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "PUT:/scim/v2/Groups/{id}",
+      "policyConfig": {
+        "operation": "PUT:/scim/v2/Groups/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.19"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/put-group"
+    },
+    {
+      "method": "PUT",
+      "path": "/scim/v2/Users/:id",
+      "catalogueUrl": "PUT:/scim/v2/Users/{id}",
+      "apiName": "iam-scim",
+      "routerFile": "iam/scim/routes.ts",
+      "handler": "iam-scim.<function>",
+      "authStrategies": [
+        "source-bearer"
+      ],
+      "policyOperation": "PUT:/scim/v2/Users/{id}",
+      "policyConfig": {
+        "operation": "PUT:/scim/v2/Users/{id}"
+      },
+      "functionApiIds": [
+        "function.identity_provisioning.api.api.04"
+      ],
+      "roleIds": [
+        "role.identity_provisioning"
+      ],
+      "specOperationId": "scim/replace-user"
     }
   ],
   "unserved": [
@@ -2138,25 +3905,11 @@
       "reason": "unserved by Phase 7 D-06 (catalogue design note 8): the dedicated GET /api/v1/reports operation serves the dashboard"
     },
     {
-      "catalogueUrl": "GET:/api/v1/my_requests",
-      "functionApiIds": [
-        "function.risk_assessment_requests.my_requests.api.01"
-      ],
-      "reason": "reserved request alias: served by the owner-scoped core route GET /api/csrm-assessment-requests"
-    },
-    {
       "catalogueUrl": "GET:/api/v1/risk_assessments/due_for_review",
       "functionApiIds": [
         "function.risk_assessments.risk_assessments.api.03"
       ],
       "reason": "reserved Phase 4 intent: superseded by the served analyst review list (GET /api/v1/risk_assessments) and the Phase 7 dashboard and alerts"
-    },
-    {
-      "catalogueUrl": "GET:/api/v1/risks/export",
-      "functionApiIds": [
-        "function.risk_register.risk_register.api.04"
-      ],
-      "reason": "deferred beyond this milestone: Risk export is not served"
     },
     {
       "catalogueUrl": "GET:/api/v1/risks/overdue",
@@ -2237,13 +3990,6 @@
       "reason": "reserved Phase 3 review intent (catalogue design note 7): superseded by the served questionnaire release, return-to-review and revert operations"
     },
     {
-      "catalogueUrl": "POST:/api/v1/reports/{reportKey}/export",
-      "functionApiIds": [
-        "function.reports.reports.api.03"
-      ],
-      "reason": "unserved by Phase 7 D-06 (catalogue design note 8): report export is deferred beyond this milestone"
-    },
-    {
       "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/approve",
       "functionApiIds": [
         "function.risk_assessments.risk_assessment_details.api.07"
@@ -2255,7 +4001,7 @@
       "functionApiIds": [
         "function.risk_assessments.risk_assessment_details.api.05"
       ],
-      "reason": "reserved Phase 4 intent: superseded by the served assessment draft jobs (POST /api/v1/questionnaires/{questionnaireId}/generate_assessment and the /api/v1/assessment_draft_jobs routes)"
+      "reason": "reserved Phase 4 intent: superseded by the targeted proposal operations POST /api/v1/risk_assessments/{assessmentId}/risk_suggestions and POST /api/v1/risks/{riskId}/rewrite (Phase 16 D-24); whole-draft regeneration is not offered"
     },
     {
       "catalogueUrl": "POST:/api/v1/risk_assessments/{assessmentId}/submit_for_approval",
@@ -2303,31 +4049,6 @@
       "method": "GET",
       "path": "/api/i18n/locales",
       "plugin": "i18n"
-    },
-    {
-      "method": "POST",
-      "path": "/api/upload",
-      "plugin": "upload"
-    },
-    {
-      "method": "GET",
-      "path": "/api/upload/files",
-      "plugin": "upload"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/upload/files/:id",
-      "plugin": "upload"
-    },
-    {
-      "method": "GET",
-      "path": "/api/upload/files/:id",
-      "plugin": "upload"
-    },
-    {
-      "method": "GET",
-      "path": "/api/upload/files/page",
-      "plugin": "upload"
     },
     {
       "method": "GET",
@@ -2466,7 +4187,7 @@
       "method": "POST",
       "path": "/api/",
       "operationId": "upload/post",
-      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+      "reason": "documented upload plugin operation; the application unmounts the plugin's content-API routes (Phase 14 D-08), so attachment files are reached only through CSRM's own operations"
     },
     {
       "method": "GET",
@@ -2730,19 +4451,19 @@
       "method": "GET",
       "path": "/api/files",
       "operationId": "upload/get/files",
-      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+      "reason": "documented upload plugin operation; the application unmounts the plugin's content-API routes (Phase 14 D-08), so attachment files are reached only through CSRM's own operations"
     },
     {
       "method": "DELETE",
       "path": "/api/files/{id}",
       "operationId": "upload/delete/files_by_id",
-      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+      "reason": "documented upload plugin operation; the application unmounts the plugin's content-API routes (Phase 14 D-08), so attachment files are reached only through CSRM's own operations"
     },
     {
       "method": "GET",
       "path": "/api/files/{id}",
       "operationId": "upload/get/files_by_id",
-      "reason": "documented upload plugin operation; this Strapi mounts the plugin's routes under /api/upload (see pluginRoutes), not at the documented path"
+      "reason": "documented upload plugin operation; the application unmounts the plugin's content-API routes (Phase 14 D-08), so attachment files are reached only through CSRM's own operations"
     },
     {
       "method": "GET",

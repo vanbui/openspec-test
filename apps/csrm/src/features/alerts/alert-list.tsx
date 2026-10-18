@@ -23,14 +23,9 @@ import {
   formatAlertDate,
 } from './alert-presentation';
 import { AlertRow } from './alert-row';
-import {
-  alertKinds,
-  alertListUrlQuerySchema,
-  alertUrgencies,
-  type AlertItem,
-  type AlertListPayload,
-  type AlertListUrlQuery,
-} from './alert-schema';
+// The vocabularies and the URL reader come from the zod-free domain module, so the Alerts route downloads no zod.
+import { alertKinds, alertUrgencies, readAlertListUrlQuery, type AlertListUrlQuery } from './alert-domain';
+import type { AlertItem, AlertListPayload } from './alert-schema';
 
 export type AlertListState = 'loading' | 'error' | 'permission';
 
@@ -215,6 +210,6 @@ export function AlertList({ alerts, dueSoonWindowDays, pagination, query, state 
 /** The alerts loading layout under the current URL's filters, which stay disabled until the list arrives. */
 export function AlertListLoading() {
   const searchParams = useSearchParams();
-  const query = alertListUrlQuerySchema.parse(Object.fromEntries(searchParams.entries()));
+  const query = readAlertListUrlQuery(Object.fromEntries(searchParams.entries()));
   return <AlertList alerts={[]} pagination={{ page: query.page, pageSize: query.pageSize, pageCount: 0, total: 0 }} query={query} state="loading" />;
 }

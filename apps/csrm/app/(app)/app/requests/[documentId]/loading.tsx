@@ -1,4 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { FilesSkeleton } from '@/features/attachments/files-skeleton';
+import { NotesSkeleton } from '@/features/request-notes/notes-skeleton';
 
 export default function RequestDetailLoading() {
   return (
@@ -6,6 +8,8 @@ export default function RequestDetailLoading() {
       <div className="grid gap-3"><Skeleton className="h-8 w-2/3 max-w-md" /><Skeleton className="h-4 w-40" /></div>
       <Skeleton className="h-64 w-full rounded-lg" />
       <Skeleton className="h-40 w-full rounded-lg" />
+      <FilesSkeleton />
+      <NotesSkeleton />
     </section>
   );
 }

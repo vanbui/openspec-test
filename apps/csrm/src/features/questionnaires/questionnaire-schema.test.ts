@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aiGenerationFactsSchema,
   answerEnvelopeSchema,
+  assessmentRequestRelationshipSchema,
   questionnaireDefinitionSchema,
   type QuestionnaireQuestion,
 } from './questionnaire-schema';
+import { aiInputsChangedSchema } from '@/features/ai-assistance/ai-generation-facts-schema';
 import {
   calculateProgress,
   clearHiddenAnswers,
   getVisibleQuestionKeys,
   orderQuestionnaire,
   validateActiveRequiredAnswers,
-  assessmentRequestRelationshipSchema,
 } from './questionnaire-domain';
 
 type AnswerType = QuestionnaireQuestion['answerType'];
@@ -160,6 +162,115 @@ describe('questionnaireDefinitionSchema', () => {
       injectedLifecycleState: 'submitted',
     }]).success).toBe(false);
   });
+
+  it('carries help text and the analyst-only AI origin, and accepts null help text (D-17, D-22)', () => {
+    const [withHelp, withoutHelp] = questionnaireDefinitionSchema.parse([
+      { ...question('name', 'Text'), helpText: 'Use the name people know the service by.', aiOrigin: 'generated-edited' },
+      { ...question('owner', 'Text', { order: 1 }), helpText: null },
+    ]);
+    expect(withHelp).toMatchObject({ helpText: 'Use the name people know the service by.', aiOrigin: 'generated-edited' });
+    expect(withoutHelp).not.toHaveProperty('helpText');
+    expect(withoutHelp).not.toHaveProperty('aiOrigin');
+  });
+
+  it('carries the analyst-only answered flag and the confirmed AI proposal origins (Phase 15 D-27, D-30)', () => {
+    const [confirmed, edited, plain] = questionnaireDefinitionSchema.parse([
+      { ...question('name', 'Text'), aiOrigin: 'proposal-confirmed', answered: true },
+      { ...question('owner', 'Text', { order: 1 }), aiOrigin: 'proposal-edited', answered: false },
+      { ...question('region', 'Text', { order: 2 }) },
+    ]);
+    expect(confirmed).toMatchObject({ aiOrigin: 'proposal-confirmed', answered: true });
+    expect(edited).toMatchObject({ aiOrigin: 'proposal-edited', answered: false });
+    expect(plain).not.toHaveProperty('answered');
+    expect(questionnaireDefinitionSchema.safeParse([{ ...question('name', 'Text'), answered: 'yes' }]).success).toBe(false);
+  });
+
+  it('refuses help text over 2,000 characters and an unknown AI origin', () => {
+    expect(questionnaireDefinitionSchema.safeParse([{ ...question('name', 'Text'), helpText: 'x'.repeat(2_001) }]).success).toBe(false);
+    expect(questionnaireDefinitionSchema.safeParse([{ ...question('name', 'Text'), aiOrigin: 'model-written' }]).success).toBe(false);
+  });
+});
+
+describe('aiGenerationFactsSchema', () => {
+  const facts = {
+    generatedAt: '2026-10-05T00:00:00.000Z',
+    generatedBy: { documentId: 'analyst-1', displayName: 'Morgan Analyst' },
+    providerName: 'deterministic-questionnaire-generation',
+    providerVersion: '2',
+    runId: 'run-1',
+    aiInputsChanged: null,
+  };
+  /* Phase 13 D-29: the notes whose mark changed since the record's generation, by identity and change only. */
+  const aiInputsChanged = {
+    count: 2,
+    notes: [
+      { documentId: 'note-1', part: 'requestor', sequence: 1, postedAt: '2026-10-06T00:00:00.000Z', change: 'marked' },
+      { documentId: 'note-3', part: 'security-analyst', sequence: 3, postedAt: '2026-10-07T00:00:00.000Z', change: 'unmarked' },
+    ],
+    files: [],
+  };
+
+  it('accepts the closed facts, including a generation before run records existed (D-23, D-25)', () => {
+    expect(aiGenerationFactsSchema.parse(facts)).toEqual(facts);
+    expect(aiGenerationFactsSchema.parse({ ...facts, runId: null, generatedBy: null }).runId).toBeNull();
+  });
+
+  it('accepts the open AI proposal count, null for a requesting analyst, or none at all (Phase 15 D-28, D-32)', () => {
+    expect(aiGenerationFactsSchema.parse({ ...facts, openProposals: 3 }).openProposals).toBe(3);
+    expect(aiGenerationFactsSchema.parse({ ...facts, openProposals: null }).openProposals).toBeNull();
+    expect(aiGenerationFactsSchema.parse(facts)).not.toHaveProperty('openProposals');
+    expect(aiGenerationFactsSchema.safeParse({ ...facts, openProposals: -1 }).success).toBe(false);
+    expect(aiGenerationFactsSchema.safeParse({ ...facts, openProposals: 1.5 }).success).toBe(false);
+  });
+
+  it('refuses a missing or unknown key', () => {
+    const { runId: _runId, ...withoutRun } = facts;
+    expect(aiGenerationFactsSchema.safeParse(withoutRun).success).toBe(false);
+    expect(aiGenerationFactsSchema.safeParse({ ...facts, prompt: 'hidden' }).success).toBe(false);
+  });
+
+  it('requires the AI-inputs signal, null or the closed list of changed notes (D-29)', () => {
+    expect(aiGenerationFactsSchema.parse({ ...facts, aiInputsChanged }).aiInputsChanged).toEqual(aiInputsChanged);
+    const { aiInputsChanged: _signal, ...withoutSignal } = facts;
+    expect(aiGenerationFactsSchema.safeParse(withoutSignal).success).toBe(false);
+  });
+
+  it('refuses a signal carrying note text, an unknown change or an extra key (D-29, G-3)', () => {
+    const [first, second] = aiInputsChanged.notes;
+    for (const signal of [
+      { ...aiInputsChanged, notes: [{ ...first, body: 'The vendor moved region.' }, second] },
+      { ...aiInputsChanged, notes: [{ ...first, change: 'edited' }, second] },
+      { ...aiInputsChanged, notes: [{ ...first, part: 'agent' }, second] },
+      { ...aiInputsChanged, runId: 'run-1' },
+      { notes: aiInputsChanged.notes, files: [] },
+    ]) {
+      expect(aiGenerationFactsSchema.safeParse({ ...facts, aiInputsChanged: signal }).success).toBe(false);
+    }
+  });
+
+  /* Phase 14 D-36 (14-PLAN-CHECK iteration 2, S-1): the one signal names files too, closed; either list may be empty. */
+  const file = { documentId: 'file-csv', fileName: 'register.csv', change: 'included' } as const;
+
+  it('accepts a files-only signal and a notes-only signal', () => {
+    const filesOnly = { count: 1, notes: [], files: [file] };
+    expect(aiInputsChangedSchema.parse(filesOnly)).toEqual(filesOnly);
+    expect(aiInputsChangedSchema.parse(aiInputsChanged)).toEqual(aiInputsChanged);
+    expect(aiInputsChangedSchema.parse({ count: 2, notes: [], files: [file, { ...file, documentId: 'file-pdf', fileName: 'pack.pdf', change: 'removed' }] }).files).toHaveLength(2);
+  });
+
+  it('refuses both lists empty, a file carrying anything else, an unknown change and a signal without files', () => {
+    const { files: _files, ...withoutFiles } = aiInputsChanged;
+    for (const signal of [
+      { count: 1, notes: [], files: [] },
+      { count: 1, notes: [], files: [{ ...file, sha256: 'a'.repeat(64) }] },
+      { count: 1, notes: [], files: [{ ...file, change: 'edited' }] },
+      { count: 1, notes: [], files: [{ ...file, fileName: '' }] },
+      { count: 1, notes: [], files: [{ ...file, fileName: 'x'.repeat(256) }] },
+      withoutFiles,
+    ]) {
+      expect(aiInputsChangedSchema.safeParse(signal).success).toBe(false);
+    }
+  });
 });
 
 describe('answerEnvelopeSchema', () => {
@@ -214,6 +325,44 @@ describe('assessment request relationship parser', () => {
       { availability: 'unavailable', documentId: 'protected-request' },
       { availability: 'absent', requestNumber: 'RAR-2026-X7K4Q2' },
       { ...availableRequest, internalStatus: 'hidden' },
+    ]) {
+      expect(assessmentRequestRelationshipSchema.safeParse(relationship).success).toBe(false);
+    }
+  });
+
+  /* Phase 13 D-16, D-25: the analyst's read names who holds the request and its notes figures; a Requestor's reads null. */
+  const assignment = { assignee: { documentId: 'analyst-1', displayName: 'Bob Doe' }, pickUp: 'not-offered' as const };
+  const notes = { total: 2, unread: 1 };
+
+  it('accepts the assignee, the pick-up state and the notes figures, or null for each', () => {
+    const summarised = { ...availableRequest, assignment, notes };
+    expect(assessmentRequestRelationshipSchema.parse(summarised)).toEqual(summarised);
+    expect(assessmentRequestRelationshipSchema.parse({ ...availableRequest, assignment: { assignee: null, pickUp: 'allowed' }, notes })).toMatchObject({ assignment: { assignee: null, pickUp: 'allowed' } });
+    expect(assessmentRequestRelationshipSchema.parse({ ...availableRequest, assignment: null, notes: null })).toMatchObject({ assignment: null, notes: null });
+  });
+
+  it('refuses an assignee or notes figure the contract does not declare', () => {
+    for (const relationship of [
+      { ...availableRequest, assignment: { ...assignment, pickUp: 'claimed' }, notes },
+      { ...availableRequest, assignment: { ...assignment, assignee: { ...assignment.assignee, email: 'bob@example.com' } }, notes },
+      { ...availableRequest, assignment: { ...assignment, history: [] }, notes },
+      { ...availableRequest, assignment, notes: { ...notes, accepting: true } },
+      { ...availableRequest, assignment, notes: { total: 2, unread: -1 } },
+    ]) {
+      expect(assessmentRequestRelationshipSchema.safeParse(relationship).success).toBe(false);
+    }
+  });
+
+  /* Phase 14 D-27: the analyst's read counts the request's files and those in the AI inputs; a Requestor's reads null. */
+  it('accepts the files figures, or null, and refuses a files figure the contract does not declare', () => {
+    const files = { count: 2, included: 1 };
+    expect(assessmentRequestRelationshipSchema.parse({ ...availableRequest, assignment, notes, files })).toMatchObject({ files });
+    expect(assessmentRequestRelationshipSchema.parse({ ...availableRequest, assignment: null, notes: null, files: null })).toMatchObject({ files: null });
+    for (const relationship of [
+      { ...availableRequest, assignment, notes, files: { ...files, names: ['vendor-security-pack.pdf'] } },
+      { ...availableRequest, assignment, notes, files: { count: 2 } },
+      { ...availableRequest, assignment, notes, files: { count: -1, included: 0 } },
+      { ...availableRequest, assignment, notes, files: { count: 2, included: 1.5 } },
     ]) {
       expect(assessmentRequestRelationshipSchema.safeParse(relationship).success).toBe(false);
     }

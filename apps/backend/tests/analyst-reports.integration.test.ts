@@ -8,7 +8,7 @@ import { deriveTreatmentDueState } from "../src/csrm/insights/treatment-due-stat
 import { addUtcDays, addUtcMonths, startOfUtcMonth, utcToday } from "../src/csrm/insights/utc-date";
 
 /*
- * D-01, D-03, D-13, D-14, D-24, D-36: the analyst reports, computed on read over
+ * D-01, D-03, D-13, D-14, D-24, D-36, D-40 to D-43: the analyst reports, computed on read over
  * controlled fixtures whose dates are offsets from the test's own UTC today.
  * The mounted harness seeds the catalogue, users and the control library only,
  * plus two draft requests, so the fixtures below are the only report sources in
@@ -144,7 +144,8 @@ function assertMatchesSpec(value: unknown, reference: SpecSchema, label: string)
 // The served key sets, restated literally at every level.
 const ENVELOPE_KEYS = ["data"];
 const DEFINITION_KEYS = ["description", "key", "title"];
-const RISK_EXPOSURE_KEYS = ["byInherentRating", "byResidualRating", "exposedSystems", "key", "residualByTreatmentStatus", "today"];
+const RISK_EXPOSURE_KEYS = ["acceptedByResidualRating", "byInherentRating", "byResidualRating", "exposedSystems", "key", "residualByTreatmentStatus", "today", "underAssessment"];
+const UNDER_ASSESSMENT_KEYS = ["byResidualRating"];
 const RATING_COUNT_KEYS = ["Critical", "High", "Low", "Moderate", "notRated", "total"];
 const RESIDUAL_BY_STATUS_KEYS = ["Critical", "High", "Low", "Moderate", "notRated"];
 const TREATMENT_STATUS_COUNT_KEYS = ["complete", "inProgress", "notProvided", "notStarted", "overdue", "total"];
@@ -195,15 +196,24 @@ type RiskFixture = {
   targetDate: string | null;
   closureDate?: string;
   system: SystemName | null;
+  treatmentAction?: "Accept" | "Treat";
 };
+/*
+ * D-40 to D-43: AR's Risks are released and AM's are under assessment. The exposure sections count
+ * released open Risks only, and the under-assessment figure counts AM's open Risks apart; the
+ * treatment and control figures keep both stages.
+ */
 const RISKS = {
-  A: { parent: "AM", residualRating: "Critical", inherentRating: "High", treatmentStatus: "Not Started", targetDate: D(-2), system: "S1" },
-  B: { parent: "AM", residualRating: "High", inherentRating: "Critical", treatmentStatus: "In Progress", targetDate: D(10), system: "S1" },
-  C: { parent: "AM", residualRating: "High", inherentRating: "High", treatmentStatus: null, targetDate: D(40), system: "S2" },
-  D: { parent: "AM", residualRating: "Moderate", inherentRating: "Low", treatmentStatus: "Complete", targetDate: D(-5), system: null },
-  E: { parent: "AM", residualRating: "Low", inherentRating: "Extreme", treatmentStatus: "Overdue", targetDate: null, system: null },
-  F: { parent: "AM", residualRating: null, inherentRating: null, treatmentStatus: "Not Started", targetDate: D(30), system: null },
-  I: { parent: "AM", residualRating: "High", inherentRating: "Moderate", treatmentStatus: "Not Started", targetDate: null, system: null },
+  // Under assessment, and accepted on a draft: never counted as accepted (D-41), nor in S1's exposure.
+  A: { parent: "AM", residualRating: "Critical", inherentRating: "High", treatmentStatus: "Not Started", targetDate: D(-2), system: "S1", treatmentAction: "Accept" },
+  B: { parent: "AR", residualRating: "High", inherentRating: "Critical", treatmentStatus: "In Progress", targetDate: D(10), system: "S1", treatmentAction: "Treat" },
+  // D-38: C is due the day after the 14-day window ends, so it is due later.
+  C: { parent: "AR", residualRating: "High", inherentRating: "High", treatmentStatus: null, targetDate: D(15), system: "S2", treatmentAction: "Accept" },
+  D: { parent: "AR", residualRating: "Moderate", inherentRating: "Low", treatmentStatus: "Complete", targetDate: D(-5), system: null, treatmentAction: "Accept" },
+  E: { parent: "AR", residualRating: "Low", inherentRating: "Extreme", treatmentStatus: "Overdue", targetDate: null, system: null },
+  // D-38: F is due on the last day of the 14-day window, which is inclusive.
+  F: { parent: "AM", residualRating: null, inherentRating: null, treatmentStatus: "Not Started", targetDate: D(14), system: null },
+  I: { parent: "AR", residualRating: "High", inherentRating: "Moderate", treatmentStatus: "Not Started", targetDate: null, system: null },
   // Closed: its ratings, status, past target date and system never count.
   G: { parent: "AM", residualRating: "Critical", inherentRating: "Critical", treatmentStatus: "In Progress", targetDate: D(-4), closureDate: D(-1), system: "S1" },
   // Its parent is only partially released, so it is outside the Risk Register scope.
@@ -276,6 +286,7 @@ function seedReportFixtures(): Promise<Fixtures> {
         ...(fixture.targetDate === null ? {} : { targetDate: fixture.targetDate }),
         ...(fixture.closureDate === undefined ? {} : { closureDate: fixture.closureDate }),
         ...(fixture.system === null ? {} : { informationSystemImpacted: systems[fixture.system] }),
+        ...(fixture.treatmentAction === undefined ? {} : { treatmentAction: fixture.treatmentAction }),
       });
     }
     const control = await harness.createFixtureDocument("api::csrm-control.csrm-control", {
@@ -454,6 +465,9 @@ function assertRiskExposureShape(data: Record<string, unknown>, label: string): 
   assertKeys(data, RISK_EXPOSURE_KEYS, `${label}_REPORT`, "RiskExposureReport");
   assertKeys(data.byResidualRating, RATING_COUNT_KEYS, `${label}_BY_RESIDUAL_RATING`, "RatingCounts");
   assertKeys(data.byInherentRating, RATING_COUNT_KEYS, `${label}_BY_INHERENT_RATING`, "RatingCounts");
+  assertKeys(data.acceptedByResidualRating, RATING_COUNT_KEYS, `${label}_ACCEPTED_BY_RESIDUAL_RATING`, "RatingCounts");
+  const underAssessment = assertKeys(data.underAssessment, UNDER_ASSESSMENT_KEYS, `${label}_UNDER_ASSESSMENT`, "RiskExposureUnderAssessment");
+  assertKeys(underAssessment.byResidualRating, RATING_COUNT_KEYS, `${label}_UNDER_ASSESSMENT_BY_RESIDUAL_RATING`, "RatingCounts");
   const matrix = assertKeys(data.residualByTreatmentStatus, RESIDUAL_BY_STATUS_KEYS, `${label}_RESIDUAL_BY_STATUS`, "ResidualByTreatmentStatus");
   for (const rating of RESIDUAL_BY_STATUS_KEYS) {
     assertKeys(matrix[rating], TREATMENT_STATUS_COUNT_KEYS, `${label}_RESIDUAL_BY_STATUS_${rating}`, "TreatmentStatusCounts");
@@ -513,15 +527,25 @@ async function alertCount(kind: string): Promise<number> {
   return count;
 }
 
-const EXPECTED_BY_RESIDUAL_RATING = { Critical: 2, High: 3, Moderate: 1, Low: 1, notRated: 1, total: 8 };
-const EXPECTED_BY_INHERENT_RATING = { Critical: 1, High: 3, Moderate: 1, Low: 1, notRated: 2, total: 8 };
+/*
+ * Released open Risks: B, C, D, E, I and RR. A and F are under assessment, G is closed and H's parent is
+ * only partly released. Without the released branch, A would lift Critical to 2 and F would add a Not rated.
+ */
+const EXPECTED_BY_RESIDUAL_RATING = { Critical: 1, High: 3, Moderate: 1, Low: 1, notRated: 0, total: 6 };
+const EXPECTED_BY_INHERENT_RATING = { Critical: 1, High: 2, Moderate: 1, Low: 1, notRated: 1, total: 6 };
+/* C and D are released and accepted; A's Accept is on a draft, so it never counts (D-41). */
+const EXPECTED_ACCEPTED_BY_RESIDUAL_RATING = { Critical: 0, High: 1, Moderate: 1, Low: 0, notRated: 0, total: 2 };
+/* A and F: the open Risks under assessment (D-42). */
+const EXPECTED_UNDER_ASSESSMENT_BY_RESIDUAL_RATING = { Critical: 1, High: 0, Moderate: 0, Low: 0, notRated: 1, total: 2 };
 const EXPECTED_RESIDUAL_BY_TREATMENT_STATUS = {
-  Critical: { notStarted: 1, inProgress: 1, overdue: 0, complete: 0, notProvided: 0, total: 2 },
+  Critical: { notStarted: 0, inProgress: 1, overdue: 0, complete: 0, notProvided: 0, total: 1 },
   High: { notStarted: 1, inProgress: 1, overdue: 0, complete: 0, notProvided: 1, total: 3 },
   Moderate: { notStarted: 0, inProgress: 0, overdue: 0, complete: 1, notProvided: 0, total: 1 },
   Low: { notStarted: 0, inProgress: 0, overdue: 1, complete: 0, notProvided: 0, total: 1 },
-  notRated: { notStarted: 1, inProgress: 0, overdue: 0, complete: 0, notProvided: 0, total: 1 },
+  notRated: { notStarted: 0, inProgress: 0, overdue: 0, complete: 0, notProvided: 0, total: 0 },
 };
+/** The register's value for each rating key: notRated is the `none` value (D-35). */
+const REGISTER_RATING_VALUES = { Critical: "Critical", High: "High", Moderate: "Moderate", Low: "Low", notRated: "none" } as const;
 
 test("the report index lists exactly the four reports with the web's canonical copy", async () => {
   const { status, body, text } = await readJson(INDEX_PATH);
@@ -546,22 +570,25 @@ test("the report index lists exactly the four reports with the web's canonical c
   );
 });
 
-test("risk exposure counts only open contextual Risks by rating, treatment status and Information System", async () => {
+test("risk exposure counts released open Risks by rating, treatment status and Information System, with accepted Risks and Risks under assessment apart (D-40 to D-42)", async () => {
   assertSameUtcDay();
   const created = await seedReportFixtures();
   const data = await readReport("risk-exposure");
   assertRiskExposureShape(data, "RISK_EXPOSURE");
 
-  // A closed Risk (G) or a Risk on a partially released parent (H) would lift Critical to 3 or more.
+  // A closed Risk (G), a Risk on a partly released parent (H) or one under assessment (A, F) never counts here.
   assert.deepEqual(data.byResidualRating, EXPECTED_BY_RESIDUAL_RATING, "RISK_EXPOSURE_BY_RESIDUAL_RATING");
   assert.deepEqual(data.byInherentRating, EXPECTED_BY_INHERENT_RATING, "RISK_EXPOSURE_BY_INHERENT_RATING");
+  assert.deepEqual(data.acceptedByResidualRating, EXPECTED_ACCEPTED_BY_RESIDUAL_RATING, "RISK_EXPOSURE_ACCEPTED_BY_RESIDUAL_RATING");
+  assert.deepEqual(data.underAssessment, { byResidualRating: EXPECTED_UNDER_ASSESSMENT_BY_RESIDUAL_RATING }, "RISK_EXPOSURE_UNDER_ASSESSMENT");
   assert.deepEqual(data.residualByTreatmentStatus, EXPECTED_RESIDUAL_BY_TREATMENT_STATUS, "RISK_EXPOSURE_RESIDUAL_BY_TREATMENT_STATUS");
-  // S1 and S2 tie on Critical and on total, so the name decides. I is the one
-  // High or Critical Risk with no Information System; D, E and F are not High or Critical.
+  // S2 carries the released Critical RR and the High C; S1 only the High B, because A, its
+  // Critical Risk, is under assessment. I is the one released High or Critical Risk with no
+  // Information System; D and E are not High or Critical.
   assert.deepEqual(data.exposedSystems, {
     rows: [
-      { documentId: created.systems.S1, name: SYSTEMS.S1, critical: 1, high: 1, total: 2 },
       { documentId: created.systems.S2, name: SYSTEMS.S2, critical: 1, high: 1, total: 2 },
+      { documentId: created.systems.S1, name: SYSTEMS.S1, critical: 0, high: 1, total: 1 },
     ],
     total: 2,
     truncated: false,
@@ -570,19 +597,32 @@ test("risk exposure counts only open contextual Risks by rating, treatment statu
   assertSameUtcDay();
 });
 
-test("the exposure figures equal the Risk Register totals for the open-state lists they link to", async () => {
+test("every exposure figure equals the Risk Register total of the stage-filtered list it links to (D-40 to D-42)", async () => {
   await seedReportFixtures();
   const data = await readReport("risk-exposure");
   const byResidualRating = data.byResidualRating as Record<string, number>;
-  for (const rating of ["Critical", "High", "Moderate", "Low"]) {
+  const byInherentRating = data.byInherentRating as Record<string, number>;
+  const accepted = data.acceptedByResidualRating as Record<string, number>;
+  const underAssessment = (data.underAssessment as { byResidualRating: Record<string, number> }).byResidualRating;
+  for (const [key, value] of Object.entries(REGISTER_RATING_VALUES)) {
+    assert.equal(await registerTotal(`residualRating=${value}&state=open&stage=released`), byResidualRating[key], `REGISTER_RELEASED_RESIDUAL_DIFFERS_${key}`);
+    assert.equal(await registerTotal(`inherentRating=${value}&state=open&stage=released`), byInherentRating[key], `REGISTER_RELEASED_INHERENT_DIFFERS_${key}`);
     assert.equal(
-      await registerTotal(`residualRating=${rating}&state=open`),
-      byResidualRating[rating],
-      `REGISTER_TOTAL_DIFFERS_${rating}`,
+      await registerTotal(`residualRating=${value}&state=open&stage=released&treatmentAction=Accept`),
+      accepted[key],
+      `REGISTER_ACCEPTED_DIFFERS_${key}`,
+    );
+    assert.equal(
+      await registerTotal(`residualRating=${value}&state=open&stage=under-assessment`),
+      underAssessment[key],
+      `REGISTER_UNDER_ASSESSMENT_DIFFERS_${key}`,
     );
   }
-  assert.equal(await registerTotal("state=open"), byResidualRating.total, "REGISTER_OPEN_TOTAL_DIFFERS");
-  assert.equal(await registerTotal("residualRating=Critical&state=open"), 2, "REGISTER_OPEN_CRITICAL_TOTAL");
+  assert.equal(await registerTotal("state=open&stage=released"), byResidualRating.total, "REGISTER_RELEASED_TOTAL_DIFFERS");
+  assert.equal(await registerTotal("state=open&stage=released&treatmentAction=Accept"), accepted.total, "REGISTER_ACCEPTED_TOTAL_DIFFERS");
+  assert.equal(await registerTotal("state=open&stage=under-assessment"), underAssessment.total, "REGISTER_UNDER_ASSESSMENT_TOTAL_DIFFERS");
+  // The two stages partition the open register, so neither figure ever holds the other's Risks.
+  assert.equal(await registerTotal("state=open"), byResidualRating.total + underAssessment.total, "REGISTER_OPEN_TOTAL_NOT_THE_TWO_STAGES");
   assert.equal(await registerTotal("state=open"), 8, "REGISTER_OPEN_TOTAL");
 });
 
@@ -674,15 +714,16 @@ test("an unknown report key is a 404 to the analyst, and any other query is one 
   }
 });
 
-test("treatment performance partitions open treatments by due state over thirty days and lists the most overdue first", async () => {
+test("treatment performance partitions open treatments by due state over the 14-day due-soon window and lists the most overdue first (D-38)", async () => {
   assertSameUtcDay();
   const created = await seedReportFixtures();
   const data = await readReport("treatment-performance");
   assertTreatmentPerformanceShape(data, "TREATMENT_PERFORMANCE");
 
-  assert.equal(data.dueWindowDays, 30, "TREATMENT_PERFORMANCE_WINDOW");
-  // Open, not-Complete treatments: A, B, C, E, F, I and RR. F's target is exactly
-  // today plus thirty days, so the window is inclusive at its end; C's is later.
+  // D-38: the product's one due-soon window, reversing Phase 7 D-13's thirty days.
+  assert.equal(data.dueWindowDays, 14, "TREATMENT_PERFORMANCE_WINDOW");
+  // Open, not-Complete treatments in both stages: A, B, C, E, F, I and RR. F's target is exactly
+  // today plus fourteen days, so the window is inclusive at its end; C's, one day later, is later.
   assert.deepEqual(data.dueState, { overdue: 2, dueWithinWindow: 2, later: 1, noTargetDate: 2, total: 7 }, "TREATMENT_DUE_STATE");
   // Every open contextual Risk by its recorded status; C records none.
   assert.deepEqual(data.treatmentStatus, {
@@ -703,7 +744,7 @@ test("treatment performance partitions open treatments by due state over thirty 
       targetDate: fixture.targetDate,
       treatmentStatus: fixture.treatmentStatus,
       closureDate: fixture.closureDate ?? null,
-    }, today, 30);
+    }, today, 14);
     if (state === "complete-or-closed") continue;
     oracle[oracleKey[state]] += 1;
     oracle.total += 1;
@@ -731,6 +772,26 @@ test("treatment performance partitions open treatments by due state over thirty 
   const dueState = data.dueState as Record<string, number>;
   assert.equal(dueState.overdue, await alertCount("risk-treatment-overdue"), "OVERDUE_DIFFERS_FROM_THE_ALERT_TOTAL");
   assert.equal((data.mostOverdue as { total: number }).total, dueState.overdue, "MOST_OVERDUE_TOTAL_DIFFERS_FROM_THE_DUE_STATE");
+  assertSameUtcDay();
+});
+
+/*
+ * D-38, G-16 seam: the report's four due-state figures read the shared due-state rule with the alerts' window, so
+ * each equals the list it opens: the due-soon and overdue alert lists, and the Risk register's dueState lists.
+ */
+test("every treatment due-state figure equals its alert list or its Risk register dueState list (D-38, G-16)", async () => {
+  assertSameUtcDay();
+  await seedReportFixtures();
+  const data = await readReport("treatment-performance");
+  const dueState = data.dueState as Record<string, number>;
+  assert.equal(dueState.dueWithinWindow, await alertCount("risk-treatment-due-soon"), "DUE_WITHIN_WINDOW_DIFFERS_FROM_THE_DUE_SOON_ALERTS");
+  assert.equal(dueState.overdue, await alertCount("risk-treatment-overdue"), "OVERDUE_DIFFERS_FROM_THE_OVERDUE_ALERTS");
+  assert.equal(dueState.dueWithinWindow, await registerTotal("dueState=due-soon"), "DUE_WITHIN_WINDOW_DIFFERS_FROM_THE_REGISTER");
+  assert.equal(dueState.overdue, await registerTotal("dueState=overdue"), "OVERDUE_DIFFERS_FROM_THE_REGISTER");
+  assert.equal(dueState.later, await registerTotal("dueState=later"), "LATER_DIFFERS_FROM_THE_REGISTER");
+  assert.equal(dueState.noTargetDate, await registerTotal("dueState=no-target-date"), "NO_TARGET_DATE_DIFFERS_FROM_THE_REGISTER");
+  // The figures were not vacuous: each list holds at least one fixture Risk.
+  for (const [key, value] of Object.entries(dueState)) assert.ok(value > 0, `DUE_STATE_FIGURE_EMPTY_${key}`);
   assertSameUtcDay();
 });
 
@@ -780,6 +841,39 @@ test("assessment throughput over twelve months reaches the release eight months 
   assertSameUtcDay();
 });
 
+test("throughput figure drill-downs equal the Released assessment population and partial approvals remain reviewable", async () => {
+  assertSameUtcDay();
+  await seedThroughputFixtures();
+  const list = async (query: string): Promise<{ numbers: string[]; total: number }> => {
+    const { status, body, text } = await readJson(`/api/v1/risk_assessments?${query}&pageSize=100`);
+    assert.equal(status, 200, `THROUGHPUT_DRILLDOWN_REFUSED_${text}`);
+    assert.ok(isRecord(body) && Array.isArray(body.data) && isRecord(body.meta));
+    assert.ok(isRecord(body.meta.pagination));
+    return {
+      numbers: (body.data as Array<{ assessmentNumber: string }>).map((row) => row.assessmentNumber).sort(),
+      total: body.meta.pagination.total as number,
+    };
+  };
+  for (const period of [6, 12]) {
+    const data = await readReport("assessment-throughput", `?period=${period}`);
+    const released = data.released as { months: Array<{ monthStart: string; count: number }>; total: number };
+    const periodList = await list(`status=approved&approvedFrom=${data.periodStart}&approvedTo=${today}`);
+    assert.equal(periodList.total, released.total, `THROUGHPUT_PERIOD_LIST_DIFFERS_${period}`);
+    assert.deepEqual(periodList.numbers, (period === 6
+      ? ["P7R-ASM-AR1", "P7R-ASM-AR2", "P7R-ASM-AR4"]
+      : ["P7R-ASM-AR1", "P7R-ASM-AR2", "P7R-ASM-AR3", "P7R-ASM-AR4"]));
+    for (const month of released.months) {
+      const nextMonth = addUtcMonths(month.monthStart, 1);
+      const monthEnd = nextMonth > today ? today : addUtcDays(nextMonth, -1);
+      const monthList = await list(`status=approved&approvedFrom=${month.monthStart}&approvedTo=${monthEnd}`);
+      assert.equal(monthList.total, month.count, `THROUGHPUT_MONTH_LIST_DIFFERS_${month.monthStart}`);
+      assert.equal(monthList.numbers.includes("P7R-ASM-APX"), false, "PARTIAL_APPROVAL_PRESENTED_AS_RELEASED");
+    }
+  }
+  assert.ok((await list("q=P7R-ASM-APX")).numbers.includes("P7R-ASM-APX"), "PARTIAL_APPROVAL_UNAVAILABLE_FOR_REVIEW");
+  assertSameUtcDay();
+});
+
 test("the throughput period is closed to six or twelve months, and no other query is taken", async () => {
   await seedThroughputFixtures();
   const refused = [
@@ -801,8 +895,111 @@ test("the throughput period is closed to six or twelve months, and no other quer
   }
 });
 
+/*
+ * Phase 16 D-13, D-14, decision 11: a withdrawn Risk counts in no report. WU, a Critical Risk with an overdue treatment
+ * and an ineffective control, impacting S1, sits on an in-review assessment of its own (which a withdrawal, an accepted
+ * edit, keeps in review: D-23, so the throughput's request counts hold) and is withdrawn and reinstated through
+ * the 16-05 operations; WR, a Critical, accepted Risk with an overdue treatment and an ineffective control, impacting S2,
+ * on the released AR carries the withdrawal facts through the fixture, as a Risk withdrawn before its assessment was
+ * released does. Withdrawn, every report equals the reports without them and each exposure and due-state figure still
+ * equals its register list; reinstated, each figure is back. The two are left withdrawn, so the last test's figures hold.
+ */
+type CurationOperation = "risk_withdrawals" | "risk_reinstatements";
+const WITHDRAWAL_REPORT_KEYS = ["risk-exposure", "control-effectiveness", "treatment-performance", "assessment-throughput"] as const;
+
+async function curateRisks(operation: CurationOperation, assessmentId: string, riskIds: readonly string[], reason: string): Promise<void> {
+  const harness = await harnessPromise;
+  const response = await harness.request({
+    path: `/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/${operation}`,
+    identity: harness.identities.analyst,
+    init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ riskIds, reason }) },
+  });
+  assert.equal(response.status, 200, `REPORTS_${operation}_FAILED: ${await response.clone().text()}`);
+}
+
+async function everyReport(): Promise<Record<string, Record<string, unknown>>> {
+  const reports: Record<string, Record<string, unknown>> = {};
+  for (const key of WITHDRAWAL_REPORT_KEYS) reports[key] = await readReport(key);
+  return reports;
+}
+
+/** The Phase 11 equality: each exposure and due-state figure is the total of the register list it links to. */
+async function assertFiguresEqualTheRegister(label: string): Promise<void> {
+  const exposure = await readReport("risk-exposure");
+  const byResidualRating = exposure.byResidualRating as Record<string, number>;
+  const accepted = exposure.acceptedByResidualRating as Record<string, number>;
+  const underAssessment = (exposure.underAssessment as { byResidualRating: Record<string, number> }).byResidualRating;
+  for (const [key, value] of Object.entries(REGISTER_RATING_VALUES)) {
+    assert.equal(await registerTotal(`residualRating=${value}&state=open&stage=released`), byResidualRating[key], `${label}_RELEASED_${key}`);
+    assert.equal(await registerTotal(`residualRating=${value}&state=open&stage=released&treatmentAction=Accept`), accepted[key], `${label}_ACCEPTED_${key}`);
+    assert.equal(await registerTotal(`residualRating=${value}&state=open&stage=under-assessment`), underAssessment[key], `${label}_UNDER_ASSESSMENT_${key}`);
+  }
+  const dueState = (await readReport("treatment-performance")).dueState as Record<string, number>;
+  assert.equal(dueState.overdue, await registerTotal("dueState=overdue"), `${label}_OVERDUE_DIFFERS_FROM_THE_REGISTER`);
+  assert.equal(dueState.overdue, await alertCount("risk-treatment-overdue"), `${label}_OVERDUE_DIFFERS_FROM_THE_ALERTS`);
+  assert.equal(dueState.dueWithinWindow, await registerTotal("dueState=due-soon"), `${label}_DUE_SOON_DIFFERS_FROM_THE_REGISTER`);
+}
+
+test("a withdrawn Critical Risk with an overdue treatment changes no report figure, and reinstating it restores each (Phase 16 D-13, D-14)", async () => {
+  assertSameUtcDay();
+  const harness = await harnessPromise;
+  const created = await seedReportFixtures();
+  const request = await harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+    requestNumber: "P7R-RAR-AW",
+    title: "P7R report request AW",
+    requestStatus: "under-review",
+    requestor: harness.users.owner,
+  });
+  const draft = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "P7R-ASM-AW",
+    assessmentStatus: "in-review",
+    summary: "P7R report withdrawal assessment AW",
+    assessmentRequest: request,
+    reviewedBy: harness.users.analyst,
+  });
+  const without = await everyReport();
+
+  const underAssessment = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
+    riskNumber: riskNumber("WU"), riskStatement: "P7R report Risk WU", assessment: draft,
+    residualRating: "Critical", inherentRating: "Critical", treatmentStatus: "Not Started", targetDate: D(-7),
+    informationSystemImpacted: created.systems.S1, treatmentAction: "Treat",
+  });
+  const released = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
+    riskNumber: riskNumber("WR"), riskStatement: "P7R report Risk WR", assessment: created.assessments.AR,
+    residualRating: "Critical", inherentRating: "Critical", treatmentStatus: "In Progress", targetDate: D(-9),
+    informationSystemImpacted: created.systems.S2, treatmentAction: "Accept",
+  });
+  for (const risk of [underAssessment, released]) {
+    await harness.createFixtureDocument("api::csrm-control-implementation.csrm-control-implementation", {
+      risk, control: created.control, controlStatus: "Implemented", effectivenessRating: "Ineffective",
+    });
+  }
+  const withRisks = await everyReport();
+  for (const key of ["risk-exposure", "control-effectiveness", "treatment-performance"] as const) {
+    assert.notDeepEqual(withRisks[key], without[key], `WITHDRAWAL_FIXTURES_NOT_IN_${key}`);
+  }
+
+  const reason = "Proposed under the wrong Risk Type";
+  const withdraw = async () => {
+    await curateRisks("risk_withdrawals", draft, [underAssessment], reason);
+    await harness.setRiskWithdrawalFactsFixture(released, { withdrawnAt: new Date().toISOString(), withdrawnBy: harness.users.analyst, withdrawalReason: reason });
+  };
+  await withdraw();
+  assert.deepEqual(await everyReport(), without, "A_WITHDRAWN_RISK_CHANGED_A_REPORT_FIGURE");
+  await assertFiguresEqualTheRegister("WITHDRAWN");
+
+  await curateRisks("risk_reinstatements", draft, [underAssessment], "Withdrawn by mistake");
+  await harness.setRiskWithdrawalFactsFixture(released, { withdrawnAt: null, withdrawnBy: null, withdrawalReason: null });
+  assert.deepEqual(await everyReport(), withRisks, "REINSTATING_DID_NOT_RESTORE_THE_REPORT_FIGURES");
+  await assertFiguresEqualTheRegister("REINSTATED");
+
+  await withdraw();
+  assert.deepEqual(await everyReport(), without, "WITHDRAWN_AGAIN_CHANGED_A_REPORT_FIGURE");
+  assertSameUtcDay();
+});
+
 test("the exposed Information Systems are capped at ten, flagged as truncated, and totalled in full", async () => {
-  // This test adds eleven open High Risks, which changes every other figure, so it runs last.
+  // This test adds eleven released open High Risks, which changes every other figure, so it runs last.
   assertSameUtcDay();
   const harness = await harnessPromise;
   const created = await seedReportFixtures();
@@ -814,7 +1011,7 @@ test("the exposed Information Systems are capped at ten, flagged as truncated, a
     await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
       riskNumber: riskNumber(`X${String(index + 1).padStart(2, "0")}`),
       riskStatement: `P7R extra exposed Risk ${index + 1}`,
-      assessment: created.assessments.AM,
+      assessment: created.assessments.AR,
       residualRating: "High",
       inherentRating: "High",
       treatmentStatus: "Not Started",
@@ -829,16 +1026,17 @@ test("the exposed Information Systems are capped at ten, flagged as truncated, a
   assert.equal(exposedSystems.truncated, true, "EXPOSED_SYSTEMS_NOT_FLAGGED_AS_TRUNCATED");
   assert.equal(exposedSystems.total, 13, "EXPOSED_SYSTEMS_TOTAL_NOT_IN_FULL");
   assert.equal(exposedSystems.risksWithoutSystem, 1, "RISKS_WITHOUT_SYSTEM_CHANGED");
-  // The two systems carrying a Critical Risk lead, then the rest by name.
+  // The system carrying a released Critical Risk leads, then the rest by name.
   assert.deepEqual(
     exposedSystems.rows,
     [
-      { documentId: created.systems.S1, name: SYSTEMS.S1, critical: 1, high: 1, total: 2 },
       { documentId: created.systems.S2, name: SYSTEMS.S2, critical: 1, high: 1, total: 2 },
+      { documentId: created.systems.S1, name: SYSTEMS.S1, critical: 0, high: 1, total: 1 },
       ...extraSystems.slice(0, 8).map((documentId, index) => ({ documentId, name: extraNames[index], critical: 0, high: 1, total: 1 })),
     ],
     "EXPOSED_SYSTEMS_ORDER",
   );
-  assert.deepEqual(data.byResidualRating, { ...EXPECTED_BY_RESIDUAL_RATING, High: 14, total: 19 }, "RISK_EXPOSURE_AFTER_EXTRA_RISKS");
+  assert.deepEqual(data.byResidualRating, { ...EXPECTED_BY_RESIDUAL_RATING, High: 14, total: 17 }, "RISK_EXPOSURE_AFTER_EXTRA_RISKS");
+  assert.deepEqual(data.underAssessment, { byResidualRating: EXPECTED_UNDER_ASSESSMENT_BY_RESIDUAL_RATING }, "UNDER_ASSESSMENT_AFTER_EXTRA_RISKS");
   assertSameUtcDay();
 });

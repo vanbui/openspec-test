@@ -354,7 +354,7 @@ test('Requestor completes a questionnaire and Security Analyst reviews the submi
   await page.context().clearCookies();
   await signInAs(page, 'Security Analyst');
   await page.getByRole('link', { name: 'Questionnaires', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Questionnaire Review' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Questionnaires', exact: true })).toBeVisible();
   await page.getByRole('link', { name: seededQuestionnaireTitle }).click();
 
   await expect(page).toHaveURL(/\/app\/review\/questionnaires\/[^/]+$/);

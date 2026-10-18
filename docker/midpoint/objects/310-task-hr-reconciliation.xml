@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nightly at 01:00 UTC (D18): compares every HR person with their Identity and
+  repairs drift; a person missing from the file is deactivated, never deleted.
+-->
+<task xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      oid="11000000-0000-4000-8000-000000000310">
+    <name>HR reconciliation (nightly)</name>
+    <ownerRef oid="00000000-0000-0000-0000-000000000002" type="c:UserType"/>
+    <executionState>runnable</executionState>
+    <schedulingState>ready</schedulingState>
+    <schedule>
+        <recurrence>recurring</recurrence>
+        <cronLikePattern>0 0 1 * * ?</cronLikePattern>
+        <misfireAction>executeImmediately</misfireAction>
+    </schedule>
+    <activity>
+        <work>
+            <reconciliation>
+                <resourceObjects>
+                    <resourceRef oid="11000000-0000-4000-8000-000000000100"/>
+                    <kind>account</kind>
+                    <intent>default</intent>
+                </resourceObjects>
+            </reconciliation>
+        </work>
+        <controlFlow>
+            <errorHandling>
+                <!-- A person whose change fails is retried later, not only on the next run: a
+                     durable retry trigger on their HR row, fired by midPoint's trigger
+                     scanner, first after 5 minutes and then every 15 minutes, so a write
+                     Strapi refused with 503 (Keycloak unavailable) completes on its own
+                     once Keycloak is back (LIFE-04). -->
+                <entry>
+                    <situation>
+                        <status>partial_error</status>
+                        <status>fatal_error</status>
+                    </situation>
+                    <reaction>
+                        <retryLater>
+                            <initialInterval>PT5M</initialInterval>
+                            <nextInterval>PT15M</nextInterval>
+                        </retryLater>
+                    </reaction>
+                </entry>
+            </errorHandling>
+        </controlFlow>
+    </activity>
+</task>

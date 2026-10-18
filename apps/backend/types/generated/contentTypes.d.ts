@@ -480,6 +480,71 @@ export interface ApiApplicationApplication extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiCsrmAiRunCsrmAiRun extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_ai_runs';
+  info: {
+    displayName: 'CSRM AI Run';
+    pluralName: 'csrm-ai-runs';
+    singularName: 'csrm-ai-run';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    assessment: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-assessment.csrm-assessment'
+    >;
+    assessmentRequest: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-assessment-request.csrm-assessment-request'
+    >;
+    attempt: Schema.Attribute.Integer;
+    completedAt: Schema.Attribute.DateTime;
+    contextSummary: Schema.Attribute.JSON;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    decisions: Schema.Attribute.JSON;
+    failureCode: Schema.Attribute.String;
+    failureMessage: Schema.Attribute.String;
+    initiatedBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    instruction: Schema.Attribute.Text;
+    jobId: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-ai-run.csrm-ai-run'
+    > &
+      Schema.Attribute.Private;
+    operation: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+      }>;
+    proposal: Schema.Attribute.JSON;
+    providerName: Schema.Attribute.String & Schema.Attribute.Required;
+    providerVersion: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    questionnaire: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-questionnaire.csrm-questionnaire'
+    >;
+    risk: Schema.Attribute.Relation<'manyToOne', 'api::csrm-risk.csrm-risk'>;
+    startedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    status: Schema.Attribute.Enumeration<
+      ['running', 'completed', 'failed', 'interrupted']
+    > &
+      Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCsrmAssessmentRequestCsrmAssessmentRequest
   extends Struct.CollectionTypeSchema {
   collectionName: 'csrm_assessment_requests';
@@ -498,6 +563,18 @@ export interface ApiCsrmAssessmentRequestCsrmAssessmentRequest
       'api::csrm-assessment.csrm-assessment'
     >;
     assessmentType: Schema.Attribute.Enumeration<['BAU', 'Project', 'Other']>;
+    assignedAnalyst: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    > &
+      Schema.Attribute.Private;
+    assignedAt: Schema.Attribute.DateTime & Schema.Attribute.Private;
+    assignedBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    > &
+      Schema.Attribute.Private;
+    assignmentLog: Schema.Attribute.JSON & Schema.Attribute.Private;
     businessCriticality: Schema.Attribute.Enumeration<
       ['Low', 'Moderate', 'High', 'Critical']
     >;
@@ -582,6 +659,7 @@ export interface ApiCsrmAssessmentCsrmAssessment
     draftAndPublish: false;
   };
   attributes: {
+    aiProvenance: Schema.Attribute.JSON;
     approvalDate: Schema.Attribute.DateTime;
     approvedBy: Schema.Attribute.Relation<
       'manyToOne',
@@ -942,6 +1020,259 @@ export interface ApiCsrmQuestionnaireCsrmQuestionnaire
   };
 }
 
+export interface ApiCsrmRequestAttachmentCsrmRequestAttachment
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_request_attachments';
+  info: {
+    description: 'A supporting file attached to an assessment request by its requestor or a Security Analyst, screened, scanned and stored privately (Phase 14, docs/contract-gaps/phase-14-request-attachments.md).';
+    displayName: 'CSRM Request Attachment';
+    pluralName: 'csrm-request-attachments';
+    singularName: 'csrm-request-attachment';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    aiText: Schema.Attribute.Text & Schema.Attribute.Private;
+    aiTextFacts: Schema.Attribute.JSON;
+    aiTextIncluded: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    assessmentRequest: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-assessment-request.csrm-assessment-request'
+    >;
+    byteSize: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 26214400;
+          min: 1;
+        },
+        number
+      >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    eventLog: Schema.Attribute.JSON;
+    file: Schema.Attribute.Media<'files' | 'images'> & Schema.Attribute.Private;
+    fileName: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+        minLength: 1;
+      }>;
+    fileType: Schema.Attribute.Enumeration<
+      ['pdf', 'docx', 'xlsx', 'pptx', 'csv', 'txt', 'png', 'jpeg']
+    > &
+      Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-request-attachment.csrm-request-attachment'
+    > &
+      Schema.Attribute.Private;
+    note: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-request-note.csrm-request-note'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    removedAt: Schema.Attribute.DateTime;
+    removedBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    scanAttempts: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
+    scanCheckedAt: Schema.Attribute.DateTime;
+    scanDetection: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 128;
+      }>;
+    scanEngine: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
+    scanStatus: Schema.Attribute.Enumeration<['pending', 'clean', 'blocked']> &
+      Schema.Attribute.Required;
+    sha256: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+        minLength: 64;
+      }>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    uploadedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    uploadedBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    uploaderPart: Schema.Attribute.Enumeration<
+      ['requestor', 'security-analyst']
+    > &
+      Schema.Attribute.Required;
+  };
+}
+
+export interface ApiCsrmRequestNoteCsrmRequestNote
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_request_notes';
+  info: {
+    description: 'An attributed, append-only, plain-text note on an assessment request (Phase 13, docs/contract-gaps/phase-13-request-notes.md).';
+    displayName: 'CSRM Request Note';
+    pluralName: 'csrm-request-notes';
+    singularName: 'csrm-request-note';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    aiInputLog: Schema.Attribute.JSON;
+    assessmentRequest: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-assessment-request.csrm-assessment-request'
+    >;
+    author: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    authorPart: Schema.Attribute.Enumeration<
+      ['requestor', 'security-analyst']
+    > &
+      Schema.Attribute.Required;
+    body: Schema.Attribute.Text & Schema.Attribute.Required;
+    changesAiInputs: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-request-note.csrm-request-note'
+    > &
+      Schema.Attribute.Private;
+    postedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    sequence: Schema.Attribute.Integer & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiCsrmRequestNoteCsrmRequestNoteReadState
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_request_note_read_states';
+  info: {
+    description: "One person's read state of one request's notes, by note sequence (Phase 13, docs/contract-gaps/phase-13-request-notes.md).";
+    displayName: 'CSRM Request Note Read State';
+    pluralName: 'csrm-request-note-read-states';
+    singularName: 'csrm-request-note-read-state';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    assessmentRequest: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-assessment-request.csrm-assessment-request'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    lastReadAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    lastReadSequence: Schema.Attribute.Integer & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-request-note.csrm-request-note-read-state'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    reader: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiCsrmRiskHistoryEventCsrmRiskHistoryEvent
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'csrm_risk_history_events';
+  info: {
+    description: 'One append-only record of a change to a CSRM Risk or one of its control implementations';
+    displayName: 'CSRM Risk History Event';
+    pluralName: 'csrm-risk-history-events';
+    singularName: 'csrm-risk-history-event';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    actor: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
+    aiRun: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-ai-run.csrm-ai-run'
+    >;
+    assessment: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::csrm-assessment.csrm-assessment'
+    >;
+    batchId: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+      }>;
+    changes: Schema.Attribute.JSON;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    kind: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+      }>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::csrm-risk-history-event.csrm-risk-history-event'
+    > &
+      Schema.Attribute.Private;
+    occurredAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    proposalItem: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+      }>;
+    publishedAt: Schema.Attribute.DateTime;
+    reason: Schema.Attribute.Text;
+    risk: Schema.Attribute.Relation<'manyToOne', 'api::csrm-risk.csrm-risk'>;
+    sourceKind: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 32;
+      }>;
+    undo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCsrmRiskTypeCsrmRiskType
   extends Struct.CollectionTypeSchema {
   collectionName: 'csrm_risk_types';
@@ -992,6 +1323,7 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    aiProvenance: Schema.Attribute.JSON;
     assessment: Schema.Attribute.Relation<
       'manyToOne',
       'api::csrm-assessment.csrm-assessment'
@@ -1073,6 +1405,12 @@ export interface ApiCsrmRiskCsrmRisk extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    withdrawalReason: Schema.Attribute.Text;
+    withdrawnAt: Schema.Attribute.DateTime;
+    withdrawnBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::idambox-user.idambox-user'
+    >;
   };
 }
 
@@ -1166,13 +1504,30 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    department: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
     displayName: Schema.Attribute.String & Schema.Attribute.Required;
     email: Schema.Attribute.Email &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
+    employeeNumber: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
     externalSubject: Schema.Attribute.String & Schema.Attribute.Unique;
     firstName: Schema.Attribute.String;
+    identitySource: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::identity-source.identity-source'
+    >;
+    jobTitle: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
     lastName: Schema.Attribute.String;
+    lastSyncedAt: Schema.Attribute.DateTime;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1184,14 +1539,158 @@ export interface ApiIdamboxUserIdamboxUser extends Struct.CollectionTypeSchema {
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    protected: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
     publishedAt: Schema.Attribute.DateTime;
     roles: Schema.Attribute.Relation<'manyToMany', 'api::role.role'>;
+    sourceDeletedAt: Schema.Attribute.DateTime;
+    sourceExternalId: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
+    sourceIdentityKey: Schema.Attribute.String &
+      Schema.Attribute.Private &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+        minLength: 64;
+      }>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     username: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
+  };
+}
+
+export interface ApiIdentitySourceIdentitySource
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'identity_sources';
+  info: {
+    displayName: 'Identity Source';
+    pluralName: 'identity-sources';
+    singularName: 'identity-source';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    lastActivityAt: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::identity-source.identity-source'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
+    publishedAt: Schema.Attribute.DateTime;
+    serviceUser: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::idambox-user.idambox-user'
+    > &
+      Schema.Attribute.Required;
+    sourceStatus: Schema.Attribute.Enumeration<['active', 'inactive']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
+    tokenHash: Schema.Attribute.String &
+      Schema.Attribute.Private &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
+    tokenRotatedAt: Schema.Attribute.DateTime & Schema.Attribute.Private;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiKeycloakSyncOutboxKeycloakSyncOutbox
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'keycloak_sync_outboxes';
+  info: {
+    displayName: 'Keycloak Sync Outbox';
+    pluralName: 'keycloak-sync-outboxes';
+    singularName: 'keycloak-sync-outbox';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    attempts: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
+    completedAt: Schema.Attribute.DateTime;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    externalSubject: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
+    generation: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<1>;
+    idamboxUser: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::idambox-user.idambox-user'
+    > &
+      Schema.Attribute.Required;
+    lastErrorCode: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 120;
+      }>;
+    leaseExpiresAt: Schema.Attribute.DateTime & Schema.Attribute.Private;
+    leaseOwner: Schema.Attribute.String &
+      Schema.Attribute.Private &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 36;
+      }>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::keycloak-sync-outbox.keycloak-sync-outbox'
+    > &
+      Schema.Attribute.Private;
+    nextAttemptAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    operation: Schema.Attribute.Enumeration<['disableAndEndSessions']> &
+      Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    syncStatus: Schema.Attribute.Enumeration<
+      ['pending', 'processing', 'completed', 'cancelled']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'pending'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userDocumentId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 24;
+      }>;
   };
 }
 
@@ -1744,6 +2243,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::application.application': ApiApplicationApplication;
+      'api::csrm-ai-run.csrm-ai-run': ApiCsrmAiRunCsrmAiRun;
       'api::csrm-assessment-request.csrm-assessment-request': ApiCsrmAssessmentRequestCsrmAssessmentRequest;
       'api::csrm-assessment.csrm-assessment': ApiCsrmAssessmentCsrmAssessment;
       'api::csrm-control-implementation.csrm-control-implementation': ApiCsrmControlImplementationCsrmControlImplementation;
@@ -1752,11 +2252,17 @@ declare module '@strapi/strapi' {
       'api::csrm-information-system.csrm-information-system': ApiCsrmInformationSystemCsrmInformationSystem;
       'api::csrm-question.csrm-question': ApiCsrmQuestionCsrmQuestion;
       'api::csrm-questionnaire.csrm-questionnaire': ApiCsrmQuestionnaireCsrmQuestionnaire;
+      'api::csrm-request-attachment.csrm-request-attachment': ApiCsrmRequestAttachmentCsrmRequestAttachment;
+      'api::csrm-request-note.csrm-request-note': ApiCsrmRequestNoteCsrmRequestNote;
+      'api::csrm-request-note.csrm-request-note-read-state': ApiCsrmRequestNoteCsrmRequestNoteReadState;
+      'api::csrm-risk-history-event.csrm-risk-history-event': ApiCsrmRiskHistoryEventCsrmRiskHistoryEvent;
       'api::csrm-risk-type.csrm-risk-type': ApiCsrmRiskTypeCsrmRiskType;
       'api::csrm-risk.csrm-risk': ApiCsrmRiskCsrmRisk;
       'api::function-api.function-api': ApiFunctionApiFunctionApi;
       'api::function.function': ApiFunctionFunction;
       'api::idambox-user.idambox-user': ApiIdamboxUserIdamboxUser;
+      'api::identity-source.identity-source': ApiIdentitySourceIdentitySource;
+      'api::keycloak-sync-outbox.keycloak-sync-outbox': ApiKeycloakSyncOutboxKeycloakSyncOutbox;
       'api::role.role': ApiRoleRole;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

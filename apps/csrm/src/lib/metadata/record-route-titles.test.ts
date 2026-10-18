@@ -14,12 +14,15 @@ const mocks = vi.hoisted(() => ({
   getQuestionnaire: vi.fn(),
   getQuestionnaireGovernanceQuestions: vi.fn(),
   getQuestionnaireQuestions: vi.fn(),
+  getRequestorQuestionnaire: vi.fn(),
   getRequest: vi.fn(),
   granted: vi.fn(),
   notFound: vi.fn(),
 }));
 
 vi.mock('server-only', () => ({}));
+// Phase 19 (19-12): the released header's Export is bound to this Server Action; its module reads services this file mocks.
+vi.mock('@/features/exports/export-actions', () => ({ exportReleasedAssessmentAction: vi.fn() }));
 // The analyst routes gate on assessment:review before their read (D-23); these cases sign in as an analyst.
 vi.mock('@/lib/auth/development-session-adapter', () => ({
   getSessionAdapter: () => ({
@@ -37,6 +40,7 @@ vi.mock('@/features/questionnaires/questionnaire-service', () => ({
   getQuestionnaire: mocks.getQuestionnaire,
   getQuestionnaireGovernanceQuestions: mocks.getQuestionnaireGovernanceQuestions,
   getQuestionnaireQuestions: mocks.getQuestionnaireQuestions,
+  getRequestorQuestionnaire: mocks.getRequestorQuestionnaire,
 }));
 vi.mock('@/features/requests/request-service', () => ({
   getRequest: mocks.getRequest,
@@ -54,7 +58,8 @@ type RouteProps = { params: Promise<{ documentId: string }> };
 type RecordRoute = { generateMetadata?: (props: RouteProps) => Promise<{ title?: unknown }>; metadata?: unknown };
 
 const recordRoutes = [
-  { route: '/app/questionnaires/{documentId}', page: '(app)/app/questionnaires/[documentId]/page', title: 'Questionnaire | IdamBox CSRM', read: mocks.getQuestionnaire },
+  // CR-401: the Requestor's route reads through the Requestor's questionnaire parser.
+  { route: '/app/questionnaires/{documentId}', page: '(app)/app/questionnaires/[documentId]/page', title: 'Questionnaire | IdamBox CSRM', read: mocks.getRequestorQuestionnaire },
   { route: '/app/review/questionnaires/{documentId}', page: '(app)/app/review/questionnaires/[documentId]/page', title: 'Questionnaire Review | IdamBox CSRM', read: mocks.getQuestionnaire },
   { route: '/app/review/requests/{documentId}', page: '(app)/app/review/requests/[documentId]/page', title: 'Assessment Request Review | IdamBox CSRM', read: mocks.getRequest },
   { route: '/app/review/assessments/{documentId}', page: '(app)/app/review/assessments/[documentId]/page', title: 'Risk Assessment Review | IdamBox CSRM', read: mocks.getAnalystAssessment },

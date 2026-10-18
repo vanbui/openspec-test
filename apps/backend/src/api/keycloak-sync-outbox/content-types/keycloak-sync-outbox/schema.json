@@ -1,0 +1,25 @@
+{
+  "kind": "collectionType",
+  "collectionName": "keycloak_sync_outboxes",
+  "info": {
+    "singularName": "keycloak-sync-outbox",
+    "pluralName": "keycloak-sync-outboxes",
+    "displayName": "Keycloak Sync Outbox"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "userDocumentId": { "type": "string", "required": true, "unique": true, "maxLength": 24 },
+    "idamboxUser": { "type": "relation", "relation": "oneToOne", "target": "api::idambox-user.idambox-user", "required": true },
+    "externalSubject": { "type": "string", "maxLength": 255 },
+    "operation": { "type": "enumeration", "enum": ["disableAndEndSessions"], "required": true },
+    "syncStatus": { "type": "enumeration", "enum": ["pending", "processing", "completed", "cancelled"], "required": true, "default": "pending" },
+    "generation": { "type": "integer", "required": true, "default": 1, "min": 1 },
+    "attempts": { "type": "integer", "required": true, "default": 0, "min": 0 },
+    "lastErrorCode": { "type": "string", "maxLength": 120 },
+    "nextAttemptAt": { "type": "datetime", "required": true },
+    "leaseOwner": { "type": "string", "private": true, "maxLength": 36 },
+    "leaseExpiresAt": { "type": "datetime", "private": true },
+    "completedAt": { "type": "datetime" }
+  }
+}

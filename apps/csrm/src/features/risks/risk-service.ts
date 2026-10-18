@@ -6,6 +6,8 @@ import {
   type StrapiClient,
   type TransportResult,
 } from '../../lib/api/transport/server-client';
+import type { ExportFileFormat } from '../../lib/files/file-response';
+import { checkExportResponse, EXPORT_FILE_CONTENT_TYPES, type ExportResult } from '../exports/export-file-check';
 import {
   parseRiskOwnerSearch,
   parseRiskDetailPayload,
@@ -40,6 +42,15 @@ export const responseParserModule = {
     { label: 'risks.listRiskRegister', component: 'RiskRegisterResponse', parser: riskRegisterPayloadSchema },
     { label: 'risks.getRiskDetail', component: 'RiskDetailResponse', parser: riskDetailPayloadSchema },
   ] as const satisfies readonly ContractResponseParser[],
+  // Phase 19 D-19: the register export is a file, checked by the shared validator's export rule instead of a zod parser.
+  fileResponses: [
+    {
+      label: 'risks.exportRiskRegister',
+      path: '/v1/risks/export',
+      method: 'get' as const,
+      contentTypes: EXPORT_FILE_CONTENT_TYPES,
+    },
+  ],
 };
 
 async function request<T>(
@@ -80,8 +91,15 @@ function pickerRequest(
   return request(invoke, (payload) => parseRiskPickerPayload(kind, payload));
 }
 
-export function listRiskRegisterAssessments(): Promise<TransportResult<readonly RiskPickerOption[]>> {
-  return pickerRequest('assessments', (client) => client.GET('/v1/risk_assessments'));
+/*
+ * D-32 and UAT-048: the Related assessment picker searches on the server, which matches the assessment number, the
+ * summary or the request title, so an assessment beyond the first page is found by any of them.
+ */
+export function listRiskRegisterAssessments(search?: string): Promise<TransportResult<readonly RiskPickerOption[]>> {
+  const q = search === undefined ? undefined : parseRiskOwnerSearch(search);
+  return pickerRequest('assessments', (client) => client.GET('/v1/risk_assessments', {
+    params: { query: { ...(q ? { q } : {}), pageSize: 25 } },
+  }));
 }
 
 export function listRiskRegisterRiskTypes(): Promise<TransportResult<readonly RiskPickerOption[]>> {
@@ -135,4 +153,39 @@ export function searchRiskRegisterAssets(search: string): Promise<TransportResul
   return pickerRequest('assets', (client) => client.GET('/v1/information_assets', {
     params: { query: inventorySearchQuery(search) },
   }));
+}
+
+/** The register's query as an export takes it: the whole filtered list, so no page and no page size (D-13). */
+export type RiskRegisterExportQuery = Omit<RiskRegisterQuery, 'page' | 'pageSize'>;
+
+/**
+ * Exports the whole filtered Risk register as CSV or XLSX (D-13, D-19) through the generated path with a binary parse.
+ * Strapi decides who may export, refuses an invalid query or more than 10,000 rows with its closed reason, and builds
+ * the file; the shared validator then checks the type, the server's name, the size and the signature before any byte
+ * is returned. Columns and the viewer's zone are sent only when given.
+ */
+export async function exportRiskRegister(input: {
+  query: RiskRegisterExportQuery;
+  format: ExportFileFormat;
+  columns?: readonly string[];
+  timeZone?: string;
+}): Promise<ExportResult> {
+  try {
+    const { page: _page, pageSize: _pageSize, ...canonical } = serializeRiskRegisterQuery({ ...input.query, page: 1, pageSize: 25 });
+    const client = await createStrapiClient();
+    const exported = await client.GET('/v1/risks/export', {
+      params: {
+        query: {
+          ...canonical,
+          format: input.format,
+          ...(input.columns && input.columns.length > 0 ? { columns: input.columns.join(',') } : {}),
+          ...(input.timeZone ? { timeZone: input.timeZone } : {}),
+        },
+      },
+      parseAs: 'arrayBuffer',
+    });
+    return checkExportResponse(exported, input.format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
 }

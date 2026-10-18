@@ -64,6 +64,8 @@ The Task 2 measured run (2026-09-26 03:11:36Z–03:13:02Z): 10 passed, 1.4 min r
 | `/app/reports/risk-exposure` | Security Analyst | 20 | 234,085 | 749,605 | 18,397 | 7.9 | 75.2 | 109.8 | 120 |
 | `/app/admin/controls` | Security Analyst | 18 | 216,513 | 702,913 | 18,397 | 6.5 | 68.0 | 106.9 | 124 |
 
+**Watch: `/app/risks/{documentId}` (2026-10-08).** Measured after `c586c45` on 2026-10-08, the Risk detail delivers 299,594 bytes of first-load JavaScript against its 300,000-byte budget: 406 bytes of headroom (99.86 %). The budget is unchanged. Its first load carries the app shell (whose navigation guard brings `ConfirmDialog` and its `AlertDialog`), the shared Toaster and the Risk Register's loading state (finding 3 below), so a change to any of them needs this route measured before it lands. The first such change after the measurement is `3061ad6` (Phase 12 UI review, UI-01), which lengthens one `AlertDialog` class by five characters.
+
 The record routes open seeded fixtures:
 - **Request:** `RAR-E2E-NAV-OWNER-001`, *Enterprise password manager rollout*.
 - **Questionnaire:** Jane's *Customer portal questionnaire draft*.
@@ -103,11 +105,24 @@ Variance worth noting:
 | TTFB | 500 ms |
 | LCP candidate | 2,500 ms |
 
-`ROUTE_BUDGET_OVERRIDES` holds one entry:
+`ROUTE_BUDGET_OVERRIDES` holds two entries. Phase 12 added the second (plan 12-16); it is recorded here since 2026-10-08 (Phase 12 code review, WR-407):
 
 | Route | Budget | Reason |
 |---|---|---|
 | `/app/questionnaires/{documentId}` | delivered JavaScript 500,000 bytes | Inherent. The Requestor's answers are validated in the browser by a zod schema built from the questions (react-hook-form's `zodResolver`), so the route carries zod's full API: 64,389 bytes delivered, 284,738 raw, not tree-shakeable. The budget is 1.5 × the 328,599-byte median measured before the fixes, rounded up. |
+| `/app/review/assessments/{documentId}` | delivered JavaScript 460,000 bytes | Inherent. Phase 12 D-37 puts the AI review UI in the editor: field markers, per-record review bars and the decision hook beside every Risk form. With it the route measured 304,218 bytes after plan 12-16, once a duplicated chunk group had been removed (quick task 261007-jbs). The budget is 1.5 × that median, rounded up. |
+
+**The review editor's override (Phase 12).** The route's Phase 8 median was 269,653 bytes, 89.9 % of the ceiling (R-08-34). Quick task 261007-jbs (2026-10-07) fixed its growth at the source (quick find's search code had joined the shell's first load) and brought it back to 299,553 bytes with no override. Plan 12-16 then added the AI review UI, a cost the D-24 triage classed as inherent: 304,218 bytes, and 1.5 × 304,218 = 456,327, rounded up to 460,000. Plan 12-17 (cited sources, suggested controls, uncited claims) measured 307,724. Phase 12 D-36 keeps the route as small as that UI allows:
+- the provenance header renders on the server;
+- the editor's client pieces stay zod-free;
+- the body of the "What the AI used" sheet and the body of a citation's source view load only when an analyst asks for them.
+
+Since the code review (WR-307, `7f8e2bd`), the sheet's frame and the source's popover and bottom-sheet frames load with the route, so each opens at once on its title; only their bodies stay code-split. The phase's final gate re-measures the route against 460,000 bytes (`12-19-SUMMARY.md`).
+
+With more than 150,000 bytes of headroom, the budget can no longer catch the regressions D-36 guards against, so source checks in `apps/csrm/src/lib/performance/zod-client-boundary.test.ts` hold them instead (WR-407):
+- the route walk fails on any static import chain from a client module the route renders to zod;
+- four AI assistance modules may import zod: the Server Action, the server-only service and the two schemas, each listed with why the browser never loads it. Every other AI assistance module reaches no zod through a static import chain. That includes the two lazily loaded bodies, which the route walk stops before;
+- the two bodies load only through `import()`, and no module in the web source imports either statically.
 
 **Derivation rule (D-24 triage).** A route whose median exceeds a ceiling is investigated first for a real defect, which is fixed at its source. Examples: a client component pulling in a module a server component could own, an unnecessary `'use client'` boundary, a loader without a limit, a duplicated fetch, a blocking font or stylesheet. Only an inherent cost earns an override, set at 1.5 × the measured median rounded up to the next 10,000 bytes or 50 ms, with a one-line reason in the spec and here.
 
@@ -138,7 +153,7 @@ Several fixes saved more than the zod chunk. The request detail and the Controls
    - Legitimately, where a form validates in the browser: the request create and edit form, the questionnaire renderer and review, the Administration create and edit form, and the CSV import flow.
    - Follow-up: extend `zod-client-boundary.test.ts` to every route and move those vocabularies the same way.
 3. **The Risk detail inherits the Risk Register's loading state.** Next renders ancestor `loading.tsx` boundaries, so `risks/loading.tsx` puts the register table's client code into `/app/risks/{documentId}`'s first load. It is inherent to the route layout and within budget, at 90.9 %.
-4. **The questionnaire route is the one inherent cost.** It holds the override above.
+4. **The questionnaire route is the one inherent cost.** It holds the override above. Phase 12 added a second, the review editor's AI review UI, with its own override (see Budgets).
 5. **The legacy polyfill is referenced by every page but never fetched.** It is Next's `nomodule` polyfill file, 112,594 bytes raw. A module-capable browser does not fetch it, so it is neither delivered nor counted.
 6. **Builds depend on Google Fonts.** `next/font/google` fetches the three families during every `next build`. Two measurement builds failed while the host's connection to `fonts.googleapis.com` and `fonts.gstatic.com` dropped out ("There was an issue establishing a connection while requesting https://fonts.gstatic.com/…"); the third passed once it recovered. This is the same dependency as the recorded `next/font/google` transient; font loading is unchanged.
 

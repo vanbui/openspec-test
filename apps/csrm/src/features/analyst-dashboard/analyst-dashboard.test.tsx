@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   can: vi.fn(),
   current: vi.fn(),
   getAnalystDashboard: vi.fn(),
+  getMyRequestStatusSummary: vi.fn(),
   granted: vi.fn(),
   refresh: vi.fn(),
   resolveE2eAnalystDashboardPartial: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock('@/lib/auth/development-session-adapter', () => ({
   }),
 }));
 vi.mock('@/features/analyst-dashboard/analyst-dashboard-service', () => ({ getAnalystDashboard: mocks.getAnalystDashboard }));
+vi.mock('@/features/requests/request-service', () => ({ getMyRequestStatusSummary: mocks.getMyRequestStatusSummary }));
 vi.mock('@/lib/testing/e2e-ui-state', () => ({
   E2eUiStateBoundary: ({ children, state }: { children: ReactNode; state: string }) => <section data-ui-state={state}>{children}</section>,
   resolveE2eAnalystDashboardPartial: mocks.resolveE2eAnalystDashboardPartial,
@@ -97,12 +99,28 @@ const dueSoonRequest = alertOf({
 });
 
 const readyUnits: AnalystDashboardUnits = {
-  kpi: { status: 'ready', data: { requiresAttention: 4, overdue: 3, dueSoon: 5, attention: 2 } },
+  kpi: { status: 'ready', data: { needsYourAction: 3, overdue: 3, dueSoon: 5, attention: 2 } },
   reviewQueue: {
     status: 'ready',
-    data: { requiresAttention: 4, awaitingRequestor: 1, generationInProgress: 0, questionnairesReadyForReview: 3, assessmentsDraft: 1, assessmentsInReview: 2 },
+    data: {
+      requiresAttention: 4,
+      awaitingRequestor: 1,
+      generationInProgress: 0,
+      questionnairesReadyForReview: 3,
+      assessmentsDraft: 1,
+      assessmentsInReview: 2,
+      mine: { requiresAttention: 3, awaitingRequestor: 0, generationInProgress: 0, withUnreadNotes: 1 },
+      unassigned: 2,
+    },
   },
-  riskExposure: { status: 'ready', data: { Critical: 1, High: 2, Moderate: 1, Low: 0, notRated: 1, total: 5 } },
+  riskExposure: {
+    status: 'ready',
+    data: {
+      released: { Critical: 1, High: 2, Moderate: 1, Low: 0, notRated: 1, total: 5 },
+      releasedAccepted: { Critical: 0, High: 0, Moderate: 1, Low: 0, notRated: 0, total: 1 },
+      underAssessment: { Critical: 1, High: 0, Moderate: 2, Low: 0, notRated: 0, total: 3 },
+    },
+  },
   highCritical: {
     status: 'ready',
     data: {
@@ -175,6 +193,8 @@ beforeEach(() => {
     calls.push('dashboard');
     return { kind: 'ready', dashboard };
   });
+  // The analyst's own requests by holder (D-18 item 7); kept out of `calls`, whose order cases are the dashboard's.
+  mocks.getMyRequestStatusSummary.mockResolvedValue({ data: { statuses: [], byHolder: { requestor: 1, analyst: 2, none: 0 } }, error: null });
   mocks.resolveE2eUiState.mockImplementation(() => {
     calls.push('fixture');
     return undefined;
@@ -199,16 +219,17 @@ describe('AnalystDashboard, populated', () => {
     expect(list).not.toHaveClass('sm:grid-cols-2');
     const tiles = within(list).getAllByRole('link');
     expect(tiles.map((tile) => tile.getAttribute('href'))).toEqual([
-      '/app/review/requests',
+      '/app/review/assigned?queue=requires-attention',
       '/app/alerts?urgency=overdue',
       '/app/alerts?urgency=due-soon',
       '/app/alerts?urgency=attention',
     ]);
     // Each tile is one link named by its caption, value and supporting line, in reading order.
-    expect(tiles[0]).toHaveAccessibleName('Requires my attention 4 Assessment Requests in your review queue');
+    // Phase 13 (D-15; U1 changed deliberately): tile 1 is the viewer's own work.
+    expect(tiles[0]).toHaveAccessibleName('Needs your action 3 Requests assigned to you that need analyst action');
     expect(tiles[1]).toHaveAccessibleName('Overdue 3 Past a due, target or review date');
     expect(tiles[2]).toHaveAccessibleName('Due within 14 days 5 Upcoming due, target or review dates');
-    expect(tiles[3]).toHaveAccessibleName('Needs attention 2 Untreated Critical Risks and ineffective Control Implementations');
+    expect(tiles[3]).toHaveAccessibleName('Needs attention 2 Untreated Critical Risks and ineffective mitigation controls');
   });
 
   it('follows the tiles with the seven widgets in D-18 order, led by the Review queue, each a region named by its heading', () => {
@@ -232,13 +253,18 @@ describe('AnalystDashboard, populated', () => {
     render(<AnalystDashboard state={{ kind: 'ready', dashboard }} />);
 
     const queue = region('Review queue');
-    expect(within(queue).getByText('Assessment Requests by queue, and Questionnaires and Risk Assessments by status.')).toBeInTheDocument();
+    expect(within(queue).getByText('Your assigned requests first, then the team’s queue.')).toBeInTheDocument();
     const groups = within(queue).getAllByRole('heading', { level: 3 });
-    expect(groups.map((group) => group.textContent)).toEqual(['Assessment Requests', 'Questionnaires', 'Risk Assessments']);
+    expect(groups.map((group) => group.textContent)).toEqual(['Assigned to you', 'Assessment Requests', 'Questionnaires', 'Risk Assessments']);
     for (const group of groups) expect(group).toHaveClass('micro-label');
     const rows = within(queue).getAllByRole('link');
     expect(rows.map((row) => [row.getAttribute('aria-label'), row.getAttribute('href')])).toEqual([
-      ['Requires my attention: 4 Assessment Requests', '/app/review/requests'],
+      ['Needs your action: 3 Assessment Requests', '/app/review/assigned?queue=requires-attention'],
+      ['With new notes: 1 Assessment Request assigned to you', '/app/review/assigned?notes=unread'],
+      ['Awaiting Requestor: 0 Assessment Requests', '/app/review/assigned?queue=awaiting-requestor'],
+      ['Generation in progress: 0 Assessment Requests', '/app/review/assigned?queue=generation-in-progress'],
+      ['Waiting for pick-up: 2 Assessment Requests', '/app/review/requests?assignee=unassigned'],
+      ['Requires attention: 4 Assessment Requests', '/app/review/requests'],
       ['Awaiting Requestor: 1 Assessment Request', '/app/review/requests?queue=awaiting-requestor'],
       ['Generation in progress: 0 Assessment Requests', '/app/review/requests?queue=generation-in-progress'],
       ['Submitted: 3 Questionnaires', '/app/review/questionnaires?status=submitted'],
@@ -249,7 +275,8 @@ describe('AnalystDashboard, populated', () => {
     const words = (text: string | null) => (text ?? '').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
     for (const row of rows) expect(words(row.getAttribute('aria-label')).startsWith(words(row.textContent))).toBe(true);
     // Submitted answers stay submitted after release, so the row is a count of the list it opens, not waiting work.
-    expect(rows[3]).toHaveTextContent(/^Submitted 3$/);
+    expect(rows[8]).toHaveTextContent(/^Submitted 3$/);
+    expect(queue).not.toHaveTextContent(/my attention/i);
     expect(queue).not.toHaveTextContent(/ready for review|work waiting/i);
     // A link row is at least the default row height, with the chevron as its at-rest cue.
     for (const row of rows) {
@@ -259,32 +286,107 @@ describe('AnalystDashboard, populated', () => {
     expect(within(rows[2]).getByText('0')).toBeInTheDocument();
   });
 
-  it('draws Risk exposure as labelled severity rows linked to the open register, and Not rated as plain text', () => {
+  it('draws Risk exposure as labelled severity rows linked to the released open register lists, Not rated included (D-42, UI-SPEC §9.2)', () => {
     render(<AnalystDashboard state={{ kind: 'ready', dashboard }} />);
 
     const exposure = region('Risk exposure');
-    const list = within(exposure).getByRole('list', { name: 'Open contextual Risks by residual rating' });
-    expect(within(list).getAllByRole('link').map((link) => [link.getAttribute('aria-label'), link.getAttribute('href')])).toEqual([
-      ['Critical: 1 open Risk by residual rating', '/app/risks?residualRating=Critical&state=open'],
-      ['High: 2 open Risks by residual rating', '/app/risks?residualRating=High&state=open'],
-      ['Moderate: 1 open Risk by residual rating', '/app/risks?residualRating=Moderate&state=open'],
-      ['Low: 0 open Risks by residual rating', '/app/risks?residualRating=Low&state=open'],
+    expect(within(exposure).getByText('Released Risks only. Open Risks by residual rating, with accepted Risks marked.')).toBeInTheDocument();
+    const list = within(exposure).getByRole('list', { name: 'Released open Risks by residual rating' });
+    const rowLinks = within(list).getAllByRole('link').filter((link) => link.getAttribute('aria-label')?.includes('by residual rating'));
+    expect(rowLinks.map((link) => [link.getAttribute('aria-label'), link.getAttribute('href')])).toEqual([
+      ['Critical: 1 released open Risk by residual rating', '/app/risks?residualRating=Critical&state=open&stage=released'],
+      ['High: 2 released open Risks by residual rating', '/app/risks?residualRating=High&state=open&stage=released'],
+      ['Moderate: 1 released open Risk by residual rating', '/app/risks?residualRating=Moderate&state=open&stage=released'],
+      ['Low: 0 released open Risks by residual rating', '/app/risks?residualRating=Low&state=open&stage=released'],
+      ['Not rated: 1 released open Risk by residual rating', '/app/risks?residualRating=none&state=open&stage=released'],
     ]);
     // The badge keeps the rating's icon and word beside its colour; the link names the row, so the badge
     // inside it does not name itself, and the link's visible words open its name (SC 2.5.3).
-    const critical = within(list).getAllByRole('link')[0]!;
+    const critical = rowLinks[0]!;
     expect(critical).toHaveTextContent(/^Critical 1$/);
     expect(critical.querySelector('[data-slot="badge"]')).toHaveTextContent('Critical');
     expect(within(list).queryByLabelText(/^Severity:/)).toBeNull();
-    const notRated = within(list).getAllByRole('listitem').at(-1)!;
-    expect(notRated).toHaveTextContent(/^Not rated 1$/);
-    expect(within(notRated).queryByRole('link')).toBeNull();
+    expect(rowLinks.at(-1)).toHaveTextContent(/^Not rated 1$/);
     const marks = [...list.querySelectorAll('[data-slot="bar-chart-mark"]')];
     expect(marks[0]).toHaveClass('bg-risk-critical');
     expect(marks.at(-1)).toHaveClass('bg-chart-1');
   });
 
-  it('lists High and Critical residual Risks with one record link each, the overdue marker only where the server says so', () => {
+  it('marks accepted released Risks with a link after their row, and counts the Risks under assessment apart below the chart (D-41, D-42, UI-D34)', () => {
+    render(<AnalystDashboard state={{ kind: 'ready', dashboard }} />);
+
+    const exposure = region('Risk exposure');
+    const list = within(exposure).getByRole('list', { name: 'Released open Risks by residual rating' });
+    // Only Moderate has an accepted figure above zero, so it alone carries the accepted link, in its own row's item.
+    const accepted = within(list).getByRole('link', { name: '1 accepted Moderate Risk' });
+    expect(accepted).toHaveTextContent(/^1 accepted$/);
+    expect(accepted).toHaveAttribute('href', '/app/risks?residualRating=Moderate&state=open&stage=released&treatmentAction=Accept');
+    expect(accepted).toHaveClass('record-link');
+    const moderate = within(list).getAllByRole('listitem')[2]!;
+    expect(within(moderate).getAllByRole('link').map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Moderate: 1 released open Risk by residual rating',
+      '1 accepted Moderate Risk',
+    ]);
+    expect(within(list).getAllByRole('link', { name: /accepted/ })).toHaveLength(1);
+
+    // Under assessment sits apart, below the list, after a hairline: never read as one total with the rows.
+    const underAssessment = within(exposure).getByRole('link', { name: 'Under assessment: 3 open Risks not yet released' });
+    expect(underAssessment).toHaveAttribute('href', '/app/risks?state=open&stage=under-assessment');
+    expect(underAssessment).toHaveTextContent(/^Under assessment 3$/);
+    expect(list.contains(underAssessment)).toBe(false);
+    expect(list.compareDocumentPosition(underAssessment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const caption = within(exposure).getByText('Not yet released, so not counted above.');
+    expect(caption).toHaveClass('text-xs', 'text-foreground-secondary');
+    expect(underAssessment.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(underAssessment.closest('[data-slot="analyst-dashboard-under-assessment"]')).toHaveClass('border-t', 'border-border');
+  });
+
+  it('shows the cleared released state with the under-assessment row beneath when no released open Risk exists, even at zero', () => {
+    const none = { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 };
+    const unreleasedOnly: AnalystDashboardData = {
+      ...dashboard,
+      units: { ...readyUnits, riskExposure: { status: 'ready', data: { released: none, releasedAccepted: none, underAssessment: { ...none, High: 2, total: 2 } } } },
+    };
+    const { unmount } = render(<AnalystDashboard state={{ kind: 'ready', dashboard: unreleasedOnly }} />);
+
+    let exposure = region('Risk exposure');
+    expect(within(exposure).getByRole('heading', { level: 3, name: 'No released open Risks' })).toBeInTheDocument();
+    expect(within(exposure).getByText('Risks count here once their risk assessment is released.')).toBeInTheDocument();
+    expect(within(exposure).queryByRole('list')).toBeNull();
+    expect(within(exposure).getAllByRole('link').map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Under assessment: 2 open Risks not yet released',
+    ]);
+    unmount();
+
+    render(<AnalystDashboard state={{ kind: 'ready', dashboard: emptyAnalystDashboard(14) }} />);
+    exposure = region('Risk exposure');
+    expect(within(exposure).getByRole('link', { name: 'Under assessment: 0 open Risks not yet released' })).toHaveAttribute('href', '/app/risks?state=open&stage=under-assessment');
+    expect(within(exposure).getByText('Not yet released, so not counted above.')).toBeInTheDocument();
+  });
+
+  it('never counts a Risk under assessment in a released row, and shows Not rated only above zero (D-42)', () => {
+    const exposureOnly: AnalystDashboardData = {
+      ...dashboard,
+      units: {
+        ...readyUnits,
+        riskExposure: {
+          status: 'ready',
+          data: {
+            released: { Critical: 0, High: 1, Moderate: 0, Low: 0, notRated: 0, total: 1 },
+            releasedAccepted: { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 },
+            underAssessment: { Critical: 4, High: 4, Moderate: 4, Low: 4, notRated: 4, total: 20 },
+          },
+        },
+      },
+    };
+    render(<AnalystDashboard state={{ kind: 'ready', dashboard: exposureOnly }} />);
+
+    const list = within(region('Risk exposure')).getByRole('list', { name: 'Released open Risks by residual rating' });
+    expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Critical 0', 'High 1', 'Moderate 0', 'Low 0']);
+    expect(within(list).queryByText('Not rated')).toBeNull();
+  });
+
+  it('lists released High and Critical residual Risks with one record link each, the overdue marker only where the server says so', () => {
     render(<AnalystDashboard state={{ kind: 'ready', dashboard }} />);
 
     const widget = region('High and Critical residual Risks');
@@ -308,9 +410,12 @@ describe('AnalystDashboard, populated', () => {
     expect(overdue).toHaveTextContent('Urgency: Overdue');
     expect(items[2]).toHaveTextContent('No target date');
     expect(items[2].querySelector('[data-slot="alert-urgency"]')).toBeNull();
-    // Truncated by the server: the note, then the register link.
+    expect(within(widget).getByText('Released open Risks rated High or Critical after treatment, highest first.')).toBeInTheDocument();
+    // Truncated by the server: the note, then one link per rating to its released open list (D-37, UI-SPEC §8.2).
     expect(within(widget).getByText('Showing 3 of 6')).toHaveClass('tabular-nums');
-    expect(within(widget).getByRole('link', { name: 'Open Risk Register' })).toHaveAttribute('href', '/app/risks?state=open&sort=residualRating:desc');
+    expect(within(widget).getByRole('link', { name: 'View Critical Risks' })).toHaveAttribute('href', '/app/risks?residualRating=Critical&state=open&stage=released');
+    expect(within(widget).getByRole('link', { name: 'View High Risks' })).toHaveAttribute('href', '/app/risks?residualRating=High&state=open&stage=released');
+    expect(within(widget).queryByRole('link', { name: 'Open Risk Register' })).toBeNull();
   });
 
   it('states the list role on every tile and row list, whose markers are removed, with one item per row', () => {
@@ -319,10 +424,11 @@ describe('AnalystDashboard, populated', () => {
     const queue = region('Review queue');
     const lists: Array<[HTMLElement, number]> = [
       [within(region('Needs action')).getByRole('list'), 4],
-      [within(queue).getByRole('list', { name: 'Assessment Requests' }), 3],
+      [within(queue).getByRole('list', { name: 'Assigned to you' }), 4],
+      [within(queue).getByRole('list', { name: 'Assessment Requests' }), 4],
       [within(queue).getByRole('list', { name: 'Questionnaires' }), 1],
       [within(queue).getByRole('list', { name: 'Risk Assessments' }), 2],
-      [within(region('Risk exposure')).getByRole('list', { name: 'Open contextual Risks by residual rating' }), 5],
+      [within(region('Risk exposure')).getByRole('list', { name: 'Released open Risks by residual rating' }), 5],
       [within(region('High and Critical residual Risks')).getByRole('list'), 3],
       [within(region('Treatments due')).getByRole('list'), 2],
       [within(region('Upcoming due dates')).getByRole('list'), 2],
@@ -346,7 +452,10 @@ describe('AnalystDashboard, populated', () => {
     expect(within(treatments).queryByText(/^Showing /)).toBeNull();
     expect(within(treatments).getByRole('link', { name: 'View overdue treatments' })).toHaveAttribute('href', '/app/alerts?kind=risk-treatment-overdue');
     expect(within(treatments).getByRole('link', { name: 'View treatments due soon' })).toHaveAttribute('href', '/app/alerts?kind=risk-treatment-due-soon');
-    expect(within(treatments).getByText('Risk treatments past their target date or due within 14 days, most overdue first.')).toBeInTheDocument();
+    // D-43: these figures keep both stages and say so.
+    expect(within(treatments).getByText('Risk treatments past their target date or due within 14 days, most overdue first. Includes Risks under assessment.')).toBeInTheDocument();
+    expect(within(region('Upcoming due dates')).getByText('Due, target and review dates in the next 14 days, soonest first. Includes Risks under assessment.')).toBeInTheDocument();
+    expect(within(region('Top alerts')).getByText('The most urgent alerts across your scope, including Risks under assessment.')).toBeInTheDocument();
 
     const upcoming = region('Upcoming due dates');
     expect([...upcoming.querySelectorAll('[data-slot="alert-row"]')].map((row) => row.getAttribute('data-variant'))).toEqual(['agenda', 'agenda']);
@@ -416,8 +525,7 @@ describe('AnalystDashboard, empty', () => {
     render(<AnalystDashboard state={{ kind: 'ready', dashboard: emptyAnalystDashboard(14) }} />);
 
     const cleared: Array<[string, string, string]> = [
-      ['Risk exposure', 'No open contextual Risks', 'Risks appear here when a Risk Assessment identifies them.'],
-      ['High and Critical residual Risks', 'No High or Critical residual Risks', 'Open Risks rated High or Critical after treatment appear here.'],
+      ['High and Critical residual Risks', 'No released High or Critical residual Risks', 'Released open Risks rated High or Critical after treatment appear here.'],
       ['Treatments due', 'No treatments due', 'Treatments past their target date, or due within 14 days, appear here.'],
       ['Upcoming due dates', 'No upcoming due dates', 'Due, target and review dates in the next 14 days appear here.'],
       ['Top alerts', 'No alerts', 'Nothing is overdue, due within 14 days, or flagged for attention.'],
@@ -433,10 +541,18 @@ describe('AnalystDashboard, empty', () => {
       expect(section.querySelector('[data-state-kind="empty"]')).not.toBeNull();
     }
 
+    // Risk exposure is cleared too, and keeps the under-assessment row, which renders at zero (UI-SPEC §9.2).
+    const exposure = region('Risk exposure');
+    expect(within(exposure).getByRole('heading', { level: 3, name: 'No released open Risks' })).toBeInTheDocument();
+    expect(within(exposure).getByText('Risks count here once their risk assessment is released.')).toBeInTheDocument();
+    expect(exposure.querySelector('[data-state-kind="empty"]')).not.toBeNull();
+    expect(within(exposure).getAllByRole('link').map((link) => link.getAttribute('aria-label'))).toEqual(['Under assessment: 0 open Risks not yet released']);
+    expect(within(exposure).queryByRole('button')).toBeNull();
+
     // Zero rows are data: the Review queue has no empty state.
     const queue = region('Review queue');
     expect(queue.querySelector('[data-state-kind]')).toBeNull();
-    expect(within(queue).getAllByRole('link')).toHaveLength(6);
+    expect(within(queue).getAllByRole('link')).toHaveLength(11);
 
     const tiles = within(region('Needs action')).getAllByRole('link');
     expect(tiles).toHaveLength(4);
@@ -459,7 +575,7 @@ describe('AnalystDashboard, partial failure', () => {
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
     // Every widget still renders.
     expect(screen.getAllByRole('alert')).toHaveLength(1);
-    expect(within(region('Review queue')).getAllByRole('link')).toHaveLength(6);
+    expect(within(region('Review queue')).getAllByRole('link')).toHaveLength(11);
   });
 
   it.each([
@@ -519,16 +635,19 @@ describe('AnalystDashboard, page states', () => {
     expect(screen.queryByRole('region')).toBeNull();
   });
 
-  it('loads as a labelled skeleton of four tiles and seven widgets in the final layout', () => {
+  it('loads as a labelled skeleton of four tiles and eight widgets in the final layout', () => {
     render(<AnalystDashboardSkeleton />);
 
     const status = screen.getByRole('status', { name: 'Loading Home' });
     expect(within(status).getByText('Loading Home')).toHaveClass('sr-only');
     expect(status.querySelectorAll('[data-slot="kpi-tile-skeleton"]')).toHaveLength(4);
     const widgets = status.querySelectorAll('[data-slot="dashboard-widget-skeleton"]');
-    expect(widgets).toHaveLength(7);
-    // The skeleton keeps the D-18 order's spans: only the last, Recent activity, spans both columns from lg.
+    expect(widgets).toHaveLength(8);
+    // The skeleton keeps the D-18 order's spans: Recent activity spans both columns from lg, and Your own
+    // requests, the eighth, sits in the left column beneath it (UI-SPEC §5.3, UI-D21).
     expect(widgets[6]).toHaveClass('lg:col-span-2');
+    expect(widgets[7]).toHaveClass('lg:col-start-1');
+    expect(widgets[7]).not.toHaveClass('lg:col-span-2');
     for (const widget of Array.from(widgets).slice(0, 6)) expect(widget).not.toHaveClass('lg:col-span-2');
     for (const widget of widgets) expect(widget.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(6);
     expect(status.querySelector('[data-slot="kpi-tile-strip"]')).toHaveClass('grid-cols-2', 'xl:grid-cols-4');
@@ -545,6 +664,7 @@ describe('Analyst Home content', () => {
 
     expect(calls).toEqual(['capability:assessment:review']);
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
+    expect(mocks.getMyRequestStatusSummary).not.toHaveBeenCalled();
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the review summary');
@@ -566,12 +686,58 @@ describe('Analyst Home content', () => {
   it('gates, reads, then resolves the fixture and the partial selector, in that order', async () => {
     render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
 
-    expect(calls[0]).toBe('capability:assessment:review');
-    expect(calls[1]).toBe('dashboard');
-    expect(calls.slice(2).sort()).toEqual(['fixture', 'partial']);
+    expect(calls).toEqual([
+      'capability:assessment:review',
+      'dashboard',
+      'fixture',
+      'partial',
+      'capability:assessment-request:create',
+    ]);
     expect(mocks.getAnalystDashboard).toHaveBeenCalledTimes(1);
     expect(document.querySelector('[data-ui-state]')).toBeNull();
     expect(within(region('Needs action')).getAllByRole('link')).toHaveLength(4);
+    expect(within(region('Your own requests')).queryByRole('link', { name: 'New request' })).not.toBeInTheDocument();
+  });
+
+  it('offers New request in Your own requests when the resolved analyst session grants creation', async () => {
+    mocks.granted.mockResolvedValue(new Set(['assessment:review', 'risk:manage', 'assessment-request:create']));
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
+    expect(within(region('Your own requests')).getByRole('link', { name: 'New request' })).toHaveAttribute('href', '/app/requests/new');
+  });
+
+  it('ends with Your own requests, read from the status summary beside the review summary, in the left column from lg', async () => {
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
+
+    expect(mocks.getMyRequestStatusSummary).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Needs action', ...widgetHeadings, 'Your own requests']);
+    const own = region('Your own requests');
+    expect(own.closest('[data-slot="analyst-dashboard-widgets"]')).not.toBeNull();
+    expect(own.closest('[data-slot="card"]')).toHaveClass('lg:col-start-1');
+    expect(own.closest('[data-slot="card"]')).not.toHaveClass('lg:col-span-2');
+    expect(within(own).getByRole('link', { name: 'Needs your action: 1 request' })).toHaveAttribute('href', '/app/requests?holder=requestor');
+    expect(within(own).getByRole('link', { name: 'With the Security Analyst: 2 requests' })).toHaveAttribute('href', '/app/requests?holder=analyst');
+  });
+
+  it('fails Your own requests on its own when the status summary fails, and keeps the review summary', async () => {
+    mocks.getMyRequestStatusSummary.mockResolvedValue({ data: null, error: { message: 'The CSRM service is unavailable. Please try again later.', status: 503 } });
+
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({}) }));
+
+    expect(within(region('Your own requests')).getByRole('alert')).toHaveTextContent('We couldn’t load your own requests');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(within(region('Review queue')).getAllByRole('link')).toHaveLength(11);
+  });
+
+  it('shows zero own requests under the empty fixture, never the counts the read returned', async () => {
+    mocks.resolveE2eUiState.mockReturnValue('empty');
+
+    render(await AnalystHomeContent({ searchParams: Promise.resolve({ __e2eState: 'empty' }) }));
+
+    const own = region('Your own requests');
+    expect(within(own).getAllByRole('link').map((link) => link.getAttribute('aria-label')).filter(Boolean)).toEqual([
+      'Needs your action: 0 requests',
+      'With the Security Analyst: 0 requests',
+    ]);
   });
 
   it('renders the permission state, outside any fixture, when Strapi refuses a read', async () => {
@@ -651,8 +817,9 @@ describe('Analyst Home content', () => {
     expect(within(top).getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     expect(within(top).queryByRole('link')).toBeNull();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
-    expect(within(region('Review queue')).getAllByRole('link')).toHaveLength(6);
-    expect(within(region('Risk exposure')).getAllByRole('link')).toHaveLength(4);
+    expect(within(region('Review queue')).getAllByRole('link')).toHaveLength(11);
+    // Five released rows, one accepted link and the under-assessment row.
+    expect(within(region('Risk exposure')).getAllByRole('link')).toHaveLength(7);
   });
 
   it('leaves Top alerts alone when the partial selector does not resolve', async () => {
@@ -671,7 +838,6 @@ describe('Analyst Home route files', () => {
     expect(page).toContain("can('assessment:review'");
     expect(page).toContain('<Suspense');
     expect(page).not.toContain("'use client'");
-    expect(page).not.toMatch(/\bfetch\s*\(/);
     expect(page.indexOf("can('assessment:review'")).toBeLessThan(page.indexOf('<Suspense'));
     // The page itself reads nothing: each Home's content makes its own authorised reads.
     expect(page).not.toContain('getAnalystDashboard(');
@@ -684,6 +850,9 @@ describe('Analyst Home route files', () => {
     expect(content.indexOf("can('assessment:review'")).toBeLessThan(content.indexOf('getAnalystDashboard('));
     expect(content.indexOf('getAnalystDashboard(')).toBeLessThan(content.indexOf('resolveE2eUiState('));
     expect(content.indexOf('getAnalystDashboard(')).toBeLessThan(content.indexOf('resolveE2eAnalystDashboardPartial('));
+    // The analyst's own requests are read after the gate and before any fixture, like the review summary (D-18 item 7).
+    expect(content.indexOf("can('assessment:review'")).toBeLessThan(content.indexOf('getMyRequestStatusSummary('));
+    expect(content.indexOf('getMyRequestStatusSummary(')).toBeLessThan(content.indexOf('resolveE2eUiState('));
   });
 
   it('renders the Home header over the review summary it streams, with no header action', async () => {

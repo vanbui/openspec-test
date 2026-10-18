@@ -1,10 +1,12 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, ClipboardPenLine, Plus, RotateCcw } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, ClipboardPenLine, Lock, PenLine, Plus, RotateCcw, UserRoundPen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
 import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
+import { StatusBadge } from '@/components/csrm/status-badge';
+import { questionOriginIcon, questionOriginMarker, releaseDescriptionFor } from '@/features/ai-assistance/ai-assistance-domain';
 import { nativeSelectClassName } from '@/components/csrm/native-select';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,6 +17,9 @@ import {
   addQuestionnaireQuestionAction, deleteQuestionnaireQuestionAction, editQuestionnaireQuestionAction,
   releaseQuestionnaireAction, returnQuestionnaireToAnalystReviewAction,
 } from './questionnaire-actions';
+import { AnsweredQuestionNote } from '../questionnaire-ai/answered-question-note';
+import { releaseGateLine } from '../questionnaire-ai/questionnaire-ai-domain';
+import { RecordLink } from '@/components/csrm/record-link';
 import { orderQuestionnaire } from './questionnaire-domain';
 import { placeInNewSection, placeInSection, sectionChoices, type QuestionPlacement, type SectionChoice } from './questionnaire-placement';
 import type { QuestionnaireDefinition, QuestionnaireQuestion } from './questionnaire-schema';
@@ -33,9 +38,9 @@ type DraftAnswerType = (typeof answerTypes)[number];
  * metadata is sent unchanged, or a new section with a title. `currentSectionKey` is the edited question's own
  * section, so an edit sends a placement only when the section changes. No section can be renamed.
  */
-const NEW_SECTION = '__new-section__';
-type DraftQuestion = { questionText: string; answerType: DraftAnswerType; required: boolean; choices: string; sectionChoice: string; newSectionTitle: string; currentSectionKey?: string };
-type FieldErrors = Partial<Record<'questionText' | 'choices' | 'newSectionTitle', string>>;
+export const NEW_SECTION = '__new-section__';
+export type DraftQuestion = { questionText: string; helpText: string; initialHelpText?: string; answerType: DraftAnswerType; required: boolean; choices: string; sectionChoice: string; newSectionTitle: string; currentSectionKey?: string };
+type FieldErrors = Partial<Record<'questionText' | 'helpText' | 'choices' | 'newSectionTitle', string>>;
 /** A refusal shown in the form's error line; `reload` offers Reload questions (UI-SPEC §1.2, §10.2 G). */
 type FormRefusal = { message: string; reload: boolean };
 /** Where a form was opened: the editor-level add, a section's add, or a question's Edit (D-04). */
@@ -58,7 +63,7 @@ const EDITOR_ADD = 'editor-add';
 const sectionAddControl = (sectionKey: string) => `section-add:${sectionKey}`;
 const editControl = (questionId: string) => `edit:${questionId}`;
 
-function isChoiceType(answerType: DraftAnswerType): boolean {
+export function isChoiceType(answerType: DraftAnswerType): boolean {
   return answerType === 'Single select' || answerType === 'Multi select';
 }
 
@@ -78,7 +83,7 @@ function questionChoices(question: QuestionnaireQuestion): string | null {
 }
 
 /** One choice per line, so the label is the analyst's words and the value is derived. */
-function parseChoices(value: string): Array<{ value: string; label: string }> {
+export function parseChoices(value: string): Array<{ value: string; label: string }> {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((label) => ({
     value: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || label,
     label,
@@ -89,18 +94,21 @@ function parseChoices(value: string): Array<{ value: string; label: string }> {
 function validateDraft(draft: DraftQuestion): FieldErrors {
   const errors: FieldErrors = {};
   if (!draft.questionText.trim()) errors.questionText = 'Enter the question text.';
+  if (draft.helpText.trim().length > 2_000) errors.helpText = 'Keep the help text to 2,000 characters or fewer.';
   if (isChoiceType(draft.answerType) && parseChoices(draft.choices).length === 0) errors.choices = 'Add at least one choice, one per line.';
   if (draft.sectionChoice === NEW_SECTION && !draft.newSectionTitle.trim()) errors.newSectionTitle = 'Enter a title for the new section.';
   return errors;
 }
 
 function blankDraft(sectionChoice: string): DraftQuestion {
-  return { questionText: '', answerType: 'Text', required: false, choices: '', sectionChoice, newSectionTitle: '' };
+  return { questionText: '', helpText: '', answerType: 'Text', required: false, choices: '', sectionChoice, newSectionTitle: '' };
 }
 
 function draftOf(question: QuestionnaireQuestion): DraftQuestion {
   return {
     questionText: question.questionText,
+    helpText: question.helpText ?? '',
+    initialHelpText: question.helpText ?? '',
     answerType: question.answerType === 'File upload' ? 'Text' : question.answerType,
     required: question.required,
     choices: (question.choices ?? []).map((choice) => choice.label).join('\n'),
@@ -110,12 +118,40 @@ function draftOf(question: QuestionnaireQuestion): DraftQuestion {
   };
 }
 
+/*
+ * Phase 15 UI-D10 (15-UI-SPEC §2.4, §5.2): Phase 10's one-open-form rule across the question editor and the AI proposals
+ * panel. The review wraps both in one scope; the editor reports its open form and the panel its Edit, then confirm form,
+ * and each disables what would open a second one. Outside a scope nothing is open and reports go nowhere.
+ */
+export type OpenQuestionForm = {
+  editorFormOpen: boolean;
+  panelFormOpen: boolean;
+  setEditorFormOpen: (open: boolean) => void;
+  setPanelFormOpen: (open: boolean) => void;
+};
+
+const noScope: OpenQuestionForm = { editorFormOpen: false, panelFormOpen: false, setEditorFormOpen: () => undefined, setPanelFormOpen: () => undefined };
+const QuestionFormContext = createContext<OpenQuestionForm>(noScope);
+
+export function QuestionFormScope({ children }: { children: ReactNode }) {
+  const [editorFormOpen, setEditorFormOpen] = useState(false);
+  const [panelFormOpen, setPanelFormOpen] = useState(false);
+  const value = useMemo(() => ({ editorFormOpen, panelFormOpen, setEditorFormOpen, setPanelFormOpen }), [editorFormOpen, panelFormOpen]);
+  return <QuestionFormContext.Provider value={value}>{children}</QuestionFormContext.Provider>;
+}
+
+export function useOpenQuestionForm(): OpenQuestionForm {
+  return useContext(QuestionFormContext);
+}
+
 /** A question's text and captions, as the editor rows show them. A focusable row takes focus after a save. */
-function QuestionSummary({ question, focusable = false }: { question: QuestionnaireQuestion; focusable?: boolean }) {
+function QuestionSummary({ question, focusable = false, showOrigin = false }: { question: QuestionnaireQuestion; focusable?: boolean; showOrigin?: boolean }) {
   const choices = questionChoices(question);
+  const origin = showOrigin ? questionOriginMarker(question.aiOrigin) : null;
   return <div className="min-w-0 space-y-1" {...(focusable ? { 'data-question-row': questionId(question), tabIndex: -1 } : {})}>
     <p className="text-sm font-medium text-foreground [overflow-wrap:anywhere]">{question.questionText}</p>
-    <p className="text-xs text-foreground-secondary">{questionCaption(question)}</p>
+    <p className="flex flex-wrap items-center gap-2 text-xs text-foreground-secondary"><span className="text-xs text-foreground-secondary">{questionCaption(question)}</span>{origin?.kind === 'badge' ? <StatusBadge family="aiReview" value="proposed" /> : origin ? <span className="inline-flex items-center gap-1">{questionOriginIcon(origin.label) === 'Check' ? <Check aria-hidden="true" className="size-3" /> : questionOriginIcon(origin.label) === 'PenLine' ? <PenLine aria-hidden="true" className="size-3" /> : <UserRoundPen aria-hidden="true" className="size-3" />}{origin.label}</span> : null}{showOrigin && question.answered === true ? <AnsweredQuestionNote /> : null}</p>
+    {question.helpText ? <p className="whitespace-pre-wrap text-xs text-foreground-secondary [overflow-wrap:anywhere]">{`Help text: ${question.helpText}`}</p> : null}
     {choices ? <p className="text-xs text-foreground-secondary [overflow-wrap:anywhere]">{choices}</p> : null}
   </div>;
 }
@@ -139,12 +175,24 @@ export function ReleasedQuestionList({ definition }: { definition: Questionnaire
   </div>;
 }
 
-export function QuestionnaireGovernance({ questionnaire, definition, placements }: { questionnaire: QuestionnaireSummary; definition: QuestionnaireDefinition; placements: readonly QuestionPlacement[] }) {
+export function QuestionnaireGovernance({ questionnaire, definition, placements, releaseGate, rowExtras }: {
+  questionnaire: QuestionnaireSummary;
+  definition: QuestionnaireDefinition;
+  placements: readonly QuestionPlacement[];
+  /** Phase 15 (15-UI-SPEC §4.7, §6, §7.1): a row's AI parts after Edit and Delete, supplied by the review. */
+  rowExtras?: (question: QuestionnaireQuestion) => ReactNode;
+  /**
+   * Phase 15 (15-UI-SPEC §8.1; D-08, UI-D19): the open AI proposals and whether a proposal job is active, from the read;
+   * `openCount` is null when the viewer is served no count (a requesting analyst, D-32).
+   */
+  releaseGate?: { openCount: number | null; activeJob: boolean };
+}) {
   const router = useRouter();
   const sectionIdPrefix = useId();
   const containerRef = useRef<HTMLElement>(null);
   const pendingFocus = useRef<FocusTarget | null>(null);
   const savingRef = useRef(false);
+  const returnedToReview = useRef(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [cleared, setCleared] = useState<readonly { questionKey: string; explanation: string }[]>([]);
@@ -153,6 +201,15 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
   const [refusal, setRefusal] = useState<FormRefusal | null>(null);
   const [saving, setSaving] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  /* §8.1: a requesting analyst learns of open proposals only when a release is refused for them. */
+  const [proposalsRefusedRelease, setProposalsRefusedRelease] = useState(false);
+  /* A refreshed server seed permits a new attempt without disclosing restricted proposal counts. */
+  useEffect(() => { setProposalsRefusedRelease(false); }, [questionnaire]);
+  const gate = releaseGate
+    ? releaseGate.openCount === null
+      ? (proposalsRefusedRelease ? releaseGateLine({ openCount: 0, activeJob: false, countServed: false }) : null)
+      : releaseGateLine({ openCount: releaseGate.openCount, activeJob: releaseGate.activeJob, countServed: true })
+    : null;
   const inAnalystReview = questionnaire.release === null || questionnaire.release === undefined;
   // A released questionnaire returns to analyst review only before an assessment exists (D-22, UI-SPEC §2.3).
   const returnable = !inAnalystReview && canReturnToAnalystReview(questionnaire);
@@ -164,7 +221,15 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
   const sections = sectionChoices(placements);
   // An edited question the reloaded questions no longer hold has no row left to edit in.
   const activeForm = openForm?.kind === 'edit' && !definition.some((question) => questionId(question) === openForm.questionId) ? null : openForm;
-  const formOpen = activeForm !== null;
+  const ownFormOpen = activeForm !== null;
+  const scope = useOpenQuestionForm();
+  const { setEditorFormOpen } = scope;
+  useEffect(() => {
+    setEditorFormOpen(ownFormOpen);
+    return () => setEditorFormOpen(false);
+  }, [ownFormOpen, setEditorFormOpen]);
+  /* UI-D10: an Edit, then confirm form open in the AI proposals panel blocks a second form here too. */
+  const formOpen = ownFormOpen || scope.panelFormOpen;
 
   function control(name: string): HTMLElement | null {
     return [...(containerRef.current?.querySelectorAll<HTMLElement>('[data-governance-control]') ?? [])].find((element) => element.dataset.governanceControl === name) ?? null;
@@ -230,8 +295,18 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
   }
 
   // Release and return show a refusal only inside their own dialog (D-06), and only for the latest attempt (WR-308).
-  async function release() { setEditorError(null); const result = await releaseQuestionnaireAction({ documentId: questionnaire.documentId }); if (!result.ok) { setEditorError(result.formError); throw new Error('Release failed'); } router.refresh(); }
-  async function returnToReview(reason?: string) { setEditorError(null); const result = await returnQuestionnaireToAnalystReviewAction({ documentId: questionnaire.documentId, reason }); if (!result.ok) { setEditorError(result.formError); throw new Error('Return failed'); } router.refresh(); }
+  async function release() { setEditorError(null); const result = await releaseQuestionnaireAction({ documentId: questionnaire.documentId }); if (!result.ok) { setEditorError(result.formError); if (result.reason === 'AI_PROPOSALS_OPEN') pendingGateLine.current = true; throw new Error('Release failed'); } router.refresh(); }
+  /* The countless line waits until the dialog that showed the refusal closes. */
+  const pendingGateLine = useRef(false);
+  function dismissRelease() { setEditorError(null); if (pendingGateLine.current) { pendingGateLine.current = false; setProposalsRefusedRelease(true); } }
+  async function returnToReview(reason?: string) { setEditorError(null); const result = await returnQuestionnaireToAnalystReviewAction({ documentId: questionnaire.documentId, reason }); if (!result.ok) { setEditorError(result.formError); throw new Error('Return failed'); } returnedToReview.current = true; router.refresh(); }
+  function returnFocus(event: Event) {
+    if (!returnedToReview.current) return;
+    returnedToReview.current = false;
+    event.preventDefault();
+    const target = document.querySelector<HTMLElement>('[data-ai-proposals-status]') ?? containerRef.current?.querySelector<HTMLElement>('h2');
+    target?.focus();
+  }
   async function remove(question: QuestionnaireQuestion, siblings: readonly QuestionnaireQuestion[]) {
     const id = questionId(question);
     const index = siblings.findIndex((sibling) => questionId(sibling) === id);
@@ -252,7 +327,7 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
     const keepsSection = editing !== null && draft.sectionChoice === draft.currentSectionKey;
     const placement = keepsSection ? null : draft.sectionChoice === NEW_SECTION ? placeInNewSection(placements, draft.newSectionTitle) : placeInSection(placements, draft.sectionChoice);
     if (!keepsSection && !placement) { setRefusal({ message: PLACEMENT_CONFLICT, reload: true }); return; }
-    const input = { questionText: draft.questionText.trim(), answerType: draft.answerType, required: draft.required, ...(placement ? { section: placement.section, order: placement.order } : {}), ...(choices ? { choices } : {}) };
+    const input = { questionText: draft.questionText.trim(), ...(draft.helpText.trim() !== (draft.initialHelpText ?? '') ? { helpText: draft.helpText.trim() || null } : {}), answerType: draft.answerType, required: draft.required, ...(placement ? { section: placement.section, order: placement.order } : {}), ...(choices ? { choices } : {}) };
     savingRef.current = true;
     setSaving(true);
     setRefusal(null);
@@ -290,12 +365,14 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
   }
 
   return <section aria-label="Questionnaire governance" className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4" ref={containerRef}>
-    <div className="flex items-start gap-3"><ClipboardPenLine aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" /><div><h2 className="text-heading-sm text-foreground">{inAnalystReview ? 'Analyst review' : 'Released to Requestor'}</h2><p className="text-sm text-muted-foreground">{panelDescription}</p></div></div>
+    <div className="flex items-start gap-3"><ClipboardPenLine aria-hidden="true" className="mt-0.5 size-5 text-muted-foreground" /><div><h2 className="text-heading-sm text-foreground focus-visible:outline-none" tabIndex={-1}>{inAnalystReview ? 'Analyst review' : 'Released to Requestor'}</h2><p className="text-sm text-muted-foreground">{panelDescription}</p></div></div>
     {cleared.length ? <div aria-live="polite" className="rounded-lg border border-border p-3"><p className="font-medium">Answers cleared by this revision</p><ul className="mt-2 list-disc pl-5 text-sm">{cleared.map((answer) => <li key={`${answer.questionKey}-${answer.explanation}`}><span className="font-medium">{questionTextFor(answer.questionKey)}</span>: {answer.explanation}</li>)}</ul><Button className="mt-2" data-print="hidden" onClick={() => setCleared([])} size="sm" type="button" variant="outline">Dismiss notice</Button></div> : null}
     {inAnalystReview ? <>
       <div className="grid justify-items-start gap-2">
-        <ConfirmDialog confirmLabel="Release questionnaire" confirmVariant="default" description="The Requestor can view this questionnaire after release." errorMessage={editorError} onConfirm={release} onDismiss={() => setEditorError(null)} pendingLabel="Releasing questionnaire…" title="Release this questionnaire?" trigger={<Button data-print="hidden" disabled={formOpen} type="button"><CheckCircle2 aria-hidden="true" />Release questionnaire</Button>} />
-        {formOpen ? <p className="text-xs text-foreground-secondary">Save or discard the open question before you release the questionnaire.</p> : null}
+        {gate
+          ? <p className="flex flex-wrap items-start gap-x-1.5 gap-y-1 text-sm text-foreground-secondary"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{gate.text}</span>{gate.link ? <RecordLink className="text-sm" href={gate.link.href}>{gate.link.label}</RecordLink> : null}</p>
+          : <ConfirmDialog confirmLabel="Release questionnaire" confirmVariant="default" description={releaseDescriptionFor(definition.filter((question) => question.aiOrigin === 'generated').length)} errorMessage={editorError} onConfirm={release} onDismiss={dismissRelease} pendingLabel="Releasing questionnaire…" title="Release this questionnaire?" trigger={<Button data-print="hidden" disabled={formOpen} type="button"><CheckCircle2 aria-hidden="true" />Release questionnaire</Button>} />}
+        {formOpen && !gate ? <p className="text-xs text-foreground-secondary">Save or discard the open question before you release the questionnaire.</p> : null}
       </div>
       <div className="grid gap-3">
         <div className="flex items-center justify-between gap-2"><h3 className="font-medium">Question editor</h3><Button className="max-md:min-h-11" data-governance-control={EDITOR_ADD} data-print="hidden" disabled={formOpen} onClick={() => open({ kind: 'editor' })} size="sm" type="button"><Plus aria-hidden="true" />Add question</Button></div>
@@ -316,12 +393,13 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
                 if (activeForm?.kind === 'edit' && activeForm.questionId === id) return <li key={id}>{questionForm(5, 'Edit question', draftOf(question))}</li>;
                 const isLastActive = definition.length <= 1;
                 return <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3" key={id}>
-                  <QuestionSummary focusable question={question} />
-                  <div className="flex gap-2" data-print="hidden">
+                  <QuestionSummary focusable question={question} showOrigin={inAnalystReview} />
+                  <div className="flex flex-wrap items-center gap-2" data-print="hidden">
                     <Button data-governance-control={editControl(id)} disabled={formOpen} onClick={() => open({ kind: 'edit', questionId: id })} size="sm" type="button" variant="outline">Edit{' '}<span className="sr-only">question: {question.questionText}</span></Button>
                     {isLastActive
                       ? <Button disabled size="sm" title="A questionnaire must retain at least one active question." type="button" variant="outline">Delete{' '}<span className="sr-only">question: {question.questionText}</span></Button>
                       : <ConfirmDialog confirmLabel="Delete question" confirmVariant="destructive" description="The question and its answer are retained in the revision history." errorMessage={deleteError} onConfirm={() => remove(question, section.questions)} onDismiss={() => setDeleteError(null)} pendingLabel="Deleting question…" title="Delete this question?" trigger={<Button disabled={formOpen} size="sm" type="button" variant="outline">Delete{' '}<span className="sr-only">question: {question.questionText}</span></Button>} />}
+                    {rowExtras?.(question)}
                   </div>
                 </li>;
               })}
@@ -331,12 +409,18 @@ export function QuestionnaireGovernance({ questionnaire, definition, placements 
           </div>;
         })}
       </div>
-    </> : returnable ? <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={editorError} onConfirm={returnToReview} onDismiss={() => setEditorError(null)} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} /> : null}
+    </> : returnable ? <ConfirmDialog confirmLabel="Return to analyst review" confirmVariant="default" description="Editing requires returning this questionnaire to review first." errorMessage={editorError} onCloseAutoFocus={returnFocus} onConfirm={returnToReview} onDismiss={() => setEditorError(null)} pendingLabel="Returning to analyst review…" reasonRequired title="Return questionnaire to analyst review?" trigger={<Button data-print="hidden" type="button"><RotateCcw aria-hidden="true" />Return to analyst review</Button>} /> : null}
     <p aria-live="polite" className="sr-only">{announcement}</p>
   </section>;
 }
 
 type QuestionFormProps = {
+  /** Phase 15 (Edit, then confirm): the submit's and discard's words, whether the section shows, and each change. */
+  submitLabel?: string;
+  pendingLabel?: string;
+  discardLabel?: string;
+  showSection?: boolean;
+  onDraftChange?: (draft: DraftQuestion) => void;
   headingLevel: 4 | 5;
   initial: DraftQuestion;
   onDiscard: () => void;
@@ -354,11 +438,13 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 /** The in-place question form (X-5): a form region named by its title, focused in Question text when it opens (D-04). */
-function QuestionForm({ headingLevel, initial, onDiscard, onReload, onSave, refusal, saving, sections, title }: QuestionFormProps) {
+export function QuestionForm({ discardLabel = 'Discard changes', headingLevel, initial, onDiscard, onDraftChange, onReload, onSave, pendingLabel = 'Saving question…', refusal, saving, sections, showSection = true, submitLabel = 'Save question', title }: QuestionFormProps) {
   const id = useId();
-  const [draft, setDraft] = useState(initial);
+  const [draft, setDraftState] = useState(initial);
+  const setDraft = (next: DraftQuestion) => { setDraftState(next); onDraftChange?.(next); };
   const [errors, setErrors] = useState<FieldErrors>({});
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const helpRef = useRef<HTMLTextAreaElement>(null);
   const choicesRef = useRef<HTMLTextAreaElement>(null);
   const newSectionRef = useRef<HTMLInputElement>(null);
   useEffect(() => { textRef.current?.focus(); }, []);
@@ -369,6 +455,7 @@ function QuestionForm({ headingLevel, initial, onDiscard, onReload, onSave, refu
     section: `${id}-section`, sectionHint: `${id}-section-hint`,
     newSection: `${id}-new-section`, newSectionHint: `${id}-new-section-hint`, newSectionError: `${id}-new-section-error`,
     required: `${id}-required`,
+    help: `${id}-help`, helpHint: `${id}-help-hint`, helpError: `${id}-help-error`,
   };
   const describedBy = (...values: Array<string | false | undefined>) => values.filter(Boolean).join(' ') || undefined;
 
@@ -378,7 +465,7 @@ function QuestionForm({ headingLevel, initial, onDiscard, onReload, onSave, refu
     const next = validateDraft(draft);
     setErrors(next);
     // Save question is never disabled for missing input: the errors say what to fix, first one focused.
-    const firstInvalid: RefObject<HTMLTextAreaElement | HTMLInputElement | null> | null = next.questionText ? textRef : next.choices ? choicesRef : next.newSectionTitle ? newSectionRef : null;
+    const firstInvalid: RefObject<HTMLTextAreaElement | HTMLInputElement | null> | null = next.questionText ? textRef : next.helpText ? helpRef : next.choices ? choicesRef : next.newSectionTitle ? newSectionRef : null;
     if (firstInvalid) {
       firstInvalid.current?.focus();
       return;
@@ -395,18 +482,19 @@ function QuestionForm({ headingLevel, initial, onDiscard, onReload, onSave, refu
     <div className="grid w-full max-w-[640px] gap-4">
       <Heading className="text-sm font-medium text-foreground" id={ids.title}>{title}</Heading>
       <div className="grid gap-2"><Label htmlFor={ids.text}>Question text</Label><Textarea aria-describedby={describedBy(errors.questionText && ids.textError)} aria-invalid={errors.questionText ? true : undefined} id={ids.text} onChange={(event) => setDraft({ ...draft, questionText: event.target.value })} ref={textRef} value={draft.questionText} /><FieldError id={ids.textError} message={errors.questionText} /></div>
+      <div className="grid gap-2"><Label htmlFor={ids.help}>Help text</Label><Textarea aria-describedby={describedBy(ids.helpHint, errors.helpText && ids.helpError)} aria-invalid={errors.helpText ? true : undefined} id={ids.help} onChange={(event) => setDraft({ ...draft, helpText: event.target.value })} ref={helpRef} value={draft.helpText} /><p className="text-sm text-muted-foreground" id={ids.helpHint}>Shown to the Requestor under the question. Keep it to one or two sentences.</p><FieldError id={ids.helpError} message={errors.helpText} /></div>
       <div className="grid gap-2"><Label htmlFor={ids.type}>Answer type</Label><select className={`${nativeSelectClassName} block w-full`} id={ids.type} onChange={(event) => setDraft({ ...draft, answerType: event.target.value as DraftAnswerType })} value={draft.answerType}>{answerTypes.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
       {isChoiceType(draft.answerType) ? <div className="grid gap-2"><Label htmlFor={ids.choices}>Choices</Label><Textarea aria-describedby={describedBy(ids.choicesHint, errors.choices && ids.choicesError)} aria-invalid={errors.choices ? true : undefined} id={ids.choices} onChange={(event) => setDraft({ ...draft, choices: event.target.value })} ref={choicesRef} value={draft.choices} /><p className="text-sm text-muted-foreground" id={ids.choicesHint}>One choice per line.</p><FieldError id={ids.choicesError} message={errors.choices} /></div> : null}
-      <div className="grid gap-2"><Label htmlFor={ids.section}>Section</Label><select aria-describedby={ids.sectionHint} className={`${nativeSelectClassName} block w-full`} id={ids.section} onChange={(event) => setDraft({ ...draft, sectionChoice: event.target.value })} value={draft.sectionChoice}>{sections.map((section) => <option key={section.key} value={section.key}>{section.label}</option>)}<option value={NEW_SECTION}>New section</option></select><p className="text-sm text-muted-foreground" id={ids.sectionHint}>A question you add or move goes at the end of its section.</p></div>
-      {draft.sectionChoice === NEW_SECTION ? <div className="grid gap-2"><Label htmlFor={ids.newSection}>New section title</Label><Input aria-describedby={describedBy(ids.newSectionHint, errors.newSectionTitle && ids.newSectionError)} aria-invalid={errors.newSectionTitle ? true : undefined} id={ids.newSection} maxLength={255} onChange={(event) => setDraft({ ...draft, newSectionTitle: event.target.value })} ref={newSectionRef} value={draft.newSectionTitle} /><p className="text-sm text-muted-foreground" id={ids.newSectionHint}>Shown to the Requestor as a heading.</p><FieldError id={ids.newSectionError} message={errors.newSectionTitle} /></div> : null}
+      {showSection ? <><div className="grid gap-2"><Label htmlFor={ids.section}>Section</Label><select aria-describedby={ids.sectionHint} className={`${nativeSelectClassName} block w-full`} id={ids.section} onChange={(event) => setDraft({ ...draft, sectionChoice: event.target.value })} value={draft.sectionChoice}>{sections.map((section) => <option key={section.key} value={section.key}>{section.label}</option>)}<option value={NEW_SECTION}>New section</option></select><p className="text-sm text-muted-foreground" id={ids.sectionHint}>A question you add or move goes at the end of its section.</p></div>
+      {draft.sectionChoice === NEW_SECTION ? <div className="grid gap-2"><Label htmlFor={ids.newSection}>New section title</Label><Input aria-describedby={describedBy(ids.newSectionHint, errors.newSectionTitle && ids.newSectionError)} aria-invalid={errors.newSectionTitle ? true : undefined} id={ids.newSection} maxLength={255} onChange={(event) => setDraft({ ...draft, newSectionTitle: event.target.value })} ref={newSectionRef} value={draft.newSectionTitle} /><p className="text-sm text-muted-foreground" id={ids.newSectionHint}>Shown to the Requestor as a heading.</p><FieldError id={ids.newSectionError} message={errors.newSectionTitle} /></div> : null}</> : null}
       <div className="flex items-center gap-2"><Checkbox checked={draft.required} id={ids.required} onCheckedChange={(checked) => setDraft({ ...draft, required: checked === true })} /><Label htmlFor={ids.required}>Required</Label></div>
       {refusal ? <div className="flex flex-wrap items-start gap-2">
         <p className="flex min-w-0 flex-1 items-start gap-1.5 text-sm text-destructive" role="alert"><AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{refusal.message}</p>
         {refusal.reload ? <Button className="max-md:min-h-11" data-print="hidden" onClick={onReload} size="sm" type="button" variant="outline">Reload questions</Button> : null}
       </div> : null}
       <div className="flex flex-col gap-2 md:flex-row">
-        <Button aria-disabled={saving ? true : undefined} className="w-full max-md:min-h-11 md:w-auto" type="submit">{saving ? 'Saving question…' : 'Save question'}</Button>
-        <Button className="w-full max-md:min-h-11 md:w-auto" onClick={onDiscard} type="button" variant="outline">Discard changes</Button>
+        <Button aria-disabled={saving ? true : undefined} className="w-full max-md:min-h-11 md:w-auto" type="submit">{saving ? pendingLabel : submitLabel}</Button>
+        <Button className="w-full max-md:min-h-11 md:w-auto" onClick={onDiscard} type="button" variant="outline">{discardLabel}</Button>
       </div>
     </div>
   </form>;

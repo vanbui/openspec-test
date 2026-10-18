@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 
+import { ATTACHMENT_ACTION_BODY_LIMIT } from './src/lib/security/action-body-limit';
+
 /*
  * The static security headers of every response, static assets included (D-19, D-42; recorded in
  * docs/security/web-headers.md). The Content-Security-Policy is not here: proxy.ts issues it per
@@ -22,10 +24,17 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  /*
+   * D-25 (14-RESEARCH Settled 6): a 25 MB file reaches its Server Action whole. Both limits are raised together: the
+   * proxy clones every body it sees, and above `proxyClientMaxBodySize` (10 MB by default) the clone ends early, so the
+   * action would receive a truncated file with no error (Pitfall 1). Both are global; proxy.ts keeps the 6 MB ceiling on
+   * every page that does not add files (src/lib/security/action-body-limit.ts).
+   */
   experimental: {
     serverActions: {
-      bodySizeLimit: '6mb',
+      bodySizeLimit: ATTACHMENT_ACTION_BODY_LIMIT,
     },
+    proxyClientMaxBodySize: ATTACHMENT_ACTION_BODY_LIMIT,
   },
   /*
    * An isolated build (a Playwright run, or a spec's own spawned server) points

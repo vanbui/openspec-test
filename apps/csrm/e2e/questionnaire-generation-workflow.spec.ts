@@ -88,12 +88,24 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
 
   await page.context().clearCookies();
   await signInAs(page, 'Security Analyst');
-  await openFromNavigation(page, 'Assessment Requests', true);
+  await openFromNavigation(page, /^Requests\b/);
   await page.getByRole('link', { name: title }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   const requestUrl = page.url();
   const generate = page.getByRole('button', { name: 'Generate questionnaire' });
   await expect(generate).toBeVisible();
+  // D-29 (12-UI-SPEC §11.1): before anything is sent, the card says how the request's information is classified.
+  await expect(
+    page.getByText(/^This request’s information is classified (Public|Internal|Restricted|Critical Infrastructure Sensitive)\./),
+    'D29_AI_POLICY_CAPTION: the allowed caption names the request’s classification under Generate questionnaire',
+  ).toBeVisible();
+  /*
+   * Phase 15 E2 (15-UI-SPEC §3.1, §16; D-12): the analyst steers the generation with an optional instruction, kept in the
+   * field above Generate questionnaire.
+   */
+  const generationInstruction = page.getByLabel('Instruction for the AI (optional)');
+  await expect(generationInstruction, 'E2_INSTRUCTION_ON_GENERATE').toBeVisible();
+  await generationInstruction.fill('Cover the offshore support team and payroll data');
   await generate.focus();
   await page.keyboard.press('Enter');
   // The status renders twice by design: in the panel and in the polite live
@@ -111,35 +123,21 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
   await expect(page.getByText(/QNR-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}/).first()).toBeVisible();
   await expectNoSeriousAxeViolations(page);
 
-  /*
-   * QUES08_ADD_TO_GENERATED_SECTIONS (UAT-016, D-05): the deterministic provider opens its first section,
-   * Request context, at order 0. A question added to it, and one added to a new section, each save on the
-   * first try and appear under their sections.
-   */
-  await test.step('QUES08_ADD_TO_GENERATED_SECTIONS', async () => {
-    const governance = page.getByRole('region', { name: 'Questionnaire governance' });
-    const addedToContext = 'Who owns the service day to day?';
-    await governance.getByRole('button', { name: 'Add question', exact: true }).click();
-    await governance.getByLabel('Question text').fill(addedToContext);
-    await governance.getByLabel('Section', { exact: true }).selectOption({ label: 'Request context' });
-    await governance.getByRole('button', { name: 'Save question' }).click();
-    await expect(
-      governance.getByRole('list', { name: 'Request context' }).getByText(addedToContext, { exact: true }),
-      'QUES08_ADD_TO_GENERATED_SECTIONS: a question added to a generated section appears under it',
-    ).toBeVisible();
-
-    const addedToNewSection = 'Which offshore teams support the service?';
-    await governance.getByRole('button', { name: 'Add question', exact: true }).click();
-    await governance.getByLabel('Question text').fill(addedToNewSection);
-    await governance.getByLabel('Section', { exact: true }).selectOption({ label: 'New section' });
-    await governance.getByLabel('New section title').fill('Offshore support');
-    await governance.getByRole('button', { name: 'Save question' }).click();
-    await expect(
-      governance.getByRole('list', { name: 'Offshore support' }).getByText(addedToNewSection, { exact: true }),
-      'QUES08_ADD_TO_GENERATED_SECTIONS: a question added to a new section appears under it',
-    ).toBeVisible();
-    await expect(governance.getByRole('alert'), 'QUES08_ADD_TO_GENERATED_SECTIONS: neither save is refused').toHaveCount(0);
-  });
+  // 12-UI-SPEC §14.1 E3: the generated questionnaire says who asked for it, carries help text and offers Not sure.
+  // WR-402: on real data, the header names the analyst (the development Security Analyst is the seeded Bob Doe) and
+  // the provider and model the generation ran on.
+  const provenanceHeader = page.getByRole('region', { name: 'AI generation' });
+  await expect(provenanceHeader.getByText('Generated with AI at the request of Bob Doe', { exact: true }), 'E3_PROVENANCE_HEADER').toBeVisible();
+  await expect(provenanceHeader, 'E3_PROVENANCE_HEADER names the provider and model').toContainText('Provider: deterministic-questionnaire-generation · Model: 2');
+  // Walk D6: the provenance header keeps the page's section rhythm (direction §3.9: 24 to 32px) above the governance panel.
+  const headerGap = await page.getByRole('region', { name: 'AI generation' }).evaluate((header) =>
+    (header.nextElementSibling?.getBoundingClientRect().top ?? Number.NaN) - header.getBoundingClientRect().bottom);
+  expect.soft(headerGap, 'D6: the provenance header sits at least 24px above the governance panel').toBeGreaterThanOrEqual(24);
+  expect.soft(headerGap, 'D6: the provenance header sits at most 32px above the governance panel').toBeLessThanOrEqual(32);
+  const generatedGovernance = page.getByRole('region', { name: 'Questionnaire governance' });
+  await expect(generatedGovernance.getByText(/^Help text: /).first(), 'E3_HELP_TEXT').toBeVisible();
+  const providerRow = generatedGovernance.getByRole('listitem').filter({ hasText: 'Is an external provider involved?' });
+  await expect(providerRow.getByText(/^Choices: .*Not sure/), 'E3_NOT_SURE').toBeVisible();
 
   const browserEvents: string[] = [];
   page.on('console', (message) => {
@@ -171,10 +169,17 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
     await page.getByRole('button', { name: 'Replace questionnaire' }).click();
     const replacement = page.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
     await expect(replacement).toBeVisible();
-    // The two questions added in QUES08_ADD_TO_GENERATED_SECTIONS are the analyst changes a replacement discards.
-    await expect(replacement).toContainText('discarding the 2 changes analysts made to its questions since it was generated');
-    await expect(replacement).toContainText('Requestor answers are never replaced.');
+    /*
+     * Phase 15 E2 (15-UI-SPEC §8.3; D-09, D-12): the unchanged, unanswered questionnaire is offered for replacement, and the
+     * confirmation has one description (nothing is lost) followed by the instruction field. Phase 10's change-count
+     * descriptions are gone.
+     */
+    await expect(replacement, 'E2_REPLACE_SINGLE_DESCRIPTION').toContainText('No analyst has changed its questions and the Requestor hasn’t answered it, so nothing is lost.');
+    await expect(replacement).not.toContainText('discarding');
+    await expect(replacement.getByLabel('Instruction for the AI (optional)'), 'E2_INSTRUCTION_IN_REPLACE').toBeVisible();
     await expect(replacement.getByRole('button', { name: 'Keep this questionnaire' })).toBeVisible();
+    const dialogAxe = await new AxeBuilder({ page }).include('[role="alertdialog"]').analyze();
+    expect(dialogAxe.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical').map((violation) => violation.id), 'E2_AXE_REPLACE_DIALOG').toEqual([]);
   });
   /*
    * UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS (UAT-041, D-26; CR-401): while the card shows a queued or running
@@ -242,7 +247,7 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
    * of Generate". In the browser, UX06_NO_GENERATE_OR_REPLACE_WHILE_JOB_RUNS above proves it for a live job.
    */
   await test.step('UX06_JOB_STATUS_ON_RETURN', async () => {
-    await openFromNavigation(page, 'Assessment Requests', true);
+    await openFromNavigation(page, /^Requests\b/);
     await expect(page).toHaveURL(/\/app\/review\/requests(\?.*)?$/);
     await page.goto(requestUrl);
     await expect(page.getByRole('heading', { name: title })).toBeVisible();
@@ -263,6 +268,51 @@ test('Security Analyst generates, replaces, and reviews a contextual questionnai
       'UX06_JOB_STATUS_ON_RETURN: the hub links the questionnaire',
     ).toHaveAttribute('href', /^\/app\/review\/questionnaires\/[^/]+$/);
   });
+
+  /*
+   * Phase 15 E2 (15-UI-SPEC §8.3; D-09): once an analyst changes the replacement's questions, the hub no longer offers
+   * Replace and says why, pointing at AI proposals instead.
+   */
+  await page.getByRole('region', { name: 'Request relationships' }).getByRole('link', { name: /^QNR-/ }).click();
+  await expect(page).toHaveURL(/\/app\/review\/questionnaires\/[^/]+$/);
+  /*
+   * QUES08_ADD_TO_GENERATED_SECTIONS (UAT-016, D-05): the deterministic provider opens its first section,
+   * Request context, at order 0. A question added to it, and one added to a new section, each save on the
+   * first try and appear under their sections.
+   */
+  await test.step('QUES08_ADD_TO_GENERATED_SECTIONS', async () => {
+    const governance = page.getByRole('region', { name: 'Questionnaire governance' });
+    const addedToContext = 'Who owns the service day to day?';
+    await governance.getByRole('button', { name: 'Add question', exact: true }).click();
+    await governance.getByLabel('Question text').fill(addedToContext);
+    await governance.getByLabel('Section', { exact: true }).selectOption({ label: 'Request context' });
+    await governance.getByRole('button', { name: 'Save question' }).click();
+    await expect(
+      governance.getByRole('list', { name: 'Request context' }).getByText(addedToContext, { exact: true }),
+      'QUES08_ADD_TO_GENERATED_SECTIONS: a question added to a generated section appears under it',
+    ).toBeVisible();
+
+    const addedToNewSection = 'Which offshore teams support the service?';
+    await governance.getByRole('button', { name: 'Add question', exact: true }).click();
+    await governance.getByLabel('Question text').fill(addedToNewSection);
+    await governance.getByLabel('Section', { exact: true }).selectOption({ label: 'New section' });
+    await governance.getByLabel('New section title').fill('Offshore support');
+    await governance.getByRole('button', { name: 'Save question' }).click();
+    await expect(
+      governance.getByRole('list', { name: 'Offshore support' }).getByText(addedToNewSection, { exact: true }),
+      'QUES08_ADD_TO_GENERATED_SECTIONS: a question added to a new section appears under it',
+    ).toBeVisible();
+    await expect(governance.getByRole('alert'), 'QUES08_ADD_TO_GENERATED_SECTIONS: neither save is refused').toHaveCount(0);
+  });
+
+  await page.goto(requestUrl);
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Replace questionnaire' }), 'E2_NO_REPLACE_AFTER_ANALYST_CHANGE').toHaveCount(0);
+  const questionnaireCard = page.locator('[data-slot="card"]').filter({ has: page.getByRole('heading', { name: 'Questionnaire generation' }) });
+  await expect(questionnaireCard.getByText('Analysts have changed this questionnaire since it was generated, so replacing it would discard their work. Use AI proposals to change it instead.'), 'E2_ANALYST_CHANGE_LINE').toBeVisible();
+  await expect(questionnaireCard.getByRole('link', { name: 'Open AI proposals' }), 'E2_OPEN_AI_PROPOSALS').toHaveAttribute('href', /^\/app\/review\/questionnaires\/[^/]+#ai-proposals$/);
+  const cardAxe = await new AxeBuilder({ page }).include('[data-slot="card"]').analyze();
+  expect(cardAxe.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical').map((violation) => violation.id), 'E2_AXE_HUB_CARD').toEqual([]);
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expectNoHorizontalOverflow(page, 'QUESTIONNAIRE_GENERATION_DESKTOP_OVERFLOW');

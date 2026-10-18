@@ -10,6 +10,7 @@ import {
   REVIEW_QUEUE_BUCKETS,
   REVIEW_QUEUE_SORT_FIELDS,
   parseAnalystReviewQuery,
+  projectAnalystReviewRequest,
   selectReviewQueueBucket,
 } from "../src/api/csrm-assessment-request/services/collection-scope";
 
@@ -28,7 +29,11 @@ const queueStatuses: Record<string, readonly string[]> = {
   "requires-attention": reviewable,
   "awaiting-requestor": reviewable,
   "generation-in-progress": reviewable,
+  // Every submitted request not yet released, at any step (13-12; D-13).
+  open: reviewable,
   released: ["approved", "closed"],
+  // Every request in review scope, reviewable or released, and never a draft (D-30).
+  all: [...reviewable, "approved", "closed"],
 };
 
 const defaultSort = [
@@ -37,6 +42,10 @@ const defaultSort = [
 ];
 
 const analyst = { csrmAuthorization: { assessmentReviewCollectionScope: "all" as const } };
+
+/** The queue's viewer (13-12): Bob, a human Security Analyst, with no new notes anywhere. */
+const bob = { documentId: "bob", humanAnalyst: true, eligibleHumanAnalyst: true };
+const noUnread: ReadonlyMap<string, number> = new Map();
 
 function request(overrides: Record<string, unknown> = {}) {
   return {
@@ -49,7 +58,7 @@ function request(overrides: Record<string, unknown> = {}) {
 }
 
 test("review queue buckets select only their published lifecycle slices", () => {
-  assert.deepEqual(REVIEW_QUEUE_BUCKETS, ["requires-attention", "awaiting-requestor", "generation-in-progress", "released"]);
+  assert.deepEqual(REVIEW_QUEUE_BUCKETS, ["requires-attention", "awaiting-requestor", "generation-in-progress", "open", "released", "all"]);
   assert.equal(selectReviewQueueBucket("requires-attention", request(), () => false), true);
   assert.equal(selectReviewQueueBucket("requires-attention", request(), () => true), false);
   assert.equal(selectReviewQueueBucket("awaiting-requestor", request({ requestStatus: "draft" }), () => false), true);
@@ -57,6 +66,10 @@ test("review queue buckets select only their published lifecycle slices", () => 
   assert.equal(selectReviewQueueBucket("generation-in-progress", request(), () => true), true);
   assert.equal(selectReviewQueueBucket("released", request({ requestStatus: "approved" }), () => false), true);
   assert.equal(selectReviewQueueBucket("released", request(), () => false), false);
+  // All requests reads every lifecycle step inside its status bound, generating or not.
+  assert.equal(selectReviewQueueBucket("all", request(), () => true), true);
+  assert.equal(selectReviewQueueBucket("all", request({ requestStatus: "approved" }), () => false), true);
+  assert.equal(selectReviewQueueBucket("all", request({ questionnaire: { releasedAt: "2026-09-21T00:00:00.000Z", questions: [] } }), () => false), true);
 });
 
 /*
@@ -191,4 +204,252 @@ test("the review read is refused without the analyst review scope", () => {
   }
   assert.throws(() => parseAnalystReviewQuery("filters[queue]=released", analyst), AssessmentRequestQueryError, "NON_OBJECT_QUERY_ACCEPTED");
   assert.throws(() => parseAnalystReviewQuery({ populate: "requestor" }, analyst), AssessmentRequestQueryError, "UNKNOWN_QUERY_KEY_ACCEPTED");
+});
+
+/*
+ * D-02 item 1 and D-29: a queue row carries the facts the analyst triages by.
+ * The days since submission are counted by the server from its own UTC today,
+ * from the UTC calendar date of the submission instant, so every viewer reads
+ * the same figure and no browser clock is consulted.
+ */
+test("a queue item carries the requestor's name, type, criticality, due date and days since submission", () => {
+  const document = {
+    documentId: "request-1",
+    requestNumber: "RAR-2026-TRIAGE",
+    title: "Customer portal",
+    requestStatus: "submitted",
+    submittedDate: "2026-09-27T23:30:00.000Z",
+    assessmentType: "Project",
+    businessCriticality: "High",
+    dueDate: "2026-10-30",
+    requestor: { displayName: "Jane Requestor" },
+  };
+
+  assert.deepEqual(projectAnalystReviewRequest(document, "2026-10-01", bob, noUnread), {
+    documentId: "request-1",
+    requestNumber: "RAR-2026-TRIAGE",
+    title: "Customer portal",
+    requestStatus: "submitted",
+    submittedDate: "2026-09-27T23:30:00.000Z",
+    requestorName: "Jane Requestor",
+    assessmentType: "Project",
+    businessCriticality: "High",
+    dueDate: "2026-10-30",
+    daysSinceSubmission: 4,
+    assignee: null,
+    pickUp: "allowed",
+    unreadNotes: 0,
+  }, "QUEUE_ITEM_TRIAGE_FIELDS");
+
+  // Submitted today reads zero days; the count is never negative, even for a
+  // submission stamped after the server's today.
+  assert.equal(projectAnalystReviewRequest({ ...document, submittedDate: "2026-10-01T00:00:00.000Z" }, "2026-10-01", bob, noUnread).daysSinceSubmission, 0, "SUBMITTED_TODAY_NOT_ZERO");
+  assert.equal(projectAnalystReviewRequest({ ...document, submittedDate: "2026-10-02T01:00:00.000Z" }, "2026-10-01", bob, noUnread).daysSinceSubmission, 0, "FUTURE_SUBMISSION_NEGATIVE");
+});
+
+test("a queue item reads null for each triage fact the request does not record", () => {
+  const projected = projectAnalystReviewRequest({
+    documentId: "request-2",
+    requestNumber: "RAR-2026-BARE",
+    title: "Bare request",
+    requestStatus: "submitted",
+  }, "2026-10-01", bob, noUnread);
+
+  assert.deepEqual(projected, {
+    documentId: "request-2",
+    requestNumber: "RAR-2026-BARE",
+    title: "Bare request",
+    requestStatus: "submitted",
+    submittedDate: null,
+    requestorName: null,
+    assessmentType: null,
+    businessCriticality: null,
+    dueDate: null,
+    daysSinceSubmission: null,
+    assignee: null,
+    pickUp: "allowed",
+    unreadNotes: 0,
+  }, "QUEUE_ITEM_MISSING_FACTS_NOT_NULL");
+
+  // The requestor contributes their display name alone, never another field.
+  const withRequestor = projectAnalystReviewRequest({
+    documentId: "request-3",
+    requestNumber: "RAR-2026-WHO",
+    title: "Who asked",
+    requestStatus: "submitted",
+    requestor: { id: 7, documentId: "jane", email: "jane.doe@idambox.com", displayName: "Jane Doe" },
+  }, "2026-10-01", bob, noUnread);
+  assert.equal(withRequestor.requestorName, "Jane Doe", "REQUESTOR_NAME_NOT_PROJECTED");
+  assert.equal(JSON.stringify(withRequestor).includes("jane.doe@idambox.com"), false, "REQUESTOR_EMAIL_PROJECTED");
+  assert.equal("requestor" in withRequestor, false, "REQUESTOR_RELATION_PROJECTED");
+  assert.equal(projectAnalystReviewRequest({ ...withRequestor, requestor: { displayName: "" } }, "2026-10-01", bob, noUnread).requestorName, null, "BLANK_REQUESTOR_NAME_NOT_NULL");
+  assert.equal(projectAnalystReviewRequest({ ...withRequestor, requestor: { displayName: "x".repeat(255) } }, "2026-10-01", bob, noUnread).requestorName, "x".repeat(255), "BOUNDED_REQUESTOR_NAME_DROPPED");
+  assert.equal(projectAnalystReviewRequest({ ...withRequestor, requestor: { displayName: "x".repeat(256) } }, "2026-10-01", bob, noUnread).requestorName, null, "OVERLONG_REQUESTOR_NAME_NOT_NULL");
+});
+
+/*
+ * D-13 (13-12): each item names who holds the request (documentId and display name only), whether this viewer may
+ * pick it up (pickUpState, the assignment operation's own rule) and the viewer's new notes on it.
+ */
+test("a queue item names its assignee, whether the viewer may pick it up, and the viewer's new notes", () => {
+  const base = { documentId: "request-4", requestNumber: "RAR-2026-HELD", title: "Held request", requestStatus: "submitted" };
+  const unread = new Map([["request-4", 3]]);
+
+  const held = projectAnalystReviewRequest({
+    ...base,
+    requestor: { documentId: "jane", displayName: "Jane Doe" },
+    assignedAnalyst: { id: 9, documentId: "second", displayName: "Second Analyst", email: "second.analyst@example.test", username: "second-analyst" },
+  }, "2026-10-01", bob, unread);
+  assert.deepEqual(held.assignee, { documentId: "second", displayName: "Second Analyst" }, "ASSIGNEE_NOT_PROJECTED_AS_PERSON");
+  assert.equal(held.pickUp, "not-offered", "HELD_REQUEST_OFFERED");
+  assert.equal(held.unreadNotes, 3, "UNREAD_COUNT_NOT_READ_FROM_THE_MAP");
+  assert.equal(JSON.stringify(held).includes("example.test"), false, "ASSIGNEE_EMAIL_PROJECTED");
+  assert.equal(JSON.stringify(held).includes("second-analyst"), false, "ASSIGNEE_USERNAME_PROJECTED");
+
+  const own = projectAnalystReviewRequest({ ...base, requestor: { documentId: "bob", displayName: "Bob Doe" } }, "2026-10-01", bob, noUnread);
+  assert.equal(own.assignee, null, "UNASSIGNED_NOT_NULL");
+  assert.equal(own.pickUp, "own-request", "OWN_REQUEST_NOT_NAMED");
+  assert.equal(own.unreadNotes, 0, "MISSING_UNREAD_NOT_ZERO");
+
+  const open = projectAnalystReviewRequest({ ...base, requestor: { documentId: "jane", displayName: "Jane Doe" } }, "2026-10-01", bob, noUnread);
+  assert.equal(open.pickUp, "allowed", "UNASSIGNED_NOT_OFFERED");
+  const toAgent = projectAnalystReviewRequest({ ...base, requestor: { documentId: "jane", displayName: "Jane Doe" } }, "2026-10-01", { documentId: "agent", humanAnalyst: false, eligibleHumanAnalyst: false }, noUnread);
+  assert.equal(toAgent.pickUp, "not-offered", "NON_HUMAN_VIEWER_OFFERED");
+  // WR-101: a human analyst who also holds the Agent role is not an eligible person, so nothing is offered to them.
+  const toDualRole = projectAnalystReviewRequest({ ...base, requestor: { documentId: "jane", displayName: "Jane Doe" } }, "2026-10-01", { documentId: "dual", humanAnalyst: true, eligibleHumanAnalyst: false }, noUnread);
+  assert.equal(toDualRole.pickUp, "not-offered", "DUAL_ROLE_VIEWER_OFFERED");
+  assert.equal("requestor" in open || "assignedAnalyst" in open, false, "PERSON_RELATION_PROJECTED");
+});
+
+/*
+ * D-30: the queue search matches the request number or the title through
+ * filters[q], so a search for a request number finds the request. The term is
+ * one string of 1 to 200 characters; anything else is malformed.
+ */
+test("the review search term is one string of 1 to 200 characters", () => {
+  for (const q of ["R", "RAR-2026-5WWFVQ", "payroll 50%_off", "x".repeat(200)]) {
+    const parsed = parseAnalystReviewQuery({ filters: { q } }, analyst);
+    assert.equal(parsed.kind, "read", `SEARCH_NOT_READ_${q.length}`);
+    assert.equal(parsed.kind === "read" ? parsed.q : undefined, q, `SEARCH_TERM_NOT_CARRIED_${q.length}`);
+  }
+  for (const q of ["", "x".repeat(201), ["RAR"], { $containsi: "RAR" }, 7, null]) {
+    assert.throws(
+      () => parseAnalystReviewQuery({ filters: { q } }, analyst),
+      AssessmentRequestQueryError,
+      `MALFORMED_SEARCH_ACCEPTED_${JSON.stringify(q)?.slice(0, 20)}`,
+    );
+  }
+  // The search still meets the rest of the validation before an outside-queue answer.
+  assert.throws(
+    () => parseAnalystReviewQuery({ filters: { q: "", requestStatus: "approved" } }, analyst),
+    AssessmentRequestQueryError,
+    "OUTSIDE_QUEUE_STATUS_SKIPPED_SEARCH_VALIDATION",
+  );
+});
+
+test("the All requests queue reads every reviewable and released status and never a draft", () => {
+  assert.deepEqual(parseAnalystReviewQuery({ filters: { queue: "all" } }, analyst), {
+    kind: "read",
+    pagination: { page: 1, pageSize: 25 },
+    bucket: "all",
+    statuses: ["submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review", "approved", "closed"],
+    sort: defaultSort,
+  }, "ALL_QUEUE_BOUND_CHANGED");
+  assert.deepEqual(parseAnalystReviewQuery({ filters: { queue: "all", requestStatus: "approved", q: "RAR-2026" } }, analyst), {
+    kind: "read",
+    pagination: { page: 1, pageSize: 25 },
+    bucket: "all",
+    statuses: ["approved"],
+    q: "RAR-2026",
+    sort: defaultSort,
+  }, "ALL_QUEUE_STATUS_NOT_NARROWED");
+  assert.deepEqual(parseAnalystReviewQuery({ filters: { queue: "all", requestStatus: "draft" } }, analyst), {
+    kind: "outside-queue",
+    pagination: { page: 1, pageSize: 25 },
+    bucket: "all",
+  }, "ALL_QUEUE_READS_A_DRAFT");
+  for (const queue of ["All", "Open", "assigned-to-me", "mine", ["all"], ""]) {
+    assert.throws(
+      () => parseAnalystReviewQuery({ filters: { queue } }, analyst),
+      AssessmentRequestQueryError,
+      `UNKNOWN_QUEUE_ACCEPTED_${JSON.stringify(queue)}`,
+    );
+  }
+});
+
+/*
+ * D-13 (13-12): the open queue is every submitted request not yet released, at any step; the assignee and notes
+ * filters are orthogonal to the queue, closed enums, and read the viewer from the policy, never from the query
+ * (T-13-40, T-13-41). "Assigned to me" is assignee=me over open, not a queue (2026-10-01 confirmation).
+ */
+const analystViewer = { csrmAuthorization: { assessmentReviewCollectionScope: "all" as const, viewerId: 7, humanAnalyst: true } };
+
+test("the open queue reads every reviewable status and no released status or draft, and its oracle agrees", () => {
+  assert.deepEqual(parseAnalystReviewQuery({ filters: { queue: "open" } }, analyst), {
+    kind: "read",
+    pagination: { page: 1, pageSize: 25 },
+    bucket: "open",
+    statuses: reviewable,
+    sort: defaultSort,
+  }, "OPEN_QUEUE_BOUND_CHANGED");
+  for (const requestStatus of requestStatuses) {
+    const expected = reviewable.includes(requestStatus);
+    assert.equal(selectReviewQueueBucket("open", request({ requestStatus }), () => false), expected, `OPEN_ORACLE_${requestStatus}`);
+    // Generating or not, released to the Requestor or not: open reads every step.
+    assert.equal(selectReviewQueueBucket("open", request({ requestStatus, questionnaire: { releasedAt: "2026-09-21T00:00:00.000Z", questions: [] } }), () => true), expected, `OPEN_ORACLE_ANY_STEP_${requestStatus}`);
+  }
+});
+
+test("the assignee and notes filters are closed values that carry the policy's viewer, never one from the query", () => {
+  for (const assignee of ["me", "unassigned"] as const) {
+    assert.deepEqual(parseAnalystReviewQuery({ filters: { queue: "open", assignee } }, analystViewer), {
+      kind: "read",
+      pagination: { page: 1, pageSize: 25 },
+      bucket: "open",
+      statuses: reviewable,
+      assignee,
+      viewerId: 7,
+      sort: defaultSort,
+    }, `ASSIGNEE_FILTER_NOT_READ_${assignee}`);
+  }
+  assert.deepEqual(parseAnalystReviewQuery({ filters: { notes: "unread", assignee: "me", queue: "requires-attention" } }, analystViewer), {
+    kind: "read",
+    pagination: { page: 1, pageSize: 25 },
+    bucket: "requires-attention",
+    statuses: reviewable,
+    assignee: "me",
+    notesUnread: true,
+    viewerId: 7,
+    humanAnalyst: true,
+    sort: defaultSort,
+  }, "NOTES_FILTER_NOT_READ");
+
+  for (const filters of [
+    { assignee: "anyone" }, { assignee: "Me" }, { assignee: "" }, { assignee: ["me"] }, { assignee: { $eq: "me" } }, { assignee: 7 },
+    { assignee: "second-analyst-document-id" },
+    { notes: "read" }, { notes: "all" }, { notes: "" }, { notes: ["unread"] }, { notes: true },
+    { viewer: "7" }, { viewerId: 7 },
+  ]) {
+    assert.throws(
+      () => parseAnalystReviewQuery({ filters }, analystViewer),
+      AssessmentRequestQueryError,
+      `MALFORMED_FILTER_ACCEPTED_${JSON.stringify(filters)}`,
+    );
+  }
+  // Without the policy's viewer id there is nobody to filter for: refused, never widened.
+  for (const filters of [{ assignee: "me" }, { assignee: "unassigned" }, { notes: "unread" }]) {
+    assert.throws(() => parseAnalystReviewQuery({ filters }, analyst), AssessmentRequestQueryError, `FILTER_WITHOUT_VIEWER_${JSON.stringify(filters)}`);
+    for (const viewerId of [0, -1, 1.5, "7", null]) {
+      const state = { csrmAuthorization: { assessmentReviewCollectionScope: "all" as const, viewerId, humanAnalyst: true } };
+      assert.throws(() => parseAnalystReviewQuery({ filters }, state), AssessmentRequestQueryError, `FILTER_WITH_BAD_VIEWER_${String(viewerId)}`);
+    }
+  }
+  // A status outside the queue still meets the filter validation first.
+  assert.throws(
+    () => parseAnalystReviewQuery({ filters: { queue: "open", requestStatus: "approved", assignee: "anyone" } }, analystViewer),
+    AssessmentRequestQueryError,
+    "OUTSIDE_QUEUE_STATUS_SKIPPED_FILTER_VALIDATION",
+  );
+  // Reads without either filter are unchanged by the viewer's facts.
+  assert.deepEqual(parseAnalystReviewQuery({}, analystViewer), parseAnalystReviewQuery({}, analyst), "VIEWER_FACTS_CHANGED_AN_UNFILTERED_READ");
 });

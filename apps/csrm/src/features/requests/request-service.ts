@@ -5,29 +5,28 @@ import {
   normalizeTransportError,
   type TransportResult,
 } from '../../lib/api/transport/server-client';
+import { checkExportResponse, EXPORT_FILE_CONTENT_TYPES, listExportParams, type ExportResult, type ListExportOptions } from '../exports/export-file-check';
 import {
-  requestSortParams,
   type CsrmAssessmentRequest,
+  type MyRequestList,
+  type MyRequestListQuery,
   type RequestRelationSummary,
-  type RequestList,
-  type RequestListQuery,
 } from './request-domain';
 import {
+  myRequestListResponseSchema,
   myRequestStatusSummaryResponseSchema,
+  parseMyRequestListPayload,
   parseMyRequestStatusSummaryPayload,
   parseRequestDetailPayload,
-  parseRequestDashboardListPayload,
   parseRequestInventoryPayload,
   parseRequestListQuery,
   parseRequestMutationPayload,
-  parseRequestSummaryListPayload,
   requestDetailPayloadSchema,
   requestInventoryPayloadSchema,
-  requestListPayloadSchema,
   requestMutationPayloadSchema,
   type RequestDraftInput,
+  type MyRequestStatusSummary,
   type RequestMutationResult,
-  type RequestStatusCount,
   requestRevertSchema,
 } from './request-schema';
 import type { ContractResponseParser } from '../assessments/assessment-service';
@@ -39,32 +38,8 @@ const forbiddenResult = {
   error: { message: 'You do not have permission to view these requests.', status: 403 },
 } as const;
 
-function listQueryParams(query: RequestListQuery) {
-  return {
-    ...(query.q ? { _q: query.q } : {}),
-    ...(query.status ? { filters: { requestStatus: query.status } } : {}),
-    sort: requestSortParams[query.sort],
-    'pagination[page]': query.page,
-    'pagination[pageSize]': query.pageSize,
-  };
-}
-
 function normalizeFailure(error: unknown, status?: number): TransportResult<never> {
   return status === 403 ? forbiddenResult : normalizeTransportError(error, status);
-}
-
-export async function listRequests(query: RequestListQuery): Promise<TransportResult<RequestList>> {
-  try {
-    const client = await createStrapiClient();
-    const { data, error, response } = await client.GET('/csrm-assessment-requests', {
-      params: { query: listQueryParams(query) },
-    });
-
-    if (error || !data) return normalizeFailure(error, response.status);
-    return { data: parseRequestSummaryListPayload(data), error: null };
-  } catch (error) {
-    return normalizeFailure(error);
-  }
 }
 
 export async function getRequest(documentId: string): Promise<TransportResult<CsrmAssessmentRequest>> {
@@ -73,9 +48,9 @@ export async function getRequest(documentId: string): Promise<TransportResult<Cs
     const { data, error, response } = await client.GET('/csrm-assessment-requests/{id}', {
       params: {
         path: { id: documentId },
-        // revertedBy is a relation: without populating it the detail screen can
-        // never show who last returned the request to draft.
-        query: { populate: ['informationSystems', 'informationAssets', 'revertedBy'] },
+        // Phase 13 D-04: the web asks for the two relation lists only. Strapi projects every person on the request
+        // itself (revertedBy and the assignment, as a documentId and a display name) and refuses to populate one.
+        query: { populate: ['informationSystems', 'informationAssets'] },
       },
     });
 
@@ -86,27 +61,42 @@ export async function getRequest(documentId: string): Promise<TransportResult<Cs
   }
 }
 
-export async function listDashboardRequests(query: RequestListQuery): Promise<TransportResult<RequestList>> {
+/** Only the parameters the caller set: an empty search, no status, no holder and no notes filter are left out. */
+function myRequestQueryParams(query: MyRequestListQuery) {
+  return {
+    ...(query.q ? { q: query.q } : {}),
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.holder ? { holder: query.holder } : {}),
+    ...(query.notes ? { notes: query.notes } : {}),
+    sort: query.sort,
+    page: query.page,
+    pageSize: query.pageSize,
+  };
+}
+
+/**
+ * The signed-in actor's own requests with who holds each one (D-02 item 6),
+ * from one owner-scoped server read; the server decides holder, stage and next step.
+ */
+export async function listMyRequests(query: MyRequestListQuery): Promise<TransportResult<MyRequestList>> {
   try {
     const client = await createStrapiClient();
-    const { data, error, response } = await client.GET('/csrm-assessment-requests', {
-      params: {
-        query: {
-          populate: ['questionnaire', 'assessment'],
-          ...listQueryParams(query),
-        },
-      },
+    const { data, error, response } = await client.GET('/v1/my_requests', {
+      params: { query: myRequestQueryParams(query) },
     });
 
     if (error || !data) return normalizeFailure(error, response.status);
-    return { data: parseRequestDashboardListPayload(data), error: null };
+    return { data: parseMyRequestListPayload(data), error: null };
   } catch (error) {
     return normalizeFailure(error);
   }
 }
 
-/** The signed-in actor's own requests counted by status, from one owner-scoped server read. */
-export async function getMyRequestStatusSummary(): Promise<TransportResult<readonly RequestStatusCount[]>> {
+/**
+ * The signed-in actor's own requests counted by status and by who holds them (D-11), from one owner-scoped server
+ * read. The analyst Home's Your own requests reads `byHolder` (11-12).
+ */
+export async function getMyRequestStatusSummary(): Promise<TransportResult<MyRequestStatusSummary>> {
   try {
     const client = await createStrapiClient();
     const { data, error, response } = await client.GET('/v1/my_requests/status_summary');
@@ -246,7 +236,6 @@ const requestRevertResponseSchema = z.object({ data: z.object({
 
 /** Every external success payload parsed by this service has a named contract entry. */
 export const contractResponseParsers: readonly ContractResponseParser[] = [
-  { label: 'request.listRequests', path: '/csrm-assessment-requests', method: 'get', parser: requestListPayloadSchema },
   {
     label: 'request.getRequest',
     path: '/csrm-assessment-requests/{id}',
@@ -266,12 +255,17 @@ export const contractResponseParsers: readonly ContractResponseParser[] = [
   { label: 'request.searchInformationAssets', component: 'InformationAssetsAdministrationListResponse', parser: requestInventoryPayloadSchema },
   { label: 'request.revertRequestToDraft', component: 'AssessmentRequestRevertResponse', parser: requestRevertResponseSchema },
   { label: 'request.getMyRequestStatusSummary', component: 'MyRequestStatusSummaryResponse', parser: myRequestStatusSummaryResponseSchema },
+  { label: 'request.listMyRequests', path: '/v1/my_requests', method: 'get', parser: myRequestListResponseSchema },
 ];
 
 export const responseParserModule = {
   modulePath: 'features/requests/request-service.ts',
   mode: 'parsers' as const,
   parsers: contractResponseParsers,
+  // Phase 19 D-19: My requests' export is a file, checked by the shared validator's export rule.
+  fileResponses: [
+    { label: 'requests.exportMyRequests', path: '/v1/my_requests/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+  ],
 };
 
 export async function revertRequestToDraft(documentId: string, reason: string): Promise<TransportResult<RequestRevertResult>> {
@@ -284,4 +278,34 @@ export async function revertRequestToDraft(documentId: string, reason: string): 
     if (error || !data) return normalizeFailure(error, response.status);
     return { data: requestRevertResponseSchema.parse(data).data, error: null };
   } catch (error) { return normalizeFailure(error); }
+}
+
+/** My requests' query as its export takes it: every page of the owner-scoped list (D-13). */
+export type MyRequestExportQuery = Pick<MyRequestListQuery, 'q' | 'sort'> & Partial<Pick<MyRequestListQuery, 'status' | 'holder' | 'notes'>>;
+
+/**
+ * Exports the signed-in actor's own requests (My requests, D-04) as the list's search and filters choose them, through
+ * the generated path with a binary parse and the shared export-file check. Strapi scopes the list to its owner.
+ */
+export async function exportMyRequests(input: ListExportOptions & { query: MyRequestExportQuery }): Promise<ExportResult> {
+  const { holder, notes, q, sort, status } = input.query;
+  try {
+    const client = await createStrapiClient();
+    const exported = await client.GET('/v1/my_requests/export', {
+      params: {
+        query: {
+          ...(q ? { q } : {}),
+          ...(status ? { status } : {}),
+          ...(holder ? { holder } : {}),
+          ...(notes ? { notes } : {}),
+          sort,
+          ...listExportParams(input),
+        },
+      },
+      parseAs: 'arrayBuffer',
+    });
+    return checkExportResponse(exported, input.format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
 }

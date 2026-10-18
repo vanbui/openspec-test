@@ -4,9 +4,11 @@ import path from "node:path";
 import type { Core } from "@strapi/strapi";
 
 import catalogue from "./idambox-csrm-role-function-api-catalogue.json";
-import { developmentFixtureSubject } from "../keycloak/development-fixture-subjects";
+import { DEVELOPMENT_FIXTURE_SUBJECTS, developmentFixtureSubject } from "../keycloak/development-fixture-subjects";
 
 const CSRM_APPLICATION_SLUG = "idambox-csrm";
+const IAM_APPLICATION_SLUG = "idambox-iam";
+const IDENTITY_PROVISIONING_FUNCTION_ID = "function.identity_provisioning.api";
 const CSRM_SECURITY_ANALYST_ROLE_NAME = "Security Analyst";
 const CONTROL_CATALOGUE_FILES = [
   "aescsf-v2-toolkit-1.1.json",
@@ -36,6 +38,12 @@ const CSRM_APPLICATION = {
   slug: CSRM_APPLICATION_SLUG,
   description:
     "Cybersecurity Risk Manager module for automating cybersecurity risk management processes.",
+  applicationStatus: "active",
+} as const;
+const IAM_APPLICATION = {
+  name: "IdamBox IAM",
+  slug: IAM_APPLICATION_SLUG,
+  description: "Identity Source provisioning for the IdamBox platform.",
   applicationStatus: "active",
 } as const;
 
@@ -853,143 +861,169 @@ const CSRM_USERS = {
   },
 } as const;
 
-export async function seedCsrmData(strapi: Core.Strapi) {
-  if (process.env.IDAMBOX_SEED_CSRM !== "true") {
-    return;
-  }
-
-  const controlLibrary = await readControlLibrary(strapi.dirs.app.root);
-  const controlSeeds = createControlSeeds(
-    controlLibrary.catalogues,
-    controlLibrary.titles,
-  );
+/** Initializes approved capabilities without controls, human users or workflow fixtures. */
+export async function seedCapabilityCatalogue(
+  strapi: Core.Strapi,
+): Promise<Map<string, { documentId: string }>> {
   const applicationService = strapi.documents("api::application.application");
   const functionService = strapi.documents("api::function.function");
   const functionApiService = strapi.documents("api::function-api.function-api");
   const roleService = strapi.documents("api::role.role");
-  const userService = strapi.documents("api::idambox-user.idambox-user");
-  const informationSystemService = strapi.documents("api::csrm-information-system.csrm-information-system");
-  const informationAssetService = strapi.documents("api::csrm-information-asset.csrm-information-asset");
-
-  await seedCsrmControls(strapi, controlSeeds, controlLibrary.supersededTitles);
-
-  const existingApplications = await applicationService.findMany({
-    filters: {
-      slug: {
-        $eq: CSRM_APPLICATION_SLUG,
-      },
-    },
-    limit: 1,
-  });
-
-  const application =
-    existingApplications[0] ??
-    (await applicationService.create({
-      data: CSRM_APPLICATION,
-    }));
-
-  if (existingApplications.length > 0) {
-    await applicationService.update({
-      documentId: application.documentId,
-      data: CSRM_APPLICATION,
-    });
-  }
-
-  const seededFunctions = new Map<string, SeededFunction>();
-
-  for (const functionSeed of catalogue.functions) {
-    const existingFunctions = await functionService.findMany({
+  const seededApplications = new Map<string, { documentId: string }>();
+  for (const applicationSeed of [CSRM_APPLICATION, IAM_APPLICATION]) {
+    const existingApplications = await applicationService.findMany({
       filters: {
-        name: {
-          $eq: functionSeed.name,
+        slug: {
+          $eq: applicationSeed.slug,
         },
-        application: {
-          documentId: {
-            $eq: application.documentId,
-          },
-        },
-        // An API-only Function stores no menuPath. `$eq: undefined` is cast to an
-        // empty string that never matches the stored NULL, which re-created every
-        // API-only Function on each seed, so it is matched as NULL instead.
-        menuPath:
-          functionSeed.menuPath === undefined
-            ? { $null: true }
-            : { $eq: functionSeed.menuPath },
-      },
-      populate: {
-        functionApis: true,
       },
       limit: 1,
     });
 
-    const platformFunction =
-      existingFunctions[0] ??
-      (await functionService.create({
-        data: {
-          name: functionSeed.name,
-          description: functionSeed.description,
-          menuPath: functionSeed.menuPath,
-          application: application.documentId,
-        },
+    const application =
+      existingApplications[0] ??
+      (await applicationService.create({
+        data: applicationSeed,
       }));
 
-    if (existingFunctions.length > 0) {
-      await functionService.update({
-        documentId: platformFunction.documentId,
-        data: {
-          description: functionSeed.description,
-          menuPath: functionSeed.menuPath,
-          application: application.documentId,
-        },
+    if (existingApplications.length > 0) {
+      await applicationService.update({
+        documentId: application.documentId,
+        data: applicationSeed,
       });
     }
+    seededApplications.set(applicationSeed.slug, application);
+  }
 
-    const existingFunctionApis =
-      (platformFunction as SeededFunction).functionApis ?? [];
-    const functionApiDocumentIds: string[] = [];
+  const seededFunctions = new Map<string, SeededFunction>();
+  // Every FunctionAPI row a catalogued Function holds after this seed (BE2-08).
+  const linkedFunctionApiDocumentIds = new Set<string>();
 
-    for (const functionApiSeed of catalogue.functionApis.filter(
-      (apiSeed) => apiSeed.functionId === functionSeed.id,
-    )) {
-      const existingFunctionApi = existingFunctionApis.find(
-        (functionApi) =>
-          functionApi.name === functionApiSeed.name &&
-          functionApi.url === functionApiSeed.url,
-      );
+  const functionPartitions = [
+    { slug: CSRM_APPLICATION_SLUG, functions: catalogue.functions.filter((entry) => entry.id !== IDENTITY_PROVISIONING_FUNCTION_ID) },
+    { slug: IAM_APPLICATION_SLUG, functions: catalogue.functions.filter((entry) => entry.id === IDENTITY_PROVISIONING_FUNCTION_ID) },
+  ];
+  for (const partition of functionPartitions) {
+    const application = seededApplications.get(partition.slug);
+    if (!application) throw new Error("CATALOGUE_APPLICATION_NOT_SEEDED");
+    for (const functionSeed of partition.functions) {
+      const existingFunctions = await functionService.findMany({
+        filters: {
+          name: {
+            $eq: functionSeed.name,
+          },
+          application: {
+            documentId: {
+              $eq: application.documentId,
+            },
+          },
+          // An API-only Function stores no menuPath. `$eq: undefined` is cast to an
+          // empty string that never matches the stored NULL, which re-created every
+          // API-only Function on each seed, so it is matched as NULL instead.
+          menuPath:
+            functionSeed.menuPath === undefined
+              ? { $null: true }
+              : { $eq: functionSeed.menuPath },
+        },
+        populate: {
+          functionApis: true,
+        },
+        limit: 1,
+      });
 
-      const functionApi =
-        existingFunctionApi ??
-        (await functionApiService.create({
+      const platformFunction =
+        existingFunctions[0] ??
+        (await functionService.create({
           data: {
-            name: functionApiSeed.name,
-            description: functionApiSeed.description,
-            url: functionApiSeed.url,
+            name: functionSeed.name,
+            description: functionSeed.description,
+            menuPath: functionSeed.menuPath,
+            application: application.documentId,
           },
         }));
 
-      if (existingFunctionApi) {
-        await functionApiService.update({
-          documentId: functionApi.documentId,
+      if (existingFunctions.length > 0) {
+        await functionService.update({
+          documentId: platformFunction.documentId,
           data: {
-            description: functionApiSeed.description,
-            url: functionApiSeed.url,
+            description: functionSeed.description,
+            menuPath: functionSeed.menuPath,
+            application: application.documentId,
           },
         });
       }
 
-      functionApiDocumentIds.push(functionApi.documentId);
+      const existingFunctionApis =
+        (platformFunction as SeededFunction).functionApis ?? [];
+      const functionApiDocumentIds: string[] = [];
+
+      for (const functionApiSeed of catalogue.functionApis.filter(
+        (apiSeed) => apiSeed.functionId === functionSeed.id,
+      )) {
+        const existingFunctionApi = existingFunctionApis.find(
+          (functionApi) =>
+            functionApi.name === functionApiSeed.name &&
+            functionApi.url === functionApiSeed.url,
+        );
+
+        const functionApi =
+          existingFunctionApi ??
+          (await functionApiService.create({
+            data: {
+              name: functionApiSeed.name,
+              description: functionApiSeed.description,
+              url: functionApiSeed.url,
+            },
+          }));
+
+        if (existingFunctionApi) {
+          await functionApiService.update({
+            documentId: functionApi.documentId,
+            data: {
+              description: functionApiSeed.description,
+              url: functionApiSeed.url,
+            },
+          });
+        }
+
+        functionApiDocumentIds.push(functionApi.documentId);
+        linkedFunctionApiDocumentIds.add(functionApi.documentId);
+      }
+
+      await functionService.update({
+        documentId: platformFunction.documentId,
+        data: {
+          functionApis: functionApiDocumentIds,
+        },
+      });
+
+      seededFunctions.set(functionSeed.id, {
+        documentId: platformFunction.documentId,
+      });
     }
+  }
 
-    await functionService.update({
-      documentId: platformFunction.documentId,
-      data: {
-        functionApis: functionApiDocumentIds,
-      },
+  /*
+   * BE2-08 (Phase 19 code review): a catalogued URL's FunctionAPI row that no Function holds any more is removed. Each
+   * Function's list is reset to the catalogue above, so on a database seeded before Phase 19 the rows of the two moved
+   * URLs (`GET:/api/v1/risks/export?format={format}` and `POST:/api/v1/reports/{reportKey}/export`) are left behind by
+   * their old Functions while their new Functions get fresh rows; no row carrying a catalogued URL may stay orphaned.
+   * Only rows with a catalogued URL that no Function references are touched, never another application's.
+   */
+  const cataloguedUrls = [...new Set(catalogue.functionApis.map((entry) => entry.url))];
+  const cataloguedRows = await functionApiService.findMany({
+    filters: { url: { $in: cataloguedUrls } },
+    fields: ["documentId"],
+    limit: Math.max(1_000, cataloguedUrls.length * 4),
+  });
+  for (const row of cataloguedRows) {
+    if (linkedFunctionApiDocumentIds.has(row.documentId)) continue;
+    const holders = await functionService.findMany({
+      filters: { functionApis: { documentId: { $eq: row.documentId } } },
+      fields: ["documentId"],
+      limit: 1,
     });
-
-    seededFunctions.set(functionSeed.id, {
-      documentId: platformFunction.documentId,
-    });
+    if (holders.length === 0) await functionApiService.delete({ documentId: row.documentId });
   }
 
   const seededRoles = new Map<string, { documentId: string }>();
@@ -1039,6 +1073,27 @@ export async function seedCsrmData(strapi: Core.Strapi) {
     seededRoles.set(roleSeed.id, role);
   }
 
+  return seededRoles;
+}
+
+export async function seedCsrmData(strapi: Core.Strapi) {
+  if (process.env.IDAMBOX_SEED_CSRM !== "true") {
+    return;
+  }
+
+  const controlLibrary = await readControlLibrary(strapi.dirs.app.root);
+  const controlSeeds = createControlSeeds(
+    controlLibrary.catalogues,
+    controlLibrary.titles,
+  );
+  const userService = strapi.documents("api::idambox-user.idambox-user");
+  const informationSystemService = strapi.documents("api::csrm-information-system.csrm-information-system");
+  const informationAssetService = strapi.documents("api::csrm-information-asset.csrm-information-asset");
+
+  await seedCsrmControls(strapi, controlSeeds, controlLibrary.supersededTitles);
+
+  const seededRoles = await seedCapabilityCatalogue(strapi);
+
   const securityAnalystRole = seededRoles.get("role.security_analyst");
 
   if (!securityAnalystRole) {
@@ -1048,23 +1103,27 @@ export async function seedCsrmData(strapi: Core.Strapi) {
   }
 
   const existingJaneUsers = await userService.findMany({
-    filters: {
-      email: {
-        $eq: CSRM_USERS.jane.email,
-      },
-    },
-    limit: 1,
+    populate: { identitySource: { fields: ["documentId"] } },
+    // A source may move both email and username; the imported fixture subject
+    // still identifies that same person without writing any source-owned data.
+    filters: { $or: [
+      { email: { $eq: CSRM_USERS.jane.email } }, { username: { $eq: CSRM_USERS.jane.username } },
+      { externalSubject: { $eq: DEVELOPMENT_FIXTURE_SUBJECTS[CSRM_USERS.jane.email] } },
+    ] },
+    limit: 2,
   });
+  if (existingJaneUsers.length > 1) throw new Error("CSRM_FIXTURE_IDENTITY_CONFLICT");
 
   if (existingJaneUsers.length === 0) {
     await userService.create({
       data: {
         ...CSRM_USERS.jane,
         ...developmentFixtureSubject(CSRM_USERS.jane.email),
+        protected: false,
         roles: [],
       },
     });
-  } else {
+  } else if (!existingJaneUsers[0].identitySource) {
     await userService.update({
       documentId: existingJaneUsers[0].documentId,
       data: {
@@ -1076,23 +1135,25 @@ export async function seedCsrmData(strapi: Core.Strapi) {
   }
 
   const existingBobUsers = await userService.findMany({
-    filters: {
-      email: {
-        $eq: CSRM_USERS.bob.email,
-      },
-    },
-    limit: 1,
+    populate: { identitySource: { fields: ["documentId"] } },
+    filters: { $or: [
+      { email: { $eq: CSRM_USERS.bob.email } }, { username: { $eq: CSRM_USERS.bob.username } },
+      { externalSubject: { $eq: DEVELOPMENT_FIXTURE_SUBJECTS[CSRM_USERS.bob.email] } },
+    ] },
+    limit: 2,
   });
+  if (existingBobUsers.length > 1) throw new Error("CSRM_FIXTURE_IDENTITY_CONFLICT");
 
   if (existingBobUsers.length === 0) {
     await userService.create({
       data: {
         ...CSRM_USERS.bob,
         ...developmentFixtureSubject(CSRM_USERS.bob.email),
+        protected: false,
         roles: [securityAnalystRole.documentId],
       },
     });
-  } else {
+  } else if (!existingBobUsers[0].identitySource) {
     await userService.update({
       documentId: existingBobUsers[0].documentId,
       data: {

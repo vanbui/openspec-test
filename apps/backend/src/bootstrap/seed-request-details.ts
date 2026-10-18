@@ -251,6 +251,48 @@ const SEED_REQUEST_DETAILS = {
     regulatoryRequirements:
       "Internal Access Control Standard and Third-Party Risk Standard. ISO/IEC 27001:2022 A.5.17. Essential Eight (multi-factor authentication).",
   },
+  "RAR-E2E-FILES-STATES-001": {
+    description: narrative({
+      plan:
+        "We want to give our managed service provider's engineers remote support access to the payroll servers through the provider's own remote support tool, so they can patch and troubleshoot out of hours.",
+      why:
+        "Out-of-hours payroll incidents currently wait until the next business day, because only two internal engineers hold the access and neither is on call. Two pay runs were delayed last year.",
+      how:
+        "The provider's engineers would start sessions from the provider's support portal through an agent installed on each payroll server. Sessions are requested in the provider's ticketing system and approved by our service desk. The provider sent its assurance report and the support tool's installer for review.",
+      assessment:
+        "A third party gains interactive access to servers that hold Restricted employee pay and bank details, through software we do not control.",
+      knownGaps:
+        "Session recording is optional in the provider's tool. We have not confirmed whether the agent can be limited to the payroll servers' maintenance windows.",
+    }),
+    assessmentType: "Project",
+    division: "Corporate Services",
+    businessUnit: "People and Culture",
+    businessPurpose: "resolving out-of-hours payroll incidents through the managed service provider",
+    thirdPartyInvolvement: true,
+    thirdPartyDetails: "A managed service provider whose engineers would reach the payroll servers through their remote support tool",
+    regulatoryRequirements: "Privacy Act 1988 obligations for employee pay data. Internal Third-Party Risk Standard.",
+  },
+  "RAR-E2E-FILES-RELEASED-001": {
+    description: narrative({
+      plan:
+        "We migrated the finance team's archived records from file shares to the records management platform, applying the retention schedule to each record class.",
+      why:
+        "Archived finance records sat on three file shares with no retention applied, so records past their disposal date were kept and records under legal hold could be deleted by mistake.",
+      how:
+        "The records management platform holds each record with its class and retention period, applies legal holds, and disposes of records only after a records officer approves the disposal list. Finance staff read archived records through the platform's search.",
+      assessment:
+        "The platform became the only copy of seven years of finance records, so its access control and disposal approval protect records we are required to keep.",
+      knownGaps:
+        "Two legacy file shares are read-only but not yet decommissioned. The disposal approval has one records officer and no delegate.",
+    }),
+    assessmentType: "BAU",
+    division: "Corporate Services",
+    businessUnit: "Finance",
+    businessPurpose: "keeping finance records for their required periods and disposing of them on approval",
+    thirdPartyInvolvement: false,
+    thirdPartyDetails: null,
+    regulatoryRequirements: "Corporations Act 2001 record keeping (seven years). Internal Records Management Standard.",
+  },
   "RAR-E2E-NAV-ANALYST-001": {
     description: narrative({
       plan:

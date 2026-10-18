@@ -1,0 +1,23 @@
+{
+  "plain": {
+    "schemaVersion": 1,
+    "questionText": "Is a second sign-in step (multi-factor authentication) required for administrator accounts, accounts that sign in through another organisation and emergency administrator accounts?",
+    "helpText": "Multi-factor authentication means a second step after the password, such as a code from an app, to confirm who is signing in.",
+    "choiceLabels": ["Yes", "No"],
+    "rationale": "The question used specialist terms a Requestor may not know."
+  },
+  "label-mismatch": {
+    "schemaVersion": 1,
+    "questionText": "Is a second sign-in step required for administrator accounts?",
+    "helpText": null,
+    "choiceLabels": ["Yes", "No", "Not sure"],
+    "rationale": "The question used specialist terms a Requestor may not know."
+  },
+  "unchanged": {
+    "schemaVersion": 1,
+    "questionText": "Is MFA enforced for privileged and federated identities, including break-glass accounts?",
+    "helpText": null,
+    "choiceLabels": ["Yes", "No"],
+    "rationale": "The question is already as plain as it can be."
+  }
+}

@@ -15,15 +15,19 @@
 | 1 | `strapi::logger` | Writes one `http` line per request: method, URL with its query string, duration, status (see Logging review). |
 | 2 | `strapi::errors` | Turns every thrown error into the JSON error envelope (see Error envelope). Everything below it is covered. |
 | 3 | `global::csrm-development-identity` | Development only (`NODE_ENV=development` and `CSRM_DEV_IDENTITY=true`): resolves `x-csrm-dev-identity` to an active IdamBox User and sets `ctx.state.idamboxUser`; inert in every other runtime. INT-02 (deferred) replaces it. |
-| 4 | `strapi::security` | koa-helmet 7.1.0 over helmet 6.2.0, Strapi's defaults (table below). |
-| 5 | `strapi::cors` | `@koa/cors`, granting only the origins listed in `CSRM_CORS_ALLOWED_ORIGINS`, none by default (see CORS). |
-| 6 | `strapi::query` | Parses the query string. |
-| 7 | `strapi::body` | koa-body 6.0.1 with the limits below (see Body limits). |
-| 8 | `strapi::session` | koa-session: signed, `httpOnly`, `secure` when `NODE_ENV=production`. The CSRM routes authenticate with the API token and never read it. |
-| 9 | `strapi::favicon` | Serves the favicon. |
-| 10 | `strapi::public` | Serves `apps/backend/public`: `robots.txt` and the local upload directory, which is empty (CSRM stores no uploads; file-upload questions are deferred). |
+| 4 | `global::csrm-keycloak-identity` | Off by default: a pass-through unless `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION=true` ([ADR 0004](../adr/0004-strapi-verifies-keycloak-access-tokens.md)). When on, it verifies the caller's Keycloak access token from `x-csrm-identity-token` against the realm JWKS and sets `ctx.state.idamboxUser` to the active IdamBox User whose `externalSubject` equals the token's `sub`; any unusable token leaves it unset, which the authorization policy answers with the ordinary 403, and the reason is logged by error name only. |
+| 5 | `strapi::security` | koa-helmet 7.1.0 over helmet 6.2.0, Strapi's defaults (table below). |
+| 6 | `strapi::cors` | `@koa/cors`, granting only the origins listed in `CSRM_CORS_ALLOWED_ORIGINS`, none by default (see CORS). |
+| 7 | `strapi::query` | Parses the query string. |
+| 8 | `strapi::body` | koa-body 6.0.1 with the limits below (see Body limits). |
+| 9 | `global::csrm-multipart-cleanup` | Phase 14 (14-04): removes every multipart part's temporary file after every request, whatever the outcome (see Body limits). |
+| 10 | `strapi::session` | koa-session: signed, `httpOnly`, `secure` when `NODE_ENV=production`. The CSRM routes authenticate with the API token and never read it. |
+| 11 | `strapi::favicon` | Serves the favicon. |
+| 12 | `strapi::public` | Serves `apps/backend/public`: `robots.txt` and the stock local upload directory, which stays empty. Request attachments (Phase 14) are stored privately outside `public/` or in a private bucket, and nothing serves them: `/uploads/` and `/csrm-private/` answer 404 (`http-hardening.integration.test.ts` › "nothing serves a stored attachment"). |
 
 `strapi::poweredBy` was the sixth entry until this plan and is removed (see X-Powered-By).
+
+Row 4, `global::csrm-keycloak-identity`, was missing from this table after ADR 0004 added the middleware, so every row from 4 onwards was numbered one short of the file; the row was inserted and the rows below renumbered after the Phase 14 code review (2026-10-11, IN-701). The table only documents the order: no Keycloak source, configuration or setting changed.
 
 ## `strapi::security` settings, observed headers and reasons
 
@@ -81,7 +85,14 @@ Proofs:
 | One multipart file | 50 MB (52,428,800 bytes) | `formidable.maxFileSize`; an oversize file is answered 413 |
 | All multipart files | 250 MB (262,144,000 bytes) | `formidable.maxTotalFileSize` |
 
-The CSV import routes, CSRM's only multipart consumers, enforce a tighter bound of their own: at most 5,242,880 bytes (5 MB), 5,000 rows and 65,536 bytes per record (`apps/backend/src/api/csrm-administration/services/csv-import.ts`), answering 413 `IMPORT_LIMIT_EXCEEDED` above the byte limit. The upload plugin's `POST /api/upload` is the other multipart route; CSRM does not use it, and the authorization matrix records that only the API token reaches it.
+CSRM's multipart routes enforce tighter bounds of their own:
+
+- **The CSV import routes:** at most 5,242,880 bytes (5 MB), 5,000 rows and 65,536 bytes per record (`apps/backend/src/api/csrm-administration/services/csv-import.ts`), answering 413 `IMPORT_LIMIT_EXCEEDED` above the byte limit.
+- **The attachment upload, `POST /api/v1/assessment_requests/{requestId}/attachments` (Phase 14):** one file of at most 26,214,400 bytes (25 MiB, labelled 25 MB). The declared size is refused with 413 `ATTACHMENT_TOO_LARGE` before the bytes are read, and the screened bytes are checked again (`request-attachments.ts`, `ATTACHMENT_LIMITS.maxBytes`). formidable's 50 MiB cap above stays the outer bound, so a file between the two reaches the route's own refusal, with its closed reason, rather than formidable's unreasoned 413.
+
+**Temporary files (Phase 14, 14-04).** `strapi::body` writes every multipart part to a formidable temporary file before any route or policy runs, and removes only the part named `files`, without waiting, and not at all when a later middleware throws. `global::csrm-multipart-cleanup` sits directly after it and, in a `finally`, removes the temporary file of every part under every name, arrays included, whether the request was accepted, refused by a policy, sent to an unmounted path or failed. Proof: `http-hardening.integration.test.ts` › "no multipart temporary file survives a request, whatever the part name and whether the caller was refused".
+
+The upload plugin's `POST /api/upload` was the other multipart route. Since Phase 14 it is unmounted for every caller (see Unmounted paths).
 
 ## CORS (restricted by default; R-08-11)
 
@@ -142,9 +153,21 @@ The same-origin and listed-origin tests passed before and after, as they should:
 
 Observed by plan 08-03 on the mounted Strapi and recorded in its summary: any `/api` path that no router mounts answers a `GET` with `404 NotFoundError "Not Found"`, a mutation with `405` and `Allow: HEAD, GET`, and `OPTIONS` with 200. That is koa's generic `allowedMethods` answer under Strapi's default middleware stack. `served-operations.integration.test.ts` asserts 404 or 405 for a mutation on each removed base. The answer says nothing about which routes exist, because every unmounted path answers the same way, so it is recorded rather than changed. A test that expects 404 for every method on a removed route asserts the wrong thing.
 
+**The upload plugin's content-API routes (Phase 14, 14-04; D-08).** Once private attachment files live in the upload plugin, its five content-API routes would let the full-access token holder list their metadata, store unscanned files or hard-delete them. `registerAttachmentStorage` (`apps/backend/src/csrm/files/register-attachment-storage.ts`, in the application's `register()`) empties the plugin's content-API router, so they are unmounted for every caller, the token included, and answer as above:
+
+| Route | Answer |
+|---|---|
+| `POST /api/upload` | 405 |
+| `GET /api/upload/files` | 404 |
+| `GET /api/upload/files/page` | 404 |
+| `GET /api/upload/files/:id` | 404 |
+| `DELETE /api/upload/files/:id` | 405 |
+
+The admin panel's own `/upload/*` routes are a separate router and are unchanged (an unauthenticated `GET /upload/settings` still answers 401). Proof: `http-hardening.integration.test.ts` › "the upload plugin's content-API routes are unmounted for every caller, the full-access token included"; the authorization matrix keeps the five as unmounted rows, and `served-operations.json` no longer lists them.
+
 ## Plugin routes the API token reaches (recorded)
 
-`apps/backend/tests/authorization-matrix.integration.test.ts` states an outcome for every route the users-permissions, upload, email, i18n and content-type-builder plugins keep mounted. A caller without the token is refused everywhere except the public users-permissions authentication routes, which refuse every request because no account exists. The full-access token holder can list, create (201) and delete users-permissions accounts, create users-permissions roles, and reach the email and upload handlers. This is the D-37 residual: the token never leaves the web server, and INT-02 replaces this surface.
+`apps/backend/tests/authorization-matrix.integration.test.ts` states an outcome for every route the users-permissions, email, i18n and content-type-builder plugins keep mounted, and for the upload plugin's five unmounted ones. A caller without the token is refused everywhere except the public users-permissions authentication routes, which refuse every request because no account exists. The full-access token holder can list, create (201) and delete users-permissions accounts, create users-permissions roles, and reach the email handlers. Since Phase 14 it no longer reaches the upload handlers, which are unmounted for every caller (see Unmounted paths). This is the D-37 residual (R-08-02): the token never leaves the web server, and INT-02 replaces this surface.
 
 ## Logging review
 

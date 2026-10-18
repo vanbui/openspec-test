@@ -1,5 +1,6 @@
 import { administrationConfig, type AdministrationKind } from "./administration-config";
 import { ADMINISTRATION_MAX_RECORDS, type AdministrationQuery } from "./administration-query";
+import { isRegisteredSourceServiceUser } from "../../../iam/identity/source-principal";
 
 type RecordValue = Record<string, unknown>;
 type QueryBuilder = {
@@ -129,6 +130,9 @@ export function createStrapiAdministrationRepository(strapi: unknown, kind: Admi
       return [...documentIds];
     },
     async resolveActiveUser(documentId) {
+      if (await isRegisteredSourceServiceUser(strapi as unknown as Parameters<typeof isRegisteredSourceServiceUser>[0], documentId)) {
+        throw new Error("CSRM Administration owner is unavailable.");
+      }
       const rows = await users.findMany({
         filters: { documentId: { $eq: documentId }, accountStatus: { $eq: "active" } },
         fields: ["documentId"],

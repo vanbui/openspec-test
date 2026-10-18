@@ -323,6 +323,50 @@ test("request revert returns only eligible submitted requests to draft with serv
   }
 });
 
+/*
+ * 13-RESEARCH §E: the revert and the assignment share one per-request lock module, so in-process
+ * writers to one request serialise against each other instead of waiting on the single SQLite
+ * connection until the pool times out. Whichever runs first, both answer, and the second sees
+ * the first's committed state.
+ *
+ * Code review WR-201: this proves the serialised outcome and the absence of a deadlock only. On SQLite, knex's single
+ * connection serialises every transaction, so it cannot show that both paths share the lock; the lock's in-process tail
+ * is proven in request-lock.unit.test.ts, and its row lock is R-08-37's proof, on PostgreSQL.
+ */
+test("a revert and a pick-up sent together on one request are serialised and both answer, with no deadlock", async () => {
+  const harness = await harnessPromise;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "WORKFLOW-SHARED-LOCK-001",
+    title: "Shared lock request",
+    requestStatus: "submitted",
+    requestor: "owner",
+    submittedDate: "2026-10-01T00:00:00.000Z",
+  });
+  const started = Date.now();
+  const [revert, pickUp] = await harness.simultaneousRequests([
+    { path: `/api/v1/assessment_requests/${requestId}/revert_to_draft`, identity: harness.identities.owner, init: revertRequest({ reason: "Shared lock revert" }) },
+    {
+      path: `/api/v1/assessment_requests/${requestId}/assignee`,
+      identity: harness.identities.analyst,
+      init: jsonRequest("PUT", { analyst: harness.users.analyst, expectedAnalyst: null }),
+    },
+  ]);
+  assert.ok(Date.now() - started < 30_000, "UNEXPECTED_SHARED_LOCK_WAIT");
+  assert.equal(revert.status, 200, "UNEXPECTED_SHARED_LOCK_REVERT_STATUS");
+  const persisted = await harness.getRequest(requestId);
+  const assignment = await harness.getRequestAssignment(requestId);
+  assert.equal(persisted?.requestStatus, "draft", "UNEXPECTED_SHARED_LOCK_STATUS");
+  if (pickUp.status === 200) {
+    // The pick-up ran first: the return to draft keeps the assignee (D-08).
+    assert.equal(assignment?.assignedAnalyst, harness.users.analyst, "UNEXPECTED_SHARED_LOCK_ASSIGNEE_LOST");
+  } else {
+    // The revert ran first: the pick-up found a draft and wrote nothing.
+    assert.equal(pickUp.status, 409, "UNEXPECTED_SHARED_LOCK_PICK_UP_STATUS");
+    assert.deepEqual(await conflictDetails(pickUp), { reason: "REQUEST_NOT_SUBMITTED" }, "UNEXPECTED_SHARED_LOCK_PICK_UP_REASON");
+    assert.equal(assignment?.assignedAnalyst, null, "UNEXPECTED_SHARED_LOCK_ASSIGNEE_WRITTEN");
+  }
+});
+
 async function conflictDetails(response: Response): Promise<unknown> {
   const body = await response.json() as { error?: { details?: unknown } };
   return body.error?.details;
@@ -342,12 +386,58 @@ test("authorised request reads carry one lifecycle truth with actor-specific nex
   assert.equal(analystLifecycle?.currentKey, "questionnaire-released", "UNEXPECTED_ANALYST_LIFECYCLE_CURRENT");
   const ownerSteps = ownerLifecycle?.steps as Array<{ key: string; state: string }>;
   assert.deepEqual(ownerSteps.map(({ state }) => state), ["completed", "completed", "completed", "current", "future", "future", "future", "future"], "UNEXPECTED_OWNER_LIFECYCLE_STEPS");
-  const ownerAction = ownerLifecycle?.nextAction as { actor?: string; href?: string };
-  const analystAction = analystLifecycle?.nextAction as { actor?: string; href?: string };
+  const ownerAction = ownerLifecycle?.nextAction as { actor?: string; holder?: string; summary?: string; href?: string };
+  const analystAction = analystLifecycle?.nextAction as { actor?: string; holder?: string; summary?: string; href?: string };
   assert.equal(ownerAction.actor, "requestor", "UNEXPECTED_OWNER_LIFECYCLE_ACTOR");
+  assert.equal(ownerAction.holder, "requestor", "UNEXPECTED_OWNER_LIFECYCLE_HOLDER");
   assert.equal(ownerAction.href, `/app/questionnaires/${fixtures.questionnaires.released}`, "UNEXPECTED_OWNER_LIFECYCLE_HREF");
   assert.equal(analystAction.actor, "analyst", "UNEXPECTED_ANALYST_LIFECYCLE_ACTOR");
+  assert.equal(analystAction.holder, "requestor", "UNEXPECTED_ANALYST_LIFECYCLE_HOLDER");
+  // D-27: the analyst reads what the Requestor is doing, never "the other party", and gets no link.
+  assert.equal(analystAction.summary, "The Requestor is answering the questionnaire.", "UNEXPECTED_ANALYST_LIFECYCLE_SUMMARY");
   assert.equal(analystAction.href, undefined, "UNEXPECTED_ANALYST_LIFECYCLE_HREF");
+});
+
+test("a submitted request names the Security Analyst as the holder of its next step for both readers, and the Requestor reads who picked it up (D-27, D-17)", async () => {
+  const harness = await harnessPromise;
+  const created = await request("/api/csrm-assessment-requests", harness.identities.owner, jsonRequest("POST", { title: "Holder named on submit" }));
+  assert.equal(created.status, 200, "UNEXPECTED_HOLDER_CREATE_STATUS");
+  const documentId = (await created.json() as { data?: { documentId?: string } }).data?.documentId;
+  assert.ok(documentId, "UNEXPECTED_HOLDER_CREATED_ID");
+  const submitted = await request(`/api/csrm-assessment-requests/${documentId}`, harness.identities.owner, jsonRequest("PUT", { requestStatus: "submitted" }));
+  assert.equal(submitted.status, 200, "UNEXPECTED_HOLDER_SUBMIT_STATUS");
+
+  const path = `/api/csrm-assessment-requests/${encodeURIComponent(documentId)}`;
+  const nextActionFor = async (identity: string) => {
+    const response = await request(path, identity);
+    assert.equal(response.status, 200, `UNEXPECTED_HOLDER_READ_STATUS_${identity}`);
+    const lifecycle = ((await response.json()) as { data?: { lifecycle?: { currentKey?: string; nextAction?: unknown } } }).data?.lifecycle;
+    assert.equal(lifecycle?.currentKey, "submitted", `UNEXPECTED_HOLDER_CURRENT_${identity}`);
+    return lifecycle?.nextAction;
+  };
+  // 13-UI-SPEC §12.1: nobody has picked the request up yet, and the Requestor is told so plainly.
+  assert.deepEqual(await nextActionFor(harness.identities.owner), {
+    actor: "requestor", holder: "analyst",
+    summary: "Your request is waiting for a Security Analyst to pick it up. They’ll then send you a questionnaire to answer.",
+  }, "UNEXPECTED_REQUESTOR_SUBMITTED_NEXT_ACTION");
+  const analystNextAction = {
+    actor: "analyst", holder: "analyst", summary: "Generate the questionnaire.", href: `/app/review/requests/${encodeURIComponent(documentId)}`,
+  };
+  assert.deepEqual(await nextActionFor(harness.identities.analyst), analystNextAction, "UNEXPECTED_ANALYST_SUBMITTED_NEXT_ACTION");
+
+  // D-17: once Bob picks it up, Jane reads his display name; the analysts' sentence and the holder are unchanged.
+  const pickedUp = await request(`/api/v1/assessment_requests/${encodeURIComponent(documentId)}/assignee`, harness.identities.analyst, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ data: { analyst: harness.users.analyst, expectedAnalyst: null } }),
+  });
+  assert.equal(pickedUp.status, 200, "UNEXPECTED_PICK_UP_STATUS");
+  assert.deepEqual(await nextActionFor(harness.identities.owner), {
+    actor: "requestor", holder: "analyst",
+    summary: "Bob Doe is reviewing your request and will send you a questionnaire to answer.",
+  }, "REQUESTOR_NEXT_ACTION_DOES_NOT_NAME_THE_ASSIGNEE");
+  assert.deepEqual(await nextActionFor(harness.identities.analyst), analystNextAction, "ANALYST_NEXT_ACTION_CHANGED_BY_THE_ASSIGNEE");
+  assert.deepEqual(await nextActionFor(harness.identities.secondAnalyst), analystNextAction, "SECOND_ANALYST_NEXT_ACTION_CHANGED_BY_THE_ASSIGNEE");
 });
 
 test("available assessment relationships include only their populated contextual control count", async () => {
@@ -359,4 +449,153 @@ test("available assessment relationships include only their populated contextual
   assert.equal(relationship?.availability, "available", "UNEXPECTED_CONTROL_COUNT_AVAILABILITY");
   assert.equal(relationship?.controlImplementationCount, 1, "UNEXPECTED_CONTROL_IMPLEMENTATION_COUNT");
   assert.equal(typeof relationship?.documentId, "string", "UNEXPECTED_AVAILABLE_ASSESSMENT_IDENTIFIER");
+});
+
+/*
+ * Phase 13 D-04 (13-RESEARCH §D, T-13-10): no person crosses the request read as more than a documentId and a
+ * display name. The caller's populate is limited to informationSystems, informationAssets, questionnaire and
+ * assessment, so populate=revertedBy and populate=* reach no IdamBox User record, and revertedBy is projected by
+ * the server on the read and on the revert response alike.
+ */
+test("the request read projects people: revertedBy is a documentId and a display name, and populate=* returns no email (D-04)", async () => {
+  const harness = await harnessPromise;
+  const created = await request("/api/csrm-assessment-requests", harness.identities.owner, jsonRequest("POST", { title: "People projection request" }));
+  assert.equal(created.status, 200, "UNEXPECTED_PROJECTION_CREATE_STATUS");
+  const requestId = (await created.json() as { data?: { documentId?: string } }).data?.documentId;
+  assert.ok(requestId, "UNEXPECTED_PROJECTION_CREATED_ID");
+  const submitted = await request(`/api/csrm-assessment-requests/${requestId}`, harness.identities.owner, jsonRequest("PUT", { requestStatus: "submitted" }));
+  assert.equal(submitted.status, 200, "UNEXPECTED_PROJECTION_SUBMIT_STATUS");
+
+  const reverted = await request(`/api/v1/assessment_requests/${requestId}/revert_to_draft`, harness.identities.analyst, revertRequest({ reason: "Clarify the people involved." }));
+  assert.equal(reverted.status, 200, "UNEXPECTED_PROJECTION_REVERT_STATUS");
+  const revertBody = await reverted.json() as { data?: { revertedBy?: Record<string, unknown> } };
+  assert.deepEqual(Object.keys(revertBody.data?.revertedBy ?? {}).sort(), ["displayName", "documentId"], "UNEXPECTED_REVERT_RESPONSE_PERSON_KEYS");
+  assert.deepEqual(revertBody.data?.revertedBy, { documentId: harness.users.analyst, displayName: "Bob Doe" }, "UNEXPECTED_REVERT_RESPONSE_PERSON");
+
+  for (const identity of [harness.identities.analyst, harness.identities.owner]) {
+    const read = await request(`/api/csrm-assessment-requests/${requestId}?populate=revertedBy`, identity);
+    assert.equal(read.status, 200, `UNEXPECTED_PROJECTION_READ_STATUS_${identity}`);
+    const body = await read.json() as { data?: { revertedBy?: Record<string, unknown> } };
+    assert.deepEqual(Object.keys(body.data?.revertedBy ?? {}).sort(), ["displayName", "documentId"], `UNEXPECTED_READ_PERSON_KEYS_${identity}`);
+    assert.deepEqual(body.data?.revertedBy, { documentId: harness.users.analyst, displayName: "Bob Doe" }, `UNEXPECTED_READ_PERSON_${identity}`);
+
+    for (const query of [
+      "populate=*",
+      "populate=requestor",
+      "populate=sponsor",
+      "populate[revertedBy]=true",
+      "populate[requestor][populate]=*",
+      "populate[0]=revertedBy&populate[1]=requestor",
+      "populate[informationSystems]=true&populate[assessment][populate][owner]=true",
+    ]) {
+      const wide = await request(`/api/csrm-assessment-requests/${requestId}?${query}`, identity);
+      assert.equal(wide.status, 200, `UNEXPECTED_WIDE_READ_STATUS_${identity}_${query}`);
+      const text = await wide.text();
+      for (const key of ["email", "username", "externalSubject", "accountStatus", "firstName", "lastName"]) {
+        assert.equal(text.includes(`"${key}"`), false, `UNEXPECTED_${key}_IN_READ_${identity}_${query}`);
+      }
+    }
+  }
+
+  // An allowed populate still populates.
+  const allowed = await request(`/api/csrm-assessment-requests/${requestId}?populate[0]=informationSystems&populate[1]=informationAssets`, harness.identities.analyst);
+  assert.equal(allowed.status, 200, "UNEXPECTED_ALLOWED_POPULATE_STATUS");
+  const allowedBody = await allowed.json() as { data?: Record<string, unknown> };
+  assert.ok(Array.isArray(allowedBody.data?.informationSystems), "UNEXPECTED_ALLOWED_POPULATE_SYSTEMS");
+  assert.ok(Array.isArray(allowedBody.data?.informationAssets), "UNEXPECTED_ALLOWED_POPULATE_ASSETS");
+});
+
+/*
+ * Phase 13 T-13-F1 (13-SECURITY.md; 13-04 threat flag): the read by id names one request, so the caller's filters
+ * decide nothing. A relation filter on a person (the requestor's email, whether a sponsor is set) must not turn the
+ * answer into yes or no about that person: a true and a false predicate both read the same request, as no filter does.
+ */
+test("the request read ignores the caller's filters, so a relation filter is no oracle about a person (T-13-F1)", async () => {
+  const harness = await harnessPromise;
+  const requestId = encodeURIComponent(harness.requests.owner);
+  const plain = await request(`/api/csrm-assessment-requests/${requestId}`, harness.identities.owner);
+  assert.equal(plain.status, 200, "UNEXPECTED_FILTER_ORACLE_BASELINE_STATUS");
+
+  for (const identity of [harness.identities.owner, harness.identities.analyst]) {
+    for (const query of [
+      "filters[requestor][email][$eq]=jane.doe@idambox.com",
+      "filters[requestor][email][$eq]=nobody@example.test",
+      "filters[requestor][email][$startsWith]=zzz",
+      "filters[requestor][displayName][$eq]=Not Jane",
+      "filters[sponsor][email][$null]=true",
+      "filters[sponsor][email][$notNull]=true",
+      "filters[requestStatus][$eq]=released",
+      "filters[$or][0][requestor][email][$eq]=nobody@example.test",
+    ]) {
+      const read = await request(`/api/csrm-assessment-requests/${requestId}?${query}`, identity);
+      assert.equal(read.status, 200, `UNEXPECTED_FILTER_ORACLE_STATUS_${identity}_${query}`);
+      const body = await read.json() as { data?: { documentId?: string } };
+      assert.equal(body.data?.documentId, harness.requests.owner, `UNEXPECTED_FILTER_ORACLE_DOCUMENT_${identity}_${query}`);
+    }
+  }
+});
+
+/*
+ * Phase 16 D-16 and the Orchestrator Confirmation "Request deletion": a request that has a Risk Assessment, in any
+ * state, is never deleted, so no assessment, Risk or history row loses its request. The refusal comes before the notes
+ * and files checks (13-06, 14-08), so a request with an assessment, a note and a file reports REQUEST_HAS_ASSESSMENT.
+ * A request with no assessment keeps today's rule, and a Requestor is refused as today.
+ */
+async function draftedRequest(label: string): Promise<{ requestId: string; assessmentId: string; riskIds: string[] }> {
+  const harness = await harnessPromise;
+  const { requestId, questionnaireId } = await harness.seedUatALikeRequest(label);
+  const { assessmentId } = await harness.runAssessmentDraftJobFixture(questionnaireId, harness.users.analyst);
+  const riskIds = (((await harness.getAssessment(assessmentId))?.risks as Array<Record<string, unknown>> | undefined) ?? []).map((risk) => String(risk.documentId));
+  assert.ok(riskIds.length > 0, `DRAFT_HAS_NO_RISKS_${label}`);
+  return { requestId, assessmentId, riskIds };
+}
+
+async function requestAggregate(requestId: string, assessmentId: string, riskIds: string[]): Promise<unknown[]> {
+  const harness = await harnessPromise;
+  return harness.snapshot([
+    () => harness.getRequest(requestId), () => harness.getAssessment(assessmentId),
+    ...riskIds.flatMap((riskId) => [() => harness.getRisk(riskId), () => harness.riskHistoryRowsFixture(riskId)]),
+    () => harness.listRequestNotes(requestId), () => harness.listRequestAttachments(requestId),
+  ]);
+}
+
+async function deleteRequest(requestId: string, identity: string): Promise<Response> {
+  return request(`/api/csrm-assessment-requests/${encodeURIComponent(requestId)}`, identity, { method: "DELETE" });
+}
+
+async function reasonOf(response: Response): Promise<unknown> {
+  return ((await response.json()) as { error?: { details?: { reason?: unknown } } }).error?.details?.reason;
+}
+
+test("a request that has a risk assessment is never deleted: 409 REQUEST_HAS_ASSESSMENT and the request, assessment, risks and history stay (D-16)", async () => {
+  const harness = await harnessPromise;
+  const { requestId, assessmentId, riskIds } = await draftedRequest("DELETE-WITH-ASSESSMENT");
+  assert.ok((await harness.riskHistoryRowsFixture(riskIds[0])).length > 0, "DRAFTED_RISK_HAS_NO_HISTORY");
+  const before = await requestAggregate(requestId, assessmentId, riskIds);
+
+  const refused = await deleteRequest(requestId, harness.identities.analyst);
+  assert.equal(refused.status, 409, `UNEXPECTED_DELETE_STATUS: ${await refused.clone().text()}`);
+  assert.equal(await reasonOf(refused), "REQUEST_HAS_ASSESSMENT", "UNEXPECTED_DELETE_REASON");
+  assert.deepEqual(await requestAggregate(requestId, assessmentId, riskIds), before, "A_REFUSED_DELETE_CHANGED_THE_AGGREGATE");
+
+  const requestor = await deleteRequest(requestId, harness.identities.owner);
+  assert.equal(requestor.status, 403, "UNEXPECTED_REQUESTOR_DELETE_STATUS");
+  assert.deepEqual(await requestAggregate(requestId, assessmentId, riskIds), before, "A_REQUESTOR_DELETE_CHANGED_THE_AGGREGATE");
+
+  const empty = await harness.createAssessmentRequestFixture({ requestNumber: "DELETE-EMPTY-001", title: "A draft with nothing yet", requestStatus: "draft", requestor: "owner", submittedDate: null });
+  const deleted = await deleteRequest(empty, harness.identities.analyst);
+  assert.ok(deleted.status >= 200 && deleted.status < 300, `UNEXPECTED_EMPTY_DELETE_STATUS_${deleted.status}`);
+  assert.equal(await harness.getRequest(empty), null, "UNEXPECTED_EMPTY_REQUEST_KEPT");
+});
+
+test("a request with an assessment, a note and a file reports REQUEST_HAS_ASSESSMENT first (D-16)", async () => {
+  const harness = await harnessPromise;
+  const { requestId, assessmentId, riskIds } = await draftedRequest("DELETE-WITH-EVERYTHING");
+  await harness.createRequestNoteFixtures(requestId, 1);
+  await harness.seedRequestAttachments(requestId, 1);
+  const before = await requestAggregate(requestId, assessmentId, riskIds);
+  const refused = await deleteRequest(requestId, harness.identities.analyst);
+  assert.equal(refused.status, 409, `UNEXPECTED_DELETE_STATUS: ${await refused.clone().text()}`);
+  assert.equal(await reasonOf(refused), "REQUEST_HAS_ASSESSMENT", "UNEXPECTED_DELETE_REASON");
+  assert.deepEqual(await requestAggregate(requestId, assessmentId, riskIds), before, "A_REFUSED_DELETE_CHANGED_THE_AGGREGATE");
 });

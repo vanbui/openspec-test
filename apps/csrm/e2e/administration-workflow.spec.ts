@@ -86,8 +86,8 @@ async function establishAnalystBaseline(
   await signInAs(page, 'Security Analyst');
   await showNavigation(page);
   await expect(
-    page.getByRole('navigation').getByText('Administration', { exact: true }),
-    'Expected Administration navigation group to be visible',
+    page.getByRole('navigation').getByText('Reference data', { exact: true }),
+    'Expected the Reference data navigation section to be visible',
   ).toBeVisible();
 }
 
@@ -111,7 +111,7 @@ async function signOutAndEstablishRequestorBaseline(page: Page): Promise<void> {
   const sheetOpened = await showNavigation(page);
   const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
   await expect(navigation.getByRole('link', { name: 'My Requests' }), 'the Requestor navigation is on screen').toBeVisible();
-  await expect(navigation.getByText('Administration', { exact: true })).toHaveCount(0);
+  await expect(navigation.getByText('Reference data', { exact: true })).toHaveCount(0);
   if (sheetOpened) {
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: 'Navigation' })).toHaveCount(0);
@@ -454,14 +454,15 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
       await expect(page.getByText('Risk Type created.')).toBeVisible();
     }
     await page.goto('/app/admin/risk-types/import');
-    await expect(page.getByRole('heading', { name: 'Import Risk Types from CSV' })).toBeVisible();
-    await expect(page.getByText('Review and validate every row before any records are created or updated.')).toBeVisible();
+    // 19-UI-SPEC §5.1, §10: the title names no format, and the description says a workbook imports too.
+    await expect(page.getByRole('heading', { level: 1, name: 'Import Risk Types', exact: true })).toBeVisible();
+    await expect(page.getByText('Import a CSV or Excel file. You review every row before anything is created or updated.')).toBeVisible();
 
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 });
       await expectNoHorizontalOverflow(page, `Risk Type import has no page overflow at ${width}px`);
       // The Guidance table renders at every width, so its region follows its overflow from 375px.
-      await expectRegionFollowsOverflow(page, 'Risk Type CSV columns', `Risk Type import Guidance at ${width}px`);
+      await expectRegionFollowsOverflow(page, 'Risk Type columns in the file', `Risk Type import Guidance at ${width}px`);
     }
 
     // Every import page fits 375px: the template pill names no collection (UI-SPEC section 11
@@ -474,15 +475,15 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
       { route: 'information-assets', plural: 'Information Assets', label: 'Information Asset' },
     ] as const) {
       await page.goto(`/app/admin/${collection.route}/import`);
-      await expect(page.getByRole('heading', { level: 1, name: `Import ${collection.plural} from CSV` })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: `Import ${collection.plural}`, exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page, `${collection.plural} import has no page overflow at 375px`);
       const template = page.getByRole('button', { name: 'Download CSV template', exact: true });
       await expect(template, `${collection.plural} import offers the CSV template`).toBeVisible();
       const templateBox = await template.boundingBox();
       expect((templateBox?.x ?? 0) + (templateBox?.width ?? Number.POSITIVE_INFINITY), `${collection.plural} template button stays inside 375px`).toBeLessThanOrEqual(375);
-      const overflow = await expectRegionFollowsOverflow(page, `${collection.label} CSV columns`, `${collection.plural} import Guidance at 375px`);
+      const overflow = await expectRegionFollowsOverflow(page, `${collection.label} columns in the file`, `${collection.plural} import Guidance at 375px`);
       if (overflow === 'true') {
-        await expect(page.getByRole('region', { name: `${collection.label} CSV columns, scrolls horizontally`, exact: true }), `${collection.plural} Guidance region keeps focus while it scrolls`).toBeFocused();
+        await expect(page.getByRole('region', { name: `${collection.label} columns in the file, scrolls horizontally`, exact: true }), `${collection.plural} Guidance region keeps focus while it scrolls`).toBeFocused();
       }
       // The 2026-09-24 baseline found axe scrollable-region-focusable on three of these pages at 375.
       await expectNoSeriousAxeViolations(page);
@@ -490,8 +491,8 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
     }
     await page.setViewportSize(primary);
     await page.goto('/app/admin/risk-types/import');
-    await expect(page.getByRole('heading', { name: 'Import Risk Types from CSV' })).toBeVisible();
-    await expectFocusVisible(page.getByRole('button', { name: 'Choose CSV file' }));
+    await expect(page.getByRole('heading', { level: 1, name: 'Import Risk Types', exact: true })).toBeVisible();
+    await expectFocusVisible(page.getByRole('button', { name: 'Choose file' }));
     await expectNoSeriousAxeViolations(page);
 
     const csv = [
@@ -503,10 +504,11 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
       `Ambiguous ${suffix},normalized collision one`,
       ` ambiguous ${suffix} ,normalized collision two`,
     ].join('\r\n');
-    await page.getByRole('button', { name: 'Choose CSV file' }).click();
+    await page.getByRole('button', { name: 'Choose file' }).click();
     await page.locator('input[type="file"]').setInputFiles({ name: `risk-types-${suffix}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv) });
     await page.getByRole('button', { name: 'Validate and preview' }).click();
-    for (const [state, count] of [['Create', 1], ['Update', 1], ['Unchanged', 1], ['Rejected', 1], ['Ambiguous', 2]] as const) {
+    // The sixth state (D-30) is a filter too: nothing here matches a stored name only by capitals or spacing.
+    for (const [state, count] of [['Create', 1], ['Update', 1], ['Unchanged', 1], ['Rejected', 1], ['Ambiguous', 2], ['Matched by similar name', 0]] as const) {
       await expect(page.getByRole('button', { name: `${state} (${count})` })).toBeVisible();
     }
     const createRecord = previewRecord(`CSV Create ${suffix}`).filter({ hasText: 'Create' });
@@ -515,25 +517,26 @@ test.describe.serial('@administration-imports CSV administration imports', () =>
     const unchangedRecord = previewRecord(unchangedName).filter({ hasText: 'Unchanged' });
     await expect(unchangedRecord, `the unchanged row is previewed at ${primary.width}px`).toBeVisible();
     await expect(unchangedRecord.locator('[data-slot="badge"]')).toHaveText('Unchanged');
+    // D-32: the error report is Strapi's file, named for its collection and the local date.
     const errorDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download error report CSV' }).click();
-    expect((await errorDownload).suggestedFilename()).toBe('risk-types-errors.csv');
+    await page.getByRole('button', { name: 'Download error report' }).click();
+    expect((await errorDownload).suggestedFilename()).toMatch(/^risk-types-import-issues-\d{4}-\d{2}-\d{2}\.csv$/);
     await page.getByRole('button', { name: 'Continue to confirmation' }).click();
     await expect(page.getByText(/1 unchanged/i)).toBeVisible();
-    await page.getByRole('checkbox', { name: 'I have reviewed the create and update rows.' }).click();
+    await page.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }).click();
     await page.getByRole('button', { name: 'Confirm import' }).click();
     await expect(page.getByRole('heading', { name: 'Import completed with rejected rows' })).toBeFocused();
-    for (const result of ['Created 1', 'Updated 1', 'Unchanged 1', 'Rejected 1', 'Ambiguous 2']) {
+    for (const result of ['Created 1', 'Updated 1', 'Unchanged 1', 'Rejected 1', 'Ambiguous 2', 'Skipped by you 0']) {
       await expect(page.getByText(result, { exact: true })).toBeVisible();
     }
     await expect(page.getByRole('link', { name: 'View record' })).toHaveCount(2);
     const resultDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download result report CSV' }).click();
-    expect((await resultDownload).suggestedFilename()).toBe('risk-types-results.csv');
+    await page.getByRole('button', { name: 'Download error report' }).click();
+    expect((await resultDownload).suggestedFilename()).toMatch(/^risk-types-import-issues-\d{4}-\d{2}-\d{2}\.csv$/);
     await expect(page).not.toHaveURL(/name=|description=|CSV%20Create/i);
 
-    await page.getByRole('button', { name: 'Import another CSV' }).click();
-    await page.getByRole('button', { name: 'Choose CSV file' }).click();
+    await page.getByRole('button', { name: 'Import another file' }).click();
+    await page.getByRole('button', { name: 'Choose file' }).click();
     const ambiguousOnly = [
       'name,description',
       `Zero write ${suffix},first`,

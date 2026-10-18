@@ -9,13 +9,15 @@ import {
   type StrapiClient,
   type TransportResult,
 } from '../../lib/api/transport/server-client';
+import { checkExportResponse, EXPORT_FILE_CONTENT_TYPES, listExportParams, type ExportResult, type ListExportOptions } from '../exports/export-file-check';
 import {
+  aiGenerationFactsSchema,
+  assessmentRequestRelationshipSchema,
   questionnaireAnswerInputSchema,
   questionnaireDefinitionSchema,
   type QuestionnaireAnswerInput,
   type QuestionnaireDefinition,
 } from './questionnaire-schema';
-import { assessmentRequestRelationshipSchema } from './questionnaire-domain';
 import type { QuestionPlacement } from './questionnaire-placement';
 
 const documentIdSchema = z.string().trim().min(1).max(255);
@@ -26,14 +28,33 @@ const progressSchema = z.object({
   percent: z.number().min(0).max(100),
 });
 const assessmentRequestSummarySchema = assessmentRequestRelationshipSchema;
+/*
+ * The closed event vocabulary and, since Phase 15 (D-26), the AI keys of the approved 06.8 amendment. Only the analyst
+ * projection carries the AI kinds and keys; the Requestor's never does. Both event shapes parse them closed, so a key
+ * this list does not know still refuses the whole response.
+ */
+const governanceEventKindSchema = z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared', 'regenerated', 'ai-proposal', 'question-restored']);
+const governanceEventAiKeys = {
+  runId: z.string().min(1).max(255).optional(),
+  itemKey: z.string().regex(/^i-([1-9]|[12][0-9]|30)$/).optional(),
+  aiEdited: z.boolean().optional(),
+  aiUndo: z.literal(true).optional(),
+  scope: z.enum(['questionnaire', 'question']).optional(),
+  instruction: z.string().min(1).max(500).optional(),
+  instructionSource: z.enum(['plain-language-preset', 'default-task']).optional(),
+  providerName: z.string().min(1).max(255).optional(),
+  providerVersion: z.string().min(1).max(255).optional(),
+  itemCount: z.number().int().min(0).max(30).optional(),
+};
 const questionnaireTimelineEventSchema = z.object({
-  kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared', 'regenerated']),
+  kind: governanceEventKindSchema,
   at: timestampSchema,
   by: z.object({ documentId: documentIdSchema, displayName: z.string().max(255).nullable() }).nullable().optional(),
   reason: z.string().max(500).optional(),
   questionKey: z.string().max(120).optional(),
   questionText: z.string().min(1).max(500).optional(),
   explanation: z.string().max(500).optional(),
+  ...governanceEventAiKeys,
 }).strict();
 const questionnaireSummarySchema = z.object({
   documentId: documentIdSchema,
@@ -54,6 +75,9 @@ const questionnaireSummarySchema = z.object({
   // authorised, and an empty array would tell every other projection that a
   // questionnaire has no revisions when it was simply never asked for.
   events: z.array(questionnaireTimelineEventSchema).max(1_000).optional(),
+  // D-23: every reader learns whether the questionnaire is AI-assisted; only an analyst header carries the facts.
+  aiAssisted: z.boolean(),
+  generation: aiGenerationFactsSchema.optional(),
 });
 const questionnaireListResponseSchema = z.object({
   data: z.array(questionnaireSummarySchema).max(10_000),
@@ -92,9 +116,12 @@ const questionnaireResponseSchema = z.object({ data: questionnaireSummarySchema 
 const questionnaireQuestionListSchema = z.array(z.object({
   documentId: z.unknown().optional(),
   questionText: z.unknown(),
+  helpText: z.unknown().optional(),
   answerType: z.unknown(),
   options: z.unknown(),
   answer: z.unknown().nullable().optional(),
+  answered: z.unknown().optional(),
+  aiOrigin: z.unknown().optional(),
 })).max(10_000)
   // The projection is still unvalidated; the pipe validates every field of it.
   .transform((questions) => questions
@@ -105,13 +132,34 @@ const questionnaireQuestionListSchema = z.array(z.object({
     .map((question) => ({
       ...(question.documentId !== undefined ? { documentId: question.documentId } : {}),
       questionText: question.questionText,
+      ...(question.helpText !== undefined ? { helpText: question.helpText } : {}),
       answerType: question.answerType,
       options: question.options,
       answer: question.answer ?? null,
+      ...(question.answered !== undefined ? { answered: question.answered } : {}),
+      ...(question.aiOrigin !== undefined ? { aiOrigin: question.aiOrigin } : {}),
     })) as z.input<typeof questionnaireDefinitionSchema>)
   .pipe(questionnaireDefinitionSchema);
 
 const questionnaireQuestionsResponseSchema = z.object({ data: questionnaireQuestionListSchema });
+
+/*
+ * CR-401 (D-23, 12-UI-SPEC §9.3): the Requestor sees no marker, provider, model, run or analyst name for the AI.
+ * Strapi serves a questionnaire's `generation` facts and each question's `aiOrigin` on analyst reads only; the
+ * Requestor's reads drop both whatever is served, so neither can reach her page or its client payload. Each is
+ * the shared parser with the drop after it, so it accepts exactly what that parser accepts.
+ */
+function withoutGeneration<T extends { generation?: unknown }>(summary: T): Omit<T, 'generation'> {
+  const { generation: _analystOnly, ...requestorView } = summary;
+  return requestorView;
+}
+function withoutAiOrigin(definition: QuestionnaireDefinition): QuestionnaireDefinition {
+  return definition.map(({ aiOrigin: _analystOnly, answered: _analystAnswered, ...question }) => question);
+}
+const requestorQuestionnaireResponseSchema = questionnaireResponseSchema.transform(({ data }) => ({ data: withoutGeneration(data) }));
+const requestorQuestionnaireListResponseSchema = questionnaireListResponseSchema.transform(({ data, meta }) => ({ data: data.map(withoutGeneration), meta }));
+const requestorQuestionnaireQuestionListSchema = questionnaireQuestionListSchema.transform(withoutAiOrigin);
+const requestorQuestionnaireQuestionsResponseSchema = z.object({ data: requestorQuestionnaireQuestionListSchema });
 
 /*
  * The same question list read for placement (10-CONTEXT D-05): every question, removed ones included, because
@@ -150,8 +198,9 @@ const questionPlacementListSchema = z.array(z.object({
 })));
 const questionnaireQuestionPlacementsResponseSchema = z.object({ data: questionPlacementListSchema });
 const governanceEventSchema = z.object({
-  schemaVersion: z.literal(1), kind: z.enum(['released', 'returned-to-review', 'question-added', 'question-edited', 'question-deleted', 'answer-cleared', 'regenerated']), at: timestampSchema, by: documentIdSchema,
+  schemaVersion: z.literal(1), kind: governanceEventKindSchema, at: timestampSchema, by: documentIdSchema,
   reason: z.string().max(500).optional(), questionKey: z.string().max(120).optional(), questionText: z.string().min(1).max(500).optional(), explanation: z.string().max(2_000).optional(),
+  ...governanceEventAiKeys,
 }).strict();
 const clearedAnswerSchema = z.object({ questionKey: z.string().trim().min(1).max(120), explanation: z.string().trim().min(1).max(2_000) }).strict();
 const governanceResponseSchema = z.object({ data: questionnaireSummarySchema.extend({
@@ -227,8 +276,9 @@ async function read<T>(
   }
 }
 
+/* The answer list of a draft save, a submission or a revert: the Requestor's form, so it carries no AI origin (CR-401). */
 function parseQuestionnaireDefinition(value: unknown): QuestionnaireDefinition {
-  return questionnaireQuestionListSchema.parse(value);
+  return requestorQuestionnaireQuestionListSchema.parse(value);
 }
 
 const questionnaireQuerySchema = z.object({
@@ -262,11 +312,17 @@ function parseQuestionnaireList(payload: unknown): QuestionnaireListResult {
   return { questionnaires: parsed.data, pagination: parsed.meta.pagination };
 }
 
+/* The Requestor's My questionnaires list: the same items without the analyst-only generation facts (CR-401). */
+function parseRequestorQuestionnaireList(payload: unknown): QuestionnaireListResult {
+  const parsed = requestorQuestionnaireListResponseSchema.parse(payload);
+  return { questionnaires: parsed.data, pagination: parsed.meta.pagination };
+}
+
 export function listMyQuestionnaires(): Promise<TransportResult<readonly QuestionnaireSummary[]>>;
 export function listMyQuestionnaires(query: QuestionnaireListQuery): Promise<TransportResult<QuestionnaireListResult>>;
 export async function listMyQuestionnaires(query?: QuestionnaireListQuery): Promise<TransportResult<QuestionnaireListResult | readonly QuestionnaireSummary[]>> {
   const resolved = query ?? { q: '', page: 1, pageSize: 50, sort: 'updatedAt:desc' as const };
-  const result = await read((client) => client.GET('/v1/my_questionnaires', { params: { query: listParams(resolved) } } as never), parseQuestionnaireList);
+  const result = await read((client) => client.GET('/v1/my_questionnaires', { params: { query: listParams(resolved) } } as never), parseRequestorQuestionnaireList);
   return query || result.error ? result : { data: result.data.questionnaires, error: null };
 }
 
@@ -292,6 +348,7 @@ export async function getReviewSummary(): Promise<TransportResult<QuestionnaireR
   );
 }
 
+/** The analyst's questionnaire read: the review page and the request hub, with the generation facts (D-23). */
 export async function getQuestionnaire(documentId: string): Promise<TransportResult<QuestionnaireSummary>> {
   return read(
     (client) => client.GET('/v1/questionnaires/{questionnaireId}', {
@@ -301,12 +358,23 @@ export async function getQuestionnaire(documentId: string): Promise<TransportRes
   );
 }
 
+/** The Requestor's questionnaire read: whether AI assisted, and nothing else of it (CR-401, D-23). */
+export async function getRequestorQuestionnaire(documentId: string): Promise<TransportResult<QuestionnaireSummary>> {
+  return read(
+    (client) => client.GET('/v1/questionnaires/{questionnaireId}', {
+      params: { path: { questionnaireId: documentIdSchema.parse(documentId) } },
+    }),
+    (payload) => requestorQuestionnaireResponseSchema.parse(payload).data,
+  );
+}
+
+/** The Requestor's questions: the questionnaire she answers, with no question's AI origin (CR-401, D-22). */
 export async function getQuestionnaireQuestions(documentId: string): Promise<TransportResult<QuestionnaireDefinition>> {
   return read(
     (client) => client.GET('/v1/questionnaires/{questionnaireId}/questions', {
       params: { path: { questionnaireId: documentIdSchema.parse(documentId) } },
     }),
-    (payload) => questionnaireQuestionsResponseSchema.parse(payload).data,
+    (payload) => requestorQuestionnaireQuestionsResponseSchema.parse(payload).data,
   );
 }
 
@@ -415,8 +483,8 @@ export async function deleteQuestionnaireQuestion(documentId: string, questionId
  * envelope, then its answers through questionnaireQuestionListSchema. The guard
  * reads the same two schemas composed, so it sees every question they carry.
  */
-const mutationContractSchema = z.object({ data: mutationResponseSchema.shape.data.extend({ answers: questionnaireQuestionListSchema }) });
-const revertContractSchema = z.object({ data: revertResponseSchema.shape.data.extend({ answers: questionnaireQuestionListSchema }) }).strip();
+const mutationContractSchema = z.object({ data: mutationResponseSchema.shape.data.extend({ answers: requestorQuestionnaireQuestionListSchema }) });
+const revertContractSchema = z.object({ data: revertResponseSchema.shape.data.extend({ answers: requestorQuestionnaireQuestionListSchema }) }).strip();
 
 /*
  * A question list's own rules, which JSON Schema cannot express: choices only on
@@ -437,12 +505,12 @@ const questionListNarrowings = (listPath: string) => [
 ];
 
 export const contractResponseParsers: readonly ContractResponseParser[] = [
-  { label: 'listMyQuestionnaires', component: 'QuestionnaireListResponse', parser: questionnaireListResponseSchema },
+  { label: 'listMyQuestionnaires', component: 'QuestionnaireListResponse', parser: requestorQuestionnaireListResponseSchema },
   { label: 'getMyQuestionnaireSummary', component: 'QuestionnaireStatusSummaryResponse', parser: requestorSummaryResponseSchema },
   { label: 'listQuestionnairesForReview', component: 'QuestionnaireListResponse', parser: questionnaireListResponseSchema },
   { label: 'getQuestionnaireReviewSummary', component: 'QuestionnaireReviewSummaryResponse', parser: reviewSummaryResponseSchema },
   { label: 'getQuestionnaire', component: 'QuestionnaireHeaderResponse', parser: questionnaireResponseSchema },
-  { label: 'getQuestionnaireQuestions', component: 'QuestionnaireQuestionsResponse', parser: questionnaireQuestionsResponseSchema, narrowedPaths: questionListNarrowings('data') },
+  { label: 'getQuestionnaireQuestions', component: 'QuestionnaireQuestionsResponse', parser: requestorQuestionnaireQuestionsResponseSchema, narrowedPaths: questionListNarrowings('data') },
   { label: 'getQuestionnaireQuestionPlacements', component: 'QuestionnaireQuestionsResponse', parser: questionnaireQuestionPlacementsResponseSchema },
   { label: 'saveQuestionnaireDraft', component: 'QuestionnaireMutationResponse', parser: mutationContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
   { label: 'submitQuestionnaire', component: 'QuestionnaireSubmitResponse', parser: mutationContractSchema, narrowedPaths: questionListNarrowings('data.answers') },
@@ -458,4 +526,45 @@ export const responseParserModule = {
   modulePath: 'features/questionnaires/questionnaire-service.ts',
   mode: 'parsers' as const,
   parsers: contractResponseParsers,
+  // Phase 19 D-19: both questionnaire exports are files, checked by the shared validator's export rule.
+  fileResponses: [
+    { label: 'questionnaires.exportQuestionnaires', path: '/v1/questionnaires/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'questionnaires.exportMyQuestionnaires', path: '/v1/my_questionnaires/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+  ],
 };
+
+/** A questionnaire list's query as its export takes it: every page (D-13). */
+export type QuestionnaireExportQuery = Omit<QuestionnaireListQuery, 'page' | 'pageSize'>;
+
+/** The list's search, status and order, each sent only when set; the export's sort is one value. */
+function questionnaireExportParams({ q, sort, status }: QuestionnaireExportQuery) {
+  return { ...(q ? { q } : {}), ...(status ? { status } : {}), sort };
+}
+
+/** Exports the analyst's Questionnaires list (D-04) as its search and status choose it. */
+export async function exportQuestionnaires(input: ListExportOptions & { query: QuestionnaireExportQuery }): Promise<ExportResult> {
+  try {
+    const client = await createStrapiClient();
+    const exported = await client.GET('/v1/questionnaires/export', {
+      params: { query: { ...questionnaireExportParams(input.query), ...listExportParams(input) } },
+      parseAs: 'arrayBuffer',
+    });
+    return checkExportResponse(exported, input.format);
+  } catch (error) {
+    return normalizeFailure(error);
+  }
+}
+
+/** Exports the viewer's own questionnaires (My questionnaires, D-04) as its search and status choose them. */
+export async function exportMyQuestionnaires(input: ListExportOptions & { query: QuestionnaireExportQuery }): Promise<ExportResult> {
+  try {
+    const client = await createStrapiClient();
+    const exported = await client.GET('/v1/my_questionnaires/export', {
+      params: { query: { ...questionnaireExportParams(input.query), ...listExportParams(input) } },
+      parseAs: 'arrayBuffer',
+    });
+    return checkExportResponse(exported, input.format);
+  } catch (error) {
+    return normalizeFailure(error);
+  }
+}

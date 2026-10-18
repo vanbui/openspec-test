@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { verifyDesignSpecAuthority } from './verify-design-spec-authority.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const phaseOneSpec = '.planning/phases/01-monorepo-foundation-and-secure-application-shell/01-UI-SPEC.md';
-const phaseSixSpec = '.planning/phases/06-administration-and-csv-imports/06-UI-SPEC.md';
+const phaseOneSpec = '.planning/workstreams/csrm/phases/01-monorepo-foundation-and-secure-application-shell/01-UI-SPEC.md';
+const phaseSixSpec = '.planning/workstreams/csrm/phases/06-administration-and-csv-imports/06-UI-SPEC.md';
 
 async function createFixture() {
   const root = await mkdtemp(join(tmpdir(), 'csrm-design-authority-'));

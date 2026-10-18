@@ -13,11 +13,17 @@ import { notFound } from 'next/navigation';
  * with Next's noindex tag (not-found.md, "Calling notFound() after streaming has started").
  *
  * `read` must be the page's own read wrapped in React's cache(), so the check costs no second request.
+ *
+ * `refusedAsMissing`: a route that shows a refused record as a missing one (the Requestor's request page; 13-UI-SPEC
+ * §8.6, O1) takes the not-found title for a 403 too, so the title tells a refused record from a missing one no more
+ * than the page does.
  */
 export async function recordRouteMetadata(
   read: Promise<{ error: { status?: number } | null }>,
   title: string,
+  { refusedAsMissing = false }: { refusedAsMissing?: boolean } = {},
 ): Promise<Metadata> {
-  if ((await read).error?.status === 404) notFound();
+  const status = (await read).error?.status;
+  if (status === 404 || (refusedAsMissing && status === 403)) notFound();
   return { title };
 }

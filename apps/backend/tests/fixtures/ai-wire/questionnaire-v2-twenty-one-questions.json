@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 2,
+  "title": "Payroll platform questionnaire",
+  "description": "Questions about the payroll platform change.",
+  "questions": [
+    {
+      "questionText": "Question 1?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 2?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 3?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 4?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 5?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 6?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 7?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 8?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 9?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 10?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 11?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 12?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 13?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 14?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 15?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 16?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 17?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 18?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 19?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 20?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    },
+    {
+      "questionText": "Question 21?",
+      "helpText": "Explain briefly.",
+      "answerType": "Text",
+      "sectionTitle": "Context",
+      "required": true,
+      "choices": []
+    }
+  ]
+}

@@ -341,6 +341,54 @@
       background-position: -200% 0;
     }
   }
+
+  /*
+   * §5 "Drawer / side panel / route swap | 260ms | expo | Fade + short slide" (14-UI-REVIEW UI-02): a sheet enters
+   * with a short slide (the 16px the navigation drawer travels) and a fade at --duration-slower on the expo curve, and
+   * leaves at --duration-base on --ease-in, because exits are at least 25% shorter than entrances (§3.11). Under
+   * reduced motion a sheet takes only the fade, which the global rule shortens.
+   */
+  --animate-drawer-in-bottom: drawer-in-bottom var(--duration-slower) var(--ease-out-expo);
+  --animate-drawer-out-bottom: drawer-out-bottom var(--duration-base) var(--ease-in) forwards;
+  --animate-drawer-in-end: drawer-in-end var(--duration-slower) var(--ease-out-expo);
+  --animate-drawer-out-end: drawer-out-end var(--duration-base) var(--ease-in) forwards;
+  --animate-drawer-fade-in: drawer-fade-in var(--duration-slower) var(--ease-out-expo);
+  --animate-drawer-fade-out: drawer-fade-out var(--duration-base) var(--ease-in) forwards;
+
+  @keyframes drawer-in-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  @keyframes drawer-out-bottom {
+    to {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  @keyframes drawer-in-end {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes drawer-out-end {
+    to {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes drawer-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes drawer-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
 }
 
 
@@ -381,9 +429,13 @@ html {
   background: var(--selection);
   color: var(--foreground);
 }
+/*
+ * No minimum width: beside a 15px classic scrollbar a 320px viewport (1280px at 400% zoom) leaves a
+ * 305px content box, so a 320px floor scrolled every page sideways (WCAG 1.4.10 Reflow). The layouts
+ * below the body are fluid down to that width.
+ */
 body {
   margin: 0;
-  min-width: 320px;
   overflow-x: hidden;
   font-size: 14px;
   line-height: 20px;
@@ -637,6 +689,94 @@ body {
     transform: scaleY(1);
   }
 }
+/*
+ * An actor's primary action (direction section 4 AppShell, X-6): a full-width light-filled pill first in
+ * the navigation, at the section 4 Buttons default height from 768px and the touch-target height below
+ * it. Hover lifts it 1px to the lighter shadow and never recolours it; reduced motion keeps the shadow
+ * and drops the lift. The inverse focus ring comes from `.sidebar :focus-visible` and
+ * `.sheet-content :focus-visible`.
+ */
+.nav-primary-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: var(--text-button-size);
+  line-height: var(--text-button-line-height);
+  font-weight: 500;
+  letter-spacing: var(--text-button-tracking);
+  box-shadow: var(--shadow-button-light);
+  transition:
+    transform var(--duration-fast) var(--ease-out-expo),
+    box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+.nav-primary-action:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-button-light-hover);
+}
+@media (min-width: 48rem) {
+  .nav-primary-action {
+    min-height: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-primary-action:hover {
+    transform: none;
+  }
+}
+/*
+ * A collapsible section's label row (X-6): a button of the nav item height, a 16px chevron before the
+ * micro-label text, and the item hover fill. The inverse focus ring is the sidebar's.
+ */
+.nav-section-toggle {
+  width: 100%;
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--sidebar-muted);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-micro) var(--ease-standard),
+    color var(--duration-micro) var(--ease-standard);
+}
+.nav-section-toggle:hover {
+  background: var(--sidebar-active);
+  color: var(--sidebar-foreground);
+}
+/*
+ * X-6, D-10: a navigation count is the sidebar's neutral tag (direction §4 Tags and chips) at the item's
+ * end, in the micro-label lockup it carries as a class. It takes the item's own colour, muted at rest and
+ * inverse on hover and when current, and the number's meaning is visually hidden text in the link, so a
+ * count is never colour alone.
+ */
+.nav-count {
+  margin-inline-start: auto;
+  flex: none;
+  border: 1px solid var(--line-on-dark-strong);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+}
+/*
+ * The comma between a label and its count is read, not seen: it stays inline beside the label, so the
+ * name reads "My requests, 3" rather than "My requests , 3", and only its opacity hides it.
+ */
+.nav-count-separator {
+  opacity: 0;
+}
 
 .header {
   position: sticky;
@@ -666,6 +806,214 @@ body {
   border: 1px solid var(--line-ink-15);
   border-radius: var(--radius-full);
   padding: 2px 10px;
+}
+/*
+ * The header's right-hand group (D-15, UI-SPEC §3): quick find's Search control, then the role tag or the account
+ * menu, with the 8px step between them. It may shrink, so the role tag can truncate below 375px (UI-D10).
+ */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+/*
+ * Quick find's Search control (X-7): from 768px the Outline pill at the default height with its icon, the label and
+ * the shortcut hint; below 768px an icon-only circle at the touch-target size whose label stays in the accessible
+ * name, visually hidden, and whose hint is not shown.
+ */
+.header-search {
+  position: relative;
+  flex: none;
+}
+/*
+ * A keyboard shortcut hint (X-7): each key a `kbd` in the micro-label lockup it carries as a class, in the secondary
+ * text colour, with a hairline boundary, the small radius and 4px horizontal padding. The hint is aria-hidden.
+ */
+.shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.shortcut-key {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  color: var(--foreground-secondary);
+}
+/*
+ * Quick find (X-8). The panel is the direction's dialog: the surface, the 2xl radius, a hairline and the overlay
+ * shadow. From 768px it is the form size, 640px, horizontally centred and anchored the header's height plus 48px below
+ * the viewport top, so its top edge never moves as results arrive; its list scrolls within the viewport height that
+ * remains below the input row and above the key hints, less 48px. Below 768px it is a full-screen sheet on the surface
+ * with a visible title row and Close, and its list fills the rest of the sheet (the phone block below). The frame the
+ * header control shows before the dialog's code arrives (.quick-find-frame) takes the same panel.
+ * Group headings are micro-labels in the secondary text colour; the comma in a heading's name is read, not seen.
+ * An option is two lines, body then caption; the active option is the inset fill the shipped item already takes.
+ * While a newer search runs, the previous answer sits at the pending opacity, with no transition (§5 Optimistic UI).
+ */
+.quick-find-content {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+  outline: none;
+}
+@media (min-width: 48rem) {
+  .quick-find-content {
+    top: calc(var(--header-h-md) + 48px);
+    max-width: 640px;
+    translate: -50% 0;
+  }
+  .quick-find-list {
+    max-height: calc(100dvh - var(--header-h-md) - 48px - 44px - 37px - 48px);
+  }
+  .quick-find-frame-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .quick-find-frame .quick-find-close {
+    display: none;
+  }
+  .quick-find-frame .quick-find-title-row {
+    padding: 0;
+  }
+}
+.quick-find-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+}
+.quick-find-command {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.quick-find-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding-inline-end: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.quick-find-input-row:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+/* The row above draws quick find's ring, so the shared command row draws none of its own (D4). */
+.quick-find-input-row [data-slot='command-input-wrapper'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  border-bottom: 0;
+  outline: none;
+}
+.quick-find-skeleton-input {
+  padding-inline: 16px;
+}
+.quick-find-clear {
+  flex: none;
+  border-radius: var(--radius-full);
+}
+.quick-find-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+}
+.quick-find-retry {
+  margin-top: 8px;
+}
+.quick-find-group-message {
+  padding: 4px 8px;
+}
+.quick-find-skeleton-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 6px 12px;
+}
+.quick-find-pending {
+  opacity: 0.6;
+}
+.quick-find-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--foreground-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+.quick-find-footer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.quick-find-group-heading {
+  color: var(--foreground-secondary);
+}
+.quick-find-group-separator {
+  opacity: 0;
+}
+.quick-find-option {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+.quick-find-option-primary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.quick-find-option-single-line {
+  -webkit-line-clamp: 1;
+}
+/* Below 375px only, the role tag shrinks with an ellipsis, its full text kept, so 320px never scrolls sideways (UI-D10). */
+@media (max-width: 374px) {
+  .header-role {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+/*
+ * From 375px to 767px a role tag too long for one line beside Menu and Search (the development Second Security
+ * Analyst, D-31) wraps onto a second line inside the header, its full text shown, instead of scrolling the page
+ * sideways. A tag that fits stays on one line, so the other roles are unchanged (13-UI-SPEC §17, UI-D10).
+ */
+@media (min-width: 375px) and (max-width: 767px) {
+  .header-role {
+    flex: 0 1 auto;
+    white-space: normal;
+    text-align: center;
+  }
 }
 .page {
   width: min(100%, var(--grid-max));
@@ -865,6 +1213,53 @@ body {
     padding: 16px;
   }
 }
+/*
+ * Below 768px, quick find's Search control is the icon-only circle at the touch-target size, its label visually hidden
+ * and kept in its name, with no shortcut hint (X-7); a quick-find option is at least the touch-target height (X-8).
+ * These follow the shell's own phone block above, which stays the first 767px block (page-header.test.tsx reads it).
+ */
+@media (max-width: 767px) {
+  .header-search {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  .header-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .header-search .shortcut-hint {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .quick-find-option {
+    min-height: 44px;
+  }
+  .quick-find-content {
+    inset: 0;
+    max-width: none;
+    height: 100dvh;
+    translate: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .quick-find-list {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+  .quick-find-close,
+  .quick-find-clear {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1035,5 +1430,45 @@ body {
   }
   a[href]::after {
     content: none;
+  }
+}
+
+/*
+ * Print report (X-31, CSRM extension 2026-10-01; Phase 19 D-24). A record that prints as a document takes the named
+ * page `csrm-report`: A4 portrait with a 16mm margin, and `Page {n} of {m}` in the bottom-right margin box where the
+ * browser supports margin boxes (Chromium 131 onwards; elsewhere no number prints). Naming the page keeps every other
+ * page on the browser's default margins (section 4 Print). The margin box takes --text-caption (12px/16px) in
+ * --color-text-secondary with tabular figures.
+ */
+@page csrm-report {
+  size: A4 portrait;
+  margin: 16mm;
+
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--foreground-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media print {
+  /* In print the document is the page itself: no card edge, padding, shadow or width limit. */
+  [data-report-document] {
+    page: csrm-report;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  /* The detail starts on a new page after the overview; each Risk avoids breaking inside where it fits on one page. */
+  [data-report-section="risks-in-detail"] {
+    break-before: page;
+  }
+  [data-report-risk] {
+    break-inside: avoid;
   }
 }

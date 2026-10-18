@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/vanbui/src/test/idambox/docs/diagrams/target-runtime.architecture.json",
+  "output": "/Users/vanbui/src/test/idambox/docs/diagrams/target-runtime-architecture.html",
+  "specification": {
+    "sha256": "3332c31e68ade567aa70ac9b0a9a2b6847775810bfe87bc0f20b53761105fbae",
+    "bytes": 5964
+  },
+  "artifact": {
+    "sha256": "170d3c8c1b16a6321584b4025a83b6a3f6d26a54574c360cc7526acd224d224d",
+    "bytes": 816176
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "evidence": {
+    "verified": true,
+    "repository": "https://github.com/vanbui/idambox",
+    "revision": "37d10d9927419909974674a1a8f78d2778255962",
+    "references": 10,
+    "linkMode": "local-only"
+  }
+}

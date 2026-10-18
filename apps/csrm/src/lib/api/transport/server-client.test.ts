@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -248,6 +248,11 @@ describe('normalizeTransportError', () => {
 
     expect(result).toEqual({ data: null, error: { message: genericMessage, status: 409, reason: 'REQUEST_WORK_STARTED' } });
   });
+  it('keeps the locked assessment reason', () => {
+    expect(normalizeTransportError(conflictBody({ reason: 'ASSESSMENT_NOT_MUTABLE' }), 409)).toEqual({
+      data: null, error: { message: genericMessage, status: 409, reason: 'ASSESSMENT_NOT_MUTABLE' },
+    });
+  });
 
   it.each([
     ['a reason outside the list', { reason: 'QUESTIONNAIRE_EXISTS' }],
@@ -269,8 +274,401 @@ describe('normalizeTransportError', () => {
     expect(normalizeTransportError(body, 409)).toEqual({ data: null, error: { message: genericMessage, status: 409 } });
   });
 
-  it('keeps a reason only on a conflict', () => {
-    expect(normalizeTransportError(conflictBody({ reason: 'REQUEST_WORK_STARTED' }), 400)).toEqual({ data: null, error: { message: genericMessage, status: 400 } });
+  /*
+   * Phase 13 (2026-10-01 confirmation; research A4): an identity-relative refusal stays a 403 and names its rule
+   * (OWN_REQUEST), so the transport keeps a closed-list reason on a 403 as on a 409 (Phase 14 widens it to any 4xx, below).
+   */
+  it('keeps a closed-list reason on a 403 identity refusal', () => {
+    const forbiddenBody = (details: unknown) => ({
+      data: null,
+      error: { status: 403, name: 'ForbiddenError', message: 'CSRM request assignment is denied.', details },
+    });
+    expect(normalizeTransportError(forbiddenBody({ reason: 'OWN_REQUEST' }), 403)).toEqual({
+      data: null, error: { message: genericMessage, status: 403, reason: 'OWN_REQUEST' },
+    });
+    expect(normalizeTransportError(forbiddenBody({ reason: 'NOT_A_REASON' }), 403)).toEqual({ data: null, error: { message: genericMessage, status: 403 } });
+    expect(normalizeTransportError(forbiddenBody({ reason: 'OWN_REQUEST' }), 500)).toEqual({ data: null, error: { message: genericMessage, status: 500 } });
+  });
+
+  /*
+   * Phase 14 (D-11; 14-RESEARCH Settled 8): the attachment refusals use 400, 413, 415 and 422 as well, so a validated
+   * reason crosses on 400, 403, 409, 413, 415 and 422. A 5xx, a missing status and a thrown error still carry none,
+   * except the stage B amendment's retryable 503 ATTACHMENT_BUSY (WR-204), which reaches its copy (below).
+   */
+  it('keeps a closed-list reason on the refusal statuses and on no other status', () => {
+    for (const [status, reason] of [[400, 'ATTACHMENT_EMPTY'], [403, 'NOT_UPLOADER'], [409, 'ATTACHMENTS_CLOSED'], [413, 'ATTACHMENT_TOO_LARGE'], [415, 'ATTACHMENT_MACRO_ENABLED'], [415, 'ATTACHMENT_UNSUPPORTED_STRUCTURE'], [415, 'ATTACHMENT_ACTIVE_CONTENT'], [422, 'ATTACHMENT_MALWARE_FOUND']] as const) {
+      expect(normalizeTransportError(conflictBody({ reason }), status)).toEqual({ data: null, error: { message: genericMessage, status, reason } });
+    }
+    expect(normalizeTransportError(conflictBody({ reason: 'ATTACHMENT_EMPTY' }), 500)).toEqual({ data: null, error: { message: genericMessage, status: 500 } });
+    expect(normalizeTransportError(conflictBody({ reason: 'ATTACHMENT_EMPTY' }), 503)).toEqual({ data: null, error: { message: genericMessage, status: 503 } });
     expect(normalizeTransportError(conflictBody({ reason: 'REQUEST_WORK_STARTED' }))).toEqual({ data: null, error: { message: genericMessage } });
+    expect(normalizeTransportError(conflictBody({ reason: 'NOT_A_REASON' }), 415)).toEqual({ data: null, error: { message: genericMessage, status: 415 } });
+  });
+
+  /*
+   * Phase 15 (D-18; I-2, a regression guard that passed before the phase's web work): an instruction refusal is a 400
+   * whose closed reason crosses so the instruction field can name it, while a 400 naming anything outside the list, and
+   * the served message, stay behind.
+   */
+  it('keeps a 400’s instruction reason and drops a 400 reason outside the closed list', () => {
+    const badRequestBody = (details: unknown) => ({
+      data: null,
+      error: { status: 400, name: 'BadRequestError', message: 'CSRM analyst instruction is not allowed.', details },
+    });
+    expect(normalizeTransportError(badRequestBody({ reason: 'INSTRUCTION_TOO_LONG' }), 400)).toEqual({
+      data: null, error: { message: genericMessage, status: 400, reason: 'INSTRUCTION_TOO_LONG' },
+    });
+    expect(normalizeTransportError(badRequestBody({ reason: 'INSTRUCTION_SOUNDS_RUDE' }), 400)).toEqual({ data: null, error: { message: genericMessage, status: 400 } });
+  });
+
+  /*
+   * IN-601 (D-18): a 404 is the refusal a missing record gets, so it never names a rule. The copy functions branch on a
+   * listed reason before the status, so a reason kept on a 404 would turn "no longer available" into a sentence that
+   * confirms the record exists. Any reason on a 404 is dropped.
+   */
+  it('drops any reason on a 404, so the existence-hiding refusal names no rule', () => {
+    const forbiddenBody = (details: unknown) => ({
+      data: null,
+      error: { status: 403, name: 'ForbiddenError', message: 'CSRM request assignment is denied.', details },
+    });
+    expect(normalizeTransportError(forbiddenBody({ reason: 'OWN_REQUEST' }), 404)).toEqual({ data: null, error: { message: genericMessage, status: 404 } });
+    for (const reason of ['ATTACHMENT_REMOVED', 'ATTACHMENT_BLOCKED', 'NOT_UPLOADER', 'REQUEST_WORK_STARTED']) {
+      expect(normalizeTransportError(conflictBody({ reason }), 404)).toEqual({ data: null, error: { message: genericMessage, status: 404 } });
+    }
+    expect(normalizeTransportError({ error: { status: 404, name: 'NotFoundError', message: 'x', details: { reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Win.Test.EICAR_HDB-1' } } }, 404))
+      .toEqual({ data: null, error: { message: genericMessage, status: 404 } });
+  });
+
+  /*
+   * The stage B amendment (2026-10-11, WR-204): a full screening or extraction queue is a retryable 503 naming
+   * ATTACHMENT_BUSY, which crosses so the person reads the busy sentence. Any other 503 stays the generic retryable 5xx.
+   */
+  it('keeps ATTACHMENT_BUSY on a 503 and no other reason there', () => {
+    expect(normalizeTransportError(conflictBody({ reason: 'ATTACHMENT_BUSY' }), 503)).toEqual({ data: null, error: { message: genericMessage, status: 503, reason: 'ATTACHMENT_BUSY' } });
+    for (const reason of ['ATTACHMENT_EMPTY', 'ATTACHMENTS_CLOSED', 'NOT_A_REASON']) {
+      expect(normalizeTransportError(conflictBody({ reason }), 503)).toEqual({ data: null, error: { message: genericMessage, status: 503 } });
+    }
+    for (const status of [500, 502, 504]) {
+      expect(normalizeTransportError(conflictBody({ reason: 'ATTACHMENT_BUSY' }), status)).toEqual({ data: null, error: { message: genericMessage, status } });
+    }
+  });
+
+  /*
+   * Orchestrator Confirmations: a file that carries malware is refused with a 422 naming ATTACHMENT_MALWARE_FOUND and a
+   * bounded detection name, and both reach the person's sentence. The detection crosses only beside that reason and only
+   * when it matches the specification's pattern (T-14-17).
+   */
+  describe('a malware refusal', () => {
+    const malwareBody = (details: unknown) => ({
+      error: { status: 422, name: 'UnprocessableEntityError', message: 'x', details },
+    });
+
+    it('keeps the 422 reason and its detection name', () => {
+      expect(normalizeTransportError(malwareBody({ reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Csrm.Test.Signature' }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Csrm.Test.Signature' },
+      });
+    });
+
+    /* WR-501: real ClamAV names carry underscores; this is a detection name, not the antivirus test string. */
+    it('keeps a real ClamAV name with an underscore beside ATTACHMENT_MALWARE_FOUND', () => {
+      expect(normalizeTransportError(malwareBody({ reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Win.Test.EICAR_HDB-1' }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Win.Test.EICAR_HDB-1' },
+      });
+    });
+
+    it('keeps a detection of 128 characters in the published alphabet', () => {
+      const detection = `A${'b'.repeat(119)}.c:d/e-f`;
+      expect(detection).toHaveLength(128);
+      expect(normalizeTransportError(malwareBody({ reason: 'ATTACHMENT_MALWARE_FOUND', detection }), 422).error?.detection).toBe(detection);
+    });
+
+    it.each([
+      ['a detection with a space', 'Csrm Test Signature'],
+      ['a detection of 129 characters', `A${'b'.repeat(128)}`],
+      ['a detection starting with punctuation', '.Csrm.Test'],
+      ['an empty detection', ''],
+      ['markup', '<b>Csrm</b>'],
+      ['a non-string detection', 42],
+      ['an array detection', ['Csrm.Test.Signature']],
+    ])('drops %s and keeps the reason', (_scenario, detection) => {
+      expect(normalizeTransportError(malwareBody({ reason: 'ATTACHMENT_MALWARE_FOUND', detection }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'ATTACHMENT_MALWARE_FOUND' },
+      });
+    });
+
+    it('drops a detection beside another reason', () => {
+      expect(normalizeTransportError(malwareBody({ reason: 'ATTACHMENT_TYPE_NOT_ALLOWED', detection: 'Csrm.Test.Signature' }), 415)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 415, reason: 'ATTACHMENT_TYPE_NOT_ALLOWED' },
+      });
+    });
+
+    it('drops an unknown reason and the detection with it', () => {
+      expect(normalizeTransportError(malwareBody({ reason: 'MALWARE', detection: 'Csrm.Test.Signature' }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422 },
+      });
+    });
+
+    it('drops the detection on a status that carries no reason', () => {
+      expect(normalizeTransportError(malwareBody({ reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Csrm.Test.Signature' }), 502)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 502 },
+      });
+    });
+  });
+
+  /*
+   * Phase 19 (D-16, D-17; T-19-03): an export over the row cap is refused 422 EXPORT_ROW_LIMIT with the rows it would
+   * hold and the cap. Both cross only beside that reason, and only as non-negative safe integers, so the dialog can say
+   * the count; any other value, or the same fields beside another reason, stays behind.
+   */
+  describe('an export row limit refusal', () => {
+    const rowLimitBody = (details: unknown) => ({
+      error: { status: 422, name: 'UnprocessableEntityError', message: 'x', details },
+    });
+
+    it('keeps the 422 reason with its row count and cap', () => {
+      expect(normalizeTransportError(rowLimitBody({ reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000 }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000 },
+      });
+    });
+
+    it.each([
+      ['a negative row count', -1],
+      ['a fractional row count', 12500.5],
+      ['a string row count', '12500'],
+      ['an unsafe row count', Number.MAX_SAFE_INTEGER + 1],
+      ['a non-finite row count', Number.POSITIVE_INFINITY],
+      ['a null row count', null],
+    ])('drops %s and keeps the reason and the cap', (_scenario, rowCount) => {
+      expect(normalizeTransportError(rowLimitBody({ reason: 'EXPORT_ROW_LIMIT', rowCount, rowCap: 10000 }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_ROW_LIMIT', rowCap: 10000 },
+      });
+    });
+
+    it('drops a cap that is not a non-negative integer', () => {
+      expect(normalizeTransportError(rowLimitBody({ reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: '10000' }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_ROW_LIMIT', rowCount: 12500 },
+      });
+    });
+
+    it('drops the row count and cap beside another reason', () => {
+      expect(normalizeTransportError(conflictBody({ reason: 'ASSESSMENT_NOT_MUTABLE', rowCount: 12500, rowCap: 10000 }), 409)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 409, reason: 'ASSESSMENT_NOT_MUTABLE' },
+      });
+    });
+
+    it('drops a found object beside the row limit', () => {
+      expect(normalizeTransportError(rowLimitBody({ reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000, found: { rows: 12500 } }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000 },
+      });
+    });
+
+    it('drops the row count and cap on a status that carries no reason', () => {
+      expect(normalizeTransportError(rowLimitBody({ reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000 }), 500)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 500 },
+      });
+    });
+  });
+
+  /*
+   * The exports record's code review amendment (2026-10-17, 3b5c66fa): an xlsx export with a text cell over Excel's
+   * limit is refused 422 EXPORT_CELL_TOO_LONG with the column's closed vocabulary key and the cell limit. Both cross only
+   * beside that reason: the key only when it matches the contract's pattern, the limit only as a non-negative safe integer.
+   */
+  describe('an export cell too long refusal', () => {
+    const cellBody = (details: unknown) => ({
+      error: { status: 422, name: 'UnprocessableEntityError', message: 'x', details },
+    });
+
+    it('keeps the 422 reason with its column key and cell limit', () => {
+      expect(normalizeTransportError(cellBody({ reason: 'EXPORT_CELL_TOO_LONG', column: 'riskStatement', cellLimit: 32767 }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_CELL_TOO_LONG', column: 'riskStatement', cellLimit: 32767 },
+      });
+    });
+
+    it.each([
+      ['a key outside the pattern', 'risk-statement'],
+      ['a key that starts with a digit', '1riskStatement'],
+      ['an over-long key', `r${'a'.repeat(64)}`],
+      ['a key holding a value', 'Customer records were exposed'],
+      ['a key that is not a string', 7],
+    ])('drops %s and keeps the reason and the limit', (_scenario, column) => {
+      expect(normalizeTransportError(cellBody({ reason: 'EXPORT_CELL_TOO_LONG', column, cellLimit: 32767 }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_CELL_TOO_LONG', cellLimit: 32767 },
+      });
+    });
+
+    it('drops a cell limit that is not a non-negative integer', () => {
+      expect(normalizeTransportError(cellBody({ reason: 'EXPORT_CELL_TOO_LONG', column: 'summary', cellLimit: '32767' }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_CELL_TOO_LONG', column: 'summary' },
+      });
+    });
+
+    it('drops the column and limit beside another reason, and the row count beside this one', () => {
+      expect(normalizeTransportError(cellBody({ reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000, column: 'summary', cellLimit: 32767 }), 422).error)
+        .toEqual({ message: genericMessage, status: 422, reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000 });
+      expect(normalizeTransportError(cellBody({ reason: 'EXPORT_CELL_TOO_LONG', column: 'summary', cellLimit: 32767, rowCount: 3, rowCap: 10000 }), 422).error)
+        .toEqual({ message: genericMessage, status: 422, reason: 'EXPORT_CELL_TOO_LONG', column: 'summary', cellLimit: 32767 });
+    });
+  });
+
+  /*
+   * Phase 19 (D-25 to D-27; T-19-03, T-19-04): a file refusal names what it found, so the fix-it copy can say it. The
+   * found object crosses only beside an IMPORT_ reason and only when it is closed and bounded as the contract publishes
+   * it; its strings lose C0 and C1 controls and bidirectional overrides, so they are safe to show as text.
+   */
+  describe('an import file refusal', () => {
+    const fileBody = (details: unknown, status = 422) => ({
+      error: { status, name: 'UnprocessableEntityError', message: 'x', details },
+    });
+
+    it('keeps the delimiter it found beside IMPORT_DELIMITER', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DELIMITER', found: { delimiter: 'semicolon' } }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'IMPORT_DELIMITER', found: { delimiter: 'semicolon' } },
+      });
+    });
+
+    it('keeps every published key within its bounds', () => {
+      const found = { headers: ['Name', 'NAME'], labels: ['Name'], delimiter: 'tab', rows: 5001, bytes: 0 };
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DUPLICATE_HEADER', found }), 422).error?.found).toEqual(found);
+    });
+
+    it('keeps 20 headers of 200 characters', () => {
+      const headers = Array.from({ length: 20 }, (_, index) => `${String(index).padStart(2, '0')}${'h'.repeat(198)}`);
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DUPLICATE_HEADER', found: { headers } }), 422).error?.found).toEqual({ headers });
+    });
+
+    it('keeps the bytes beside a 413 IMPORT_FILE_TOO_LARGE', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_FILE_TOO_LARGE', found: { bytes: 6_000_000 } }, 413), 413).error).toEqual({
+        message: genericMessage, status: 413, reason: 'IMPORT_FILE_TOO_LARGE', found: { bytes: 6_000_000 },
+      });
+    });
+
+    it('strips a right-to-left override, other bidirectional controls and C0 and C1 controls from a header', () => {
+      const found = { headers: ['Na‮me', '⁦Owner⁩\u0000\u0085'], labels: ['Name\u001B'] };
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DUPLICATE_HEADER', found }), 422).error?.found).toEqual({
+        headers: ['Name', 'Owner'],
+        labels: ['Name'],
+      });
+    });
+
+    /*
+     * FE4-10: the strings lose what the attachment name rule removes (file-response.ts IN-403): every control, every
+     * format character (the zero-width and joining characters, the soft hyphen, the byte order mark and the tags too)
+     * and the line and paragraph separators. The rule is written with escapes, so no invisible character sits in source.
+     */
+    it('strips zero-width, soft-hyphen, byte-order-mark, tag and separator characters too', () => {
+      const found = { headers: ['​Na­me﻿', 'Own er ', 'Owner/Team\u{E0041}‍'], labels: ['⁠Name‌'] };
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DUPLICATE_HEADER', found }), 422).error?.found).toEqual({
+        headers: ['Name', 'Owner', 'Owner/Team'],
+        labels: ['Name'],
+      });
+    });
+
+    it('writes its character rule with escapes only', () => {
+      const source = readFileSync(join(process.cwd(), 'src/lib/api/transport/server-client.ts'), 'utf8');
+      const invisible = [...source].filter((character) => /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(character) && !['\n', '\r', '\t'].includes(character));
+      expect(invisible.map((character) => `U+${character.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`)).toEqual([]);
+    });
+
+    it('drops found beside EXPORT_ROW_LIMIT', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000, found: { delimiter: 'semicolon' } }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'EXPORT_ROW_LIMIT', rowCount: 12500, rowCap: 10000 },
+      });
+    });
+
+    it('drops found beside a reason outside the import refusals', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Csrm.Test.Signature', found: { rows: 1 } }), 422).error).toEqual({
+        message: genericMessage, status: 422, reason: 'ATTACHMENT_MALWARE_FOUND', detection: 'Csrm.Test.Signature',
+      });
+    });
+
+    it('drops the row count and cap beside an import refusal', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_TOO_MANY_ROWS', rowCount: 5001, rowCap: 5000, found: { rows: 5001 } }), 422).error).toEqual({
+        message: genericMessage, status: 422, reason: 'IMPORT_TOO_MANY_ROWS', found: { rows: 5001 },
+      });
+    });
+
+    it.each([
+      ['an unknown key', { delimiter: 'tab', cells: ['secret'] }],
+      ['21 headers', { headers: Array.from({ length: 21 }, (_, index) => `H${index}`) }],
+      ['a 201-character header', { headers: ['h'.repeat(201)] }],
+      ['21 labels', { labels: Array.from({ length: 21 }, (_, index) => `L${index}`) }],
+      ['a 201-character label', { labels: ['l'.repeat(201)] }],
+      ['a header that is not a string', { headers: [42] }],
+      ['headers that are not an array', { headers: 'Name' }],
+      ['an unknown delimiter', { delimiter: 'pipe' }],
+      ['a negative row count', { rows: -1 }],
+      ['a fractional byte count', { bytes: 1.5 }],
+      ['a string row count', { rows: '5001' }],
+      ['an array', [{ delimiter: 'tab' }]],
+      ['a string', 'semicolon'],
+      ['null', null],
+    ])('drops a found with %s and keeps the reason', (_scenario, found) => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DELIMITER', found }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'IMPORT_DELIMITER' },
+      });
+    });
+
+    /* The import record's 2026-10-17 amendment: a CSV the parser cannot read names the line it failed on, beside its reason only. */
+    it('keeps the line beside IMPORT_CSV_MALFORMED', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_CSV_MALFORMED', found: { line: 7 } }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'IMPORT_CSV_MALFORMED', found: { line: 7 } },
+      });
+    });
+
+    it('keeps IMPORT_CSV_MALFORMED without a found when the parser named no line', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_CSV_MALFORMED' }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'IMPORT_CSV_MALFORMED' },
+      });
+    });
+
+    it('drops the line beside any other import refusal', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DELIMITER', found: { delimiter: 'tab', line: 3 } }), 422).error).toEqual({
+        message: genericMessage, status: 422, reason: 'IMPORT_DELIMITER', found: { delimiter: 'tab' },
+      });
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_TOO_MANY_ROWS', found: { line: 3 } }), 422).error).toEqual({
+        message: genericMessage, status: 422, reason: 'IMPORT_TOO_MANY_ROWS',
+      });
+    });
+
+    it.each([
+      ['a zero line', { line: 0 }],
+      ['a negative line', { line: -2 }],
+      ['a fractional line', { line: 1.5 }],
+      ['a string line', { line: '7' }],
+      ['a line beside an unknown key', { line: 7, text: 'Name,"broken' }],
+    ])('drops a found with %s beside IMPORT_CSV_MALFORMED and keeps the reason', (_scenario, found) => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_CSV_MALFORMED', found }), 422)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 422, reason: 'IMPORT_CSV_MALFORMED' },
+      });
+    });
+
+    it('drops found on a status that carries no reason', () => {
+      expect(normalizeTransportError(fileBody({ reason: 'IMPORT_DELIMITER', found: { delimiter: 'tab' } }, 500), 500)).toEqual({
+        data: null,
+        error: { message: genericMessage, status: 500 },
+      });
+    });
   });
 });

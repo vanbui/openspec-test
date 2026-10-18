@@ -1,29 +1,28 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  CheckIcon,
+  ArchiveIcon,
   CircleCheckIcon,
   CircleDashedIcon,
   CircleDotIcon,
   CircleIcon,
-  CircleQuestionMarkIcon,
-  CircleXIcon,
   ClipboardListIcon,
   ClipboardPenLineIcon,
   Clock3Icon,
   ClockAlertIcon,
-  FileCheck2Icon,
   FilePenLineIcon,
   FileWarningIcon,
   LockKeyholeIcon,
-  RefreshCwIcon,
   SearchCheckIcon,
   SendIcon,
+  SparklesIcon,
+  UnlinkIcon,
+  HistoryIcon,
 } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
 
 import { Badge, type badgeVariants } from '@/components/ui/badge';
-import type { CsvRowState } from '@/features/administration/csv-import-schema';
 import type { AssessmentStatus } from '@/features/assessments/assessment-schema';
+import type { RequestAttachment } from '@/features/attachments/attachments-schema';
 import type { QuestionnaireStatus as QuestionnaireServedState } from '@/features/questionnaires/questionnaire-service';
 import type { RequestStatus } from '@/features/requests/request-domain';
 import type { riskRegisterTreatmentStatuses } from '@/features/risks/risk-schema';
@@ -48,7 +47,9 @@ type StatusValues = {
   assessment: AssessmentStatus;
   questionnaire: QuestionnaireStatusValue;
   treatment: TreatmentStatus;
-  importRow: CsvRowState;
+  aiReview: 'proposed' | 'uncited' | 'stale';
+  risk: 'withdrawn';
+  attachment: RequestAttachment['state'];
 };
 export type StatusFamily = keyof StatusValues;
 export type StatusValue<F extends StatusFamily> = StatusValues[F];
@@ -58,6 +59,19 @@ export type StatusPresentation = {
   label: string;
   tone: StatusTone;
 };
+
+/** The icons of the file states (14-UI-SPEC §3.4), by name: the attachments feature resolves them (IN-506). */
+export type AttachmentStatusIconName = 'ShieldCheck' | 'ShieldEllipsis' | 'ShieldX' | 'FileX' | 'ArchiveX';
+
+/** A presentation whose icon is named rather than held, so this module ships no component for it (IN-506). */
+export type NamedIconStatusPresentation = {
+  iconName: AttachmentStatusIconName;
+  label: string;
+  tone: StatusTone;
+};
+
+/** The file family names its icons; every other family holds its icon. */
+type PresentationOf<F extends StatusFamily> = F extends 'attachment' ? NamedIconStatusPresentation : StatusPresentation;
 
 /*
  * Icons never repeat a severity shape (direction section 3.6) or an urgency icon (section 4 Urgency). A draft
@@ -100,31 +114,58 @@ const treatmentFamily = {
 } satisfies Record<TreatmentStatus, StatusPresentation>;
 
 /*
- * A CSV import row's state, in its review and its results (direction section 4, CSV import rows): a row that is
- * or will be written is success, an unchanged row is neutral, and a row the Security Analyst must correct in the
- * file is warning. An ambiguous row is a question, never the High severity triangle.
+ * A CSV import row's state lives in an import-only module of the Administration import feature (19-13; B4, B5), so
+ * its six states and their icons never ship on a route that renders no import; it renders through PresentedStatusBadge.
  */
-const importRowFamily = {
-  create: { icon: CheckIcon, label: 'Create', tone: 'success' },
-  update: { icon: RefreshCwIcon, label: 'Update', tone: 'success' },
-  unchanged: { icon: FileCheck2Icon, label: 'Unchanged', tone: 'neutral' },
-  rejected: { icon: CircleXIcon, label: 'Rejected', tone: 'warning' },
-  ambiguous: { icon: CircleQuestionMarkIcon, label: 'Ambiguous', tone: 'warning' },
-} satisfies Record<CsvRowState, StatusPresentation>;
+
+const aiReviewFamily = {
+  proposed: { icon: SparklesIcon, label: 'AI proposed', tone: 'warning' },
+  uncited: { icon: UnlinkIcon, label: 'No source cited', tone: 'warning' },
+  /* Phase 15 (15-UI-SPEC §4.4; D-20): a proposal its question or questionnaire has moved past; Reject only. */
+  stale: { icon: HistoryIcon, label: 'Changed since proposed', tone: 'warning' },
+} satisfies Record<StatusValues['aiReview'], StatusPresentation>;
+
+/*
+ * A Risk's own state (16-UI-SPEC §6.4; X-27; S-14, D-46): a Risk a Security Analyst took out of its assessment without
+ * deleting it. Neutral, because it waits on nobody while it stays withdrawn; the Archive icon and the word carry it. An
+ * active Risk shows no badge.
+ */
+const riskFamily = {
+  withdrawn: { icon: ArchiveIcon, label: 'Withdrawn', tone: 'neutral' },
+} satisfies Record<StatusValues['risk'], StatusPresentation>;
+
+/*
+ * A file's state (14-UI-SPEC §3.4; X-21). Every value is neutral, because none is work waiting on a person and none is
+ * overdue (UI-D14): the icon and the words tell Blocked from Waiting for malware check, never a colour. `Available` is
+ * in the mapping for completeness; an available file shows no badge.
+ *
+ * IN-506 (D-27, R-08-34): the labels and tones stay in this one mapping, but the icons are named, and the attachments
+ * feature resolves them (AttachmentStatusBadge), so a route that renders a badge but no file, the assessment editor's
+ * included, ships none of the five file icons.
+ */
+const attachmentFamily = {
+  available: { iconName: 'ShieldCheck', label: 'Available', tone: 'neutral' },
+  pending: { iconName: 'ShieldEllipsis', label: 'Waiting for malware check', tone: 'neutral' },
+  blocked: { iconName: 'ShieldX', label: 'Blocked', tone: 'neutral' },
+  unavailable: { iconName: 'FileX', label: 'File unavailable', tone: 'neutral' },
+  removed: { iconName: 'ArchiveX', label: 'Removed', tone: 'neutral' },
+} satisfies Record<StatusValues['attachment'], NamedIconStatusPresentation>;
 
 /**
- * The one mapping from a status value to its label, tone and icon: the four workflow families and the CSV
- * import rows. Badges, filter options, chips and cards all read it; feature code passes a family and a value
+ * The one mapping from a status value to its label, tone and icon: the workflow, review, risk and file families.
+ * Badges, filter options, chips and cards all read it; feature code passes a family and a value
  * and never chooses any of the three.
  */
 export const statusPresentation: {
-  readonly [F in StatusFamily]: Readonly<Record<StatusValue<F>, StatusPresentation>>;
+  readonly [F in StatusFamily]: Readonly<Record<StatusValue<F>, PresentationOf<F>>>;
 } = {
   request: requestFamily,
   assessment: assessmentFamily,
   questionnaire: questionnaireFamily,
   treatment: treatmentFamily,
-  importRow: importRowFamily,
+  aiReview: aiReviewFamily,
+  risk: riskFamily,
+  attachment: attachmentFamily,
 };
 
 /*
@@ -132,7 +173,7 @@ export const statusPresentation: {
  * parsers refuse unknown values at the boundary, so this guards a value added to a vocabulary before its label
  * (the G-13 seam); it never renders anything but the status value itself.
  */
-function unknownStatusPresentation(value: string): StatusPresentation {
+export function unknownStatusPresentation(value: string): StatusPresentation {
   const words = value.replaceAll('-', ' ').trim();
   return {
     icon: CircleIcon,
@@ -141,8 +182,8 @@ function unknownStatusPresentation(value: string): StatusPresentation {
   };
 }
 
-function presentationOf<F extends StatusFamily>(family: F, value: StatusValue<F>): StatusPresentation {
-  const entries: Readonly<Record<string, StatusPresentation>> = statusPresentation[family];
+function presentationOf<F extends StatusFamily>(family: F, value: StatusValue<F>): StatusPresentation | NamedIconStatusPresentation {
+  const entries: Readonly<Record<string, StatusPresentation | NamedIconStatusPresentation>> = statusPresentation[family];
   return Object.hasOwn(entries, value) ? entries[value] : unknownStatusPresentation(String(value));
 }
 
@@ -174,27 +215,38 @@ const toneBadges = {
   danger: { variant: 'danger' },
 } satisfies Record<StatusTone, { className?: string; variant: BadgeVariant }>;
 
+type HeldIconFamily = Exclude<StatusFamily, 'attachment'>;
+
 type FamilyBadgeProps = {
-  [F in StatusFamily]: { family: F; status?: never; value: StatusValue<F> };
-}[StatusFamily];
+  [F in HeldIconFamily]: { family: F; status?: never; value: StatusValue<F>; icons?: never };
+}[HeldIconFamily];
 
-type RequestBadgeProps = { family?: never; status: RequestStatus; value?: never };
+/** The file family names its icons, so its caller passes the components (the attachments feature; IN-506). */
+type AttachmentBadgeProps = {
+  family: 'attachment';
+  status?: never;
+  value: StatusValue<'attachment'>;
+  icons: Readonly<Record<AttachmentStatusIconName, LucideIcon>>;
+};
 
-export type StatusBadgeProps = (FamilyBadgeProps | RequestBadgeProps) & {
+type RequestBadgeProps = { family?: never; status: RequestStatus; value?: never; icons?: never };
+
+export type StatusBadgeProps = (FamilyBadgeProps | AttachmentBadgeProps | RequestBadgeProps) & {
   className?: string;
   /** Announce status changes politely, for a badge that updates in place. */
   live?: boolean;
 };
 
 /**
- * A workflow status: a tinted rounded-rect with a leading icon and its label, never colour alone. The
- * request family keeps its original `status` prop; every other family passes `family` and `value`.
+ * A presented status: a tinted rounded-rect with a leading icon and its label, never colour alone. The one tone
+ * rendering, which StatusBadge and a feature's own presentation map (the import rows, 19-13) both render through.
  */
-export function StatusBadge(props: StatusBadgeProps) {
-  const { className, live = false } = props;
-  const presentation = props.status === undefined
-    ? presentationOf(props.family, props.value)
-    : presentationOf('request', props.status);
+export function PresentedStatusBadge({ presentation, className, live = false }: {
+  presentation: StatusPresentation;
+  className?: string;
+  /** Announce status changes politely, for a badge that updates in place. */
+  live?: boolean;
+}) {
   const tone: { className?: string; variant: BadgeVariant } = toneBadges[presentation.tone];
   const Icon = presentation.icon;
 
@@ -209,4 +261,20 @@ export function StatusBadge(props: StatusBadgeProps) {
       {presentation.label}
     </Badge>
   );
+}
+
+/**
+ * A workflow status, presented from the one mapping. The request family keeps its original `status` prop; every
+ * other family passes `family` and `value`.
+ */
+export function StatusBadge(props: StatusBadgeProps) {
+  const { className, live = false } = props;
+  const presentation = props.status === undefined
+    ? presentationOf(props.family, props.value)
+    : presentationOf('request', props.status);
+  const icon = 'icon' in presentation
+    ? presentation.icon
+    : props.family === 'attachment' ? props.icons[presentation.iconName] : CircleIcon;
+
+  return <PresentedStatusBadge className={className} live={live} presentation={{ icon, label: presentation.label, tone: presentation.tone }} />;
 }

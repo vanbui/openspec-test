@@ -29,8 +29,23 @@ describe('the sidebar wordmark link', () => {
     const mark = container.querySelector('img');
     expect(mark).toHaveAttribute('alt', '');
     expect(mark).not.toHaveAttribute('loading', 'lazy');
-    const source = readFileSync(resolve(process.cwd(), 'src/components/shell/wordmark.tsx'), 'utf8');
+    const source = readFileSync(resolve(process.cwd(), 'src/components/shell/brand-lockup.tsx'), 'utf8');
     expect(source).toMatch(/<Image\b[^>]*\spreload[\s/>]/);
     expect(source).not.toMatch(/\bpriority\b/);
+  });
+
+  /*
+   * The root fallbacks (the global error, not-found and sign-in pages) show the lockup without the shell. The global
+   * error boundary's client chunk is delivered on every route, and the lockup it imported from this module brought the
+   * shell's navigation guard and its leave dialog with it, a second copy of the guard in every route's first load
+   * (found measuring /app/risks/{documentId} in Phase 13 stage B). They take the lockup from a module with no guard.
+   */
+  it('gives the root fallbacks the lockup from a module that reaches no navigation guard', () => {
+    const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
+    for (const file of ['app/global-error.tsx', 'app/not-found.tsx', 'app/sign-in/page.tsx']) {
+      expect(read(file), file).toContain("from '@/components/shell/brand-lockup'");
+      expect(read(file), file).not.toContain("from '@/components/shell/wordmark'");
+    }
+    expect(read('src/components/shell/brand-lockup.tsx')).not.toMatch(/navigation-guard|wordmark'/);
   });
 });

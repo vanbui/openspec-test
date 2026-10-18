@@ -11,7 +11,11 @@ import { releaseReadinessHref } from './assessment-domain';
  * the editor route keeps zod out of the browser.
  */
 
-export type ReleaseReadinessAssessmentItem = { key: string; label: string; href: string };
+/**
+ * An assessment-scope item. `href` is null when the item is not a link (the requesting analyst's `Decisions on AI
+ * proposals`, 16-UI-SPEC §9.1); `caption` is the line under it (`{n} open`, or the requesting analyst's sentence).
+ */
+export type ReleaseReadinessAssessmentItem = { key: string; label: string; href: string | null; caption?: string };
 export type OutstandingRiskRow = { riskNumber: string; href: string; outstanding: number; missing: readonly string[] };
 export type MetRiskRow = { riskNumber: string; href: string; met: number };
 
@@ -27,11 +31,37 @@ export type ReleaseReadinessSummary = {
 
 type RiskGroup = { riskNumber: string; href: string; outstanding: string[]; met: number };
 
+/** Phase 16 D-42 (16-UI-SPEC §9.1): the served requirement that every risk AI proposal has a human decision. */
+export const AI_PROPOSALS_DECIDED_KEY = 'aiProposalsDecided';
+
+/** §9.1 (15 §8.1's wording): the requesting analyst's caption, with no link and no count. */
+export const REQUESTING_ANALYST_DECISIONS_CAPTION = 'This assessment has open AI proposals. Another Security Analyst decides them before release.';
+
+/** What the page knows of the AI proposals beside the served readiness (16-UI-SPEC §9.1). */
+export type ReleaseReadinessProposals = {
+  /** The open proposals the proposals read counts; null when the read is unavailable or not served to this viewer. */
+  openCount?: number | null;
+  /** The viewer raised the originating request (OWN_REQUEST): the item has no link and no count. */
+  viewerRaisedRequest?: boolean;
+};
+
+/*
+ * §9.1: while outstanding, `Decisions on AI proposals` links to the section with `{n} open` under it; for the analyst who
+ * raised the request it is plain text with their sentence. Met, it is listed as any met item. Only the presentation
+ * changes: the served state decides whether it is met, and Strapi refuses a release with open proposals.
+ */
+function presentAiDecisions(item: ReleaseReadinessAssessmentItem, outstanding: boolean, proposals: ReleaseReadinessProposals): ReleaseReadinessAssessmentItem {
+  if (item.key !== AI_PROPOSALS_DECIDED_KEY || !outstanding) return item;
+  if (proposals.viewerRaisedRequest) return { ...item, href: null, caption: REQUESTING_ANALYST_DECISIONS_CAPTION };
+  const count = proposals.openCount;
+  return typeof count === 'number' && count > 0 ? { ...item, caption: `${count.toLocaleString('en-AU')} open` } : item;
+}
+
 /** Groups the served requirements, keeping served order for assessment items and first-appearance order for Risks. */
 export function summarizeReleaseReadiness(readiness: {
   ready: boolean;
   requirements: readonly ReleaseReadinessRequirement[];
-}): ReleaseReadinessSummary {
+}, proposals: ReleaseReadinessProposals = {}): ReleaseReadinessSummary {
   const outstandingAssessment: ReleaseReadinessAssessmentItem[] = [];
   const metAssessment: ReleaseReadinessAssessmentItem[] = [];
   const risks = new Map<string, RiskGroup>();
@@ -41,8 +71,9 @@ export function summarizeReleaseReadiness(readiness: {
     if (requirement.state === 'met') met += 1;
     const href = releaseReadinessHref(requirement);
     if (requirement.scope === 'assessment') {
-      const item = { key: requirement.key, label: requirement.label, href };
-      (requirement.state === 'met' ? metAssessment : outstandingAssessment).push(item);
+      const outstanding = requirement.state !== 'met';
+      const item = presentAiDecisions({ key: requirement.key, label: requirement.label, href }, outstanding, proposals);
+      (outstanding ? outstandingAssessment : metAssessment).push(item);
       continue;
     }
     // Keyed by the Risk's destination, unique per Risk: Strapi only bounds a Risk number, so two may share one (IN-205).

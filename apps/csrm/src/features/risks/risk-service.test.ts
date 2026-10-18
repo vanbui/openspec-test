@@ -25,6 +25,9 @@ const registerPayload = {
     residualRating: 'Moderate', treatmentStatus: 'In Progress', treatmentOwner: null,
     targetDate: '2026-09-30', treatmentDueState: 'later',
     assessment: { documentId: 'assessment-1', assessmentNumber: 'ASM-0001', title: 'Portal' },
+    accepted: false,
+    stage: 'under-assessment',
+    treatmentAction: null,
   }],
   meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 }, selectedLabels: {} },
 };
@@ -47,6 +50,7 @@ const detail = {
     controlOwner: null, controlStatus: 'Planned', effectivenessRating: null, evidence: null,
     implementationDueDate: '2026-09-30', implementedDate: null, reviewDate: null,
   }],
+  withdrawal: null,
 };
 
 describe('Risk Register generated-client boundary', () => {
@@ -61,6 +65,22 @@ describe('Risk Register generated-client boundary', () => {
       { data: { ...detail, targetDate: '2026-02-30' } },
       { data: { ...detail, controlImplementations: [{ ...detail.controlImplementations[0], controlStatus: 'Forged' }] } },
       { data: { ...detail, controlImplementations: Array.from({ length: 1_001 }, () => detail.controlImplementations[0]) } },
+    ]) expect(() => parse(hostile)).toThrow();
+  });
+
+  /* Phase 16 D-45: the register detail always carries its withdrawal block, null on an active Risk. */
+  it('parses the Risk detail withdrawal block, null or who, when and why, and refuses anything else', () => {
+    const parse = (riskSchema as unknown as { parseRiskDetailPayload: (payload: unknown) => unknown }).parseRiskDetailPayload;
+    const block = { at: '2026-10-15T01:02:03.000Z', by: { documentId: 'user-bob', displayName: 'Bob Doe' }, reason: 'Proposed under the wrong Risk Type' };
+    expect(parse({ data: { ...detail, withdrawal: null } })).toEqual({ ...detail, withdrawal: null });
+    expect(parse({ data: { ...detail, withdrawal: block } })).toEqual({ ...detail, withdrawal: block });
+    expect(parse({ data: { ...detail, withdrawal: { ...block, by: null } } })).toEqual({ ...detail, withdrawal: { ...block, by: null } });
+    const { withdrawal: _withdrawal, ...withoutWithdrawal } = detail;
+    for (const hostile of [
+      { data: withoutWithdrawal },
+      { data: { ...detail, withdrawal: { ...block, undo: false } } },
+      { data: { ...detail, withdrawal: { ...block, reason: '' } } },
+      { data: { ...detail, withdrawal: { ...block, at: 'yesterday' } } },
     ]) expect(() => parse(hostile)).toThrow();
   });
 
@@ -106,7 +126,7 @@ describe('Risk Register generated-client boundary', () => {
 
   it('uses existing generated inventory paths and fails closed on cap overflow', async () => {
     get
-      .mockResolvedValueOnce(response({ data: [{ documentId: 'assessment-1', assessmentNumber: 'ASM-0001', assessmentStatus: 'draft', summary: null, overallRating: null, generatedDate: null, generatedBy: null, approvalDate: null }] }))
+      .mockResolvedValueOnce(response({ data: [{ documentId: 'assessment-1', assessmentNumber: 'ASM-0001', assessmentStatus: 'draft', summary: null, overallRating: null, generatedDate: null, generatedBy: null, approvalDate: null, requestTitle: null, riskCount: 0, highestResidualRating: null }] }))
       .mockResolvedValueOnce(response({ data: [{ documentId: 'type-1', name: 'Access', description: null }] }))
       .mockResolvedValueOnce(response({ data: [{ documentId: 'control-1', controlNumber: 'AC-1', name: 'Access control', description: null }] }))
       .mockResolvedValueOnce(response({ data: [{ documentId: 'user-1', displayName: 'Alex Analyst' }] }))
@@ -149,5 +169,118 @@ describe('Risk Register generated-client boundary', () => {
       });
     }
     expect(normalizeTransportError).toHaveBeenCalledTimes(6);
+  });
+});
+
+/*
+ * D-32, X-4 and UAT-048: the Related assessment picker asks GET /v1/risk_assessments for the term, which the server
+ * matches against the number, the summary and the request title, and labels each option by its number and its
+ * request's title, or by its number alone when the request has no title.
+ */
+describe('the Related assessment picker search', () => {
+  const assessment = (overrides: Record<string, unknown> = {}) => ({
+    documentId: 'assessment-1', assessmentNumber: 'ASM-2026-2XX26G', assessmentStatus: 'approved', summary: null,
+    overallRating: 'High', generatedDate: null, generatedBy: null, approvalDate: '2026-09-27T00:30:00.000Z',
+    requestTitle: 'UAT-A: Brightwage People cloud HR and payroll platform', riskCount: 4, highestResidualRating: 'Critical',
+    ...overrides,
+  });
+  const page = (data: unknown[]) => ({ data, meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: data.length } } });
+
+  it('sends the term and a page of 25 to the assessment list, and the page alone with no term', async () => {
+    get.mockResolvedValueOnce(response(page([assessment()]))).mockResolvedValueOnce(response(page([])));
+
+    await service.listRiskRegisterAssessments('  payroll ');
+    await service.listRiskRegisterAssessments();
+
+    expect(get.mock.calls[0]).toEqual(['/v1/risk_assessments', { params: { query: { q: 'payroll', pageSize: 25 } } }]);
+    expect(get.mock.calls[1]).toEqual(['/v1/risk_assessments', { params: { query: { pageSize: 25 } } }]);
+  });
+
+  it('labels each assessment by its number and its request title, or by its number alone', () => {
+    const options = riskSchema.parseRiskPickerPayload('assessments', page([
+      assessment(),
+      assessment({ documentId: 'assessment-2', assessmentNumber: 'ASM-2026-NOTITLE', requestTitle: null }),
+    ]));
+
+    expect(options).toEqual([
+      { documentId: 'assessment-1', label: 'ASM-2026-2XX26G · UAT-A: Brightwage People cloud HR and payroll platform' },
+      { documentId: 'assessment-2', label: 'ASM-2026-NOTITLE' },
+    ]);
+  });
+});
+
+/*
+ * Phase 19 D-19: the register export is read with a binary parse, checked by the shared validator's export rule, and
+ * returned with the server's name and row count; a refusal keeps the transport error's reason and counts.
+ */
+describe('exportRiskRegister', () => {
+  const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const PK = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]);
+  const fileResponse = (headers: Record<string, string>, bytes: Uint8Array = PK) => ({
+    data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    response: { status: 200, headers: new Headers(headers) },
+  });
+  const served = {
+    'content-type': XLSX,
+    'content-disposition': 'attachment; filename="risk-register-2026-10-01.xlsx"; filename*=UTF-8\'\'risk-register-2026-10-01.xlsx',
+    'x-csrm-row-count': '1',
+  };
+  const query = parseRiskRegisterQuery({ q: 'HYPERLINK', treatmentStatus: 'In Progress', page: '3', pageSize: '50' });
+
+  it('sends the register query without its page, the format, the columns and the zone, and returns the checked bytes', async () => {
+    get.mockResolvedValueOnce(fileResponse(served));
+
+    const result = await service.exportRiskRegister({ query, format: 'xlsx', columns: ['riskNumber', 'riskStatement'], timeZone: 'Australia/Sydney' });
+
+    expect(get).toHaveBeenCalledWith('/v1/risks/export', {
+      params: { query: { q: 'HYPERLINK', treatmentStatus: 'In Progress', sort: 'targetDate:asc', format: 'xlsx', columns: 'riskNumber,riskStatement', timeZone: 'Australia/Sydney' } },
+      parseAs: 'arrayBuffer',
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.bytes).toBeInstanceOf(Uint8Array);
+    expect(result.data).toEqual({ fileName: 'risk-register-2026-10-01.xlsx', contentType: XLSX, bytes: PK, rowCount: 1 });
+  });
+
+  it('sends neither columns nor a zone when none is given', async () => {
+    get.mockResolvedValueOnce(fileResponse(served));
+
+    await service.exportRiskRegister({ query, format: 'xlsx' });
+
+    expect(get.mock.calls[0]?.[1]).toEqual({ params: { query: { q: 'HYPERLINK', treatmentStatus: 'In Progress', sort: 'targetDate:asc', format: 'xlsx' } }, parseAs: 'arrayBuffer' });
+  });
+
+  it('returns a 422 as the transport error with its reason, row count and cap', async () => {
+    const refusal = { data: null, error: { message: 'CSRM request failed.', status: 422, reason: 'EXPORT_ROW_LIMIT', rowCount: 12_500, rowCap: 10_000 } };
+    const body = { error: { status: 422, name: 'UnprocessableEntityError', message: 'x', details: { reason: 'EXPORT_ROW_LIMIT', rowCount: 12_500, rowCap: 10_000 } } };
+    get.mockResolvedValueOnce({ error: body, response: { status: 422, headers: new Headers() } });
+    normalizeTransportError.mockReturnValueOnce(refusal);
+
+    await expect(service.exportRiskRegister({ query, format: 'csv' })).resolves.toEqual(refusal);
+    expect(normalizeTransportError).toHaveBeenCalledWith(body, 422);
+  });
+
+  it('refuses a missing, non-integer or out-of-range row count as a file-check failure', async () => {
+    for (const count of [null, '1.5', 'one', '-1', '10001', '']) {
+      const headers: Record<string, string> = { ...served };
+      if (count === null) delete headers['x-csrm-row-count'];
+      else headers['x-csrm-row-count'] = count;
+      get.mockResolvedValueOnce(fileResponse(headers));
+      await expect(service.exportRiskRegister({ query, format: 'xlsx' }), String(count)).resolves.toEqual({ data: null, error: { kind: 'file-check', failure: 'row-count' } });
+    }
+  });
+
+  it('refuses bytes the export rule rejects, and never returns them', async () => {
+    get.mockResolvedValueOnce(fileResponse({ ...served, 'content-type': 'text/html' }));
+    await expect(service.exportRiskRegister({ query, format: 'xlsx' })).resolves.toEqual({ data: null, error: { kind: 'file-check', failure: 'type' } });
+    get.mockResolvedValueOnce(fileResponse(served, new TextEncoder().encode('<html>')));
+    await expect(service.exportRiskRegister({ query, format: 'xlsx' })).resolves.toEqual({ data: null, error: { kind: 'file-check', failure: 'signature' } });
+    get.mockResolvedValueOnce(fileResponse({ ...served, 'content-type': 'text/csv; charset=utf-8' }));
+    await expect(service.exportRiskRegister({ query, format: 'csv' })).resolves.toEqual({ data: null, error: { kind: 'file-check', failure: 'name' } });
+  });
+
+  it('registers the export with the parity guard as a file response of the two export media types', () => {
+    expect(service.responseParserModule.fileResponses).toEqual([
+      { label: 'risks.exportRiskRegister', path: '/v1/risks/export', method: 'get', contentTypes: ['text/csv; charset=utf-8', XLSX] },
+    ]);
   });
 });

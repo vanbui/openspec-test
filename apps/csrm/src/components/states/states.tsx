@@ -119,17 +119,18 @@ export function ErrorState({ action, density, description, headingLevel, noun, r
   );
 }
 
-export function PermissionDeniedState({ action, area, density, headingLevel }: {
+export function PermissionDeniedState({ action, area, density, description, headingLevel }: {
   action?: StateAction;
   area?: string;
   density?: StateDensity;
+  description?: string;
   headingLevel?: HeadingLevel;
 } = {}) {
   const heading = area ? `You don’t have access to ${area}` : 'You don’t have access to this area';
 
   return (
     <StateFrame density={density} heading={heading} headingLevel={headingLevel} icon={LockKeyhole} kind="permission" role="alert">
-      <p className="text-sm text-foreground-secondary">Home shows the work you can open. If you think you should have access, contact your administrator.</p>
+      <p className="text-sm text-foreground-secondary">{description ?? 'Home shows the work you can open. If you think you should have access, contact your administrator.'}</p>
       <StateActionLink action={action ?? goToHome} />
     </StateFrame>
   );

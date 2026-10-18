@@ -101,11 +101,17 @@ const exposedSystemSchema = z.object({
   total: countSchema,
 }).strict();
 
+/*
+ * D-40 to D-42: every section of the risk-exposure report counts released open Risks; the accepted Risks
+ * among them and the open Risks under assessment are their own required counts, so the under-assessment
+ * figure is never read as, or added to, a released one.
+ */
 export const riskExposureReportSchema = z.object({
   key: z.literal('risk-exposure'),
   today: dateSchema,
   byResidualRating: ratingCountsSchema,
   byInherentRating: ratingCountsSchema,
+  acceptedByResidualRating: ratingCountsSchema,
   residualByTreatmentStatus: z.object({
     Critical: treatmentStatusCountsSchema,
     High: treatmentStatusCountsSchema,
@@ -119,6 +125,7 @@ export const riskExposureReportSchema = z.object({
     truncated: z.boolean(),
     risksWithoutSystem: countSchema,
   }).strict(),
+  underAssessment: z.object({ byResidualRating: ratingCountsSchema }).strict(),
 }).strict();
 
 export const treatmentPerformanceReportSchema = z.object({

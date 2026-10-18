@@ -87,7 +87,7 @@ describe('SaveStatus', () => {
   it('a blocked failure is announced once with its message and Refresh page', async () => {
     const user = userEvent.setup();
     const onRefresh = vi.fn();
-    const message = 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.';
+    const message = 'A Security Analyst has taken this questionnaire back to update it, so your latest answers weren’t saved. They’re kept on this page, and you can carry on when it’s sent back to you.';
     renderStatus({ kind: 'failed', failure: 'blocked', message }, { onRefresh });
 
     expect(screen.getByRole('alert')).toHaveTextContent(message);

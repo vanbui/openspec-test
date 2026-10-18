@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Object template of HR people (150-archetype-hr-person.xml). The display name
+  (SCIM displayName) is the HR preferred name when given, otherwise the given and
+  family names, otherwise the username (D19, P4-09).
+-->
+<objectTemplate xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                xmlns:ext="http://idambox.test/midpoint/extension"
+                oid="11000000-0000-4000-8000-000000000140">
+    <name>HR person template</name>
+    <mapping>
+        <name>display-name</name>
+        <strength>strong</strength>
+        <source><path>nickName</path></source>
+        <source><path>givenName</path></source>
+        <source><path>familyName</path></source>
+        <source><path>extension/ext:username</path></source>
+        <expression>
+            <script>
+                <code>
+                    def text = { value -> value == null ? '' : value.toString().trim() }
+                    if (text(nickName)) return text(nickName)
+                    def joined = [text(givenName), text(familyName)].findAll { it }.join(' ')
+                    if (joined) return joined
+                    return text(username) ?: null
+                </code>
+            </script>
+        </expression>
+        <target><path>fullName</path></target>
+    </mapping>
+</objectTemplate>

@@ -19,6 +19,10 @@ export type SegmentedControlProps<TValue extends string> = {
   value: TValue;
   onValueChange: (value: TValue) => void;
   className?: string;
+  /** The id of a line that describes the choice, such as a hint under it. */
+  describedBy?: string;
+  /** Read-only while a request runs: the segments keep focus and a press changes nothing. */
+  readOnly?: boolean;
 };
 
 /**
@@ -28,9 +32,11 @@ export type SegmentedControlProps<TValue extends string> = {
  */
 export function SegmentedControl<TValue extends string>({
   className,
+  describedBy,
   label,
   onValueChange,
   options,
+  readOnly = false,
   value,
 }: SegmentedControlProps<TValue>) {
   const labelId = useId();
@@ -43,9 +49,12 @@ export function SegmentedControl<TValue extends string>({
       {/* Unchecked segments inherit the group's text colour. A colour utility beside `text-button`
           in one `cn()` call would make tailwind-merge drop the type token. */}
       <RadioGroupPrimitive.Root
+        aria-describedby={describedBy}
         aria-labelledby={labelId}
+        aria-readonly={readOnly || undefined}
         className="grid w-full auto-cols-fr grid-flow-col rounded-full border border-border-strong bg-surface p-1 text-foreground md:inline-grid md:w-auto"
         onValueChange={(next) => {
+          if (readOnly) return;
           const option = options.find((candidate) => candidate.value === next);
           if (option) onValueChange(option.value);
         }}

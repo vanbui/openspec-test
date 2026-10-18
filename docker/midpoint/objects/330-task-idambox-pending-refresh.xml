@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every minute: refreshes IdamBox SCIM writes midPoint holds as pending operations
+  (for example while Strapi cannot be reached) and retries them, each no sooner
+  than the resource's operationRetryPeriod (PT1M) and at most
+  operationRetryMaxAttempts times, so recovery does not flood Strapi or Keycloak.
+  Strapi's 503 (Keycloak unavailable) is retried by the HR tasks' retry trigger
+  instead, because the connector reports it as a generic error (ADR 0006).
+-->
+<task xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      oid="11000000-0000-4000-8000-000000000330">
+    <name>IdamBox pending-operation refresh</name>
+    <ownerRef oid="00000000-0000-0000-0000-000000000002" type="c:UserType"/>
+    <executionState>runnable</executionState>
+    <schedulingState>ready</schedulingState>
+    <schedule>
+        <recurrence>recurring</recurrence>
+        <interval>60</interval>
+        <misfireAction>executeImmediately</misfireAction>
+    </schedule>
+    <activity>
+        <work>
+            <shadowRefresh/>
+        </work>
+    </activity>
+</task>

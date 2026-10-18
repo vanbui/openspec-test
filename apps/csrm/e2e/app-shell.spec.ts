@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+import { signInAs } from './helpers/navigation';
+
 const wcagTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // The locked not-found copy (UI-SPEC section 9.3), shared by the root and the in-shell fallback.
 const notFound = {
@@ -113,5 +115,53 @@ test('a notFound() inside the shell renders the same copy in the shell', async (
     await expect(page.getByText(/could not be found/i)).toHaveCount(0);
     await expect(page.locator('[data-slot="skeleton"], [aria-busy="true"], [role="status"][aria-label^="Loading"]')).toHaveCount(0);
     await expectAccessibleWithoutOverflow(page, `the in-shell not-found at ${width}px`);
+  }
+});
+
+/*
+ * D-31 (UI-SPEC §17, UI-D26): the second human Security Analyst signs in through the development sign-in and reads
+ * the analyst's shell. This spec is not in the mobile project's allowlist, so the test proves both widths itself:
+ * at 1440 the analyst navigation's Assessment work section, at 375 the header's Menu, Search and role tag with no
+ * horizontal scroll (the automated half of the header backstop). At 375 the page is no wider than 375 and the whole
+ * tag, `Second Security Analyst`, is shown inside the screen, wrapped rather than cut (IN-403); axe runs at each
+ * width (WR-606).
+ */
+test('REQ08_SECOND_ANALYST_SIGN_IN: the Second Security Analyst signs in and reads the analyst shell at 1440 and 375', async ({ page }) => {
+  const role = 'Second Security Analyst';
+  await signInAs(page, role);
+
+  for (const width of [1440, 375] as const) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await page.goto('/app');
+    await expect(page.getByRole('heading', { level: 1, name: 'Home', exact: true }), `REQ08_SECOND_ANALYST_SIGN_IN: Home at ${width}px`).toBeVisible();
+    const banner = page.getByRole('banner');
+    await expect(banner.getByText(role, { exact: true }), `REQ08_SECOND_ANALYST_SIGN_IN: the role tag at ${width}px`).toBeVisible();
+
+    if (width === 1440) {
+      const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+      await expect(
+        navigation.getByRole('group', { name: 'Assessment work', exact: true }),
+        'REQ08_SECOND_ANALYST_SIGN_IN: the analyst navigation at 1440',
+      ).toBeVisible();
+    } else {
+      await expect(banner.getByRole('button', { name: 'Menu', exact: true }), 'REQ08_SECOND_ANALYST_SIGN_IN: Menu at 375').toBeVisible();
+      await expect(banner.getByRole('button', { name: /^Search\b/ }), 'REQ08_SECOND_ANALYST_SIGN_IN: the search icon at 375').toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), 'REQ08_SECOND_ANALYST_SIGN_IN: the page is no wider than 375').toBeLessThanOrEqual(375);
+      // The tag is shown whole, inside the screen: neither cut off (either way) nor pushed past an edge.
+      const tag = banner.getByText(role, { exact: true });
+      await expect(tag).toHaveText(role);
+      await expect.poll(
+        () => tag.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return {
+            wholeAcross: element.scrollWidth <= element.clientWidth,
+            wholeDown: element.scrollHeight <= element.clientHeight,
+            onScreen: box.left >= 0 && box.right <= window.innerWidth && box.top >= 0,
+          };
+        }),
+        { message: 'REQ08_SECOND_ANALYST_SIGN_IN: the role tag is whole and on screen at 375' },
+      ).toEqual({ wholeAcross: true, wholeDown: true, onScreen: true });
+    }
+    await expectAccessibleWithoutOverflow(page, `REQ08_SECOND_ANALYST_SIGN_IN: the Second Security Analyst’s Home at ${width}px`);
   }
 });

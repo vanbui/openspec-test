@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { components } from '../../lib/api/generated/schema';
 import { riskRegisterRatings } from '../risks/risk-schema';
+import { alertKinds, alertUrgencies, MAX_ALERT_PAGE, readAlertListUrlQuery, type AlertKind, type AlertUrgency } from './alert-domain';
 
 type Schemas = components['schemas'];
 
@@ -20,20 +21,8 @@ type SameUnion<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : fals
  * the one client narrowing, registered beside each parser that reads alert
  * rows (alert-service.ts, report-service.ts).
  */
-export const alertKinds = [
-  'risk-treatment-overdue',
-  'risk-treatment-due-soon',
-  'request-overdue',
-  'request-due-soon',
-  'control-implementation-overdue',
-  'assessment-review-due',
-  'critical-residual-risk-untreated',
-  'ineffective-control',
-] as const satisfies readonly Schemas['AlertKind'][];
-export type AlertKind = (typeof alertKinds)[number];
-
-export const alertUrgencies = ['overdue', 'due-soon', 'attention'] as const satisfies readonly Schemas['AlertUrgency'][];
-export type AlertUrgency = (typeof alertUrgencies)[number];
+// The kind and urgency tuples live in the zod-free alert-domain.ts, so the Alerts list downloads no zod (plan 11-09).
+export { alertKinds, alertUrgencies, readAlertListUrlQuery, type AlertKind, type AlertListUrlQuery, type AlertUrgency } from './alert-domain';
 
 export const alertSourceTypes = [
   'risk',
@@ -60,7 +49,6 @@ const alertVocabulariesMatchTheContract = {
 } as const;
 void alertVocabulariesMatchTheContract;
 
-const MAX_ALERT_PAGE = 1_000_000;
 const documentIdSchema = z.string().min(1).max(255);
 const countSchema = z.number().int().nonnegative();
 const pageSizeSchema = z.union([z.literal(5), z.literal(10), z.literal(25), z.literal(50)]);
@@ -157,24 +145,10 @@ export const alertListQuerySchema = z.object({
 }).strict();
 export type AlertListQuery = z.input<typeof alertListQuerySchema>;
 
-const firstValue = (value: unknown): unknown => Array.isArray(value) ? value[0] : value;
-
 /**
- * The Alerts screen's URL (`?kind=`, `?urgency=`, `?page=`, `?pageSize=`). The
- * screen filters by one kind at a time. An unknown kind or urgency reads as all,
- * and any page size other than 10, 25 or 50 reads as the default, as the other
- * list filters do.
+ * The Alerts screen's URL (`?kind=`, `?urgency=`, `?page=`, `?pageSize=`), read on the server by the one reader the
+ * client also uses (`readAlertListUrlQuery` in the zod-free `alert-domain.ts`), so the two never read a URL apart.
+ * It accepts any non-null object, not only a plain one: `next dev` resolves searchParams to a Proxy whose
+ * `constructor` has no prototype, which `z.record` refuses as "expected record".
  */
-export const alertListUrlQuerySchema = z.object({
-  kind: z.preprocess(firstValue, z.enum(alertKinds).optional().catch(undefined)),
-  urgency: z.preprocess(firstValue, z.enum(alertUrgencies).optional().catch(undefined)),
-  page: z.preprocess((value) => {
-    const parsed = Number(firstValue(value));
-    return Number.isInteger(parsed) && parsed >= 1 && parsed <= MAX_ALERT_PAGE ? parsed : 1;
-  }, z.number().int().min(1).max(MAX_ALERT_PAGE)),
-  pageSize: z.preprocess((value) => {
-    const parsed = Number(firstValue(value));
-    return parsed === 10 || parsed === 25 || parsed === 50 ? parsed : 25;
-  }, z.union([z.literal(10), z.literal(25), z.literal(50)])),
-}).strip();
-export type AlertListUrlQuery = z.infer<typeof alertListUrlQuerySchema>;
+export const alertListUrlQuerySchema = z.looseObject({}).transform((params) => readAlertListUrlQuery(params));

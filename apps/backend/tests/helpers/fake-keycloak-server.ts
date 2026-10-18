@@ -17,7 +17,7 @@ export type FakeKeycloakUser = {
 
 export type FakeKeycloakRequest = { method: string; path: string; authorization?: string; body: unknown; rawBody: string };
 
-type Override = { status: number; body?: string; delayMs?: number };
+type Override = { status: number; body?: string; delayMs?: number; bodyDelayMs?: number };
 
 export const FAKE_KEYCLOAK_REALM = "idambox";
 export const FAKE_KEYCLOAK_CLIENT_ID = "idambox-strapi-admin";
@@ -33,9 +33,12 @@ export const FAKE_KEYCLOAK_CLIENT_SECRET = "fake-keycloak-client-secret-do-not-l
  */
 export async function startFakeKeycloakServer(options: { tokenLifetimeSeconds?: number } = {}) {
   const users = new Map<string, FakeKeycloakUser>();
+  const sessions = new Map<string, Set<string>>();
   const requests: FakeKeycloakRequest[] = [];
   const validTokens = new Set<string>();
   const overrides: Array<{ prefix: string; override: Override }> = [];
+  const barriers: Array<{ prefix: string; entered: () => void; wait: Promise<void>; release: () => void }> = [];
+  const held = new Set<() => void>();
   let tokenLifetimeSeconds = options.tokenLifetimeSeconds ?? 300;
 
   const adminPrefix = `/admin/realms/${FAKE_KEYCLOAK_REALM}/users`;
@@ -58,11 +61,20 @@ export async function startFakeKeycloakServer(options: { tokenLifetimeSeconds?: 
     };
 
     const key = `${method} ${url.pathname}`;
+    const barrierIndex = barriers.findIndex(({ prefix }) => key.startsWith(prefix));
+    if (barrierIndex >= 0) {
+      const [barrier] = barriers.splice(barrierIndex, 1);
+      barrier.entered(); await barrier.wait; held.delete(barrier.release);
+    }
     const overrideIndex = overrides.findIndex(({ prefix }) => key.startsWith(prefix));
     if (overrideIndex >= 0) {
       const [{ override }] = overrides.splice(overrideIndex, 1);
       if (override.delayMs) await new Promise((resolve) => setTimeout(resolve, override.delayMs));
       response.writeHead(override.status, { "content-type": "application/json" });
+      if (override.bodyDelayMs) {
+        response.flushHeaders();
+        await new Promise((resolve) => setTimeout(resolve, override.bodyDelayMs));
+      }
       response.end(override.body ?? "");
       return;
     }
@@ -122,7 +134,11 @@ export async function startFakeKeycloakServer(options: { tokenLifetimeSeconds?: 
       user.password = input.value;
       return send(204);
     }
-    return send(404, { error: "Not found" });
+    if (method === "POST" && rest.length === 2 && rest[1] === "logout") {
+      sessions.delete(user.id);
+      return send(204);
+    }
+    return send(501, { error: "Unimplemented fake route" });
   });
 
   await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
@@ -131,6 +147,7 @@ export async function startFakeKeycloakServer(options: { tokenLifetimeSeconds?: 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
     users,
+    sessions,
     requests,
     adminRequests: () => requests.filter((request) => request.path.startsWith("/admin/")),
     tokenRequests: () => requests.filter((request) => request.path === tokenPath),
@@ -142,6 +159,14 @@ export async function startFakeKeycloakServer(options: { tokenLifetimeSeconds?: 
     failNext(prefix: string, override: Override) {
       overrides.push({ prefix, override });
     },
+    holdNext(prefix: string) {
+      let entered!: () => void;
+      let release!: () => void;
+      const arrived = new Promise<void>((resolve) => { entered = resolve; });
+      const wait = new Promise<void>((resolve) => { release = resolve; });
+      held.add(release); barriers.push({ prefix, entered, wait, release });
+      return { entered: arrived, release };
+    },
     revokeTokens() {
       validTokens.clear();
     },
@@ -149,6 +174,7 @@ export async function startFakeKeycloakServer(options: { tokenLifetimeSeconds?: 
       tokenLifetimeSeconds = seconds;
     },
     close: () => new Promise<void>((resolve, reject) => {
+      for (const release of held) release();
       server.closeAllConnections();
       server.close((error) => error ? reject(error) : resolve());
     }),

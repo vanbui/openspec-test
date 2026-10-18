@@ -1,30 +1,24 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
+import { buildAssessmentContext } from "../src/csrm/ai/assessment-context";
+import { uatALikeRecords } from "./fixtures/uat-a-like-context";
 
 import { openaiCompatibleAssessmentDraftProvider } from "../src/api/csrm-assessment/services/openai-compatible-assessment-draft-provider";
 import { AssessmentDraftJobFailure } from "../src/api/csrm-assessment/services/assessment-draft-registry";
 import { openaiCompatibleQuestionnaireGenerationProvider } from "../src/api/csrm-questionnaire/services/openai-compatible-questionnaire-generation-provider";
 import { QuestionnaireGenerationJobFailure } from "../src/api/csrm-questionnaire/services/questionnaire-generation-registry";
 import { startFakeOpenAiCompatibleServer } from "./helpers/fake-openai-compatible-server";
+import { questionnaireContextFixture } from "./helpers/questionnaire-context-fixture";
 
-const questionnaireContext = {
-  title: "Payroll replacement", description: "Replace payroll platform", assessmentType: "Third-party",
-  businessPurpose: "Pay employees", businessCriticality: "High", thirdPartyInvolvement: true, thirdPartyDetails: "Hosted service",
-};
-const assessmentContext = {
-  answers: [{ questionKey: "hosting-model", value: "cloud" }],
-  riskTypes: [{ name: "Alpha risk", applicableControls: [{ controlNumber: "CTL-1" }] }],
-};
-const assessmentRisk = {
-  riskTypeName: "Alpha risk", issueStatement: "Issue", riskStatement: "Risk", riskCategory: "Cyber", riskSubCategory: "Exposure", riskCause: "Cause", potentialImpact: "Impact",
-  inherentLikelihood: "Likely", highestInherentConsequence: "Major", inherentRating: "High", inherentRatingRationale: "Rationale",
-  residualLikelihood: "Possible", highestResidualConsequence: "Moderate", residualRating: "Moderate", residualRatingRationale: "Residual rationale",
-  treatmentAction: "Treat", treatmentPlan: "Plan", suggestedControlNumbers: ["CTL-1"],
-};
-const validQuestionnaire = JSON.stringify({ schemaVersion: 1, title: "Generated", description: "Description", questions: Array.from({ length: 8 }, (_, index) => ({ questionText: `Describe the security objective ${index + 1}.`, answerType: "Long text", sectionTitle: "Context", required: true, choices: [] })) });
+const questionnaireContext = questionnaireContextFixture();
+const assessmentRecords = uatALikeRecords();
+const assessmentContext = buildAssessmentContext(assessmentRecords, { operation: "assessment-draft" });
+const validQuestionnaire = JSON.stringify({ schemaVersion: 2, title: "Generated", description: "Description", questions: Array.from({ length: 8 }, (_, index) => ({ questionText: `Describe the security objective ${index + 1}.`, helpText: "Explain the objective.", answerType: "Long text", sectionTitle: "Context", required: true, choices: [] })) });
 const invalidQuestionnaire = JSON.stringify({ ...JSON.parse(validQuestionnaire), extra: true });
-const validAssessment = JSON.stringify({ schemaVersion: 1, summary: "Summary", overallRating: "High", overallRiskRationale: "Rationale", recommendationsSummary: "Recommendations", risks: [assessmentRisk] });
-const invalidAssessment = JSON.stringify({ ...JSON.parse(validAssessment), risks: [{ ...assessmentRisk, treatmentAction: "Accept" }] });
+const validAssessment = readFileSync(path.resolve(process.cwd(), "tests/fixtures/ai-wire/assessment-v2-uat-a.json"), "utf8");
+const invalidAssessment = readFileSync(path.resolve(process.cwd(), "tests/fixtures/ai-wire/assessment-v2-rating-field.json"), "utf8");
 
 type FailureCase = { name: string; response: { status?: number; body?: string; rawBody?: string; delayMs?: number }; code: string; singleRequest?: boolean };
 const cases: FailureCase[] = [
@@ -74,7 +68,7 @@ async function assertAssessmentFailure(failure: FailureCase): Promise<void> {
     const server = await startFakeOpenAiCompatibleServer({ response: { ...failure.response, ...(body ? { body } : {}) } });
     try {
       setConfig(server.baseURL, failure.name === "timeout" ? 150 : 1_000);
-      await assert.rejects(() => openaiCompatibleAssessmentDraftProvider.generate(assessmentContext), (error: unknown) =>
+      await assert.rejects(() => openaiCompatibleAssessmentDraftProvider.generate({ context: assessmentContext, records: assessmentRecords }), (error: unknown) =>
         assertSafeFailure(error, AssessmentDraftJobFailure, failure.code, server.baseURL, "assessment-model", failure.response.rawBody ?? body ?? ""));
       if (failure.singleRequest) assert.equal(server.requests.length, 1);
     } finally { await server.close(); }

@@ -11,7 +11,12 @@ const actionMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('./assessment-actions', () => actionMocks);
+const aiActionMocks = vi.hoisted(() => ({ getQuestionnaireProposalJobAction: vi.fn(), retryQuestionnaireProposalJobAction: vi.fn(), startQuestionnaireAiProposalsAction: vi.fn() }));
+vi.mock('../questionnaire-ai/questionnaire-ai-actions', () => aiActionMocks);
+const routerRefresh = vi.hoisted(() => vi.fn());
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
 
+import type { QuestionnaireAiProposalsView } from '../questionnaire-ai/questionnaire-ai-domain';
 import { QuestionnaireGenerationJob } from './questionnaire-generation-job';
 
 const queuedJob: QuestionnaireGenerationJobRecord = {
@@ -22,6 +27,10 @@ const queuedJob: QuestionnaireGenerationJobRecord = {
   attempt: 1,
   queuedAt: '2026-09-03T00:00:00.000Z',
   status: 'queued',
+  // D-18: the viewer's own job unless a case says otherwise.
+  canRetry: false,
+  initiatedBy: { documentId: 'analyst-id', displayName: 'Alex Analyst' },
+  initiatedByViewer: true,
 };
 
 const completedJob: QuestionnaireGenerationJobRecord = {
@@ -45,6 +54,7 @@ const failedJob: QuestionnaireGenerationJobRecord = {
   completedAt: '2026-09-03T00:00:02.000Z',
   failureCode: 'provider-failed',
   failureMessage: 'The provider could not prepare a questionnaire.',
+  canRetry: true,
 };
 
 function deferred<T>() {
@@ -194,8 +204,7 @@ describe('QuestionnaireGenerationJob lifecycle', () => {
  * The count is the served `analystChangesSinceGeneration`; when the read served none, the dialog says so
  * without guessing.
  */
-const replacementOpening = 'This generates a new questionnaire from the request and replaces this one';
-const replacementClosing = 'Requestor answers are never replaced. The new questionnaire stays in analyst review until you release it.';
+const replacementDescription = 'This generates a new questionnaire from the request and replaces this one. No analyst has changed its questions and the Requestor hasn’t answered it, so nothing is lost. The new questionnaire stays in analyst review until you release it.';
 
 describe('replacing a questionnaire in analyst review', () => {
   beforeEach(() => {
@@ -221,25 +230,22 @@ describe('replacing a questionnaire in analyst review', () => {
     expect(screen.getByText('Generate a questionnaire from this request for Security Analyst review.')).toBeInTheDocument();
   });
 
-  it.each([
-    [0, `${replacementOpening}. No analyst has changed its questions since it was generated. ${replacementClosing}`],
-    [1, `${replacementOpening}, discarding the 1 change an analyst made to its questions since it was generated. ${replacementClosing}`],
-    [3, `${replacementOpening}, discarding the 3 changes analysts made to its questions since it was generated. ${replacementClosing}`],
-    [null, `${replacementOpening}, discarding any changes analysts made to its questions since it was generated. ${replacementClosing}`],
-  ])('states what a replacement discards when the served count is %s', (count, description) => {
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={count} requestId="request-one" />);
+  /* Phase 15 (15-UI-SPEC §8.3; D-09, UI-D21; U3): one description, since a replacement is offered only when nothing is lost. */
+  it('states that nothing is lost, the only description a replacement now has, followed by the instruction field', () => {
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
 
     const dialog = screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
-    expect(dialog).toHaveAccessibleDescription(description);
+    expect(dialog).toHaveAccessibleDescription(replacementDescription);
+    expect(within(dialog).getByLabelText('Instruction for the AI (optional)')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Replace questionnaire' })).toHaveAttribute('data-variant', 'destructive');
     expect(within(dialog).getByRole('button', { name: 'Keep this questionnaire' })).toBeInTheDocument();
     expect(actionMocks.startQuestionnaireGenerationAction).not.toHaveBeenCalled();
   });
 
   it('keeps the questionnaire when the analyst dismisses the confirmation', async () => {
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={2} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     fireEvent.click(screen.getByRole('button', { name: 'Keep this questionnaire' }));
@@ -252,7 +258,7 @@ describe('replacing a questionnaire in analyst review', () => {
   it('shows Replacing questionnaire… while the confirmed replacement starts', async () => {
     const started = deferred<{ ok: true; data: QuestionnaireGenerationJobRecord }>();
     actionMocks.startQuestionnaireGenerationAction.mockReturnValue(started.promise);
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={2} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Replace questionnaire' }));
@@ -266,7 +272,7 @@ describe('replacing a questionnaire in analyst review', () => {
   it('keeps the confirmation open with the refusal when Strapi refuses the replacement', async () => {
     const refusal = 'This questionnaire has been released to the Requestor, so it can’t be replaced. Return it to analyst review first.';
     actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: false, formError: refusal, reason: 'QUESTIONNAIRE_RELEASED' });
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={2} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Replace questionnaire' }));
@@ -285,6 +291,32 @@ describe('replacing a questionnaire in analyst review', () => {
 const releasedHint = 'This questionnaire has been released to the Requestor. To replace it, return QNR-2026-KX2AHV to analyst review first.';
 
 /* IN-201: a questionnaire that exists but is not served as released gets a neutral line, never the released hint. */
+/*
+ * Phase 13 D-29 (13-UI-SPEC §10.2): the hub page renders the questionnaire's AI-inputs signal on the server and hands it
+ * to this card as a slot, which the card sets above its idle action or its state line. The signal offers no action.
+ */
+describe('the AI-inputs signal on the questionnaire card', () => {
+  const allowedPolicy = { status: 'allowed', reason: null, requestClassification: 'Internal', classificationSource: 'default', ceiling: null } as const;
+  const slot = <p data-testid="ai-inputs-slot">AI inputs changed since this questionnaire was generated</p>;
+
+  it('sets the slot above the idle action', () => {
+    render(<QuestionnaireGenerationJob action="replace" aiInputsChanged={slot} aiPolicy={allowedPolicy} analystChangesSinceGeneration={0} requestId="request-one" />);
+    const replace = screen.getByRole('button', { name: 'Replace questionnaire' });
+    expect(screen.getByTestId('ai-inputs-slot').compareDocumentPosition(replace) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('sets the slot above the state line of a job on the card', () => {
+    render(<QuestionnaireGenerationJob action="replace" aiInputsChanged={slot} aiPolicy={allowedPolicy} requestId="request-one" seededJob={{ job: failedJob, canRetry: true }} />);
+    const state = screen.getByText('Questionnaire generation failed', { selector: '[data-slot="alert-title"]' });
+    expect(screen.getByTestId('ai-inputs-slot').compareDocumentPosition(state) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows nothing of the signal without a slot', () => {
+    render(<QuestionnaireGenerationJob action="replace" aiPolicy={allowedPolicy} requestId="request-one" />);
+    expect(screen.queryByText(/AI inputs changed/)).not.toBeInTheDocument();
+  });
+});
+
 describe('a questionnaire that exists but is not served as released', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -359,13 +391,13 @@ describe('a failed questionnaire generation job', () => {
   it('offers Replace questionnaire through the confirmation when the replacement was not acknowledged', async () => {
     actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: queuedJob });
     const notAcknowledged = { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED' };
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={1} seededJob={{ job: notAcknowledged, canRetry: true }} requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} seededJob={{ job: notAcknowledged, canRetry: true }} requestId="request-one" />);
 
     expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Replace and generate again' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
-    expect(dialog).toHaveTextContent('discarding the 1 change an analyst made to its questions since it was generated');
+    expect(dialog).toHaveAccessibleDescription(replacementDescription);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Replace questionnaire' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
 
@@ -375,13 +407,20 @@ describe('a failed questionnaire generation job', () => {
 });
 
 /*
- * UAT-041 (D-26, D-27, UI-SPEC §12.1): an analyst who leaves the request while a job runs and comes back sees
- * the job's status in place of Generate or Replace. The page seeds the card from the request's jobs read; a
- * job the viewer started is polled by id, and a job another Security Analyst started is polled by request.
+ * UAT-041 (D-26, UI-SPEC §12.1, Phase 13 §13): an analyst who leaves the request while a job runs and comes back
+ * sees the job's status in place of Generate or Replace. The page seeds the card from the request's jobs read; a
+ * job the viewer started (initiatedByViewer) is polled by id, and a job a colleague started is polled by request
+ * and says who started it. The route is keyed on initiatedByViewer, never on canRetry.
  */
 const runningJob: QuestionnaireGenerationJobRecord = { ...queuedJob, status: 'running', startedAt: '2026-09-03T00:00:01.000Z' };
 const leaveAndReturn = 'You can leave this page. The status shows here when you come back.';
-const startedByAnother = 'Started by another Security Analyst.';
+const bob = { documentId: 'bob-id', displayName: 'Bob Doe' };
+const startedByBob = 'Started by Bob Doe.';
+/* The two Phase 10 sentences Phase 13 retires (UI-SPEC §13); no state renders either. */
+const retiredCopy = ['Started by another Security Analyst.', 'Only the Security Analyst who started it can retry it.'];
+function expectNoRetiredCopy() {
+  for (const sentence of retiredCopy) expect(document.body.textContent).not.toContain(sentence);
+}
 
 describe('a questionnaire generation job seeded when the analyst comes back', () => {
   beforeEach(() => {
@@ -394,13 +433,15 @@ describe('a questionnaire generation job seeded when the analyst comes back', ()
   it.each([
     ['queued', queuedJob, 'Questionnaire generation is queued'],
     ['running', runningJob, 'Questionnaire generation is running'],
-  ] as const)('shows a %s job the viewer started in place of Generate and Replace, polled by id', async (_status, job, title) => {
+  ] as const)('shows a %s job the viewer started in place of Generate and Replace, with no Started by line, polled by id', async (_status, job, title) => {
     actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: job });
-    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job, canRetry: true }} />);
+    // An active job is never retryable (canRetry false), yet the viewer started it, so it is followed by id.
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job, canRetry: false }} />);
 
     expect(screen.getByText(title, { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByText(leaveAndReturn)).toBeInTheDocument();
-    expect(screen.queryByText(startedByAnother)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Started by/)).not.toBeInTheDocument();
+    expectNoRetiredCopy();
     expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/server-owned/i);
@@ -410,13 +451,17 @@ describe('a questionnaire generation job seeded when the analyst comes back', ()
     expect(actionMocks.getRequestGenerationJobsAction).not.toHaveBeenCalled();
   });
 
-  it('shows a running job another Security Analyst started and polls it by request, never by id', async () => {
+  it.each([
+    ['queued', queuedJob, 'Questionnaire generation is queued'],
+    ['running', runningJob, 'Questionnaire generation is running'],
+  ] as const)('shows a %s job a colleague started with Started by {name}, and polls it by request, never by id', async (_status, job, title) => {
     actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: true, data: { questionnaireGeneration: { job: completedJob, canRetry: false }, assessmentDraft: null } });
-    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: runningJob, canRetry: false }} />);
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: { ...job, initiatedBy: bob, initiatedByViewer: false }, canRetry: false }} />);
 
-    expect(screen.getByText('Questionnaire generation is running', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText(title, { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByText(leaveAndReturn)).toBeInTheDocument();
-    expect(screen.getByText(startedByAnother)).toBeInTheDocument();
+    expect(screen.getByText(startedByBob)).toBeInTheDocument();
+    expectNoRetiredCopy();
     expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
@@ -446,11 +491,13 @@ describe('a questionnaire generation job seeded when the analyst comes back', ()
 });
 
 /*
- * D-26 (UI-SPEC §12.1, §12.5): Retry stays with the analyst who started the job. Another analyst sees the
- * failure, is told who may retry it and may start a new job. When the jobs read failed, the idle action says
- * what starting does. The card reports its job's status so the hub can say generation is in progress.
+ * Phase 13 §13 (D-18; U4 changed deliberately): a failed job offers its retry to every analyst on the request, and
+ * a colleague's failed job says who started it. canRetry ("the job failed and this viewer may retry it") alone
+ * decides the retry; a failed job the viewer may not retry offers a new start. After the viewer's own retry the
+ * card shows no Started by line. When the jobs read failed, the idle action says what starting does. The card
+ * reports its job's status so the hub can say generation is in progress.
  */
-const retryRights = 'Only the Security Analyst who started it can retry it.';
+const colleagueFailedJob: QuestionnaireGenerationJobRecord = { ...failedJob, initiatedBy: bob, initiatedByViewer: false };
 const readFailed = 'We couldn’t check whether a generation is already running. If one is, starting generation shows its progress instead of starting another.';
 
 describe('retry rights, a failed jobs read and the reported status', () => {
@@ -464,20 +511,37 @@ describe('retry rights, a failed jobs read and the reported status', () => {
   it.each([
     ['generate', 'Generate questionnaire'],
     ['replace', 'Replace questionnaire'],
-  ] as const)('shows another analyst’s failed job with who may retry it, and offers %s instead of Retry', (action, label) => {
-    render(<QuestionnaireGenerationJob action={action} analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job: failedJob, canRetry: false }} />);
+  ] as const)('shows a colleague’s failed job with Started by {name} and offers Retry questionnaire generation, not %s', (action, label) => {
+    render(<QuestionnaireGenerationJob action={action} analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job: colleagueFailedJob, canRetry: true }} />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent('Questionnaire generation failed');
     expect(alert).toHaveTextContent('The provider could not prepare a questionnaire.');
-    expect(alert).toHaveTextContent(retryRights);
-    expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: label })).toBeEnabled();
+    expect(alert).toHaveTextContent(startedByBob);
+    expect(screen.getByRole('button', { name: 'Retry questionnaire generation' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument();
+    expectNoRetiredCopy();
   });
 
-  it('lets another analyst start a new job after a failure they cannot retry', async () => {
+  it('retries a colleague’s failed job, after which the card shows the attempt as the viewer’s own', async () => {
+    actionMocks.retryQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: { ...queuedJob, attempt: 2, initiatedBy: { documentId: 'analyst-id', displayName: 'Alex Analyst' }, initiatedByViewer: true } });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: colleagueFailedJob, canRetry: true }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry questionnaire generation' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(actionMocks.retryQuestionnaireGenerationJobAction).toHaveBeenCalledWith({ jobId: 'job-one' });
+    expect(screen.getByText('Attempt 2')).toBeInTheDocument();
+    expect(screen.queryByText(/^Started by/)).not.toBeInTheDocument();
+    expectNoRetiredCopy();
+  });
+
+  it('offers a new start, and no retry, for a failed job the viewer may not retry', async () => {
     actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: { ...queuedJob, jobId: 'job-two' } });
-    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: failedJob, canRetry: false }} />);
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: { ...colleagueFailedJob, canRetry: false }, canRetry: false }} />);
+
+    expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
+    expectNoRetiredCopy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
@@ -487,12 +551,24 @@ describe('retry rights, a failed jobs read and the reported status', () => {
     expect(screen.getByText('Questionnaire generation is queued', { selector: 'p' })).toBeInTheDocument();
   });
 
-  it('offers the initiator Retry questionnaire generation without the retry-rights line', () => {
+  it('offers the initiator Retry questionnaire generation with no Started by line', () => {
     render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: failedJob, canRetry: true }} />);
 
     expect(screen.getByRole('button', { name: 'Retry questionnaire generation' })).toBeEnabled();
-    expect(screen.queryByText(retryRights)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Started by/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+    expectNoRetiredCopy();
+  });
+
+  /* D-18: the by-id poll takes canRetry from the served job, never assuming the viewer may retry it. */
+  it('shows no retry when the by-id poll serves a failed job the viewer may not retry', async () => {
+    actionMocks.getQuestionnaireGenerationJobAction.mockResolvedValue({ ok: true, data: { ...failedJob, canRetry: false } });
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-one" seededJob={{ job: runningJob, canRetry: false }} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(actionMocks.getQuestionnaireGenerationJobAction).toHaveBeenCalledWith({ jobId: 'job-one' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Questionnaire generation failed');
+    expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
   });
 
   it.each([
@@ -546,7 +622,7 @@ describe('retry rights, a failed jobs read and the reported status', () => {
 
   it('shows the error inside the replacement confirmation when the replacement action throws', async () => {
     actionMocks.startQuestionnaireGenerationAction.mockRejectedValueOnce(new Error('network'));
-    render(<QuestionnaireGenerationJob action="replace" requestId="request-one" />);
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} requestId="request-one" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Replace questionnaire' }));
@@ -597,5 +673,343 @@ describe('retry rights, a failed jobs read and the reported status', () => {
     const idle = vi.fn();
     render(<QuestionnaireGenerationJob action="generate" onJobStatusChange={idle} requestId="request-one" />);
     expect(idle).toHaveBeenLastCalledWith(null);
+  });
+});
+
+/* 12-UI-SPEC §11.1 and §11.2, D-29: the served AI data policy gates the idle action. */
+describe('questionnaire generation under the AI data policy', () => {
+  const restricted = { status: 'allowed', reason: null, requestClassification: 'Restricted', classificationSource: 'assets', ceiling: null } as const;
+  const aboveCeiling = { status: 'refused', reason: 'AI_CLASSIFICATION_ABOVE_CEILING', requestClassification: 'Restricted', classificationSource: 'assets', ceiling: 'Public' } as const;
+  const notConfigured = { status: 'refused', reason: 'AI_POLICY_NOT_CONFIGURED', requestClassification: 'Internal', classificationSource: 'default', ceiling: null } as const;
+  const aboveCeilingText = 'This request’s information is classified Restricted, above the Public limit the AI provider is approved for, so it can’t be sent to the AI. Contact your administrator.';
+  const notConfiguredText = 'The AI provider hasn’t been approved for any information classification yet, so nothing can be sent to it. Contact your administrator.';
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('captions an allowed action with the request’s classification', () => {
+    const { rerender } = render(<QuestionnaireGenerationJob action="generate" aiPolicy={restricted} requestId="request-one" />);
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeEnabled();
+    expect(screen.getByText('This request’s information is classified Restricted.')).toBeInTheDocument();
+    rerender(<QuestionnaireGenerationJob action="generate" aiPolicy={{ ...restricted, requestClassification: 'Internal', classificationSource: 'default' }} requestId="request-one" />);
+    expect(screen.getByText('This request’s information is classified Internal. No information asset on it is classified, so Internal applies.')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['generate', aboveCeiling, aboveCeilingText],
+    ['replace', aboveCeiling, aboveCeilingText],
+    ['generate', notConfigured, notConfiguredText],
+  ] as const)('replaces %s with the refusal alert (%#)', (action, policy, description) => {
+    render(<QuestionnaireGenerationJob action={action} aiPolicy={policy} analystChangesSinceGeneration={0} requestId="request-one" />);
+    expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    const alert = screen.getByRole('note');
+    expect(within(alert).getByText('AI generation isn’t available for this request')).toBeInTheDocument();
+    expect(within(alert).getByText(description)).toBeInTheDocument();
+    expect(alert).toHaveTextContent('Contact your administrator.');
+    expect(alert.querySelector('svg.lucide-shield-ban')).not.toBeNull();
+    expect(alert).not.toHaveTextContent(/manual|another way|instead/i);
+  });
+
+  it('keeps the action as Phase 10 has it when the jobs read served no policy', () => {
+    render(<QuestionnaireGenerationJob action="generate" jobsReadFailed requestId="request-one" />);
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeEnabled();
+    expect(screen.queryByText(/is classified/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['AI_CLASSIFICATION_ABOVE_CEILING', 'This request’s information is now classified above the limit the AI provider is approved for, so nothing was sent to the AI. Contact your administrator.'],
+    ['AI_POLICY_NOT_CONFIGURED', 'The AI provider isn’t approved for any information classification yet, so nothing was sent to the AI. Contact your administrator.'],
+    ['CONTEXT_TOO_LARGE', 'This request holds more information than CSRM can send to the AI at once, so nothing was sent. Contact your administrator.'],
+  ])('reads the %s failure in plain words', (failureCode, sentence) => {
+    render(<QuestionnaireGenerationJob action="generate" aiPolicy={restricted} requestId="request-one" seededJob={{ job: { ...failedJob, failureCode }, canRetry: true }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(sentence);
+    expect(screen.queryByText(failedJob.failureMessage)).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * WR-408, IN-303, WR-308 (12-UI-SPEC §11.1, §11.3; D-28, D-29; G-20). A generation the AI data policy refuses at
+ * enqueue reads §11.1's description, naming the request's classification, the approved limit and whom to contact.
+ * The served policy names them only when it is that same refusal; one that allowed generation is out of date, so
+ * the card reads the policy again. Retry and the failed state's Replace are generations too, so the served policy
+ * gates them as it gates Generate.
+ */
+describe('questionnaire generation the AI data policy refuses', () => {
+  const stale = { status: 'allowed', reason: null, requestClassification: 'Restricted', classificationSource: 'assets', ceiling: null } as const;
+  const aboveCeiling = { status: 'refused', reason: 'AI_CLASSIFICATION_ABOVE_CEILING', requestClassification: 'Restricted', classificationSource: 'assets', ceiling: 'Public' } as const;
+  const fixedAboveCeiling = 'This request’s information is classified above the limit the AI provider is approved for, so it can’t be sent to the AI. Contact your administrator.';
+  const namedAboveCeiling = 'This request’s information is classified Restricted, above the Public limit the AI provider is approved for, so it can’t be sent to the AI. Contact your administrator.';
+  const notConfigured = 'The AI provider hasn’t been approved for any information classification yet, so nothing can be sent to it. Contact your administrator.';
+  const refusedByPolicy = (reason: string, formError: string) => ({ ok: false, formError, reason });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it('names the classification and the approved limit when a start is refused, reading the policy the served one no longer matches', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue(refusedByPolicy('AI_CLASSIFICATION_ABOVE_CEILING', fixedAboveCeiling));
+    actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: true, data: { questionnaireGeneration: null, assessmentDraft: null, aiPolicy: aboveCeiling } });
+    render(<QuestionnaireGenerationJob action="generate" aiPolicy={stale} requestId="request-one" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Questionnaire generation couldn’t start');
+    expect(alert).toHaveTextContent(namedAboveCeiling);
+    expect(alert).not.toHaveTextContent(/now classified|nothing was sent/);
+    expect(actionMocks.getRequestGenerationJobsAction).toHaveBeenCalledWith({ requestId: 'request-one' });
+  });
+
+  it('keeps §11.1’s fixed sentence when the policy can’t be read, and its own sentence for an unconfigured provider', async () => {
+    actionMocks.startQuestionnaireGenerationAction
+      .mockResolvedValueOnce(refusedByPolicy('AI_CLASSIFICATION_ABOVE_CEILING', fixedAboveCeiling))
+      .mockResolvedValueOnce(refusedByPolicy('AI_POLICY_NOT_CONFIGURED', notConfigured));
+    actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: false, formError: 'The request service is unavailable. Please try again later.' });
+    render(<QuestionnaireGenerationJob action="generate" jobsReadFailed requestId="request-one" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('alert')).toHaveTextContent(fixedAboveCeiling);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('alert')).toHaveTextContent(notConfigured);
+  });
+
+  it('names them in the Replace confirmation when a replacement is refused', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue(refusedByPolicy('AI_CLASSIFICATION_ABOVE_CEILING', fixedAboveCeiling));
+    actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: true, data: { questionnaireGeneration: null, assessmentDraft: null, aiPolicy: aboveCeiling } });
+    render(<QuestionnaireGenerationJob action="replace" aiPolicy={stale} analystChangesSinceGeneration={0} requestId="request-one" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Replace questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' })).toHaveTextContent(namedAboveCeiling);
+  });
+
+  it('offers no Retry for a failed job while the served policy refuses, and shows the refusal once', () => {
+    render(<QuestionnaireGenerationJob action="generate" aiPolicy={aboveCeiling} requestId="request-one" seededJob={{ job: { ...failedJob, failureCode: 'AI_CLASSIFICATION_ABOVE_CEILING' }, canRetry: true }} />);
+
+    expect(screen.queryByRole('button', { name: 'Retry questionnaire generation' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('note')).toHaveLength(1);
+    expect(screen.getByRole('note')).toHaveTextContent(namedAboveCeiling);
+  });
+
+  it('offers no Replace for a refused acknowledgement while the served policy refuses', () => {
+    render(<QuestionnaireGenerationJob action="replace" aiPolicy={aboveCeiling} analystChangesSinceGeneration={0} requestId="request-one" seededJob={{ job: { ...failedJob, failureCode: 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED' }, canRetry: true }} />);
+
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('note')).toHaveLength(1);
+  });
+
+  it('keeps Retry under an allowed policy without the idle state’s classification caption (§11.1)', () => {
+    render(<QuestionnaireGenerationJob action="generate" aiPolicy={stale} requestId="request-one" seededJob={{ job: failedJob, canRetry: true }} />);
+
+    expect(screen.getByRole('button', { name: 'Retry questionnaire generation' })).toBeEnabled();
+    expect(screen.queryByText(/is classified/)).not.toBeInTheDocument();
+  });
+
+  it('names the classification and the approved limit when the server refuses a retry', async () => {
+    actionMocks.retryQuestionnaireGenerationJobAction.mockResolvedValue(refusedByPolicy('AI_CLASSIFICATION_ABOVE_CEILING', fixedAboveCeiling));
+    actionMocks.getRequestGenerationJobsAction.mockResolvedValue({ ok: true, data: { questionnaireGeneration: null, assessmentDraft: null, aiPolicy: aboveCeiling } });
+    render(<QuestionnaireGenerationJob action="generate" aiPolicy={stale} requestId="request-one" seededJob={{ job: failedJob, canRetry: true }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry questionnaire generation' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    const refusal = screen.getAllByRole('alert').find((alert) => alert.textContent?.includes('Questionnaire generation couldn’t start'));
+    expect(refusal).toHaveTextContent(namedAboveCeiling);
+  });
+});
+
+/* Phase 15 (15-UI-SPEC §3.3, §12; D-12, D-32): the instruction on the hub's Generate. */
+describe('generating with an instruction from the hub', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    window.sessionStorage.clear();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it('clears an acknowledged replacement instruction and reopens with the same approved guidance as Generate', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: queuedJob });
+    const page = render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} ownerKey="owner-a" requestId="request-one" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    let dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByLabelText('Instruction for the AI (optional)'), { target: { value: 'Cover offshore payroll.' } });
+    expect(window.sessionStorage.getItem('csrm-draft:replacement-instruction:owner-a:request-one')).toBe('Cover offshore payroll.');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Replace questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(window.sessionStorage.getItem('csrm-draft:replacement-instruction:owner-a:request-one')).toBeNull();
+    page.unmount();
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} ownerKey="owner-a" requestId="request-one" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByLabelText('Instruction for the AI (optional)')).toHaveValue('');
+    expect(within(dialog).getByText('Say what the questionnaire should focus on, for example “Cover the offshore support team and payroll data”. The AI already reads the request and the marked notes and files.')).toBeInTheDocument();
+  });
+
+  it('explains instruction availability on the requesting analyst’s Replace action and dialog', () => {
+    const caption = 'You raised this request, so you can generate without an instruction. Another Security Analyst can give the AI one.';
+    render(<QuestionnaireGenerationJob action="replace" analystChangesSinceGeneration={0} ownRequest requestId="request-one" />);
+    expect(screen.getByText(caption)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
+    expect(within(screen.getByRole('alertdialog')).getByText(caption)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Instruction for the AI (optional)')).toBeNull();
+  });
+
+  it('shows the optional instruction field above Generate questionnaire and sends what was typed, then clears it', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: true, data: queuedJob });
+    render(<QuestionnaireGenerationJob action="generate" ownerKey="owner-a" requestId="request-one" seededJob={undefined} />);
+    const field = screen.getByLabelText('Instruction for the AI (optional)');
+    expect(screen.getByText('Say what the questionnaire should focus on, for example “Cover the offshore support team and payroll data”. The AI already reads the request and the marked notes and files.')).toBeInTheDocument();
+    expect(field.compareDocumentPosition(screen.getByRole('button', { name: 'Generate questionnaire' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.change(field, { target: { value: 'Cover the offshore support team and payroll data' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(actionMocks.startQuestionnaireGenerationAction).toHaveBeenCalledWith({ requestId: 'request-one', replaceUnansweredQuestionnaire: false, instruction: 'Cover the offshore support team and payroll data' });
+    expect(window.sessionStorage.getItem('csrm-draft:generation-instruction:owner-a:request-one')).toBeNull();
+  });
+
+  it('shows an instruction refusal beside the field and keeps the text', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: false, formError: 'The instruction repeats a long passage of the Requestor’s own words. The AI already reads the request and the marked notes and files, so say what to focus on in your own words.', reason: 'INSTRUCTION_REPEATS_REQUESTOR_TEXT' });
+    render(<QuestionnaireGenerationJob action="generate" ownerKey="owner-a" requestId="request-one" seededJob={undefined} />);
+    const field = screen.getByLabelText('Instruction for the AI (optional)');
+    fireEvent.change(field, { target: { value: 'The vendor processes payroll.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(field).toHaveAccessibleDescription(/repeats a long passage of the Requestor’s own words/);
+    expect(field).toHaveValue('The vendor processes payroll.');
+  });
+
+  it('shows family I’s sentence when the analyst raised the request', async () => {
+    actionMocks.startQuestionnaireGenerationAction.mockResolvedValue({ ok: false, formError: 'A Security Analyst can’t give the AI an instruction on a request they raised. Generate without one, or ask another Security Analyst.', reason: 'OWN_REQUEST' });
+    render(<QuestionnaireGenerationJob action="generate" ownerKey="owner-a" requestId="request-one" seededJob={undefined} />);
+    fireEvent.change(screen.getByLabelText('Instruction for the AI (optional)'), { target: { value: 'Cover payroll.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate questionnaire' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('alert')).toHaveTextContent('A Security Analyst can’t give the AI an instruction on a request they raised. Generate without one, or ask another Security Analyst.');
+  });
+
+  it('offers a requesting analyst no field, and says they can generate without one', () => {
+    render(<QuestionnaireGenerationJob action="generate" ownRequest ownerKey="owner-a" requestId="request-one" seededJob={undefined} />);
+    expect(screen.queryByLabelText('Instruction for the AI (optional)')).toBeNull();
+    expect(screen.getByText('You raised this request, so you can generate without an instruction. Another Security Analyst can give the AI one.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeInTheDocument();
+  });
+});
+
+/* Phase 15 (15-UI-SPEC §8.3, §8.4, §13; D-09, D-29, D-33; U3): the hub card with the proposals read. */
+describe('the hub card with AI proposals', () => {
+  const allowed = { allowed: true, reason: null };
+  const view = (overrides: Partial<QuestionnaireAiProposalsView> = {}): QuestionnaireAiProposalsView => ({
+    questionnaireId: 'q-1', state: 'analyst-review', openCount: 0,
+    actions: { start: allowed, rewrite: allowed, confirm: allowed, reject: allowed, replace: allowed },
+    runs: [], items: [], jobs: [], fixedQuestions: [], ...overrides,
+  });
+  const card = (aiProposals: QuestionnaireAiProposalsView | null, props: Partial<Parameters<typeof QuestionnaireGenerationJob>[0]> = {}) => render(
+    <QuestionnaireGenerationJob action="replace" aiProposals={aiProposals} analystChangesSinceGeneration={0} questionnaireHref="/app/review/questionnaires/q-1" questionnaireNumber="QNR-1" requestId="request-one" timing={{ ...fastTiming }} {...props} />,
+  );
+  const fastTiming = { pollIntervalMs: 5, timeoutMs: 60, now: () => Date.now(), setTimeout: (callback: () => void, delay: number) => globalThis.setTimeout(callback, delay), clearTimeout: (handle: ReturnType<typeof setTimeout>) => globalThis.clearTimeout(handle) };
+
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('offers Replace when the read allows it', () => {
+    card(view());
+    expect(screen.getByRole('button', { name: 'Replace questionnaire' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['QUESTIONNAIRE_ANSWERED', 'The Requestor has answered this questionnaire, so it can’t be replaced. Ask the AI for follow-up questions instead.', 'Open AI proposals'],
+    ['QUESTIONNAIRE_HAS_ANALYST_CHANGES', 'Analysts have changed this questionnaire since it was generated, so replacing it would discard their work. Use AI proposals to change it instead.', 'Open AI proposals'],
+    ['AI_PROPOSALS_OPEN', 'This questionnaire has open AI proposals. Decide them before replacing it.', '2 open AI proposals'],
+  ])('says why Replace is not offered for %s, linking to the AI proposals', (reason, line, link) => {
+    card(view({ openCount: 2, actions: { start: allowed, rewrite: allowed, confirm: allowed, reject: allowed, replace: { allowed: false, reason } } }));
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    expect(screen.getByText(line)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: link })).toHaveAttribute('href', '/app/review/questionnaires/q-1#ai-proposals');
+  });
+
+  it('counts the open AI proposals as a link to the panel, or says none are open, and shows neither for a requesting analyst', () => {
+    const { unmount } = card(view({ openCount: 3 }));
+    expect(screen.getByRole('link', { name: 'AI proposals: 3 open' })).toHaveAttribute('href', '/app/review/questionnaires/q-1#ai-proposals');
+    unmount();
+    const none = card(view());
+    expect(screen.getByText('AI proposals: none open')).toBeInTheDocument();
+    none.unmount();
+    card(null, { ownRequest: true });
+    expect(screen.queryByText(/^AI proposals:/)).toBeNull();
+  });
+
+  it('follows a hub-started proposal job to its proposals', async () => {
+    const queued = { jobId: 'pj-1', questionnaireId: 'q-1', operation: 'questionnaire-proposals' as const, questionId: null, status: 'queued' as const, attempt: 1, queuedAt: '2026-10-12T00:00:00.000Z', startedAt: null, completedAt: null, runId: null, failureCode: null, failureMessage: null, initiatedBy: { documentId: 'analyst-2', displayName: 'Sam Analyst' }, initiatedByViewer: false, canRetry: false };
+    aiActionMocks.getQuestionnaireProposalJobAction.mockResolvedValue({ ok: true, data: { ...queued, status: 'completed', runId: 'run-9' } });
+    const { rerender } = card(view({ jobs: [queued] }));
+    expect(screen.getByText('The AI is preparing follow-up questions.')).toBeInTheDocument();
+    const statusHolder = screen.getByText('The AI is preparing follow-up questions.');
+    statusHolder.focus();
+    expect(statusHolder).toHaveFocus();
+    expect(screen.getByText('Started by Sam Analyst.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open AI proposals' })).toHaveAttribute('href', '/app/review/questionnaires/q-1#ai-proposals');
+    await act(async () => { await new Promise((resolve) => globalThis.setTimeout(resolve, 30)); });
+    expect(routerRefresh).toHaveBeenCalled();
+    expect(statusHolder).toBeInTheDocument();
+    expect(statusHolder).toHaveFocus();
+    const run = { runId: 'run-9', operation: 'questionnaire-proposals' as const, scope: 'questionnaire' as const, initiatedBy: null, startedAt: null, completedAt: null, providerName: null, providerVersion: null, instruction: null, instructionSource: 'default-task' as const, targetQuestion: null, outcome: 'items' as const, counts: { items: 3, open: 3 }, adjustments: [], sourcesDropped: 0 };
+    rerender(<QuestionnaireGenerationJob action="replace" aiProposals={view({ openCount: 3, runs: [run] })} analystChangesSinceGeneration={0} questionnaireHref="/app/review/questionnaires/q-1" requestId="request-one" timing={fastTiming} />);
+    expect(screen.getByText('3 AI proposals are ready to review.')).toBeInTheDocument();
+    expect(screen.getByText('3 AI proposals are ready to review.')).toBe(statusHolder);
+    expect(statusHolder).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Review AI proposals' })).toHaveAttribute('href', '/app/review/questionnaires/q-1#ai-proposals');
+  });
+
+  it('shows a failed hub proposal job with Q3’s copy and Retry AI proposals, and CONTEXT_TOO_LARGE with Q1’s sentence', () => {
+    const failed = { jobId: 'pj-1', questionnaireId: 'q-1', operation: 'questionnaire-proposals' as const, questionId: null, status: 'failed' as const, attempt: 1, queuedAt: '2026-10-12T00:00:00.000Z', startedAt: null, completedAt: null, runId: null, failureCode: 'PROVIDER_OUTPUT_INVALID', failureMessage: 'x', initiatedBy: null, initiatedByViewer: true, canRetry: true };
+    const { unmount } = card(view({ jobs: [failed] }));
+    expect(screen.getByText('The AI’s reply couldn’t be read, so nothing was proposed. Try again.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry AI proposals' })).toBeInTheDocument();
+    unmount();
+    card(view({ jobs: [{ ...failed, failureCode: 'CONTEXT_TOO_LARGE', failureMessage: 'The request is too large for this operation.' }] }));
+    expect(screen.getByText('This questionnaire and its request hold more than CSRM can send to the AI at once, so nothing was sent. Contact your administrator.')).toBeInTheDocument();
+  });
+
+  it('restores the questionnaire-wide completed hub outcome after reload, independently of later rewrites', () => {
+    const run = { runId: 'run-hub', operation: 'questionnaire-proposals' as const, scope: 'questionnaire' as const, initiatedBy: null, startedAt: null, completedAt: null, providerName: null, providerVersion: null, instruction: null, instructionSource: 'default-task' as const, targetQuestion: null, outcome: 'items' as const, counts: { items: 3, open: 3 }, adjustments: [], sourcesDropped: 0 };
+    card(view({ state: 'submitted', openCount: 3, runs: [
+      { ...run, runId: 'run-rewrite', operation: 'question-rewrite', scope: 'question', counts: { items: 1, open: 1 }, targetQuestion: { questionId: 'question-1', questionText: 'Question' } },
+      run,
+      { ...run, runId: 'older-run', counts: { items: 2, open: 0 } },
+    ] }));
+    expect(screen.getByText('3 AI proposals are ready to review.')).toHaveAttribute('data-ai-proposals-job-status');
+    expect(screen.getByRole('link', { name: 'Review AI proposals' })).toBeInTheDocument();
+  });
+});
+
+/* Phase 15 (15-UI-SPEC §13 amendment of 2026-10-11; D-29): CONTEXT_TOO_LARGE on the generation card. */
+describe('the generation card’s CONTEXT_TOO_LARGE by the shared rule', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  const notes = 'The AI context is too large. 2 notes are marked as changing the AI inputs (notes 2 and 5) and 1 file is included in them; unmark or exclude some and try again.';
+
+  it('shows the served sentence when it names notes marked as changing the AI inputs, then the files without 14-16’s sentence', () => {
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-1" seededJob={{ job: { ...failedJob, failureCode: 'CONTEXT_TOO_LARGE', failureMessage: notes, failureAttachments: [{ documentId: 'att-pack', fileName: 'vendor-security-pack.pdf' }] }, canRetry: true }} />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(notes);
+    expect(within(alert).getByRole('link', { name: 'vendor-security-pack.pdf' })).toHaveAttribute('href', '/app/review/requests/request-1#file-att-pack');
+    expect(alert).not.toHaveTextContent('The files included in the AI inputs hold more text than CSRM can send at once');
+    expect(alert).not.toHaveTextContent('Contact your administrator');
+  });
+
+  it('shows a notes-only sentence alone, marked as changing the AI inputs', () => {
+    const one = 'The AI context is too large. 1 note is marked as changing the AI inputs (note 7); unmark some and try again.';
+    render(<QuestionnaireGenerationJob action="generate" requestId="request-1" seededJob={{ job: { ...failedJob, failureCode: 'CONTEXT_TOO_LARGE', failureMessage: one }, canRetry: true }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(one);
+    expect(within(screen.getByRole('alert')).queryByRole('list')).toBeNull();
   });
 });

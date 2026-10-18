@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FocusEvent } from 'react';
 import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form';
@@ -21,7 +21,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   calculateProgress,
   getVisibleQuestionKeys,
+  keptUnsavedAnswersOf,
   orderQuestionnaire,
+  parseKeptUnsavedAnswers,
+  restorableUnsavedAnswers,
+  unsavedAnswersRestoredCaption,
   validateActiveRequiredAnswers,
   type QuestionnaireAnswers,
 } from './questionnaire-domain';
@@ -36,8 +40,12 @@ import type {
   QuestionnaireDefinition,
   QuestionnaireQuestion,
 } from './questionnaire-schema';
+import { hasAnswerValue as hasValue, questionFieldId as fieldId, SubmittedQuestionnaireAnswers } from './questionnaire-submitted-answers';
 import type { SubmittedNoticeVariant } from './questionnaire-workflow-rules';
+import { refusalMessage } from '@/lib/api/refusal-copy';
+import { clearSessionDraft, readSessionDraft } from '@/lib/session-drafts/session-drafts';
 import {
+  NOT_ANSWERABLE,
   rememberSavedQuestionnaire,
   savedQuestionnaireAfter,
   useAnswerAutosave,
@@ -59,13 +67,11 @@ export type QuestionnaireRendererProps = {
    * this wins at mount, so a page restored by Back or Forward never shows answers older than the last save.
    */
   serverUpdatedAt?: string;
-};
-
-/* Every variant begins `Questionnaire submitted.` (UI-SPEC UI-D12). */
-const submittedNoticeText: Record<SubmittedNoticeVariant, string> = {
-  'requestor-revertible': 'Questionnaire submitted. The Security Analyst is reviewing your answers. Until they start the assessment, you can return the questionnaire to draft to change them.',
-  'requestor-locked': 'Questionnaire submitted. The Security Analyst has started the assessment, so your answers can no longer change.',
-  analyst: 'Questionnaire submitted. These are the Requestor’s submitted answers.',
+  /**
+   * Phase 15 (15-UI-SPEC §11.2; D-25, UI-D25): the draft owner key the Requestor's unsaved answers are kept under for the
+   * session when a Security Analyst takes the questionnaire back; without it nothing is kept beyond the page.
+   */
+  ownerKey?: string | null;
 };
 
 const answerValueSchema = z.union([
@@ -74,13 +80,6 @@ const answerValueSchema = z.union([
   z.array(z.string().max(255)).max(1_000),
   z.null(),
 ]);
-
-function hasValue(value: AnswerValue | undefined): boolean {
-  if (value === null || value === undefined) return false;
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (Array.isArray(value)) return value.length > 0;
-  return true;
-}
 
 function initialValue(question: QuestionnaireQuestion): AnswerValue {
   if (question.answer?.value !== null && question.answer?.value !== undefined) return question.answer.value;
@@ -140,22 +139,6 @@ function activeAnswerInputs(
     .map((question) => ({ questionKey: question.questionKey, value: values[question.questionKey] ?? null }));
 }
 
-function answerDisplay(question: QuestionnaireQuestion): string {
-  const value = question.answer?.value;
-  if (!hasValue(value)) return 'Not answered';
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (Array.isArray(value)) {
-    const labels = new Map(question.choices?.map((choice) => [choice.value, choice.label]));
-    return value.map((item) => labels.get(item) ?? item).join(', ');
-  }
-  if (typeof value === 'string') return question.choices?.find((choice) => choice.value === value)?.label ?? value;
-  return 'Not answered';
-}
-
-function fieldId(key: string): string {
-  return `question-${key}`;
-}
-
 function QuestionError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return <p className="flex items-start gap-1.5 text-xs text-destructive" id={id} role="alert"><AlertCircle aria-hidden="true" className="mt-px size-3.5 shrink-0" />{message}</p>;
@@ -169,7 +152,10 @@ function EditableQuestion({ control, error, question }: {
   const id = fieldId(question.questionKey);
   const labelId = `${id}-label`;
   const errorId = `${id}-error`;
-  const describedBy = error ? errorId : undefined;
+  const hintId = `${id}-hint`;
+  /* D-17: the help text is the field hint, read before the error (12-UI-SPEC §9.1). */
+  const hint = question.helpText ? <p className="whitespace-pre-wrap text-xs text-foreground-secondary" id={hintId}>{question.helpText}</p> : null;
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
   const name = `answers.${question.questionKey}` as const;
 
   if (question.support.status === 'unsupported') {
@@ -187,8 +173,9 @@ function EditableQuestion({ control, error, question }: {
       if (question.answerType === 'Boolean') {
         const value = typeof field.value === 'boolean' ? String(field.value) : '';
         return (
-          <fieldset aria-labelledby={labelId} className="grid gap-3" id={id} tabIndex={-1}>
+          <fieldset aria-describedby={describedBy} aria-labelledby={labelId} className="grid gap-3" id={id} tabIndex={-1}>
             <legend className="text-sm font-medium" id={labelId}>{question.questionText}{question.required ? ' (required)' : ''}</legend>
+            {hint}
             <RadioGroup name={field.name} onBlur={field.onBlur} onValueChange={(next) => field.onChange(next === 'true')} value={value}>
               <label className="flex min-h-9 items-center gap-3 text-sm"><RadioGroupItem aria-describedby={describedBy} aria-invalid={Boolean(error)} ref={field.ref} value="true" />Yes</label>
               <label className="flex min-h-9 items-center gap-3 text-sm"><RadioGroupItem aria-describedby={describedBy} aria-invalid={Boolean(error)} value="false" />No</label>
@@ -199,8 +186,9 @@ function EditableQuestion({ control, error, question }: {
       }
       if (question.answerType === 'Single select') {
         return (
-          <fieldset aria-labelledby={labelId} className="grid gap-3" id={id} tabIndex={-1}>
+          <fieldset aria-describedby={describedBy} aria-labelledby={labelId} className="grid gap-3" id={id} tabIndex={-1}>
             <legend className="text-sm font-medium" id={labelId}>{question.questionText}{question.required ? ' (required)' : ''}</legend>
+            {hint}
             <RadioGroup name={field.name} onBlur={field.onBlur} onValueChange={field.onChange} value={typeof field.value === 'string' ? field.value : ''}>
               {question.choices?.map((choice, index) => <label className="flex min-h-9 items-center gap-3 text-sm" key={choice.value}><RadioGroupItem aria-describedby={describedBy} aria-invalid={Boolean(error)} ref={index === 0 ? field.ref : undefined} value={choice.value} />{choice.label}</label>)}
             </RadioGroup>
@@ -211,8 +199,9 @@ function EditableQuestion({ control, error, question }: {
       if (question.answerType === 'Multi select') {
         const selected = Array.isArray(field.value) ? field.value : [];
         return (
-          <fieldset aria-labelledby={labelId} className="grid gap-3" id={id} tabIndex={-1}>
+          <fieldset aria-describedby={describedBy} aria-labelledby={labelId} className="grid gap-3" id={id} tabIndex={-1}>
             <legend className="text-sm font-medium" id={labelId}>{question.questionText}{question.required ? ' (required)' : ''}</legend>
+            {hint}
             {question.choices?.map((choice, index) => <label className="flex min-h-9 items-center gap-3 text-sm" key={choice.value}><Checkbox aria-describedby={describedBy} aria-invalid={Boolean(error)} checked={selected.includes(choice.value)} name={field.name} onBlur={field.onBlur} onCheckedChange={(checked) => field.onChange(checked ? [...selected, choice.value] : selected.filter((item) => item !== choice.value))} ref={index === 0 ? field.ref : undefined} />{choice.label}</label>)}
             <QuestionError id={errorId} message={error} />
           </fieldset>
@@ -231,22 +220,12 @@ function EditableQuestion({ control, error, question }: {
       return (
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor={id} id={labelId}>{question.questionText}{question.required ? ' (required)' : ''}</label>
+          {hint}
           {question.answerType === 'Long text' ? <Textarea {...common} /> : <Input {...common} type={question.answerType === 'Date' ? 'date' : 'text'} />}
           <QuestionError id={errorId} message={error} />
         </div>
       );
     }} />
-  );
-}
-
-function ReadOnlyQuestion({ question }: { question: QuestionnaireQuestion }) {
-  return (
-    <div className="grid gap-1" id={fieldId(question.questionKey)}>
-      <h3 className="text-heading-sm text-foreground">{question.questionText}</h3>
-      {question.support.status === 'unsupported' ? (
-        <Alert><AlertCircle aria-hidden="true" /><AlertTitle>File upload is unavailable</AlertTitle><AlertDescription>No file answer can be displayed for this question.</AlertDescription></Alert>
-      ) : <p className="whitespace-pre-wrap text-sm text-muted-foreground">{answerDisplay(question)}</p>}
-    </div>
   );
 }
 
@@ -265,13 +244,13 @@ function applyFailure(result: Extract<QuestionnaireActionResult, { ok: false }>,
 /** A save failure as the save status shows it (UI-SPEC §6.1): blocked carries its §10.2 C sentence. */
 function saveOutcome(result: Extract<QuestionnaireActionResult, { ok: false }>): AutosaveOutcome {
   return result.failure === 'blocked'
-    ? { ok: false, failure: 'blocked', message: result.formError ?? 'Your answers can’t be saved in this questionnaire’s current state.' }
+    ? { ok: false, failure: 'blocked', message: result.formError ?? 'Your answers can’t be saved in this questionnaire’s current state.', ...(result.reason ? { reason: result.reason } : {}) }
     : { ok: false, failure: 'retryable' };
 }
 
 const retryableSaveMessage = 'Your latest answers weren’t saved.';
 
-export function QuestionnaireRenderer({ definition: initialDefinition, documentId, mode, submittedNotice = 'requestor-revertible', serverUpdatedAt }: QuestionnaireRendererProps) {
+export function QuestionnaireRenderer({ definition: initialDefinition, documentId, mode, ownerKey = null, submittedNotice = 'requestor-revertible', serverUpdatedAt }: QuestionnaireRendererProps) {
   const router = useRouter();
   /* A save this tab remembers wins at mount only when it is later than the page (Back and Forward, D-11). */
   const [definition, setDefinition] = useState(() => (mode === 'edit' ? savedQuestionnaireAfter(documentId, serverUpdatedAt)?.answers : undefined) ?? initialDefinition);
@@ -335,8 +314,11 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
   const autosave = useAnswerAutosave({
     save: saveAnswers,
     getAnswers: () => activeAnswerInputs(definition, form.getValues('answers')),
+    keepUnsaved: ownerKey ? { ownerKey, documentId, kept: (answers) => keptUnsavedAnswersOf(definition, answers) } : null,
   });
-  const { schedule, flush, reset: resetAutosave } = autosave;
+  /* §11.2: how many kept answers this load restored, shown until the page is left. */
+  const [restoredCount, setRestoredCount] = useState(0);
+  const { schedule, flush, reset: resetAutosave, recover } = autosave;
   /* Leaving warns while a change waits, a save is in flight or the last one failed; never once submitted (D-12). */
   useLeaveGuard(autosave.blocking && !submitted, autosave.status.kind === 'failed' ? 'failed' : 'waiting');
 
@@ -349,14 +331,35 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     return () => subscription.unsubscribe();
   }, [form, schedule]);
 
-  /* A new seed after Refresh page resets the form to it; the definition state already holds it. */
-  const seededDefinition = useRef(definition);
-  seededDefinition.current = definition;
+  /*
+   * §11.2 (UI-D25): on a released load, answers kept earlier in this session go back into the questions they still fit,
+   * as unsaved edits that autosave then saves. Reset the refreshed server seed first, then merge recovery; keep
+   * eligible entries durable until a save acknowledges them. Ineligible entries are discarded silently.
+   */
+  const seeded = useRef<{ version: number; mode: string } | null>(null);
   useEffect(() => {
-    if (seedVersion === 0) return;
-    form.reset(initialValues(seededDefinition.current));
-    resetAutosave();
-  }, [form, resetAutosave, seedVersion]);
+    if (seeded.current?.version === seedVersion && seeded.current.mode === mode) return;
+    const wasSeeded = seeded.current !== null;
+    seeded.current = { version: seedVersion, mode };
+    if (wasSeeded) {
+      form.reset(initialValues(definition));
+      resetAutosave();
+    }
+    if (!ownerKey || mode !== 'edit') return;
+    const raw = readSessionDraft('unsaved-answers', ownerKey, documentId);
+    if (raw === null) return;
+    const restorable = restorableUnsavedAnswers(parseKeptUnsavedAnswers(raw) ?? [], definition);
+    if (restorable.length === 0) {
+      clearSessionDraft('unsaved-answers', ownerKey, documentId);
+      return;
+    }
+    for (const entry of restorable) {
+      const value = Array.isArray(entry.value) ? [...entry.value] : entry.value;
+      form.setValue(`answers.${entry.questionKey}`, value as AnswerValue, { shouldDirty: true, shouldValidate: false });
+    }
+    setRestoredCount(restorable.length);
+    recover();
+  }, [definition, documentId, form, mode, ownerKey, recover, resetAutosave, seedVersion]);
 
   /* A field losing focus saves at once; moving between the choices of one group is not leaving it. */
   function flushOnLeavingField(event: FocusEvent<HTMLFormElement>) {
@@ -432,7 +435,8 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     setSubmitError(null);
     const saved = await autosave.saveNow();
     if (!saved.ok) {
-      setSubmitError(saved.failure === 'blocked' ? saved.message : retryableSaveMessage);
+      /* §11.2: taken back while submitting reads the submit sentence, which says the answers are kept. */
+      setSubmitError(saved.failure === 'blocked' ? (saved.reason === NOT_ANSWERABLE ? refusalMessage('questionnaireSubmit', NOT_ANSWERABLE) : saved.message) : retryableSaveMessage);
       throw new Error('Draft save failed');
     }
     const result = await submitQuestionnaireAction({ documentId, answers: activeAnswerInputs(definition, form.getValues('answers')) });
@@ -451,16 +455,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
     router.refresh();
   }
 
-  if (submitted) {
-    const readOnlyAnswers = Object.fromEntries(definition.map((question) => [question.questionKey, question.answer]));
-    const readOnlyVisible = new Set(getVisibleQuestionKeys(definition, readOnlyAnswers));
-    return (
-      <div className="grid w-full max-w-3xl gap-8">
-        <Alert><CheckCircle2 aria-hidden="true" /><AlertTitle>Submitted</AlertTitle><AlertDescription>{submittedNoticeText[submittedNotice]}</AlertDescription></Alert>
-        {sections.map((section) => <FormSection description={section.description} headingId={`section-${section.key}`} key={section.key} title={section.title}>{section.questions.filter((question) => readOnlyVisible.has(question.questionKey)).map((question) => <ReadOnlyQuestion key={question.questionKey} question={question} />)}</FormSection>)}
-      </div>
-    );
-  }
+  if (submitted) return <SubmittedQuestionnaireAnswers definition={definition} submittedNotice={submittedNotice} />;
 
   return (
     <form className="grid w-full max-w-3xl grid-cols-1 gap-8" noValidate onBlur={flushOnLeavingField} onSubmit={(event) => { event.preventDefault(); void saveDraft(); }}>
@@ -469,6 +464,7 @@ export function QuestionnaireRenderer({ definition: initialDefinition, documentI
         <Progress aria-label={`${progress.answered} of ${progress.total} questionnaire questions answered`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={progress.percent} value={progress.percent} />
         <p className="text-sm text-muted-foreground">{supportedUnanswered.length} required {supportedUnanswered.length === 1 ? 'question' : 'questions'} unanswered</p>
         <SaveStatus onRefresh={refreshPage} onRetry={autosave.retry} status={autosave.status} />
+        {restoredCount > 0 ? <p className="text-sm text-foreground-secondary">{unsavedAnswersRestoredCaption(restoredCount)}</p> : null}
       </section>
       {attempted && attention.length > 0 ? (
         <section aria-label="Questionnaire validation guidance" className="grid gap-2 rounded-lg border border-warning-border bg-warning-subtle p-4">

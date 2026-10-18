@@ -1,0 +1,2 @@
+# midPoint renames loaded post-initial objects to *.done inside the midpoint_home volume; never let one into the repository
+*.done

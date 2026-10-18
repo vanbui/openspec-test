@@ -59,6 +59,14 @@ void dashboardVocabulariesMatchTheContract;
 const countSchema = z.number().int().nonnegative();
 const documentIdSchema = z.string().min(1).max(255);
 
+/** Phase 13 (D-15): the viewer's own queue counts, each the Assigned to me list's total. */
+const dashboardReviewQueueMineSchema = z.object({
+  requiresAttention: countSchema,
+  awaitingRequestor: countSchema,
+  generationInProgress: countSchema,
+  withUnreadNotes: countSchema,
+}).strict();
+
 const dashboardReviewQueueSchema = z.object({
   requiresAttention: countSchema,
   awaitingRequestor: countSchema,
@@ -66,6 +74,9 @@ const dashboardReviewQueueSchema = z.object({
   questionnairesReadyForReview: countSchema,
   assessmentsDraft: countSchema,
   assessmentsInReview: countSchema,
+  mine: dashboardReviewQueueMineSchema,
+  /** Requires attention with nobody holding the request: Requests' `assignee=unassigned`. */
+  unassigned: countSchema,
 }).strict();
 
 export const dashboardRiskRowSchema = z.object({
@@ -92,11 +103,22 @@ export const activityItemSchema = z.object({
   occurredAt: z.iso.datetime({ offset: true }),
 }).strict();
 
+/**
+ * Risk exposure in the Risk register's two stages (D-40 to D-42): released open Risks, the accepted ones
+ * among them, and open Risks under assessment, each a closed rating count. The Phase 7 flat count of both
+ * stages is refused, so it can never be read as released.
+ */
+export const dashboardRiskExposureSchema = z.object({
+  released: ratingCountsSchema,
+  releasedAccepted: ratingCountsSchema,
+  underAssessment: ratingCountsSchema,
+}).strict();
+
 const dashboardSummarySchema = z.object({
   today: z.iso.date(),
   dueSoonWindowDays: z.number().int().min(1),
   reviewQueue: dashboardReviewQueueSchema,
-  riskExposure: ratingCountsSchema,
+  riskExposure: dashboardRiskExposureSchema,
   highCriticalRisks: z.object({
     rows: z.array(dashboardRiskRowSchema).max(5),
     total: countSchema,
@@ -117,6 +139,7 @@ export const dashboardSummaryResponseSchema = z.object({ data: dashboardSummaryS
 
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 export type DashboardReviewQueue = z.infer<typeof dashboardReviewQueueSchema>;
+export type DashboardRiskExposure = z.infer<typeof dashboardRiskExposureSchema>;
 export type DashboardRiskRow = z.infer<typeof dashboardRiskRowSchema>;
 export type ActivityItem = z.infer<typeof activityItemSchema>;
 

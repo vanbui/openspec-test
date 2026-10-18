@@ -1,0 +1,406 @@
+{
+  "_comment": "Phase 16 (16-08): model-facing wire bodies for the two risk proposal operations on the UAT-A-like context. uatASuggestions holds ten distinct risks (eight are kept); acceptOnHigh proposes Accept on a High residual; malformed breaks the structure; rewrite returns the offshore administrator access risk with a changed impact and residual consequence.",
+  "uatASuggestions": {
+    "schemaVersion": 1,
+    "risks": [
+      {
+        "riskTypeName": "Payment Integrity",
+        "issueStatement": "Unsigned payment files reconciled by hand.",
+        "riskStatement": "Unsigned payment files reconciled by hand could be altered before the pay run without detection",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Payment files are not signed and are reconciled by hand",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-1",
+        "informationAsset": "asset-1",
+        "inherentLikelihood": "Likely",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Major",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [
+            "answer.payment-files"
+          ],
+          "riskCause": [
+            "answer.payment-files"
+          ],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": "Payment Integrity",
+        "issueStatement": "Bank detail changes requested by email.",
+        "riskStatement": "Bank detail changes requested by email could redirect an employee's pay to a fraudster",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Bank detail changes are accepted from email requests without a call-back check",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-2",
+        "informationAsset": "asset-1",
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [
+            "request.description"
+          ],
+          "riskCause": [
+            "request.description"
+          ],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": null,
+        "issueStatement": "Payroll interface credentials stored in scripts.",
+        "riskStatement": "Payroll interface credentials stored in scripts could be reused to reach the payroll platform",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Service credentials for the payroll interface are kept in plain text scripts",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-2",
+        "informationAsset": null,
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": null,
+        "issueStatement": "Leavers' payroll access.",
+        "riskStatement": "Leavers' payroll access may persist after they depart",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Access removal depends on a manual notice from people leaders",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-3",
+        "informationAsset": null,
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": "Personal Information Handling",
+        "issueStatement": "Tax file numbers held in exported reports.",
+        "riskStatement": "Tax file numbers held in exported reports could be disclosed outside the payroll team",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Payroll reports with tax file numbers are exported to shared folders",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": null,
+        "informationAsset": "asset-1",
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [
+            "request.regulatoryRequirements"
+          ],
+          "riskCause": [
+            "request.regulatoryRequirements"
+          ],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": "Internet Exposure",
+        "issueStatement": "Unpatched payroll platform components.",
+        "riskStatement": "Unpatched payroll platform components could be exploited from the internet",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Vendor patches are applied quarterly rather than on release",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-2",
+        "informationAsset": null,
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": null,
+        "issueStatement": "Audit logs for pay-run approvals.",
+        "riskStatement": "Audit logs for pay-run approvals may be overwritten before anyone reviews them",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Approval logs are kept for seven days only",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-1",
+        "informationAsset": null,
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": null,
+        "issueStatement": "A single payroll administrator.",
+        "riskStatement": "A single payroll administrator could be unavailable during a pay run",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Only one trained administrator can run the pay cycle",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": null,
+        "informationAsset": null,
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": null,
+        "issueStatement": "Test environments seeded with live payroll data.",
+        "riskStatement": "Test environments seeded with live payroll data could expose employee details",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Production payroll data is copied into test environments unmasked",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": null,
+        "informationAsset": "asset-1",
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      },
+      {
+        "riskTypeName": null,
+        "issueStatement": "Changes to pay rates.",
+        "riskStatement": "Changes to pay rates could be applied without a second approval",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Pay rate tables can be edited by one person without review",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": null,
+        "informationAsset": null,
+        "inherentLikelihood": "Possible",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Possible",
+        "highestResidualConsequence": "Moderate",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Treat",
+        "treatmentPlan": "Introduce the control described and confirm it operates before the next pay run.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [
+            "answer.duties"
+          ],
+          "riskCause": [
+            "answer.duties"
+          ],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      }
+    ]
+  },
+  "acceptOnHigh": {
+    "schemaVersion": 1,
+    "risks": [
+      {
+        "riskTypeName": "Payment Integrity",
+        "issueStatement": "Bank detail changes requested by email.",
+        "riskStatement": "Bank detail changes requested by email could redirect an employee's pay to a fraudster",
+        "riskCategory": "Payroll",
+        "riskSubCategory": "Payroll operations",
+        "riskCause": "Bank detail changes are accepted from email requests without a call-back check",
+        "potentialImpact": "Employees or the organisation could suffer financial loss or a privacy breach.",
+        "informationSystem": "system-2",
+        "informationAsset": "asset-1",
+        "inherentLikelihood": "Likely",
+        "highestInherentConsequence": "Major",
+        "inherentRatingRationale": "The exposure is present in normal operation.",
+        "residualLikelihood": "Likely",
+        "highestResidualConsequence": "Major",
+        "residualRatingRationale": "Existing practices reduce but do not remove the exposure.",
+        "treatmentAction": "Accept",
+        "treatmentPlan": "Accept the risk because a call-back check would slow down urgent changes.",
+        "sources": {
+          "issueStatement": [],
+          "riskStatement": [],
+          "riskCause": [],
+          "potentialImpact": [],
+          "inherentRatingRationale": [],
+          "residualRatingRationale": [],
+          "treatmentPlan": []
+        },
+        "uncitedClaims": [],
+        "suggestedControls": []
+      }
+    ]
+  },
+  "malformed": {
+    "schemaVersion": 1,
+    "risks": [
+      {
+        "riskStatement": "A risk with nothing else.",
+        "treatmentAction": "Accept"
+      }
+    ]
+  },
+  "rewrite": {
+    "schemaVersion": 1,
+    "risk": {
+      "riskTypeName": "Internet Exposure",
+      "issueStatement": "Offshore administrators hold standing privileged access.",
+      "riskStatement": "Offshore support administrators with standing privileged access could read or change payroll data without detection.",
+      "riskCategory": "Access control",
+      "riskSubCategory": "Privileged access",
+      "riskCause": "Shared administrator accounts are used by the offshore support team without session recording.",
+      "potentialImpact": "Payroll data could be read or changed without detection, and a change to bank details could misdirect pay.",
+      "informationSystem": "system-2",
+      "informationAsset": "asset-1",
+      "inherentLikelihood": "Likely",
+      "highestInherentConsequence": "Major",
+      "inherentRatingRationale": "Standing access is broad and unmonitored.",
+      "residualLikelihood": "Likely",
+      "highestResidualConsequence": "Minor",
+      "residualRatingRationale": "Quarterly access reviews and the bank's own checks limit what a misused account can change.",
+      "treatmentAction": "Treat",
+      "treatmentPlan": "Introduce session recording and just-in-time administrator access.",
+      "sources": {
+        "issueStatement": [],
+        "riskStatement": [],
+        "riskCause": [],
+        "potentialImpact": [
+          "request.description",
+          "not-a-source"
+        ],
+        "inherentRatingRationale": [],
+        "residualRatingRationale": [
+          "answer.duties"
+        ],
+        "treatmentPlan": []
+      },
+      "uncitedClaims": [],
+      "suggestedControls": []
+    }
+  }
+}

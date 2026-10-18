@@ -2,13 +2,15 @@ import 'server-only';
 
 import type { CapabilityAdapter } from '@/lib/capabilities/capability-adapter';
 
-export const developmentRoles = ['Requestor', 'Secondary Requestor', 'Security Analyst'] as const;
+export const developmentRoles = ['Requestor', 'Secondary Requestor', 'Security Analyst', 'Second Security Analyst'] as const;
 
 export type DevelopmentRole = (typeof developmentRoles)[number];
 export type SessionRuntimeMode = 'development' | 'oidc' | 'unavailable';
 
 export interface Session {
   displayName: string;
+  /** Opaque stable cache identity. It conveys no authorisation and never contains a token or subject. */
+  identityKey?: string;
   /**
    * Set by OIDC sessions only (ADR 0003): the user's own Keycloak email claim. It is used only
    * for display in the account menu and never for authorisation (Strapi resolves identity from

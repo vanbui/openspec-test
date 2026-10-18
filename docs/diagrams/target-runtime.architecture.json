@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "IdamBox Platform · Target Runtime",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/vanbui/idambox",
+      "revision": "37d10d9927419909974674a1a8f78d2778255962",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    { "id": "identity_sources", "type": "external", "label": "Customer identity sources", "sublabel": "HR · directories · databases", "pos": [45, 60], "size": [205, 76] },
+    { "id": "identity_connectors", "type": "backend", "label": "ConnId connectors", "sublabel": "CSV · LDAP · SQL · SCIM2", "tag": "Open source connector SPI", "pos": [345, 60], "size": [205, 76], "sources": [{ "path": "docker/midpoint/Dockerfile", "label": "Reference connector build" }] },
+    { "id": "identity_governance", "type": "backend", "label": "midPoint", "sublabel": "Correlation · lifecycle · reconciliation", "tag": "Reference IGA · replaceable", "pos": [650, 60], "size": [225, 76], "sources": [{ "path": "docs/adr/0005-midpoint-identity-engine-and-strapi-scim.md", "label": "Identity engine decision" }] },
+    { "id": "scim_interface", "type": "security", "label": "Strapi SCIM 2.0 interface", "sublabel": "/scim/v2/Users · discovery", "tag": "RFC 7643 / RFC 7644", "pos": [975, 60], "size": [230, 76], "sources": [{ "path": ".planning/workstreams/iam/IDENTITY-PROVISIONING-BRIEF.md", "label": "Target SCIM contract" }] },
+    { "id": "access_management", "type": "security", "label": "Keycloak", "sublabel": "SSO · MFA · OIDC tokens", "tag": "Reference AM · replaceable", "pos": [45, 240], "size": [225, 86], "sources": [{ "path": "apps/csrm/src/lib/auth/oidc-auth-options.ts", "label": "Reference OIDC integration" }] },
+    { "id": "product_runtimes", "type": "frontend", "label": "IdamBox product runtimes", "sublabel": "CSRM GA · LMS / Compliance planned", "tag": "Each product uses the shared platform", "pos": [420, 240], "size": [285, 86], "sources": [{ "path": ".planning/PROJECT.md", "label": "Shared product platform" }, { "path": "apps/csrm/src/lib/api/transport/server-client.ts", "label": "Typed server API transport" }] },
+    { "id": "shared_backend", "type": "backend", "label": "IdamBox Platform · Strapi", "sublabel": "Identity · authorization · domain APIs", "tag": "All IdamBox products · apps/backend", "pos": [975, 240], "size": [230, 86], "sources": [{ "path": "apps/backend/src/index.ts", "label": "Backend runtime" }, { "path": "apps/backend/src/api/application/content-types/application/schema.json", "label": "Application capability model" }] },
+    { "id": "platform_records", "type": "database", "label": "Private platform database", "sublabel": "Users · grants · product records · outbox", "pos": [975, 415], "size": [230, 76], "sources": [{ "path": "apps/backend/config/database.ts", "label": "Database configuration" }, { "path": "apps/backend/src/iam/keycloak-sync/outbox.ts", "label": "Durable deactivation work" }] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "Identity governance trust domain", "wraps": ["identity_connectors", "identity_governance"], "pad": 26 },
+    { "kind": "security-group", "label": "Access management trust domain", "wraps": ["access_management"], "pad": 26 },
+    { "kind": "security-group", "label": "Product sessions and server runtimes", "wraps": ["product_runtimes"], "pad": 26 },
+    { "kind": "security-group", "label": "Strapi API authorization + private data", "wraps": ["scim_interface", "shared_backend", "platform_records"], "pad": 26 }
+  ],
+  "connections": [
+    { "id": "source_read", "from": "identity_sources", "to": "identity_connectors", "label": "Source protocols" },
+    { "id": "connid_spi", "from": "identity_connectors", "to": "identity_governance", "label": "ConnId SPI" },
+    { "id": "identity_provisioning", "from": "identity_governance", "to": "scim_interface", "label": "SCIM · HTTPS + bearer", "variant": "security", "labelDy": 62 },
+    { "id": "source_authorization", "from": "scim_interface", "to": "shared_backend", "label": "Source-scoped user writes", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelDy": 60 },
+    { "id": "product_sign_in", "from": "access_management", "to": "product_runtimes", "label": "OIDC · SSO + MFA", "variant": "security" },
+    { "id": "product_api", "from": "product_runtimes", "to": "shared_backend", "label": "HTTPS · typed API + caller token", "variant": "emphasis" },
+    { "id": "access_sync", "from": "shared_backend", "to": "access_management", "label": "User sync · provider adapter", "variant": "security", "fromSide": "bottom", "toSide": "bottom", "via": [[1090, 365], [157.5, 365]] },
+    { "id": "document_service", "from": "shared_backend", "to": "platform_records", "label": "Document Service · SQL", "fromSide": "right", "toSide": "right", "via": [[1260, 283], [1260, 453]], "labelAt": [1130, 392] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "One platform, many products", "items": ["CSRM is the first GA product; IdamBox LMS and IdamBox Compliance are planned", "Shared users and grants; product-specific Functions, APIs and record access", "Private files, malware scans and advisory AI; humans release CSRM assessments"] },
+    { "dot": "rose", "title": "Trust and ownership", "items": ["Strapi verifies JWTs; enforces Role → Function → FunctionAPI and record / source scope", "Sources own identity attributes and status; IdamBox alone grants product roles", "Leavers lose API access locally; durable retry disables users and ends AM sessions"] },
+    { "dot": "violet", "title": "Customer IAM and open connectors", "items": ["Customer IGA can replace midPoint via SCIM; customer AM replaces Keycloak via OIDC + adapters", "ConnId is an open source common SPI; choose supported bundles per deployment", "Reference SCIM2 V1.2.9 is community-supported, without Evolveum support"] }
+  ]
+}

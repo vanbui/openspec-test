@@ -153,4 +153,23 @@ describe('alert list URL query', () => {
     }
     expect(alertListUrlQuerySchema.parse({ page: '4', pageSize: '10', sort: 'kind:asc' })).toEqual({ page: 4, pageSize: 10 });
   });
+
+  it('reads any non-null object, not only a plain one, as `next dev` resolves searchParams to a proxy', () => {
+    class SearchParams { urgency = 'overdue'; page = '2'; }
+    const nullPrototype = Object.assign(Object.create(null) as Record<string, string>, { urgency: 'overdue', page: '2' });
+    // `next dev` wraps the page's searchParams in a Proxy whose get trap binds every function it returns to the target,
+    // so `constructor` is a bound function with no prototype, and zod's plain-object test (z.record) refuses it.
+    const nextDevSearchParams = new Proxy({ urgency: 'overdue', page: '2' }, {
+      get: (target, property, receiver) => {
+        const value: unknown = Reflect.get(target, property, receiver);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    for (const [name, params] of [['class instance', new SearchParams()], ['null prototype', nullPrototype], ['next dev proxy', nextDevSearchParams]] as const) {
+      expect(alertListUrlQuerySchema.parse(params), name).toEqual({ urgency: 'overdue', page: 2, pageSize: 25 });
+    }
+    for (const notAnObject of [null, undefined, 'urgency=overdue', ['overdue']]) {
+      expect(alertListUrlQuerySchema.safeParse(notAnObject).success, String(notAnObject)).toBe(false);
+    }
+  });
 });

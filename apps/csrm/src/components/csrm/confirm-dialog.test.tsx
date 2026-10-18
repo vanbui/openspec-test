@@ -91,3 +91,35 @@ describe('ConfirmDialog in controlled mode', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 });
+
+/*
+ * The pilot's walk, O8 (direction §4 Buttons: "Heights stay app-scaled: 32px small, 36px default, 40px large; touch
+ * targets ≥44px below 768px"): the confirm and leave dialogs' buttons were 36px tall at 375. The shared footer gives
+ * every button it holds the touch-target height below 768px, and leaves them at 36px from 768px.
+ */
+describe('ConfirmDialog’s buttons at phone widths (O8)', () => {
+  it('holds both buttons in the shared footer, which gives each the touch-target height below 768px', async () => {
+    const user = userEvent.setup();
+    render(
+      <ConfirmDialog
+        confirmLabel="Submit request"
+        confirmVariant="default"
+        description="Security Analysts will be able to pick it up."
+        onConfirm={vi.fn()}
+        pendingLabel="Submitting request…"
+        title="Submit this assessment request?"
+        trigger={<button type="button">Submit request</button>}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Submit this assessment request?' });
+    const footer = dialog.querySelector<HTMLElement>('[data-slot="alert-dialog-footer"]')!;
+    expect(footer).toHaveClass('max-md:*:min-h-11');
+    for (const name of ['Cancel', 'Submit request']) {
+      const button = within(dialog).getByRole('button', { name });
+      expect(button.parentElement, `${name} is the footer’s own child`).toBe(footer);
+      expect(button).toHaveAttribute('data-size', 'default');
+    }
+  });
+});

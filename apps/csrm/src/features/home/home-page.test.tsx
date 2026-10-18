@@ -23,9 +23,9 @@ const mocks = vi.hoisted(() => ({
   getDashboardSummary: vi.fn(),
   getAlertSummary: vi.fn(),
   listAlerts: vi.fn(),
-  getRequestorDashboard: vi.fn(),
+  getRequestorHome: vi.fn(),
   resolveE2eUiState: vi.fn(),
-  resolveE2eDashboardPartial: vi.fn(),
+  resolveE2eRequestorHomePartial: vi.fn(),
   resolveE2eAnalystDashboardPartial: vi.fn(),
 }));
 
@@ -44,14 +44,11 @@ vi.mock('@/features/analyst-dashboard/analyst-dashboard-service', () => ({
   getDashboardSummary: mocks.getDashboardSummary,
 }));
 vi.mock('@/features/alerts/alert-service', () => ({ getAlertSummary: mocks.getAlertSummary, listAlerts: mocks.listAlerts }));
-vi.mock('@/features/dashboard/requestor-dashboard-service', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/features/dashboard/requestor-dashboard-service')>(),
-  getRequestorDashboard: mocks.getRequestorDashboard,
-}));
+vi.mock('@/features/home/requestor-home-service', () => ({ getRequestorHome: mocks.getRequestorHome }));
 vi.mock('@/lib/testing/e2e-ui-state', () => ({
   E2eUiStateBoundary: ({ children, state }: { children: ReactNode; state: string }) => <section data-ui-state={state}>{children}</section>,
   resolveE2eUiState: mocks.resolveE2eUiState,
-  resolveE2eDashboardPartial: mocks.resolveE2eDashboardPartial,
+  resolveE2eRequestorHomePartial: mocks.resolveE2eRequestorHomePartial,
   resolveE2eAnalystDashboardPartial: mocks.resolveE2eAnalystDashboardPartial,
 }));
 
@@ -59,7 +56,7 @@ import HomeError from '../../../app/(app)/app/error';
 import HomeLoading from '../../../app/(app)/app/loading';
 import HomePage, { metadata } from '../../../app/(app)/app/page';
 import { emptyAnalystDashboard } from '../analyst-dashboard/analyst-dashboard-presentation';
-import { deriveRequestorDashboard } from '../dashboard/requestor-dashboard-service';
+import { emptyRequestorHome } from './requestor-home-presentation';
 
 const homeDescription = 'What needs your action, and where your work stands.';
 const fixtureQuery = Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' });
@@ -119,13 +116,21 @@ beforeEach(() => {
     return granted.has(capability);
   });
   mocks.getAnalystDashboard.mockImplementation(async () => { calls.push('analyst-dashboard'); return { kind: 'ready', dashboard: emptyAnalystDashboard(14) }; });
-  mocks.getRequestorDashboard.mockImplementation(async () => { calls.push('requestor-dashboard'); return { kind: 'ready', dashboard: deriveRequestorDashboard([], []) }; });
+  mocks.getRequestorHome.mockImplementation(async () => { calls.push('requestor-home'); return { kind: 'ready', home: emptyRequestorHome }; });
   mocks.resolveE2eUiState.mockImplementation(() => { calls.push('fixture'); return undefined; });
-  mocks.resolveE2eDashboardPartial.mockImplementation(() => { calls.push('requestor-partial'); return false; });
+  mocks.resolveE2eRequestorHomePartial.mockImplementation(() => { calls.push('requestor-partial'); return false; });
   mocks.resolveE2eAnalystDashboardPartial.mockImplementation(() => { calls.push('analyst-partial'); return false; });
 });
 
 describe('Home at /app', () => {
+  it('omits every New request action for a Requestor who can read but cannot create', async () => {
+    signInAsRequestor();
+    mocks.granted.mockResolvedValue(new Set(['assessment-request:read']));
+    render(await resolveServerTree(await HomePage({ searchParams: Promise.resolve({}) })));
+    expect(screen.getByRole('region', { name: 'Needs your action' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New request' })).not.toBeInTheDocument();
+  });
+
   it('is titled Home for every actor', () => {
     expect(metadata).toEqual({ title: 'Home | IdamBox CSRM' });
   });
@@ -138,8 +143,11 @@ describe('Home at /app', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(within(pageHeader()).getByText(homeDescription)).toBeInTheDocument();
     expect(within(pageHeader()).getByRole('link', { name: 'New request' })).toHaveAttribute('href', '/app/requests/new');
-    expect(mocks.getRequestorDashboard).toHaveBeenCalledTimes(1);
-    expect(calls.indexOf('capability:assessment:review')).toBeLessThan(calls.indexOf('requestor-dashboard'));
+    expect(mocks.getRequestorHome).toHaveBeenCalledTimes(1);
+    expect(calls).toContain('capability:assessment:review');
+    expect(calls.indexOf('capability:assessment:review')).toBeLessThan(calls.indexOf('requestor-home'));
+    // The Requestor Home leads with the work waiting for them (D-19, D-22).
+    expect(screen.getAllByRole('heading', { level: 2 })[0]).toHaveTextContent('Needs your action');
     for (const analystRead of [mocks.getAnalystDashboard, mocks.getDashboardSummary, mocks.getAlertSummary, mocks.listAlerts]) {
       expect(analystRead).not.toHaveBeenCalled();
     }
@@ -158,8 +166,16 @@ describe('Home at /app', () => {
     expect(pageHeader().querySelector('a, button')).toBeNull();
     expect(mocks.getAnalystDashboard).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('region', { name: 'Needs action' })).toBeInTheDocument();
-    expect(mocks.getRequestorDashboard).not.toHaveBeenCalled();
-    expect(mocks.resolveE2eDashboardPartial).not.toHaveBeenCalled();
+    // Phase 13 (D-15; UI-SPEC §3): the analyst Home leads with the viewer's own work, then the team's queue.
+    const tiles = within(screen.getByRole('region', { name: 'Needs action' })).getAllByRole('link');
+    expect(tiles[0]).toHaveAttribute('href', '/app/review/assigned?queue=requires-attention');
+    expect(tiles[0]).toHaveAccessibleName('Needs your action 0 Requests assigned to you that need analyst action');
+    const queue = screen.getByRole('region', { name: 'Review queue' });
+    expect(within(queue).getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent).slice(0, 2)).toEqual(['Assigned to you', 'Assessment Requests']);
+    expect(within(queue).getAllByRole('link')).toHaveLength(11);
+    expect(document.body).not.toHaveTextContent(/my attention/i);
+    expect(mocks.getRequestorHome).not.toHaveBeenCalled();
+    expect(mocks.resolveE2eRequestorHomePartial).not.toHaveBeenCalled();
   });
 
   it('streams each Home behind its own skeleton, chosen before the boundary', async () => {
@@ -175,7 +191,7 @@ describe('Home at /app', () => {
 
     // Choosing the skeleton reads only the session: no data read happens before the boundary.
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
-    expect(mocks.getRequestorDashboard).not.toHaveBeenCalled();
+    expect(mocks.getRequestorHome).not.toHaveBeenCalled();
   });
 
   it('loads with the Home header alone: no action and no body, since the variant is not chosen yet (UI-D4)', () => {

@@ -1,0 +1,12 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v2.0 — Assessment Lifecycle and Oversight",
+  "phases": [],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 19.1)",
+    "reason": "Phase 19.1 of 16 — needs a plan"
+  },
+  "updated_at": "2026-10-17T13:54:15.308Z"
+}

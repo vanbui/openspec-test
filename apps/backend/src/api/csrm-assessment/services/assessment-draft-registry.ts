@@ -4,6 +4,8 @@ export const ASSESSMENT_DRAFT_JOB_MAX_TERMINAL = 500;
 export const ASSESSMENT_DRAFT_JOB_TERMINAL_TTL_MS = 60 * 60 * 1_000;
 
 export type AssessmentDraftJobStatus = "queued" | "running" | "completed" | "failed";
+/* Phase 14 D-33: a CONTEXT_TOO_LARGE failure keeps the files included when the context was refused, by documentId. */
+export type AssessmentDraftJobFailureRecord = { code: string; message: string; attachmentDocumentIds?: string[] };
 export type AssessmentDraftJobRecord = {
   jobId: string;
   questionnaireId: string;
@@ -16,7 +18,7 @@ export type AssessmentDraftJobRecord = {
   startedAt?: string;
   completedAt?: string;
   assessmentId?: string;
-  failure?: { code: string; message: string };
+  failure?: AssessmentDraftJobFailureRecord;
 };
 
 export type AssessmentDraftJobActor = {
@@ -58,7 +60,7 @@ export class AssessmentDraftRegistryError extends Error {
 }
 
 export class AssessmentDraftJobFailure extends Error {
-  constructor(public readonly code: string, public readonly safeMessage: string) {
+  constructor(public readonly code: string, public readonly safeMessage: string, public readonly attachmentDocumentIds: readonly string[] = []) {
     super(safeMessage);
     this.name = "AssessmentDraftJobFailure";
   }
@@ -81,15 +83,24 @@ function publicRecord(job: InternalJob): AssessmentDraftJobRecord {
     ...(job.startedAt ? { startedAt: job.startedAt } : {}),
     ...(job.completedAt ? { completedAt: job.completedAt } : {}),
     ...(job.assessmentId ? { assessmentId: job.assessmentId } : {}),
-    ...(job.failure ? { failure: { ...job.failure } } : {}),
+    ...(job.failure ? { failure: { ...job.failure, ...(job.failure.attachmentDocumentIds ? { attachmentDocumentIds: [...job.failure.attachmentDocumentIds] } : {}) } } : {}),
   };
 }
 
-function safeFailure(error: unknown): { code: string; message: string } {
+/*
+ * IN-102: the one safe code and message a draft failure is recorded with, on the job and on its run alike, so the hub
+ * and a count of failed runs agree. A failure with no safe code of its own (an unexpected error, a state change) is
+ * DRAFT_GENERATION_FAILED; a safe message is one line of plain text, as the run record requires.
+ */
+export function safeAssessmentDraftFailure(error: unknown): AssessmentDraftJobFailureRecord {
   if (error instanceof AssessmentDraftJobFailure
     && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)
-    && nonBlank(error.safeMessage, 255)) {
-    return { code: error.code, message: error.safeMessage };
+    && nonBlank(error.safeMessage, 255)
+    && !/[\r\n<>]/.test(error.safeMessage)) {
+    // D-33: the included files, by documentId, at most as many as a request can hold (ATTACHMENT_LIMITS.maxActivePerRequest).
+    const ids = error.attachmentDocumentIds;
+    const attachmentDocumentIds = Array.isArray(ids) && ids.length <= 20 && ids.every((id) => nonBlank(id)) ? [...ids] : [];
+    return { code: error.code, message: error.safeMessage, ...(attachmentDocumentIds.length ? { attachmentDocumentIds } : {}) };
   }
   return { code: "DRAFT_GENERATION_FAILED", message: "Assessment draft generation failed safely." };
 }
@@ -127,13 +138,22 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
     while (retainedTerminal.length > maxTerminal) remove(retainedTerminal.shift() as InternalJob);
   }
 
+  function authorized(job: Pick<AssessmentDraftJobRecord, "initiatingAnalystDocumentId">, actor: AssessmentDraftJobActor): boolean {
+    if (!actor || !nonBlank(actor.documentId) || typeof actor.canReadAllDraftJobs !== "boolean") return false;
+    return actor.documentId === job.initiatingAnalystDocumentId || actor.canReadAllDraftJobs;
+  }
+
   function authorize(job: InternalJob, actor: AssessmentDraftJobActor): void {
-    if (!actor || !nonBlank(actor.documentId) || typeof actor.canReadAllDraftJobs !== "boolean") {
-      throw new AssessmentDraftRegistryError(403, "Assessment draft job access is denied.");
-    }
-    if (actor.documentId !== job.initiatingAnalystDocumentId && !actor.canReadAllDraftJobs) {
-      throw new AssessmentDraftRegistryError(403, "Assessment draft job access is denied.");
-    }
+    if (!authorized(job, actor)) throw new AssessmentDraftRegistryError(403, "Assessment draft job access is denied.");
+  }
+
+  /*
+   * D-18: "the job failed and this viewer may retry it", the rule `retry` itself applies: the job failed, no draft
+   * is running for its questionnaire, and the viewer passes `authorize` (the initiator, or any human Security
+   * Analyst once the workflow passes the policy's humanAnalyst fact). It says nothing about who started the job.
+   */
+  function mayRetry(job: AssessmentDraftJobRecord, actor: AssessmentDraftJobActor): boolean {
+    return job.status === "failed" && !inFlight.has(job.questionnaireId) && authorized(job, actor);
   }
 
   function launch(job: InternalJob): void {
@@ -157,7 +177,7 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
         job.assessmentId = result.assessmentId;
       } catch (error) {
         job.status = "failed";
-        job.failure = safeFailure(error);
+        job.failure = safeAssessmentDraftFailure(error);
       } finally {
         job.completedAt = now().toISOString();
         job.lastAccess = ++accessSequence;
@@ -218,6 +238,8 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
     if (job.status !== "failed" || inFlight.has(job.questionnaireId)) {
       throw new AssessmentDraftRegistryError(409, "Only failed jobs can be retried.");
     }
+    // D-18, G-3: a retry is the retrying analyst's attempt, so execute writes them as generatedBy and the run's initiatedBy.
+    job.initiatingAnalystDocumentId = actor.documentId;
     job.status = "queued";
     job.attempt += 1;
     job.queuedAt = now().toISOString();
@@ -233,15 +255,14 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
   /*
    * D-25: the questionnaire's current draft job for any analyst who may review
    * its request — the job the questionnaire is mapped to (active or retained),
-   * else the retained job queued last — with whether the viewer initiated it
-   * (`canRetry`: true for the initiator whatever the job's status; `retry`
-   * itself still refuses a job that has not failed).
-   * Like the questionnaire registry's request read, it neither authorises nor
-   * touches `lastAccess`; `get` and `retry` stay initiator-only (D-27).
+   * else the retained job queued last. D-18: `canRetry` is `mayRetry` for this
+   * viewer; who started the job is the projection's business. Like the
+   * questionnaire registry's request read, it neither authorises nor touches
+   * `lastAccess`.
    */
-  function latestForQuestionnaire(questionnaireId: string, viewerDocumentId: string): { job: AssessmentDraftJobRecord; canRetry: boolean } | null {
+  function latestForQuestionnaire(questionnaireId: string, viewer: AssessmentDraftJobActor): { job: AssessmentDraftJobRecord; canRetry: boolean } | null {
     cleanup();
-    if (!nonBlank(questionnaireId) || !nonBlank(viewerDocumentId)) return null;
+    if (!nonBlank(questionnaireId) || !viewer || !nonBlank(viewer.documentId)) return null;
     const mappedId = jobsByQuestionnaire.get(questionnaireId);
     let selected = mappedId ? jobs.get(mappedId) : undefined;
     if (!selected) {
@@ -249,8 +270,8 @@ export function createAssessmentDraftRegistry(options: RegistryOptions) {
         if (job.questionnaireId === questionnaireId && (!selected || job.queuedAt >= selected.queuedAt)) selected = job;
       }
     }
-    return selected ? { job: publicRecord(selected), canRetry: viewerDocumentId === selected.initiatingAnalystDocumentId } : null;
+    return selected ? { job: publicRecord(selected), canRetry: mayRetry(selected, viewer) } : null;
   }
 
-  return { enqueue, get, retry, cleanup, latestForQuestionnaire };
+  return { enqueue, get, retry, cleanup, latestForQuestionnaire, mayRetry };
 }

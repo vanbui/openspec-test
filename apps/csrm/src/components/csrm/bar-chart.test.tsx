@@ -116,6 +116,73 @@ describe('BarChart labelled values', () => {
     expect(notRated.querySelector('svg.lucide-chevron-right')).toBeNull();
   });
 
+  it('adds a secondary link after a linked row inside the same item, named by its accessible name (UI-SPEC §9.2, UI-D34)', () => {
+    render(
+      <BarChart
+        ariaLabel="Released open Risks by residual rating"
+        data={[
+          {
+            key: 'Moderate',
+            label: <RiskRatingBadge labelled={false} rating="Moderate" />,
+            labelText: 'Moderate',
+            value: 3,
+            tone: 'risk-moderate',
+            href: '/app/risks?residualRating=Moderate&state=open&stage=released',
+            secondary: {
+              href: '/app/risks?residualRating=Moderate&state=open&stage=released&treatmentAction=Accept',
+              label: '1 accepted',
+              accessibleName: '1 accepted Moderate Risk',
+            },
+          },
+          {
+            key: 'Low',
+            label: <RiskRatingBadge labelled={false} rating="Low" />,
+            labelText: 'Low',
+            value: 2,
+            tone: 'risk-low',
+            href: '/app/risks?residualRating=Low&state=open&stage=released',
+          },
+        ]}
+        presentation="labelled-values"
+        unit={openRisks}
+      />,
+    );
+
+    const list = screen.getByRole('list', { name: 'Released open Risks by residual rating' });
+    const [moderate, low] = within(list).getAllByRole('listitem');
+    const [rowLink, accepted] = within(moderate!).getAllByRole('link');
+    expect(rowLink).toHaveAccessibleName('Moderate: 3 open Risks');
+    // The secondary link follows the row link, never inside it: no link nests in another (UI-D34).
+    expect(rowLink!.compareDocumentPosition(accepted!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(rowLink!.contains(accepted!)).toBe(false);
+    expect(accepted).toHaveAccessibleName('1 accepted Moderate Risk');
+    expect(accepted).toHaveTextContent(/^1 accepted$/);
+    expect(accepted).toHaveAttribute('href', '/app/risks?residualRating=Moderate&state=open&stage=released&treatmentAction=Accept');
+    // The record-link treatment, a touch target below md, on the row's line from the widget's @md size.
+    expect(accepted).toHaveClass('record-link', 'min-h-11', 'md:min-h-6');
+    expect(moderate).toHaveClass('col-span-full', 'grid-cols-subgrid');
+    // A row without a secondary link is still one link.
+    expect(within(low!).getAllByRole('link')).toHaveLength(1);
+    // The rows share one grid, so every mark keeps one scale whether or not its row has a secondary link.
+    expect(list).toHaveClass('@md:grid-cols-[minmax(0,1fr)_auto]');
+  });
+
+  it('renders a list with no secondary link as before: one flex column of rows', () => {
+    render(
+      <BarChart
+        ariaLabel="Open Risks"
+        data={[{ key: 'High', label: 'High', labelText: 'High', value: 1, href: '/app/risks?residualRating=High' }]}
+        presentation="labelled-values"
+        unit={openRisks}
+      />,
+    );
+
+    const list = screen.getByRole('list', { name: 'Open Risks' });
+    expect(list).toHaveClass('flex', 'flex-col');
+    expect(list.className).not.toMatch(/grid/);
+    expect(within(list).getByRole('listitem').className).toBe('');
+  });
+
   it('renders no mark for a zero value while its label still reads 0', () => {
     render(
       <BarChart

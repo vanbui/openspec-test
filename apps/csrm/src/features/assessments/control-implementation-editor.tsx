@@ -54,6 +54,8 @@ export type ControlImplementationEditorProps = {
   /** Hands the page the record Strapi saved, so the page and this form both hold the latest saved values (CR-201). */
   onUpdated?: (implementation: ControlImplementation) => void;
   onRemoved?: (implementationId: string) => void;
+  /** FE3-05 (16-UI-SPEC §6.5): a change refused because the Risk was withdrawn meanwhile, so the page reads it again. */
+  onRiskWithdrawn?: () => void;
   /** Moves focus to the Control input when the form opens (UI-SPEC §13.1). */
   focusControlOnOpen?: boolean;
   /** When this control was just added, so its new form confirms `Mitigation control added at {time}` (UI-SPEC §13.4). */
@@ -100,7 +102,7 @@ function normalizeEmptyValues(values: ControlImplementationUpdateInput): Control
   return Object.fromEntries(controlImplementationWritableFields.map((field) => [field, values[field] === '' ? null : values[field]])) as ControlImplementationUpdateInput;
 }
 
-export function ControlImplementationEditor({ addedAt, assessmentId, focusControlOnOpen = false, implementation, mode, onCreated, onRemoved, onUpdated, options, riskId }: ControlImplementationEditorProps) {
+export function ControlImplementationEditor({ addedAt, assessmentId, focusControlOnOpen = false, implementation, mode, onCreated, onRemoved, onRiskWithdrawn, onUpdated, options, riskId }: ControlImplementationEditorProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [selectedControl, setSelectedControl] = useState<RelationPickerItem | null>(() => initialControl(implementation));
@@ -160,6 +162,7 @@ export function ControlImplementationEditor({ addedAt, assessmentId, focusContro
         }
       }
       setFormError(result.formError);
+      if (result.reason === 'RISK_WITHDRAWN') onRiskWithdrawn?.();
       return;
     }
     // Confirmed only after an ok result, so a save that did not persist never reads as saved (T-10-54).
@@ -177,6 +180,7 @@ export function ControlImplementationEditor({ addedAt, assessmentId, focusContro
     const result = await deleteControlImplementationAction({ assessmentId, implementationId: implementation.documentId });
     if (!result.ok) {
       setRemoveError(result.formError);
+      if (result.reason === 'RISK_WITHDRAWN') onRiskWithdrawn?.();
       throw new Error('Removal failed');
     }
     onRemoved?.(implementation.documentId);

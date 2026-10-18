@@ -22,25 +22,16 @@ type DocumentService = {
   findOne: (query: Record<string, unknown>) => Promise<PersistedRequest | null>;
   update: (query: { documentId: string; data: WorkflowData; populate?: WorkflowData }) => Promise<PersistedRequest>;
 };
-type WorkflowStrapi = {
+type WorkflowStrapi = RequestLockStrapi & {
   documents: (uid: string) => DocumentService;
-  db: {
-    transaction: <T>(work: (context: { trx: unknown }) => Promise<T>) => Promise<T>;
-    queryBuilder: (uid: string) => {
-      select: (columns: string[]) => unknown;
-      where: (where: WorkflowData) => unknown;
-      forUpdate: () => unknown;
-      transacting: (transaction: unknown) => unknown;
-      execute: <T>() => Promise<T>;
-    };
-  };
 };
 
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
+import { withRequestLock, type RequestLockStrapi } from "./request-lock";
+import { PERSON_FIELDS } from "./request-people";
 import { REVERT_REASON_MAX_LENGTH, parseRevertReason as parseSharedRevertReason } from "./revert-reason";
 
 export { REVERT_REASON_MAX_LENGTH } from "./revert-reason";
-const requestRevertTails = new Map<string, Promise<void>>();
 
 export class AssessmentRequestWorkflowError extends Error {
   constructor(
@@ -65,30 +56,6 @@ export function parseRevertReason(body: unknown): string {
   }
 }
 
-async function serializeRequestRevert<T>(documentId: string, work: () => Promise<T>): Promise<T> {
-  const previous = requestRevertTails.get(documentId) ?? Promise.resolve();
-  let release: () => void = () => undefined;
-  const current = new Promise<void>((resolve) => { release = resolve; });
-  const tail = previous.then(() => current);
-  requestRevertTails.set(documentId, tail);
-  await previous;
-  try {
-    return await work();
-  } finally {
-    release();
-    if (requestRevertTails.get(documentId) === tail) requestRevertTails.delete(documentId);
-  }
-}
-
-async function lockRequest(strapi: WorkflowStrapi, documentId: string, transaction: unknown): Promise<void> {
-  const query = strapi.db.queryBuilder("api::csrm-assessment-request.csrm-assessment-request");
-  query.select(["id"]);
-  query.where({ documentId });
-  query.forUpdate();
-  query.transacting(transaction);
-  await query.execute<unknown>();
-}
-
 export async function revertRequestToDraft(input: {
   strapi: WorkflowStrapi;
   requestDocumentId: string;
@@ -98,8 +65,8 @@ export async function revertRequestToDraft(input: {
 }): Promise<PersistedRequest> {
   const reason = parseRevertReason(input.body);
   if (!input.requestDocumentId || !input.actorDocumentId) throw new AssessmentRequestWorkflowError();
-  return serializeRequestRevert(input.requestDocumentId, () => input.strapi.db.transaction(async ({ trx }) => {
-    await lockRequest(input.strapi, input.requestDocumentId, trx);
+  // The shared per-request lock (request-lock.ts): every write to one request serialises against this one.
+  return withRequestLock(input.strapi, input.requestDocumentId, async () => {
     const requests = input.strapi.documents("api::csrm-assessment-request.csrm-assessment-request");
     const request = await requests.findOne({
       documentId: input.requestDocumentId,
@@ -123,10 +90,11 @@ export async function revertRequestToDraft(input: {
       },
       // The response is the authoritative reverted request, and the reverting
       // identity is a relation: without populating it the caller receives an
-      // audit fact it cannot read.
-      populate: { revertedBy: true },
+      // audit fact it cannot read. It is read as a person only (D-04); the
+      // controller projects it to a documentId and a display name.
+      populate: { revertedBy: { fields: [...PERSON_FIELDS] } },
     });
-  }));
+  });
 }
 
 export function requestorWritableData(data: unknown): WorkflowData {
@@ -193,13 +161,26 @@ export function prepareRequestorUpdate(
  * writable fields of any request, past draft included. A status change is still only the
  * Requestor's transition, the submission of a draft dated by the server; any other status is
  * refused.
+ *
+ * Phase 13 D-20 (08-SECURITY.md O-5): only the request's own requestor submits it. An analyst
+ * submitting a request someone else raised is refused with 403 NOT_REQUEST_REQUESTOR before
+ * anything else is decided, so the first line alone attests its own request; an analyst who raised
+ * the request still submits it (T-08-A2). Every other status keeps the Requestor path, which answers
+ * 400 for anything but draft or submitted.
  */
 export function prepareAnalystUpdate(
   persisted: PersistedRequest,
   data: unknown,
   submittedAt: Date = new Date(),
+  actorDocumentId?: unknown,
 ): WorkflowData {
   if (!isRecord(data)) throw new AssessmentRequestWorkflowError("CSRM assessment request data is invalid.");
+  if (data.requestStatus === "submitted") {
+    const requestor = isRecord(persisted.requestor) ? persisted.requestor.documentId : undefined;
+    if (typeof actorDocumentId !== "string" || actorDocumentId.length === 0 || requestor !== actorDocumentId) {
+      throw new AssessmentRequestWorkflowError("CSRM assessment request submission is denied.", 403, "NOT_REQUEST_REQUESTOR");
+    }
+  }
   return data.requestStatus === undefined
     ? requestorWritableData(data)
     : prepareRequestorUpdate(persisted, data, submittedAt);

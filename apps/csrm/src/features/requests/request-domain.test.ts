@@ -13,8 +13,8 @@ const submittedStep = (actor: 'analyst' | 'requestor' = 'analyst'): RequestLifec
   currentLabel: 'Submitted',
   terminal: false,
   nextAction: actor === 'analyst'
-    ? { actor, summary: 'Generate the questionnaire.', href: '/app/review/requests/request-1' }
-    : { actor, summary: 'The work is waiting with the other party.' },
+    ? { actor, holder: 'analyst', summary: 'Generate the questionnaire.', href: '/app/review/requests/request-1' }
+    : { actor, holder: 'analyst', summary: 'The Security Analyst is reviewing your request and will send you a questionnaire to answer.' },
   steps: [],
 });
 
@@ -42,10 +42,10 @@ describe('the analyst’s next action follows the generation rule (walkthrough f
   it('leaves every other served next action as served', () => {
     const released: RequestLifecycle = {
       currentKey: 'questionnaire-released', currentLabel: 'Questionnaire released', terminal: false,
-      nextAction: { actor: 'analyst', summary: 'The work is waiting with the other party.' }, steps: [],
+      nextAction: { actor: 'analyst', holder: 'requestor', summary: 'The Requestor is answering the questionnaire.' }, steps: [],
     };
     expect(analystRequestLifecycle({ requestStatus: 'questionnaire-in-progress', lifecycle: released })).toBe(released);
-    expect(analystRequestLifecycle({ requestStatus: 'under-review', lifecycle: submittedStep('requestor') })?.nextAction?.summary).toBe('The work is waiting with the other party.');
+    expect(analystRequestLifecycle({ requestStatus: 'under-review', lifecycle: submittedStep('requestor') })?.nextAction?.summary).toBe('The Security Analyst is reviewing your request and will send you a questionnaire to answer.');
   });
 
   it('passes a lifecycle with no next action, or none at all, through', () => {

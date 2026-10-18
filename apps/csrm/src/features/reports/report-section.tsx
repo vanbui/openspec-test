@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 
+import { RecordLink } from '@/components/csrm/record-link';
 import { EmptyState } from '@/components/states/states';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { ReportEmptyCopy } from './report-presentation';
+import type { ReportEmptyCopy, ReportTextLink } from './report-presentation';
 
 export type ReportSectionProps = {
   /** The section's element id; its heading id derives from it. */
@@ -20,6 +21,8 @@ export type ReportSectionProps = {
   empty?: ReportEmptyCopy;
   /** Truncation and coverage notes, shown only when they apply. */
   notes?: readonly string[];
+  /** Links that follow the notes, such as the coverage note's View Critical and View High (UI-SPEC §9.3). */
+  noteLinks?: readonly ReportTextLink[];
   /** Any other body, such as a bounded list of shared alert rows and its footer. */
   children?: ReactNode;
 };
@@ -36,7 +39,7 @@ function ReportSectionEmpty({ copy }: { copy: ReportEmptyCopy }) {
  * container, so its body adapts to its own width: the chart comes first, then its table, and the
  * two sit side by side once the section is wide enough.
  */
-export function ReportSection({ caption, chart, children, description, empty, id, notes, table }: ReportSectionProps) {
+export function ReportSection({ caption, chart, children, description, empty, id, noteLinks, notes, table }: ReportSectionProps) {
   const headingId = `${id}-heading`;
 
   return (
@@ -57,6 +60,15 @@ export function ReportSection({ caption, chart, children, description, empty, id
               {notes && notes.length > 0 ? (
                 <div className="space-y-1" data-slot="report-section-notes">
                   {notes.map((note) => <p className="text-xs tabular-nums text-foreground-secondary" key={note}>{note}</p>)}
+                  {noteLinks && noteLinks.length > 0 ? (
+                    <p className="flex flex-wrap gap-x-4 text-xs" data-slot="report-section-note-links">
+                      {noteLinks.map((link) => (
+                        <RecordLink aria-label={link.accessibleName} className="inline-flex min-h-6 items-center" href={link.href} key={link.href}>
+                          {link.label}
+                        </RecordLink>
+                      ))}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </>

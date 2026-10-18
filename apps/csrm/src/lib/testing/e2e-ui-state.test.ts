@@ -88,16 +88,38 @@ describe('resolveE2eUiState', () => {
     expect(resolveE2eUiState({ __e2eState: ['loading', 'empty'] })).toBeUndefined();
   });
 
-  it('keeps the partial dashboard proof closed behind the same server harness', async () => {
-    const { resolveE2eDashboardPartial } = await import('./e2e-ui-state');
+});
+
+describe('resolveE2eRequestorHomePartial', () => {
+  it('fails With the Security Analyst only for its closed value in the attested runtime (D-23)', async () => {
+    const { resolveE2eRequestorHomePartial } = await import('./e2e-ui-state');
     process.env.CSRM_E2E_UI_STATE_HARNESS = '1';
     attestRuntime();
-    expect(resolveE2eDashboardPartial({ __e2ePartial: 'draft-requests-error' })).toBe(true);
-    expect(resolveE2eDashboardPartial({ __e2ePartial: 'anything-else' })).toBe(false);
-    // Each dashboard owns its own selector: the analyst one never fails a Requestor widget.
-    expect(resolveE2eDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(false);
+
+    expect(resolveE2eRequestorHomePartial({ __e2ePartial: 'requestor-home-with-analyst-error' })).toBe(true);
+    // The retired dashboard selector and the analyst Home's own selector never fail a Requestor Home section.
+    for (const value of ['draft-requests-error', 'analyst-top-alerts-error', 'requestor-home-with-analyst', 'REQUESTOR-HOME-WITH-ANALYST-ERROR', '', undefined]) {
+      expect(resolveE2eRequestorHomePartial({ __e2ePartial: value }), String(value)).toBe(false);
+    }
+    expect(resolveE2eRequestorHomePartial({ __e2ePartial: ['requestor-home-with-analyst-error'] })).toBe(false);
+    expect(resolveE2eRequestorHomePartial({})).toBe(false);
+  });
+
+  it('is never accepted without the attested runtime', async () => {
+    const { resolveE2eRequestorHomePartial } = await import('./e2e-ui-state');
+
     delete process.env.CSRM_E2E_UI_STATE_HARNESS;
-    expect(resolveE2eDashboardPartial({ __e2ePartial: 'draft-requests-error' })).toBe(false);
+    expect(resolveE2eRequestorHomePartial({ __e2ePartial: 'requestor-home-with-analyst-error' })).toBe(false);
+
+    // The harness switch alone is not an attestation.
+    process.env.CSRM_E2E_UI_STATE_HARNESS = '1';
+    expect(resolveE2eRequestorHomePartial({ __e2ePartial: 'requestor-home-with-analyst-error' })).toBe(false);
+  });
+
+  it('replaces the retired dashboard selector', async () => {
+    const module = await import('./e2e-ui-state');
+
+    expect(module).not.toHaveProperty('resolveE2eDashboardPartial');
   });
 });
 
@@ -108,7 +130,7 @@ describe('resolveE2eAnalystDashboardPartial', () => {
     attestRuntime();
 
     expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: 'analyst-top-alerts-error' })).toBe(true);
-    for (const value of ['draft-requests-error', 'analyst-top-alerts', 'ANALYST-TOP-ALERTS-ERROR', '', undefined]) {
+    for (const value of ['draft-requests-error', 'requestor-home-with-analyst-error', 'analyst-top-alerts', 'ANALYST-TOP-ALERTS-ERROR', '', undefined]) {
       expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: value }), String(value)).toBe(false);
     }
     expect(resolveE2eAnalystDashboardPartial({ __e2ePartial: ['analyst-top-alerts-error'] })).toBe(false);

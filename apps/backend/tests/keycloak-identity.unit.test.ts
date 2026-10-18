@@ -220,6 +220,7 @@ test("effective access lists birthright and explicit grants, and human-only oper
   ];
 
   const requestor = summariseEffectiveAccess({
+    registeredSourceService: false,
     displayName: "Jane Doe",
     explicitRoles: [],
     requestorRoles: [requestorRole],
@@ -232,6 +233,7 @@ test("effective access lists birthright and explicit grants, and human-only oper
   });
 
   const analyst = summariseEffectiveAccess({
+    registeredSourceService: false,
     displayName: "Bob Doe",
     explicitRoles: [{ name: "Security Analyst", functions: analystFunctions }],
     requestorRoles: [requestorRole],
@@ -246,12 +248,36 @@ test("effective access lists birthright and explicit grants, and human-only oper
   ]);
 
   const agent = summariseEffectiveAccess({
+    registeredSourceService: false,
     displayName: "Agent",
     explicitRoles: [{ name: "Security Analyst Agent", functions: analystFunctions }],
     requestorRoles: [requestorRole],
     requestorId: 3,
   });
   assert.equal(agent.operations.includes(release), false);
+});
+
+test("effective access offers the My requests export to every person through the birthright, and never to the service agent the policy refuses (19-07)", () => {
+  const exportMine = "GET:/api/v1/my_requests/export";
+  const requestorRole = {
+    name: "Requestor",
+    functions: [
+      { name: "My Requests", menuPath: "Risk Assessment Requests:My Requests", functionApis: [{ url: "GET:/api/v1/my_requests" }] },
+      { name: "My List Export API", menuPath: null, functionApis: [{ url: exportMine }] },
+    ],
+  };
+  const analystFunctions = [{ name: "Risk Register", menuPath: "Risk Register:Risk Register", functionApis: [{ url: "GET:/api/v1/risks" }] }];
+  const summarise = (displayName: string, explicitRoles: Array<{ name: string; functions: typeof analystFunctions }>, requestorId: number) =>
+    summariseEffectiveAccess({ registeredSourceService: false, displayName, explicitRoles, requestorRoles: [requestorRole], requestorId });
+
+  const jane = summarise("Jane Doe", [], 1);
+  assert.ok(jane.operations.includes(exportMine), "JANE_NOT_OFFERED_HER_EXPORT");
+  const bob = summarise("Bob Doe", [{ name: "Security Analyst", functions: analystFunctions }], 2);
+  assert.ok(bob.operations.includes(exportMine), "BOB_NOT_OFFERED_HIS_EXPORT");
+  const agent = summarise("Agent", [{ name: "Security Analyst Agent", functions: analystFunctions }], 3);
+  assert.equal(agent.operations.includes(exportMine), false, "THE_AGENT_IS_OFFERED_AN_EXPORT_THE_POLICY_REFUSES");
+  // The birthright's other operations stay offered to the agent: only the refused export is withheld.
+  assert.ok(agent.operations.includes("GET:/api/v1/my_requests"), "THE_AGENT_LOST_ITS_BIRTHRIGHT_LIST");
 });
 
 test("the development seed links fixture people to their local Keycloak ids only in development and never under provisioning", () => {
@@ -279,7 +305,7 @@ test("the fixture ids match the local realm import", async () => {
   const { readFileSync } = await import("node:fs");
   const path = await import("node:path");
   const realm = JSON.parse(
-    readFileSync(path.resolve(__dirname, "..", "..", "..", "..", "..", "idp", "keycloak", "import", "idambox-realm.json"), "utf8"),
+    readFileSync(path.resolve(__dirname, "..", "..", "..", "..", "..", "docker", "keycloak", "import", "idambox-realm.json"), "utf8"),
   ) as { users: Array<{ id?: string; email?: string }> };
 
   for (const [email, id] of Object.entries(DEVELOPMENT_FIXTURE_SUBJECTS)) {

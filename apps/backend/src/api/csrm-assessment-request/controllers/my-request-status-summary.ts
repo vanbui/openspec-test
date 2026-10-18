@@ -1,4 +1,5 @@
-import { countOwnedRequestsByStatus, projectMyRequestStatusSummary } from "../services/request-status-summary";
+import { ownRequestorId } from "../services/my-requests";
+import { readOwnedRequestStatusSummary } from "../services/request-status-summary";
 
 /*
  * GET /api/v1/my_requests/status_summary (D-05, D-28). The route's policy grants
@@ -24,21 +25,13 @@ function safeError(ctx: RecordValue, status: 400 | 403, message: string): unknow
   return { data: null, error: { status, message } };
 }
 
-/** The caller's own user id, only when the policy decided an owner scope for this request. */
-function ownRequestorId(state: unknown): number | null {
-  const authorization = isRecord(state) && isRecord(state.csrmAuthorization) ? state.csrmAuthorization : null;
-  if (authorization?.assessmentRequestCollectionScope !== "own") return null;
-  const requestorId = authorization.assessmentRequestRequestorId;
-  return typeof requestorId === "number" && Number.isSafeInteger(requestorId) && requestorId > 0 ? requestorId : null;
-}
-
 const myRequestStatusSummaryController = {
   async statusSummary(ctx: RecordValue) {
     if (!isRecord(ctx.query) || Object.keys(ctx.query).length > 0) return safeError(ctx, 400, QUERY_INVALID);
     const requestorId = ownRequestorId(ctx.state);
     if (requestorId === null) return safeError(ctx, 403, ACCESS_DENIED);
-    const rows = await countOwnedRequestsByStatus(globalThis.strapi.db.connection, requestorId);
-    return { data: projectMyRequestStatusSummary(rows) };
+    const connection = globalThis.strapi.db.connection;
+    return { data: await readOwnedRequestStatusSummary(connection, requestorId) };
   },
 };
 

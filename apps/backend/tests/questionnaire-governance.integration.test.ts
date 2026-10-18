@@ -101,9 +101,11 @@ test("mounted questionnaire release gates the Requestor and is human-analyst onl
     harness.identities.owner,
     { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: [] }) },
   );
-  assert.equal(deniedAnswers.status, 403, "UNRELEASED_OWNER_ANSWERS_ALLOWED");
+  assert.equal(deniedAnswers.status, 409, "UNRELEASED_OWNER_ANSWERS_ALLOWED");
+  assert.deepEqual(((await deniedAnswers.json()) as { error: { details: unknown } }).error.details, { reason: "QUESTIONNAIRE_NOT_ANSWERABLE" });
   const deniedSubmit = await request(`/api/v1/questionnaires/${encodeURIComponent(unreleased)}/submit`, harness.identities.owner, post());
-  assert.equal(deniedSubmit.status, 403, "UNRELEASED_OWNER_SUBMIT_ALLOWED");
+  assert.equal(deniedSubmit.status, 409, "UNRELEASED_OWNER_SUBMIT_ALLOWED");
+  assert.deepEqual(((await deniedSubmit.json()) as { error: { details: unknown } }).error.details, { reason: "QUESTIONNAIRE_NOT_ANSWERABLE" });
 
   // An analyst may always open an unreleased questionnaire: it is analyst-only
   // work until they choose to release it.
@@ -254,7 +256,7 @@ test("mounted return to review is analyst-only, audited, and restores submitted 
   assert.equal((await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`, harness.identities.owner)).status, 403, "RETURNED_OWNER_RETAINED_READ_ACCESS");
   assert.equal((await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/answers`, harness.identities.owner, {
     method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: [] }),
-  })).status, 403, "RETURNED_OWNER_RETAINED_SAVE_ACCESS");
+  })).status, 409, "RETURNED_OWNER_RETAINED_SAVE_ACCESS");
   assert.equal(record(await harness.getRequest(requestId), "REQUEST_AFTER_RETURN").requestStatus, statusBefore, "RETURN_MOVED_REQUEST_STATUS");
   assert.equal((await request(returnPath(questionnaireId), harness.identities.analyst, post({ reason: "Again." }))).status, 409, "RETURN_WAS_IDEMPOTENT");
   assert.equal((await request(returnPath(fixtures.questionnaires.released), harness.identities.analyst, post({ reason: "Already released fixture." }))).status, 200, "RETURN_PRE_RELEASED_FIXTURE_FAILED");
@@ -395,6 +397,48 @@ test("mounted analyst question mutations retain deleted evidence and exclude it 
     ["question-added", "question-edited", "released", "returned-to-review", "question-edited", "question-edited", "answer-cleared", "question-edited", "question-deleted"],
     "QUESTION_MUTATION_EVENTS_WERE_NOT_APPENDED_IN_ORDER",
   );
+});
+
+test("Requestor answer saves remain readable when the questionnaire also contains a soft-deleted v2 question", async () => {
+  const harness = await harnessPromise;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: `QUESTIONNAIRE-GOVERNANCE-TOMBSTONE-${Date.now().toString(36)}`,
+    title: "Governance tombstone response fixture",
+    requestStatus: "questionnaire-in-progress",
+    requestor: "owner",
+  });
+  const { questionnaire, question: activeQuestionId } = await harness.createQuestionnaireLifecycleFixture({
+    requestDocumentId: requestId,
+    released: false,
+    answerState: "draft",
+  });
+  assert.ok(activeQuestionId, "ACTIVE_QUESTION_FIXTURE_MISSING");
+  const activeQuestion = record(await harness.getQuestion(activeQuestionId), "ACTIVE_QUESTION_FIXTURE");
+  const activeKey = record(activeQuestion.options, "ACTIVE_QUESTION_OPTIONS").questionKey;
+  const added = await request(questionsPath(questionnaire), harness.identities.analyst, post({
+    questionText: "Which historical region applied?",
+    answerType: "Text",
+    required: true,
+    section: { key: "context", title: "Context", order: 1 },
+    order: 2,
+  }));
+  assert.equal(added.status, 200, `TOMBSTONE_FIXTURE_QUESTION_ADD_FAILED: ${await added.clone().text()}`);
+  const afterAdd = record(await harness.getQuestionnaire(questionnaire), "TOMBSTONE_FIXTURE_AFTER_ADD");
+  const addedQuestion = record((afterAdd.questions as Array<Record<string, unknown>>).find((question) => question.questionText === "Which historical region applied?"), "TOMBSTONE_FIXTURE_ADDED_QUESTION");
+  const deleted = await request(`${questionsPath(questionnaire)}/${encodeURIComponent(String(addedQuestion.documentId))}`, harness.identities.analyst, { method: "DELETE" });
+  assert.equal(deleted.status, 200, `TOMBSTONE_FIXTURE_DELETE_FAILED: ${await deleted.clone().text()}`);
+  const deletedQuestionKey = record(addedQuestion.options, "TOMBSTONE_FIXTURE_ADDED_OPTIONS").questionKey;
+
+  assert.equal((await request(releasePath(questionnaire), harness.identities.analyst, post())).status, 200, "TOMBSTONE_FIXTURE_RELEASE_FAILED");
+  const saved = await request(`/api/v1/questionnaires/${encodeURIComponent(questionnaire)}/answers`, harness.identities.owner, {
+    method: "PATCH", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ answers: [{ questionKey: activeKey, value: "Primary region" }] }),
+  });
+  assert.equal(saved.status, 200, `REQUESTOR_SAVE_FAILED_WITH_DELETED_QUESTION: ${await saved.clone().text()}`);
+  const answers = (record(await payload(saved), "REQUESTOR_SAVE_WITH_DELETED_QUESTION").data as Record<string, unknown>).answers as Array<Record<string, unknown>>;
+  const returnedKeys = answers.map((entry) => record(entry.options, "SAVED_ANSWER_OPTIONS").questionKey);
+  assert.ok(returnedKeys.includes(activeKey), "ACTIVE_ANSWER_MISSING_FROM_SAVE_RESPONSE");
+  assert.ok(!returnedKeys.includes(deletedQuestionKey), "DELETED_QUESTION_LEAKED_INTO_REQUESTOR_ANSWERS");
 });
 
 /*
@@ -730,24 +774,24 @@ test("mounted analyst adds to an existing and a new section of a generated quest
 
   // The last question in Request context is removed, so the next free order must count it.
   const generated = await served();
-  const criticality = generated.find((question) => question.options.questionKey === "business-criticality");
-  assert.ok(criticality, "GENERATED_ADD_FIXTURE_QUESTION_MISSING");
-  const removed = await request(`${questionsPath(questionnaireId)}/${encodeURIComponent(criticality.documentId)}`, analyst, { method: "DELETE" });
+  const providerDetails = generated.find((question) => question.options.questionKey === "third-party-details");
+  assert.ok(providerDetails, "GENERATED_ADD_FIXTURE_QUESTION_MISSING");
+  const removed = await request(`${questionsPath(questionnaireId)}/${encodeURIComponent(providerDetails.documentId)}`, analyst, { method: "DELETE" });
   assert.equal(removed.status, 200, "GENERATED_ADD_REMOVE_FAILED");
 
   const placements = await served();
-  assert.ok(placements.some((question) => question.options.questionKey === "business-criticality" && question.deleted !== undefined), "GENERATED_ADD_REMOVED_QUESTION_NOT_SERVED");
+  assert.ok(placements.some((question) => question.options.questionKey === "third-party-details" && question.deleted !== undefined), "GENERATED_ADD_REMOVED_QUESTION_NOT_SERVED");
   const contextQuestions = placements.filter((question) => question.options.section.key === "context");
   const context = contextQuestions[0]!.options.section;
   assert.deepEqual(context, { key: "context", title: "Request context", order: 0 }, "GENERATED_ADD_CONTEXT_SECTION");
   const nextContextOrder = Math.max(...contextQuestions.map((question) => question.options.order)) + 1;
-  assert.equal(nextContextOrder, 2, "GENERATED_ADD_NEXT_ORDER_COUNTS_THE_REMOVED_QUESTION");
+  assert.equal(nextContextOrder, 4, "GENERATED_ADD_NEXT_ORDER_COUNTS_THE_REMOVED_QUESTION");
 
   // What the editor sent before the fix, and an order the removed question still holds, both clash.
   const legacy = await add({ key: "general", title: "General", order: 0 }, 0, "Who owns the service?");
   assert.equal(legacy.status, 409, "GENERATED_ADD_LEGACY_PLACEMENT_STATUS");
   assert.equal(await refusalReason(legacy), "DEFINITION_CONFLICT", "GENERATED_ADD_LEGACY_PLACEMENT_REASON");
-  const onRemoved = await add(context, 1, "Who owns the service?");
+  const onRemoved = await add(context, 3, "Who owns the service?");
   assert.equal(onRemoved.status, 409, "GENERATED_ADD_REMOVED_ORDER_STATUS");
   assert.equal(await refusalReason(onRemoved), "DEFINITION_CONFLICT", "GENERATED_ADD_REMOVED_ORDER_REASON");
 
@@ -762,13 +806,208 @@ test("mounted analyst adds to an existing and a new section of a generated quest
 
   // The analyst read projects nothing for an invalid definition, so a full list proves it stayed valid.
   const after = await served();
-  assert.equal(after.length, 6, "GENERATED_ADD_DEFINITION_STAYS_VALID");
+  assert.equal(after.length, 9, "GENERATED_ADD_DEFINITION_STAYS_VALID");
   const placed = (questionText: string) => {
     const question = after.find((candidate) => (candidate as unknown as { questionText: string }).questionText === questionText);
     assert.ok(question, `GENERATED_ADD_NOT_PERSISTED_${questionText}`);
     return { section: question.options.section, order: question.options.order };
   };
-  assert.deepEqual(placed("Who owns the service?"), { section: context, order: 2 }, "GENERATED_ADD_EXISTING_SECTION_PLACEMENT");
+  assert.deepEqual(placed("Who owns the service?"), { section: context, order: 4 }, "GENERATED_ADD_EXISTING_SECTION_PLACEMENT");
   assert.deepEqual(placed("Which offshore teams support the service?"), { section: offshore, order: 0 }, "GENERATED_ADD_NEW_SECTION_PLACEMENT");
   assert.equal((await request(releasePath(questionnaireId), analyst, post())).status, 200, "GENERATED_ADD_RELEASES_WITH_A_VALID_DEFINITION");
+});
+
+/*
+ * Phase 15 (15-08 Task 1; D-08, D-20): release waits for every AI proposal. A questionnaire with an open item, or with a
+ * proposal job queued or running, cannot reach the Requestor; a damaged run never blocks it (fail open).
+ */
+
+const OFFSHORE_NOTE = "Jane: the vendor now uses an offshore support team with administrator access to the payroll system.";
+
+type HarnessValue = Awaited<typeof harnessPromise>;
+
+async function governanceRequest(path: string, identity: string, method: string, body?: unknown): Promise<Response> {
+  return request(path, identity, { method, ...(body === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }) });
+}
+
+/* Jane's submitted questionnaire with her marked offshore note, Bob's three-item proposal run, then the return to analyst review. */
+async function seedOpenProposals(harness: HarnessValue, label: string, beforeProposals?: (requestId: string, questionnaireId: string) => Promise<unknown>): Promise<{ requestId: string; questionnaireId: string; runId: string }> {
+  const { requestId, questionnaireId } = await harness.seedUatALikeRequest(label);
+  await beforeProposals?.(requestId, questionnaireId);
+  await harness.seedRequestNotes(requestId, [{ part: "requestor", sequence: 1, postedAt: "2026-09-01T00:00:00.000Z", body: OFFSHORE_NOTE, changesAiInputs: true }]);
+  const started = await harness.startQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId);
+  assert.equal(started.status, 202, `PROPOSALS_NOT_STARTED: ${JSON.stringify(started)}`);
+  const ended = await harness.waitForProposalJobFixture(String(started.data?.jobId));
+  assert.equal(ended.status, "completed", `JOB_NOT_COMPLETED: ${JSON.stringify(ended.failure)}`);
+  const returned = await governanceRequest(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/return_to_review`, harness.identities.analyst, "POST", { reason: "Decide the offshore proposals." });
+  assert.equal(returned.status, 200, `RETURN_TO_REVIEW_FAILED: ${await returned.clone().text()}`);
+  return { requestId, questionnaireId, runId: String(ended.runId) };
+}
+
+async function answeredQuestionRows(harness: HarnessValue, questionnaireId: string): Promise<unknown[]> {
+  return (((await harness.getQuestionnaire(questionnaireId))?.questions ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => { const answer = row.answer as Record<string, unknown> | null; return Boolean(answer && answer.value !== null && answer.value !== ""); })
+    .map((row) => ({ documentId: row.documentId, questionText: row.questionText, options: row.options, answer: row.answer }))
+    .sort((left, right) => String(left.documentId).localeCompare(String(right.documentId)));
+}
+
+async function releaseReason(response: Response): Promise<unknown> {
+  return ((await response.clone().json()) as { error?: { details?: { reason?: unknown } } }).error?.details?.reason;
+}
+
+test("mounted release is refused with AI_PROPOSALS_OPEN while an AI proposal item is open, deep-equal, and allowed after Reject remaining with every answer unchanged (D-08)", async () => {
+  const harness = await harnessPromise;
+  const { questionnaireId, runId } = await seedOpenProposals(harness, "GATE-RELEASE");
+  const before = await harness.questionnaireSnapshotFixture(questionnaireId);
+  const answeredBefore = await answeredQuestionRows(harness, questionnaireId);
+  const refused = await governanceRequest(releasePath(questionnaireId), harness.identities.analyst, "POST");
+  assert.equal(refused.status, 409, `RELEASE_NOT_REFUSED: ${await refused.clone().text()}`);
+  assert.equal(await releaseReason(refused), "AI_PROPOSALS_OPEN");
+  assert.deepEqual(await harness.questionnaireSnapshotFixture(questionnaireId), before, "REFUSED_RELEASE_NOT_DEEP_EQUAL");
+
+  const rejected = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: ["i-1", "i-2", "i-3"].map((item) => ({ runId, item, action: "reject" })) });
+  assert.deepEqual([rejected.status, rejected.data], [200, { applied: 3, unchanged: 0 }], `REJECT_REMAINING_FAILED: ${JSON.stringify(rejected)}`);
+  const released = await governanceRequest(releasePath(questionnaireId), harness.identities.analyst, "POST");
+  assert.equal(released.status, 200, `RELEASE_AFTER_REJECT_REMAINING_FAILED: ${await released.clone().text()}`);
+  assert.equal(typeof (await harness.getQuestionnaire(questionnaireId))?.releasedAt, "string", "NOT_RELEASED");
+  assert.deepEqual(await answeredQuestionRows(harness, questionnaireId), answeredBefore, "RELEASE_CHANGED_AN_ANSWERED_QUESTION");
+});
+
+test("mounted release is refused with AI_PROPOSALS_OPEN while a proposal job for the questionnaire is running (D-08)", async () => {
+  const harness = await harnessPromise;
+  const { questionnaireId } = await harness.seedUatALikeRequest("GATE-RELEASE-JOB");
+  const returned = await governanceRequest(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/return_to_review`, harness.identities.analyst, "POST", { reason: "Ask the AI first." });
+  assert.equal(returned.status, 200);
+  await harness.withHeldQuestionnaireProposalProvider(async (hold) => {
+    const started = await harness.startQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId);
+    assert.equal(started.status, 202, `PROPOSALS_NOT_STARTED: ${JSON.stringify(started)}`);
+    await hold.reached;
+    const refused = await governanceRequest(releasePath(questionnaireId), harness.identities.analyst, "POST");
+    assert.equal(refused.status, 409, `RELEASE_NOT_REFUSED_WHILE_A_JOB_RUNS: ${await refused.clone().text()}`);
+    assert.equal(await releaseReason(refused), "AI_PROPOSALS_OPEN");
+    hold.release();
+    await harness.waitForProposalJobFixture(String(started.data?.jobId));
+  });
+});
+
+test("mounted release is not blocked by a damaged proposal run (fail open), which the gate logs once (D-20)", async () => {
+  const harness = await harnessPromise;
+  const { questionnaireId, runId } = await seedOpenProposals(harness, "GATE-RELEASE-DAMAGED");
+  await harness.updateAiRunFixture(runId, { decisions: [{ schemaVersion: 2, at: "not-a-time", by: harness.users.analyst, item: "i-1", action: "accepted" }] });
+  await harness.withStrapiWarnings(async (warnings) => {
+    const released = await governanceRequest(releasePath(questionnaireId), harness.identities.analyst, "POST");
+    assert.equal(released.status, 200, `DAMAGED_RUN_BLOCKED_THE_RELEASE: ${await released.clone().text()}`);
+    const returned = await governanceRequest(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/return_to_review`, harness.identities.analyst, "POST", { reason: "Once more." });
+    assert.equal(returned.status, 200);
+    const again = await governanceRequest(releasePath(questionnaireId), harness.identities.analyst, "POST");
+    assert.equal(again.status, 200);
+    assert.equal(warnings().filter((message) => message.includes(runId)).length, 1, `DAMAGED_RUN_NOT_LOGGED_ONCE: ${JSON.stringify(warnings())}`);
+  });
+});
+
+/*
+ * Phase 15 (15-08 Task 4; D-05, D-27, D-28, D-30, D-32): the analyst's questionnaire reads say which questions are
+ * answered (only in analyst review and on a submitted questionnaire), how many AI proposal items are open, and which
+ * questions came from confirmed AI proposals.
+ */
+
+type Json = Record<string, unknown>;
+
+async function readAs(path: string, identity: string, diagnostic: string): Promise<unknown> {
+  const response = await request(path, identity);
+  assert.equal(response.status, 200, `${diagnostic}: ${await response.clone().text()}`);
+  return ((await response.json()) as { data: unknown }).data;
+}
+
+const headerPath = (questionnaireId: string) => `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`;
+
+/* The UAT-A-like questionnaire as an AI generation left it: generation facts and one completed generation run. */
+async function markGenerated(harness: HarnessValue, requestId: string, questionnaireId: string): Promise<string> {
+  const built = await harness.buildAssessmentContextFixture({ operation: "questionnaire-generation", requestId });
+  const runId = await harness.createAiRunFixture({
+    operation: "questionnaire-generation", initiatedBy: harness.users.analyst, providerName: "deterministic-questionnaire", providerVersion: "1",
+    assessmentRequest: requestId, questionnaire: questionnaireId, contextSummary: built.context.summary,
+  });
+  await harness.completeAiRunFixture(runId, { schemaVersion: 2, proposal: { questions: [] }, adjustments: [] });
+  await harness.updateFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", questionnaireId, {
+    generatedDate: "2026-08-20T00:00:00.000Z", generatedBy: harness.users.analyst, providerName: "deterministic-questionnaire", providerVersion: "1",
+  });
+  return runId;
+}
+
+test("mounted analyst questions read flags answered questions in analyst review and on a submitted questionnaire, never while the Requestor answers and never for the Requestor; progress counts the same answers (D-05, D-30)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const { questionnaireId } = await harness.seedUatALikeRequest("READ-ANSWERED");
+  const submitted = await readAs(questionsPath(questionnaireId), analyst, "SUBMITTED_QUESTIONS") as Json[];
+  assert.deepEqual(submitted.map((question) => [question.questionText, question.answered]), [
+    ["Are payment files signed?", true], ["Are duties segregated?", true], ["Has the pay-run fallback been tested?", true], ["Other recovery notes?", false],
+  ], "SUBMITTED_ANSWERED_FLAGS");
+  assert.ok(submitted.every((question) => question.answer !== null || question.answered === false), "SUBMITTED_ANSWERS_HIDDEN");
+
+  const returned = await governanceRequest(`/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}/return_to_review`, analyst, "POST", { reason: "Check the answers." });
+  assert.equal(returned.status, 200);
+  const review = await readAs(questionsPath(questionnaireId), analyst, "REVIEW_QUESTIONS") as Json[];
+  assert.deepEqual(review.map((question) => question.answered), [true, true, true, false], "REVIEW_ANSWERED_FLAGS");
+  assert.ok(review.every((question) => question.answer === null), "REVIEW_READ_REVEALED_DRAFT_ANSWER_CONTENT");
+  const header = await readAs(headerPath(questionnaireId), analyst, "REVIEW_HEADER") as Json;
+  assert.equal((header.progress as Json).answered, review.filter((question) => question.answered === true).length, "PROGRESS_DISAGREES_WITH_THE_ANSWERED_FLAGS");
+
+  const released = await governanceRequest(releasePath(questionnaireId), analyst, "POST");
+  assert.equal(released.status, 200);
+  const answering = await readAs(questionsPath(questionnaireId), analyst, "ANSWERING_QUESTIONS") as Json[];
+  assert.ok(answering.every((question) => !("answered" in question)), "ANSWERED_FLAG_SERVED_WHILE_THE_REQUESTOR_ANSWERS");
+  const ownerRead = await readAs(questionsPath(questionnaireId), owner, "OWNER_QUESTIONS") as Json[];
+  assert.ok(ownerRead.every((question) => !("answered" in question)), "ANSWERED_FLAG_SERVED_TO_THE_REQUESTOR");
+});
+
+test("mounted analyst header carries the open AI proposal count, 0 once decided and null for a requesting analyst; generation.runId stays on the generation run after a proposal run (D-27, D-28, D-32)", async () => {
+  const harness = await harnessPromise;
+  let generationRunId = "";
+  const { requestId, questionnaireId, runId } = await seedOpenProposals(harness, "READ-OPEN", async (request, questionnaire) => { generationRunId = await markGenerated(harness, request, questionnaire); });
+  const generation = async (identity: string) => ((await readAs(headerPath(questionnaireId), identity, "HEADER")) as Json).generation as Json;
+  const open = await generation(harness.identities.analyst);
+  assert.equal(open.openProposals, 3, "OPEN_PROPOSALS_NOT_COUNTED");
+  assert.equal(open.runId, generationRunId, "GENERATION_RUN_ID_MOVED_TO_THE_PROPOSAL_RUN");
+  const rejected = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: ["i-1", "i-2", "i-3"].map((item) => ({ runId, item, action: "reject" })) });
+  assert.equal(rejected.status, 200);
+  assert.equal((await generation(harness.identities.analyst)).openProposals, 0, "DECIDED_PROPOSALS_STILL_OPEN");
+  await harness.updateFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", requestId, { requestor: harness.users.analyst });
+  assert.equal((await generation(harness.identities.analyst)).openProposals, null, "REQUESTING_ANALYST_SAW_THE_COUNT");
+  assert.equal((await generation(harness.identities.secondAnalyst)).openProposals, 0, "SECOND_ANALYST_LOST_THE_COUNT");
+});
+
+test("mounted analyst questions read marks confirmed AI questions proposal-confirmed or proposal-edited, restores the earlier origin after an Undo, and reads generated-edited after a later manual edit (D-27)", async () => {
+  const harness = await harnessPromise;
+  const { analyst } = harness.identities;
+  const { questionnaireId, runId } = await seedOpenProposals(harness, "READ-ORIGINS", (request, questionnaire) => markGenerated(harness, request, questionnaire));
+  const origin = async (text: string) => ((await readAs(questionsPath(questionnaireId), analyst, "ORIGIN_QUESTIONS")) as Json[]).find((question) => question.questionText === text)?.aiOrigin;
+  const decided = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: [
+    { runId, item: "i-1", action: "accept" },
+    { runId, item: "i-2", action: "accept", edits: { questionText: "Will the offshore team administer your systems?" } },
+  ] });
+  assert.equal(decided.status, 200, `CONFIRM_FAILED: ${JSON.stringify(decided)}`);
+  assert.equal(await origin("In which country or countries is the offshore support team based?"), "proposal-confirmed");
+  assert.equal(await origin("Will the offshore team administer your systems?"), "proposal-edited");
+
+  // An analyst's own question, rewritten by a confirmed proposal and then undone, reads as the analyst's again.
+  const added = await governanceRequest(`${headerPath(questionnaireId)}/questions`, analyst, "POST", { questionText: "Is MFA enforced for privileged accounts?", answerType: "Long text", required: false, section: { key: "payment", title: "Payment processing", order: 1 }, order: 9 });
+  assert.equal(added.status, 200);
+  const mfa = ((await readAs(questionsPath(questionnaireId), analyst, "MFA_QUESTIONS")) as Json[]).find((question) => question.questionText === "Is MFA enforced for privileged accounts?") as Json;
+  assert.equal(mfa.aiOrigin, "analyst-added");
+  const started = await harness.startQuestionRewriteFixture(harness.users.analyst, questionnaireId, String(mfa.documentId));
+  assert.equal(started.status, 202, `REWRITE_NOT_STARTED: ${JSON.stringify(started)}`);
+  const rewrite = await harness.waitForProposalJobFixture(String(started.data?.jobId));
+  const confirmRewrite = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: [{ runId: String(rewrite.runId), item: "i-1", action: "accept" }] });
+  assert.equal(confirmRewrite.status, 200, `REWRITE_CONFIRM_FAILED: ${JSON.stringify(confirmRewrite)}`);
+  const rewritten = ((await readAs(questionsPath(questionnaireId), analyst, "REWRITTEN_QUESTIONS")) as Json[]).find((question) => question.documentId === mfa.documentId) as Json;
+  assert.equal(rewritten.aiOrigin, "proposal-confirmed");
+  const undo = await harness.decideQuestionnaireProposalsFixture(harness.users.analyst, questionnaireId, { decisions: [{ runId: String(rewrite.runId), item: "i-1", action: "restore" }] });
+  assert.equal(undo.status, 200);
+  assert.equal(await origin("Is MFA enforced for privileged accounts?"), "analyst-added", "UNDO_DID_NOT_RESTORE_THE_ORIGIN");
+
+  const country = ((await readAs(questionsPath(questionnaireId), analyst, "COUNTRY_QUESTIONS")) as Json[]).find((question) => question.questionText === "In which country or countries is the offshore support team based?") as Json;
+  const edited = await governanceRequest(`${headerPath(questionnaireId)}/questions/${encodeURIComponent(String(country.documentId))}`, analyst, "PATCH", { helpText: "Edited by hand." });
+  assert.equal(edited.status, 200);
+  assert.equal(await origin("In which country or countries is the offshore support team based?"), "generated-edited", "MANUAL_EDIT_AFTER_CONFIRMATION_NOT_GENERATED_EDITED");
 });

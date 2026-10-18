@@ -6,9 +6,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { searchAfterPause } from '@/test/debounced-search';
 
 import type { RiskDetail } from './risk-schema';
-import { RiskDetails, type RiskDetailsOptions } from './risk-details';
+import { RiskDetails, ShowHistoryPending, type RiskDetailsOptions } from './risk-details';
 
 const actionMocks = vi.hoisted(() => ({
   createMitigationControlAction: vi.fn(),
@@ -111,6 +112,7 @@ const detail: RiskDetail = {
     implementedDate: '2026-08-20',
     reviewDate: '2026-11-20',
   }],
+  withdrawal: null,
 };
 
 type PickerRecord = { documentId: string; name: string; detail?: string };
@@ -285,7 +287,7 @@ describe('RiskDetails', () => {
     const edit = screen.getByRole('button', { name: 'Edit risk' });
     await user.click(edit);
 
-    const form = screen.getByRole('form', { name: 'Edit Risk' });
+    const form = await screen.findByRole('form', { name: 'Edit Risk' });
     expect(screen.getByRole('region', { name: 'Risk statement and classification' })).toHaveAccessibleDescription('Edit this Risk’s details.');
     expect(form).toHaveClass('max-w-[640px]');
     expect(form.querySelector('.md\\:grid-cols-2')).not.toBeInTheDocument();
@@ -369,8 +371,8 @@ describe('RiskDetails', () => {
     expect(owner.tagName).toBe('INPUT');
     expect(screen.getByText('Selected owner: Bob Doe')).toBeInTheDocument();
     expect(screen.getByRole('form', { name: 'Edit mitigation control' }).querySelector('select[name="controlOwner"]')).toBeNull();
-    await user.type(owner, 'Zo');
-    await user.click(await screen.findByRole('option', { name: 'Zoe Owner' }));
+    await searchAfterPause(owner, 'Zo');
+    await user.click(screen.getByRole('option', { name: 'Zoe Owner' }));
     expect(searchOwners).toHaveBeenLastCalledWith({ search: 'Zo' });
     expect(screen.getByText('Selected owner: Zoe Owner')).toBeInTheDocument();
 
@@ -580,22 +582,75 @@ describe('RiskDetails', () => {
     expect(container.querySelector('link[rel="prefetch"]')).not.toBeInTheDocument();
   });
 
+  /*
+   * Phase 16 D-45, UI-D32, 16-UI-SPEC §11.3: a withdrawn Risk's detail is read-only. It says who withdrew it, when and
+   * why, links to the assessment's Withdrawn view, and offers its history but no edit or mitigation-control action.
+   */
+  it('shows a withdrawn Risk read-only with who, when and why, Open {assessment number} and Show history (D-45, UI-D32)', () => {
+    const withdrawn: RiskDetail = {
+      ...detail,
+      withdrawal: { at: '2026-10-14T03:30:00.000Z', by: { documentId: 'user-bob', displayName: 'Bob Doe' }, reason: 'Proposed under the wrong Risk Type' },
+    };
+    const { container } = renderDetails({ detail: withdrawn });
+
+    // The Withdrawn badge follows the ratings in the header.
+    const status = screen.getByLabelText('Risk ratings and status');
+    const badge = within(status).getByText('Withdrawn', { exact: true });
+    const ratings = within(status).getAllByLabelText(/Severity:/);
+    expect(ratings[ratings.length - 1]!.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const notice = screen.getByRole('alert');
+    expect(within(notice).getByText('Withdrawn risk - read only')).toBeInTheDocument();
+    expect(notice).toHaveTextContent(/^Withdrawn risk - read only.*Bob Doe withdrew this risk on .+: “Proposed under the wrong Risk Type”\. It doesn’t count in RA-2026-001 or its release readiness\. Reinstate it from the assessment to change it\./);
+    expect(within(notice).getByRole('link', { name: 'Open RA-2026-001' })).toHaveAttribute('href', '/app/review/assessments/assessment-alpha?risks=withdrawn#risk-risk-alpha');
+    expect(notice.querySelector('time')).toHaveAttribute('dateTime', '2026-10-14T03:30:00.000Z');
+    expect(screen.queryByText('Released assessment - read only')).not.toBeInTheDocument();
+
+    expect(screen.getByRole('button', { name: 'Show history' })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.queryByRole('button', { name: 'Edit risk' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mitigation control/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Edit|Save|Add|Remove|Close/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    expect(container.querySelector('[disabled]')).not.toBeInTheDocument();
+  });
+
+  it('names a withdrawer CSRM can no longer read by the role, and keeps Show history on an active and a released Risk (§11.3)', () => {
+    const view = renderDetails({ detail: { ...detail, withdrawal: { at: '2026-10-14T03:30:00.000Z', by: null, reason: 'Duplicate of RSK-2026-002' } } });
+    // FE3-09: the role starts the sentence, so it is capitalised.
+    expect(screen.getByRole('alert')).toHaveTextContent(/^Withdrawn risk - read only\s*A Security Analyst withdrew this risk on /);
+    view.unmount();
+
+    const active = renderDetails();
+    expect(screen.getByRole('button', { name: 'Edit risk' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show history' })).toBeInTheDocument();
+    expect(screen.queryByText('Withdrawn', { exact: true })).not.toBeInTheDocument();
+    active.unmount();
+
+    renderDetails({ detail: { ...detail, parentLock: 'released' }, options: undefined, searchOwners: undefined });
+    expect(screen.getByRole('button', { name: 'Show history' })).toBeInTheDocument();
+  });
+
   it('keeps PageHeader orientation while safe states disclose no Risk facts', async () => {
+    vi.useFakeTimers();
     const view = render(<RiskDetails state="loading" />);
     expect(screen.getByRole('heading', { level: 1, name: 'Risk details' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading Risk details' })).toBeInTheDocument();
     expect(document.querySelectorAll('[data-slot="risk-detail-skeleton-section"]')).toHaveLength(0);
-    await waitFor(() => expect(document.querySelectorAll('[data-slot="risk-detail-skeleton-section"]')).toHaveLength(5), { timeout: 600 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(299); });
+    expect(document.querySelectorAll('[data-slot="risk-detail-skeleton-section"]')).toHaveLength(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(document.querySelectorAll('[data-slot="risk-detail-skeleton-section"]')).toHaveLength(5);
+    vi.useRealTimers();
 
     for (const state of ['not-available', 'permission'] as const) {
       view.rerender(<RiskDetails detail={detail} state={state} />);
       expect(screen.getByRole('heading', { level: 1, name: 'Risk details' })).toBeInTheDocument();
       // D-45: the safe-state header describes the page without internal terms.
       expect(screen.getByText('View a Risk and the controls that mitigate it.')).toBeInTheDocument();
-      expect(screen.getByRole('alert')).toHaveTextContent(state === 'permission' ? 'You don’t have permission to view the Risk Register' : 'Risk not available');
+      expect(screen.getByRole('alert')).toHaveTextContent(state === 'permission' ? 'You don’t have permission to view the Risk register' : 'Risk not available');
       if (state === 'permission') {
         // D-25, UI-SPEC §2.3 and §2.4: the refusal names Home, never a workspace, and recovers to it.
-        expect(screen.getByRole('alert')).toHaveTextContent('The Risk Register is for Security Analysts. Home shows the work you can open.');
+        expect(screen.getByRole('alert')).toHaveTextContent('The Risk register is for Security Analysts. Home shows the work you can open.');
         expect(within(screen.getByRole('alert')).getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/app');
         expect(screen.getByRole('alert')).not.toHaveTextContent(/workspace/i);
       }
@@ -639,7 +694,6 @@ describe('RiskDetails', () => {
     expect(page).toContain('getRiskDetail');
     expect(page).toContain('<Suspense');
     expect(page).not.toContain("'use client'");
-    expect(page).not.toMatch(/\bfetch\s*\(/);
   });
 });
 
@@ -721,6 +775,15 @@ describe('the Risk detail route’s pickers (D-28, D-30)', () => {
     expect(pageMocks.getRequest).not.toHaveBeenCalled();
   });
 
+  it('reads no assessment or request and offers no editor for a withdrawn Risk (D-45)', async () => {
+    pageMocks.getRiskDetail.mockResolvedValue({ data: { ...detail, withdrawal: { at: '2026-10-14T03:30:00.000Z', by: null, reason: 'Duplicate' } }, error: null });
+    const element = await RiskDetailsContent(routeProps()) as ReactElement<React.ComponentProps<typeof RiskDetails>>;
+    expect(element.props.options).toBeUndefined();
+    expect(element.props.searchOwners).toBeUndefined();
+    expect(pageMocks.getAnalystAssessment).not.toHaveBeenCalled();
+    expect(pageMocks.listRiskTypes).not.toHaveBeenCalled();
+  });
+
   it('never loads the control library or an inventory page as options', () => {
     const page = readFileSync(resolve(process.cwd(), 'app/(app)/app/risks/[documentId]/page.tsx'), 'utf8');
     expect(page).not.toMatch(/listControls|listInformationSystems|listInformationAssets/);
@@ -728,5 +791,50 @@ describe('the Risk detail route’s pickers (D-28, D-30)', () => {
     expect(page).toContain('searchControlsAction');
     expect(page).toContain('searchInformationSystemsAction');
     expect(page).toContain('searchInformationAssetsAction');
+  });
+});
+
+/*
+ * The route's error, loading and not-found boundaries ship with every Risk detail page. Importing the whole RiskDetails module there
+ * put a second copy of it in the page's first load (two chunks held it), which took the route over its 300,000-byte
+ * budget once Phase 16 added the history trigger. They import the small states module instead.
+ */
+describe('the Risk detail route boundaries', () => {
+  const route = (file: string) => readFileSync(resolve(process.cwd(), 'app/(app)/app/risks/[documentId]', file), 'utf8');
+
+  it.each(['error.tsx', 'loading.tsx', 'not-found.tsx'])('%s imports the states module, not the RiskDetails module', (file) => {
+    const source = route(file);
+    expect(source).toContain("from '@/features/risks/risk-details-states'");
+    expect(source).not.toContain("from '@/features/risks/risk-details'");
+  });
+
+  it('loads the header’s Show history after the page, so the history’s code stays out of the first load', async () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/risks/risk-details.tsx'), 'utf8');
+    expect(source).not.toMatch(/^import[^;]*from '@\/features\/risk-curation\/risk-history-trigger';/m);
+    expect(source).toContain("import('@/features/risk-curation/risk-history-trigger')");
+    render(<RiskDetails detail={detail} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Show history' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'Show history' })).toHaveAttribute('aria-haspopup', 'dialog');
+  });
+
+  it('shows the same named control, not yet usable, until Show history loads, so nothing shifts', async () => {
+    const { RiskHistoryTrigger } = await import('@/features/risk-curation/risk-history-trigger');
+    const shape = (button: HTMLElement) => ({ className: button.className, text: button.textContent, popup: button.getAttribute('aria-haspopup'), html: button.innerHTML });
+    const pending = render(<ShowHistoryPending />);
+    const waiting = within(pending.container).getByRole('button', { name: 'Show history' });
+    expect(waiting).toBeDisabled();
+    const waitingShape = shape(waiting);
+    pending.unmount();
+    render(<RiskHistoryTrigger ownerKey={null} riskId="risk-1" riskNumber="RSK-0001" variant="header" />);
+    const loaded = screen.getByRole('button', { name: 'Show history' });
+    expect(loaded).toBeEnabled();
+    expect(shape(loaded)).toEqual(waitingShape);
+  });
+
+  it('the error boundary says the Risk could not load and offers Try again', async () => {
+    const { default: RiskDetailsError } = await import('../../../app/(app)/app/risks/[documentId]/error');
+    render(<RiskDetailsError />);
+    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load this Risk');
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 });

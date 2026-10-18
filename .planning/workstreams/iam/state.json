@@ -1,0 +1,38 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.0 \u2014 Identity Provisioning",
+  "phases": [
+    {
+      "number": "1",
+      "name": "midPoint platform and connector spike",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Identity model and leaver-safe Keycloak sync",
+      "status": "complete"
+    },
+    {
+      "number": "3",
+      "name": "Strapi SCIM 2.0 service",
+      "status": "complete"
+    },
+    {
+      "number": "4",
+      "name": "midPoint configuration",
+      "status": "complete"
+    },
+    {
+      "number": "5",
+      "name": "Sign-in and end-to-end journey",
+      "status": "planned"
+    }
+  ],
+  "next": {
+    "command": "/gsd-execute-phase 5 --ws iam",
+    "label": "Execute Phase 5",
+    "reason": "Twelve plans checked in eight waves; execution and orchestrator live checkpoints pending; planning stopped as requested"
+  },
+  "updated_at": "2026-10-17"
+}

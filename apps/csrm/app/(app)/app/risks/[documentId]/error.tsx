@@ -1,7 +1,7 @@
 'use client';
 
-import { RiskDetails } from '@/features/risks/risk-details';
+import { RiskDetailsState } from '@/features/risks/risk-details-states';
 
 export default function RiskDetailsError() {
-  return <RiskDetails state="error" />;
+  return <RiskDetailsState kind="error" />;
 }

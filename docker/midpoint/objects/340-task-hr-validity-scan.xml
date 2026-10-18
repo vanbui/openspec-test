@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every 5 minutes: applies HR start and end dates as they pass (validFrom and
+  validTo), even when the CSV itself has not changed (P4-07).
+-->
+<task xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      oid="11000000-0000-4000-8000-000000000340">
+    <name>HR validity scan</name>
+    <ownerRef oid="00000000-0000-0000-0000-000000000002" type="c:UserType"/>
+    <executionState>runnable</executionState>
+    <schedulingState>ready</schedulingState>
+    <schedule>
+        <recurrence>recurring</recurrence>
+        <interval>300</interval>
+        <misfireAction>executeImmediately</misfireAction>
+    </schedule>
+    <activity>
+        <work>
+            <focusValidityScan/>
+        </work>
+        <controlFlow>
+            <errorHandling>
+                <!-- A person whose change fails is retried later, not only on the next run: a
+                     durable retry trigger on their HR row, fired by midPoint's trigger
+                     scanner, first after 5 minutes and then every 15 minutes, so a write
+                     Strapi refused with 503 (Keycloak unavailable) completes on its own
+                     once Keycloak is back (LIFE-04). -->
+                <entry>
+                    <situation>
+                        <status>partial_error</status>
+                        <status>fatal_error</status>
+                    </situation>
+                    <reaction>
+                        <retryLater>
+                            <initialInterval>PT5M</initialInterval>
+                            <nextInterval>PT15M</nextInterval>
+                        </retryLater>
+                    </reaction>
+                </entry>
+            </errorHandling>
+        </controlFlow>
+    </activity>
+</task>

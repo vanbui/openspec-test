@@ -15,6 +15,11 @@ import { seedRequestDetails } from "./seed-request-details";
  * direction time moves, so a long suite that crosses UTC midnight cannot move
  * a record into another category.
  *
+ * One released, open Risk carries the treatment action Accept (D-45), so the
+ * browser proves the Risk register's Accepted marker and the analyst Home's
+ * accepted link on a real record. It is Moderate with no target date, so it
+ * raises no alert and moves no alert figure.
+ *
  * The fixture never creates a Control: it uses two existing library Controls by
  * their stable numbers. It shares no record with any other fixture, and no
  * request is `submitted`, so no spec can start generation on one.
@@ -49,6 +54,8 @@ export const ANALYST_INSIGHTS_FIXTURE = {
     critical: "RSK-E2E-P7-CRITICAL-001",
     closed: "RSK-E2E-P7-CLOSED-001",
     released: "RSK-E2E-P7-RELEASED-001",
+    /** D-45: the one released, open, accepted Risk. */
+    accepted: "RSK-E2E-P7-ACCEPTED-001",
   },
 } as const;
 
@@ -212,7 +219,9 @@ async function reconcileAnalystInsights(strapi: Core.Strapi, options: SeedAnalys
       assessment: SeedDocument;
       statement: string;
       rating: "Moderate" | "High" | "Critical";
-      treatmentStatus: "Not Started" | "In Progress" | "Complete";
+      /** Treat, unless the fixture is the accepted Risk (D-45). */
+      treatmentAction?: "Accept" | "Treat";
+      treatmentStatus: "Not Started" | "In Progress" | "Complete" | null;
       targetDate: string | null;
       identifiedDate: string | null;
       closureDate: string | null;
@@ -224,7 +233,7 @@ async function reconcileAnalystInsights(strapi: Core.Strapi, options: SeedAnalys
     riskCategory: "Cyber Security",
     inherentRating: facts.rating,
     residualRating: facts.rating,
-    treatmentAction: "Treat",
+    treatmentAction: facts.treatmentAction ?? "Treat",
     treatmentStatus: facts.treatmentStatus,
     targetDate: facts.targetDate,
     identifiedDate: facts.identifiedDate,
@@ -280,6 +289,18 @@ async function reconcileAnalystInsights(strapi: Core.Strapi, options: SeedAnalys
     rating: "Critical",
     treatmentStatus: "In Progress",
     targetDate: day("RSK-E2E-P7-RELEASED-001.targetDate"),
+    identifiedDate: null,
+    closureDate: null,
+    exposed: false,
+  });
+  // D-45: released and open, and accepted, so it carries no treatment status and no target date.
+  await risk(risks.accepted, {
+    assessment: releasedAssessment,
+    statement: "Accepted fixture: Phase 7 released platform archive retention exceeds policy, and the risk is accepted.",
+    rating: "Moderate",
+    treatmentAction: "Accept",
+    treatmentStatus: null,
+    targetDate: null,
     identifiedDate: null,
     closureDate: null,
     exposed: false,

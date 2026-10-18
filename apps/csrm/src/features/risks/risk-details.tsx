@@ -1,34 +1,55 @@
 'use client';
 
-import { LockKeyholeIcon } from 'lucide-react';
-import Link from 'next/link';
+import { Archive, History, LockKeyholeIcon } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 
 import { DetailSection } from '@/components/csrm/detail-section';
+import { LocalInstant } from '@/components/csrm/local-time';
 import { RecordLink } from '@/components/csrm/record-link';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import { StatusBadge } from '@/components/csrm/status-badge';
-import { PageHeader } from '@/components/shell/app-shell';
+import { PageHeader } from '@/components/csrm/page-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { RiskDetailServerActionResult } from './risk-actions';
-import { RiskDetailEditor, type RiskDetailsOptions, type RiskOwnerSearch } from './risk-detail-editor';
+import type { RiskDetailsOptions, RiskOwnerSearch } from './risk-detail-editor';
 import { MitigationControlList } from './mitigation-control-list';
+import { RiskDetailsSkeleton, RiskDetailsState } from './risk-details-states';
 import type { RiskDetail } from './risk-schema';
 
 export type { RiskDetailsOptions } from './risk-detail-editor';
+export { RiskDetailsSkeleton };
+
+const RiskDetailEditor = dynamic(() => import('./risk-detail-editor').then((module) => module.RiskDetailEditor), {
+  loading: () => <div aria-label="Loading the Risk editor" className="grid gap-3" role="status"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-24 w-full" /></div>,
+});
+
+/*
+ * The header's `Show history` (16-UI-SPEC §11.3) loads after the page, as the editor does, so the history's trigger, frame
+ * and icons stay out of this route's first load (its 300,000-byte budget). Until it arrives the same control shows, not
+ * yet usable; the history's body still loads on first open (16-12).
+ */
+export function ShowHistoryPending() {
+  return <Button aria-haspopup="dialog" className="max-md:min-h-11" data-print="hidden" disabled size="sm" type="button" variant="outline"><History aria-hidden="true" />Show history</Button>;
+}
+
+const RiskHistoryTrigger = dynamic(() => import('@/features/risk-curation/risk-history-trigger').then((module) => module.RiskHistoryTrigger), {
+  ssr: false,
+  loading: () => <ShowHistoryPending />,
+});
 
 export type RiskDetailsProps = {
   detail?: RiskDetail;
   options?: RiskDetailsOptions;
   searchOwners?: RiskOwnerSearch;
   state?: 'ready' | 'loading' | 'not-available' | 'error' | 'permission';
+  /** The viewer's session-draft owner key, which keeps the history sheet's density per person (16-12). */
+  ownerKey?: string | null;
 };
 
 type Conflict = Extract<RiskDetailServerActionResult<never>, { conflict: true }>;
-
-const safeHeader = <PageHeader title="Risk details" description="View a Risk and the controls that mitigate it." />;
 
 /** Scrolls the element the URL's hash names into view, if it is on the page. */
 function scrollToLocationHash() {
@@ -43,7 +64,7 @@ function scrollToLocationHash() {
   document.getElementById(id)?.scrollIntoView();
 }
 
-export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: RiskDetailsProps) {
+export function RiskDetails({ detail, options, ownerKey = null, searchOwners, state = 'ready' }: RiskDetailsProps) {
   const [current, setCurrent] = useState(detail);
   const [currentState, setCurrentState] = useState(state);
   const [editing, setEditing] = useState(false);
@@ -92,7 +113,10 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
   if (currentState === 'error') return <RiskDetailsState kind="error" />;
   if (currentState === 'not-available' || !current) return <RiskDetailsState kind="not-available" />;
 
-  const mutable = current.parentLock === 'mutable';
+  const released = current.parentLock === 'released';
+  const { withdrawal } = current;
+  // A withdrawn Risk is read-only here, as a released one is: it changes only once reinstated (D-45, UI-D32).
+  const mutable = !released && withdrawal === null;
   const canEdit = mutable && options && searchOwners;
   const description = excerpt(current.riskStatement);
   const status = (
@@ -100,17 +124,24 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
       <span className="text-sm font-medium">Inherent</span>{current.inherentRating ? <RiskRatingBadge rating={current.inherentRating} /> : <span className="text-sm">Not provided</span>}
       <span className="text-sm font-medium">Residual</span>{current.residualRating ? <RiskRatingBadge rating={current.residualRating} /> : <span className="text-sm">Not provided</span>}
       {/* A locked Risk belongs to a released assessment; the read-only consequence is the Alert's to state. */}
-      {!mutable ? <StatusBadge family="assessment" value="approved" /> : null}
+      {released ? <StatusBadge family="assessment" value="approved" /> : null}
+      {withdrawal ? <StatusBadge family="risk" value="withdrawn" /> : null}
     </div>
   );
 
   return (
     <>
-      <PageHeader title={current.riskNumber} description={description} status={status} />
+      <PageHeader
+        title={current.riskNumber}
+        description={description}
+        status={status}
+        action={<RiskHistoryTrigger ownerKey={ownerKey} riskId={current.documentId} riskNumber={current.riskNumber} variant="header" />}
+      />
       <p aria-atomic="true" aria-live="polite" role="status" className="sr-only">{message}</p>
       <div className="grid gap-8">
         {/* Inside the section grid, the notice keeps the page's section rhythm above the first section (W-12). */}
-        {!mutable ? <Alert><LockKeyholeIcon aria-hidden="true" /><AlertTitle>Released assessment - read only</AlertTitle><AlertDescription>This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.</AlertDescription></Alert> : null}
+        {withdrawal ? <WithdrawnRiskNotice detail={current} released={released} withdrawal={withdrawal} /> : null}
+        {released && !withdrawal ? <Alert><LockKeyholeIcon aria-hidden="true" /><AlertTitle>Released assessment - read only</AlertTitle><AlertDescription>This Risk belongs to a released assessment. Risk and mitigation-control information can no longer be changed.</AlertDescription></Alert> : null}
         {editing && canEdit ? (
           <DetailSection title="Risk statement and classification" description="Edit this Risk’s details.">
             <RiskDetailEditor detail={current} options={options} searchOwners={searchOwners} onCancel={() => { setEditing(false); setMessage(''); focusEdit(); }} onConflict={handleConflict} onNoChange={() => setMessage('No changes to save.')} onSaved={(updated) => { setCurrent(updated); setEditing(false); setMessage('Risk changes saved.'); focusEdit(); }} />
@@ -135,34 +166,25 @@ export function RiskDetails({ detail, options, searchOwners, state = 'ready' }: 
   );
 }
 
-export function RiskDetailsSkeleton() {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setVisible(true), 300);
-    return () => window.clearTimeout(timer);
-  }, []);
+/*
+ * 16-UI-SPEC §11.3: who withdrew the Risk, when and why, and the way back to it in its assessment's Withdrawn view.
+ * A person CSRM can no longer read is named by the role that withdraws (16-11's fallback). Once the assessment is
+ * released nothing can be reinstated (D-08), so the notice no longer says how to.
+ */
+function WithdrawnRiskNotice({ detail, released, withdrawal }: { detail: RiskDetail; released: boolean; withdrawal: NonNullable<RiskDetail['withdrawal']> }) {
+  const { assessmentNumber, documentId } = detail.assessment;
+  const href = `/app/review/assessments/${encodeURIComponent(documentId)}?risks=withdrawn#risk-${encodeURIComponent(detail.documentId)}`;
   return (
-    <>
-      {safeHeader}
-      <section aria-label="Loading Risk details" aria-live="polite" className="grid gap-8" role="status">
-        <span className="sr-only">Loading Risk details</span>
-        {visible ? <><Skeleton className="h-10 w-full max-w-xl motion-reduce:animate-none" />{Array.from({ length: 5 }, (_, index) => <div className="grid gap-4 rounded-lg border border-border p-6" data-slot="risk-detail-skeleton-section" key={index}><Skeleton className="h-7 w-52 motion-reduce:animate-none" /><Skeleton className="h-24 w-full motion-reduce:animate-none" /></div>)}</> : null}
-      </section>
-    </>
-  );
-}
-
-function RiskDetailsState({ kind }: { kind: 'not-available' | 'error' | 'permission' }) {
-  const content = kind === 'permission'
-    ? { title: 'You don’t have permission to view the Risk Register', body: 'The Risk Register is for Security Analysts. Home shows the work you can open.' }
-    : kind === 'error'
-      ? { title: 'We couldn’t load this Risk', body: 'Try again. If the problem continues, contact your CSRM administrator.' }
-      : { title: 'Risk not available', body: 'This Risk may no longer exist or may not be available to you.' };
-  return (
-    <>
-      {safeHeader}
-      <Alert role="alert"><AlertTitle>{content.title}</AlertTitle><AlertDescription>{content.body}</AlertDescription>{kind === 'permission' ? <Button asChild className="mt-4" variant="outline"><Link href="/app">Go to Home</Link></Button> : null}{kind === 'error' ? <Button className="mt-4" type="button" variant="outline" onClick={() => window.location.reload()}>Try again</Button> : null}</Alert>
-    </>
+    <Alert>
+      <Archive aria-hidden="true" />
+      <AlertTitle>Withdrawn risk - read only</AlertTitle>
+      <AlertDescription>
+        <p className="[overflow-wrap:anywhere]">
+          {withdrawal.by?.displayName ?? 'A Security Analyst'} withdrew this risk on <LocalInstant style="date-time" value={withdrawal.at} />: {`“${withdrawal.reason}”`}. It doesn’t count in {assessmentNumber} or its release readiness.{released ? null : ' Reinstate it from the assessment to change it.'}
+        </p>
+        <RecordLink className="mt-2 inline-flex min-h-11 items-center md:min-h-6" href={href}>{`Open ${assessmentNumber}`}</RecordLink>
+      </AlertDescription>
+    </Alert>
   );
 }
 

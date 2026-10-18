@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { strapiHealthUrl, webOrigin } from './harness-urls';
 import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
+import { completeRiskForRelease, confirmRemainingToastText, expectDecisionRecorded, selectOwner } from './helpers/assessment-release';
 import { signInAs } from './helpers/navigation';
 
 const submittedRequestTitle = 'Customer portal release 4.2 self-service changes';
@@ -47,45 +48,6 @@ async function expectRelationshipLinkAtBothViewports(
   await expect(page, `${label} opens its authorised route`).toHaveURL(new URL(href, webOrigin).href);
 }
 
-async function selectOwner(ownerPicker: Locator): Promise<void> {
-  await ownerPicker.fill('Jane');
-  await ownerPicker.page().getByRole('option', { name: 'Jane Doe' }).click();
-}
-
-async function completeRiskForRelease(
-  page: Page,
-  index: number,
-  treatmentAction: 'Accept' | 'Treat',
-): Promise<void> {
-  const riskForm = page.getByRole('region', { name: 'Identified Risks' }).locator('form').nth(index);
-  await riskForm.getByRole('textbox', { name: 'Inherent likelihood' }).fill('Likely');
-  await riskForm.getByRole('textbox', { name: 'Highest inherent consequence' }).fill('Major');
-  await riskForm.getByRole('textbox', { name: 'Residual likelihood' }).fill('Possible');
-  await riskForm.getByRole('textbox', { name: 'Highest residual consequence' }).fill('Moderate');
-  await selectOwner(riskForm.getByRole('combobox', { name: 'Risk owner' }));
-  await riskForm.getByRole('combobox', { name: 'Treatment action' }).selectOption(treatmentAction);
-  await riskForm.getByRole('textbox', { name: 'Target date' }).fill('2027-08-30');
-
-  if (treatmentAction === 'Treat') {
-    await riskForm.getByRole('textbox', { name: 'Treatment plan' }).fill('Implement and verify the selected reusable mitigation control.');
-    await selectOwner(riskForm.getByRole('combobox', { name: 'Treatment owner' }));
-    await riskForm.getByRole('textbox', { name: 'Treatment resolve date' }).fill('2027-06-30');
-  }
-
-  const saveResponse = page.waitForResponse((response) =>
-    response.request().method() === 'POST' && response.url().includes('/app/review/assessments/'));
-  await riskForm.getByRole('button', { name: 'Save risk' }).click();
-  expect((await saveResponse).ok(), `ASSESS-03 risk ${index + 1} persisted`).toBe(true);
-  // D-33, UI-SPEC §13.4: the save confirms beside Save risk with the local time, in its polite region.
-  await expect(
-    riskForm.getByRole('status').filter({ hasText: /^Risk saved at / }),
-    `ASSESS06_RISK_SAVE_CONFIRMED risk ${index + 1} confirms the save with its time`,
-  ).toBeVisible();
-  await page.reload();
-  await expect(riskForm.getByRole('combobox', { name: 'Treatment action' })).toHaveValue(treatmentAction);
-  await expect(page.getByRole('list', { name: 'Release requirements' }), `ASSESS-03 risk ${index + 1} retains the complete readiness checklist`).toBeVisible();
-}
-
 test('Bob reviews, drafts, edits, and releases an assessment that Jane reads without mutation access', async ({ browser, page, request }) => {
   test.setTimeout(240_000);
 
@@ -110,12 +72,13 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
 
   const navigation = page.getByRole('dialog', { name: 'Navigation' });
   await expect(navigation.getByRole('link', { name: 'Questionnaires', exact: true }), 'BASELINE_ANALYST_QUESTIONNAIRE_NAVIGATION').toBeVisible();
-  const reviewRequests = navigation.getByRole('link', { name: 'Assessment Requests', exact: true });
+  // Its name gains its count when the queue holds work ("Requests, 9 waiting for pick-up", 13 D-14), so it is anchored, not exact.
+  const reviewRequests = navigation.getByRole('link', { name: /^Requests\b/ });
   expect(await reviewRequests.count(), 'Phase 4 capability unmet: analyst review queue is available').toBe(1);
 
   await reviewRequests.click();
   await expect(page).toHaveURL(/\/app\/review\/requests$/);
-  await expect(page.getByRole('heading', { name: 'Assessment request review' }), 'ASSESS-01 authorised analyst queue').toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Requests', exact: true }), 'ASSESS-01 authorised analyst queue').toBeVisible();
   await expectNoHorizontalOverflow(page, 'ASSESS-01 analyst request queue has no mobile overflow');
   await expectNoSeriousAxeViolations(page);
 
@@ -132,7 +95,9 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(page.getByRole('heading', { name: submittedRequestTitle })).toBeVisible();
   // The request hub opens a record from its own identifier, so the questionnaire
   // is reached by its link destination rather than by a separate Open control.
-  const questionnaireLink = page.locator('main a[href^="/app/review/questionnaires/"]').first();
+  // Read inside the hub's relationships: below 768px the lifecycle stepper's next action ("Draft the
+  // assessment.") also links to the questionnaire, and from 768px it is hidden (UI-SPEC §6.2, E18).
+  const questionnaireLink = page.getByRole('region', { name: 'Request relationships' }).locator('a[href^="/app/review/questionnaires/"]').first();
   const questionnaireHref = expectEncodedRecordPath(
     await questionnaireLink.getAttribute('href'),
     '/app/review/questionnaires/',
@@ -175,6 +140,11 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(page.getByRole('heading', { name: 'Risk assessment review' })).toBeVisible();
   await expect(page.getByText(/ASM-\d{4}-/)).toBeVisible();
   await expect(page.getByText('Draft', { exact: true }).first(), 'ASSESS-02 generated output is not released').toBeVisible();
+  // UAT-032 (12-UI-SPEC §1): the analyst editor opens with who asked for the AI generation, and the provider and model
+  // it ran on (WR-402): the development Security Analyst is the seeded Bob Doe, and the deterministic draft provider's model is 2.
+  const provenanceHeader = page.getByRole('region', { name: 'AI generation' });
+  await expect(provenanceHeader.getByText('Generated with AI at the request of Bob Doe', { exact: true }), 'UAT032_ANALYST_PROVENANCE_HEADER').toBeVisible();
+  await expect(provenanceHeader, 'UAT032_ANALYST_PROVENANCE_HEADER names the provider and model').toContainText('Provider: deterministic-assessment-draft · Model: 2');
 
   await page.getByRole('combobox', { name: 'Overall control effectiveness' }).selectOption('Partially Effective');
   const assessmentSaveResponse = page.waitForResponse((response) =>
@@ -232,6 +202,7 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await completeRiskForRelease(page, 0, 'Treat');
   await completeRiskForRelease(page, 1, 'Accept');
   await completeRiskForRelease(page, 2, 'Accept');
+  await completeRiskForRelease(page, 3, 'Accept');
   await expect(rating, 'ASSESS-03 edited rating remains selected').toHaveValue('Moderate');
 
   await page.getByRole('button', { name: 'Add mitigation control' }).first().click();
@@ -282,6 +253,26 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   await expect(persistedControl.getByText(`Selected control: ${controlLabel}`, { exact: true }), 'ASSESS06_CONTROL_PICKED_BY_TYPING the chosen control is saved and read back by its label').toBeVisible();
   await expect(persistedControl.getByText('Selected owner: Jane Doe', { exact: true }), 'E11 the searched control owner is saved and read back by name').toBeVisible();
   await expect(persistedControl.getByRole('textbox', { name: 'Evidence' })).toHaveValue('Control selected from the reusable catalogue and scheduled for verification.');
+  await expect(readinessRequirements, 'E1_AI_REVIEW_OUTSTANDING unreviewed proposals block release').toContainText('Review of AI proposals');
+  /*
+   * A decision re-reads the assessment, which can reorder the Risks, so each pass takes the first remaining Confirm
+   * remaining. WR-401: each pass waits for its own outcome, the success toast naming its count and record, with no
+   * danger toast, never for an HTTP status (a refused Server Action still answers 200).
+   */
+  const confirmRemaining = page.getByRole('button', { name: /^Confirm remaining \(\d+\)/ });
+  for (let pass = 0; pass < 12 && await confirmRemaining.count() > 0; pass += 1) {
+    const confirm = confirmRemaining.first();
+    const name = String(await confirm.getAttribute('aria-label'));
+    await confirm.focus();
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press('Enter');
+    const confirmed = await expectDecisionRecorded(page, confirmRemainingToastText(name), `E1_AI_REVIEW_CONFIRMED ${name}`);
+    await expect(page.getByRole('button', { name, exact: true }), `E1_AI_REVIEW_CONFIRMED ${name} leaves nothing to confirm`).toHaveCount(0);
+    const closeToast = confirmed.locator('[data-close-button]');
+    if (await closeToast.count()) await closeToast.click();
+  }
+  await expect(confirmRemaining, 'E1_AI_REVIEW_CONFIRMED every record’s AI proposals are reviewed').toHaveCount(0);
+  await page.reload();
   await expect(page.getByText('All release requirements are met'), 'ASSESS-03 persisted edits satisfy release readiness').toBeVisible();
   await expect(readinessRequirements, 'ASSESS06_READINESS_BY_RISK nothing outstanding is listed once all are met').toHaveCount(0);
   // D-35: met items show only when the analyst asks.
@@ -366,12 +357,16 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
 
   await page.context().clearCookies();
   await signInAs(page, 'Requestor');
-  const releasedRegion = page.getByRole('region', { name: 'Recently released assessments' });
-  await expect(releasedRegion.getByText('Deterministic assessment assistance identified 3 reviewable risk proposals.'), 'ASSESS-05 Jane dashboard item is authoritative').toBeVisible();
-  const releasedAssessment = releasedRegion.getByRole('link', { name: /ASM-\d{4}-/ });
+  // E14 (UI-SPEC §5.2): the Requestor Home's Released assessments names each item by its request title, newest first.
+  const releasedRegion = page.getByRole('region', { name: 'Released assessments', exact: true });
+  const releasedItem = releasedRegion.getByRole('list', { name: 'Released risk assessments' }).getByRole('listitem')
+    .filter({ hasText: submittedRequestTitle });
+  await expect(releasedItem, 'ASSESS-05 Jane’s Home lists the released assessment by its request title').toHaveCount(1);
+  const releasedAssessment = releasedItem.getByRole('link', { name: /ASM-\d{4}-/ });
   await expect(releasedAssessment, 'ASSESS-05 released assessment identifier is the only record opener').toHaveCount(1);
   await expect(releasedAssessment).toHaveAttribute('href', /^\/app\/assessments\/[^/]+$/);
-  await expect(releasedAssessment).toHaveClass(/text-text-link.*underline.*focus-visible:ring-2/);
+  // The shared record-link treatment (direction §4 Record links), owned by the record-link class.
+  await expect(releasedAssessment).toHaveClass(/\brecord-link\b/);
   // The list is a real <ul>/<li>, so the row carries the listitem role
   // implicitly and has no role attribute for an XPath predicate to match.
   const releasedCard = releasedAssessment.locator('xpath=ancestor-or-self::li[1]');
@@ -399,6 +394,10 @@ test('Bob reviews, drafts, edits, and releases an assessment that Jane reads wit
   }
   await expect(page.getByRole('article', { name: /Released risk assessment ASM-/ })).toBeVisible();
   await expect(page.getByText(deterministicRiskStatement, { exact: true }), 'ASSESS-05 Jane sees the released risk').toBeVisible();
+  // UAT-032 (12-UI-SPEC §10, D-23): Jane learns that AI assisted and an analyst reviewed, and sees no generator row.
+  const overview = page.getByRole('heading', { level: 2, name: 'Assessment overview' }).locator('..');
+  await expect(overview.getByText('AI helped prepare the first draft of this assessment. A Security Analyst reviewed it before releasing it to you.'), 'UAT032_REQUESTOR_AI_NOTICE').toBeVisible();
+  await expect(overview.locator('dt:text-is("Generated by")'), 'UAT032_REQUESTOR_AI_NOTICE no generator row').toHaveCount(0);
   // E12 (D-34, D-36): Jane reads the control the analyst picked by its number and title, never by its internal id.
   const releasedMitigation = page.getByRole('region', { name: 'Mitigation control implementations' }).first();
   const [pickedControlNumber, pickedControlTitle] = controlLabel!.split(' · ');

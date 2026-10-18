@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The archetype of every Identity the HR CSV creates (100-resource-hr-csv.xml).
+  Only these Identities get an IdamBox User: administrators, service identities
+  and any other midPoint user never receive the IdamBox SCIM construction (P4-06).
+-->
+<archetype xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+           oid="11000000-0000-4000-8000-000000000150">
+    <name>HR person</name>
+    <description>An Identity owned by the HR Identity Source.</description>
+    <archetypePolicy>
+        <display>
+            <label>HR person</label>
+            <pluralLabel>HR people</pluralLabel>
+        </display>
+        <objectTemplateRef oid="11000000-0000-4000-8000-000000000140"/>
+    </archetypePolicy>
+    <inducement>
+        <construction>
+            <resourceRef oid="11000000-0000-4000-8000-000000000110"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+</archetype>

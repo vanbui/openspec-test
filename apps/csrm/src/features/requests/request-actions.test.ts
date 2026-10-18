@@ -201,3 +201,50 @@ describe('request return to draft refusals (UI-SPEC §10.2 A)', () => {
     await expect(actions.revertRequestToDraftAction(input)).resolves.toEqual({ ok: false, formError: 'The request service is unavailable. Please try again later.' });
   });
 });
+
+/*
+ * 14-UI-SPEC §2.2 (D-26; UI-D3; RESEARCH Pitfall 18): while files are queued the new-request form stays on the page. The
+ * create and the update return the draft's id instead of redirecting, and revalidate nothing, because a revalidation
+ * would re-render the route for the address the form has just replaced and unmount the queue.
+ */
+describe('saving a draft while its files are queued (stayOnPage)', () => {
+  const draft = { title: 'Payroll SaaS for the people team' };
+  const saved = { documentId: 'request-9', requestNumber: 'RAR-2026-PAY001', requestStatus: 'draft', title: draft.title, submittedDate: null };
+
+  it('creates the draft and returns its id, with no revalidation and no redirect', async () => {
+    const actions = await loadActions();
+    createRequest.mockResolvedValueOnce({ data: saved, error: null });
+
+    await expect(actions.createRequestAction(draft, { stayOnPage: true })).resolves.toEqual({ ok: true, data: saved });
+    expect(createRequest).toHaveBeenCalledTimes(1);
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('updates the same draft and returns its id, with no revalidation and no redirect', async () => {
+    const actions = await loadActions();
+    updateRequest.mockResolvedValueOnce({ data: saved, error: null });
+
+    await expect(actions.updateRequestAction({ documentId: 'request-9', ...draft }, { stayOnPage: true })).resolves.toEqual({ ok: true, data: saved });
+    expect(updateRequest).toHaveBeenCalledWith('request-9', expect.objectContaining(draft));
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('still revalidates and redirects to the draft without the option', async () => {
+    const actions = await loadActions();
+    createRequest.mockResolvedValueOnce({ data: saved, error: null });
+
+    await actions.createRequestAction(draft);
+    expect(revalidatePath).toHaveBeenCalledWith('/app/requests');
+    expect(redirect).toHaveBeenCalledWith('/app/requests/request-9');
+  });
+
+  it('keeps the refusal of a create that fails, with the option', async () => {
+    const actions = await loadActions();
+    createRequest.mockResolvedValueOnce({ data: null, error: { message: 'raw backend detail', status: 503 } });
+
+    await expect(actions.createRequestAction(draft, { stayOnPage: true })).resolves.toEqual({ ok: false, formError: 'The request service is unavailable. Please try again later.' });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+});

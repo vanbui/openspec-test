@@ -1,0 +1,117 @@
+# Requirements: IdamBox Identity and Access Management (IAM)
+
+**Defined:** 2026-10-13
+**Core Value:** A leaver in the customer's Identity Source loses access to every IdamBox product on the next sync, without anyone remembering to do it, and no external system can grant IdamBox roles.
+**Source:** `.planning/workstreams/iam/IDENTITY-PROVISIONING-BRIEF.md` (decisions D1–D26; draft IDs IAM-01–IAM-11 split into the atomic IDs below).
+
+## v1 Requirements
+
+Requirements for milestone v1.0 Identity Provisioning. Each maps to one roadmap phase.
+
+### Platform
+
+- [x] **PLAT-01**: A developer starts midPoint 4.8.14 LTS, its PostgreSQL repository and Mailpit alongside Keycloak and ClamAV from the one `idp` compose project, with credentials from a git-ignored `docker/.env` and midPoint on `127.0.0.1:8081` (D5, D9).
+- [x] **PLAT-02**: The midPoint image carries the Provision IAM SCIM2 connector `V1.2.9`, built from source by a repository Dockerfile with no committed binaries, and midPoint lists the connector as available (D10).
+- [x] **PLAT-03**: A developer applies changed midPoint configuration with a reload script, resets the stack with one documented command, and finds start, reset and reload in `docker/README.md` (D23).
+
+### Identity model
+
+- [x] **MODEL-01**: An operator registers an Identity Source with its own non-human service identity, which holds only the Identity Provisioning Function (D15).
+- [x] **MODEL-02**: An operator issues, rotates and revokes an Identity Source's bearer token from a backend script; the token is shown once and stored only as a hash (D15).
+- [x] **MODEL-03**: Each IdamBox User records whether it is sourced (Identity Source and source key) or manual, and whether it is protected (D13, D14).
+
+### Provisioning
+
+- [x] **PROV-01**: midPoint creates an IdamBox User through SCIM `POST /Users`, and the new user receives only the birthright Requestor role (D11, D20).
+- [x] **PROV-02**: midPoint reads, lists and searches IdamBox Users through SCIM with `eq` filters and `startIndex`/`count` paging (D11).
+- [x] **PROV-03**: midPoint updates a sourced user's identity attributes through SCIM `PUT` and `PATCH` without changing their IdamBox Roles (D6, D11, D19).
+- [x] **PROV-04**: The connector's connection test passes against Strapi's `/ResourceTypes`, `/Schemas` and `/ServiceProviderConfig` (D11).
+- [x] **PROV-05**: An Identity Source cannot read or change another source's users, and cannot change protected users (D13, D15).
+- [x] **PROV-06**: An operator links a pre-existing manual user to its Identity Source by confirming midPoint's correlation proposal; afterwards only the source key links them (D13).
+- [x] **PROV-07**: An admin cannot edit a sourced user's HR-owned fields through the Strapi user APIs (D6).
+- [x] **PROV-08**: The connector's recorded request sequence passes as backend tests in CI (D11, D18).
+
+### Lifecycle
+
+- [x] **LIFE-01**: A leaver deactivated through SCIM is refused in every IdamBox UI and API on their next request (D12).
+- [x] **LIFE-02**: A leaver's deactivation commits in Strapi while Keycloak is unavailable; their Keycloak account is disabled and sessions ended once Keycloak returns (D16).
+- [x] **LIFE-03**: A SCIM `DELETE` deactivates the user and marks them source-deleted; the record and every reference to it survive (D12).
+- [x] **LIFE-04**: A create or update while Keycloak is unavailable answers 503 with `Retry-After`, and midPoint completes it after Keycloak recovers (D16).
+
+### Engine
+
+- [x] **ENG-01**: midPoint imports the reference HR CSV and correlates each person on `employeeNumber` (D3, D19).
+- [x] **ENG-02**: A joiner, mover or leaver added to the HR CSV reaches Strapi within one 5-minute sync cycle (D18).
+- [x] **ENG-03**: Nightly reconciliation repairs drift in midPoint-managed IdamBox Users, and a refresh task retries pending operations (D18).
+- [x] **ENG-04**: An operator sees each lifecycle decision and its cause in midPoint's audit log, and Strapi logs every SCIM request with source, operation, target and outcome (D21).
+
+### Sign-in
+
+- [ ] **SIGN-01**: A new sourced user receives Keycloak's set-password email (Mailpit locally); provisioning never sets a password (D17).
+- [ ] **SIGN-02**: A scripted local gate proves CSV joiner → sign-in as Requestor → CSV mover → CSV leaver → refused in the UI and the API, with a Playwright sign-in proof at 1440 and 375 (D18).
+
+## v2 Requirements
+
+Deferred. Tracked but not in the current roadmap.
+
+- **FUT-01**: midPoint provisions Keycloak directly (Openstandia connector) with managed Keycloak groups.
+- **FUT-02**: The SCIM interface passes the Microsoft SCIM Validator and Okta's SCIM test suite.
+- **FUT-03**: Sourced users sign in through the customer's corporate IdP via Keycloak brokering.
+- **FUT-04**: DatabaseTable and SIMS Identity Sources.
+- **FUT-05**: `manager`, `division` and start/end dates on IdamBox Users.
+- **FUT-06**: HR groups map to IdamBox Roles under membership governance.
+- **FUT-07**: GDPR erasure pseudonymises a deactivated user.
+- **FUT-08**: An admin screen manages Identity Sources and tokens.
+- **FUT-09**: Provisioning changes appear in csrm Phase 22's change log.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Pull connectors to HR vendor APIs | midPoint owns source connectivity |
+| Passwords from a source | HR sends no passwords; Keycloak owns credentials |
+| Roles from a source | Roles are governed inside IdamBox (Role → Function) |
+| Hard deletes | References from requests, risks and owners must survive |
+| SCIM `/Groups` writes and `/Bulk` | No consumer needs them; Group is advertised only for the connector's connection test |
+| midPoint in CI | Too heavy; the recorded connector sequence keeps the contract honest |
+| CSRM UI changes beyond the sign-in journey | Handed off to the `csrm` workstream (brief section 9) |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PLAT-01 | Phase 1 | Complete |
+| PLAT-02 | Phase 1 | Complete |
+| PLAT-03 | Phase 1 | Complete |
+| MODEL-01 | Phase 2 | Complete |
+| MODEL-02 | Phase 3 | Complete |
+| MODEL-03 | Phase 2 | Complete |
+| PROV-01 | Phase 3 | Complete |
+| PROV-02 | Phase 3 | Complete |
+| PROV-03 | Phase 3 | Complete |
+| PROV-04 | Phase 3 | Complete |
+| PROV-05 | Phase 2 | Complete |
+| PROV-06 | Phase 4 | Complete |
+| PROV-07 | Phase 2 | Complete |
+| PROV-08 | Phase 3 | Complete |
+| LIFE-01 | Phase 3 | Complete |
+| LIFE-02 | Phase 2 | Complete |
+| LIFE-03 | Phase 3 | Complete |
+| LIFE-04 | Phase 4 | Complete |
+| ENG-01 | Phase 4 | Complete |
+| ENG-02 | Phase 4 | Complete |
+| ENG-03 | Phase 4 | Complete |
+| ENG-04 | Phase 4 | Complete |
+| SIGN-01 | Phase 5 | Pending |
+| SIGN-02 | Phase 5 | Pending |
+
+**Coverage:**
+- v1 requirements: 24 total
+- Mapped to phases: 24
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-10-13*
+*Last updated: 2026-10-16 after Phase 4 (ENG-01–04, PROV-06, LIFE-04 complete)*

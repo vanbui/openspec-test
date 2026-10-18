@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -10,11 +11,17 @@ import { ConfirmDialog } from '@/components/csrm/confirm-dialog';
 import { FormSection } from '@/components/csrm/form-section';
 import { DetailSection } from '@/components/csrm/detail-section';
 import { LocalInstant } from '@/components/csrm/local-time';
+import { GuardedLink, useLeaveGuard } from '@/components/csrm/navigation-guard';
 import { RecordLink } from '@/components/csrm/record-link';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
+import { SaveStatus, type SaveStatusValue } from '@/components/csrm/save-status';
+import { filesCopy, filesIntakeCopy, filesNotAddedAlert, requestLeaveCopy, savedRequestLeaveCopy } from '@/features/attachments/attachments-domain';
+import { useFilesInFlight, useKeptFiles } from '@/features/attachments/file-store';
+import { FilesPanel, type FilesSectionProps } from '@/features/attachments/files-section';
+import { UploadQueue, type UploadQueueHandle } from '@/features/attachments/upload-queue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -26,14 +33,22 @@ import { createRequestAction, searchInformationAssetsAction, searchInformationSy
 import { RelationMultiSelect, type RelationSearchInput, type RelationSearchResult, type RelationSelection } from '../assessments/owner-combobox';
 import { type RequestAssessmentRelation, type RequestQuestionnaireRelation, type RequestRelationSummary } from './request-domain';
 import { requestDraftSchema, type RequestDraftInput, type RequestMutationResult } from './request-schema';
+import { SubmitDescription, useSubmitFiles } from './request-workflow-actions';
 
 export type RequestFormProps = {
   assets: readonly RequestRelationSummary[];
   defaultValues?: Partial<RequestDraftInput>;
   documentId?: string;
+  /** The signed-in person's opaque key (server-only `draftOwnerKey`): keys the tab's file store. No key, no files. */
+  draftOwnerKey?: string | null;
+  /** The draft's Files section, as its request page reads it (edit only; `filesSectionFor`, D-18). */
+  files?: FilesSectionProps | null;
   mode: 'create' | 'edit';
   systems: readonly RequestRelationSummary[];
 };
+
+/** A request may hold 20 files; a new request holds none yet (D-10). */
+const NEW_REQUEST_FILE_ROOM = 20;
 
 const emptyValues: RequestDraftInput = {
   title: '', description: '', assessmentType: undefined, division: '', businessUnit: '',
@@ -146,23 +161,94 @@ function RelationField({ name, label, description, options, searchRelations }: {
   );
 }
 
-export function RequestForm({ assets, defaultValues, documentId, mode, systems }: RequestFormProps) {
+export function RequestForm({ assets, defaultValues, documentId, draftOwnerKey = null, files = null, mode, systems }: RequestFormProps) {
   const formRouter = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedResult, setSubmittedResult] = useState<RequestMutationResult | null>(null);
+  /* The draft this form saves: the edit form's, or the one the new-request form's first save created (UI-D3). */
+  const [draftId, setDraftId] = useState<string | null>(mode === 'edit' ? documentId ?? null : null);
+  /* `adding` while the queue sends the files after a save (§2.2), and until the page moves on. */
+  const [phase, setPhase] = useState<'idle' | 'adding'>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveStatusValue>({ kind: 'idle' });
+  const queue = useRef<UploadQueueHandle>(null);
+  /* §2.2: shown after a save whose files were not all added, and focused each time a save ends that way. */
+  const [notAddedSaves, setNotAddedSaves] = useState(0);
+  const notAddedAlert = useRef<HTMLDivElement>(null);
+  const notAddedId = useId();
   const focusInvalidAfterDialog = useRef(false);
   const form = useForm<RequestDraftInput>({
     defaultValues: { ...emptyValues, ...defaultValues },
     mode: 'onBlur',
     resolver: zodResolver(requestDraftSchema),
   });
+  const ownerKey = draftOwnerKey ?? '';
+  /* The draft's files not added, kept for the tab (§1.5), and its files on their way, from the tab's file store. */
+  const kept = useKeptFiles(ownerKey, draftId ?? '', 'draft');
+  const filesInFlight = useFilesInFlight(ownerKey, draftId ?? '');
+  const submitFiles = useSubmitFiles(draftOwnerKey, documentId ?? '');
 
+  /*
+   * §10: the new-request form's own leave warning while it holds unsaved fields. Files chosen before the draft exists
+   * are the queue's to guard (in the same words); once a file is on its way the queue asks in the files' words, and a
+   * file not added is kept for the tab, so neither asks here. Once the first save has created the draft, only the changes
+   * since would be lost, and the words say so (IN-502).
+   */
+  useLeaveGuard(mode === 'create' && phase === 'idle' && filesInFlight === 0 && form.formState.isDirty, 'waiting', draftId === null ? requestLeaveCopy : savedRequestLeaveCopy);
+
+  useEffect(() => {
+    if (notAddedSaves > 0) notAddedAlert.current?.focus();
+  }, [notAddedSaves]);
+
+  /*
+   * 14-UI-SPEC §2.2 (D-26; UI-D3). Without files to send, Save draft saves as it always has and the action moves to the
+   * draft. With files, the save stays on the page: the first save creates the draft and the address becomes its edit
+   * route without a navigation, so a reload lands on the draft and saving again only updates it. The queue then sends
+   * the files one at a time, and the page moves to the draft once every file is added or waiting for the malware check.
+   */
   async function saveDraft(values: RequestDraftInput) {
     setFormError(null);
-    const result = mode === 'create'
-      ? await createRequestAction(values)
-      : await updateRequestAction({ documentId, ...values });
-    if (result?.ok === false) applyActionFailure(result, form.setError, setFormError);
+    if (phase !== 'idle') return;
+    /* The fields as saved, so the leave warning only asks about changes made after this save (§10). */
+    const savedFields = structuredClone(form.getValues());
+    const creating = mode === 'create' && draftId === null;
+    const saved = draftId ?? documentId;
+    if (!queue.current?.hasWork()) {
+      const result = creating
+        ? await createRequestAction(values)
+        : await updateRequestAction({ documentId: saved, ...values });
+      if (result?.ok === false) applyActionFailure(result, form.setError, setFormError);
+      return;
+    }
+
+    const result = creating
+      ? await createRequestAction(values, { stayOnPage: true })
+      : await updateRequestAction({ documentId: saved, ...values }, { stayOnPage: true });
+    if (!result || result.ok === false) {
+      if (result) applyActionFailure(result, form.setError, setFormError);
+      return;
+    }
+    const savedId = result.data.documentId;
+    /*
+     * WR-504: the queue as it is now that the save has answered, never the handle taken before it: a file may have been
+     * added or refused while the save was on its way, and a stale handle would wait for it forever.
+     */
+    const current = queue.current;
+    if (creating) {
+      setDraftId(savedId);
+      window.history.replaceState(null, '', `/app/requests/${encodeURIComponent(savedId)}/edit`);
+    }
+    form.reset(savedFields, { keepValues: true, keepIsSubmitted: true, keepSubmitCount: true });
+    setSaveStatus({ kind: 'saved', at: new Date().toISOString() });
+    if (!current) return;
+    setPhase('adding');
+    const settled = await current.sendAll(savedId);
+    if (settled.notAdded === 0) {
+      formRouter.replace(`/app/requests/${encodeURIComponent(savedId)}`);
+      return;
+    }
+    /* §2.2 (UI-D29): the page stays; the alert says what to do, and the files not added stay listed here and kept. */
+    setPhase('idle');
+    setNotAddedSaves((saves) => saves + 1);
   }
 
   async function submitDraft() {
@@ -179,6 +265,7 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
       throw new Error('Submission failed');
     }
     setSubmittedResult(result.data);
+    submitFiles.clearKept();
     toast.success('Request submitted.');
     /*
      * Submitting is only offered from the edit route, and a submitted request
@@ -190,6 +277,24 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
   }
 
   const isSubmitted = submittedResult?.requestStatus === 'submitted';
+  /* WR-504: while Save draft is on its way, from the first check to the last file settled, the queue takes no change. */
+  const saving = form.formState.isSubmitting || phase !== 'idle';
+  /* §2.2: the alert above the queue while the draft holds files not added after a save. */
+  const alert = notAddedSaves > 0 && draftId !== null && kept.length > 0 ? filesNotAddedAlert(kept.length) : null;
+  const notAddedNotice = alert && draftId !== null ? (
+    /*
+     * IN-503 (§2.2 "announced once"): a group named by its title, which the focus move announces, not a live alert, so a
+     * recount as rows are retried or removed is not announced again.
+     */
+    <Alert aria-describedby={`${notAddedId}-description`} aria-labelledby={`${notAddedId}-title`} className="gap-y-2" ref={notAddedAlert} role="group" tabIndex={-1} variant="destructive">
+      <AlertTitle id={`${notAddedId}-title`}>{alert.title}</AlertTitle>
+      <AlertDescription id={`${notAddedId}-description`}>{alert.description}</AlertDescription>
+      <div className="col-start-2 pt-1">
+        {/* O8 (direction §4 Buttons): a phone action at full width and the touch-target height below 768px. */}
+        <GuardedLink className={buttonVariants({ variant: 'outline', size: 'sm', className: 'max-md:min-h-11 max-md:w-full' })} href={`/app/requests/${encodeURIComponent(draftId)}`}>{filesIntakeCopy.goToDraft}</GuardedLink>
+      </div>
+    </Alert>
+  ) : null;
 
   return (
     <Form {...form}>
@@ -232,14 +337,35 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
           <RelationField description="Search and select every information asset included in scope." label="Information assets" name="informationAssets" options={assets} searchRelations={searchInformationAssetsAction} />
           <p className="text-sm text-muted-foreground">Sponsor selection is not available in CSRM.</p>
         </FormSection>
+        {/*
+          * 14-UI-SPEC §2.1 and §2.3 (D-27): files with the request. On the new-request form they wait for Save draft; on
+          * the draft's edit form the draft's own list and field render, and a chosen file is added at once (UI-D4).
+          */}
+        {mode === 'create' && draftOwnerKey !== null ? (
+          <FormSection description={filesIntakeCopy.createDescription} title={filesIntakeCopy.title}>
+            {notAddedNotice}
+            <UploadQueue disabled={saving} label={filesCopy.addFiles} leaveCopy={requestLeaveCopy} mode="deferred" ownerKey={draftOwnerKey} ref={queue} remaining={NEW_REQUEST_FILE_ROOM} scope="draft" />
+          </FormSection>
+        ) : null}
+        {mode === 'edit' && files ? (
+          <FormSection description={filesIntakeCopy.editDescription} title={filesIntakeCopy.title}>
+            {notAddedNotice}
+            <FilesPanel {...files} queueDisabled={saving} queueRef={queue} />
+          </FormSection>
+        ) : null}
         {!isSubmitted ? (
-          <div className="flex flex-wrap gap-3 border-t border-border pt-6">
-            <Button disabled={form.formState.isSubmitting} type="submit">{form.formState.isSubmitting ? 'Saving draft…' : 'Save draft'}</Button>
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
+            <Button disabled={saving} type="submit">
+              {phase === 'adding'
+                ? <><Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />{filesIntakeCopy.addingFiles}</>
+                : form.formState.isSubmitting ? 'Saving draft…' : 'Save draft'}
+            </Button>
             {mode === 'edit' ? (
               <ConfirmDialog
+                confirmDisabled={submitFiles.waiting}
                 confirmLabel="Submit request"
                 confirmVariant="default"
-                description="A Security Analyst will review your request and send you a questionnaire to answer. Until they start work on it, you can return the request to draft to make changes."
+                description={<SubmitDescription line={submitFiles.line} />}
                 errorMessage={formError}
                 onConfirm={submitDraft}
                 onDismiss={() => {
@@ -253,6 +379,8 @@ export function RequestForm({ assets, defaultValues, documentId, mode, systems }
                 trigger={<Button type="button" variant="outline">Submit request</Button>}
               />
             ) : null}
+            {/* X-1: the draft's save, while the page stays to add its files (§2.2). */}
+            <SaveStatus savedLabel={(time) => <>Draft saved at {time}</>} status={saveStatus} />
           </div>
         ) : null}
       </form>

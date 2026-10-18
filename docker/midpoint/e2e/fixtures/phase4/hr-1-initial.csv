@@ -1,0 +1,2 @@
+employeeNumber,givenName,familyName,preferredName,email,username,department,jobTitle,status,startDate,endDate
+940001,Iris,Example,,lifecycle.joiner@idambox.test,lifecycle.iris,Lifecycle Engineering,Lifecycle Engineer,active,,

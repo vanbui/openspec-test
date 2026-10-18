@@ -1,10 +1,16 @@
 import {
   AssessmentWorkflowError,
+  appendAiRunDecisionsWithinMutation,
   parseWritableRiskFields,
   type AssessmentMutationStrapi,
   withMutableAssessmentMutation,
 } from "../../csrm-assessment/services/assessment-workflow";
 import { createWithRiskNumber } from "./risk-number";
+import { isRegisteredSourceServiceUser, registeredSourceServiceUserDocumentIds } from "../../../iam/identity/source-principal";
+import { RISK_AI_FIELDS, applyAiFieldEdit, fieldEventsByRun, parseRiskAiProvenance } from "../../csrm-assessment/services/ai-provenance";
+import { isActiveRisk } from "../../../csrm/active-risk";
+import { RISK_HISTORY_FIELDS, RISK_HISTORY_RELATIONS_POPULATE, riskChanges } from "../../../csrm/risk-history-changes";
+import { recordRiskHistory, type RiskHistoryEntry } from "../../csrm-risk-history-event/services/risk-history";
 
 type RecordValue = Record<string, unknown>;
 type DocumentService = {
@@ -19,7 +25,6 @@ export type RiskWorkflowStrapi = {
 };
 
 const RISK_UID = "api::csrm-risk.csrm-risk";
-const ASSESSMENT_UID = "api::csrm-assessment.csrm-assessment";
 const RELATION_UID = {
   riskType: "api::csrm-risk-type.csrm-risk-type",
   riskOwner: "api::idambox-user.idambox-user",
@@ -68,6 +73,9 @@ async function resolveRelations(strapi: RiskWorkflowStrapi, data: RecordValue): 
     }
     const relationId = documentId(value);
     if (!relationId) throw new RiskWorkflowError(400, "CSRM Risk reference is invalid.");
+    if ((field === "riskOwner" || field === "treatmentOwner") && await isRegisteredSourceServiceUser(strapi, relationId)) {
+      throw new RiskWorkflowError(400, "CSRM Risk reference is invalid.");
+    }
     const relation = await strapi.documents(uid).findOne({ documentId: relationId });
     if (!relation || ((field === "riskOwner" || field === "treatmentOwner") && relation.accountStatus !== "active")) {
       throw new RiskWorkflowError(400, "CSRM Risk reference is invalid.");
@@ -77,24 +85,6 @@ async function resolveRelations(strapi: RiskWorkflowStrapi, data: RecordValue): 
   return resolved;
 }
 
-async function requireAssessment(strapi: RiskWorkflowStrapi, assessmentDocumentId: string): Promise<RecordValue> {
-  const assessment = await strapi.documents(ASSESSMENT_UID).findOne({ documentId: assessmentDocumentId });
-  if (!assessment) throw new RiskWorkflowError(404, "CSRM assessment was not found.");
-  return assessment;
-}
-
-export async function listAssessmentRiskDocuments(
-  strapi: RiskWorkflowStrapi,
-  assessmentDocumentId: string,
-): Promise<RecordValue[]> {
-  assertDocumentId(assessmentDocumentId, "CSRM assessment identifier is invalid.");
-  await requireAssessment(strapi, assessmentDocumentId);
-  return strapi.documents(RISK_UID).findMany({
-    filters: { assessment: { documentId: { $eq: assessmentDocumentId } } },
-    sort: ["riskNumber:asc"],
-    limit: 1_000,
-  });
-}
 
 const MAX_ASSESSMENT_RISKS = 1_000;
 const MAX_ASSESSMENT_OWNER_LABELS = 2_000;
@@ -129,6 +119,8 @@ export async function loadAnalystAssessmentRiskDetails(
       informationAssetImpacted: true,
       treatmentOwner: true,
       controlImplementations: { populate: { control: true } },
+      // Phase 16 D-08: the withdrawing analyst, named in the analyst detail's withdrawal block (id and name only).
+      withdrawnBy: { fields: ["documentId", "displayName"] },
     },
   });
   if (risks.length > MAX_ASSESSMENT_RISKS) {
@@ -165,6 +157,148 @@ export async function loadAnalystAssessmentOwnerLabels(
   return labels;
 }
 
+/**
+ * Where a change to a Risk comes from, for its history row (D-19): the analyst, or an AI run whose proposal the
+ * analyst accepted (the run, and the proposal item when there is one).
+ */
+export type HistorySource = { kind: "analyst" } | { kind: "ai-run"; runDocumentId: string; proposalItem?: string };
+
+/** The history row's source fields for `source`. */
+export function historySourceFields(source: HistorySource): Pick<RiskHistoryEntry, "sourceKind" | "aiRunDocumentId" | "proposalItem"> {
+  return source.kind === "ai-run"
+    ? { sourceKind: "ai-run", aiRunDocumentId: source.runDocumentId, ...(source.proposalItem ? { proposalItem: source.proposalItem } : {}) }
+    : { sourceKind: "analyst" };
+}
+
+/**
+ * D-07: a withdrawn Risk is read-only. Every inner Risk and control implementation function and Phase 12's decisions
+ * call this on the Risk they loaded inside the transaction, after the editable guard, so a released assessment still
+ * answers ASSESSMENT_NOT_MUTABLE first. Reinstating the Risk is the only way to change it again.
+ */
+export function assertRiskActive(risk: unknown): void {
+  if (!isActiveRisk(risk)) throw new AssessmentWorkflowError(409, "CSRM Risk has been withdrawn.", "RISK_WITHDRAWN");
+}
+
+type InnerRiskInput = {
+  strapi: RiskWorkflowStrapi;
+  /** The assessment withMutableAssessmentMutation (or withAssessmentLock) loaded and locked. */
+  assessment: RecordValue;
+  actorDocumentId: string;
+  source: HistorySource;
+};
+
+const RISK_HISTORY_POPULATE = { assessment: true, ...RISK_HISTORY_RELATIONS_POPULATE } as const;
+
+function lockedAssessmentId(assessment: RecordValue): string {
+  const assessmentDocumentId = documentId(assessment);
+  if (!assessmentDocumentId) throw new RiskWorkflowError(409, "CSRM Risk ancestor is invalid.");
+  return assessmentDocumentId;
+}
+
+/**
+ * Creates one Risk inside the caller's locked transaction and records its `created` history row there (D-19). It
+ * never serialises, so a batch may call it repeatedly. The caller owns the guard and the transition.
+ */
+export async function createRiskWithinMutation(input: InnerRiskInput & { fields: unknown }): Promise<RecordValue & { changed: boolean }> {
+  const assessmentDocumentId = lockedAssessmentId(input.assessment);
+  const parsed = parseWritableRiskFields(input.fields);
+  assertRequiredRiskStatement(parsed, true);
+  const data = await resolveRelations(input.strapi, parsed);
+  const created = await createWithRiskNumber((riskNumber) => input.strapi.documents(RISK_UID).create({ data: {
+    ...data,
+    riskNumber,
+    assessment: assessmentDocumentId,
+  } }));
+  const riskDocumentId = documentId(created);
+  if (!riskDocumentId) throw new RiskWorkflowError(409, "CSRM Risk persistence is invalid.");
+  // The approved record: a `created` row lists each starting value that holds one, with `from: null`.
+  const stored = await input.strapi.documents(RISK_UID).findOne({ documentId: riskDocumentId, populate: RISK_HISTORY_POPULATE });
+  if (!stored) throw new RiskWorkflowError(409, "CSRM Risk persistence is invalid.");
+  await recordRiskHistory(input.strapi, {
+    kind: "created",
+    riskDocumentId,
+    assessmentDocumentId,
+    actorDocumentId: input.actorDocumentId,
+    ...historySourceFields(input.source),
+    changes: { fields: riskChanges(null, stored, RISK_HISTORY_FIELDS) },
+  });
+  return { ...created, changed: true };
+}
+
+/**
+ * Updates one Risk inside the caller's locked transaction (D-19, D-07, Phase 12 D-21). It re-reads the Risk with its
+ * assessment and relations, refuses a moved Risk (409) and a withdrawn one (RISK_WITHDRAWN), resolves the relations
+ * (a registered source service user is never an owner), marks the AI fields the change edits, and writes only when a
+ * value changes. The `updated` history row lists exactly the changed fields, each relation with the label it has now;
+ * a change of nothing writes nothing and returns `changed: false`.
+ *
+ * An `ai-run` source (Phase 16 D-25, D-37) is a confirmed or undone AI proposal: the caller records each field's
+ * per-field fact itself (`markFieldsConfirmedFromRun`, or the facts an Undo restores) with its decision event, so Phase
+ * 12's `edited` marking and its run event are skipped. `undo` marks the history row of an Undo of a confirmed change.
+ */
+export async function updateRiskWithinMutation(input: InnerRiskInput & {
+  riskDocumentId: string;
+  fields: unknown;
+  /** Verifier W-3: only a human Security Analyst's edit reviews an AI field. */
+  humanAnalyst: boolean;
+  /** The history row reverses a confirmed AI change (only with an `ai-run` source). */
+  undo?: boolean;
+}): Promise<RecordValue & { changed: boolean }> {
+  assertDocumentId(input.riskDocumentId, "CSRM Risk identifier is invalid.");
+  const assessmentDocumentId = lockedAssessmentId(input.assessment);
+  const parsed = parseWritableRiskFields(input.fields);
+  assertRequiredRiskStatement(parsed, false);
+  const risks = input.strapi.documents(RISK_UID);
+  const before = await risks.findOne({ documentId: input.riskDocumentId, populate: RISK_HISTORY_POPULATE });
+  if (!before) throw new RiskWorkflowError(404, "CSRM Risk was not found.");
+  if (documentId(before.assessment) !== assessmentDocumentId) throw new RiskWorkflowError(409, "CSRM Risk ancestor changed.");
+  assertRiskActive(before);
+  const data = await resolveRelations(input.strapi, parsed);
+  // Relations compare by documentId, so whether anything changes is known before any label is read.
+  if (riskChanges(before, { ...before, ...data }, RISK_HISTORY_FIELDS).length === 0) return { ...before, changed: false };
+
+  const provenance = input.source.kind === "ai-run" ? null : parseRiskAiProvenance(before.aiProvenance);
+  const relationFields = new Set(["riskType", "informationSystemImpacted", "informationAssetImpacted"]);
+  const valueChanged = provenance ? RISK_AI_FIELDS.filter((field) => field in data && (relationFields.has(field)
+    ? documentId(data[field]) !== documentId(before[field])
+    : data[field] !== before[field])) : [];
+  const at = new Date().toISOString();
+  // D-21, verifier W-3: who edits decides each changed AI field's review state, in this transaction with its run event.
+  const edit = provenance ? applyAiFieldEdit(provenance, valueChanged, { documentId: input.actorDocumentId, humanAnalyst: input.humanAnalyst }, at) : null;
+  await risks.update({ documentId: input.riskDocumentId, data: {
+    ...data, ...(edit?.fields.length ? { aiProvenance: edit.provenance } : {}),
+  } });
+  // The Phase 16 code review amendment (2026-10-16, item 1; BE2-01, BE2-03): each field's event goes to the run that
+  // proposed its value, one event per run, in this transaction.
+  if (provenance && edit?.fields.length) {
+    for (const [runId, fields] of fieldEventsByRun(provenance, edit.fields)) {
+      await appendAiRunDecisionsWithinMutation(input.strapi, runId, [
+        { schemaVersion: 1, kind: "edited", at, by: input.actorDocumentId, target: input.riskDocumentId, fields },
+      ]);
+    }
+  }
+  const after = await risks.findOne({ documentId: input.riskDocumentId, populate: RISK_HISTORY_POPULATE });
+  if (!after) throw new RiskWorkflowError(404, "CSRM Risk was not found.");
+  const fields = riskChanges(before, after, RISK_HISTORY_FIELDS);
+  if (fields.length === 0) return { ...after, changed: false };
+  await recordRiskHistory(input.strapi, {
+    kind: "updated",
+    riskDocumentId: input.riskDocumentId,
+    assessmentDocumentId,
+    actorDocumentId: input.actorDocumentId,
+    ...historySourceFields(input.source),
+    ...(input.undo ? { undo: true } : {}),
+    occurredAt: new Date(at),
+    changes: { fields },
+  });
+  return { ...after, changed: true };
+}
+
+function withoutChanged(result: RecordValue & { changed: boolean }): RecordValue {
+  const { changed: _changed, ...record } = result;
+  return record;
+}
+
 export async function createAssessmentRisk(input: {
   strapi: RiskWorkflowStrapi;
   assessmentDocumentId: string;
@@ -174,25 +308,27 @@ export async function createAssessmentRisk(input: {
   assertDocumentId(input.assessmentDocumentId, "CSRM assessment identifier is invalid.");
   const parsed = parseWritableRiskFields(input.body);
   assertRequiredRiskStatement(parsed, true);
-  return withMutableAssessmentMutation({
+  return withoutChanged(await withMutableAssessmentMutation({
     strapi: input.strapi,
     assessmentDocumentId: input.assessmentDocumentId,
     analystDocumentId: input.analystDocumentId,
-    mutate: async () => {
-      const data = await resolveRelations(input.strapi, parsed);
-      return createWithRiskNumber((riskNumber) => input.strapi.documents(RISK_UID).create({ data: {
-        ...data,
-        riskNumber,
-        assessment: input.assessmentDocumentId,
-      } }));
-    },
-  });
+    transition: (result) => result.changed ? "accepted-edit" : "none",
+    mutate: ({ assessment }) => createRiskWithinMutation({
+      strapi: input.strapi,
+      assessment,
+      actorDocumentId: input.analystDocumentId,
+      source: { kind: "analyst" },
+      fields: parsed,
+    }),
+  }));
 }
 
 export async function updateRisk(input: {
   strapi: RiskWorkflowStrapi;
   riskDocumentId: string;
   analystDocumentId: string;
+  /** Verifier W-3: the editor holds the update through the human Security Analyst Role, so its edit reviews an AI field. */
+  humanAnalyst: boolean;
   body: unknown;
 }): Promise<RecordValue> {
   assertDocumentId(input.riskDocumentId, "CSRM Risk identifier is invalid.");
@@ -205,23 +341,22 @@ export async function updateRisk(input: {
   if (!candidate) throw new RiskWorkflowError(404, "CSRM Risk was not found.");
   const assessmentDocumentId = documentId(candidate.assessment);
   if (!assessmentDocumentId) throw new RiskWorkflowError(409, "CSRM Risk ancestor is invalid.");
-  return withMutableAssessmentMutation({
+  return withoutChanged(await withMutableAssessmentMutation({
     strapi: input.strapi,
     assessmentDocumentId,
     analystDocumentId: input.analystDocumentId,
-    mutate: async () => {
-      const authoritativeRisk = await input.strapi.documents(RISK_UID).findOne({
-        documentId: input.riskDocumentId,
-        populate: { assessment: true },
-      });
-      if (!authoritativeRisk) throw new RiskWorkflowError(404, "CSRM Risk was not found.");
-      if (documentId(authoritativeRisk.assessment) !== assessmentDocumentId) {
-        throw new RiskWorkflowError(409, "CSRM Risk ancestor changed.");
-      }
-      const data = await resolveRelations(input.strapi, parsed);
-      return input.strapi.documents(RISK_UID).update({ documentId: input.riskDocumentId, data });
-    },
-  });
+    // D-23: a PATCH that changes nothing withdraws no review.
+    transition: (result) => result.changed ? "accepted-edit" : "none",
+    mutate: ({ assessment }) => updateRiskWithinMutation({
+      strapi: input.strapi,
+      assessment,
+      actorDocumentId: input.analystDocumentId,
+      source: { kind: "analyst" },
+      riskDocumentId: input.riskDocumentId,
+      fields: parsed,
+      humanAnalyst: input.humanAnalyst,
+    }),
+  }));
 }
 
 /**
@@ -249,8 +384,10 @@ export async function listControlDocuments(strapi: RiskWorkflowStrapi): Promise<
 }
 
 export async function searchActiveUserDocuments(strapi: RiskWorkflowStrapi, search: string): Promise<RecordValue[]> {
+  const serviceIds = await registeredSourceServiceUserDocumentIds(strapi);
   return strapi.documents("api::idambox-user.idambox-user").findMany({
     filters: {
+      ...(serviceIds.length === 0 ? {} : { documentId: { $notIn: serviceIds } }),
       accountStatus: { $eq: "active" },
       displayName: { $containsi: search },
     },

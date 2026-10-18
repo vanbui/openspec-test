@@ -4,22 +4,24 @@ import { cache } from 'react';
 
 import { QuestionnaireDetail } from '@/features/questionnaires/questionnaire-detail';
 import { availableAssessmentRequest } from '@/features/questionnaires/questionnaire-domain';
-import { getQuestionnaire, getQuestionnaireQuestions } from '@/features/questionnaires/questionnaire-service';
+import { getQuestionnaireQuestions, getRequestorQuestionnaire } from '@/features/questionnaires/questionnaire-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
+import { draftOwnerKey } from '@/lib/session-drafts/draft-owner-key';
 
 type QuestionnaireDetailPageProps = { params: Promise<{ documentId: string }> };
 
-// One read per request, shared by the document title and the page.
-const readQuestionnaire = cache(getQuestionnaire);
+// One read per request, shared by the document title and the page. The Requestor's read keeps none of the
+// analyst-only AI facts (CR-401, D-23), so none reaches the client view.
+const readQuestionnaire = cache(getRequestorQuestionnaire);
 
 // A questionnaire id that does not exist takes the not-found's title; any other outcome keeps the route's.
 export async function generateMetadata({ params }: QuestionnaireDetailPageProps): Promise<Metadata> {
   return recordRouteMetadata(readQuestionnaire((await params).documentId), 'Questionnaire | IdamBox CSRM');
 }
 
-async function requestorRequestHref(questionnaire: Awaited<ReturnType<typeof getQuestionnaire>>['data']): Promise<string | undefined> {
+async function requestorRequestHref(questionnaire: Awaited<ReturnType<typeof getRequestorQuestionnaire>>['data']): Promise<string | undefined> {
   if (!questionnaire) return undefined;
 
   const request = availableAssessmentRequest(questionnaire.assessmentRequest);
@@ -47,5 +49,8 @@ export default async function QuestionnaireDetailPage({ params }: QuestionnaireD
   const assessmentRequestHref = await requestorRequestHref(questionnaireResult.data);
   if (!questionsResult.data?.length) return <QuestionnaireDetail assessmentRequestHref={assessmentRequestHref} questionnaire={questionnaireResult.data} state="empty" />;
 
-  return <QuestionnaireDetail assessmentRequestHref={assessmentRequestHref} definition={questionsResult.data} questionnaire={questionnaireResult.data} state={questionnaireResult.data.state === 'submitted' ? 'submitted' : 'ready'} />;
+  /* 15-UI-SPEC §11.2 (D-25, UI-D25): the Requestor's unsaved answers are kept per person; the key names nobody in clear. */
+  const session = await getSessionAdapter().current();
+  const ownerKey = session ? draftOwnerKey(session) : null;
+  return <QuestionnaireDetail assessmentRequestHref={assessmentRequestHref} definition={questionsResult.data} draftOwnerKey={ownerKey} questionnaire={questionnaireResult.data} state={questionnaireResult.data.state === 'submitted' ? 'submitted' : 'ready'} />;
 }

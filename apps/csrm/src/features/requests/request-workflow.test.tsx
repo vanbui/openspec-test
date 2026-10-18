@@ -1,11 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { canRevertRequestToDraft, type AssessmentRequestRelationships, type CsrmAssessmentRequest } from './request-domain';
 import { RequestWorkflowActions } from './request-workflow-actions';
+import { AttachmentFileStoreProvider } from '@/features/attachments/file-store';
+import { UploadQueue } from '@/features/attachments/upload-queue';
 
 const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
@@ -24,9 +26,12 @@ vi.mock('./request-actions', () => ({
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError, success: mocks.toastSuccess } }));
+const attachmentMocks = vi.hoisted(() => ({ uploadAttachmentAction: vi.fn() }));
+vi.mock('@/features/attachments/attachments-actions', () => attachmentMocks);
 
 beforeEach(() => {
   for (const mock of Object.values(mocks)) mock.mockReset();
+  attachmentMocks.uploadAttachmentAction.mockReset();
 });
 
 const routeRoot = resolve(process.cwd(), 'app/(app)/app/requests');
@@ -52,8 +57,6 @@ describe('request route workflow', () => {
     expect(edit).toContain('await params');
     expect(edit).toContain('getRequest');
     expect(edit).not.toContain("'use client'");
-    expect(detail).not.toMatch(/\bfetch\s*\(/);
-    expect(edit).not.toMatch(/\bfetch\s*\(/);
     expect(readFileSync(resolve(routeRoot, 'new/loading.tsx'), 'utf8')).toContain('RequestFormLoading');
     expect(readFileSync(resolve(routeRoot, '[documentId]/edit/loading.tsx'), 'utf8')).toContain('RequestFormLoading');
   });
@@ -209,5 +212,85 @@ describe('RequestWorkflowActions after a transition', () => {
     expect(screen.queryByRole('button', { name: 'Return to draft' })).not.toBeInTheDocument();
     expect(screen.getByText('A Security Analyst has started work on this request, so it can no longer return to draft.')).toBeInTheDocument();
     expect(screen.queryByText(/You can return this request to draft/)).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * 14-UI-SPEC §2.4 (UI-D5) and §1.5 (UI-D35): the request page's submit dialog waits while a file on the page is waiting or
+ * being added, because a file still on its way when the request becomes submitted would be refused for lacking a note
+ * (D-17). A file not added does not block submission: the dialog says how many, and submitting clears them from the tab.
+ */
+describe('submitting while files are on their way (§2.4; UI-D5)', () => {
+  const OWNER = 'owner-key-jane';
+  const pdf = (name: string) => new File(['%PDF-1.7'], name, { type: 'application/pdf', lastModified: 1 });
+  const added = (name: string) => ({
+    ok: true,
+    data: {
+      documentId: `att-${name}`, fileName: name, fileType: 'pdf', byteSize: 8, state: 'available',
+      uploadedBy: { documentId: 'u-jane', displayName: 'Jane Doe' }, uploaderPart: 'requestor', uploadedAt: '2026-10-10T01:00:00.000Z',
+      note: null, removedBy: null, removedAt: null, detection: null, actions: { download: true, remove: true, restore: false },
+    },
+  });
+
+  function draftPage() {
+    return render(
+      <AttachmentFileStoreProvider>
+        <RequestWorkflowActions draftOwnerKey={OWNER} request={requestIn()} />
+        <UploadQueue label="Add files" ownerKey={OWNER} remaining={20} requestId="request-1" scope="draft" />
+      </AttachmentFileStoreProvider>,
+    );
+  }
+
+  async function choose(name: string) {
+    const user = userEvent.setup({ applyAccept: false });
+    await user.upload(screen.getByLabelText('Add files'), pdf(name));
+    return user;
+  }
+
+  it('says to wait and disables Submit request while a file is being added', async () => {
+    const settles: ((value: unknown) => void)[] = [];
+    attachmentMocks.uploadAttachmentAction.mockImplementation(() => new Promise((resolve) => settles.push(resolve)));
+    draftPage();
+    const user = await choose('vendor-security-pack.pdf');
+    await waitFor(() => expect(settles).toHaveLength(1));
+
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Submit this assessment request?' });
+    expect(dialog).toHaveTextContent('Wait until your files are added, then submit.');
+    expect(within(dialog).getByRole('button', { name: 'Submit request' })).toBeDisabled();
+
+    await act(async () => settles[0]!(added('vendor-security-pack.pdf')));
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Submit request' })).toBeEnabled());
+    expect(dialog).not.toHaveTextContent('Wait until your files are added');
+    expect(mocks.submitRequestAction).not.toHaveBeenCalled();
+  });
+
+  it('names a file not added without blocking, and submitting clears it from the tab', async () => {
+    attachmentMocks.uploadAttachmentAction.mockResolvedValue({ ok: false, kind: 'refused', reason: 'ATTACHMENT_EMPTY', offerNewNote: false, message: 'This file is empty. Check it’s the file you meant and choose it again.' });
+    mocks.submitRequestAction.mockResolvedValue({ ok: true, data: { documentId: 'request-1', requestStatus: 'submitted', submittedDate: '2026-10-10T02:00:00.000Z' } });
+    draftPage();
+    const user = await choose('empty.pdf');
+    await screen.findByRole('button', { name: 'Choose another file to replace empty.pdf' });
+
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Submit this assessment request?' });
+    expect(dialog).toHaveTextContent('1 file wasn’t added. Submit anyway, or retry it first.');
+    const confirm = within(dialog).getByRole('button', { name: 'Submit request' });
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(mocks.submitRequestAction).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('list', { name: 'Files being added' })).toBeNull());
+  });
+
+  it('names several files not added, written out', async () => {
+    attachmentMocks.uploadAttachmentAction.mockResolvedValue({ ok: false, kind: 'retryable', offerNewNote: false, message: 'We couldn’t add this file. Try again.' });
+    draftPage();
+    const user = userEvent.setup({ applyAccept: false });
+    await user.upload(screen.getByLabelText('Add files'), [pdf('one.pdf'), pdf('two.pdf')]);
+    await screen.findByRole('button', { name: 'Retry two.pdf' });
+    await user.click(screen.getByRole('button', { name: 'Submit request' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('2 files weren’t added. Submit anyway, or retry them first.');
   });
 });

@@ -161,7 +161,7 @@ describe('answer save refusals tell autosave whether to stop (UI-SPEC §10.2 C, 
   const values = { documentId: 'questionnaire-1', answers: [{ questionKey: 'internet-facing', value: true }] };
 
   it.each([
-    ['QUESTIONNAIRE_NOT_ANSWERABLE', 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.'],
+    ['QUESTIONNAIRE_NOT_ANSWERABLE', 'A Security Analyst has taken this questionnaire back to update it, so your latest answers weren’t saved. They’re kept on this page, and you can carry on when it’s sent back to you.'],
     ['QUESTIONNAIRE_ALREADY_SUBMITTED', 'This questionnaire has already been submitted, so your latest answers weren’t saved. Refresh the page to see the submitted answers.'],
     ['QUESTIONNAIRE_HAS_NO_QUESTIONS', 'This questionnaire has no questions to answer.'],
   ])('a 409 %s is blocked, states the reason and returns it', async (reason, formError) => {
@@ -260,7 +260,7 @@ describe('the autosave Server Action revalidates nothing (D-11)', () => {
     await expect(actions.autosaveQuestionnaireDraftAction(values)).resolves.toEqual({
       ok: false,
       values,
-      formError: 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.',
+      formError: 'A Security Analyst has taken this questionnaire back to update it, so your latest answers weren’t saved. They’re kept on this page, and you can carry on when it’s sent back to you.',
       failure: 'blocked',
       reason: 'QUESTIONNAIRE_NOT_ANSWERABLE',
     });
@@ -291,7 +291,7 @@ describe('questionnaire submit refusals (UI-SPEC §10.2 D)', () => {
   it.each([
     ['QUESTIONNAIRE_INCOMPLETE', 'Some required questions are unanswered. Answer them, then submit again.'],
     ['QUESTIONNAIRE_ALREADY_SUBMITTED', 'This questionnaire has already been submitted.'],
-    ['QUESTIONNAIRE_NOT_ANSWERABLE', 'This questionnaire is no longer open for answers, so it can’t be submitted.'],
+    ['QUESTIONNAIRE_NOT_ANSWERABLE', 'A Security Analyst has taken this questionnaire back to update it, so it can’t be submitted now. Your answers are kept, and you can submit when it’s sent back to you.'],
     ['QUESTIONNAIRE_HAS_NO_QUESTIONS', 'This questionnaire has no questions to answer.'],
   ])('%s reads its sentence and returns the reason', async (reason, formError) => {
     submitQuestionnaire.mockResolvedValueOnce(conflict(reason));

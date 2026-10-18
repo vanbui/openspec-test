@@ -36,7 +36,8 @@ const DETACHED_METHOD = [
 ];
 const CLIENT_HANDLE = /\bcreateStrapiClient\b|\bStrapiClient\b|['"]openapi-fetch['"]/;
 const PATH_CONSTANT = /const (\w+) = '(\/[^']+)'(?: as const)?;/g;
-const FETCH_CALL = /\bfetch\(/;
+// A space before the parenthesis cannot hide a fetch call either.
+const FETCH_CALL = /\bfetch\s*\(/;
 const IMPORT_OPERATIONS = ['risk_types', 'controls', 'information_systems', 'information_assets'].flatMap((collection) => [
   `POST /v1/${collection}/import/preview`,
   `POST /v1/${collection}/import`,

@@ -445,16 +445,16 @@ const report = (key: string, heading: string, title: string): SweepStep => ({ ro
 const administration = (collection: string, label: string, plural: string, routes: readonly [string, string, string]): SweepStep[] => [
   { route: routes[0], title: `${plural} | IdamBox CSRM`, heading: plural },
   { route: routes[1], title: `Create ${label} | IdamBox CSRM`, heading: `Create ${label}` },
-  { route: routes[2], title: `Import ${plural} CSV | IdamBox CSRM`, heading: `Import ${plural} from CSV` },
+  { route: routes[2], title: `Import ${plural} | IdamBox CSRM`, heading: `Import ${plural}` },
   { firstRecordOf: routes[0], link: new RegExp(`^/app/admin/${collection}/(?!new$|import$)[^/?#]+$`), title: `${label} Details | IdamBox CSRM` },
 ];
 
 const personalSteps: readonly SweepStep[] = [
   { route: '/app', title: 'Home | IdamBox CSRM', heading: 'Home' },
-  { route: '/app/requests', title: 'My Requests | IdamBox CSRM', heading: 'My Requests' },
-  { route: '/app/requests/new', title: 'New Request | IdamBox CSRM', heading: 'New assessment request' },
-  { route: '/app/questionnaires', title: 'My Questionnaires | IdamBox CSRM', heading: 'My Questionnaires' },
-  { route: '/app/assessments', title: 'My Risk Assessments | IdamBox CSRM', heading: 'My Risk Assessments' },
+  { route: '/app/requests', title: 'My requests | IdamBox CSRM', heading: 'My requests' },
+  { route: '/app/requests/new', title: 'New request | IdamBox CSRM', heading: 'New request' },
+  { route: '/app/questionnaires', title: 'My questionnaires | IdamBox CSRM', heading: 'My questionnaires' },
+  { route: '/app/assessments', title: 'My risk assessments | IdamBox CSRM', heading: 'My risk assessments' },
 ];
 // The request detail is titled by its route; its heading is the request's own title.
 const firstOwnRequest: SweepStep = { firstRecordOf: '/app/requests', link: /^\/app\/requests\/(?!new$)[^/?#]+$/, title: 'Assessment Request | IdamBox CSRM' };
@@ -476,13 +476,13 @@ const analystSteps: readonly SweepStep[] = [
   ...personalSteps,
   firstOwnRequest,
   // The analyst's Home (/app, the review summary since D-16) is swept with personalSteps.
-  { route: '/app/review/requests', title: 'Assessment Request Review | IdamBox CSRM', heading: 'Assessment request review' },
+  { route: '/app/review/requests', title: 'Requests | IdamBox CSRM', heading: 'Requests' },
   { firstRecordOf: '/app/review/requests?queue=awaiting-requestor', link: /^\/app\/review\/requests\/[^/?#]+$/, title: 'Assessment Request Review | IdamBox CSRM' },
-  { route: '/app/review/questionnaires', title: 'Questionnaire Review | IdamBox CSRM', heading: 'Questionnaire Review' },
+  { route: '/app/review/questionnaires', title: 'Questionnaires | IdamBox CSRM', heading: 'Questionnaires' },
   { firstRecordOf: '/app/review/questionnaires', link: /^\/app\/review\/questionnaires\/[^/?#]+$/, title: 'Questionnaire Review | IdamBox CSRM' },
-  { route: '/app/review/assessments', title: 'Risk Assessment Review | IdamBox CSRM', heading: 'Risk assessment review' },
+  { route: '/app/review/assessments', title: 'Risk assessments | IdamBox CSRM', heading: 'Risk assessments' },
   { firstRecordOf: '/app/review/assessments', link: /^\/app\/review\/assessments\/[^/?#]+$/, title: 'Risk Assessment Review | IdamBox CSRM', heading: 'Risk assessment review' },
-  { route: '/app/risks', title: 'Risk Register | IdamBox CSRM', heading: 'Risk Register' },
+  { route: '/app/risks', title: 'Risk register | IdamBox CSRM', heading: 'Risk register' },
   { firstRecordOf: '/app/risks', link: /^\/app\/risks\/[^/?#]+$/, title: 'Risk Details | IdamBox CSRM' },
   { route: '/app/alerts', title: 'Alerts | IdamBox CSRM', heading: 'Alerts' },
   { route: '/app/reports', title: 'Reports | IdamBox CSRM', heading: 'Reports' },
@@ -503,7 +503,7 @@ const analystSteps: readonly SweepStep[] = [
 // A Requestor's refusal of an analyst surface keeps its page header and title and shows the shared
 // permission state, the Administration refusal included (08-12).
 const refusalSteps: readonly SweepStep[] = [
-  { route: '/app/risks', title: 'Risk Register | IdamBox CSRM', heading: 'Risk Register', state: 'permission' },
+  { route: '/app/risks', title: 'Risk register | IdamBox CSRM', heading: 'Risk register', state: 'permission' },
   { route: '/app/alerts', title: 'Alerts | IdamBox CSRM', heading: 'Alerts', state: 'permission' },
   { route: '/app/reports', title: 'Reports | IdamBox CSRM', heading: 'Reports', state: 'permission' },
   { route: '/app/admin/controls', title: 'Controls | IdamBox CSRM', heading: 'Controls', state: 'permission' },
@@ -573,7 +573,7 @@ test('a client-side navigation on the production build loads no development runt
     (window as Window & { __csrmSameDocument?: boolean }).__csrmSameDocument = true;
   });
   await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Risk register', exact: true }).click();
-  await expectSettled(page, { url: /\/app\/risks$/, title: 'Risk Register | IdamBox CSRM', heading: 'Risk Register' }, 'the Risk Register after a client-side navigation');
+  await expectSettled(page, { url: /\/app\/risks$/, title: 'Risk register | IdamBox CSRM', heading: 'Risk register' }, 'the Risk register after a client-side navigation');
 
   expect(await page.evaluate(() => (window as Window & { __csrmSameDocument?: boolean }).__csrmSameDocument), 'the navigation kept the document').toBe(true);
   await expect(page.locator('nextjs-portal'), 'no development overlay is mounted').toHaveCount(0);

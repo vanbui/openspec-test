@@ -9,6 +9,7 @@ import {
   type StrapiClient,
   type TransportResult,
 } from '../../lib/api/transport/server-client';
+import { checkExportResponse, EXPORT_FILE_CONTENT_TYPES, listExportParams, type ExportResult, type ListExportOptions } from '../exports/export-file-check';
 import type { ContractResponseParser } from '../assessments/assessment-service';
 import {
   alertListQuerySchema,
@@ -45,6 +46,10 @@ export const responseParserModule = {
     },
     { label: 'alerts.getAlertSummary', component: 'AlertSummaryResponse', parser: alertSummaryResponseSchema },
   ] as const satisfies readonly ContractResponseParser[],
+  // Phase 19 D-19: the alerts export is a file, checked by the shared validator's export rule.
+  fileResponses: [
+    { label: 'alerts.exportAlerts', path: '/v1/alerts/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+  ],
 };
 
 async function request<T>(
@@ -86,4 +91,22 @@ export async function listAlerts(input: AlertListQuery): Promise<TransportResult
 /** Every current alert counted by kind and by urgency over the list's own predicate. */
 export async function getAlertSummary(): Promise<TransportResult<AlertSummary>> {
   return request((client) => client.GET('/v1/alerts/summary'), parseAlertSummaryPayload, 'alerts.getAlertSummary');
+}
+
+/** The alert list's filters as its export takes them: every page (D-13), so no page and no page size. */
+export type AlertExportQuery = Omit<AlertListQuery, 'page' | 'pageSize'>;
+
+/** Exports the analyst's alerts (D-04) as the kind and urgency filters choose them, with the shared export-file check. */
+export async function exportAlerts(input: ListExportOptions & { query: AlertExportQuery }): Promise<ExportResult> {
+  const { kinds, urgency } = input.query;
+  try {
+    const client = await createStrapiClient();
+    const exported = await client.GET('/v1/alerts/export', {
+      params: { query: { ...(kinds ? { kind: [...kinds] } : {}), ...(urgency ? { urgency } : {}), ...listExportParams(input) } },
+      parseAs: 'arrayBuffer',
+    });
+    return checkExportResponse(exported, input.format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
 }

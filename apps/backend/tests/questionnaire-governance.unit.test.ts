@@ -6,10 +6,12 @@ import {
   countAnalystChangesSinceGeneration,
   GOVERNANCE_EVENT_KINDS,
   GOVERNANCE_LOG_MAX_ENTRIES,
+  GOVERNANCE_LOG_SCHEMA_VERSION,
   GovernanceLogError,
   MAX_QUESTION_TEXT_LENGTH,
   parseGovernanceEvent,
   parseGovernanceLog,
+  projectGovernanceEventsForRequestor,
   questionTextSnapshot,
   summariseGovernanceLog,
 } from "../src/api/csrm-questionnaire/services/questionnaire-governance-log";
@@ -77,6 +79,8 @@ test("the governance event kinds are a frozen closed vocabulary", () => {
     "question-deleted",
     "answer-cleared",
     "regenerated",
+    "ai-proposal",
+    "question-restored",
   ]);
   assert.equal(Object.isFrozen(GOVERNANCE_EVENT_KINDS), true, "GOVERNANCE_EVENT_KINDS_MUTABLE");
 });
@@ -515,4 +519,258 @@ test("versioned deleted questions remain parseable history but leave every activ
   assert.deepEqual(activeQuestionnaireDefinition(definition).map((entry) => entry.questionKey), ["service-name"]);
   assert.deepEqual(getVisibleQuestionKeys(definition, { "service-name": "yes", "retired-question": null }), ["service-name"]);
   assert.equal(questionnaireState(questionnaire({ questions: [first, removed] })), "submitted", "DELETED_REQUIRED_QUESTION_BLOCKED_SUBMISSION_STATE");
+});
+
+/*
+ * Phase 15 (D-26, the approved 06.8 amendment): an `ai-proposal` event records that a Security Analyst asked the AI for
+ * proposals. It carries the run, its scope, exactly one of the instruction or its source, the provider and the number of
+ * items the run kept; the closed parser refuses any AI key on a kind that may not carry it.
+ */
+const RUN_ID = "run-document-id";
+const INSTRUCTION = "Add questions about the offshore support team";
+
+function aiProposal(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return defined(event({
+    kind: "ai-proposal",
+    runId: RUN_ID,
+    scope: "questionnaire",
+    instruction: INSTRUCTION,
+    providerName: "deterministic-questionnaire-proposals",
+    providerVersion: "1",
+    itemCount: 3,
+    ...overrides,
+  }));
+}
+
+/* An override of undefined leaves the key out, as a writer that omits it would. */
+function defined(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
+}
+
+/* The parsed event read as plain keys, so a case can name a key the event type does not declare yet. */
+function keysOf(value: unknown): Record<string, unknown> {
+  return value as Record<string, unknown>;
+}
+
+test("an ai-proposal event appends frozen with every key, at schemaVersion 1 (D-26)", () => {
+  const [appended, ...rest] = appendGovernanceEvent([], aiProposal());
+  assert.equal(rest.length, 0);
+  assert.deepEqual(appended, {
+    schemaVersion: 1,
+    kind: "ai-proposal",
+    at: AT,
+    by: ACTOR,
+    runId: RUN_ID,
+    scope: "questionnaire",
+    instruction: INSTRUCTION,
+    providerName: "deterministic-questionnaire-proposals",
+    providerVersion: "1",
+    itemCount: 3,
+  });
+  assert.equal(Object.isFrozen(appended), true, "AI_PROPOSAL_EVENT_MUTABLE");
+  assert.equal(GOVERNANCE_LOG_SCHEMA_VERSION, 1, "SCHEMA_VERSION_BUMPED");
+  // The default task and the plain-language preset stand in for an instruction; nothing proposed is a result too.
+  assert.equal(keysOf(parseGovernanceEvent(aiProposal({ instruction: undefined, instructionSource: "default-task", itemCount: 0 }))).instructionSource, "default-task");
+  const rewrite = keysOf(parseGovernanceEvent(aiProposal({
+    scope: "question",
+    instruction: undefined,
+    instructionSource: "plain-language-preset",
+    questionKey: "hosting",
+    questionText: "Where will the service be hosted?",
+    itemCount: 1,
+  })));
+  assert.equal(rewrite.questionKey, "hosting");
+  assert.equal(rewrite.instructionSource, "plain-language-preset");
+  assert.equal(String(keysOf(parseGovernanceEvent(aiProposal({ instruction: "a".repeat(500), itemCount: 30 }))).instruction).length, 500);
+});
+
+test("the closed parser refuses an ai-proposal outside the amendment's bounds and AI keys on kinds that may not carry them", () => {
+  const refused: Array<[string, Record<string, unknown>]> = [
+    ["BOTH_INSTRUCTION_AND_SOURCE", aiProposal({ instructionSource: "default-task" })],
+    ["NEITHER_INSTRUCTION_NOR_SOURCE", aiProposal({ instruction: undefined })],
+    ["UNKNOWN_INSTRUCTION_SOURCE", aiProposal({ instruction: undefined, instructionSource: "analyst" })],
+    ["OVERLONG_INSTRUCTION", aiProposal({ instruction: "a".repeat(501) })],
+    ["BLANK_INSTRUCTION", aiProposal({ instruction: "   " })],
+    ["ITEM_COUNT_ABOVE_30", aiProposal({ itemCount: 31 })],
+    ["NEGATIVE_ITEM_COUNT", aiProposal({ itemCount: -1 })],
+    ["FRACTIONAL_ITEM_COUNT", aiProposal({ itemCount: 1.5 })],
+    ["MISSING_ITEM_COUNT", aiProposal({ itemCount: undefined })],
+    ["MISSING_RUN", aiProposal({ runId: undefined })],
+    ["OVERLONG_RUN", aiProposal({ runId: "a".repeat(256) })],
+    ["UNKNOWN_SCOPE", aiProposal({ scope: "assessment" })],
+    ["MISSING_PROVIDER", aiProposal({ providerName: undefined })],
+    ["OVERLONG_PROVIDER_VERSION", aiProposal({ providerVersion: "a".repeat(256) })],
+    ["QUESTION_SCOPE_WITHOUT_QUESTION", aiProposal({ scope: "question" })],
+    ["QUESTION_SCOPE_WITHOUT_TEXT", aiProposal({ scope: "question", questionKey: "hosting" })],
+    ["QUESTIONNAIRE_SCOPE_NAMING_A_QUESTION", aiProposal({ questionKey: "hosting", questionText: "Where?" })],
+    ["AI_EDITED_ON_AI_PROPOSAL", aiProposal({ aiEdited: false })],
+    ["ITEM_KEY_ON_AI_PROPOSAL", aiProposal({ itemKey: "i-1" })],
+    ["RUN_ON_RELEASED", event({ runId: RUN_ID })],
+    ["ITEM_COUNT_ON_RELEASED", event({ itemCount: 1 })],
+    ["INSTRUCTION_ON_RETURNED", event({ kind: "returned-to-review", reason: "Clarify.", instruction: INSTRUCTION })],
+    ["PROVIDER_ON_QUESTION_ADDED", event({ kind: "question-added", questionKey: "hosting", providerName: "deterministic" })],
+  ];
+  for (const [diagnostic, value] of refused) {
+    assert.throws(() => appendGovernanceEvent([], JSON.parse(JSON.stringify(value))), GovernanceLogError, `GOVERNANCE_EVENT_ACCEPTED_${diagnostic}`);
+  }
+});
+
+test("the analyst projection of an ai-proposal carries every AI key and the initiating analyst's name", () => {
+  const source = questionnaire({ governanceLog: [
+    aiProposal({ at: "2026-09-03T00:00:00.000Z" }),
+    aiProposal({
+      at: "2026-09-04T00:00:00.000Z",
+      scope: "question",
+      instruction: undefined,
+      instructionSource: "plain-language-preset",
+      questionKey: "service-name",
+      questionText: "What is the name of the service?",
+      itemCount: 1,
+    }),
+  ] });
+  const [requested, rewrite] = projectGovernanceEvents(source, "analyst", (documentId) => (documentId === ACTOR ? "Bob Doe" : null));
+  assert.deepEqual(requested, {
+    kind: "ai-proposal",
+    at: "2026-09-03T00:00:00.000Z",
+    by: { documentId: ACTOR, displayName: "Bob Doe" },
+    runId: RUN_ID,
+    scope: "questionnaire",
+    instruction: INSTRUCTION,
+    providerName: "deterministic-questionnaire-proposals",
+    providerVersion: "1",
+    itemCount: 3,
+  }, "ANALYST_PROJECTION_LOST_AN_AI_KEY");
+  assert.deepEqual(rewrite, {
+    kind: "ai-proposal",
+    at: "2026-09-04T00:00:00.000Z",
+    by: { documentId: ACTOR, displayName: "Bob Doe" },
+    questionKey: "service-name",
+    questionText: "What is the name of the service?",
+    runId: RUN_ID,
+    scope: "question",
+    instructionSource: "plain-language-preset",
+    providerName: "deterministic-questionnaire-proposals",
+    providerVersion: "1",
+    itemCount: 1,
+  }, "ANALYST_PROJECTION_LOST_A_REWRITE_KEY");
+});
+
+/*
+ * Phase 15 (D-26, D-07, D-09): a confirmation names its run, item and whether the analyst edited it; an Undo adds
+ * `aiUndo`; an undone removal restores the question. The Requestor's history never carries an AI kind or key, and a
+ * confirmation and its Undo inside one analyst-review round leave no trace there.
+ */
+function confirmation(kind: string, itemKey: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return event({ kind, questionKey: `question-${itemKey}`, questionText: "Who supports the service offshore?", runId: RUN_ID, itemKey, aiEdited: false, ...overrides });
+}
+
+/* The pure Requestor projection of a stored log, read as plain keys. */
+function projectForRequestor(events: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+  return projectGovernanceEventsForRequestor(parseGovernanceLog(events)).map(keysOf);
+}
+
+test("a confirmation's question change carries its run, item and edit flag together, and a restored question its key", () => {
+  assert.equal(keysOf(parseGovernanceEvent(confirmation("question-added", "i-1"))).aiEdited, false);
+  assert.equal(keysOf(parseGovernanceEvent(confirmation("question-edited", "i-2", { aiEdited: true, aiUndo: true }))).aiUndo, true);
+  assert.equal(parseGovernanceEvent(event({ kind: "question-restored", questionKey: "hosting" })).kind, "question-restored");
+  assert.equal(keysOf(parseGovernanceEvent(event({ kind: "question-restored", questionKey: "hosting", questionText: "Where?", runId: RUN_ID, itemKey: "i-3", aiEdited: false, aiUndo: true }))).itemKey, "i-3");
+  assert.equal(keysOf(parseGovernanceEvent(event({ kind: "regenerated", instruction: INSTRUCTION }))).instruction, INSTRUCTION);
+  assert.equal(keysOf(parseGovernanceEvent(event({ kind: "regenerated", instructionSource: "default-task" }))).instructionSource, "default-task");
+  const refused: Array<[string, Record<string, unknown>]> = [
+    ["ITEM_WITHOUT_RUN", defined(confirmation("question-added", "i-1", { runId: undefined }))],
+    ["RUN_WITHOUT_ITEM", defined(confirmation("question-added", "i-1", { itemKey: undefined }))],
+    ["CONFIRMATION_WITHOUT_EDIT_FLAG", defined(confirmation("question-deleted", "i-1", { aiEdited: undefined }))],
+    ["ITEM_KEY_OUTSIDE_I_1_TO_I_30", confirmation("question-edited", "i-31")],
+    ["UNDO_FALSE", confirmation("question-edited", "i-1", { aiUndo: false })],
+    ["UNDO_ALONE", event({ kind: "question-edited", questionKey: "hosting", aiUndo: true })],
+    ["RESTORED_WITHOUT_QUESTION", event({ kind: "question-restored" })],
+    ["RESTORED_ITEM_WITHOUT_RUN", event({ kind: "question-restored", questionKey: "hosting", itemKey: "i-1", aiUndo: true })],
+    ["REGENERATED_WITH_BOTH", event({ kind: "regenerated", instruction: INSTRUCTION, instructionSource: "default-task" })],
+    ["REGENERATED_WITH_PRESET", event({ kind: "regenerated", instructionSource: "plain-language-preset" })],
+    ["REGENERATED_WITH_RUN", event({ kind: "regenerated", runId: RUN_ID })],
+  ];
+  for (const [diagnostic, value] of refused) {
+    assert.throws(() => parseGovernanceEvent(value), GovernanceLogError, `GOVERNANCE_EVENT_ACCEPTED_${diagnostic}`);
+  }
+});
+
+test("the Requestor projection drops AI requests, every AI key and a confirmation undone in the same round", () => {
+  const projected = projectForRequestor([
+    event({ kind: "released", at: "2026-09-01T00:00:00.000Z" }),
+    aiProposal({ at: "2026-09-02T00:00:00.000Z" }),
+    confirmation("question-added", "i-1", { at: "2026-09-03T00:00:00.000Z" }),
+    confirmation("question-deleted", "i-1", { at: "2026-09-04T00:00:00.000Z", aiUndo: true }),
+    confirmation("question-edited", "i-2", { at: "2026-09-05T00:00:00.000Z", aiEdited: true }),
+    event({ kind: "released", at: "2026-09-06T00:00:00.000Z" }),
+  ]);
+  assert.deepEqual(projected.map((entry) => entry.kind), ["released", "question-edited", "released"], "SAME_ROUND_PAIR_OR_AI_REQUEST_REACHED_THE_REQUESTOR");
+  for (const entry of projected) {
+    for (const key of ["runId", "itemKey", "aiEdited", "aiUndo", "scope", "instruction", "instructionSource", "providerName", "providerVersion", "itemCount"]) {
+      assert.equal(key in entry, false, `REQUESTOR_RECEIVED_AI_KEY_${key}`);
+    }
+  }
+  assert.equal(projected[1]?.questionKey, "question-i-2", "REQUESTOR_PROJECTION_DROPPED_A_KEPT_EVENT'S_OWN_KEYS");
+});
+
+test("the Requestor projection keeps a confirmation and its Undo when a release lies between them, not just the same round", () => {
+  const projected = projectForRequestor([
+    confirmation("question-added", "i-1", { at: "2026-09-03T00:00:00.000Z" }),
+    event({ kind: "released", at: "2026-09-04T00:00:00.000Z" }),
+    event({ kind: "returned-to-review", at: "2026-09-05T00:00:00.000Z", reason: "Undo the addition." }),
+    confirmation("question-deleted", "i-1", { at: "2026-09-06T00:00:00.000Z", aiUndo: true }),
+    // A second confirmation of the same item, undone before any release, leaves no trace.
+    confirmation("question-added", "i-1", { at: "2026-09-07T00:00:00.000Z", aiEdited: true }),
+    confirmation("question-deleted", "i-1", { at: "2026-09-08T00:00:00.000Z", aiEdited: true, aiUndo: true }),
+    // An Undo of another run's item does not pair.
+    confirmation("question-edited", "i-2", { at: "2026-09-09T00:00:00.000Z" }),
+    confirmation("question-edited", "i-2", { at: "2026-09-10T00:00:00.000Z", runId: "other-run", aiUndo: true }),
+  ]);
+  assert.deepEqual(projected.map((entry) => `${entry.kind}@${String(entry.at).slice(0, 10)}`), [
+    "question-added@2026-09-03",
+    "released@2026-09-04",
+    "returned-to-review@2026-09-05",
+    "question-deleted@2026-09-06",
+    "question-edited@2026-09-09",
+    "question-edited@2026-09-10",
+  ], "PAIRING_ACROSS_A_RELEASE_OR_ACROSS_RUNS");
+});
+
+test("an unpaired question-restored reaches the Requestor as a question change with kind and at only", () => {
+  const source = questionnaire({ governanceLog: [
+    confirmation("question-deleted", "i-1", { at: "2026-09-03T00:00:00.000Z" }),
+    event({ kind: "released", at: "2026-09-04T00:00:00.000Z" }),
+    event({ kind: "returned-to-review", at: "2026-09-05T00:00:00.000Z", reason: "Restore the question." }),
+    event({ kind: "question-restored", at: "2026-09-06T00:00:00.000Z", questionKey: "question-i-1", questionText: "Who supports the service offshore?", runId: RUN_ID, itemKey: "i-1", aiEdited: false, aiUndo: true }),
+    aiProposal({ at: "2026-09-07T00:00:00.000Z" }),
+  ] });
+  const requestor = projectGovernanceEvents(source, "requestor");
+  assert.deepEqual(requestor, [
+    { kind: "question-deleted", at: "2026-09-03T00:00:00.000Z" },
+    { kind: "released", at: "2026-09-04T00:00:00.000Z" },
+    { kind: "returned-to-review", at: "2026-09-05T00:00:00.000Z" },
+    { kind: "question-restored", at: "2026-09-06T00:00:00.000Z" },
+  ], "REQUESTOR_PROJECTION_OF_AI_EVENTS");
+  // The analyst keeps every event and every key.
+  const analyst = projectGovernanceEvents(source, "analyst");
+  assert.deepEqual(analyst.map((entry) => entry.kind), ["question-deleted", "released", "returned-to-review", "question-restored", "ai-proposal"]);
+  assert.deepEqual([analyst[3]?.runId, analyst[3]?.itemKey, analyst[3]?.aiEdited, analyst[3]?.aiUndo], [RUN_ID, "i-1", false, true], "ANALYST_LOST_THE_UNDO_SOURCE");
+  assert.equal(analyst[0]?.aiEdited, false, "ANALYST_LOST_THE_CONFIRMATION_SOURCE");
+});
+
+test("countAnalystChangesSinceGeneration counts a question-restored beside added, edited and deleted (D-09)", () => {
+  const T = "2026-09-10T00:00:00.000Z";
+  assert.equal(countAnalystChangesSinceGeneration([
+    event({ kind: "question-restored", at: "2026-09-09T00:00:00.000Z", questionKey: "before" }),
+    event({ kind: "question-restored", at: "2026-09-11T00:00:00.000Z", questionKey: "hosting", runId: RUN_ID, itemKey: "i-1", aiEdited: false, aiUndo: true }),
+    aiProposal({ at: "2026-09-11T00:00:01.000Z" }),
+  ], T), 1, "QUESTION_RESTORED_NOT_COUNTED_OR_AI_REQUEST_COUNTED");
+  assert.deepEqual(
+    projectAnalystRevision(questionnaire({ generatedDate: T, governanceLog: [
+      confirmation("question-added", "i-1", { at: "2026-09-11T00:00:00.000Z" }),
+      confirmation("question-deleted", "i-1", { at: "2026-09-11T00:00:01.000Z", aiUndo: true }),
+      event({ kind: "question-restored", at: "2026-09-11T00:00:02.000Z", questionKey: "hosting" }),
+    ] })).analystChangesSinceGeneration,
+    3,
+    "CONFIRMATIONS_AND_UNDOS_NOT_ANALYST_CHANGES",
+  );
 });

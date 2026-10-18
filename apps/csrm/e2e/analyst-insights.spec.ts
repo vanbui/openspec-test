@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { createSubmittedRequest } from './helpers/requests';
+
 /*
  * Phase 7 browser proofs. Plans 05, 07 and 08 add one slice each (alerts, reports, the analyst
  * dashboard). Plan 09 adds the cross-screen analyst journey, which also opens every report, and one
@@ -17,6 +19,8 @@ const fixture = {
     critical: 'RSK-E2E-P7-CRITICAL-001',
     closed: 'RSK-E2E-P7-CLOSED-001',
     released: 'RSK-E2E-P7-RELEASED-001',
+    /** D-45: the one released, open Risk whose treatment action is Accept, rated Moderate. */
+    accepted: 'RSK-E2E-P7-ACCEPTED-001',
   },
   requests: {
     overdue: 'RAR-E2E-P7-OVERDUE-001',
@@ -28,19 +32,23 @@ const fixture = {
 } as const;
 
 /*
- * The four reports as the copy map and the served definitions name them. Together `tableSections`
- * and `alertSections` are every section a report renders. A table section's table is the text
- * equivalent of its chart (or, for the cross-tab, the section itself); an alert section lists shared
- * alert rows, so it is proved by a Phase 7 fixture row instead of a table.
+ * The four reports as the copy map and the served definitions name them. Together `tableSections`,
+ * `alertSections` and `coverageSections` are every section a report renders. A table section's table
+ * is the text equivalent of its chart (or, for the cross-tab, the section itself); an alert section
+ * lists shared alert rows, so it is proved by a Phase 7 fixture row instead of a table. A coverage
+ * section ranks records that may not exist: the most exposed Information Systems count released
+ * High and Critical Risks only (D-42), and the seed's one released Critical Risk impacts no system,
+ * so the section shows either its table or its coverage note.
  */
 const reports = [
   {
     key: 'risk-exposure',
     title: 'Risk exposure',
     documentTitle: 'Risk Exposure Report | IdamBox CSRM',
-    tiles: 3,
-    tableSections: ['Inherent and residual rating', 'Residual rating by treatment status', 'Most exposed Information Systems'],
+    tiles: 5,
+    tableSections: ['Inherent and residual rating', 'Residual rating by treatment status', 'Under assessment'],
     alertSections: [],
+    coverageSections: ['Most exposed Information Systems'],
   },
   {
     key: 'treatment-performance',
@@ -49,6 +57,7 @@ const reports = [
     tiles: 3,
     tableSections: ['Due state', 'Treatment status'],
     alertSections: ['Most overdue treatments'],
+    coverageSections: [],
   },
   {
     key: 'assessment-throughput',
@@ -57,6 +66,7 @@ const reports = [
     tiles: 2,
     tableSections: ['Released per month', 'Assessment Requests by lifecycle state'],
     alertSections: [],
+    coverageSections: [],
   },
   {
     key: 'control-effectiveness',
@@ -65,6 +75,7 @@ const reports = [
     tiles: 2,
     tableSections: ['Implementation status', 'Effectiveness rating'],
     alertSections: [],
+    coverageSections: [],
   },
 ] as const;
 
@@ -168,7 +179,7 @@ async function queueRowValue(row: Locator): Promise<number> {
   return value;
 }
 
-/* The analyst Home's widgets after Needs action, in D-18 order (UI-SPEC §5.3, E6). */
+/* The analyst Home's widgets after Needs action, in D-18 order, ending with Your own requests (UI-SPEC §5.3, E6). */
 const dashboardWidgets = [
   'Review queue',
   'Treatments due',
@@ -177,6 +188,7 @@ const dashboardWidgets = [
   'Risk exposure',
   'High and Critical residual Risks',
   'Recent activity',
+  'Your own requests',
 ] as const;
 
 /** The desktop row whose record link is `identifier`, paging forward through the list if needed. */
@@ -199,12 +211,12 @@ test('analyst alerts show the Phase 7 fixture conditions with actor-correct sour
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, 'Security Analyst');
 
-  // The analyst reaches Alerts from the Reports navigation group.
-  const reportsGroup = page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('group', { name: 'Reports' });
-  await reportsGroup.getByRole('link', { name: 'Alerts', exact: true }).click();
+  // The analyst reaches Alerts from the Oversight navigation section.
+  const oversight = page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('group', { name: 'Oversight' });
+  await oversight.getByRole('link', { name: /^Alerts\b/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Alerts' })).toBeVisible();
   await expect(page).toHaveTitle('Alerts | IdamBox CSRM');
-  await expect(reportsGroup.getByRole('link', { name: 'Alerts', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(oversight.getByRole('link', { name: /^Alerts\b/ })).toHaveAttribute('aria-current', 'page');
 
   await page.goto('/app/alerts?kind=risk-treatment-overdue&pageSize=50');
   await expect(page.getByRole('combobox', { name: 'Filter by alert type' })).toHaveValue('risk-treatment-overdue');
@@ -286,12 +298,12 @@ test('the navigation sheet scrolls at 375×667 so every analyst item and the rol
   await expect(sheet).toBeVisible();
   // The analyst's sheet is taller than the viewport, so the sheet itself must scroll.
   expect(await sheet.evaluate((element) => element.scrollHeight > element.clientHeight), 'the sheet overflows 667px and scrolls').toBe(true);
-  await expect(sheet.getByRole('group', { name: 'Reports' }).getByRole('link', { name: 'Alerts', exact: true })).toBeVisible();
+  await expect(sheet.getByRole('group', { name: 'Oversight' }).getByRole('link', { name: /^Alerts\b/ })).toBeVisible();
 
-  const lastAdministrationLink = sheet.getByRole('group', { name: 'Administration' }).getByRole('link').last();
-  await lastAdministrationLink.scrollIntoViewIfNeeded();
-  await expect(lastAdministrationLink).toBeVisible();
-  await expect(lastAdministrationLink).toBeInViewport();
+  const lastReferenceDataLink = sheet.getByRole('group', { name: 'Reference data' }).getByRole('link').last();
+  await lastReferenceDataLink.scrollIntoViewIfNeeded();
+  await expect(lastReferenceDataLink).toBeVisible();
+  await expect(lastReferenceDataLink).toBeInViewport();
 
   const roleSwitcher = sheet.getByRole('combobox', { name: 'Development role' });
   await roleSwitcher.scrollIntoViewIfNeeded();
@@ -310,27 +322,32 @@ test('analyst reaches the report index from Reports navigation, and report tiles
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, 'Security Analyst');
 
-  // The analyst reaches the index from the Reports navigation group, after Alerts.
-  const reportsGroup = page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('group', { name: 'Reports' });
-  await expect(reportsGroup.getByRole('link')).toHaveText(['Alerts', 'Reports']);
-  await reportsGroup.getByRole('link', { name: 'Reports', exact: true }).click();
+  // The analyst reaches the index from the Oversight navigation section: Risk register, Alerts, then Reports.
+  const oversight = page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('group', { name: 'Oversight' });
+  // Alerts carries the overdue count in its text and name when alerts are overdue (D-10), so it is anchored.
+  await expect(oversight.getByRole('link')).toHaveText(['Risk register', /^Alerts(, [\d,]+ overdue)?$/, 'Reports']);
+  for (const name of ['Risk register', /^Alerts\b/, 'Reports'] as const) {
+    await expect(oversight.getByRole('link', typeof name === 'string' ? { name, exact: true } : { name }), `Oversight holds ${name}`).toBeVisible();
+  }
+  await oversight.getByRole('link', { name: 'Reports', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Reports', exact: true })).toBeVisible();
   await expect(page).toHaveTitle('Reports | IdamBox CSRM');
-  await expect(reportsGroup.getByRole('link', { name: 'Reports', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(oversight.getByRole('link', { name: 'Reports', exact: true })).toHaveAttribute('aria-current', 'page');
   const index = page.getByRole('list', { name: 'Reports' });
   await expect(index.getByRole('listitem')).toHaveCount(reports.length);
   for (const report of reports) {
     await expect(index.getByRole('link', { name: report.title, exact: true }), `${report.key} card`).toHaveAttribute('href', `/app/reports/${report.key}`);
   }
 
-  // Risk exposure: the Critical residual tile equals the open, Critical-residual Risk Register list.
+  // Risk exposure: the Critical residual tile equals the released, open, Critical-residual Risk Register list (D-42).
   await page.goto('/app/reports/risk-exposure');
-  const criticalTile = page.getByRole('region', { name: 'Summary', exact: true }).getByRole('link', { name: /^Critical residual [\d,]+$/ });
+  const criticalTile = page.getByRole('region', { name: 'Summary', exact: true }).getByRole('link', { name: /^Critical residual [\d,]+ Released open Risks$/ });
   const criticalResidual = await tileValue(criticalTile);
   await criticalTile.click();
   await expect(page).toHaveURL(/\/app\/risks\?/);
   await expect(page).toHaveURL(/[?&]residualRating=Critical(&|$)/);
   await expect(page).toHaveURL(/[?&]state=open(&|$)/);
+  await expect(page).toHaveURL(/[?&]stage=released(&|$)/);
   await expect(page.getByRole('heading', { name: 'Risk Register' })).toBeVisible();
   expect(await displayedResultTotal(page), 'the Critical residual tile equals its Risk Register list').toBe(criticalResidual);
 
@@ -459,7 +476,18 @@ test('reports fit 375 to 1440 without page scroll: the cross-tab scrolls in its 
 test('analyst dashboard shows what needs attention and every tile equals the list it opens', async ({ page }) => {
   test.setTimeout(300_000);
   await page.setViewportSize({ width: 1440, height: 900 });
+  /*
+   * WR-603: Bob picks up a request Jane has just submitted, so his Needs your action holds work and its figure is
+   * compared with the list it opens, never read only at zero.
+   */
+  await signIn(page, 'Requestor');
+  const held = await createSubmittedRequest(page, { title: `Dashboard assigned work ${Date.now().toString(36)}`, assessmentType: 'BAU', businessCriticality: 'Low', dueDate: null });
+  await page.context().clearCookies();
   await signIn(page, 'Security Analyst');
+  await page.goto(`/app/review/requests/${encodeURIComponent(held.documentId)}`);
+  const assignment = page.getByRole('region', { name: 'Assignment' });
+  await assignment.getByRole('button', { name: `Pick up ${held.requestNumber}`, exact: true }).click();
+  await expect(assignment.getByText('Assigned to Bob Doe', { exact: true }), 'Bob holds a request that needs him').toBeVisible();
 
   // The analyst's Home is the review summary (D-16); the Home item reaches it from anywhere.
   const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
@@ -470,21 +498,36 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   await expect(homeItem).toHaveAttribute('aria-current', 'page');
   await expect(navigation.locator('[aria-current="page"]'), 'exactly one navigation item is current').toHaveCount(1);
 
-  // Needs action first: four tiles, then the seven widgets in reading order.
+  // Needs action first: four tiles, then the eight widgets in reading order, Your own requests last.
   const needsAction = page.getByRole('region', { name: 'Needs action', exact: true });
   await expect(needsAction.locator('[data-slot="kpi-tile"]'), 'the four Needs action tiles').toHaveCount(4);
   await expect(page.locator('[data-state-kind="error"]'), 'no unit failed').toHaveCount(0);
   await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(['Needs action', ...dashboardWidgets]);
 
-  // Requires my attention equals the default review queue it opens.
-  const requiresAttentionTile = needsAction.getByRole('link', { name: /^Requires my attention [\d,]+ / });
-  const requiresAttention = await tileValue(requiresAttentionTile);
-  await requiresAttentionTile.click();
-  await expect(page).toHaveURL(/\/app\/review\/requests(\?|$)/);
+  // E1 (Phase 13 D-15, changed deliberately): Needs your action is the viewer's own work and equals Assigned to me
+  // under Requires attention, the list it opens, which holds the request Bob picked up (WR-603).
+  const needsYourActionTile = needsAction.getByRole('link', { name: /^Needs your action [\d,]+ Requests assigned to you that need analyst action$/ });
+  const needsYourAction = await tileValue(needsYourActionTile);
+  expect(needsYourAction, 'the request Bob picked up needs him').toBeGreaterThanOrEqual(1);
+  // WR-603: the team's Requires attention row keeps the proof E1 replaced: it equals the Requests queue it opens.
+  const teamRow = page.getByRole('region', { name: 'Review queue', exact: true }).getByRole('link', { name: /^Requires attention: [\d,]+ / });
+  await expect(teamRow, 'the team’s Requires attention row').toHaveCount(1);
+  await expect(teamRow).toHaveAttribute('href', '/app/review/requests');
+  const teamRequiresAttention = await queueRowValue(teamRow);
+  await needsYourActionTile.click();
+  await expect(page).toHaveURL(/\/app\/review\/assigned\?queue=requires-attention$/);
+  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Assigned to me', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Filter by queue' })).toHaveValue('requires-attention');
-  await expect(navigation.getByRole('link', { name: 'Assessment Requests', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(navigation.getByRole('link', { name: /^Assigned to me\b/ })).toHaveAttribute('aria-current', 'page');
   await expect(homeItem, 'the Home item is not current on a review queue').not.toHaveAttribute('aria-current', 'page');
-  expect(await displayedResultTotal(page), 'the Requires my attention tile equals the review queue').toBe(requiresAttention);
+  expect(await displayedResultTotal(page), 'the Needs your action tile equals Assigned to me under Requires attention').toBe(needsYourAction);
+  await expect(page.getByRole('main').getByRole('link', { name: held.requestNumber, exact: true }), 'Assigned to me holds the request Bob picked up').toHaveCount(1);
+
+  await page.goto('/app');
+  await teamRow.click();
+  await expect(page).toHaveURL(/\/app\/review\/requests$/);
+  await expect(page.getByRole('combobox', { name: 'Filter by queue' })).toHaveValue('requires-attention');
+  expect(await displayedResultTotal(page), 'the team’s Requires attention row equals the Requests queue it opens').toBe(teamRequiresAttention);
 
   // Overdue equals the overdue alert list.
   await page.goto('/app');
@@ -497,14 +540,15 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   await expect(page.getByRole('combobox', { name: 'Filter by urgency' })).toHaveValue('overdue');
   expect(await displayedResultTotal(page), 'the Overdue tile equals its alert list').toBe(overdue);
 
-  // The Critical exposure row equals the open, Critical-residual Risk Register list.
+  // E22 (D-42): the Critical exposure row equals the released, open, Critical-residual Risk register list.
   await page.goto('/app');
-  const criticalRow = page.getByRole('region', { name: 'Risk exposure', exact: true }).getByRole('link', { name: /^Critical: [\d,]+ open Risks? by residual rating$/ });
+  const criticalRow = page.getByRole('region', { name: 'Risk exposure', exact: true }).getByRole('link', { name: /^Critical: [\d,]+ released open Risks? by residual rating$/ });
   const critical = await barValue(criticalRow);
   await criticalRow.click();
   await expect(page).toHaveURL(/\/app\/risks\?/);
   await expect(page).toHaveURL(/[?&]residualRating=Critical(&|$)/);
   await expect(page).toHaveURL(/[?&]state=open(&|$)/);
+  await expect(page).toHaveURL(/[?&]stage=released(&|$)/);
   await expect(page.getByRole('heading', { name: 'Risk Register' })).toBeVisible();
   expect(await displayedResultTotal(page), 'the Critical exposure row equals its Risk Register list').toBe(critical);
 
@@ -517,12 +561,12 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   const submitted = await queueRowValue(submittedRow);
   await submittedRow.click();
   await expect(page).toHaveURL(/\/app\/review\/questionnaires\?(.*&)?status=submitted(&|$)/);
-  await expect(page.getByRole('heading', { name: 'Questionnaire Review' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Questionnaires', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Filter by status' })).toHaveValue('submitted');
   expect(await displayedResultTotal(page), 'the Submitted row equals the submitted Questionnaire list').toBe(submitted);
 
-  // Every High and Critical row's Risk is in the open register it links to. Membership only: that
-  // list holds every open Risk, High and Critical first (the register has no multi-rating filter).
+  // E23 (D-42, D-37): every High and Critical row's Risk is in the released open list of its rating,
+  // which the footer's View Critical Risks and View High Risks open. Membership, read from the two lists.
   await page.goto('/app');
   const highCritical = page.getByRole('region', { name: 'High and Critical residual Risks', exact: true });
   const highCriticalLinks = highCritical.locator('a.record-link');
@@ -532,14 +576,35 @@ test('analyst dashboard shows what needs attention and every tile equals the lis
   const identifiers = await highCriticalLinks.allTextContents();
   expect(identifiers.some((identifier) => identifier.startsWith('RSK-E2E-P7-')), 'a Phase 7 fixture Risk is listed').toBe(true);
   expect(identifiers, 'a closed Risk never counts as exposure').not.toContain(fixture.risks.closed);
-  await highCritical.getByRole('link', { name: 'Open Risk Register' }).click();
-  await expect(page).toHaveURL(/\/app\/risks\?/);
-  await expect(page).toHaveURL(/[?&]state=open(&|$)/);
-  await expect(page).toHaveURL(/[?&]sort=residualRating(:|%3A)desc(&|$)/);
-  const register = page.getByRole('table', { name: 'Risk Register results' });
-  await expect(register).toBeVisible();
-  for (const identifier of identifiers) {
-    await expect(register.getByRole('link', { name: identifier, exact: true }), `${identifier} is in the open register`).toBeVisible();
+  // The seeded Critical Risk is under assessment, so the released list never shows it (D-42).
+  expect(identifiers, 'a Risk under assessment is never in the released list').not.toContain(fixture.risks.critical);
+  await expect(highCritical.getByRole('link', { name: 'Open Risk Register' }), 'E23: the footer no longer opens every open Risk').toHaveCount(0);
+  // Each row's rating, from its badge, so each identifier is looked for in the list of its own rating.
+  const rowsByRating: Record<'Critical' | 'High', string[]> = { Critical: [], High: [] };
+  for (const item of await highCritical.getByRole('list').getByRole('listitem').all()) {
+    const identifier = ((await item.locator('a.record-link').textContent()) ?? '').trim();
+    const rating = (await item.getByLabel(/^Severity: critical/).count()) > 0 ? 'Critical' : 'High';
+    rowsByRating[rating].push(identifier);
+  }
+  expect([...rowsByRating.Critical, ...rowsByRating.High].sort(), 'every row has a rating').toEqual(identifiers.map((identifier) => identifier.trim()).sort());
+  for (const rating of ['Critical', 'High'] as const) {
+    await page.goto('/app');
+    await highCritical.getByRole('link', { name: `View ${rating} Risks`, exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/risks\?/);
+    await expect(page).toHaveURL(new RegExp(`[?&]residualRating=${rating}(&|$)`));
+    await expect(page).toHaveURL(/[?&]state=open(&|$)/);
+    await expect(page).toHaveURL(/[?&]stage=released(&|$)/);
+    // A rating with no row may have an empty list, which renders no table: nothing to look for.
+    if (rowsByRating[rating].length === 0) continue;
+    // The released open list of one rating holds a few Risks; one page of 50 reads all of them.
+    await page.goto(`${page.url()}&pageSize=50`);
+    const register = page.getByRole('table', { name: 'Risk Register results' });
+    await expect(register).toBeVisible();
+    expect(await displayedResultTotal(page), `the released ${rating} list fits on one page`).toBeLessThanOrEqual(50);
+    const listed = (await register.locator('a.record-link').allTextContents()).map((identifier) => identifier.trim());
+    for (const identifier of rowsByRating[rating]) {
+      expect(listed, `${identifier} is in the released open ${rating} list`).toContain(identifier);
+    }
   }
 
   // Top alerts lists a fixture Risk; Recent activity names the Security Analyst who released a Risk Assessment.
@@ -590,8 +655,311 @@ test('the Top alerts widget fails independently', async ({ page }) => {
   // Every sibling still renders its own figures.
   await expect(page.getByRole('main').getByRole('alert'), 'only Top alerts failed').toHaveCount(1);
   await expect(page.getByRole('region', { name: 'Needs action', exact: true }).locator('[data-slot="kpi-tile"]')).toHaveCount(4);
-  await expect(page.getByRole('region', { name: 'Review queue', exact: true }).getByRole('link')).toHaveCount(6);
-  await expect(page.getByRole('region', { name: 'Risk exposure', exact: true }).getByRole('list', { name: 'Open contextual Risks by residual rating' })).toBeVisible();
+  // Phase 13 (D-15): the Assigned to you group's four rows and Waiting for pick-up join the six team rows.
+  await expect(page.getByRole('region', { name: 'Review queue', exact: true }).getByRole('link')).toHaveCount(11);
+  await expect(page.getByRole('region', { name: 'Risk exposure', exact: true }).getByRole('list', { name: 'Released open Risks by residual rating' })).toBeVisible();
+});
+
+/*
+ * DASH-03 (D-41, D-42, UI-SPEC §9.2): the open Risks under assessment are counted apart from the released
+ * rows, say why, and equal the register's under-assessment list. At 1440, desktop only.
+ */
+test('DASH03_UNDER_ASSESSMENT_APART: the analyst Home counts the Risks under assessment apart, equal to their list', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  const exposure = page.getByRole('region', { name: 'Risk exposure', exact: true });
+  await expect(exposure.getByText('Released Risks only. Open Risks by residual rating, with accepted Risks marked.', { exact: true })).toBeVisible();
+  const released = exposure.getByRole('list', { name: 'Released open Risks by residual rating' });
+  await expect(released).toBeVisible();
+  const underAssessment = exposure.getByRole('link', { name: /^Under assessment: [\d,]+ open Risks? not yet released$/ });
+  await expect(underAssessment, 'DASH03_UNDER_ASSESSMENT_ROW').toBeVisible();
+  await expect(exposure.getByText('Not yet released, so not counted above.', { exact: true }), 'DASH03_UNDER_ASSESSMENT_CAPTION').toBeVisible();
+  // Apart: the row sits below the released list, outside it, so the two stages are never one total.
+  await expect(released.getByRole('link', { name: /^Under assessment/ }), 'DASH03_UNDER_ASSESSMENT_OUTSIDE_THE_RELEASED_LIST').toHaveCount(0);
+  const [listBox, rowBox] = await Promise.all([released.boundingBox(), underAssessment.boundingBox()]);
+  expect(rowBox!.y, 'DASH03_UNDER_ASSESSMENT_BELOW_THE_RELEASED_ROWS').toBeGreaterThanOrEqual(listBox!.y + listBox!.height - 1);
+  // The seeded in-review assessment holds open Risks, so the figure is above zero.
+  const count = await queueRowValue(underAssessment);
+  expect(count, 'DASH03_UNDER_ASSESSMENT_COUNTS_THE_SEEDED_RISKS').toBeGreaterThan(0);
+
+  await underAssessment.click();
+  await expect(page).toHaveURL(/\/app\/risks\?/);
+  await expect(page).toHaveURL(/[?&]state=open(&|$)/);
+  await expect(page).toHaveURL(/[?&]stage=under-assessment(&|$)/);
+  await expect(page.getByText('Stage: Under assessment', { exact: true }), 'DASH03_UNDER_ASSESSMENT_CHIP').toBeVisible();
+  expect(await displayedResultTotal(page), 'DASH03_UNDER_ASSESSMENT_EQUALS_ITS_LIST').toBe(count);
+});
+
+/*
+ * D-41, D-45 (UI-SPEC §9.2, §9.5): the seeded released, open, accepted Moderate Risk is counted in the Moderate
+ * row's accepted link, which opens exactly the accepted released list, and the register marks it Released and
+ * Accepted. At 1440 the accepted link sits on its row's line.
+ */
+test('DASH03_ACCEPTED_SEED: the accepted seed Risk is in its rating’s accepted link and marked Released and Accepted', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  const exposure = page.getByRole('region', { name: 'Risk exposure', exact: true });
+  const moderateRow = exposure.getByRole('link', { name: /^Moderate: [\d,]+ released open Risks? by residual rating$/ });
+  const accepted = exposure.getByRole('link', { name: /^[\d,]+ accepted Moderate Risks?$/ });
+  await expect(accepted, 'DASH03_ACCEPTED_LINK').toBeVisible();
+  await expect(accepted).toHaveText(/^[\d,]+ accepted$/);
+  const acceptedCount = Number.parseInt(((await accepted.textContent()) ?? '').replace(/,/g, ''), 10);
+  expect(acceptedCount, 'DASH03_ACCEPTED_COUNTS_THE_SEED').toBeGreaterThan(0);
+  expect(acceptedCount, 'DASH03_ACCEPTED_IS_PART_OF_ITS_ROW').toBeLessThanOrEqual(await barValue(moderateRow));
+  // UI-SPEC §9.2 at 1440: the accepted link holds its row's line.
+  const [rowBox, acceptedBox] = await Promise.all([moderateRow.boundingBox(), accepted.boundingBox()]);
+  expect(acceptedBox!.y, 'DASH03_ACCEPTED_ON_ITS_ROW_LINE_AT_1440').toBeLessThan(rowBox!.y + rowBox!.height);
+  expect(acceptedBox!.y + acceptedBox!.height, 'DASH03_ACCEPTED_ON_ITS_ROW_LINE_AT_1440').toBeGreaterThan(rowBox!.y);
+  expect(acceptedBox!.x, 'DASH03_ACCEPTED_AFTER_ITS_ROW_AT_1440').toBeGreaterThanOrEqual(rowBox!.x + rowBox!.width - 1);
+
+  await accepted.click();
+  await expect(page).toHaveURL(/\/app\/risks\?/);
+  for (const parameter of [/[?&]residualRating=Moderate(&|$)/, /[?&]state=open(&|$)/, /[?&]stage=released(&|$)/, /[?&]treatmentAction=Accept(&|$)/]) {
+    await expect(page).toHaveURL(parameter);
+  }
+  expect(await displayedResultTotal(page), 'DASH03_ACCEPTED_EQUALS_ITS_LIST').toBe(acceptedCount);
+  const register = page.getByRole('table', { name: 'Risk Register results' });
+  const seededRow = register.getByRole('row').filter({ has: page.getByRole('link', { name: fixture.risks.accepted, exact: true }) });
+  await expect(seededRow, 'DASH03_ACCEPTED_SEED_LISTED').toHaveCount(1);
+  await expect(seededRow.getByText('Released', { exact: true }), 'DASH03_ACCEPTED_SEED_RELEASED').toBeVisible();
+  await expect(seededRow.getByText('Accepted', { exact: true }), 'DASH03_ACCEPTED_SEED_ACCEPTED').toBeVisible();
+});
+
+/*
+ * D-38, D-42 (UI-SPEC §9.3, §9.4): the Risk exposure report's Released open Risks, Accepted and Under assessment
+ * tiles each equal the register list of their own stage, and the treatment report's due window is the product's
+ * 14 days, its figure equal to the due-soon alert list.
+ */
+test('DASH03_REPORT_SCOPE: the exposure report counts each stage apart and the treatment report reads the 14-day window, each equal to its list', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  const stageTiles = [
+    { name: /^Released open Risks [\d,]+ Released Risks only$/, parameters: [/[?&]state=open(&|$)/, /[?&]stage=released(&|$)/], chip: 'Stage: Released' },
+    {
+      name: /^Accepted [\d,]+ Released Risks with the treatment action Accept$/,
+      parameters: [/[?&]state=open(&|$)/, /[?&]stage=released(&|$)/, /[?&]treatmentAction=Accept(&|$)/],
+      chip: 'Treatment action: Accept',
+    },
+    { name: /^Under assessment [\d,]+ Not yet released$/, parameters: [/[?&]state=open(&|$)/, /[?&]stage=under-assessment(&|$)/], chip: 'Stage: Under assessment' },
+  ] as const;
+  for (const stage of stageTiles) {
+    await page.goto('/app/reports/risk-exposure');
+    const summary = page.getByRole('region', { name: 'Summary', exact: true });
+    await expect(summary.getByRole('listitem'), 'DASH03_REPORT_FIVE_TILES').toHaveCount(5);
+    const tile = summary.getByRole('link', { name: stage.name });
+    await expect(tile, `DASH03_REPORT_TILE ${stage.chip}`).toBeVisible();
+    const value = await tileValue(tile);
+    // The seed holds released, accepted and under-assessment open Risks, so no figure is vacuous.
+    expect(value, `DASH03_REPORT_TILE_ABOVE_ZERO ${stage.chip}`).toBeGreaterThan(0);
+    await tile.click();
+    await expect(page).toHaveURL(/\/app\/risks\?/);
+    for (const parameter of stage.parameters) await expect(page).toHaveURL(parameter);
+    await expect(page.getByText(stage.chip, { exact: true }), `DASH03_REPORT_CHIP ${stage.chip}`).toBeVisible();
+    expect(await displayedResultTotal(page), `DASH03_REPORT_TILE_EQUALS_ITS_LIST ${stage.chip}`).toBe(value);
+  }
+
+  // The Under assessment section sits apart, after the three released sections, with its own table.
+  await page.goto('/app/reports/risk-exposure');
+  const sections = page.locator('[data-slot="report-section"] > h2');
+  await expect(sections).toHaveText(['Inherent and residual rating', 'Residual rating by treatment status', 'Most exposed Information Systems', 'Under assessment']);
+  const underAssessment = page.getByRole('region', { name: 'Under assessment', exact: true });
+  await expect(underAssessment.getByText('Open Risks in risk assessments not yet released, by residual rating. They are not counted in the sections above.', { exact: true })).toBeVisible();
+  await expect(underAssessment.getByRole('table', { name: 'Under assessment', exact: true }).getByRole('columnheader')).toHaveText(['Residual rating', 'Risks']);
+
+  // Treatment performance: the window is the product's 14 days, and its figure equals the due-soon alerts (D-38).
+  await page.goto('/app/reports/treatment-performance');
+  const treatmentSummary = page.getByRole('region', { name: 'Summary', exact: true });
+  const dueTile = treatmentSummary.locator('[data-slot="kpi-tile"]').filter({ has: page.getByText('Due within 14 days', { exact: true }) });
+  await expect(dueTile, 'DASH03_REPORT_DUE_WITHIN_14_DAYS').toHaveCount(1);
+  await expect(page.getByRole('table', { name: 'Due state', exact: true }).getByRole('rowheader', { name: 'Due within 14 days', exact: true })).toBeVisible();
+  await expect(page.getByText(/Due within 30 days/), 'DASH03_REPORT_NO_30_DAY_WINDOW').toHaveCount(0);
+  await expect(page.getByText('Open Risks whose treatment is not Complete, by target date. Includes Risks under assessment.', { exact: true })).toBeVisible();
+  const dueSoon = await tileValue(dueTile);
+  expect(dueSoon, 'DASH03_REPORT_DUE_SOON_ABOVE_ZERO').toBeGreaterThan(0);
+  await page.goto('/app/alerts?kind=risk-treatment-due-soon');
+  await expect(page.getByRole('combobox', { name: 'Filter by alert type' })).toHaveValue('risk-treatment-due-soon');
+  expect(await displayedResultTotal(page), 'DASH03_REPORT_DUE_SOON_EQUALS_THE_ALERT_LIST').toBe(dueSoon);
+});
+
+/** The figure a report table cell shows, linked or plain. */
+async function cellValue(cell: Locator): Promise<number> {
+  const text = await cell.textContent();
+  const value = Number.parseInt((text ?? '').replace(/,/g, ''), 10);
+  expect(Number.isSafeInteger(value), `the cell shows a whole number, not "${text}"`).toBe(true);
+  return value;
+}
+
+/** The body row of a report table whose row header reads `label`. */
+function reportTableRow(page: Page, table: string, label: string): Locator {
+  return page.getByRole('table', { name: table, exact: true }).getByRole('row')
+    .filter({ has: page.getByRole('rowheader', { name: label, exact: true }) });
+}
+
+/*
+ * UX-09 criterion 2 (D-35, UI-SPEC §8.2): the treatment report's Due later figure opens the register's
+ * dueState=later list, whose total equals it. A zero figure is plain text (X-10), so the proof then opens the
+ * same list by its URL and finds it as empty as the figure says.
+ */
+test('UX09_FIGURE_DUE_LATER: the treatment report’s Due later figure equals the Risk register list it opens', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  await page.goto('/app/reports/treatment-performance');
+  const row = reportTableRow(page, 'Due state', 'Due later');
+  await expect(row, 'UX09_FIGURE_DUE_LATER_ROW').toHaveCount(1);
+  const figure = await cellValue(row.getByRole('cell'));
+  if (figure > 0) {
+    const link = row.getByRole('link', { name: /^[\d,]+ Risks?: Due later$/ });
+    await expect(link, 'UX09_FIGURE_DUE_LATER_LINK').toHaveAttribute('href', '/app/risks?dueState=later');
+    await link.click();
+  } else {
+    await expect(row.getByRole('link'), 'UX09_FIGURE_DUE_LATER_ZERO_IS_PLAIN').toHaveCount(0);
+    await page.goto('/app/risks?dueState=later');
+  }
+  await expect(page).toHaveURL(/\/app\/risks\?dueState=later$/);
+  await expect(page.getByText('Due state: Due later', { exact: true }), 'UX09_FIGURE_DUE_LATER_CHIP').toBeVisible();
+  expect(await displayedResultTotal(page), 'UX09_FIGURE_DUE_LATER_EQUALS_ITS_LIST').toBe(figure);
+});
+
+/** The first figure link in a report table whose name matches `name`, with the figure it shows. */
+async function firstFigureLink(page: Page, table: string, name: RegExp, message: string): Promise<{ link: Locator; figure: number }> {
+  const links = page.getByRole('table', { name: table, exact: true }).getByRole('link', { name });
+  // Only a figure above zero links (X-10); the seed gives each of these tables at least one.
+  await expect(links.first(), `${message}_HAS_A_NON_ZERO_FIGURE`).toBeVisible();
+  const link = links.first();
+  const figure = await cellValue(link);
+  expect(figure, `${message}_FIGURE_ABOVE_ZERO`).toBeGreaterThan(0);
+  return { link, figure };
+}
+
+/*
+ * UX-09 criterion 2 (D-35, UI-SPEC §8.2, §9.3): a residual rating by treatment status figure opens the released
+ * open Risks with that rating and treatment status, and the register's total equals it.
+ */
+test('UX09_FIGURE_EXPOSURE_CELL: a residual rating by treatment status figure equals the Risk register list it opens', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  await page.goto('/app/reports/risk-exposure');
+  const { link, figure } = await firstFigureLink(
+    page,
+    'Residual rating by treatment status',
+    /^[\d,]+ Risks?: (Critical|High|Moderate|Low|Not rated), (Not Started|In Progress|Overdue|Complete|Not provided)$/,
+    'UX09_FIGURE_EXPOSURE_CELL',
+  );
+  await link.click();
+  await expect(page).toHaveURL(/\/app\/risks\?/);
+  for (const parameter of [/[?&]residualRating=[\w]+(&|$)/, /[?&]treatmentStatus=[\w+]+(&|$)/, /[?&]state=open(&|$)/, /[?&]stage=released(&|$)/]) {
+    await expect(page, 'UX09_FIGURE_EXPOSURE_CELL_FILTERS').toHaveURL(parameter);
+  }
+  await expect(page.getByText('Stage: Released', { exact: true }), 'UX09_FIGURE_EXPOSURE_CELL_CHIP').toBeVisible();
+  expect(await displayedResultTotal(page), 'UX09_FIGURE_EXPOSURE_CELL_EQUALS_ITS_LIST').toBe(figure);
+});
+
+/*
+ * D-35, D-39 (UI-SPEC §8.2): a month's released figure opens that month's released Risk Assessments, with the
+ * Released from and Released to chips, and the list's total equals it.
+ */
+test('UX09_FIGURE_THROUGHPUT_MONTH: a released month figure equals the Risk assessments list it opens', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  await page.goto('/app/reports/assessment-throughput');
+  const { link, figure } = await firstFigureLink(page, 'Released per month', /^[\d,]+ released in \w+ \d{4}$/, 'UX09_FIGURE_THROUGHPUT_MONTH');
+  await expect(link).toHaveAttribute('href', /^\/app\/review\/assessments\?status=approved&approvedFrom=\d{4}-\d{2}-01&approvedTo=\d{4}-\d{2}-\d{2}$/);
+  await link.click();
+  await expect(page).toHaveURL(/\/app\/review\/assessments\?status=approved&approvedFrom=\d{4}-\d{2}-01&approvedTo=\d{4}-\d{2}-\d{2}$/);
+  await expect(page.getByText(/^Released from \(UTC\): /), 'UX09_FIGURE_THROUGHPUT_MONTH_FROM_CHIP').toBeVisible();
+  await expect(page.getByText(/^Released to \(UTC\): /), 'UX09_FIGURE_THROUGHPUT_MONTH_TO_CHIP').toBeVisible();
+  expect(await displayedResultTotal(page), 'UX09_FIGURE_THROUGHPUT_MONTH_EQUALS_ITS_LIST').toBe(figure);
+});
+
+/*
+ * D-35 (UI-SPEC §8.2): a lifecycle figure opens the Requests queue's All requests view with that status, and the
+ * queue's total equals it.
+ */
+test('UX09_FIGURE_LIFECYCLE_ROW: a lifecycle figure equals the All requests queue it opens', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  await page.goto('/app/reports/assessment-throughput');
+  const { link, figure } = await firstFigureLink(page, 'Assessment Requests by lifecycle state', /^[\d,]+ requests?: .+$/, 'UX09_FIGURE_LIFECYCLE_ROW');
+  await link.click();
+  await expect(page).toHaveURL(/\/app\/review\/requests\?queue=all&status=[a-z-]+$/);
+  await expect(page.getByText(/^Queue: All requests$/), 'UX09_FIGURE_LIFECYCLE_ROW_QUEUE').toBeVisible();
+  expect(await displayedResultTotal(page), 'UX09_FIGURE_LIFECYCLE_ROW_EQUALS_ITS_LIST').toBe(figure);
+});
+
+/*
+ * D-36 (UI-SPEC §8.1 rule 5, §8.2): a count of mitigation controls never poses as an equal list. The
+ * implementation status row header opens the open Risks with that mitigation-control status, its name beginning
+ * with the status, and the figure beside it stays plain.
+ */
+test('UX09_FIGURE_CONTROL_ROW_HEADER: an implementation status row header opens the Risks with those mitigation controls', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, 'Security Analyst');
+
+  await page.goto('/app/reports/control-effectiveness');
+  const table = page.getByRole('table', { name: 'Implementation status', exact: true });
+  // The figures count mitigation controls, so none of them links; only the row headers do.
+  await expect(table.getByRole('cell').getByRole('link'), 'UX09_FIGURE_CONTROL_FIGURES_PLAIN').toHaveCount(0);
+  // A linked row header takes its link's name, which begins with the visible status (WCAG 2.5.3).
+  const header = table.getByRole('rowheader').getByRole('link', { name: 'Existing: view the Risks with Existing mitigation controls', exact: true });
+  await expect(header, 'UX09_FIGURE_CONTROL_ROW_HEADER_NAME').toBeVisible();
+  await expect(header).toHaveText('Existing');
+  await header.click();
+  await expect(page).toHaveURL(/\/app\/risks\?mitigationStatus=Existing&state=open$/);
+  await expect(page.getByText('Mitigation-control status: Existing', { exact: true }), 'UX09_FIGURE_CONTROL_ROW_HEADER_CHIP').toBeVisible();
+  await expect(page.getByText(/^[\d,]+ results?$/), 'UX09_FIGURE_CONTROL_ROW_HEADER_LIST').toBeVisible();
+  await page.goto('/app/risks?mitigationStatus=Existing&state=open&q=RSK-DEV-MUTABLE-001');
+  await expect(page.getByRole('link', { name: 'RSK-DEV-MUTABLE-001', exact: true }), 'Existing excludes the seeded Planned-control Risk').toHaveCount(0);
+});
+
+/*
+ * UI-SPEC §9.2 at 375 (plan 11-21's B1 walkthrough stays the backstop): the accepted link wraps beneath its
+ * row's count and no exposure row overflows its widget. This file is not on the mobile project's list, so the
+ * check sets the 375×812 viewport itself and runs in the desktop project only.
+ */
+test('the accepted link sits beneath its row’s count without overflow at a 375 viewport', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await signIn(page, 'Security Analyst');
+
+  const exposure = page.getByRole('region', { name: 'Risk exposure', exact: true });
+  const moderateRow = exposure.getByRole('link', { name: /^Moderate: [\d,]+ released open Risks? by residual rating$/ });
+  const accepted = exposure.getByRole('link', { name: /^[\d,]+ accepted Moderate Risks?$/ });
+  await accepted.scrollIntoViewIfNeeded();
+  await expect(accepted).toBeVisible();
+  const [countBox, acceptedBox, widgetBox] = await Promise.all([
+    moderateRow.locator('[data-slot="bar-chart-value"]').boundingBox(),
+    accepted.boundingBox(),
+    exposure.boundingBox(),
+  ]);
+  expect(acceptedBox!.y, 'the accepted link wraps beneath its row’s count at 375').toBeGreaterThanOrEqual(countBox!.y + countBox!.height - 1);
+  for (const item of await exposure.getByRole('listitem').all()) {
+    const box = await item.boundingBox();
+    expect(box!.x, 'an exposure row starts inside its widget at 375').toBeGreaterThanOrEqual(widgetBox!.x - 1);
+    expect(box!.x + box!.width, 'an exposure row ends inside its widget at 375').toBeLessThanOrEqual(widgetBox!.x + widgetBox!.width + 1);
+  }
+  expect(acceptedBox!.x + acceptedBox!.width, 'the accepted link ends inside its widget at 375').toBeLessThanOrEqual(widgetBox!.x + widgetBox!.width + 1);
+  const caption = exposure.getByText('Not yet released, so not counted above.', { exact: true });
+  const [underAssessmentBox, captionBox] = await Promise.all([
+    exposure.getByRole('link', { name: /^Under assessment: / }).boundingBox(),
+    caption.boundingBox(),
+  ]);
+  expect(captionBox!.y, 'the under-assessment caption sits beneath its row at 375').toBeGreaterThanOrEqual(underAssessmentBox!.y + underAssessmentBox!.height - 1);
+  await expectNoHorizontalOverflow(page, 'the analyst Home has no horizontal overflow at 375px');
 });
 
 /*
@@ -650,8 +1018,8 @@ test('a Security Analyst goes from the dashboard to an alert to its source recor
   const criticalRow = await findAlertRow(page, fixture.risks.critical);
   await expect(criticalRow.locator('[data-slot="badge"][data-urgency="attention"]'), 'the fixture row needs attention').toHaveText('Urgency: Needs attention');
 
-  // Every report opens with its text equivalents, from Reports navigation and back through the breadcrumb.
-  await navigation.getByRole('group', { name: 'Reports' }).getByRole('link', { name: 'Reports', exact: true }).click();
+  // Every report opens with its text equivalents, from the Oversight section and back through the breadcrumb.
+  await navigation.getByRole('group', { name: 'Oversight' }).getByRole('link', { name: 'Reports', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Reports', exact: true })).toBeVisible();
   const index = page.getByRole('list', { name: 'Reports' });
   await expect(index.getByRole('listitem')).toHaveCount(reports.length);
@@ -662,10 +1030,17 @@ test('a Security Analyst goes from the dashboard to an alert to its source recor
     await expect(page.getByText(/^Computed from current records as at \d{1,2} [A-Z][a-z]{2,4} \d{4}\.$/), `${report.key} as-at line`).toBeVisible();
     await expect(page.getByRole('region', { name: 'Summary', exact: true }).getByRole('listitem'), `${report.key} KPI strip`).toHaveCount(report.tiles);
     await expect(page.locator('[data-state-kind="error"]'), `${report.key} renders no error state`).toHaveCount(0);
-    await expect(page.locator('[data-slot="report-section"]'), `${report.key} renders every section`).toHaveCount(report.tableSections.length + report.alertSections.length);
+    await expect(page.locator('[data-slot="report-section"]'), `${report.key} renders every section`)
+      .toHaveCount(report.tableSections.length + report.alertSections.length + report.coverageSections.length);
     for (const name of report.tableSections) {
       const section = page.getByRole('region', { name, exact: true });
       await expect(section.getByRole('table', { name, exact: true }), `${report.key} · ${name} has a visible table`).toBeVisible();
+    }
+    for (const name of report.coverageSections) {
+      const section = page.getByRole('region', { name, exact: true });
+      const tableOrNote = section.getByRole('table', { name, exact: true })
+        .or(section.getByText(/^[\d,]+ High or Critical residual Risks? (has|have) no impacted Information System\.$/));
+      await expect(tableOrNote.first(), `${report.key} · ${name} shows its table or its coverage note`).toBeVisible();
     }
     for (const name of report.alertSections) {
       const section = page.getByRole('region', { name, exact: true });
@@ -694,10 +1069,11 @@ test('Requestor and Secondary Requestor see no analyst navigation and are refuse
     await signIn(page, role);
     const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
     await expect(navigation.getByRole('link', { name: 'Home', exact: true }), `${role} navigation rendered`).toBeVisible();
-    for (const item of ['Analyst dashboard', 'Alerts', 'Reports'] as const) {
-      await expect(navigation.getByRole('link', { name: item, exact: true }), `${role} has no ${item} link`).toHaveCount(0);
+    // Anchored, so a count in an Alerts link's name could not hide it (D-10).
+    for (const item of [/^Analyst dashboard\b/, /^Alerts\b/, /^Reports\b/]) {
+      await expect(navigation.getByRole('link', { name: item }), `${role} has no ${item} link`).toHaveCount(0);
     }
-    await expect(navigation.getByRole('group', { name: 'Reports' }), `${role} has no Reports group`).toHaveCount(0);
+    await expect(navigation.getByRole('group', { name: 'Oversight' }), `${role} has no Oversight section`).toHaveCount(0);
 
     for (const route of phase7Routes) {
       for (const url of [route.url, `${route.url}?__e2eState=populated`]) {

@@ -7,6 +7,9 @@ import {
   RiskRegisterQueryError,
 } from "../src/api/csrm-risk/services/risk-register-query";
 import {
+  applyActiveRisk,
+  applyDisclosableParent,
+  applyWithdrawnRisk,
   assertRiskRegisterScope,
   getRiskRegisterDetail,
   listRiskRegister,
@@ -15,6 +18,7 @@ import {
   type RiskRegisterDetailRepository,
   type RiskRegisterRepository,
 } from "../src/api/csrm-risk/services/risk-register";
+import { TREATMENT_DUE_STATES } from "../src/csrm/insights/treatment-due-state";
 
 /* The UTC calendar date every register read below is evaluated on. */
 const today = "2026-09-24";
@@ -100,17 +104,120 @@ test("the Risk Register parser accepts the complete flat UI contract", () => {
   }
 });
 
-test("the Risk Register parser accepts exactly the open and closed Risk states (D-36)", () => {
-  assert.deepEqual([...RISK_REGISTER_STATES], ["open", "closed"]);
+test("the Risk Register parser accepts exactly the open, closed and withdrawn Risk states (D-36, Phase 16 D-08)", () => {
+  assert.deepEqual([...RISK_REGISTER_STATES], ["open", "closed", "withdrawn"]);
   assert.equal(parseRiskRegisterQuery({ state: "open" }).filters.state, "open");
   assert.equal(parseRiskRegisterQuery({ state: "closed" }).filters.state, "closed");
+  // Phase 16 D-08: withdrawn Risks are listed only under this explicit value.
+  assert.equal(parseRiskRegisterQuery({ state: "withdrawn" }).filters.state, "withdrawn");
+  assert.deepEqual(parseRiskRegisterQuery({ state: "withdrawn", stage: "under-assessment" }).filters, { state: "withdrawn", stage: "under-assessment" });
   // Absent means both, so no state predicate is recorded at all.
   assert.equal("state" in parseRiskRegisterQuery({}).filters, false);
   assert.deepEqual(parseRiskRegisterQuery({ state: "open", residualRating: "High" }).filters, { state: "open", residualRating: "High" });
 
-  for (const invalid of ["Open", "CLOSED", "", " open", "all", "none", ["open", "closed"], ["open"], { $eq: "open" }, { $ne: "closed" }, null, true, 1]) {
+  for (const invalid of ["Open", "CLOSED", "Withdrawn", "withdrawn ", "active", "", " open", "all", "none", ["open", "closed"], ["open"], ["withdrawn"], { $eq: "open" }, { $ne: "closed" }, null, true, 1]) {
     assert.throws(() => parseRiskRegisterQuery({ state: invalid }), RiskRegisterQueryError, JSON.stringify(invalid));
   }
+});
+
+/*
+ * D-40, D-44: a Risk is released or under assessment, the two branches of the register's scope. The
+ * filter is a closed enum, so no other value narrows or widens the scope; absent lists both.
+ */
+test("the Risk Register parser accepts exactly the released and under-assessment stages (D-40, D-44)", () => {
+  const stageOf = (value: unknown) => (parseRiskRegisterQuery({ stage: value }).filters as Record<string, unknown>).stage;
+  assert.equal(stageOf("released"), "released");
+  assert.equal(stageOf("under-assessment"), "under-assessment");
+  // Absent means both stages, so no stage predicate is recorded at all.
+  assert.equal("stage" in parseRiskRegisterQuery({}).filters, false);
+  assert.deepEqual(
+    parseRiskRegisterQuery({ stage: "released", state: "open", residualRating: "Critical" }).filters,
+    { stage: "released", state: "open", residualRating: "Critical" },
+  );
+
+  for (const invalid of [
+    "closed", "", "Released", "RELEASED", " released", "under assessment", "under_assessment", "draft", "in-review", "all",
+    ["released"], ["released", "under-assessment"], { $eq: "released" }, null, true, 1,
+  ]) {
+    assert.throws(() => parseRiskRegisterQuery({ stage: invalid }), RiskRegisterQueryError, JSON.stringify(invalid));
+  }
+});
+
+/*
+ * D-02 item 3, D-44: the treatment action is the JDL's closed Accept or Treat. Case matters, as it does
+ * for every other register enum; absent lists every action, including none recorded.
+ */
+test("the Risk Register parser accepts exactly the Accept and Treat treatment actions (D-44)", () => {
+  const actionOf = (value: unknown) => (parseRiskRegisterQuery({ treatmentAction: value }).filters as Record<string, unknown>).treatmentAction;
+  assert.equal(actionOf("Accept"), "Accept");
+  assert.equal(actionOf("Treat"), "Treat");
+  assert.equal("treatmentAction" in parseRiskRegisterQuery({}).filters, false);
+  assert.deepEqual(
+    parseRiskRegisterQuery({ stage: "released", treatmentAction: "Accept", state: "open" }).filters,
+    { stage: "released", treatmentAction: "Accept", state: "open" },
+  );
+
+  for (const invalid of [
+    "accept", "ACCEPT", "treat", "Transfer", "Avoid", "", " Accept", "Accept ", "none",
+    ["Accept"], ["Accept", "Treat"], { $eq: "Accept" }, null, true, 1,
+  ]) {
+    assert.throws(() => parseRiskRegisterQuery({ treatmentAction: invalid }), RiskRegisterQueryError, JSON.stringify(invalid));
+  }
+});
+
+/*
+ * D-02 item 3, D-35, G-16: the due state is the one rule's closed vocabulary (treatment-due-state.ts), so a
+ * figure can open the Risks behind each due state; absent lists every Risk.
+ */
+test("the Risk Register parser accepts exactly the five treatment due states (D-35, G-16)", () => {
+  const dueStateOf = (value: unknown) => (parseRiskRegisterQuery({ dueState: value }).filters as Record<string, unknown>).dueState;
+  for (const dueState of TREATMENT_DUE_STATES) assert.equal(dueStateOf(dueState), dueState, dueState);
+  assert.equal("dueState" in parseRiskRegisterQuery({}).filters, false);
+  assert.deepEqual(
+    parseRiskRegisterQuery({ dueState: "later", stage: "released", state: "open" }).filters,
+    { dueState: "later", stage: "released", state: "open" },
+  );
+
+  for (const invalid of [
+    "Overdue", "OVERDUE", "due soon", "due_soon", "dueSoon", "", " overdue", "none", "all", "open",
+    ["overdue"], ["overdue", "later"], { $eq: "overdue" }, null, true, 1,
+  ]) {
+    assert.throws(() => parseRiskRegisterQuery({ dueState: invalid }), RiskRegisterQueryError, JSON.stringify(invalid));
+  }
+});
+
+/*
+ * D-02 item 3, D-35, research Pitfalls 11 and 21: every figure that counts Risks has a closed register value.
+ * "none" lists a rating or treatment status that is null or off its vocabulary, "any" any mitigation control,
+ * and impactedSystem a separate key whose one value is "none", never a documentId, refused beside a system.
+ */
+test("the Risk Register parser accepts the none, any, effectiveness and no-system figure filters (D-35)", () => {
+  const filtersOf = (value: Record<string, unknown>) => parseRiskRegisterQuery(value).filters as Record<string, unknown>;
+  assert.deepEqual(
+    filtersOf({ inherentRating: "none", residualRating: "none", treatmentStatus: "none" }),
+    { inherentRating: "none", residualRating: "none", treatmentStatus: "none" },
+  );
+  assert.equal(filtersOf({ mitigationStatus: "any" }).mitigationStatus, "any");
+  for (const rating of ["Effective", "Partially Effective", "Ineffective", "Not Assessed", "none"]) {
+    assert.equal(filtersOf({ mitigationEffectiveness: rating }).mitigationEffectiveness, rating, rating);
+  }
+  assert.equal(filtersOf({ impactedSystem: "none" }).impactedSystem, "none");
+  // system stays an opaque id: "none" there is a documentId search, not the no-system rule.
+  assert.deepEqual(filtersOf({ system: "none" }), { system: "none" });
+  for (const key of ["mitigationEffectiveness", "impactedSystem"]) {
+    assert.equal(key in parseRiskRegisterQuery({}).filters, false, key);
+  }
+
+  for (const [key, invalid] of [
+    ["inherentRating", "None"], ["residualRating", "NONE"], ["residualRating", "Not rated"], ["treatmentStatus", "Not provided"],
+    ["treatmentStatus", "none "], ["mitigationStatus", "Any"], ["mitigationStatus", "all"],
+    ["mitigationEffectiveness", "effective"], ["mitigationEffectiveness", "Not provided"], ["mitigationEffectiveness", ""],
+    ["mitigationEffectiveness", ["Effective"]], ["impactedSystem", "None"], ["impactedSystem", "all"], ["impactedSystem", ""],
+    ["impactedSystem", "system-document-04"], ["impactedSystem", ["none"]], ["impactedSystem", { $eq: "none" }],
+  ] as const) {
+    assert.throws(() => parseRiskRegisterQuery({ [key]: invalid }), RiskRegisterQueryError, `${key}=${JSON.stringify(invalid)}`);
+  }
+  assert.throws(() => parseRiskRegisterQuery({ impactedSystem: "none", system: "system-document-04" }), RiskRegisterQueryError, "IMPACTED_SYSTEM_WITH_SYSTEM");
 });
 
 test("the Risk Register parser accepts inclusive one-sided, closed, and equal date ranges", () => {
@@ -209,6 +316,22 @@ test("the register list requires a UTC calendar today before any repository read
   assert.equal(calls, 0, "INVALID_TODAY_TOUCHED_REPOSITORY");
 });
 
+test("the Accepted marker is served only for released, open Accept Risks", () => {
+  for (const [changes, expected] of [
+    [{ treatmentAction: "Accept" }, true],
+    [{ treatmentAction: "Accept", closureDate: "2026-09-20" }, false],
+    [{ treatmentAction: "Accept", treatmentStatus: "Complete" }, true],
+    [{ treatmentAction: "Treat" }, false],
+    // BE1-02: a withdrawn Risk is not open, so it is never accepted.
+    [{ treatmentAction: "Accept", withdrawnAt: "2026-09-10T08:00:00.000Z" }, false],
+    [{ treatmentAction: "Accept", withdrawnAt: null }, true],
+    [{ treatmentAction: "Accept", assessment: { documentId: "draft", assessmentNumber: "ASM-DRAFT", assessmentRequest: { title: "Draft" }, assessmentStatus: "draft", approvalDate: null, approver: null } }, false],
+  ] as const) {
+    const projected = projectRiskRegisterItem({ ...riskDocument("risk-a", "RSK-001"), assessment: { documentId: "released", assessmentNumber: "ASM-RELEASED", assessmentStatus: "approved", approvedBy: { documentId: "bob" }, approvalDate: "2026-09-20T10:00:00.000Z", assessmentRequest: { title: "Released" } }, ...changes }, today);
+    assert.equal((projected as unknown as Record<string, unknown>).accepted, expected, `ACCEPTED_OPEN_RELEASED_PREDICATE_${JSON.stringify(changes)}`);
+  }
+});
+
 test("the register list evaluates every row's due state on the today it is given", async () => {
   const repository: RiskRegisterRepository = {
     async count() { return 1; },
@@ -250,11 +373,39 @@ test("the register projection derives the D-04 treatment due state from explicit
   }
 });
 
-test("list uses one parsed filter model, bounded page IDs, and restores database order", async () => {
-  const observed: Array<{ operation: string; value: unknown }> = [];
+test("none-filtered legacy values project as null without changing stored facts or due state", async () => {
+  const legacy = {
+    ...riskDocument("risk-legacy", "RSK-LEGACY"),
+    inherentRating: "Extreme",
+    residualRating: "Severe",
+    treatmentStatus: "Deferred",
+    targetDate: "2026-09-23",
+  };
   const repository: RiskRegisterRepository = {
-    async count(filters: unknown) {
-      observed.push({ operation: "count", value: filters });
+    async count() { return 1; },
+    async selectPage() { return ["risk-legacy"]; },
+    async hydrate() { return [legacy]; },
+  };
+  for (const field of ["inherentRating", "residualRating", "treatmentStatus"]) {
+    const result = await listRiskRegister({ repository, state, query: { [field]: "none" }, today });
+    assert.deepEqual(
+      [result.data[0]?.inherentRating, result.data[0]?.residualRating, result.data[0]?.treatmentStatus],
+      [null, null, null],
+      field,
+    );
+    assert.equal(result.data[0]?.treatmentDueState, "overdue");
+    assert.equal(result.meta.pagination.total, 1);
+  }
+  assert.equal(legacy.inherentRating, "Extreme");
+  assert.equal(legacy.residualRating, "Severe");
+  assert.equal(legacy.treatmentStatus, "Deferred");
+});
+
+test("list uses one parsed filter model, bounded page IDs, and restores database order", async () => {
+  const observed: Array<{ operation: string; value: unknown; today?: unknown }> = [];
+  const repository: RiskRegisterRepository = {
+    async count(filters: unknown, evaluatedOn?: unknown) {
+      observed.push({ operation: "count", value: filters, today: evaluatedOn });
       return 3;
     },
     async selectPage(input: unknown) {
@@ -277,7 +428,8 @@ test("list uses one parsed filter model, bounded page IDs, and restores database
     today,
   });
 
-  assert.deepEqual(observed[0], { operation: "count", value: { q: "exposure", treatmentStatus: "Complete" } });
+  // The count and the page share the parsed filters and the list's today, which the dueState filter reads (G-16).
+  assert.deepEqual(observed[0], { operation: "count", value: { q: "exposure", treatmentStatus: "Complete" }, today });
   assert.deepEqual(observed[1], {
     operation: "page",
     value: {
@@ -285,6 +437,7 @@ test("list uses one parsed filter model, bounded page IDs, and restores database
       sort: { field: "inherentRating", direction: "desc" },
       offset: 10,
       limit: 10,
+      today,
     },
   });
   assert.deepEqual(observed[2], { operation: "hydrate", value: ["risk-c", "risk-a"] });
@@ -330,16 +483,19 @@ test("register projection is a closed positive allowlist", () => {
     closureDate: null,
   }, today);
 
-  // The nine Phase 5 keys plus the server-derived treatment due state (D-26); closureDate
-  // is read to derive it but never disclosed.
+  // The nine Phase 5 keys, the server-derived treatment due state (D-26), the parent's stage and the
+  // recorded treatment action (D-44); closureDate is read to derive the due state but never disclosed.
   assert.deepEqual(Object.keys(projected).sort(), [
+    "accepted",
     "assessment",
     "documentId",
     "inherentRating",
     "residualRating",
     "riskNumber",
     "riskStatement",
+    "stage",
     "targetDate",
+    "treatmentAction",
     "treatmentDueState",
     "treatmentOwner",
     "treatmentStatus",
@@ -348,6 +504,57 @@ test("register projection is a closed positive allowlist", () => {
   assert.deepEqual(projected.treatmentOwner, { documentId: "treatment-owner", displayName: "Treatment Owner" });
   assert.deepEqual(projected.assessment, { documentId: "assessment-1", assessmentNumber: "ASM-001", title: "Assessment title" });
   assert.doesNotMatch(JSON.stringify(projected), /secret|email|createdAt|updatedAt|\"id\":|controlImplementations|closureDate/i);
+});
+
+/*
+ * D-40, D-44: each row says which branch of the register's scope it is in, decided from the populated
+ * parent exactly as the detail's parent gate decides it. A parent in neither branch cannot be listed,
+ * so a row built from one is a data defect, refused without a partial page.
+ */
+test("register rows carry the recorded treatment action, Accept, Treat or none (D-44)", () => {
+  const actionOf = (value: unknown) => (projectRiskRegisterItem({ ...riskDocument("risk-1", "RSK-001"), treatmentAction: value }, today) as Record<string, unknown>).treatmentAction;
+  assert.equal(actionOf("Accept"), "Accept");
+  assert.equal(actionOf("Treat"), "Treat");
+  assert.equal(actionOf(null), null);
+  assert.equal(actionOf(undefined), null);
+  // CR-101, WR-103: a stored value outside the JDL's enumeration (legacy or directly written data) is served in the
+  // contract's "none recorded" form, as an off-vocabulary rating or status is, so it never fails the page.
+  for (const legacy of ["accept", "Transfer", "", 1, { value: "Accept" }]) {
+    assert.equal(actionOf(legacy), null, `LEGACY_TREATMENT_ACTION_SERVED_${JSON.stringify(legacy)}`);
+  }
+});
+
+test("register rows carry the parent's stage: released, or under assessment for a draft or in-review parent", () => {
+  const withParent = (facts: Record<string, unknown>) => {
+    const document = riskDocument("risk-1", "RSK-001");
+    document.assessment = { ...(document.assessment as Record<string, unknown>), ...facts };
+    return document;
+  };
+  const stageOf = (facts: Record<string, unknown>) => (projectRiskRegisterItem(withParent(facts), today) as Record<string, unknown>).stage;
+
+  assert.equal(stageOf({ assessmentStatus: "draft", approvedBy: null, approvalDate: null }), "under-assessment");
+  assert.equal(stageOf({ assessmentStatus: "in-review", approvedBy: null, approvalDate: null }), "under-assessment");
+  assert.equal(
+    stageOf({ assessmentStatus: "approved", approvedBy: { documentId: "analyst-1" }, approvalDate: "2026-08-30T00:00:00.000Z" }),
+    "released",
+  );
+
+  for (const partial of [
+    { assessmentStatus: "approved", approvedBy: null, approvalDate: null },
+    { assessmentStatus: "in-review", approvedBy: { documentId: "analyst-1" }, approvalDate: null },
+    { assessmentStatus: "in-review", approvedBy: null, approvalDate: "2026-08-30T00:00:00.000Z" },
+    { assessmentStatus: "approved", approvedBy: { documentId: "analyst-1" }, approvalDate: null },
+    { assessmentStatus: "approved", approvedBy: null, approvalDate: "2026-08-30T00:00:00.000Z" },
+    { assessmentStatus: "draft", approvedBy: { documentId: "analyst-1" }, approvalDate: "2026-08-30T00:00:00.000Z" },
+    { assessmentStatus: "closed", approvedBy: null, approvalDate: null },
+    { assessmentStatus: undefined, approvedBy: null, approvalDate: null },
+  ]) {
+    assert.throws(
+      () => projectRiskRegisterItem(withParent(partial), today),
+      (error: unknown) => error instanceof RiskRegisterError && error.status === 400,
+      `PARTIAL_PARENT_LISTED_${JSON.stringify(partial)}`,
+    );
+  }
 });
 
 test("detail scope is asserted before the caller-selected Risk identifier is looked up", async () => {
@@ -377,9 +584,11 @@ test("detail projects every Risk group and bounded relation summary as one close
     "inherentRatingRationale", "isExempted", "issueStatement", "parentLock", "potentialImpact", "residualLikelihood",
     "residualRating", "residualRatingRationale", "riskCategory", "riskCause", "riskCommunicationDate", "riskNumber",
     "riskOwner", "riskStatement", "riskSubCategory", "riskType", "riskVelocity", "targetDate", "treatmentAction",
-    "treatmentOwner", "treatmentPlan", "treatmentResolveDate", "treatmentStatus",
+    "treatmentOwner", "treatmentPlan", "treatmentResolveDate", "treatmentStatus", "withdrawal",
   ].sort());
   assert.equal(detail.parentLock, "mutable");
+  // Phase 16 D-45: an active Risk carries no withdrawal block.
+  assert.equal(detail.withdrawal, null);
   assert.deepEqual(detail.riskType, { documentId: "risk-type-1", name: "Internet exposure", description: "External attack surface" });
   assert.deepEqual(detail.riskOwner, { documentId: "owner-1", displayName: "Risk Owner" });
   assert.deepEqual(detail.treatmentOwner, { documentId: "treatment-owner-1", displayName: "Treatment Owner" });
@@ -398,6 +607,82 @@ test("detail projects every Risk group and bounded relation summary as one close
     reviewDate: "2027-08-01",
   }]);
   assert.doesNotMatch(JSON.stringify(detail), /secret@example|username|createdAt|updatedAt|publishedAt|createdBy|updatedBy|requestor|"id":/i);
+});
+
+/*
+ * CR-101: a Risk the register lists under "Not rated" or "Not provided" because a stored value is off its
+ * vocabulary must open too. Every closed value of the detail is served inside its published enumeration, an
+ * off-vocabulary one as not provided (null), so the closed client parser never refuses the record.
+ */
+test("detail serves an off-vocabulary closed value as not provided, so a legacy record opens", async () => {
+  const legacy = {
+    ...detailRiskDocument(),
+    dataClassification: "Secret",
+    inherentRating: "Extreme",
+    residualRating: "Severe",
+    controlEffectiveness: "Mostly Effective",
+    riskVelocity: "Glacial",
+    treatmentAction: "accept",
+    treatmentStatus: "Deferred",
+  };
+  const implementation = { ...detailControlImplementation(), controlStatus: "Paused", effectivenessRating: "Unrated" };
+  const detail = await getRiskRegisterDetail({ repository: detailRepository(legacy, [implementation]), state, riskDocumentId: "risk-detail-1" });
+
+  for (const field of ["dataClassification", "inherentRating", "residualRating", "controlEffectiveness", "riskVelocity", "treatmentAction", "treatmentStatus"]) {
+    assert.equal(detail[field], null, `LEGACY_DETAIL_VALUE_SERVED_${field}`);
+  }
+  const [served] = detail.controlImplementations as Array<Record<string, unknown>>;
+  assert.equal(served.controlStatus, null, "LEGACY_CONTROL_STATUS_SERVED");
+  assert.equal(served.effectivenessRating, null, "LEGACY_EFFECTIVENESS_SERVED");
+  // The values inside the vocabulary are served as they are.
+  const current = await getRiskRegisterDetail({ repository: detailRepository(detailRiskDocument(), [detailControlImplementation()]), state, riskDocumentId: "risk-detail-1" });
+  assert.deepEqual(
+    [current.dataClassification, current.inherentRating, current.residualRating, current.controlEffectiveness, current.riskVelocity, current.treatmentAction, current.treatmentStatus],
+    ["Restricted", "High", "Moderate", "Effective", "High", "Treat", "In Progress"],
+  );
+});
+
+/*
+ * Phase 16 D-45, D-03 item 9: the register detail of a withdrawn Risk carries who withdrew it, when and why, as
+ * the analyst assessment detail does; its parent lock keeps its two values.
+ */
+test("detail of a withdrawn Risk carries its withdrawal block and keeps its parent lock (Phase 16 D-45)", async () => {
+  const withdrawn = {
+    ...detailRiskDocument(),
+    withdrawnAt: "2026-10-15T01:02:03.000Z",
+    withdrawnBy: { documentId: "analyst-1", displayName: "Bob Analyst", email: "secret@example.test" },
+    withdrawalReason: "Proposed under the wrong Risk Type",
+  };
+  const detail = await getRiskRegisterDetail({ repository: detailRepository(withdrawn, []), state, riskDocumentId: "risk-detail-1" });
+  assert.equal(detail.parentLock, "mutable");
+  assert.deepEqual(detail.withdrawal, {
+    at: "2026-10-15T01:02:03.000Z",
+    by: { documentId: "analyst-1", displayName: "Bob Analyst" },
+    reason: "Proposed under the wrong Risk Type",
+  });
+  assert.doesNotMatch(JSON.stringify(detail), /secret@example/);
+
+  // The withdrawing person can no longer be named: the block stays, with no person.
+  const unnamed = await getRiskRegisterDetail({
+    repository: detailRepository({ ...withdrawn, withdrawnBy: null }, []),
+    state,
+    riskDocumentId: "risk-detail-1",
+  });
+  assert.deepEqual(unnamed.withdrawal, { at: "2026-10-15T01:02:03.000Z", by: null, reason: "Proposed under the wrong Risk Type" });
+});
+
+/*
+ * Phase 16 D-13: the SQL form of the active-risk rule sits beside the disclosure predicate as two helpers that add
+ * one constant fragment on the outer alias `r`; the disclosure predicate itself never names the withdrawal fact, so
+ * the Withdrawn filter can still reach withdrawn rows.
+ */
+test("the active and withdrawn SQL helpers add one constant predicate on the outer Risk alias (Phase 16 D-13)", () => {
+  const recorded: string[] = [];
+  const recorder = { whereRaw(sql: string) { recorded.push(sql); return recorder; } };
+  assert.equal(applyActiveRisk(recorder), recorder);
+  assert.equal(applyWithdrawnRisk(recorder), recorder);
+  assert.deepEqual(recorded, ["r.withdrawn_at IS NULL", "r.withdrawn_at IS NOT NULL"]);
+  assert.doesNotMatch(applyDisclosableParent.toString(), /withdrawn/);
 });
 
 test("detail accepts only complete mutable or released parent facts", async () => {
@@ -483,11 +768,16 @@ function riskDocument(documentId: string, riskNumber: string): Record<string, un
     inherentRating: "High",
     residualRating: "Moderate",
     treatmentStatus: "In Progress",
+    treatmentAction: "Treat",
     treatmentOwner: { documentId: "treatment-owner", displayName: "Treatment Owner" },
     targetDate: "2027-01-31",
+    // A mutable parent (in review, no release facts), as hydrate populates it.
     assessment: {
       documentId: "assessment-1",
       assessmentNumber: "ASM-001",
+      assessmentStatus: "in-review",
+      approvedBy: null,
+      approvalDate: null,
       assessmentRequest: { title: "Assessment title" },
     },
   };

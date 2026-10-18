@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deriveRequestLifecycle, projectRequestLifecycle, REQUEST_LIFECYCLE_STEPS, type RequestLifecycleFacts } from "../src/api/csrm-assessment-request/services/request-lifecycle";
+import { deriveRequestLifecycle, holderFor, projectRequestLifecycle, REQUEST_LIFECYCLE_STEPS, type LifecycleKey, type RequestLifecycleFacts } from "../src/api/csrm-assessment-request/services/request-lifecycle";
 
 const statuses = ["draft", "submitted", "questionnaire-in-progress", "risk-assessment-drafted", "under-review", "approved", "closed"] as const;
 
@@ -66,4 +66,137 @@ test("projection supplies actor-specific actions and only authorised relation li
   assert.equal(unreleased.nextAction?.href, undefined, "REQUESTOR_CANNOT_OPEN_UNRELEASED_QUESTIONNAIRE");
   const assessment = projectRequestLifecycle({ documentId: "request-1", requestStatus: "risk-assessment-drafted", assessment: { documentId: "assessment-1", assessmentStatus: "draft", risks: [] } }, { csrmAuthorization: { assessmentRequestActor: "requestor" } });
   assert.equal(assessment.nextAction?.href, undefined, "REQUESTOR_CANNOT_OPEN_UNRELEASED_ASSESSMENT");
+});
+
+/*
+ * D-27, UI-SPEC §6.1: the next action names who holds the work. `actor` stays the viewer; `holder` is the
+ * D-20 party whose turn it is, the same for both viewers. The holder's own sentence is verb-first and links
+ * where the server can; the other party reads what the holder is doing, in words that name them, with no link.
+ */
+const at = "2026-01-01T00:00:00.000Z";
+const submittedQuestion = {
+  documentId: "question-a", questionText: "Question a", answerType: "Text",
+  options: { schemaVersion: 1, questionKey: "a", section: { key: "context", title: "Context", order: 0 }, order: 0, required: true },
+  answer: { schemaVersion: 1, value: "Yes", state: "submitted", updatedAt: at, submittedAt: at },
+};
+const generatedQuestionnaire = { documentId: "questionnaire-1", questionnaireNumber: "QUES-0001", releasedAt: null, questions: [] };
+const releasedQuestionnaire = { ...generatedQuestionnaire, releasedAt: at };
+const submittedQuestionnaire = { ...releasedQuestionnaire, questions: [submittedQuestion] };
+const readyRisk = {
+  riskStatement: "Customer data exposure", inherentLikelihood: "Likely", highestInherentConsequence: "Major",
+  residualLikelihood: "Unlikely", highestResidualConsequence: "Minor", inherentRating: "High", residualRating: "Low",
+  riskOwner: { documentId: "user-1" }, treatmentAction: "Accept", targetDate: "2026-12-31",
+};
+const draftAssessment = { documentId: "assessment-1", assessmentNumber: "ASM-0001", assessmentStatus: "draft", risks: [] };
+const reviewedAssessment = {
+  ...draftAssessment, assessmentStatus: "in-review", reviewedBy: { documentId: "analyst-1" },
+  summary: "Summary", overallRating: "High", overallRiskRationale: "Rationale", risks: [readyRisk],
+};
+const releasedAssessment = { ...reviewedAssessment, assessmentStatus: "approved", approvedBy: { documentId: "analyst-1" }, approvalDate: at };
+
+type HolderRow = {
+  key: string; document: Record<string, unknown>; holder: "requestor" | "analyst" | "none";
+  requestor: string; requestorHref?: string; analyst: string; analystHref?: string;
+  /** 13-UI-SPEC §12.1: the Requestor's sentence when a Security Analyst holds the request; absent where no analyst holds the step. */
+  requestorNamed?: string;
+};
+const request = (fields: Record<string, unknown>) => ({ documentId: "request-1", ...fields });
+const holderTable: HolderRow[] = [
+  { key: "draft", document: request({ requestStatus: "draft" }), holder: "requestor",
+    requestor: "Complete and submit this request.", requestorHref: "/app/requests/request-1",
+    analyst: "The Requestor hasn’t submitted this request yet." },
+  { key: "submitted", document: request({ requestStatus: "submitted" }), holder: "analyst",
+    requestor: "Your request is waiting for a Security Analyst to pick it up. They’ll then send you a questionnaire to answer.",
+    requestorNamed: "Bob Doe is reviewing your request and will send you a questionnaire to answer.",
+    analyst: "Generate the questionnaire.", analystHref: "/app/review/requests/request-1" },
+  { key: "questionnaire-generated", document: request({ requestStatus: "questionnaire-in-progress", questionnaire: generatedQuestionnaire }), holder: "analyst",
+    requestor: "A Security Analyst is checking your questionnaire before sending it to you.",
+    requestorNamed: "Bob Doe is checking your questionnaire before sending it to you.",
+    analyst: "Review and release the questionnaire.", analystHref: "/app/review/questionnaires/questionnaire-1" },
+  { key: "questionnaire-released", document: request({ requestStatus: "questionnaire-in-progress", questionnaire: releasedQuestionnaire }), holder: "requestor",
+    requestor: "Answer and submit the questionnaire.", requestorHref: "/app/questionnaires/questionnaire-1",
+    analyst: "The Requestor is answering the questionnaire." },
+  { key: "questionnaire-submitted", document: request({ requestStatus: "questionnaire-in-progress", questionnaire: submittedQuestionnaire }), holder: "analyst",
+    requestor: "A Security Analyst is reviewing your answers to assess the request’s risk.",
+    requestorNamed: "Bob Doe is reviewing your answers to assess the request’s risk.",
+    analyst: "Draft the assessment.", analystHref: "/app/review/questionnaires/questionnaire-1" },
+  { key: "assessment-drafted", document: request({ requestStatus: "risk-assessment-drafted", questionnaire: submittedQuestionnaire, assessment: draftAssessment }), holder: "analyst",
+    requestor: "A Security Analyst is preparing your risk assessment.",
+    requestorNamed: "Bob Doe is preparing your risk assessment.",
+    analyst: "Complete the assessment review.", analystHref: "/app/review/assessments/assessment-1" },
+  { key: "assessment-reviewed", document: request({ requestStatus: "under-review", questionnaire: submittedQuestionnaire, assessment: reviewedAssessment }), holder: "analyst",
+    requestor: "A Security Analyst is finalising your risk assessment before releasing it to you.",
+    requestorNamed: "Bob Doe is finalising your risk assessment before releasing it to you.",
+    analyst: "Release the assessment.", analystHref: "/app/review/assessments/assessment-1" },
+  { key: "assessment-released", document: request({ requestStatus: "approved", questionnaire: submittedQuestionnaire, assessment: releasedAssessment }), holder: "none",
+    requestor: "No action is required.", analyst: "No action is required." },
+];
+const viewer = (actor: "requestor" | "analyst") => ({ csrmAuthorization: { assessmentRequestActor: actor } });
+
+test("holderFor gives the D-20 holder of every lifecycle step", () => {
+  const expected: Record<string, string> = {
+    draft: "requestor", submitted: "analyst", "questionnaire-generated": "analyst", "questionnaire-released": "requestor",
+    "questionnaire-submitted": "analyst", "assessment-drafted": "analyst", "assessment-reviewed": "analyst", "assessment-released": "none",
+  };
+  assert.deepEqual(REQUEST_LIFECYCLE_STEPS.map(({ key }) => [key, holderFor(key)]), Object.entries(expected), "UNEXPECTED_HOLDER_MAP");
+});
+
+test("each step's next action names its holder in the UI-SPEC §6.1 sentence for both viewers, linking only the holder's own step", () => {
+  assert.deepEqual(holderTable.map(({ key }) => key), REQUEST_LIFECYCLE_STEPS.map(({ key }) => key), "TABLE_COVERS_EVERY_STEP");
+  for (const row of holderTable) {
+    for (const actor of ["requestor", "analyst"] as const) {
+      const lifecycle = projectRequestLifecycle(row.document, viewer(actor));
+      assert.equal(lifecycle.currentKey, row.key, `FIXTURE_STEP_${row.key}_${actor}`);
+      const expectedHref = actor === "requestor" ? row.requestorHref : row.analystHref;
+      assert.deepEqual(lifecycle.nextAction, {
+        actor, holder: row.holder, summary: row[actor], ...(expectedHref ? { href: expectedHref } : {}),
+      }, `NEXT_ACTION_${row.key}_${actor}`);
+      // T-11-06: the viewer who does not hold the step gets no link, and a Requestor's sentence names no record.
+      if (row.holder !== actor) assert.equal(lifecycle.nextAction?.href, undefined, `NO_LINK_FOR_NON_HOLDER_${row.key}_${actor}`);
+      if (actor === "requestor") assert.doesNotMatch(lifecycle.nextAction?.summary ?? "", /QUES-|ASM-|questionnaire-1|assessment-1/, `REQUESTOR_SENTENCE_NAMES_NO_RECORD_${row.key}`);
+      assert.doesNotMatch(lifecycle.nextAction?.summary ?? "", /other party/, `RETIRED_SENTENCE_${row.key}_${actor}`);
+    }
+  }
+});
+
+/*
+ * D-17, 13-UI-SPEC §12.1: the Requestor reads the assigned analyst's display name at every step an analyst holds, and
+ * a plain "waiting" or "A Security Analyst" sentence when nobody holds the request. The analyst's own sentences, the
+ * holder and the links never change with the assignee.
+ */
+test("the Requestor's sentences name the assigned Security Analyst, or say nobody has picked the request up (D-17)", () => {
+  for (const row of holderTable) {
+    for (const assigneeName of ["Bob Doe", null, undefined, "", "   "] as const) {
+      const named = typeof assigneeName === "string" && assigneeName.trim().length > 0;
+      const options = assigneeName === undefined ? undefined : { assigneeName };
+      const requestor = projectRequestLifecycle(row.document, viewer("requestor"), options);
+      const analyst = projectRequestLifecycle(row.document, viewer("analyst"), options);
+      const label = `${row.key}_${String(assigneeName)}`;
+      assert.deepEqual(requestor.nextAction, {
+        actor: "requestor", holder: row.holder,
+        summary: named && row.requestorNamed ? row.requestorNamed : row.requestor,
+        ...(row.requestorHref ? { href: row.requestorHref } : {}),
+      }, `REQUESTOR_NEXT_ACTION_${label}`);
+      assert.deepEqual(analyst.nextAction, {
+        actor: "analyst", holder: row.holder, summary: row.analyst, ...(row.analystHref ? { href: row.analystHref } : {}),
+      }, `ANALYST_NEXT_ACTION_UNCHANGED_${label}`);
+      assert.equal(requestor.nextAction?.holder, holderFor(row.key as LifecycleKey), `HOLDER_UNCHANGED_${label}`);
+      assert.doesNotMatch(requestor.nextAction?.summary ?? "", /^The Security Analyst is/, `OLD_HOLDER_SENTENCE_${label}`);
+    }
+  }
+  // The name is served as given: the display name, never more (D-04, D-17).
+  assert.equal(
+    projectRequestLifecycle(holderTable[1].document, viewer("requestor"), { assigneeName: "Dr Ana O’Neil-Smith" }).nextAction?.summary,
+    "Dr Ana O’Neil-Smith is reviewing your request and will send you a questionnaire to answer.",
+    "NAME_NOT_SERVED_AS_GIVEN",
+  );
+});
+
+test("a closed request has no next action and no holder", () => {
+  const closed = request({ requestStatus: "closed", questionnaire: submittedQuestionnaire, assessment: releasedAssessment });
+  for (const actor of ["requestor", "analyst"] as const) {
+    const lifecycle = projectRequestLifecycle(closed, viewer(actor));
+    assert.equal(lifecycle.terminal, true, `CLOSED_TERMINAL_${actor}`);
+    assert.equal(lifecycle.nextAction, null, `CLOSED_HAS_NO_NEXT_ACTION_${actor}`);
+  }
 });

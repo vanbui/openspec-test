@@ -1,5 +1,7 @@
 import type { Core } from '@strapi/strapi';
 
+import { attachmentUploadPluginConfig } from '../src/csrm/files/register-attachment-storage';
+
 const allowedMediaTypes = [
   'image/*',
   'video/*',
@@ -33,6 +35,9 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
   },
   upload: {
     config: {
+      // D-06: the private S3 block when CSRM_ATTACHMENT_STORAGE=s3; otherwise the local provider, made private in
+      // register(). Strapi's env() helper reads process.env, as this does.
+      ...attachmentUploadPluginConfig(process.env),
       security: {
         allowedTypes: allowedMediaTypes,
         deniedTypes: deniedExecutableTypes,

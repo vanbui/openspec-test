@@ -1,0 +1,68 @@
+# Fresh stack after docker compose --profile scim-spike down -v / up -d
+2026-10-13T13:43:31Z
+(re-run after the code-review fixes: psql schema probes in init.sh, type+version connector search in spike-test.sh)
+
+## compose ps
+clamav clamav/clamav:stable Up About a minute (healthy) 127.0.0.1:3310->3310/tcp
+keycloak quay.io/keycloak/keycloak:26.6.1 Up About a minute 127.0.0.1:8080->8080/tcp
+mailpit axllent/mailpit:v1.31.5 Up About a minute (healthy) 127.0.0.1:8025->8025/tcp
+midpoint idambox/midpoint:4.8.14-scim2-1.2.9 Up 54 seconds (healthy) 127.0.0.1:8081->8080/tcp
+midpoint_data postgres:16-alpine Up About a minute (healthy) 5432/tcp
+scim_stub nginx:1.28.0-alpine Up About a minute 80/tcp
+
+## midpoint_init log
+[idambox-init] preparing midPoint home
+[idambox-init] creating repository schema
+[idambox-init] creating audit schema
+[idambox-init] installing SCIM2 connector bundle
+[idambox-init] seeding numbered objects as post-initial objects
+[idambox-init] done
+
+## spike-test.sh
+== image
+idambox/midpoint:4.8.14-scim2-1.2.9
+== connectors of type com.exclamationlabs.connid.base.scim2.Scim2Connector, version 1.2.9
+matching connectors: 1
+== connection test of resource 11000000-0000-4000-8000-000000000001
+top-level status: success
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.test"	"status" : "success"
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.connector"	"status" : "success"
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.connector.instantiation"	"status" : "success"
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.connector.initialization"	"status" : "success"
+"operation" : "com.evolveum.midpoint.provisioning.ucf.api.ConnectorInstance.configure"	"status" : "success"
+"operation" : "com.evolveum.midpoint.provisioning.ucf.api.ConnectorInstance.initialize"	"status" : "success"
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.connector.connection"	"status" : "success"
+"operation" : "com.evolveum.midpoint.provisioning.ucf.api.ConnectorInstance.test"	"status" : "success"
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.connector.capabilities"	"status" : "success"
+"operation" : "com.evolveum.midpoint.provisioning.ucf.api.ConnectorInstance.fetchCapabilities"	"status" : "success"
+"operation" : "org.identityconnectors.framework.api.ConnectorFacade.getSupportedOperations"	"status" : "success"
+"operation" : "org.identityconnectors.framework.api.ConnectorFacade.schema"	"status" : "success"
+"operation" : "com.evolveum.midpoint.schema.constants.TestResourceOpNames.resourceSchema"	"status" : "success"
+"operation" : "com.evolveum.midpoint.provisioning.ucf.api.ConnectorInstance.fetchResourceSchema"	"status" : "success"
+"operation" : "com.evolveum.midpoint.repo.cache.RepositoryCache.getVersion"	"status" : "success"
+== stub requests since 2026-10-13T13:43:33Z
+2026-10-13T13:43:35+00:00 GET /scim/v2/ResourceTypes 200
+2026-10-13T13:43:35+00:00 GET /scim/v2/ResourceTypes 200
+2026-10-13T13:43:35+00:00 GET /scim/v2/ResourceTypes 200
+2026-10-13T13:43:35+00:00 GET /scim/v2/ResourceTypes 200
+2026-10-13T13:43:35+00:00 GET /scim/v2/ResourceTypes 200
+RESULT: GO
+
+## reachability
+GET http://127.0.0.1:8081/midpoint/ -> 302
+GET http://127.0.0.1:8080/realms/idambox/.well-known/openid-configuration -> 200
+GET http://127.0.0.1:8025/api/v1/info -> 200
+
+## Connector build provenance
+source commit: 05c404bbecf9c28938e2183411c7b04b4f8f4226
+05f3a93b7c9b958cce0e595ec24b931057c9f37fa1c4548612131f408fc3712c  connector-scim2-1.2.9-0-fat.jar
+### resolved runtime classpath (top-level)
++--- com.google.code.gson:gson:2.10.1
++--- org.apache.httpcomponents:httpclient:4.5.14
++--- net.tirasa.connid:connector-framework-internal:1.5.1.10
++--- commons-codec:commons-codec:1.15
++--- com.exclamationlabs.connid:connector-base:4.1.11-+ -> 4.1.11-197
++--- com.fasterxml.jackson.core:jackson-annotations:2.2.1 -> 2.13.4 (*)
++--- com.fasterxml.jackson.core:jackson-databind:2.13.4 -> 2.13.4.2 (*)
++--- org.codehaus.groovy:groovy:2.5.21
+\--- com.evolveum.polygon:connector-common:1.5.1.3

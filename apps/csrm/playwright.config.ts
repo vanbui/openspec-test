@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import { basename, dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
+import { keepAttestationFresh, writeAttestation } from './src/lib/testing/e2e-attestation-writer';
 import { harnessPort } from './src/lib/testing/e2e-harness-ports';
 import {
   KEEP_ARTIFACTS_VARIABLE,
@@ -52,7 +53,9 @@ mkdirSync(join(tmpdir(), 'csrm-playwright-e2e'), { recursive: true });
 const e2eRuntimeRoot = mkdtempSync(join(tmpdir(), 'csrm-playwright-e2e', `${invocationId}-`));
 const e2eRuntimeAttestationPath = join(e2eRuntimeRoot, 'attestation.json');
 const e2eRuntimeNonce = randomUUID();
-writeFileSync(e2eRuntimeAttestationPath, JSON.stringify({ nonce: e2eRuntimeNonce, createdAt: new Date().toISOString() }), { mode: 0o600 });
+writeAttestation(e2eRuntimeAttestationPath, e2eRuntimeNonce);
+// The run outlasts the attestation's freshness window, so the runner keeps it fresh while it is alive (e2e-attestation-writer.ts).
+if (process.env.TEST_WORKER_INDEX === undefined) keepAttestationFresh(e2eRuntimeAttestationPath, e2eRuntimeNonce);
 process.once('exit', () => {
   rmSync(e2eRuntimeRoot, { recursive: true, force: true });
 });
@@ -102,9 +105,9 @@ process.env.CSRM_E2E_DEVELOPMENT_API_TOKEN ??= developmentApiToken;
 process.env.CSRM_E2E_ATTESTATION_NONCE_VALUE ??= e2eRuntimeNonce;
 
 /*
- * The run's throwaway database and builds (SR-09): removed when the run passes, kept for debugging,
- * with their paths printed, when it fails or is interrupted or when CSRM_E2E_KEEP_ARTIFACTS=1 asks
- * for them. Only the runner does this. It exits after Playwright has stopped both servers, and its
+ * The run's throwaway database, its attachment store beside it, and its builds (SR-09; IN-607): removed when the run
+ * passes, kept together for debugging, with their paths printed, when it fails or is interrupted or when
+ * CSRM_E2E_KEEP_ARTIFACTS=1 asks for them, so a kept database never references files that are gone. Only the runner does this. It exits after Playwright has stopped both servers, and its
  * names are the ones the servers were given; a worker evaluates this file with an id of its own that
  * names nothing on disk. Each path is this run's own and listed exactly, so files another run may
  * still be using are never touched.
@@ -118,8 +121,8 @@ if (process.env.TEST_WORKER_INDEX === undefined) {
     const report = (message: string) => writeSync(2, `\n[harness] ${message}\n${present.map((path) => `  ${path}`).join('\n')}\n`);
     if (disposition !== 'remove') {
       report(disposition === 'keep-failed'
-        ? `The run exited ${exitCode}, so its database and builds are kept for debugging:`
-        : `${KEEP_ARTIFACTS_VARIABLE}=1 keeps the run's database and builds:`);
+        ? `The run exited ${exitCode}, so its database, attachment store and builds are kept for debugging:`
+        : `${KEEP_ARTIFACTS_VARIABLE}=1 keeps the run's database, attachment store and builds:`);
       return;
     }
     const failures: string[] = [];
@@ -136,6 +139,8 @@ if (process.env.TEST_WORKER_INDEX === undefined) {
 
 export default defineConfig({
   testDir: './e2e',
+  // The IAM sign-in journey runs only under playwright.iam-journey.config.ts, owned by its disposable runner.
+  testIgnore: '**/iam-journey.spec.ts',
   timeout: 180_000,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
@@ -159,12 +164,20 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   /*
-   * Six critical journeys run at 1440px and at 375px (D-14, D-41). `desktop` runs every spec at
-   * 1440×900. `mobile` runs again, at 375×812 with touch, only the tests titled `@journey` in the five
+   * Critical journeys run at 1440px and at 375px (D-14, D-41). `desktop` runs every spec at
+   * 1440×900. `mobile` runs again, at 375×812 with touch, only the tests titled `@journey` in the seven
    * files whose journeys can run twice against one database: the request journey creates its own
    * record, the Requestor read-only journey reads seeded records, the Risk Register journey toggles
-   * its edits between two values, the CSV import names its records per project, and the Home and
-   * navigation journeys (navigation-and-home.spec.ts) only read. A journey reads its starting width
+   * its edits between two values, the CSV import names its records per project, the Home and
+   * navigation journeys (navigation-and-home.spec.ts) only read or save a uniquely titled draft per
+   * project, the review list journeys
+   * (review-lists.spec.ts) each create a uniquely titled request per project or only read it, and the
+   * quick-find journeys (quick-find.spec.ts) each create a uniquely titled request per project or only
+   * read. Phase 13's two specs run twice too: each request-pick-up journey creates its own uniquely titled request,
+   * and each request-notes journey creates its own uniquely titled request or only reads the seeded released one
+   * (`RAR-E2E-NAV-OWNER-001`), so the notes one project adds are never on a request the other reads. That released request is
+   * read-only for assignment too: no journey may pick it up, since picking up a released request cannot be undone (D-08)
+   * and every later read of it expects it unassigned (IN-603). A journey reads its starting width
    * from its project (`primaryViewport` in `e2e/helpers/navigation.ts`).
    *
    * The questionnaire journey (questionnaire-workflow.spec.ts) and the release journey
@@ -193,6 +206,20 @@ export default defineConfig({
         '**/risk-register-workflow.spec.ts',
         '**/administration-workflow.spec.ts',
         '**/navigation-and-home.spec.ts',
+        '**/review-lists.spec.ts',
+        '**/quick-find.spec.ts',
+        '**/ai-context-provenance.spec.ts',
+        // Phase 13 (REQ-08): its tests meant to run at 375 carry @journey; a desktop-only test leaves the tag off.
+        '**/request-pick-up.spec.ts',
+        '**/request-notes.spec.ts',
+        // Phase 14 (COLLAB-02): each attachments journey creates its own uniquely titled draft, so both projects can run it.
+        '**/request-attachments.spec.ts',
+        // Phase 15 (QUES-11, QUES-12): each AI proposals journey creates its own uniquely titled request, so both projects can run it; its tests meant to run at 375 carry @journey.
+        '**/questionnaire-ai-proposals.spec.ts',
+        // Phase 16 (ASSESS-09, ASSESS-10; D-50): each risk curation journey creates its own UAT-A-like records, so both projects can run it.
+        '**/risk-curation.spec.ts',
+        // Phase 19 (CSV-01; D-39): each export journey works only on records it creates, uniquely titled per project, so both projects can run it.
+        '**/exports-and-imports.spec.ts',
       ],
       grep: /@journey/,
     },
@@ -213,6 +240,25 @@ export default defineConfig({
         IDAMBOX_SEED_CORE: 'true',
         IDAMBOX_SEED_CSRM: 'true',
         CSRM_AI_PROVIDER: 'deterministic',
+        // D-31: keep the data ceiling independent of local settings.
+        CSRM_AI_DATA_CLASSIFICATION_CEILING: '',
+        CSRM_AI_COMPLETION_TRANSCRIPT_DIAGNOSTICS: 'false',
+        /*
+         * Strapi's dotenv never overrides a set variable, so these keep a local `.env`
+         * with Keycloak provisioning or token verification on (ADR 0002, ADR 0004) from
+         * refusing the development identity bridge in the server this run starts.
+         */
+        IDAMBOX_KEYCLOAK_PROVISIONING: 'false',
+        IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION: 'false',
+        /*
+         * Phase 14 (D-39): files go to this run's own directory and are checked by the development scanner (CSRM's test
+         * signature only), so no local setting reaches a real store or scanner. The directory sits beside the run's
+         * database under the ignored `.tmp/` and follows its keep-or-remove disposition above (IN-607), so the tree stays
+         * clean and a kept database still finds its files.
+         */
+        CSRM_ATTACHMENT_STORAGE: 'local',
+        CSRM_ATTACHMENT_LOCAL_DIR: join(__dirname, '..', 'backend', runNames.attachmentDir),
+        CSRM_ATTACHMENT_SCANNER: 'development',
         csrmAppIsEnabled: 'true',
         STRAPI_ADMIN_AUTO_OPEN: 'false',
       },

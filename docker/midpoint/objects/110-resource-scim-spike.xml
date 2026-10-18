@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Phase 1 connector spike: proves the SCIM2 connector loads on midPoint 4.8 and
+  passes its connection test against the disposable discovery stub
+  (docker/midpoint/scim-stub, compose profile "scim-spike").
+
+  The stub does not authenticate, so the token below is a non-secret placeholder.
+  The IdamBox SCIM resource that carries a real Identity Source token is iam Phase 4.
+-->
+<resource xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:cfg="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/connector-scim2/com.exclamationlabs.connid.base.scim2.Scim2Connector"
+          oid="11000000-0000-4000-8000-000000000001">
+    <name>SCIM2 connector spike (discovery stub)</name>
+    <description>Phase 1 go/no-go check of the community SCIM2 connector. Not a provisioning target.</description>
+    <connectorRef type="c:ConnectorType">
+        <filter>
+            <q:and>
+                <q:equal>
+                    <q:path>c:connectorType</q:path>
+                    <q:value>com.exclamationlabs.connid.base.scim2.Scim2Connector</q:value>
+                </q:equal>
+                <q:equal>
+                    <q:path>c:connectorVersion</q:path>
+                    <q:value>1.2.9</q:value>
+                </q:equal>
+            </q:and>
+        </filter>
+    </connectorRef>
+    <connectorConfiguration>
+        <icfc:configurationProperties>
+            <cfg:serviceUrl>http://scim_stub/scim/v2</cfg:serviceUrl>
+            <cfg:token>
+                <t:clearValue>spike-placeholder-no-auth</t:clearValue>
+            </cfg:token>
+            <cfg:usersEndpointUrl>/Users</cfg:usersEndpointUrl>
+            <cfg:groupsEndpointUrl>/Groups</cfg:groupsEndpointUrl>
+            <cfg:enableStandardSchema>true</cfg:enableStandardSchema>
+            <cfg:enableEnterpriseUser>false</cfg:enableEnterpriseUser>
+            <cfg:enableAWSSchema>false</cfg:enableAWSSchema>
+            <cfg:enableSlackSchema>false</cfg:enableSlackSchema>
+            <cfg:enableDynamicSchema>false</cfg:enableDynamicSchema>
+            <cfg:deepGet>false</cfg:deepGet>
+            <cfg:deepImport>false</cfg:deepImport>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+</resource>

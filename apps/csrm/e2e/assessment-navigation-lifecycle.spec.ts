@@ -179,24 +179,24 @@ test('assessment navigation gives both actors lifecycle context and keeps an unr
     await nonOwnerPage.setViewportSize({ width, height: width === 375 ? 812 : 900 });
 
     /*
-     * Jane's request. Strapi answers another Requestor's request read with 403, so the page renders
-     * the shared permission state and nothing of the record, under the page's one level-one heading,
-     * which names the page and never the record (08-12).
+     * Jane's request. Strapi answers another Requestor's request read with 403, and the page renders
+     * its not-found state inside the shell, as for a missing request, titled by it, so the page never
+     * confirms the request exists and shows nothing of the record, its notes included (Phase 13,
+     * 13-UI-SPEC §8.6, O1 of the 13-19 walk, changed deliberately from the permission state).
      */
     await nonOwnerPage.goto(ownerRequestPath);
-    await expect(main.getByRole('heading', { level: 1, name: 'Assessment request', exact: true }), `D18_REQUEST_PAGE_HEADING_${width}`).toBeVisible();
+    await expect(main.getByRole('heading', { level: 1, name: 'Page not found', exact: true }), `D18_REQUEST_NOT_FOUND_HEADING_${width}`).toBeVisible();
     await expect(nonOwnerPage.getByRole('heading', { level: 1 }), `D18_REQUEST_ONE_LEVEL_ONE_HEADING_${width}`).toHaveCount(1);
-    await expect(nonOwnerPage, `D18_REQUEST_TITLE_${width}`).toHaveTitle('Assessment Request | IdamBox CSRM');
-    const requestDenial = main.locator('[data-state-kind="permission"]');
-    await expect(requestDenial, `D18_REQUEST_PERMISSION_STATE_${width}`).toBeVisible();
-    await expect(requestDenial).toHaveAttribute('role', 'alert');
-    await expect(requestDenial).toContainText('You don’t have access to this area');
-    await expect(requestDenial.getByRole('link', { name: 'Go to Home', exact: true })).toHaveAttribute('href', '/app');
+    await expect(nonOwnerPage, `D18_REQUEST_TITLE_${width}`).toHaveTitle('Page not found | IdamBox CSRM');
+    await expect(main.getByText('The page you asked for doesn’t exist or has moved.', { exact: true }), `D18_REQUEST_NOT_FOUND_STATE_${width}`).toBeVisible();
+    await expect(main.getByRole('link', { name: 'Go to Home', exact: true })).toHaveAttribute('href', '/app');
+    await expect(main.locator('[data-state-kind="permission"]'), `D18_REQUEST_NO_PERMISSION_STATE_${width}`).toHaveCount(0);
     await expect(nonOwnerPage.getByRole('banner').getByText('Secondary Requestor', { exact: true }), `D18_REQUEST_SHELL_KEPT_${width}`).toBeVisible();
     await expect(main.getByRole('region', { name: 'Request actions' }), `D18_REQUEST_NO_ACTIONS_${width}`).toHaveCount(0);
     await expect(main.getByRole('heading', { name: /^Current lifecycle state:/ }), `D18_REQUEST_NO_LIFECYCLE_${width}`).toHaveCount(0);
+    await expect(main.getByRole('region', { name: 'Notes', exact: true }), `D18_REQUEST_NO_NOTES_${width}`).toHaveCount(0);
     await expectNoOwnerFact(nonOwnerPage, janesFacts, `REQUEST_${width}`);
-    await expectNoHorizontalOverflow(nonOwnerPage, `the request permission state has no horizontal overflow at ${width}px`);
+    await expectNoHorizontalOverflow(nonOwnerPage, `the request not-found state has no horizontal overflow at ${width}px`);
 
     /*
      * Jane's questionnaire, Customer portal questionnaire draft, at /app/questionnaires/{documentId}.
@@ -285,7 +285,7 @@ test('an Analyst status choice outside the queue shows the empty filtered list, 
   await requestStatus.selectOption('approved');
   await expect(page).toHaveURL(/status=approved/);
   const noMatchingRequests = page.getByRole('heading', { name: 'No assessment requests match these filters' });
-  await expectAtBothWidths(page, noMatchingRequests, 'Released in Requires my attention empty-filter state');
+  await expectAtBothWidths(page, noMatchingRequests, 'Released in Requires attention empty-filter state');
   // The chip says what the list shows, on screen and on paper (verdict 4a); the table row and the empty state each clear it.
   await expect(page.getByText('Status: Released', { exact: true }), 'the status filter shows as a chip').toBeVisible();
   await expect(page.locator('[data-state-kind="empty"]').getByRole('button', { name: 'Clear filters' })).toBeVisible();

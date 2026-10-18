@@ -10,6 +10,7 @@
     "./**/*.test.ts",
     "./helpers/**/*.ts",
     "../src/api/csrm-administration/services/**/*.ts",
+    "../src/csrm/files/extraction-worker.ts",
     "../types/generated/**/*.d.ts"
   ],
   "exclude": ["../node_modules", "../dist", "../.tmp"]

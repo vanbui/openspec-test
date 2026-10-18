@@ -3,7 +3,7 @@
 import type { SortingState } from '@tanstack/react-table';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 
 import { DataTable, type DataTableColumn } from '@/components/csrm/data-table';
 import { nativeSelectClassName } from '@/components/csrm/native-select';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { controlLabel, controlTitle } from '@/features/assessments/control-label';
 import { administrationSearchDelayMs, getAdministrationConfig, type AdministrationKind } from './administration-config';
 import {
+  administrationFilterChips,
   administrationPageSizes,
   controlTypeValues,
   dataClassificationValues,
@@ -54,6 +55,12 @@ export type AdministrationWorkspaceProps = {
   pagination: Pagination;
   densityUserId?: string;
   onSearch?: (value: string) => void;
+  /**
+   * The list's Export (19-15; the Export placement pattern): rendered last in the header's actions, and passed only when
+   * the read succeeded and the session holds this collection's export capability. Presentation only: Strapi refuses
+   * every export the viewer may not make (D-16).
+   */
+  exportButton?: ReactNode;
 };
 
 function queryString(query: AdministrationQuery): string {
@@ -167,7 +174,7 @@ export function AdministrationBreadcrumbs({ kind, current }: { kind: Administrat
   </BreadcrumbList></Breadcrumb>;
 }
 
-export function AdministrationWorkspace({ densityUserId = 'security-analyst', items, kind, onSearch, pagination, query, state }: AdministrationWorkspaceProps) {
+export function AdministrationWorkspace({ densityUserId = 'security-analyst', exportButton, items, kind, onSearch, pagination, query, state }: AdministrationWorkspaceProps) {
   const config = getAdministrationConfig(kind);
   const pathname = usePathname();
   const router = useRouter();
@@ -268,7 +275,7 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
       <PageHeader
         description={collectionDescriptions[kind]}
         title={config.pluralLabel}
-        action={<div className="flex w-full flex-col gap-2 md:w-auto md:flex-row-reverse"><Link className={buttonVariants()} href={config.newPath}>Create {config.label}</Link><Link className={buttonVariants({ variant: 'outline' })} href={`${config.listPath}/import`}>Import CSV</Link></div>}
+        action={<div className="flex w-full flex-col gap-2 md:w-auto md:flex-row-reverse"><Link className={buttonVariants()} href={config.newPath}>Create {config.label}</Link><Link className={buttonVariants({ variant: 'outline' })} href={`${config.listPath}/import`}>Import</Link>{exportButton}</div>}
       />
       <form role="search" className="grid max-w-3xl gap-4 md:grid-cols-3" onSubmit={(event) => { event.preventDefault(); submitSearch(); }}>
         <fieldset className="contents" disabled={isPending}>
@@ -283,7 +290,7 @@ export function AdministrationWorkspace({ densityUserId = 'security-analyst', it
         columns={columns}
         data={[...items]}
         densityUserId={densityUserId}
-        filters={[...(query.q ? [{ id: 'q', label: 'Search', value: query.q }] : []), ...(query.framework ? [{ id: 'framework', label: 'Framework', value: query.framework }] : []), ...(query.controlType ? [{ id: 'controlType', label: 'Control type', value: query.controlType }] : []), ...(query.environment ? [{ id: 'environment', label: 'Environment', value: query.environment }] : []), ...(query.deploymentModel ? [{ id: 'deploymentModel', label: 'Deployment model', value: query.deploymentModel }] : []), ...(query.lifecycleState ? [{ id: 'lifecycleState', label: 'Lifecycle', value: query.lifecycleState }] : []), ...(query.internetFacing ? [{ id: 'internetFacing', label: 'Internet-facing', value: query.internetFacing === 'true' ? 'Yes' : 'No' }] : []), ...(query.dataClassification ? [{ id: 'dataClassification', label: 'Classification', value: query.dataClassification }] : []), ...(['containsPersonalData', 'containsLegalData', 'containsCreditCardData'] as const).flatMap((field) => query[field] ? [{ id: field, label: field === 'containsPersonalData' ? 'Personal data' : field === 'containsLegalData' ? 'Legal data' : 'Credit-card data', value: query[field] === 'true' ? 'Yes' : 'No' }] : [])]}
+        filters={administrationFilterChips(query)}
         getRowId={(record) => record.documentId}
         loadingLabel={`Loading ${config.pluralLabel}`}
         onClearFilter={(id) => navigate({ [id]: '', page: 1 })}

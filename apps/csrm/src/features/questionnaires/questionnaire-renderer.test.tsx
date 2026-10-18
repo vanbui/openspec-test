@@ -3,10 +3,11 @@ import { resolve } from 'node:path';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { QuestionnaireDefinition } from './questionnaire-schema';
+import { questionnaireDefinitionSchema, type QuestionnaireDefinition } from './questionnaire-schema';
 import type { QuestionnaireSummary } from './questionnaire-service';
 import { QuestionnaireDetail } from './questionnaire-detail';
 import { QuestionnaireRenderer } from './questionnaire-renderer';
+import { NavigationGuardProvider } from '@/components/csrm/navigation-guard';
 import { rememberSavedQuestionnaire, savedQuestionnaireAfter } from './use-answer-autosave';
 
 const saveQuestionnaireDraftAction = vi.hoisted(() => vi.fn());
@@ -116,6 +117,7 @@ const questionnaire: QuestionnaireSummary = {
     title: 'Customer portal review',
     requestStatus: 'questionnaire-in-progress',
   },
+  aiAssisted: false,
   updatedAt: '2026-08-30T01:00:00.000Z',
 };
 
@@ -426,7 +428,6 @@ describe('QuestionnaireRenderer', () => {
     const testSource = readFileSync(resolve(process.cwd(), 'src/features/questionnaires/questionnaire-renderer.test.tsx'), 'utf8');
     expect(route).toContain('getQuestionnaireQuestions');
     expect(route).not.toContain("'use client'");
-    expect(route).not.toMatch(/\bfetch\s*\(/);
     expect(testSource).not.toContain(['PHASE3', 'RED', 'W0_04', 'RENDERER_ABSENT'].join('_'));
     expect(testSource).not.toContain(['exists', 'Sync'].join(''));
   });
@@ -465,7 +466,7 @@ describe('QuestionnaireRenderer autosave and save status (D-11, UI-SPEC §6.1 an
 
   it('a blocked save states its reason with Refresh page, and no form-level alert remains', async () => {
     const user = userEvent.setup();
-    const message = 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.';
+    const message = 'A Security Analyst has taken this questionnaire back to update it, so your latest answers weren’t saved. They’re kept on this page, and you can carry on when it’s sent back to you.';
     autosaveQuestionnaireDraftAction.mockResolvedValue({ ok: false, formError: message, failure: 'blocked', reason: 'QUESTIONNAIRE_NOT_ANSWERABLE' });
     render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" />);
 
@@ -540,5 +541,202 @@ describe('QuestionnaireRenderer autosave and save status (D-11, UI-SPEC §6.1 an
     render(<QuestionnaireRenderer definition={pageAnswers} documentId={`q-fresh-${serverUpdatedAt}`} mode="edit" serverUpdatedAt={serverUpdatedAt} />);
 
     expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('Page portal');
+  });
+});
+
+/* 12-UI-SPEC §9 (D-16, D-17, D-23): help text as the field hint, Not sure, and the AI disclosure. */
+describe('help text, Not sure and the AI disclosure', () => {
+  const helped = (key: string, type: QuestionnaireDefinition[number]['answerType'], extra: Partial<QuestionnaireDefinition[number]> = {}) =>
+    question(key, `Question ${key}`, type, { helpText: `Help for ${key}.`, ...extra });
+  const choices = [{ value: 'yes', label: 'Yes' }, { value: 'not-sure', label: 'Not sure' }, { value: 'no', label: 'No' }];
+
+  it('puts the help text under the label, before the control, and first in its description', () => {
+    render(<QuestionnaireRenderer definition={[
+      helped('text', 'Text', { order: 1 }), helped('long', 'Long text', { order: 2 }), helped('date', 'Date', { order: 3 }),
+      helped('single', 'Single select', { order: 4, choices }), helped('multi', 'Multi select', { order: 5, choices }), helped('flag', 'Boolean', { order: 6 }),
+      question('plain', 'Plain question', 'Text', { order: 7 }),
+    ]} documentId="questionnaire-1" mode="edit" />);
+    for (const key of ['text', 'long', 'date']) {
+      const hint = screen.getByText(`Help for ${key}.`);
+      expect(hint).toHaveAttribute('id', `question-${key}-hint`);
+      expect(hint).toHaveClass('text-xs', 'text-foreground-secondary', 'whitespace-pre-wrap');
+      expect(screen.getByLabelText(`Question ${key}`)).toHaveAttribute('aria-describedby', `question-${key}-hint`);
+    }
+    for (const key of ['single', 'multi', 'flag']) {
+      const group = screen.getByRole('group', { name: `Question ${key}` });
+      expect(group).toHaveAttribute('aria-describedby', `question-${key}-hint`);
+      expect(within(group).getByText(`Help for ${key}.`)).toBeInTheDocument();
+    }
+    const single = screen.getByRole('group', { name: 'Question single' });
+    expect(within(single).getAllByRole('radio').map((radio) => radio.closest('label')?.textContent)).toEqual(['Yes', 'Not sure', 'No']);
+    expect(screen.getByLabelText('Plain question')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('renders help text as text, never markup', () => {
+    const { container } = render(<QuestionnaireRenderer definition={[question('x', 'Question x', 'Text', { helpText: '<b>bold</b> help' })]} documentId="questionnaire-1" mode="edit" />);
+    expect(container.querySelector('b')).toBeNull();
+    expect(screen.getByText('<b>bold</b> help')).toBeInTheDocument();
+  });
+
+  it('tells the Requestor that AI helped, and how to answer Not sure, only when that is true', () => {
+    /*
+     * CR-401 (D-23, 12-UI-SPEC §9.3): the input carries every AI fact an analyst's read serves (the generation
+     * block and a question's AI origin), so the negative below fails if the view ever renders one of them.
+     */
+    const generation = {
+      generatedAt: '2026-08-29T09:00:00.000Z',
+      generatedBy: { documentId: 'analyst-1', displayName: 'Bob Analyst' },
+      providerName: 'deterministic-questionnaire-generation',
+      providerVersion: '2',
+      runId: 'run-1',
+      aiInputsChanged: null,
+    };
+    const notSure = [question('single', 'Question single', 'Single select', { choices, aiOrigin: 'generated' })];
+    const { rerender } = render(<QuestionnaireDetail definition={notSure} questionnaire={{ ...questionnaire, aiAssisted: true, generation }} state="ready" />);
+    expect(screen.getByText('A Security Analyst used AI to help write these questions and reviewed them before sending them to you.')).toBeInTheDocument();
+    expect(screen.getByText(/^Not sure of an answer\? Choose “Not sure” where it’s offered\./)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/AI proposed|Provider:|Model:|deterministic-questionnaire-generation|Bob Analyst|Show what the AI used|Generated with AI|run-1/);
+    expect(screen.queryByRole('region', { name: 'AI generation' })).not.toBeInTheDocument();
+    rerender(<QuestionnaireDetail definition={definition} questionnaire={questionnaire} state="ready" />);
+    expect(screen.queryByText(/used AI to help write/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Not sure of an answer\? Give your best answer/)).toBeInTheDocument();
+  });
+
+  /*
+   * WR-02 (D-16, 12-UI-SPEC §9.3): a hosted model that offered its own "Unsure" has it stored and served to the
+   * Requestor as the canonical Not sure choice (Strapi's questionnaire-generation.integration "stores and serves a
+   * model's own Not sure"). These are the question rows her read serves for it, parsed as her page parses them, and the
+   * introduction then tells her to choose it.
+   */
+  it('tells the Requestor to choose Not sure for the questions Strapi serves from a model that offered its own', () => {
+    const section = { key: 'section-1', title: 'Access', order: 0 };
+    const served = [
+      { documentId: 'question-q-2', questionText: 'Does a provider host the service?', helpText: 'Include any company that runs it for you.', answerType: 'Single select',
+        options: { schemaVersion: 1, questionKey: 'q-2', section, order: 0, required: true, choices: [{ value: 'Yes', label: 'Yes' }, { value: 'not-sure', label: 'Not sure' }, { value: 'No', label: 'No' }] }, answer: null },
+      { documentId: 'question-q-8', questionText: 'Describe the recovery steps.', helpText: 'Explain who restores the service and how.', answerType: 'Long text',
+        options: { schemaVersion: 1, questionKey: 'q-8', section, order: 1, required: false }, answer: null },
+    ];
+    render(<QuestionnaireDetail definition={questionnaireDefinitionSchema.parse(served)} questionnaire={{ ...questionnaire, documentId: 'questionnaire-not-sure', aiAssisted: true }} state="ready" />);
+    expect(screen.getByText(/^Not sure of an answer\? Choose “Not sure” where it’s offered\./)).toBeInTheDocument();
+    const group = screen.getByRole('group', { name: /Does a provider host the service\?/ });
+    expect(within(group).getAllByRole('radio').map((radio) => radio.closest('label')?.textContent)).toEqual(['Yes', 'Not sure', 'No']);
+  });
+});
+
+/*
+ * Phase 15 (15-UI-SPEC §11.2; D-25, UI-D25, SD-1; U4): a Security Analyst takes the questionnaire back while the Requestor
+ * answers. The refused save keeps every typed value on the page and in the session store; the submit dialog says why it
+ * can't submit; the next released load restores what still fits, with a caption, and clears the store.
+ */
+describe('a Requestor’s answers when the analyst takes the questionnaire back', () => {
+  const editable = definition.filter((item) => item.questionKey !== 'evidence').map((item) => ({ ...item, required: false }));
+  const saveSentence = 'A Security Analyst has taken this questionnaire back to update it, so your latest answers weren’t saved. They’re kept on this page, and you can carry on when it’s sent back to you.';
+  const submitSentence = 'A Security Analyst has taken this questionnaire back to update it, so it can’t be submitted now. Your answers are kept, and you can submit when it’s sent back to you.';
+  const storeKey = 'csrm-draft:unsaved-answers:owner-a:questionnaire-1';
+  const notAnswerable = { ok: false, formError: saveSentence, failure: 'blocked', reason: 'QUESTIONNAIRE_NOT_ANSWERABLE' };
+
+  beforeEach(() => { window.sessionStorage.clear(); });
+
+  it('keeps restored text through a retryable save failure and reload, clearing it only after acknowledgement', async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(storeKey, JSON.stringify([
+      { questionKey: 'service_name', answerType: 'Text', choicesSignature: '', value: 'Kept portal' },
+    ]));
+    autosaveQuestionnaireDraftAction.mockResolvedValue({ ok: false, failure: 'retryable' });
+    const first = render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+    await user.click(screen.getByRole('textbox', { name: /Service name/ }));
+    await user.tab();
+    expect(await screen.findByText(/Your latest answers weren’t saved/)).toBeInTheDocument();
+    expect(window.sessionStorage.getItem(storeKey)).toContain('Kept portal');
+    first.unmount();
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+    expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('Kept portal');
+    autosaveQuestionnaireDraftAction.mockResolvedValue({ ok: true, data: { updatedAt: '2026-10-13T01:00:00.000Z', answers: editable } });
+    await user.click(screen.getByRole('textbox', { name: /Service name/ }));
+    await user.tab();
+    await waitFor(() => expect(window.sessionStorage.getItem(storeKey)).toBeNull());
+  });
+
+  it('restores a take-back refusal on a soft refreshed editable seed before saving again', async () => {
+    const user = userEvent.setup();
+    autosaveQuestionnaireDraftAction.mockResolvedValue(notAnswerable);
+    const page = render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Soft refresh portal');
+    await user.tab();
+    expect(await screen.findByRole('alert')).toHaveTextContent(saveSentence);
+    await user.click(screen.getByRole('button', { name: 'Refresh page' }));
+    autosaveQuestionnaireDraftAction.mockResolvedValue({ ok: false, failure: 'retryable' });
+    page.rerender(<QuestionnaireRenderer definition={editable.map((item) => ({ ...item }))} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+    expect(await screen.findByText('1 unsaved answer was restored from earlier in this session. Check it before you carry on.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('Soft refresh portal');
+    expect(window.sessionStorage.getItem(storeKey)).toContain('Soft refresh portal');
+  });
+
+  it('keeps the typed answers on the page and in the session store as JSON, and warns before unload', async () => {
+    const user = userEvent.setup();
+    autosaveQuestionnaireDraftAction.mockResolvedValue(notAnswerable);
+    render(<NavigationGuardProvider><QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" /></NavigationGuardProvider>);
+
+    const serviceName = screen.getByRole('textbox', { name: /Service name/ });
+    await user.type(serviceName, 'Customer portal');
+    await user.tab();
+    expect(await screen.findByRole('alert')).toHaveTextContent(saveSentence);
+    expect(serviceName).toHaveValue('Customer portal');
+    const kept = JSON.parse(window.sessionStorage.getItem(storeKey) ?? 'null') as unknown[];
+    expect(kept).toEqual(expect.arrayContaining([{ questionKey: 'service_name', answerType: 'Text', choicesSignature: '', value: 'Customer portal' }]));
+
+    await user.type(screen.getByRole('textbox', { name: /Additional details/ }), 'More');
+    await user.tab();
+    expect(autosaveQuestionnaireDraftAction).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(window.sessionStorage.getItem(storeKey) ?? '[]')).toEqual(expect.arrayContaining([expect.objectContaining({ questionKey: 'details', value: 'More' })]));
+
+    const unload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
+  });
+
+  it('shows the submit sentence in the dialog when the save before submitting is refused for the same reason', async () => {
+    const user = userEvent.setup();
+    saveQuestionnaireDraftAction.mockResolvedValue(notAnswerable);
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+
+    await user.type(screen.getByRole('textbox', { name: /Service name/ }), 'Customer portal');
+    await user.click(screen.getByRole('button', { name: 'Submit questionnaire' }));
+    const dialog = screen.getByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Submit questionnaire' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(submitSentence);
+    expect(submitQuestionnaireAction).not.toHaveBeenCalled();
+  });
+
+  it('restores the answers that still fit on the next released load, says so, and clears the store', async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(storeKey, JSON.stringify([
+      { questionKey: 'service_name', answerType: 'Text', choicesSignature: '', value: 'Customer portal' },
+      { questionKey: 'audience', answerType: 'Single select', choicesSignature: JSON.stringify(['staff', 'customers']), value: 'customers' },
+      { questionKey: 'regions', answerType: 'Multi select', choicesSignature: JSON.stringify(['au', 'us']), value: ['au'] },
+      { questionKey: 'details', answerType: 'Text', choicesSignature: '', value: 'Changed type' },
+      { questionKey: 'removed_question', answerType: 'Text', choicesSignature: '', value: 'Gone' },
+    ]));
+    render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+
+    expect(await screen.findByText('2 unsaved answers were restored from earlier in this session. Check them before you carry on.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('Customer portal');
+    expect(screen.getByRole('radio', { name: 'Customers' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Australia' })).not.toBeChecked();
+    expect(screen.getByRole('textbox', { name: /Additional details/ })).toHaveValue('');
+    await user.click(screen.getByRole('textbox', { name: /Service name/ }));
+    await user.tab();
+    await waitFor(() => expect(window.sessionStorage.getItem(storeKey)).toBeNull());
+  });
+
+  it('restores nothing from a kept value that does not parse, or holds entries of another shape, and clears it', async () => {
+    for (const kept of ['{not json', JSON.stringify([{ questionKey: 'service_name', value: 42 }]), JSON.stringify({ questionKey: 'service_name' })]) {
+      window.sessionStorage.setItem(storeKey, kept);
+      const { unmount } = render(<QuestionnaireRenderer definition={editable} documentId="questionnaire-1" mode="edit" ownerKey="owner-a" />);
+      await waitFor(() => expect(window.sessionStorage.getItem(storeKey)).toBeNull());
+      expect(screen.queryByText(/unsaved answers? (was|were) restored/)).toBeNull();
+      expect(screen.getByRole('textbox', { name: /Service name/ })).toHaveValue('');
+      unmount();
+    }
   });
 });

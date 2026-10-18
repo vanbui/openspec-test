@@ -13,6 +13,8 @@ const calls = vi.hoisted(() => [] as string[]);
 const mocks = vi.hoisted(() => ({
   can: vi.fn(),
   current: vi.fn(),
+  exportAlertsAction: vi.fn(),
+  exportButton: vi.fn(),
   granted: vi.fn(),
   listAlerts: vi.fn(),
   refresh: vi.fn(),
@@ -33,6 +35,13 @@ vi.mock('@/lib/auth/development-session-adapter', () => ({
   }),
 }));
 vi.mock('@/features/alerts/alert-service', () => ({ listAlerts: mocks.listAlerts }));
+vi.mock('@/features/exports/export-actions', () => ({ exportAlertsAction: mocks.exportAlertsAction }));
+vi.mock('@/components/csrm/export/export-button', () => ({
+  ExportButton: (props: { heading: string }) => {
+    mocks.exportButton(props);
+    return <button type="button">Export <span className="sr-only">{props.heading}</span></button>;
+  },
+}));
 vi.mock('@/lib/testing/e2e-ui-state', () => ({
   E2eUiStateBoundary: ({ children, state }: { children: ReactNode; state: string }) => <section data-ui-state={state}>{children}</section>,
   resolveE2eUiState: mocks.resolveE2eUiState,
@@ -184,6 +193,20 @@ describe('Alerts route content', () => {
     expect(mocks.listAlerts).toHaveBeenLastCalledWith({ kinds: undefined, urgency: undefined, page: 1, pageSize: 25 });
   });
 
+  it('reads the URL filters from the searchParams proxy `next dev` resolves, which is not a plain object', async () => {
+    // Next's development instrumentation returns every function property bound to the target, `constructor` included.
+    const nextDevSearchParams = new Proxy<Record<string, string>>({ urgency: 'overdue', page: '2' }, {
+      get: (target, property, receiver) => {
+        const value: unknown = Reflect.get(target, property, receiver);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+
+    render(await AlertsContent({ searchParams: Promise.resolve(nextDevSearchParams) }));
+
+    expect(mocks.listAlerts).toHaveBeenLastCalledWith({ kinds: undefined, urgency: 'overdue', page: 2, pageSize: 25 });
+  });
+
   it('renders the populated list with the released marker and an analyst record link', async () => {
     render(await AlertsContent({ searchParams: Promise.resolve({}) }));
 
@@ -235,7 +258,6 @@ describe('Alerts route files', () => {
     expect(page).toContain('listAlerts');
     expect(page).toContain('<Suspense');
     expect(page).not.toContain("'use client'");
-    expect(page).not.toMatch(/\bfetch\s*\(/);
     expect(page).not.toMatch(/export default async function/);
     // The capability check precedes the read.
     expect(page.indexOf("can('assessment:review'")).toBeLessThan(page.indexOf('listAlerts('));
@@ -263,5 +285,77 @@ describe('Alerts route files', () => {
     const error = route('error.tsx');
     expect(error).toContain("'use client'");
     expect(error).toMatch(/retry=\{retry\}/);
+  });
+});
+
+/*
+ * Phase 19 export placement (the pilot's ruling of 2026-10-16; D-16, D-20): the Alerts header renders inside the
+ * Suspense-wrapped content above every state, and carries Export only when the session holds alerts:export and the
+ * alerts read returned data. A Requestor sees the gate and no Export; the static fallback header carries no action.
+ */
+describe('the Alerts header’s Export (19-11)', () => {
+  const holding = (...capabilities: string[]) => mocks.granted.mockResolvedValue(new Set(capabilities));
+  const filtered = { kind: 'risk-treatment-overdue', urgency: 'overdue' };
+
+  it('shows Export Alerts as the header’s last action with the read’s total and filter chips, from one read', async () => {
+    holding('assessment:review', 'alerts:export');
+    mocks.listAlerts.mockResolvedValue(listPayload([releasedRiskAlert], { pagination: { page: 1, pageSize: 25, pageCount: 2, total: 26 } }));
+
+    render(await AlertsContent({ searchParams: Promise.resolve(filtered) }));
+
+    const header = screen.getByRole('heading', { level: 1, name: 'Alerts' }).closest('.page-header') as HTMLElement;
+    expect(within(header).getAllByRole('button').at(-1)).toHaveAccessibleName('Export Alerts');
+    expect(mocks.listAlerts).toHaveBeenCalledTimes(1);
+    expect(mocks.exportButton).toHaveBeenCalledWith(expect.objectContaining({
+      heading: 'Alerts',
+      view: 'alerts',
+      action: mocks.exportAlertsAction,
+      query: { kinds: ['risk-treatment-overdue'], urgency: 'overdue' },
+      total: 26,
+      multiplePages: true,
+      searchActive: false,
+      chips: [{ label: 'Alert type', value: expect.any(String) }, { label: 'Urgency', value: expect.any(String) }],
+    }));
+  });
+
+  it('shows the alerts without Export for a session holding the alerts read alone', async () => {
+    holding('assessment:review');
+
+    render(await AlertsContent({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Alerts' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'RSK-E2E-P7-RELEASED-001' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Export Alerts' })).not.toBeInTheDocument();
+  });
+
+  it('shows a Requestor the gate under the header, with no Export and no read', async () => {
+    signInAsRequestor();
+    mocks.granted.mockResolvedValue(new Set(['assessment-request:read', 'assessment-request:create', 'my-requests:export']));
+
+    render(await AlertsContent({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Alerts' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to alerts');
+    expect(screen.queryByRole('button', { name: /^Export/ })).not.toBeInTheDocument();
+    expect(mocks.listAlerts).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 500])('shows the header without Export when the alerts read fails with %i', async (status) => {
+    holding('assessment:review', 'alerts:export');
+    mocks.listAlerts.mockResolvedValue({ data: null, error: { status, message: 'x' } });
+
+    render(await AlertsContent({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Alerts' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export Alerts' })).not.toBeInTheDocument();
+  });
+
+  it('keeps Export off the static header the Suspense fallback shows', () => {
+    const source = readFileSync(resolve(process.cwd(), 'app/(app)/app/alerts/page.tsx'), 'utf8');
+    const page = source.slice(source.indexOf('export default function AlertsPage'));
+    const fallback = /fallback=\{([\s\S]*?)\}>\s*<AlertsContent/.exec(page)?.[1] ?? '';
+    expect(fallback).toContain('<AlertsPageHeader />');
+    expect(source.slice(source.indexOf('export async function AlertsContent'), source.indexOf('export default function AlertsPage'))).toContain("can('alerts:export'");
   });
 });

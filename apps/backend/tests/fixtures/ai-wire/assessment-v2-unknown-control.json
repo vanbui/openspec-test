@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "summary": "Summary",
+  "summarySources": [
+    "request.description"
+  ],
+  "overallRiskRationale": "Overall rationale",
+  "overallRiskRationaleSources": [
+    "request.description"
+  ],
+  "recommendationsSummary": "Recommendations",
+  "recommendationsSummarySources": [
+    "request.description"
+  ],
+  "risks": [
+    {
+      "riskTypeName": "Personal Information Handling",
+      "issueStatement": "Issue",
+      "riskStatement": "Risk statement",
+      "riskCategory": "Cyber",
+      "riskSubCategory": "Exposure",
+      "riskCause": "Cause",
+      "potentialImpact": "Impact",
+      "informationSystem": "system-1",
+      "informationAsset": "asset-1",
+      "inherentLikelihood": "Possible",
+      "highestInherentConsequence": "Major",
+      "inherentRatingRationale": "Inherent rationale",
+      "residualLikelihood": "Possible",
+      "highestResidualConsequence": "Moderate",
+      "residualRatingRationale": "Residual rationale",
+      "treatmentAction": "Treat",
+      "treatmentPlan": "Review and record the treatment rationale.",
+      "sources": {
+        "issueStatement": [
+          "request.description"
+        ],
+        "riskStatement": [
+          "request.description"
+        ],
+        "riskCause": [
+          "request.description"
+        ],
+        "potentialImpact": [
+          "request.description"
+        ],
+        "inherentRatingRationale": [
+          "request.description"
+        ],
+        "residualRatingRationale": [
+          "request.description"
+        ],
+        "treatmentPlan": [
+          "request.description"
+        ]
+      },
+      "uncitedClaims": [],
+      "suggestedControls": [
+        {
+          "controlNumber": "OUTSIDE",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-001",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-001",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-002",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-003",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-004",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-005",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-006",
+          "rationale": "Applicable control."
+        },
+        {
+          "controlNumber": "CTRL-007",
+          "rationale": "Applicable control."
+        }
+      ]
+    },
+    {
+      "riskTypeName": "Personal Information Handling",
+      "issueStatement": "Issue",
+      "riskStatement": "Risk statement",
+      "riskCategory": "Cyber",
+      "riskSubCategory": "Exposure",
+      "riskCause": "Cause",
+      "potentialImpact": "Impact",
+      "informationSystem": null,
+      "informationAsset": "asset-1",
+      "inherentLikelihood": "Possible",
+      "highestInherentConsequence": "Major",
+      "inherentRatingRationale": "Inherent rationale",
+      "residualLikelihood": "Possible",
+      "highestResidualConsequence": "Moderate",
+      "residualRatingRationale": "Residual rationale",
+      "treatmentAction": "Treat",
+      "treatmentPlan": "Review and record the treatment rationale.",
+      "sources": {
+        "issueStatement": [
+          "request.description"
+        ],
+        "riskStatement": [
+          "request.description"
+        ],
+        "riskCause": [
+          "request.description"
+        ],
+        "potentialImpact": [
+          "request.description"
+        ],
+        "inherentRatingRationale": [
+          "request.description"
+        ],
+        "residualRatingRationale": [
+          "request.description"
+        ],
+        "treatmentPlan": [
+          "request.description"
+        ]
+      },
+      "uncitedClaims": [],
+      "suggestedControls": []
+    },
+    {
+      "riskTypeName": null,
+      "issueStatement": "Issue",
+      "riskStatement": "Risk statement",
+      "riskCategory": "Cyber",
+      "riskSubCategory": "Exposure",
+      "riskCause": "Cause",
+      "potentialImpact": "Impact",
+      "informationSystem": null,
+      "informationAsset": null,
+      "inherentLikelihood": "Possible",
+      "highestInherentConsequence": "Major",
+      "inherentRatingRationale": "Inherent rationale",
+      "residualLikelihood": "Possible",
+      "highestResidualConsequence": "Moderate",
+      "residualRatingRationale": "Residual rationale",
+      "treatmentAction": "Accept",
+      "treatmentPlan": "Review and record the treatment rationale.",
+      "sources": {
+        "issueStatement": [
+          "request.description"
+        ],
+        "riskStatement": [
+          "request.description"
+        ],
+        "riskCause": [
+          "request.description"
+        ],
+        "potentialImpact": [
+          "request.description"
+        ],
+        "inherentRatingRationale": [
+          "request.description"
+        ],
+        "residualRatingRationale": [
+          "request.description"
+        ],
+        "treatmentPlan": [
+          "request.description"
+        ]
+      },
+      "uncitedClaims": [],
+      "suggestedControls": []
+    }
+  ]
+}

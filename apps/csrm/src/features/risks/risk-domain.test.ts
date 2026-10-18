@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calendarDate, formatRiskTargetDate, readRiskRegisterQuery } from './risk-domain';
+import { calendarDate, formatRiskTargetDate, isAcceptedRiskRow, readRiskRegisterQuery, riskRegisterCardMarker } from './risk-domain';
 import { parseRiskRegisterQuery } from './risk-schema';
 
 /*
@@ -12,11 +12,11 @@ const readable: [string, Record<string, unknown>][] = [
   ['every filter, the sort and the paging', {
     q: '  unauthorised access  ', treatmentStatus: 'In Progress', inherentRating: 'High', residualRating: 'Moderate',
     riskOwner: 'owner_1', treatmentOwner: ' owner-2 ', assessment: 'asm1', system: 'sys-1', asset: 'asset_1',
-    mitigationStatus: 'Planned', state: 'closed', targetDateFrom: '2026-06-30', targetDateTo: '2026-07-31',
+    mitigationStatus: 'Planned', state: 'closed', stage: 'under-assessment', treatmentAction: 'Treat', dueState: 'due-soon', mitigationEffectiveness: 'Not Assessed', impactedSystem: 'none', targetDateFrom: '2026-06-30', targetDateTo: '2026-07-31',
     sort: 'riskNumber:desc', page: '3', pageSize: '50',
   }],
   ['values outside each vocabulary', {
-    treatmentStatus: 'Bogus', inherentRating: 'high', residualRating: '', mitigationStatus: 'Unknown', state: 'archived',
+    treatmentStatus: 'Bogus', inherentRating: 'high', residualRating: '', mitigationStatus: 'Unknown', state: 'archived', stage: 'Released', treatmentAction: 'accept', dueState: 'Overdue', mitigationEffectiveness: 'not provided', impactedSystem: 'None',
     riskOwner: 'has space', treatmentOwner: '', assessment: 'a'.repeat(201), system: 'semi;colon', asset: '   ',
     sort: 'nope', page: '0', pageSize: '20',
   }],
@@ -30,6 +30,8 @@ const readable: [string, Record<string, unknown>][] = [
   ['one date bound', { targetDateFrom: '2026-02-28' }],
   ['equal date bounds', { targetDateFrom: '2026-12-01', targetDateTo: '2026-12-01' }],
   ['parameters the register does not know', { foo: 'bar', riskStatement: 'x' }],
+  ['the none and any figure filters', { inherentRating: 'none', residualRating: 'none', treatmentStatus: 'none', mitigationStatus: 'any', mitigationEffectiveness: 'none' }],
+  ['no impacted system beside a chosen system, which wins', { system: 'sys-1', impactedSystem: 'none' }],
 ];
 
 const refused: [string, Record<string, unknown>][] = [
@@ -39,6 +41,30 @@ const refused: [string, Record<string, unknown>][] = [
   ['a repeated date parameter', { targetDateFrom: ['2026-01-01', '2026-01-02'] }],
   ['a range whose start follows its end', { targetDateFrom: '2026-07-31', targetDateTo: '2026-06-30' }],
 ];
+
+/*
+ * D-41, D-44, UI-SPEC section 9.1: "Accepted" marks the recorded decision on a released Risk. A Risk still
+ * under assessment with Accept shows only its treatment action, never as accepted.
+ */
+describe('isAcceptedRiskRow', () => {
+  it.each([
+    ['a closed released Risk with Accept', { stage: 'released', treatmentAction: 'Accept', accepted: false }, false],
+    ['a released Risk with Accept', { stage: 'released', treatmentAction: 'Accept', accepted: true }, true],
+    ['a Risk under assessment with Accept', { stage: 'under-assessment', treatmentAction: 'Accept' }, false],
+    ['a released Risk with Treat', { stage: 'released', treatmentAction: 'Treat' }, false],
+    ['a released Risk with no treatment action', { stage: 'released', treatmentAction: null }, false],
+    ['a Risk under assessment with no treatment action', { stage: 'under-assessment', treatmentAction: null }, false],
+  ] as const)('reads %s', (_case, row, accepted) => {
+    expect(isAcceptedRiskRow(row)).toBe(accepted);
+  });
+
+  it('writes the card’s marker: the stage, then “ · Accepted” for an accepted Risk', () => {
+    expect(riskRegisterCardMarker({ stage: 'released', treatmentAction: 'Accept', accepted: true })).toBe('Released · Accepted');
+    expect(riskRegisterCardMarker({ stage: 'released', treatmentAction: 'Treat' })).toBe('Released');
+    expect(riskRegisterCardMarker({ stage: 'under-assessment', treatmentAction: 'Accept' })).toBe('Under assessment');
+    expect(riskRegisterCardMarker({ stage: 'under-assessment', treatmentAction: null })).toBe('Under assessment');
+  });
+});
 
 describe('readRiskRegisterQuery', () => {
   it.each(readable)('reads %s exactly as the page’s schema does', (_case, input) => {

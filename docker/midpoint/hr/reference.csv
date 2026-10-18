@@ -1,0 +1,8 @@
+employeeNumber,givenName,familyName,preferredName,email,username,department,jobTitle,status,startDate,endDate
+000101,Ada,Lindqvist,,ada.lindqvist@hr.idambox.test,ada.lindqvist,Finance,Accounts Officer,active,2024-02-05,
+000102,Bartholomew,Nakamura,Bart,bart.nakamura@hr.idambox.test,bart.nakamura,Engineering,Platform Engineer,active,2023-07-17,
+000103,Chloé,Østergaard,,chloe.ostergaard@hr.idambox.test,chloe.ostergaard,"Legal, Risk and Compliance",Compliance Analyst,active,,
+000104,Dev,Okafor,,dev.okafor@hr.idambox.test,dev.okafor,Engineering,Graduate Engineer,active,2099-01-04,
+000105,Elif,Moreau,,elif.moreau@hr.idambox.test,elif.moreau,Operations,Service Manager,terminated,2021-03-01,2026-06-30
+000106,Farid,Castellanos,,farid.castellanos@hr.idambox.test,farid.castellanos,Sales,Account Executive,active,2022-01-10,2025-12-31
+000107,Grace,O'Neill,"Grace ""Gigi"" O'Neill",grace.oneill@hr.idambox.test,grace.oneill,People,HR Business Partner,active,2020-09-14,

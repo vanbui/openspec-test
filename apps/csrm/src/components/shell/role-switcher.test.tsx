@@ -36,6 +36,19 @@ describe('RoleSwitcher', () => {
     expect(new Set(selects.map((select) => select.id)).size).toBe(2);
     for (const select of selects) expect(select).toHaveValue('Security Analyst');
   });
+
+  it('lists the four development roles, Second Security Analyst after Security Analyst (D-31, UI-D26)', () => {
+    render(<RoleSwitcher role="Second Security Analyst" />);
+
+    const select = screen.getByRole('combobox', { name: 'Development role' });
+    expect(Array.from((select as HTMLSelectElement).options).map((option) => option.textContent)).toEqual([
+      'Requestor',
+      'Secondary Requestor',
+      'Security Analyst',
+      'Second Security Analyst',
+    ]);
+    expect(select).toHaveValue('Second Security Analyst');
+  });
 });
 
 /*

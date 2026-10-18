@@ -358,10 +358,30 @@ Phase 7 figure.
   - The fix is to use the first enumeration value for an integer enumeration, then drop the
     narrowing.
   - Meanwhile, mounted spec pinning and a direct pin in `risk-schema.test.ts` cover the register.
-- **`scripts/verify-phase-06-integrity.mjs` pins stale catalogue counts.** It expects 30 Functions and
-  110 FunctionAPIs, and the catalogue now has 45 and 121. No suite runs it.
+- **`scripts/verify-phase-06-integrity.mjs` pinned stale catalogue counts.** It expected 30 Functions
+  and 110 FunctionAPIs when the catalogue had 45 and 121, and no suite ran it. The gate was retired on
+  2026-10-18. The catalogue's identity is now guarded by `served-operations.integration.test.ts`
+  ("the two catalogue copies are byte-identical") and its integrity by `pnpm verify:csrm-seed`.
 - **Duplicate API-only Function rows remain in development databases seeded before 07-01.** 07-01
   fixed the reconciler, so no new duplicates appear. The old rows are detached and unreachable, and a
   clean-up is optional.
 - **`next build` has not been run for the Phase 7 routes.** Every browser suite runs against
   `next dev`. Production-build verification is Phase 8.
+
+## Phase 19 amendment (2026-10-16): the report export served
+
+Item 4's report export, and its row in item 5's table of catalogued operations left unserved, are served by Phase 19, plan 19-09, at the catalogued URL `POST /api/v1/reports/{reportKey}/export`, per `docs/contract-gaps/phase-19-exports-and-export-log.md`, effective on that record's approval. Its FunctionApi moves from `function.reports.reports.api.03` to `function.reports.export_api.api.01`, a human-only API Function granted to `role.security_analyst` alone, with its name, URL and description unchanged. The report's own figures and windows are unchanged; XLSX holds one sheet per report table and CSV one chosen table, with the export record's grants, underlying read (`GET /api/v1/reports/{reportKey}`), row cap, neutraliser and event log. The released assessment's print-ready report (X-31) is a separate page with no operation. Every other item of this record, including the four operations item 5 still leaves unserved, is unchanged.
+
+### Affected Workstreams
+
+`apps/backend` is shared by every workstream (`.planning/PROJECT.md`, "GSD Workstreams", "The shared backend"); on 2026-10-16 its table lists `csrm` and `iam`. The changes, each backward compatible for any later reader:
+
+- **The move** of `function.reports.reports.api.03` to `function.reports.export_api.api.01`, name, URL and description unchanged: the operation was unserved until now, so a reader keyed on the old id re-reads the catalogue and no served grant is lost.
+- **The refusals on it:** it is a member of `HUMAN_ANALYST_ONLY_OPERATIONS` (a caller without the human Security Analyst grant is refused with `CSRM analyst exports require a human Security Analyst.`) and of `SERVICE_IDENTITY_REFUSED_OPERATIONS` (the Security Analyst Agent is refused with `CSRM exports are refused to automation identities.`); both apply to this new operation only.
+- **`function.reports.reports` keeps its menu path and grants;** it loses only the moved FunctionApi.
+
+`csrm` is the only workstream whose application calls the report export. `iam` reads the catalogue but none of these names: on 2026-10-16, `grep -rlE "CONFLICT_REASONS|HUMAN_ANALYST_ONLY|SERVICE_IDENTITY_REFUSED|/v1/[a-z_]+/export|export_api|csv-import|import/preview|import/template|error_report|function\.risk_register|function\.reports|function\.administration|AssessmentWorkflowErrorResponse|write-excel-file|xlsx-reader|security-event-log" .planning/workstreams/iam/` printed nothing.
+
+Phase 19 amendment status: **approved by the pilot on 2026-10-16** (G-6).
+
+What the pilot checked (2026-10-16): the reserved report export served at its catalogued URL; `function.reports.reports.api.03` moved to `function.reports.export_api.api.01` with name, URL and description unchanged; the reports menu Function keeps its menu path and grants (the Security Analyst Agent still reads reports but cannot export them); no lines removed from the Phase 07 record; AGENTS.md (Strapi enforces every rule against the resolved IdamBox User; navigation visibility is not authorisation; Requestors never reach another Requestor's records; AI is not involved; JDL terminology); the role-function catalogue (new API-only Functions, human-only analyst exports, the Requestor-birthright own-record Function, no grant to the Security Analyst Agent or any service role, both copies byte-identical); `specification.json` changes additive only; no content-type change; and `.planning/PROJECT.md` "The shared backend": the Affected Workstreams section re-ran both greps, `iam` reads none of Phase 19's names, and every change keeps existing endpoints, grants and decisions backward compatible.

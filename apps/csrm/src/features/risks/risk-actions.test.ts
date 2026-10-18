@@ -7,6 +7,10 @@ const createControlImplementation = vi.hoisted(() => vi.fn());
 const updateControlImplementation = vi.hoisted(() => vi.fn());
 const deleteControlImplementation = vi.hoisted(() => vi.fn());
 const getRiskDetail = vi.hoisted(() => vi.fn());
+const listRiskRegisterAssessments = vi.hoisted(() => vi.fn());
+const searchRiskRegisterOwners = vi.hoisted(() => vi.fn());
+const searchRiskRegisterSystems = vi.hoisted(() => vi.fn());
+const searchRiskRegisterAssets = vi.hoisted(() => vi.fn());
 const revalidatePath = vi.hoisted(() => vi.fn());
 
 vi.mock('../assessments/assessment-service', () => ({
@@ -15,13 +19,16 @@ vi.mock('../assessments/assessment-service', () => ({
   updateControlImplementation,
   deleteControlImplementation,
 }));
-vi.mock('./risk-service', () => ({ getRiskDetail }));
+vi.mock('./risk-service', () => ({
+  getRiskDetail, listRiskRegisterAssessments, searchRiskRegisterOwners, searchRiskRegisterSystems, searchRiskRegisterAssets,
+}));
 vi.mock('next/cache', () => ({ revalidatePath }));
 
 afterEach(() => {
   for (const mock of [
     updateRisk, createControlImplementation, updateControlImplementation,
     deleteControlImplementation, getRiskDetail, revalidatePath,
+    listRiskRegisterAssessments, searchRiskRegisterOwners, searchRiskRegisterSystems, searchRiskRegisterAssets,
   ]) mock.mockReset();
 });
 
@@ -151,5 +158,40 @@ describe('Risk detail Server Action boundary', () => {
     expect(JSON.stringify(result)).not.toContain('private failure detail');
     expect(getRiskDetail).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+/*
+ * D-32 and UAT-048: the Risk register's Related assessment picker searches on the server, which matches the number,
+ * the summary or the request title, beyond the first page. The action passes the term through and keeps the
+ * server's order, so an assessment found by its request title is never dropped for a label that does not contain it.
+ */
+describe('the Risk register relation search', () => {
+  const option = (index: number) => ({ documentId: `assessment-${index}`, label: `ASM-2026-${String(index).padStart(5, '0')} · UAT-A: Brightwage People cloud HR` });
+
+  it('passes the term to the server assessment search once and returns its first 20 options unfiltered', async () => {
+    const options = Array.from({ length: 25 }, (_, index) => option(index));
+    listRiskRegisterAssessments.mockResolvedValue({ data: options, error: null });
+
+    const result = await actions.searchRiskRegisterRelationsAction({ kind: 'assessments', search: '  payroll ' });
+
+    expect(listRiskRegisterAssessments).toHaveBeenCalledTimes(1);
+    expect(listRiskRegisterAssessments).toHaveBeenCalledWith('payroll');
+    expect(result).toEqual({ ok: true, data: options.slice(0, 20) });
+  });
+
+  it('keeps searching the other relations as before', async () => {
+    searchRiskRegisterOwners.mockResolvedValue({ data: [{ documentId: 'bob', label: 'Bob Doe' }, { documentId: 'alice', label: 'Alice Analyst' }], error: null });
+
+    await expect(actions.searchRiskRegisterRelationsAction({ kind: 'owners', search: 'bob' })).resolves.toEqual({ ok: true, data: [{ documentId: 'bob', label: 'Bob Doe' }] });
+    expect(searchRiskRegisterOwners).toHaveBeenCalledWith('bob');
+    expect(listRiskRegisterAssessments).not.toHaveBeenCalled();
+  });
+
+  it('reports an unavailable assessment search without its detail', async () => {
+    listRiskRegisterAssessments.mockResolvedValue(failure(503));
+
+    const result = await actions.searchRiskRegisterRelationsAction({ kind: 'assessments', search: 'payroll' });
+    expect(result).toEqual({ ok: false, formError: 'Relation search is unavailable. Try again.' });
   });
 });

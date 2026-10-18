@@ -6,8 +6,9 @@ import { HomePageHeader } from '@/features/home/home-page-header';
 import { RequestorHomeContent, RequestorHomeSkeleton } from '@/features/home/requestor-home';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
+import { pageHeadings, routeTitle } from '@/config/navigation/page-headings';
 
-export const metadata = { title: 'Home | IdamBox CSRM' };
+export const metadata = { title: routeTitle(pageHeadings.home) };
 
 type HomePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -25,12 +26,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const session = await sessionAdapter.current();
   const granted = session ? await sessionAdapter.capabilitiesFor(session).granted() : new Set<Capability>();
   const analyst = can('assessment:review', granted);
+  const canCreate = can('assessment-request:create', granted);
 
   return (
     <>
-      <HomePageHeader variant={analyst ? 'analyst' : 'requestor'} />
+      <HomePageHeader variant={analyst ? 'analyst' : 'requestor'} withAction={canCreate} />
       <Suspense fallback={analyst ? <AnalystDashboardSkeleton /> : <RequestorHomeSkeleton />}>
-        {analyst ? <AnalystHomeContent searchParams={searchParams} /> : <RequestorHomeContent searchParams={searchParams} />}
+        {analyst ? <AnalystHomeContent searchParams={searchParams} /> : <RequestorHomeContent canCreate={canCreate} searchParams={searchParams} />}
       </Suspense>
     </>
   );

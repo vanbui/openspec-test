@@ -4,7 +4,7 @@ import './globals.css';
 
 import { ShieldCheckIcon } from 'lucide-react';
 
-import { BrandLockup } from '@/components/shell/wordmark';
+import { BrandLockup } from '@/components/shell/brand-lockup';
 import { Button } from '@/components/ui/button';
 import { fontVariableClassName } from './fonts';
 

@@ -8,22 +8,46 @@ import type { z } from 'zod';
 vi.mock('server-only', () => ({}));
 
 import { responseParserModule as assessmentResponseParserModule, type ContractResponseParser } from './assessments/assessment-service';
+import { analystRiskDetailSchema, riskWithdrawalSchema } from './assessments/assessment-schema';
 import { parserFreeModules } from './parser-free-modules';
 import { responseParserModule as requestResponseParserModule } from './requests/request-service';
 import { responseParserModule as questionnaireResponseParserModule } from './questionnaires/questionnaire-service';
-import { responseParserModule as riskSchemaResponseParserModule } from './risks/risk-schema';
+import { responseParserModule as riskSchemaResponseParserModule, riskDetailSchema, riskRegisterQuerySchema } from './risks/risk-schema';
 import { responseParserModule as riskServiceResponseParserModule } from './risks/risk-service';
 import { responseParserModule as administrationResponseParserModule } from './administration/administration-service';
 import { responseParserModule as alertResponseParserModule } from './alerts/alert-service';
 import { responseParserModule as analystDashboardResponseParserModule } from './analyst-dashboard/analyst-dashboard-service';
 import { responseParserModule as reportResponseParserModule } from './reports/report-service';
-import { responseParserModule as dashboardResponseParserModule } from './dashboard/requestor-dashboard-service';
+import { responseParserModule as requestorHomeResponseParserModule } from './home/requestor-home-service';
 import { responseParserModule as accessResponseParserModule } from './access/access-service';
+import { responseParserModule as aiAssistanceResponseParserModule } from './ai-assistance/ai-assistance-service';
+import { responseParserModule as questionnaireAiResponseParserModule } from './questionnaire-ai/questionnaire-ai-service';
+import { responseParserModule as riskCurationResponseParserModule } from './risk-curation/risk-curation-service';
+import { responseParserModule as requestAssignmentResponseParserModule } from './request-assignment/assignment-service';
+import { responseParserModule as requestNotesResponseParserModule } from './request-notes/notes-service';
+import { responseParserModule as requestAttachmentsResponseParserModule } from './attachments/attachments-service';
+import { ATTACHMENT_RESPONSE_CONTENT_TYPES, EXPORT_RESPONSE_CONTENT_TYPES } from '../lib/files/file-response';
 
+/**
+ * A binary success response a service reads with a binary parse (Phase 14 D-24, Phase 19 D-19): the operation, and the
+ * media types its shared file-response validator accepts, which must be exactly the 200's declared content.
+ */
+type ContractFileResponse = {
+  readonly label: string;
+  readonly path: string;
+  readonly method: 'get' | 'post';
+  readonly contentTypes: readonly string[];
+};
+
+/**
+ * `parsers`: the module parses JSON responses (and may also read files); `file-response`: it reads files only, each
+ * checked by the shared validator rather than a zod parser; `no-direct-response-parser`: it parses nothing itself.
+ */
 type ResponseParserModule = {
   readonly modulePath: string;
-  readonly mode: 'parsers' | 'no-direct-response-parser';
+  readonly mode: 'parsers' | 'no-direct-response-parser' | 'file-response';
   readonly parsers: readonly ContractResponseParser[];
+  readonly fileResponses?: readonly ContractFileResponse[];
   readonly reason?: string;
 };
 
@@ -35,8 +59,14 @@ const responseParserModuleInventory: readonly ResponseParserModule[] = [
   alertResponseParserModule,
   analystDashboardResponseParserModule,
   reportResponseParserModule,
-  dashboardResponseParserModule,
+  requestorHomeResponseParserModule,
   accessResponseParserModule,
+  aiAssistanceResponseParserModule,
+  questionnaireAiResponseParserModule,
+  riskCurationResponseParserModule,
+  requestAssignmentResponseParserModule,
+  requestNotesResponseParserModule,
+  requestAttachmentsResponseParserModule,
   riskServiceResponseParserModule,
   riskSchemaResponseParserModule,
   ...parserFreeModules,
@@ -56,9 +86,8 @@ const parsers: readonly ContractResponseParser[] = [
  * `narrowedPaths`.
  */
 const boundaryGrandfathered: Readonly<Record<string, string>> = {
-  // Phase 2 — the request family (features/requests/request-service.ts)
-  'request.listRequests':
-    'Phase 2 request list: the client bounds the request number, title, selected system and asset names and questionnaire title with min(1) and the requestor display name with max(255) where the contract declares no bound; the contract bounds for the request family are a Phase 8 backlog item.',
+  // Phase 2 — the request family (features/requests/request-service.ts). The request list parser retired with
+  // its last caller, the Requestor dashboard read, when the Requestor Home moved to GET /v1/my_requests (11-12).
   'request.getRequest':
     'Phase 2 request detail: the request list bounds plus min(1)/max(255) on the related questionnaire and assessment documentIds; the contract bounds for the request family are a Phase 8 backlog item.',
   'request.createRequest':
@@ -95,10 +124,6 @@ const boundaryGrandfathered: Readonly<Record<string, string>> = {
   // Phase 4 — the assessment family (features/assessments/assessment-service.ts)
   'listAssessmentRequests':
     'Phase 4 analyst request queue: min(1)/max on the request documentId, number and title; the contract bounds for the assessment family are a Phase 8 backlog item.',
-  'getAssessmentDraftJob':
-    'Phase 4 draft job: min(1)/max on the jobId and questionnaireId; the contract bounds for the assessment family are a Phase 8 backlog item.',
-  'getQuestionnaireGenerationJob':
-    'Phase 06.2 generation job: min(1)/max on the jobId, requestId, provider name and provider version beyond the union restructure already narrowed at data; the contract bounds for the assessment family are a Phase 8 backlog item.',
   'listMyReleasedAssessments':
     'Phase 4 released assessment list: min(1)/max on the documentId and assessment number, max on the summary and min(1)/max on the generating actor documentId and display name; the contract bounds for the assessment family are a Phase 8 backlog item.',
   'listAnalystAssessments':
@@ -205,22 +230,52 @@ function schemaFor(entry: ContractResponseParser): JsonObject {
   return schema;
 }
 
+/**
+ * The file-response mode (14-RESEARCH Pitfall 12): a binary 200 declares no JSON, and each of its media types is a
+ * string with that `contentMediaType`. The validator's accepted types must be exactly the declared ones, so the
+ * contract cannot add a type the web would refuse, or the web accept one the contract does not serve.
+ */
+function checkFileResponse(entry: ContractFileResponse): void {
+  const content = specification.paths[entry.path]?.[entry.method]?.responses?.['200']?.content;
+  if (!content) throw new Error(`${entry.label} cannot resolve ${entry.method.toUpperCase()} ${entry.path} 200 file response.`);
+  const declared = Object.keys(content);
+  if (declared.includes('application/json')) throw new Error(`${entry.label} declares a JSON 200, not a file response.`);
+  for (const mediaType of declared) {
+    const schema = content[mediaType]?.schema as JsonObject | undefined;
+    if (schema?.type !== 'string' || schema.contentMediaType !== mediaType) {
+      throw new Error(`${entry.label} declares ${mediaType} without a string schema of that contentMediaType.`);
+    }
+  }
+  if ([...declared].sort().join(' ') !== [...entry.contentTypes].sort().join(' ')) {
+    throw new Error(`${entry.label} file response content types differ from the contract: ${declared.join(', ')}`);
+  }
+}
+
 function validateInventory(inventory: readonly ResponseParserModule[]): void {
   const paths = new Set<string>();
   const labels = new Set<string>();
   for (const module of inventory) {
     if (paths.has(module.modulePath)) throw new Error(`Duplicate parser module declaration: ${module.modulePath}`);
     paths.add(module.modulePath);
+    const fileResponses = module.fileResponses ?? [];
     if (module.mode === 'parsers' && module.parsers.length === 0) {
       throw new Error(`Parser-bearing module has no descriptors: ${module.modulePath}`);
     }
-    if (module.mode === 'no-direct-response-parser' && (!module.reason || module.parsers.length !== 0)) {
+    if (module.mode === 'no-direct-response-parser' && (!module.reason || module.parsers.length !== 0 || fileResponses.length !== 0)) {
       throw new Error(`Parser-free module declaration contradicts its parser registry: ${module.modulePath}`);
+    }
+    if (module.mode === 'file-response' && (fileResponses.length === 0 || module.parsers.length !== 0)) {
+      throw new Error(`File-response module declaration contradicts its registry: ${module.modulePath}`);
     }
     for (const parser of module.parsers) {
       if (labels.has(parser.label)) throw new Error(`Duplicate response parser descriptor: ${parser.label}`);
       labels.add(parser.label);
       schemaFor(parser);
+    }
+    for (const fileResponse of fileResponses) {
+      if (labels.has(fileResponse.label)) throw new Error(`Duplicate response parser descriptor: ${fileResponse.label}`);
+      labels.add(fileResponse.label);
+      checkFileResponse(fileResponse);
     }
   }
 }
@@ -272,7 +327,8 @@ function stringFor(schema: JsonObject, mode: Mode): string {
   if (named.length > 0) return String(named[0]);
   if (schema.format === 'date-time') return '2026-01-15T09:30:00.000Z';
   if (schema.format === 'date') return '2026-01-15';
-  if (typeof schema.pattern === 'string') return 'ASM-2026-33SAEN';
+  // A patterned string the contract gives an example for (a closed key such as a proposal item's `i-1`) takes that example.
+  if (typeof schema.pattern === 'string') return Array.isArray(schema.examples) && typeof schema.examples[0] === 'string' ? schema.examples[0] : 'ASM-2026-33SAEN';
   const minLength = typeof schema.minLength === 'number' ? schema.minLength : undefined;
   const maxLength = typeof schema.maxLength === 'number' ? schema.maxLength : undefined;
   if (mode === 'boundary-empty') return ' '.repeat(minLength ?? 0);
@@ -468,25 +524,223 @@ describe('contract-to-client-schema parity', () => {
     // into their own registry without any boundary changing.
     expect([...responseParserModuleInventory.map((module) => module.modulePath)].sort()).toEqual([
       'features/access/access-service.ts',
+      'features/ai-assistance/ai-assistance-actions.ts',
+      'features/ai-assistance/ai-assistance-service.ts',
       'features/administration/administration-actions.ts',
       'features/administration/administration-service.ts',
       'features/alerts/alert-service.ts',
       'features/analyst-dashboard/analyst-dashboard-service.ts',
       'features/assessments/assessment-actions.ts',
       'features/assessments/assessment-service.ts',
-      'features/dashboard/requestor-dashboard-service.ts',
+      'features/attachments/attachments-service.ts',
+      'features/home/requestor-home-service.ts',
+      'features/questionnaire-ai/questionnaire-ai-actions.ts',
+      'features/questionnaire-ai/questionnaire-ai-service.ts',
       'features/questionnaires/questionnaire-actions.ts',
       'features/questionnaires/questionnaire-service.ts',
       'features/reports/report-service.ts',
+      'features/request-assignment/assignment-service.ts',
+      'features/request-notes/notes-service.ts',
       'features/requests/request-actions.ts',
       'features/requests/request-service.ts',
+      'features/risk-curation/risk-curation-actions.ts',
+      'features/risk-curation/risk-curation-service.ts',
       'features/risks/risk-actions.ts',
       'features/risks/risk-schema.ts',
       'features/risks/risk-service.ts',
     ].sort());
     for (const module of responseParserModuleInventory) {
-      expect(module.mode === 'parsers' ? module.parsers.length > 0 : Boolean(module.reason)).toBe(true);
+      const declared = module.mode === 'parsers'
+        ? module.parsers.length > 0
+        : module.mode === 'file-response' ? (module.fileResponses ?? []).length > 0 : Boolean(module.reason);
+      expect(declared).toBe(true);
     }
+  });
+
+  it('registers the request attachment download in the file-response mode against the contract’s eight media types (14-07, D-23, D-24)', () => {
+    const fileResponses: readonly ContractFileResponse[] = (requestAttachmentsResponseParserModule as ResponseParserModule).fileResponses ?? [];
+    expect(fileResponses.map((entry) => [entry.label, entry.method, entry.path])).toEqual([
+      ['downloadRequestAttachment', 'get', '/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content'],
+    ]);
+    const content = specification.paths['/v1/assessment_requests/{requestId}/attachments/{attachmentId}/content']?.get?.responses?.['200']?.content ?? {};
+    expect(Object.keys(content)).toEqual([...ATTACHMENT_RESPONSE_CONTENT_TYPES]);
+    expect(fileResponses[0]?.contentTypes).toEqual(ATTACHMENT_RESPONSE_CONTENT_TYPES);
+    expect(() => validateInventory([requestAttachmentsResponseParserModule])).not.toThrow();
+    // The mode is checked both ways: a type the contract does not serve, a JSON 200 and an empty file-only module fail.
+    const download = fileResponses[0]!;
+    expect(() => validateInventory([{ ...requestAttachmentsResponseParserModule, fileResponses: [{ ...download, contentTypes: [...download.contentTypes, 'text/html'] }] }]))
+      .toThrow('file response content types differ from the contract');
+    expect(() => validateInventory([{ ...requestAttachmentsResponseParserModule, fileResponses: [{ ...download, path: '/v1/assessment_requests/{requestId}/attachments' }] }]))
+      .toThrow('declares a JSON 200');
+    expect(() => validateInventory([{ modulePath: 'features/exports/export-service.ts', mode: 'file-response', parsers: [], fileResponses: [] }]))
+      .toThrow('File-response module declaration contradicts');
+  });
+
+  it('registers the Risk register export in the file-response mode against the two export media types (19-06, D-19)', () => {
+    const fileResponses: readonly ContractFileResponse[] = (riskServiceResponseParserModule as ResponseParserModule).fileResponses ?? [];
+    expect(fileResponses.map((entry) => [entry.label, entry.method, entry.path])).toEqual([
+      ['risks.exportRiskRegister', 'get', '/v1/risks/export'],
+    ]);
+    // Exactly the validator's registered values, the CSV with its charset parameter: the guard drops no parameter.
+    expect(fileResponses[0]?.contentTypes).toEqual(Object.values(EXPORT_RESPONSE_CONTENT_TYPES));
+    expect([...(fileResponses[0]?.contentTypes ?? [])].sort()).toEqual([
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv; charset=utf-8',
+    ]);
+    const content = specification.paths['/v1/risks/export']?.get?.responses?.['200']?.content ?? {};
+    expect(Object.keys(content).sort()).toEqual([...Object.values(EXPORT_RESPONSE_CONTENT_TYPES)].sort());
+    expect(() => validateInventory([riskServiceResponseParserModule])).not.toThrow();
+    const exported = fileResponses[0]!;
+    // The essence alone is not the declared type, so the guard refuses a registration that drops the parameter.
+    expect(() => validateInventory([{ ...riskServiceResponseParserModule, fileResponses: [{ ...exported, contentTypes: ['text/csv', EXPORT_RESPONSE_CONTENT_TYPES.xlsx] }] }]))
+      .toThrow('file response content types differ from the contract');
+  });
+
+  /*
+   * 19-15 (D-31 to D-33; 19-PLAN-CHECK recheck C NB1): the Administration files the import flow and the reference lists
+   * read, each registered in the task that adds its call: the four templates (Task 1), the four error reports (Task 2)
+   * and the four reference-list exports (Task 3).
+   */
+  it('registers the Administration import files in the file-response inventory against the two export media types (19-15)', () => {
+    const fileResponses: readonly ContractFileResponse[] = (administrationResponseParserModule as ResponseParserModule).fileResponses ?? [];
+    expect(fileResponses.map((entry) => `${entry.method.toUpperCase()} ${entry.path}`)).toEqual([
+      'GET /v1/risk_types/import/template',
+      'GET /v1/controls/import/template',
+      'GET /v1/information_systems/import/template',
+      'GET /v1/information_assets/import/template',
+      'POST /v1/risk_types/import/error_report',
+      'POST /v1/controls/import/error_report',
+      'POST /v1/information_systems/import/error_report',
+      'POST /v1/information_assets/import/error_report',
+      'GET /v1/risk_types/export',
+      'GET /v1/controls/export',
+      'GET /v1/information_systems/export',
+      'GET /v1/information_assets/export',
+    ]);
+    for (const entry of fileResponses) {
+      expect(entry.contentTypes, entry.label).toEqual(['text/csv; charset=utf-8', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+      expect(() => checkFileResponse(entry), entry.label).not.toThrow();
+    }
+    expect(() => validateInventory([administrationResponseParserModule])).not.toThrow();
+  });
+
+  it('registers all ten export operations in the file-response mode against the two export media types (19-11, D-19)', () => {
+    const exports = responseParserModuleInventory
+      .flatMap((module) => module.fileResponses ?? [])
+      .filter((entry) => !entry.path.includes('/import/') && !['/v1/risk_types/export', '/v1/controls/export', '/v1/information_systems/export', '/v1/information_assets/export'].includes(entry.path))
+      .filter((entry) => !(ATTACHMENT_RESPONSE_CONTENT_TYPES as readonly string[]).every((type) => entry.contentTypes.includes(type)));
+    expect(exports.map((entry) => `${entry.method.toUpperCase()} ${entry.path}`).sort()).toEqual([
+      'GET /v1/alerts/export',
+      'GET /v1/assessment_requests/export',
+      'GET /v1/my_questionnaires/export',
+      'GET /v1/my_requests/export',
+      'GET /v1/my_risk_assessments/export',
+      'GET /v1/questionnaires/export',
+      'GET /v1/risk_assessments/export',
+      'GET /v1/risk_assessments/{assessmentId}/export',
+      'GET /v1/risks/export',
+      'POST /v1/reports/{reportKey}/export',
+    ]);
+    for (const entry of exports) {
+      expect(entry.contentTypes, entry.label).toEqual(['text/csv; charset=utf-8', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+      expect(() => checkFileResponse(entry), entry.label).not.toThrow();
+    }
+  });
+
+  it('registers the request attachment removal against its closed body and the attachment response (14-08, D-04 item 4)', () => {
+    const removal = ((specification.paths as unknown as Record<string, JsonObject>)['/v1/assessment_requests/{requestId}/attachments/{attachmentId}/removal'] as JsonObject | undefined)?.put as JsonObject | undefined;
+    expect(removal).toBeDefined();
+    expect(((removal!.requestBody as JsonObject).content as JsonObject)).toEqual({
+      'application/json': { schema: { $ref: '#/components/schemas/RequestAttachmentRemovalRequest' } },
+    });
+    expect((((removal!.responses as JsonObject)['200'] as JsonObject).content as JsonObject)).toEqual({
+      'application/json': { schema: { $ref: '#/components/schemas/RequestAttachmentResponse' } },
+    });
+    const body = specification.components.schemas.RequestAttachmentRemovalRequest as JsonObject;
+    expect(body.additionalProperties).toBe(false);
+    expect(((body.properties as JsonObject).data as JsonObject).additionalProperties).toBe(false);
+    expect(Object.keys(((body.properties as JsonObject).data as JsonObject).properties as JsonObject)).toEqual(['removed']);
+  });
+
+  it('registers the request attachment AI inclusion against its closed body and the preview against its closed text response (14-09, D-30, D-31)', () => {
+    const paths = specification.paths as unknown as Record<string, JsonObject>;
+    const setAiInput = (paths['/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_input'] as JsonObject | undefined)?.put as JsonObject | undefined;
+    expect(setAiInput).toBeDefined();
+    expect(((setAiInput!.requestBody as JsonObject).content as JsonObject)).toEqual({
+      'application/json': { schema: { $ref: '#/components/schemas/RequestAttachmentAiInputRequest' } },
+    });
+    expect((((setAiInput!.responses as JsonObject)['200'] as JsonObject).content as JsonObject)).toEqual({
+      'application/json': { schema: { $ref: '#/components/schemas/RequestAttachmentResponse' } },
+    });
+    const body = specification.components.schemas.RequestAttachmentAiInputRequest as JsonObject;
+    expect(body.additionalProperties).toBe(false);
+    expect(((body.properties as JsonObject).data as JsonObject).additionalProperties).toBe(false);
+    expect(Object.keys(((body.properties as JsonObject).data as JsonObject).properties as JsonObject)).toEqual(['included']);
+    const getAiText = (paths['/v1/assessment_requests/{requestId}/attachments/{attachmentId}/ai_text'] as JsonObject | undefined)?.get as JsonObject | undefined;
+    expect(getAiText).toBeDefined();
+    expect((((getAiText!.responses as JsonObject)['200'] as JsonObject).content as JsonObject)).toEqual({
+      'application/json': { schema: { $ref: '#/components/schemas/RequestAttachmentAiTextResponse' } },
+    });
+    // The analysts' AI facts on a file are optional, so a Requestor's file, which carries none, is the same component.
+    const attachment = specification.components.schemas.RequestAttachment as JsonObject;
+    expect(((attachment.properties as JsonObject).ai as JsonObject | undefined)?.$ref).toBe('#/components/schemas/RequestAttachmentAi');
+    expect(attachment.required as string[]).not.toContain('ai');
+    // The section's AI policy is the analysts' optional meta (D-28, D-30).
+    const meta = specification.components.schemas.RequestAttachmentListMeta as JsonObject;
+    expect(((meta.properties as JsonObject).aiPolicy as JsonObject | undefined)?.$ref).toBe('#/components/schemas/RequestAttachmentAiPolicy');
+    expect(meta.required as string[]).not.toContain('aiPolicy');
+  });
+
+  it('publishes the request read’s optional file summary as the closed RequestAttachmentSummary, and the delete’s second reason (14-08, D-04 items 7 and 11)', () => {
+    const read = ((specification.paths as unknown as Record<string, JsonObject>)['/csrm-assessment-requests/{id}'] as JsonObject).get as JsonObject;
+    const data = ((((read.responses as JsonObject)['200'] as JsonObject).content as JsonObject)['application/json'] as JsonObject).schema as JsonObject;
+    const document = (data.properties as JsonObject).data as JsonObject;
+    expect(((document.properties as JsonObject).attachments as JsonObject | undefined)?.$ref).toBe('#/components/schemas/RequestAttachmentSummary');
+    // Optional: only a reader of the request's attachments gets it (D-18).
+    expect(document.required as string[]).not.toContain('attachments');
+    const summary = specification.components.schemas.RequestAttachmentSummary as JsonObject | undefined;
+    expect(summary?.additionalProperties).toBe(false);
+    const addFacts = specification.components.schemas.RequestAttachmentAddFacts as JsonObject;
+    expect(Object.keys((summary?.properties ?? {}) as JsonObject)).toEqual(['count', ...Object.keys(addFacts.properties as JsonObject)]);
+    expect(summary?.required).toEqual(['count', ...(addFacts.required as string[])]);
+    const remove = ((specification.paths as unknown as Record<string, JsonObject>)['/csrm-assessment-requests/{id}'] as JsonObject).delete as JsonObject;
+    expect(String(((remove.responses as JsonObject)['409'] as JsonObject).description)).toContain('REQUEST_HAS_ATTACHMENTS');
+  });
+
+  it('registers the request attachments parsers against their components, and the upload sends multipart (14-06, D-04)', () => {
+    expect(requestAttachmentsResponseParserModule.parsers.map((entry) => [entry.label, entry.component])).toEqual([
+      ['listRequestAttachments', 'RequestAttachmentListResponse'],
+      ['uploadRequestAttachment', 'RequestAttachmentResponse'],
+      ['setRequestAttachmentRemoval', 'RequestAttachmentResponse'],
+      ['setRequestAttachmentAiInput', 'RequestAttachmentResponse'],
+      ['getRequestAttachmentAiText', 'RequestAttachmentAiTextResponse'],
+    ]);
+    const upload =((specification.paths as unknown as Record<string, JsonObject>)['/v1/assessment_requests/{requestId}/attachments'] as JsonObject).post as JsonObject;
+    const content = (upload.requestBody as JsonObject).content as JsonObject;
+    expect(Object.keys(content)).toEqual(['multipart/form-data']);
+    const body = specification.components.schemas.RequestAttachmentUploadRequest as JsonObject;
+    expect(body.additionalProperties).toBe(false);
+    expect(Object.keys(body.properties as JsonObject).sort()).toEqual(['file', 'noteId']);
+    expect(((upload.responses as JsonObject)['201'] as JsonObject).content).toEqual({
+      'application/json': { schema: { $ref: '#/components/schemas/RequestAttachmentResponse' } },
+    });
+    // D-05: no stored-file fact is part of the served attachment.
+    const served = Object.keys((specification.components.schemas.RequestAttachment as JsonObject).properties as JsonObject);
+    for (const secret of ['sha256', 'hash', 'url', 'aiText', 'file']) expect(served).not.toContain(secret);
+  });
+
+  it('registers the Phase 16 risk curation parsers against their components (16-11, D-02)', () => {
+    expect(riskCurationResponseParserModule.parsers.map((entry) => [entry.label, entry.component])).toEqual([
+      ['withdrawRisks', 'RiskCurationResponse'],
+      ['reinstateRisks', 'RiskCurationResponse'],
+      ['getRiskHistory', 'RiskHistoryResponse'],
+      ['startRiskSuggestions', 'RiskProposalJobResponse'],
+      ['startRiskRewrite', 'RiskProposalJobResponse'],
+      ['getRiskProposalJob', 'RiskProposalJobResponse'],
+      ['retryRiskProposalJob', 'RiskProposalJobResponse'],
+      ['listRiskAiProposals', 'RiskAiProposalsResponse'],
+      ['decideRiskProposals', 'AiProposalDecisionResponse'],
+    ]);
   });
 
   it('rejects missing populated assessment actor summaries', () => {
@@ -652,6 +906,372 @@ describe('contract-to-client-schema parity', () => {
     expect(hidden).toEqual([]);
   });
 
+  it('parses the request queue item with its five triage fields, closed against any other key (D-02 item 1)', () => {
+    const triageFields = ['requestorName', 'assessmentType', 'businessCriticality', 'dueDate', 'daysSinceSubmission'];
+    const item = specification.components.schemas.AssessmentRequestQueueItem as { required?: string[]; additionalProperties?: unknown };
+    expect(item.required ?? []).toEqual(expect.arrayContaining(triageFields));
+    expect(item.additionalProperties).toBe(false);
+
+    const entry = parsers.find((candidate) => candidate.label === 'listAssessmentRequests');
+    expect(entry, 'listAssessmentRequests is no longer registered').toBeDefined();
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>> };
+    const parsed = entry!.parser.safeParse(payload);
+    expect(parsed.success, formatIssues(parsed.error)).toBe(true);
+    expect(Object.keys((parsed.data as { data: Array<Record<string, unknown>> }).data[0])).toEqual(expect.arrayContaining(triageFields));
+
+    const extra = { ...payload, data: [{ ...payload.data[0], requestorEmail: 'jane.doe@idambox.com' }] };
+    const refused = entry!.parser.safeParse(extra);
+    expect(refused.success).toBe(false);
+    expect(refused.success ? [] : refused.error.issues.flatMap(issuePaths)).toContain('data.0.requestorEmail');
+  });
+
+  it('parses the request queue item’s assignee, pick-up state and new-note count, and the read’s viewer, all required (13-12; D-13)', () => {
+    const fields = ['assignee', 'pickUp', 'unreadNotes'];
+    const item = specification.components.schemas.AssessmentRequestQueueItem as { required?: string[]; properties?: Record<string, { enum?: unknown[] }> };
+    expect(item.required ?? []).toEqual(expect.arrayContaining(fields));
+    expect(item.properties?.pickUp?.enum).toEqual(['allowed', 'own-request', 'not-offered']);
+    const meta = specification.components.schemas.AssessmentRequestQueueMeta as { required?: string[]; additionalProperties?: unknown };
+    expect(meta.required ?? []).toEqual(['pagination', 'viewer']);
+    expect(meta.additionalProperties).toBe(false);
+
+    const entry = parsers.find((candidate) => candidate.label === 'listAssessmentRequests');
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>>; meta: Record<string, unknown> };
+    const parsed = entry!.parser.safeParse(payload);
+    expect(parsed.success, formatIssues(parsed.error)).toBe(true);
+    expect(Object.keys((parsed.data as { data: Array<Record<string, unknown>> }).data[0])).toEqual(expect.arrayContaining(fields));
+
+    const { viewer: _viewer, ...metaWithoutViewer } = payload.meta;
+    expect(entry!.parser.safeParse({ ...payload, meta: metaWithoutViewer }).success).toBe(false);
+    const assigneeWithEmail = { ...payload, data: [{ ...payload.data[0], assignee: { documentId: 'sam-id', displayName: 'Sam Analyst', email: 'sam@example.test' } }] };
+    expect(entry!.parser.safeParse(assigneeWithEmail).success).toBe(false);
+  });
+
+  it('parses the assessment list item with its request title, Risk count and highest residual rating, closed against any other key (D-02 item 2)', () => {
+    const listFields = ['requestTitle', 'riskCount', 'highestResidualRating'];
+    const item = specification.components.schemas.AssessmentSummary as { required?: string[]; additionalProperties?: unknown };
+    expect(item.required ?? []).toEqual(expect.arrayContaining(listFields));
+    expect(item.additionalProperties).toBe(false);
+
+    for (const label of ['listAnalystAssessments', 'listMyReleasedAssessments', 'listRiskRegisterAssessments']) {
+      const entry = parsers.find((candidate) => candidate.label === label);
+      expect(entry, `${label} is no longer registered`).toBeDefined();
+      const generated = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>> };
+      // A released item, so the Requestor parser's released-only narrowing (data.0.assessmentStatus) holds too.
+      const payload = { ...generated, data: [{ ...generated.data[0], assessmentStatus: 'approved', approvalDate: '2026-09-27T00:30:00.000Z' }] };
+      const parsed = entry!.parser.safeParse(payload);
+      expect(parsed.success, `${label}: ${formatIssues(parsed.error)}`).toBe(true);
+      expect(Object.keys((parsed.data as { data: Array<Record<string, unknown>> }).data[0])).toEqual(expect.arrayContaining(listFields));
+
+      const extra = { ...payload, data: [{ ...payload.data[0], requestNumber: 'RAR-2026-EXTRA' }] };
+      const refused = entry!.parser.safeParse(extra);
+      expect(refused.success, label).toBe(false);
+      expect(refused.success ? [] : refused.error.issues.flatMap(issuePaths)).toContain('data.0.requestNumber');
+    }
+  });
+
+  it('parses the Risk Register detail with its required, closed withdrawal block and reads the withdrawn state filter (16-07, D-02, D-08, D-45)', () => {
+    const detail = specification.components.schemas.RiskDetail as { required?: string[]; properties?: Record<string, JsonObject>; additionalProperties?: unknown };
+    expect(detail.additionalProperties).toBe(false);
+    expect(detail.required ?? []).toContain('withdrawal');
+    expect(detail.properties?.withdrawal?.anyOf).toEqual([{ $ref: '#/components/schemas/RiskWithdrawal' }, { type: 'null' }]);
+    expect(Object.keys(riskDetailSchema.shape).sort()).toEqual(Object.keys(detail.properties ?? {}).sort());
+    const block = { at: '2026-10-15T01:02:03.000Z', by: { documentId: 'user-bob', displayName: 'Bob Doe' }, reason: 'Proposed under the wrong Risk Type' };
+    const withdrawalSchema = (riskDetailSchema.shape as Record<string, { safeParse: (value: unknown) => { success: boolean } }>).withdrawal;
+    expect(withdrawalSchema, 'the register detail parser has no withdrawal').toBeDefined();
+    for (const value of [null, block, { ...block, by: null }]) {
+      expect(withdrawalSchema!.safeParse(value).success).toBe(riskWithdrawalSchema.nullable().safeParse(value).success);
+    }
+    expect(withdrawalSchema!.safeParse({ ...block, undo: false }).success).toBe(false);
+
+    const operation = specification.paths['/v1/risks'].get as { parameters: Array<{ name: string; schema: { enum?: unknown[] } }> };
+    const published = operation.parameters.find((parameter) => parameter.name === 'state')?.schema.enum;
+    expect(published).toEqual(['open', 'closed', 'withdrawn']);
+    for (const value of published ?? []) {
+      expect(riskRegisterQuerySchema.parse({ state: value }).state, `state=${String(value)}`).toBe(value);
+    }
+    expect(riskRegisterQuerySchema.parse({ state: 'off-the-vocabulary' }).state).toBeUndefined();
+  });
+
+  it('parses the analyst Risk detail with its required, closed withdrawal block, key for key with the contract (16-06, D-02, D-03 item 9)', () => {
+    const detail = specification.components.schemas.AnalystRiskDetail as { required?: string[]; properties?: Record<string, JsonObject>; additionalProperties?: unknown };
+    expect(detail.additionalProperties).toBe(false);
+    expect(detail.required ?? []).toContain('withdrawal');
+    expect(detail.properties?.withdrawal?.anyOf).toEqual([{ $ref: '#/components/schemas/RiskWithdrawal' }, { type: 'null' }]);
+    expect(Object.keys(analystRiskDetailSchema.shape).sort()).toEqual(Object.keys(detail.properties ?? {}).sort());
+
+    const withdrawal = specification.components.schemas.RiskWithdrawal as { required?: string[]; properties?: Record<string, JsonObject>; additionalProperties?: unknown };
+    expect(withdrawal, 'RiskWithdrawal is not published').toBeDefined();
+    expect(withdrawal.additionalProperties).toBe(false);
+    expect(withdrawal.required).toEqual(['at', 'by', 'reason']);
+    expect(Object.keys(riskWithdrawalSchema.shape).sort()).toEqual(Object.keys(withdrawal.properties ?? {}).sort());
+    expect(withdrawal.properties?.reason).toMatchObject({ type: 'string', minLength: 1, maxLength: 500 });
+
+    // The analyst detail's registered parser; a released instance, so its released-only narrowings hold too.
+    const entry = parsers.find((candidate) => candidate.label === 'getReleasedAssessment (analyst actor)');
+    expect(entry, 'the analyst assessment detail is not registered').toBeDefined();
+    const generated = instanceOf(schemaFor(entry!), 'maximal', entry!.branch) as { data: { risks: Array<Record<string, unknown>> } };
+    const released = { assessmentStatus: 'approved', assessmentDate: '2026-10-15T01:02:03.000Z', approvalDate: '2026-10-15T01:02:03.000Z', approvedBy: { documentId: 'user-bob', displayName: 'Bob Doe' } };
+    const payload = { ...generated, data: { ...generated.data, ...released } };
+    expect(entry!.parser.safeParse(payload).success, 'the maximal analyst detail does not parse').toBe(true);
+    const withRisk = (risk: Record<string, unknown>) => ({ ...payload, data: { ...payload.data, risks: [risk] } });
+    const [risk] = payload.data.risks;
+    const block = { at: '2026-10-15T01:02:03.000Z', by: { documentId: 'user-bob', displayName: 'Bob Doe' }, reason: 'Proposed under the wrong Risk Type' };
+    expect(entry!.parser.safeParse(withRisk({ ...risk, withdrawal: null })).success).toBe(true);
+    expect(entry!.parser.safeParse(withRisk({ ...risk, withdrawal: block })).success).toBe(true);
+    const refused = entry!.parser.safeParse(withRisk({ ...risk, withdrawal: { ...block, undo: false } }));
+    expect(refused.success).toBe(false);
+    expect(refused.success ? [] : refused.error.issues.flatMap(issuePaths)).toContain('data.risks.0.withdrawal.undo');
+  });
+
+  it('parses my requests closed, with each item\'s holder, stage and next step and no assessment field (D-02 item 6, T-11-53)', () => {
+    const item = specification.components.schemas.MyRequestItem as { required?: string[]; properties?: Record<string, { enum?: string[] }>; additionalProperties?: unknown };
+    expect(item, 'MyRequestItem is not published').toBeDefined();
+    expect(item.additionalProperties).toBe(false);
+    expect(item.properties?.holder?.enum).toEqual(['requestor', 'analyst', 'none']);
+    expect(Object.keys(item.properties ?? {}).filter((key) => /assessment/i.test(key))).toEqual([]);
+
+    const entry = parsers.find((candidate) => candidate.label === 'request.listMyRequests');
+    expect(entry, 'request.listMyRequests is not registered').toBeDefined();
+    expect(entry!.path).toBe('/v1/my_requests');
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>> };
+    const parsed = entry!.parser.safeParse(payload);
+    expect(parsed.success, formatIssues(parsed.error)).toBe(true);
+
+    const extra = { ...payload, data: [{ ...payload.data[0], assessmentNumber: 'ASM-2026-ABCDEF' }] };
+    const refusedExtra = entry!.parser.safeParse(extra);
+    expect(refusedExtra.success).toBe(false);
+    expect(refusedExtra.success ? [] : refusedExtra.error.issues.flatMap(issuePaths)).toContain('data.0.assessmentNumber');
+
+    const unknownHolder = { ...payload, data: [{ ...payload.data[0], holder: 'security-analyst' }] };
+    const refusedHolder = entry!.parser.safeParse(unknownHolder);
+    expect(refusedHolder.success).toBe(false);
+    expect(refusedHolder.success ? [] : refusedHolder.error.issues.flatMap(issuePaths)).toContain('data.0.holder');
+  });
+
+  it('parses my requests with the assignee as a display name alone and the unread note count, and the summary with withUnreadNotes (D-17, D-24)', () => {
+    const item = specification.components.schemas.MyRequestItem as { required?: string[]; properties?: Record<string, Record<string, unknown>> };
+    expect(item.required ?? []).toEqual(expect.arrayContaining(['assignee', 'unreadNotes']));
+    expect(item.properties?.unreadNotes).toMatchObject({ type: 'integer', minimum: 0 });
+    const assignee = specification.components.schemas.MyRequestAssignee as { required?: string[]; properties?: Record<string, unknown>; additionalProperties?: unknown };
+    expect(assignee, 'MyRequestAssignee is not published').toBeDefined();
+    expect(Object.keys(assignee.properties ?? {})).toEqual(['displayName']);
+    expect(assignee.required).toEqual(['displayName']);
+    expect(assignee.additionalProperties).toBe(false);
+    const summary = specification.components.schemas.MyRequestStatusSummary as { required?: string[]; properties?: Record<string, Record<string, unknown>> };
+    expect(summary.required ?? []).toContain('withUnreadNotes');
+    expect(summary.properties?.withUnreadNotes).toMatchObject({ type: 'integer', minimum: 0 });
+
+    const entry = parsers.find((candidate) => candidate.label === 'request.listMyRequests');
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>> };
+    const withItem = (changes: Record<string, unknown>) => ({ ...payload, data: [{ ...payload.data[0], ...changes }] });
+    expect(entry!.parser.safeParse(withItem({ assignee: null, unreadNotes: 0 })).success).toBe(true);
+    expect(entry!.parser.safeParse(withItem({ assignee: { displayName: 'Bob Doe' }, unreadNotes: 3 })).success).toBe(true);
+    const moreThanTheName = entry!.parser.safeParse(withItem({ assignee: { displayName: 'Bob Doe', documentId: 'user-bob' } }));
+    expect(moreThanTheName.success).toBe(false);
+    expect(moreThanTheName.success ? [] : moreThanTheName.error.issues.flatMap(issuePaths)).toContain('data.0.assignee.documentId');
+    const { unreadNotes: _omitted, ...withoutUnread } = payload.data[0]!;
+    const missingUnread = entry!.parser.safeParse({ ...payload, data: [withoutUnread] });
+    expect(missingUnread.success).toBe(false);
+    expect(missingUnread.success ? [] : missingUnread.error.issues.flatMap(issuePaths)).toContain('data.0.unreadNotes');
+
+    const summaryEntry = parsers.find((candidate) => candidate.label === 'request.getMyRequestStatusSummary');
+    const summaryPayload = instanceOf(schemaFor(summaryEntry!), 'maximal') as { data: Record<string, unknown> };
+    expect(summaryEntry!.parser.safeParse(summaryPayload).success).toBe(true);
+    const { withUnreadNotes: _missing, ...withoutCount } = summaryPayload.data;
+    const refusedSummary = summaryEntry!.parser.safeParse({ ...summaryPayload, data: withoutCount });
+    expect(refusedSummary.success).toBe(false);
+    expect(refusedSummary.success ? [] : refusedSummary.error.issues.flatMap(issuePaths)).toContain('data.withUnreadNotes');
+  });
+
+  it('parses the Risk register row with its stage, refusing a missing or unknown stage (D-02 item 3, D-44)', () => {
+    const item = specification.components.schemas.RiskRegisterItem as { required?: string[]; properties?: Record<string, { enum?: string[] }>; additionalProperties?: unknown };
+    expect(item.required ?? []).toContain('stage');
+    expect(item.properties?.stage?.enum).toEqual(['released', 'under-assessment']);
+    expect(item.additionalProperties).toBe(false);
+
+    const entry = parsers.find((candidate) => candidate.label === 'risks.listRiskRegister');
+    expect(entry, 'risks.listRiskRegister is no longer registered').toBeDefined();
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>> };
+    for (const stage of ['released', 'under-assessment']) {
+      const parsed = entry!.parser.safeParse({ ...payload, data: [{ ...payload.data[0], stage }] });
+      expect(parsed.success, `${stage}: ${formatIssues(parsed.error)}`).toBe(true);
+    }
+
+    const { stage: _omitted, ...withoutStage } = payload.data[0];
+    const refusedMissing = entry!.parser.safeParse({ ...payload, data: [withoutStage] });
+    expect(refusedMissing.success).toBe(false);
+    expect(refusedMissing.success ? [] : refusedMissing.error.issues.flatMap(issuePaths)).toContain('data.0.stage');
+
+    const refusedUnknown = entry!.parser.safeParse({ ...payload, data: [{ ...payload.data[0], stage: 'in-review' }] });
+    expect(refusedUnknown.success).toBe(false);
+    expect(refusedUnknown.success ? [] : refusedUnknown.error.issues.flatMap(issuePaths)).toContain('data.0.stage');
+  });
+
+  it('parses the Risk register row with its treatment action, Accept, Treat or none, refusing any other (D-02 item 3, D-44)', () => {
+    const item = specification.components.schemas.RiskRegisterItem as { required?: string[]; properties?: Record<string, { enum?: unknown[] }> };
+    expect(item.required ?? []).toContain('treatmentAction');
+    expect(item.properties?.treatmentAction?.enum).toEqual(['Accept', 'Treat', null]);
+
+    const entry = parsers.find((candidate) => candidate.label === 'risks.listRiskRegister');
+    expect(entry, 'risks.listRiskRegister is no longer registered').toBeDefined();
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Array<Record<string, unknown>> };
+    for (const treatmentAction of ['Accept', 'Treat', null]) {
+      const parsed = entry!.parser.safeParse({ ...payload, data: [{ ...payload.data[0], treatmentAction }] });
+      expect(parsed.success, `${String(treatmentAction)}: ${formatIssues(parsed.error)}`).toBe(true);
+    }
+
+    const { treatmentAction: _omitted, ...withoutAction } = payload.data[0];
+    const refusedMissing = entry!.parser.safeParse({ ...payload, data: [withoutAction] });
+    expect(refusedMissing.success).toBe(false);
+    expect(refusedMissing.success ? [] : refusedMissing.error.issues.flatMap(issuePaths)).toContain('data.0.treatmentAction');
+
+    const refusedUnknown = entry!.parser.safeParse({ ...payload, data: [{ ...payload.data[0], treatmentAction: 'accept' }] });
+    expect(refusedUnknown.success).toBe(false);
+    expect(refusedUnknown.success ? [] : refusedUnknown.error.issues.flatMap(issuePaths)).toContain('data.0.treatmentAction');
+  });
+
+  /*
+   * D-02 item 4, D-40 to D-42: the analyst Home's exposure is three rating counts (released, released and
+   * accepted, under assessment). The parser requires all three and refuses the Phase 7 flat shape, which
+   * counted both stages as one total, so it can never be read as released.
+   */
+  /*
+   * Phase 13 (D-15): the summary's review queue carries the viewer's own counts as a closed block and the team's
+   * pick-up pool, both required. The parser refuses either missing, and an `open` count no surface shows.
+   */
+  it('parses the dashboard review queue with the viewer’s own counts and the pick-up pool, both required (D-15)', () => {
+    const queue = specification.components.schemas.DashboardReviewQueue as { required?: string[]; properties?: Record<string, unknown> } | undefined;
+    expect(queue, 'DashboardReviewQueue is not published').toBeDefined();
+    expect(queue!.required).toEqual(expect.arrayContaining(['mine', 'unassigned']));
+    expect(queue!.properties?.mine).toEqual({ $ref: '#/components/schemas/DashboardReviewQueueMine' });
+    const mine = specification.components.schemas.DashboardReviewQueueMine as { required?: string[]; additionalProperties?: unknown } | undefined;
+    expect(mine, 'DashboardReviewQueueMine is not published').toBeDefined();
+    expect(mine!.required).toEqual(['requiresAttention', 'awaitingRequestor', 'generationInProgress', 'withUnreadNotes']);
+    expect(mine!.additionalProperties).toBe(false);
+
+    const entry = parsers.find((candidate) => candidate.label === 'analystDashboard.getDashboardSummary');
+    expect(entry, 'analystDashboard.getDashboardSummary is no longer registered').toBeDefined();
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Record<string, unknown> & { reviewQueue: Record<string, unknown> & { mine: Record<string, unknown> } } };
+    expect(entry!.parser.safeParse(payload).success).toBe(true);
+    const { mine: _mine, ...withoutMine } = payload.data.reviewQueue;
+    const { unassigned: _unassigned, ...withoutPool } = payload.data.reviewQueue;
+    for (const [path, reviewQueue] of [
+      ['data.reviewQueue.mine', withoutMine],
+      ['data.reviewQueue.unassigned', withoutPool],
+      ['data.reviewQueue.mine', { ...payload.data.reviewQueue, mine: { ...payload.data.reviewQueue.mine, open: 1 } }],
+    ] as const) {
+      const refused = entry!.parser.safeParse({ ...payload, data: { ...payload.data, reviewQueue } });
+      expect(refused.success, path).toBe(false);
+      expect(refused.success ? [] : refused.error.issues.flatMap(issuePaths).some((issue) => issue.startsWith(path)), path).toBe(true);
+    }
+  });
+
+  it('parses the dashboard summary exposure as three rating counts, refusing the flat shape of both stages (D-02 item 4, D-42)', () => {
+    const exposure = specification.components.schemas.DashboardRiskExposure as { required?: string[]; properties?: Record<string, unknown>; additionalProperties?: unknown } | undefined;
+    expect(exposure, 'DashboardRiskExposure is not published').toBeDefined();
+    expect(exposure!.required).toEqual(['released', 'releasedAccepted', 'underAssessment']);
+    expect(exposure!.additionalProperties).toBe(false);
+    for (const key of ['released', 'releasedAccepted', 'underAssessment']) {
+      expect(exposure!.properties?.[key], key).toEqual({ $ref: '#/components/schemas/RatingCounts' });
+    }
+
+    const entry = parsers.find((candidate) => candidate.label === 'analystDashboard.getDashboardSummary');
+    expect(entry, 'analystDashboard.getDashboardSummary is no longer registered').toBeDefined();
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Record<string, unknown> & { riskExposure: Record<string, unknown> } };
+    const parsed = entry!.parser.safeParse(payload);
+    expect(parsed.success, formatIssues(parsed.error)).toBe(true);
+
+    const flat = { ...payload, data: { ...payload.data, riskExposure: payload.data.riskExposure.released } };
+    const refusedFlat = entry!.parser.safeParse(flat);
+    expect(refusedFlat.success).toBe(false);
+    expect(refusedFlat.success ? [] : refusedFlat.error.issues.flatMap(issuePaths)).toContain('data.riskExposure.released');
+
+    const { underAssessment: _omitted, ...withoutUnderAssessment } = payload.data.riskExposure;
+    const refusedMissing = entry!.parser.safeParse({ ...payload, data: { ...payload.data, riskExposure: withoutUnderAssessment } });
+    expect(refusedMissing.success).toBe(false);
+    expect(refusedMissing.success ? [] : refusedMissing.error.issues.flatMap(issuePaths)).toContain('data.riskExposure.underAssessment');
+  });
+
+  /*
+   * D-02 item 4, D-40 to D-42: the Risk exposure report's sections count released open Risks, and it carries
+   * the accepted Risks by residual rating and the Risks under assessment apart. The parser requires both and
+   * refuses the under-assessment figure as a flat count, so it is never read as a released section.
+   */
+  it('parses the risk exposure report with its accepted and under-assessment counts, refusing it without them (D-02 item 4, D-42)', () => {
+    const report = specification.components.schemas.RiskExposureReport as { required?: string[]; properties?: Record<string, unknown> } | undefined;
+    expect(report?.required ?? []).toEqual(expect.arrayContaining(['acceptedByResidualRating', 'underAssessment']));
+    expect(report?.properties?.acceptedByResidualRating).toEqual({ $ref: '#/components/schemas/RatingCounts' });
+    expect(report?.properties?.underAssessment).toEqual({ $ref: '#/components/schemas/RiskExposureUnderAssessment' });
+    const underAssessment = specification.components.schemas.RiskExposureUnderAssessment as { required?: string[]; properties?: Record<string, unknown>; additionalProperties?: unknown } | undefined;
+    expect(underAssessment, 'RiskExposureUnderAssessment is not published').toBeDefined();
+    expect(underAssessment!.required).toEqual(['byResidualRating']);
+    expect(underAssessment!.additionalProperties).toBe(false);
+    expect(underAssessment!.properties).toEqual({ byResidualRating: { $ref: '#/components/schemas/RatingCounts' } });
+
+    const entry = parsers.find((candidate) => candidate.label === 'reports.getReport.riskExposure');
+    expect(entry, 'reports.getReport.riskExposure is no longer registered').toBeDefined();
+    const payload = instanceOf(schemaFor(entry!), 'maximal') as { data: Record<string, unknown> & { underAssessment: { byResidualRating: unknown } } };
+    const parsed = entry!.parser.safeParse(payload);
+    expect(parsed.success, formatIssues(parsed.error)).toBe(true);
+
+    const flat = { ...payload, data: { ...payload.data, underAssessment: payload.data.underAssessment.byResidualRating } };
+    const refusedFlat = entry!.parser.safeParse(flat);
+    expect(refusedFlat.success).toBe(false);
+
+    for (const key of ['acceptedByResidualRating', 'underAssessment']) {
+      const { [key]: _omitted, ...without } = payload.data;
+      const refusedMissing = entry!.parser.safeParse({ ...payload, data: without });
+      expect(refusedMissing.success, key).toBe(false);
+      expect(refusedMissing.success ? [] : refusedMissing.error.issues.flatMap(issuePaths)).toContain(`data.${key}`);
+    }
+  });
+
+  /*
+   * D-02 item 3, D-35: every figure that counts Risks opens the register through a closed filter. The web query
+   * parser keeps exactly each published value and drops anything else, so it never sends a value Strapi refuses.
+   */
+  it('reads each Risk register figure filter closed on its published values (D-02 item 3, D-35)', () => {
+    const operation = specification.paths['/v1/risks'].get as { parameters: Array<{ name: string; schema: { enum?: unknown[] } }> };
+    for (const name of ['dueState', 'mitigationEffectiveness', 'impactedSystem', 'inherentRating', 'residualRating', 'treatmentStatus', 'mitigationStatus']) {
+      const published = operation.parameters.find((parameter) => parameter.name === name)?.schema.enum;
+      expect(published, `${name} is not a published closed filter`).toEqual(expect.any(Array));
+      for (const value of published ?? []) {
+        expect((riskRegisterQuerySchema.parse({ [name]: value }) as Record<string, unknown>)[name], `${name}=${String(value)}`).toBe(value);
+      }
+      expect((riskRegisterQuerySchema.parse({ [name]: 'off-the-vocabulary' }) as Record<string, unknown>)[name]).toBeUndefined();
+    }
+  });
+
+  it('parses the lifecycle next action with its holder, refusing a missing or unknown holder (D-02 item 5, D-27)', () => {
+    const nextActionSchema = specification.components.schemas.AssessmentRequestLifecycleNextAction as { required?: string[]; properties?: Record<string, { enum?: string[] }>; additionalProperties?: unknown };
+    expect(nextActionSchema.required ?? []).toEqual(expect.arrayContaining(['actor', 'holder', 'summary']));
+    expect(nextActionSchema.properties?.holder?.enum).toEqual(['requestor', 'analyst', 'none']);
+    expect(nextActionSchema.additionalProperties).toBe(false);
+
+    const entry = parsers.find((candidate) => candidate.label === 'request.getRequest');
+    expect(entry, 'request.getRequest is no longer registered').toBeDefined();
+    const generated = instanceOf(schemaFor(entry!), 'maximal') as { data: Record<string, unknown> };
+    const stepKeys = ['draft', 'submitted', 'questionnaire-generated', 'questionnaire-released', 'questionnaire-submitted', 'assessment-drafted', 'assessment-reviewed', 'assessment-released'];
+    const withNextAction = (nextAction: Record<string, unknown>) => ({ ...generated, data: { ...generated.data, lifecycle: {
+      currentKey: 'submitted', currentLabel: 'Submitted', terminal: false, nextAction,
+      steps: stepKeys.map((key, index) => ({ key, label: key, state: index < 1 ? 'completed' : index === 1 ? 'current' : 'future' })),
+    } } });
+    const served = { actor: 'requestor', holder: 'analyst', summary: 'Bob Doe is reviewing your request and will send you a questionnaire to answer.' };
+
+    const parsed = entry!.parser.safeParse(withNextAction(served));
+    expect(parsed.success, formatIssues(parsed.error)).toBe(true);
+    expect((parsed.data as { data: { lifecycle: { nextAction: Record<string, unknown> } } }).data.lifecycle.nextAction.holder).toBe('analyst');
+
+    const { holder: _omitted, ...missing } = served;
+    const refusedMissing = entry!.parser.safeParse(withNextAction(missing));
+    expect(refusedMissing.success).toBe(false);
+    expect(refusedMissing.success ? [] : refusedMissing.error.issues.flatMap(issuePaths)).toContain('data.lifecycle.nextAction.holder');
+
+    const refusedUnknown = entry!.parser.safeParse(withNextAction({ ...served, holder: 'security-analyst' }));
+    expect(refusedUnknown.success).toBe(false);
+    expect(refusedUnknown.success ? [] : refusedUnknown.error.issues.flatMap(issuePaths)).toContain('data.lifecycle.nextAction.holder');
+  });
+
   it('never grandfathers the Phase 7 parsers', () => {
     // IN-03 is resolved by contract (D-05): each of these parsers mirrors the
     // bounds the specification declares, so none may be excused from the
@@ -682,8 +1302,12 @@ describe('contract-to-client-schema parity', () => {
     // Risk Register parser had been hidden behind a root-reporting wrapper, and
     // the question list behind a registration that stopped at its envelope, so
     // their bounds were already there, not new. It fell from 43 to 42 in plan 10-15 (D-34): the assessment's
-    // risk list parser became listAssessmentRiskItems, whose bounds AssessmentRiskListResponse declares.
-    expect(Object.keys(boundaryGrandfathered).length).toBe(42);
+    // risk list parser became listAssessmentRiskItems, whose bounds AssessmentRiskListResponse declares. It fell
+    // from 42 to 41 in plan 11-12 (D-34): the request list parser retired with its last caller, the Requestor
+    // dashboard read, and both Homes read GET /v1/my_requests, whose bounds MyRequestListResponse declares. It fell
+    // from 41 to 39 in plan 13-08 (D-18): the by-id job operations and the job components declare every bound the
+    // job parsers enforce, so getAssessmentDraftJob and getQuestionnaireGenerationJob are held to the boundary modes.
+    expect(Object.keys(boundaryGrandfathered).length).toBe(39);
   });
 
   it('rejects duplicate, omitted, parser-free, and unresolved parser declarations', () => {

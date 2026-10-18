@@ -20,9 +20,22 @@ import {
   riskTypeUpdateInputSchema,
   type RiskTypeAdministrationRecord,
 } from './administration-schema';
-import { commitAdministrationCsv, createAdministrationControl, createInformationAsset, createInformationSystem, createRiskType, listAdministrationControls, previewAdministrationCsv, updateAdministrationControl, updateInformationAsset, updateInformationSystem, updateRiskType } from './administration-service';
+import { commitAdministrationCsv, createAdministrationControl, createInformationAsset, createInformationSystem, createRiskType, downloadImportErrorReport, downloadImportTemplate, listAdministrationControls, previewAdministrationCsv, updateAdministrationControl, updateInformationAsset, updateInformationSystem, updateRiskType } from './administration-service';
 import { applicableControlSearchOptions, type ApplicableControlOption } from './applicable-controls';
-import type { CsvImportPreviewData, CsvImportResultData } from './csv-import-schema';
+import { checkImportFileInBrowser } from './csv-client-parser';
+import { csvImportDecisions, type CsvImportPreviewData, type CsvImportResultData } from './csv-import-schema';
+import {
+  importFileRefusal,
+  importStepRefusal,
+  isImportFileRefusalReason,
+  type ImportFileRefusalCopy,
+  type ImportFileRefusalReason,
+  type ImportStepRefusalCopy,
+  type ImportStepRefusalKind,
+} from './import-refusal-copy';
+import { formatFileSize } from '@/lib/files/format-file-size';
+import type { ImportRefusalFound } from '@/lib/api/transport/server-client';
+import { readViewerTimeZone } from '@/lib/time/viewer-time-zone';
 
 export type AdministrationActionResult<T> =
   | { ok: true; data: T }
@@ -38,13 +51,58 @@ const applicableControlSearchSchema = z.string().trim().min(1).max(200);
 /* One page of the Administration page sizes (10, 25, 50, 100): enough to choose from, never the whole library. */
 const applicableControlSearchPageSize = 25;
 
+/*
+ * What a refused import step says (19-UI-SPEC §6), worded here from the feature-only family S module
+ * (import-refusal-copy.ts, 19-02), never the shared refusal-copy.ts, which ships on the request detail page: a file
+ * Strapi or this action refused (S2: a title, a body naming what was found, the fix's steps), or a refused step (S3).
+ */
+export type ImportRefusal =
+  | ({ family: 'file'; reason: ImportFileRefusalReason } & ImportFileRefusalCopy)
+  | ({ family: 'step'; step: ImportStepRefusalKind } & ImportStepRefusalCopy);
+
 export type CsvImportActionResult<T> =
   | { ok: true; data: T }
-  | { ok: false; formError: string; unknownOutcome?: true };
+  | { ok: false; formError: string; refusal?: ImportRefusal; unknownOutcome?: true };
 
+/*
+ * One .csv or .xlsx upload within the 5 MB limit (D-25): the same extension and size check the browser makes, made again
+ * here because a Server Action is callable directly. Strapi reads the file and checks everything else.
+ */
 function csvFile(value: FormDataEntryValue | null): File | null {
-  return value instanceof File && value.size > 0 && value.size <= 5_242_880
-    && value.name.toLocaleLowerCase('en-AU').endsWith('.csv') ? value : null;
+  return value instanceof File && value.size > 0 && checkImportFileInBrowser(value).ok ? value : null;
+}
+
+/** S2 for a refused file, with the file's own name and its X-23 size, and what Strapi found where it said. */
+function fileRefusal(reason: ImportFileRefusalReason, file: File, found?: ImportRefusalFound): { ok: false; formError: string; refusal: ImportRefusal } {
+  const copy = importFileRefusal({ reason, ...(found ? { found } : {}), fileName: file.name, fileSize: formatFileSize(file.size) });
+  return { ok: false, formError: copy.title, refusal: { family: 'file', reason, ...copy } };
+}
+
+/** S3 for a refused step. */
+function stepRefusal(step: ImportStepRefusalKind): { ok: false; formError: string; refusal: ImportRefusal } {
+  const copy = importStepRefusal(step);
+  return { ok: false, formError: copy.message, refusal: { family: 'step', step, ...copy } };
+}
+
+/** A file Strapi built for the import, checked by the export rule; or S3's copy for its refusal. */
+export type ImportFileActionResult =
+  | { ok: true; fileName: string; contentType: string; bytes: Uint8Array }
+  | { ok: false; refusal: ImportStepRefusalCopy };
+
+/** An error report, with the rows to correct that Strapi counted (`X-CSRM-Row-Count`). */
+export type ImportReportActionResult =
+  | { ok: true; fileName: string; contentType: string; bytes: Uint8Array; rowCount: number }
+  | { ok: false; refusal: ImportStepRefusalCopy };
+
+const templateInputSchema = z.object({ kind: z.enum(administrationKinds), format: z.enum(['csv', 'xlsx']) }).strict();
+
+/** Downloads the collection's import template in the chosen format (D-31), for the browser to save. */
+export async function downloadImportTemplateAction(input: unknown): Promise<ImportFileActionResult> {
+  const parsed = templateInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, refusal: importStepRefusal('template') };
+  const result = await downloadImportTemplate(parsed.data.kind, parsed.data.format);
+  if (result.error) return { ok: false, refusal: importStepRefusal('template') };
+  return { ok: true, ...result.data };
 }
 
 function csvKind(value: FormDataEntryValue | null): AdministrationKind | null {
@@ -57,17 +115,37 @@ export async function previewAdministrationCsvAction(formData: FormData): Promis
   const kind = csvKind(formData.get('kind'));
   if (!kind) return { ok: false, formError: 'This CSV import is not available.' };
   const config = getAdministrationConfig(kind);
-  const file = csvFile(formData.get('file'));
-  if (!file) return { ok: false, formError: 'Choose one CSV file no larger than 5 MiB.' };
-  const result = await previewAdministrationCsv(kind, file);
+  const upload = formData.get('file');
+  if (!(upload instanceof File)) return { ok: false, formError: 'Choose one CSV or Excel file, up to 5 MB.' };
+  const checked = checkImportFileInBrowser(upload);
+  if (!checked.ok) return fileRefusal(checked.reason, upload);
+  // An empty file has no header row to read; Strapi's reader refuses it the same way.
+  if (upload.size === 0) return fileRefusal('IMPORT_NO_HEADER', upload);
+  const result = await previewAdministrationCsv(kind, upload);
   if (result.error) {
+    // A file Strapi can't read is 413, 415 or 422 with a closed reason; a malformed request stays a plain 400 (stop A ruling 3).
+    if (isImportFileRefusalReason(result.error.reason)) return fileRefusal(result.error.reason, upload, result.error.found);
     const formError = result.error.status === 403 ? `You do not have permission to import ${config.pluralLabel}.`
-      : result.error.status === 413 ? 'This CSV file is larger than 5 MiB.'
-        : 'The CSV could not be validated. Review the file and try again.';
+      : 'We couldn’t check this file. Choose it again to retry.';
     return { ok: false, formError };
   }
   return { ok: true, data: result.data };
 }
+
+/*
+ * The similar rows' decisions (D-30): a JSON object of row numbers (1 to 5 digits) to `update` or `skip`, at most 5,000
+ * entries and 200,000 characters, as the commit request publishes it. Strapi checks them again against its preview.
+ */
+const decisionsSchema = z.string().max(200_000)
+  .transform((text, context) => {
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      context.addIssue({ code: 'custom', message: 'The decisions are not JSON.' });
+      return z.NEVER;
+    }
+  })
+  .pipe(z.record(z.string().regex(/^[0-9]{1,5}$/), z.enum(csvImportDecisions)).refine((decisions) => Object.keys(decisions).length <= 5_000));
 
 export async function commitAdministrationCsvAction(formData: FormData): Promise<CsvImportActionResult<CsvImportResultData>> {
   const kind = csvKind(formData.get('kind'));
@@ -78,12 +156,18 @@ export async function commitAdministrationCsvAction(formData: FormData): Promise
   const file = csvFile(formData.get('file'));
   const previewDigest = formData.get('previewDigest');
   if (!file || typeof previewDigest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(previewDigest)) {
-    return { ok: false, formError: 'The reviewed CSV no longer matches this import. Select the file again.' };
+    return { ok: false, formError: 'The reviewed file no longer matches this import. Select the file again.' };
   }
-  const result = await commitAdministrationCsv(kind, file, previewDigest);
+  const submitted = formData.get('decisions');
+  const decisions = submitted === null ? null : decisionsSchema.safeParse(submitted);
+  if (decisions && !decisions.success) return stepRefusal('decision-missing');
+  const result = await commitAdministrationCsv(kind, file, previewDigest, decisions ? JSON.stringify(decisions.data) : undefined);
   if (result.error) {
-    if (result.error.status === 409) return { ok: false, formError: 'The selected CSV no longer matches the reviewed preview.' };
-    if (result.error.status === 400 || result.error.status === 403 || result.error.status === 413 || result.error.status === 415) {
+    if (result.error.reason === 'IMPORT_DECISION_MISSING') return stepRefusal('decision-missing');
+    if (result.error.reason === 'IMPORT_REVIEW_EXPIRED') return stepRefusal('review-expired');
+    if (isImportFileRefusalReason(result.error.reason)) return fileRefusal(result.error.reason, file, result.error.found);
+    if (result.error.status === 409) return { ok: false, formError: 'The selected file no longer matches the reviewed preview.' };
+    if (result.error.status === 400 || result.error.status === 403 || result.error.status === 413 || result.error.status === 415 || result.error.status === 422) {
       return { ok: false, formError: `The ${config.label} import was not applied. Review the file and try again.` };
     }
     return {
@@ -94,6 +178,32 @@ export async function commitAdministrationCsvAction(formData: FormData): Promise
   }
   revalidatePath(config.listPath);
   return { ok: true, data: result.data };
+}
+
+const reportTokenSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
+
+/*
+ * The error report (D-32): the upload with exactly one token, the preview's at Review or the result's at Results.
+ * Strapi rebuilds every cell from the file and its own record, so the browser sends no issue and no row.
+ */
+export async function downloadImportErrorReportAction(formData: FormData): Promise<ImportReportActionResult> {
+  const kind = csvKind(formData.get('kind'));
+  const file = csvFile(formData.get('file'));
+  const previewDigest = reportTokenSchema.safeParse(formData.get('previewDigest'));
+  const resultToken = reportTokenSchema.safeParse(formData.get('resultToken'));
+  if (!kind || !file || previewDigest.success === resultToken.success) return { ok: false, refusal: importStepRefusal('error-report') };
+  const timeZone = await readViewerTimeZone();
+  const result = await downloadImportErrorReport(kind, {
+    file,
+    ...(previewDigest.success ? { previewDigest: previewDigest.data } : {}),
+    ...(resultToken.success ? { resultToken: resultToken.data } : {}),
+    ...(timeZone ? { timeZone } : {}),
+  });
+  if (result.error) {
+    const expired = 'reason' in result.error && result.error.reason === 'IMPORT_REVIEW_EXPIRED';
+    return { ok: false, refusal: importStepRefusal(expired ? 'review-expired' : 'error-report') };
+  }
+  return { ok: true, ...result.data };
 }
 
 /*

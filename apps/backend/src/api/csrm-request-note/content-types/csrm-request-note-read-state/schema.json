@@ -1,0 +1,18 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_request_note_read_states",
+  "info": {
+    "singularName": "csrm-request-note-read-state",
+    "pluralName": "csrm-request-note-read-states",
+    "displayName": "CSRM Request Note Read State",
+    "description": "One person's read state of one request's notes, by note sequence (Phase 13, docs/contract-gaps/phase-13-request-notes.md)."
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "lastReadAt": { "type": "datetime", "required": true },
+    "lastReadSequence": { "type": "integer", "required": true },
+    "reader": { "type": "relation", "relation": "manyToOne", "target": "api::idambox-user.idambox-user" },
+    "assessmentRequest": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-assessment-request.csrm-assessment-request" }
+  }
+}

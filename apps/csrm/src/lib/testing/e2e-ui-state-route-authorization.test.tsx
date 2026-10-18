@@ -19,10 +19,10 @@ const mocks = vi.hoisted(() => ({
   listReportDefinitions: vi.fn(),
   getReport: vi.fn(),
   getAnalystDashboard: vi.fn(),
-  getRequestorDashboard: vi.fn(),
+  getRequestorHome: vi.fn(),
   notFound: vi.fn(),
   resolveE2eUiState: vi.fn(),
-  resolveE2eDashboardPartial: vi.fn(),
+  resolveE2eRequestorHomePartial: vi.fn(),
   resolveE2eAnalystDashboardPartial: vi.fn(),
 }));
 
@@ -36,11 +36,11 @@ vi.mock('@/features/administration/administration-service', async (importOrigina
 vi.mock('@/features/alerts/alert-service', () => ({ listAlerts: mocks.listAlerts }));
 vi.mock('@/features/reports/report-service', () => ({ getReport: mocks.getReport, listReportDefinitions: mocks.listReportDefinitions }));
 vi.mock('@/features/analyst-dashboard/analyst-dashboard-service', () => ({ getAnalystDashboard: mocks.getAnalystDashboard }));
-vi.mock('@/features/dashboard/requestor-dashboard-service', async (importOriginal) => ({ ...await importOriginal<typeof import('@/features/dashboard/requestor-dashboard-service')>(), getRequestorDashboard: mocks.getRequestorDashboard }));
+vi.mock('@/features/home/requestor-home-service', () => ({ getRequestorHome: mocks.getRequestorHome }));
 vi.mock('@/lib/testing/e2e-ui-state', () => ({
   E2eUiStateBoundary: ({ children, state }: { children: ReactNode; state: string }) => <section data-ui-state={state}>{children}</section>,
   resolveE2eAnalystDashboardPartial: mocks.resolveE2eAnalystDashboardPartial,
-  resolveE2eDashboardPartial: mocks.resolveE2eDashboardPartial,
+  resolveE2eRequestorHomePartial: mocks.resolveE2eRequestorHomePartial,
   resolveE2eUiState: mocks.resolveE2eUiState,
 }));
 
@@ -48,6 +48,7 @@ import { AssessmentListContent } from '../../../app/(app)/app/review/assessments
 import AssessmentsPage from '../../../app/(app)/app/assessments/page';
 import QuestionnairesPage from '../../../app/(app)/app/questionnaires/page';
 import { AssessmentRequestListContent } from '../../../app/(app)/app/review/requests/page';
+import { AssignedRequestListContent } from '../../../app/(app)/app/review/assigned/page';
 import QuestionnaireReviewsPage from '../../../app/(app)/app/review/questionnaires/page';
 import AdministrationCollectionPage from '../../../app/(app)/app/admin/[collection]/page';
 import { AlertsContent } from '../../../app/(app)/app/alerts/page';
@@ -56,7 +57,7 @@ import ReportPage, { ReportDetailContent } from '../../../app/(app)/app/reports/
 import HomePage from '../../../app/(app)/app/page';
 import { AnalystHomeContent } from '@/features/home/analyst-home';
 import { emptyAnalystDashboard } from '../../features/analyst-dashboard/analyst-dashboard-presentation';
-import { deriveRequestorDashboard } from '../../features/dashboard/requestor-dashboard-service';
+import { emptyRequestorHome } from '../../features/home/requestor-home-presentation';
 
 const params = Promise.resolve({ __e2eState: 'error' });
 const success = { data: { records: [], pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }, error: null };
@@ -104,8 +105,8 @@ beforeEach(() => {
   mocks.listReportDefinitions.mockImplementation(async () => { calls.push('report-definitions'); return reportDefinitionsSuccess; });
   mocks.getReport.mockImplementation(async () => { calls.push('report'); return reportSuccess; });
   mocks.getAnalystDashboard.mockImplementation(async () => { calls.push('analyst-dashboard'); return { kind: 'ready', dashboard: emptyAnalystDashboard(14) }; });
-  mocks.getRequestorDashboard.mockImplementation(async () => { calls.push('requestor-dashboard'); return { kind: 'ready', dashboard: deriveRequestorDashboard([], []) }; });
-  mocks.resolveE2eDashboardPartial.mockImplementation(() => { calls.push('requestor-partial'); return false; });
+  mocks.getRequestorHome.mockImplementation(async () => { calls.push('requestor-home'); return { kind: 'ready', home: emptyRequestorHome }; });
+  mocks.resolveE2eRequestorHomePartial.mockImplementation(() => { calls.push('requestor-partial'); return false; });
   mocks.resolveE2eAnalystDashboardPartial.mockImplementation(() => { calls.push('analyst-partial'); return false; });
   mocks.notFound.mockImplementation(() => { calls.push('not-found'); throw new Error('NEXT_NOT_FOUND'); });
   mocks.resolveE2eUiState.mockImplementation(() => { calls.push('fixture'); return 'error'; });
@@ -116,6 +117,7 @@ describe('guarded route presentation fixtures', () => {
     ['my questionnaires', async () => QuestionnairesPage({ searchParams: params }), 'my-questionnaires'],
     ['my released assessments', async () => AssessmentsPage({ searchParams: params }), 'my-assessments'],
     ['assessment request review', async () => AssessmentRequestListContent({ searchParams: params }), 'review-requests'],
+    ['Assigned to me', async () => AssignedRequestListContent({ searchParams: params }), 'review-requests'],
     ['assessment review', async () => AssessmentListContent({ searchParams: params }), 'assessments'],
     ['questionnaire review', async () => QuestionnaireReviewsPage({ searchParams: params }), 'questionnaires'],
     ['administration', async () => AdministrationCollectionPage({ params: Promise.resolve({ collection: 'controls' }), searchParams: params }), 'controls'],
@@ -134,6 +136,7 @@ describe('guarded route presentation fixtures', () => {
     ['my questionnaires', async () => QuestionnairesPage({ searchParams: params }), mocks.listMyQuestionnaires],
     ['my released assessments', async () => AssessmentsPage({ searchParams: params }), mocks.listMyReleasedAssessments],
     ['assessment request review', async () => AssessmentRequestListContent({ searchParams: params }), mocks.listAssessmentRequests],
+    ['Assigned to me', async () => AssignedRequestListContent({ searchParams: params }), mocks.listAssessmentRequests],
     ['assessment review', async () => AssessmentListContent({ searchParams: params }), mocks.listAnalystAssessments],
     ['questionnaire review', async () => QuestionnaireReviewsPage({ searchParams: params }), mocks.listQuestionnairesForReview],
     ['administration', async () => AdministrationCollectionPage({ params: Promise.resolve({ collection: 'controls' }), searchParams: params }), mocks.listAdministrationControls],
@@ -173,6 +176,21 @@ describe('Requestor isolation on restricted routes', () => {
     });
   }
 
+  it.each([
+    ['Requests', async () => AssessmentRequestListContent({ searchParams: params }), mocks.listAssessmentRequests],
+    ['Assigned to me', async () => AssignedRequestListContent({ searchParams: params }), mocks.listAssessmentRequests],
+    ['Questionnaires', async () => QuestionnaireReviewsPage({ searchParams: params }), mocks.listQuestionnairesForReview],
+    ['Risk assessments', async () => AssessmentListContent({ searchParams: params }), mocks.listAnalystAssessments],
+  ] as const)('refuses the %s review list before any analyst read or fixture', async (_name, route, service) => {
+    signInAsRequestor();
+    // Read access to one's own requests does not grant analyst review access.
+    mocks.granted.mockResolvedValue(new Set(['assessment-request:read']));
+    render(await route());
+    expect(screen.getByRole('alert')).toBeVisible();
+    expect(service).not.toHaveBeenCalled();
+    expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
+  });
+
   it('denies Administration at its capability gate before any service read or fixture', async () => {
     signInAsRequestor();
     render(await AdministrationCollectionPage({ params: Promise.resolve({ collection: 'controls' }), searchParams: params }));
@@ -210,16 +228,29 @@ describe('Requestor isolation on restricted routes', () => {
   it('gives a Requestor at /app the Requestor Home before any analyst read, analyst fixture or partial selector', async () => {
     signInAsRequestor();
     render(await resolveServerTree(await HomePage({ searchParams: Promise.resolve({ __e2eState: 'error', __e2ePartial: 'analyst-top-alerts-error' }) })));
-    // The variant is chosen from the session's capabilities first; only the Requestor's own read
-    // follows, and its fixture resolves after that read succeeded (T-11-01).
+    // The variant is chosen from the session's capabilities first; only the Requestor's own reads
+    // follow, and its fixture and its own partial selector resolve after they succeeded (T-11-01, D-23).
     expect(calls[0]).toBe('capability');
     expect(calls).not.toContain('analyst-dashboard');
     expect(calls).not.toContain('analyst-partial');
-    expect(calls.indexOf('fixture')).toBeGreaterThan(calls.indexOf('requestor-dashboard'));
+    expect(mocks.getRequestorHome).toHaveBeenCalledTimes(1);
+    expect(calls.indexOf('fixture')).toBeGreaterThan(calls.indexOf('requestor-home'));
+    expect(calls.indexOf('requestor-partial')).toBeGreaterThan(calls.indexOf('requestor-home'));
     expect(mocks.getAnalystDashboard).not.toHaveBeenCalled();
     expect(mocks.resolveE2eAnalystDashboardPartial).not.toHaveBeenCalled();
     expect(document.querySelector('[data-slot="kpi-tile"], [data-slot="analyst-dashboard"]')).toBeNull();
     expect(document.querySelector('a[href^="/app/risks/"], a[href^="/app/review/"]')).toBeNull();
+  });
+
+  it('resolves no fixture or partial selector for a Requestor whose own reads Strapi refused', async () => {
+    signInAsRequestor();
+    mocks.getRequestorHome.mockImplementation(async () => { calls.push('requestor-home'); return { kind: 'permission-denied' }; });
+    render(await resolveServerTree(await HomePage({ searchParams: Promise.resolve({ __e2eState: 'populated', __e2ePartial: 'requestor-home-with-analyst-error' }) })));
+    expect(calls).toEqual(['capability', 'capability', 'requestor-home']);
+    expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
+    expect(mocks.resolveE2eRequestorHomePartial).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-ui-state]')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to your requests');
   });
 
   it('denies the Reports index at its capability gate before any report read or fixture', async () => {
@@ -247,18 +278,42 @@ describe('Requestor isolation on restricted routes', () => {
 
   it.each([
     ['assessment request review', async () => AssessmentRequestListContent({ searchParams: params }), mocks.listAssessmentRequests],
+    ['Assigned to me', async () => AssignedRequestListContent({ searchParams: params }), mocks.listAssessmentRequests],
     ['assessment review', async () => AssessmentListContent({ searchParams: params }), mocks.listAnalystAssessments],
     ['questionnaire review', async () => QuestionnaireReviewsPage({ searchParams: params }), mocks.listQuestionnairesForReview],
   ] as const)('renders the %s denial for a Requestor without a fixture boundary or restricted records', async (_name, route, service) => {
     signInAsRequestor();
-    // These routes have no page-level gate: Strapi is the authority and denies the analyst
-    // collection operation to a Requestor. The fixture selector must never override that.
+    // The route gate refuses before a collection read; the fixture cannot override that refusal.
     service.mockResolvedValue({ data: null, error: { status: 403, message: 'Forbidden' } });
     render(await route());
-    expect(service).toHaveBeenCalled();
+    expect(service).not.toHaveBeenCalled();
     expect(mocks.resolveE2eUiState).not.toHaveBeenCalled();
     expect(document.querySelector('[data-ui-state]')).toBeNull();
     expect(screen.getByRole('alert')).toBeVisible();
     expect(screen.queryByText(restrictedRecord)).toBeNull();
+  });
+});
+
+/*
+ * D-14 (13-UI-SPEC §2.1): Assigned to me is the viewer's own open requests. The scope is fixed on the server, so
+ * the URL can neither widen it nor name another person, and the view opens on All open.
+ */
+describe('Assigned to me reads only the viewer’s requests', () => {
+  beforeEach(() => mocks.resolveE2eUiState.mockImplementation(() => { calls.push('fixture'); return undefined; }));
+
+  it('sends filters[assignee]=me and the All open queue by default', async () => {
+    render(await AssignedRequestListContent({ searchParams: Promise.resolve({}) }));
+    expect(mocks.listAssessmentRequests).toHaveBeenCalledTimes(1);
+    expect(mocks.listAssessmentRequests).toHaveBeenCalledWith(expect.objectContaining({ queue: 'open', assignee: 'me', notes: undefined, q: '' }));
+  });
+
+  it('keeps a chosen queue, search, status and notes filter, and never takes the assignee from the URL', async () => {
+    render(await AssignedRequestListContent({ searchParams: Promise.resolve({ queue: 'requires-attention', assignee: 'unassigned', notes: 'unread', q: 'vendor', status: 'submitted' }) }));
+    expect(mocks.listAssessmentRequests).toHaveBeenCalledWith(expect.objectContaining({ queue: 'requires-attention', assignee: 'me', notes: 'unread', q: 'vendor', status: 'submitted' }));
+  });
+
+  it('falls back to All open for a queue it does not know', async () => {
+    render(await AssignedRequestListContent({ searchParams: Promise.resolve({ queue: 'everything' }) }));
+    expect(mocks.listAssessmentRequests).toHaveBeenCalledWith(expect.objectContaining({ queue: 'open', assignee: 'me' }));
   });
 });

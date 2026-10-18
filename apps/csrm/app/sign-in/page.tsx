@@ -1,7 +1,7 @@
 import { ShieldCheckIcon } from 'lucide-react';
 
 import type { Metadata } from 'next';
-import { BrandLockup } from '@/components/shell/wordmark';
+import { BrandLockup } from '@/components/shell/brand-lockup';
 import { Button } from '@/components/ui/button';
 import { resolveSessionRuntimeMode } from '@/lib/auth/development-runtime';
 import { validatedReturnTo } from '@/lib/auth/return-to';
@@ -49,7 +49,7 @@ function SignInUnavailable() {
 /*
  * The production-only Keycloak OIDC sign-in card (ADR 0003). It never names
  * "development", "Strapi" or a fixture identity: the copy is the same whether this
- * runs in a customer's Keycloak or the local `idp/` realm.
+ * runs in a customer's Keycloak or the local `docker/` realm.
  */
 function OidcSignIn({ returnTo, error }: { returnTo: string; error?: string }) {
   return (
@@ -113,6 +113,7 @@ export default async function SignIn({ searchParams }: SignInPageProps) {
           <Button className="h-control-h" name="role" type="submit" value="Requestor">Continue as Requestor</Button>
           <Button name="role" type="submit" value="Secondary Requestor" variant="outline" className="h-control-h">Continue as Secondary Requestor</Button>
           <Button name="role" type="submit" value="Security Analyst" variant="outline" className="h-control-h">Continue as Security Analyst</Button>
+          <Button name="role" type="submit" value="Second Security Analyst" variant="outline" className="h-control-h">Continue as Second Security Analyst</Button>
         </form>
         <p className="sign-in-note">
           Strapi remains the authorization authority: navigation and actions never grant access on

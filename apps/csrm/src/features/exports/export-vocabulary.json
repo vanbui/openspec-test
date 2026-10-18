@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 1,
+  "labels": {
+    "requestStatus": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "questionnaire-in-progress": "Questionnaire in progress",
+      "risk-assessment-drafted": "Risk assessment drafted",
+      "under-review": "Under review",
+      "approved": "Released",
+      "closed": "Closed"
+    },
+    "questionnaireStatus": { "analyst-review": "Analyst review", "not-started": "Not started", "draft": "Draft", "submitted": "Submitted" },
+    "assessmentStatus": { "draft": "Draft", "in-review": "In review", "approved": "Released", "closed": "Closed" },
+    "treatmentStatus": { "Not Started": "Not Started", "In Progress": "In Progress", "Overdue": "Overdue", "Complete": "Complete" },
+    "treatmentDueState": { "overdue": "Overdue", "due-soon": "Due soon", "later": "Due later", "no-target-date": "No target date", "complete-or-closed": "Complete or closed" },
+    "riskStage": { "released": "Released", "under-assessment": "Under assessment" },
+    "riskState": { "open": "Open", "closed": "Closed", "withdrawn": "Withdrawn" },
+    "requestHolder": { "requestor": "Needs your action", "analyst": "With the Security Analyst", "none": "No action needed" },
+    "alertKind": {
+      "risk-treatment-overdue": "Treatment overdue",
+      "risk-treatment-due-soon": "Treatment due soon",
+      "request-overdue": "Request overdue",
+      "request-due-soon": "Request due soon",
+      "control-implementation-overdue": "Control Implementation overdue",
+      "assessment-review-due": "Risk Assessment review due",
+      "critical-residual-risk-untreated": "Critical Risk not treated",
+      "ineffective-control": "Ineffective Control Implementation"
+    },
+    "alertUrgency": { "overdue": "Overdue", "due-soon": "Due soon", "attention": "Needs attention" }
+  },
+  "views": {
+    "risk-register": {
+      "slug": "risk-register",
+      "heading": "Risk register",
+      "records": "risks",
+      "columns": [
+        { "key": "riskNumber", "label": "Risk number", "type": "record", "visible": true, "width": 14 },
+        { "key": "riskStatement", "label": "Statement", "type": "text", "visible": true, "width": 60 },
+        { "key": "inherentRating", "label": "Inherent rating", "type": "text", "visible": true, "width": 16 },
+        { "key": "residualRating", "label": "Residual rating", "type": "text", "visible": true, "width": 16 },
+        { "key": "treatmentStatus", "label": "Treatment status", "type": "label", "family": "treatmentStatus", "visible": true, "width": 18 },
+        { "key": "treatmentOwner", "label": "Treatment owner", "type": "person", "visible": true, "width": 24 },
+        { "key": "targetDate", "label": "Target date", "type": "date", "visible": true, "width": 14 },
+        { "key": "assessment", "label": "Related assessment", "type": "record", "visible": true, "width": 18 },
+        { "key": "stage", "label": "Stage", "type": "label", "family": "riskStage", "visible": false, "width": 18 },
+        { "key": "accepted", "label": "Accepted", "type": "flag", "visible": false, "width": 10 },
+        { "key": "treatmentDueState", "label": "Due state", "type": "label", "family": "treatmentDueState", "visible": false, "width": 18 },
+        { "key": "requestTitle", "label": "Request title", "type": "text", "visible": false, "width": 40 },
+        { "key": "assessmentType", "label": "Assessment type", "type": "text", "visible": false, "width": 16 },
+        { "key": "riskOwner", "label": "Risk owner", "type": "person", "visible": false, "width": 24 },
+        { "key": "riskType", "label": "Risk Type", "type": "text", "visible": false, "width": 24 },
+        { "key": "treatmentAction", "label": "Treatment action", "type": "text", "visible": false, "width": 16 },
+        { "key": "treatmentPlan", "label": "Treatment plan", "type": "text", "visible": false, "width": 60 },
+        { "key": "informationSystem", "label": "Impacted system", "type": "text", "visible": false, "width": 30 },
+        { "key": "informationAsset", "label": "Impacted asset", "type": "text", "visible": false, "width": 30 },
+        { "key": "treatmentResolveDate", "label": "Treatment resolve date", "type": "date", "visible": false, "width": 16 },
+        { "key": "riskState", "label": "State", "type": "label", "family": "riskState", "visible": false, "width": 12 }
+      ]
+    },
+    "requests": {
+      "slug": "requests",
+      "heading": "Requests",
+      "records": "requests",
+      "columns": [
+        { "key": "requestNumber", "label": "Request", "type": "record", "visible": true, "width": 14 },
+        { "key": "title", "label": "Title", "type": "text", "visible": true, "width": 40 },
+        { "key": "requestor", "label": "Requestor", "type": "person", "visible": true, "width": 24 },
+        { "key": "assessmentType", "label": "Assessment type", "type": "text", "visible": true, "width": 16 },
+        { "key": "businessCriticality", "label": "Business criticality", "type": "text", "visible": true, "width": 18 },
+        { "key": "status", "label": "Status", "type": "label", "family": "requestStatus", "visible": true, "width": 24 },
+        { "key": "assignee", "label": "Assigned to", "type": "person", "visible": true, "width": 24 },
+        { "key": "dueDate", "label": "Due date", "type": "date", "visible": true, "width": 14 },
+        { "key": "ageDays", "label": "Age", "type": "number", "visible": true, "width": 8 },
+        { "key": "submittedAt", "label": "Submitted", "type": "instant", "visible": true, "width": 14 }
+      ]
+    },
+    "questionnaires": {
+      "slug": "questionnaires",
+      "heading": "Questionnaires",
+      "records": "questionnaires",
+      "columns": [
+        { "key": "questionnaireNumber", "label": "Questionnaire ID", "type": "record", "visible": true, "width": 16 },
+        { "key": "title", "label": "Title", "type": "text", "visible": true, "width": 40 },
+        { "key": "assessmentRequest", "label": "Assessment request", "type": "record", "visible": true, "width": 18 },
+        { "key": "status", "label": "Status", "type": "label", "family": "questionnaireStatus", "visible": true, "width": 16 }
+      ]
+    },
+    "alerts": {
+      "slug": "alerts",
+      "heading": "Alerts",
+      "records": "alerts",
+      "columns": [
+        { "key": "urgency", "label": "Urgency", "type": "label", "family": "alertUrgency", "visible": true, "width": 16 },
+        { "key": "residualRating", "label": "Residual rating", "type": "text", "visible": true, "width": 16 },
+        { "key": "condition", "label": "Condition", "type": "label", "family": "alertKind", "visible": true, "width": 36 },
+        { "key": "record", "label": "Record", "type": "record", "visible": true, "width": 16 },
+        { "key": "governingDate", "label": "Date", "type": "date", "visible": true, "width": 14 }
+      ]
+    },
+    "risk-assessments": {
+      "slug": "risk-assessments",
+      "heading": "Risk assessments",
+      "records": "risk assessments",
+      "columns": [
+        { "key": "assessmentNumber", "label": "Assessment", "type": "record", "visible": true, "width": 14 },
+        { "key": "requestTitle", "label": "Request title", "type": "text", "visible": true, "width": 40 },
+        { "key": "status", "label": "Status", "type": "label", "family": "assessmentStatus", "visible": true, "width": 14 },
+        { "key": "riskCount", "label": "Risks", "type": "number", "visible": true, "width": 8 },
+        { "key": "highestResidualRating", "label": "Highest residual rating", "type": "text", "visible": true, "width": 22 },
+        { "key": "draftInitiatedBy", "label": "Draft initiated by", "type": "person", "visible": true, "width": 24 },
+        { "key": "releasedAt", "label": "Released", "type": "instant", "visible": true, "width": 14 }
+      ]
+    },
+    "my-requests": {
+      "slug": "my-requests",
+      "heading": "My requests",
+      "records": "requests",
+      "columns": [
+        { "key": "requestNumber", "label": "Request ID", "type": "record", "visible": true, "width": 14 },
+        { "key": "title", "label": "Title", "type": "text", "visible": true, "width": 40 },
+        { "key": "status", "label": "Status", "type": "label", "family": "requestStatus", "visible": true, "width": 24 },
+        { "key": "assignee", "label": "Security Analyst", "type": "person", "visible": true, "width": 24 },
+        { "key": "nextStep", "label": "Next step", "type": "text", "visible": true, "width": 48 },
+        { "key": "dueDate", "label": "Due date", "type": "date", "visible": true, "width": 14 },
+        { "key": "updatedAt", "label": "Updated", "type": "instant", "visible": true, "width": 14 },
+        { "key": "holder", "label": "Holder", "type": "label", "family": "requestHolder", "visible": false, "width": 26 }
+      ]
+    },
+    "my-questionnaires": {
+      "slug": "my-questionnaires",
+      "heading": "My questionnaires",
+      "records": "questionnaires",
+      "columns": [
+        { "key": "questionnaireNumber", "label": "Questionnaire ID", "type": "record", "visible": true, "width": 16 },
+        { "key": "title", "label": "Title", "type": "text", "visible": true, "width": 40 },
+        { "key": "assessmentRequest", "label": "Assessment request", "type": "record", "visible": true, "width": 18 },
+        { "key": "progress", "label": "Progress", "type": "text", "visible": true, "width": 18 },
+        { "key": "status", "label": "Status", "type": "label", "family": "questionnaireStatus", "visible": true, "width": 16 }
+      ]
+    },
+    "my-risk-assessments": {
+      "slug": "my-risk-assessments",
+      "heading": "My risk assessments",
+      "records": "risk assessments",
+      "columns": [
+        { "key": "assessmentNumber", "label": "Assessment", "type": "record", "visible": true, "width": 14 },
+        { "key": "requestTitle", "label": "Request title", "type": "text", "visible": true, "width": 40 },
+        { "key": "overallRating", "label": "Overall rating", "type": "text", "visible": true, "width": 16 },
+        { "key": "releasedAt", "label": "Released", "type": "instant", "visible": true, "width": 14 }
+      ]
+    },
+    "risk-types": {
+      "slug": "risk-types",
+      "heading": "Risk Types",
+      "records": "Risk Types",
+      "columns": [
+        { "key": "name", "label": "Name", "type": "text", "visible": true, "width": 32 },
+        { "key": "description", "label": "Description", "type": "text", "visible": true, "width": 60 },
+        { "key": "applicableControls", "label": "Applicable controls", "type": "number", "visible": true, "width": 12 }
+      ]
+    },
+    "controls": {
+      "slug": "controls",
+      "heading": "Controls",
+      "records": "Controls",
+      "columns": [
+        { "key": "controlNumber", "label": "Control number", "type": "text", "visible": true, "width": 20 },
+        { "key": "name", "label": "Name", "type": "text", "visible": true, "width": 32 },
+        { "key": "description", "label": "Description", "type": "text", "visible": true, "width": 60 },
+        { "key": "controlType", "label": "Type", "type": "text", "visible": true, "width": 20 },
+        { "key": "controlReference", "label": "Reference", "type": "text", "visible": true, "width": 20 },
+        { "key": "framework", "label": "Framework", "type": "text", "visible": true, "width": 20 },
+        { "key": "frameworkVersion", "label": "Framework version", "type": "text", "visible": true, "width": 20 },
+        { "key": "frameworkSource", "label": "Framework source", "type": "text", "visible": true, "width": 20 }
+      ]
+    },
+    "information-systems": {
+      "slug": "information-systems",
+      "heading": "Information Systems",
+      "records": "Information Systems",
+      "columns": [
+        { "key": "name", "label": "Name", "type": "text", "visible": true, "width": 32 },
+        { "key": "description", "label": "Description", "type": "text", "visible": true, "width": 60 },
+        { "key": "systemType", "label": "Type", "type": "text", "visible": true, "width": 20 },
+        { "key": "environment", "label": "Environment", "type": "text", "visible": true, "width": 20 },
+        { "key": "deploymentModel", "label": "Deployment model", "type": "text", "visible": true, "width": 20 },
+        { "key": "businessCriticality", "label": "Business criticality", "type": "text", "visible": true, "width": 20 },
+        { "key": "internetFacing", "label": "Internet-facing", "type": "flag", "visible": true, "width": 12 },
+        { "key": "externalAccessRequired", "label": "External access required", "type": "flag", "visible": true, "width": 12 },
+        { "key": "hostingLocation", "label": "Hosting location", "type": "text", "visible": true, "width": 20 },
+        { "key": "lifecycleState", "label": "Lifecycle", "type": "text", "visible": true, "width": 20 },
+        { "key": "owner", "label": "Owner", "type": "person", "visible": true, "width": 24 }
+      ]
+    },
+    "information-assets": {
+      "slug": "information-assets",
+      "heading": "Information Assets",
+      "records": "Information Assets",
+      "columns": [
+        { "key": "name", "label": "Name", "type": "text", "visible": true, "width": 32 },
+        { "key": "description", "label": "Description", "type": "text", "visible": true, "width": 60 },
+        { "key": "location", "label": "Location", "type": "text", "visible": true, "width": 20 },
+        { "key": "type", "label": "Type", "type": "text", "visible": true, "width": 20 },
+        { "key": "dataClassification", "label": "Classification", "type": "text", "visible": true, "width": 20 },
+        { "key": "confidentialityRating", "label": "Confidentiality rating", "type": "text", "visible": true, "width": 20 },
+        { "key": "integrityRating", "label": "Integrity rating", "type": "text", "visible": true, "width": 20 },
+        { "key": "availabilityRating", "label": "Availability rating", "type": "text", "visible": true, "width": 20 },
+        { "key": "containsPersonalData", "label": "Contains personal data", "type": "flag", "visible": true, "width": 12 },
+        { "key": "containsLegalData", "label": "Contains legal data", "type": "flag", "visible": true, "width": 12 },
+        { "key": "containsCreditCardData", "label": "Contains credit card data", "type": "flag", "visible": true, "width": 12 },
+        { "key": "comments", "label": "Comments", "type": "text", "visible": true, "width": 60 }
+      ]
+    }
+  },
+  "tables": {
+    "released-assessment": {
+      "summary": {
+        "heading": "Summary",
+        "columns": [
+          { "key": "assessmentNumber", "label": "Assessment", "type": "record" },
+          { "key": "requestNumber", "label": "Request", "type": "record" },
+          { "key": "requestTitle", "label": "Request title", "type": "text" },
+          { "key": "releasedAt", "label": "Released", "type": "instant" },
+          { "key": "releasedBy", "label": "Released by", "type": "person" },
+          { "key": "overallRating", "label": "Overall rating", "type": "text" },
+          { "key": "overallControlEffectiveness", "label": "Overall control effectiveness", "type": "text" },
+          { "key": "summary", "label": "Summary", "type": "text" },
+          { "key": "overallRationale", "label": "Overall rationale", "type": "text" },
+          { "key": "recommendations", "label": "Recommendations", "type": "text" },
+          { "key": "nextReviewDate", "label": "Next review date", "type": "date" }
+        ]
+      },
+      "risks": {
+        "heading": "Risks",
+        "columns": [
+          { "key": "riskNumber", "label": "Risk", "type": "record" },
+          { "key": "riskStatement", "label": "Risk statement", "type": "text" },
+          { "key": "inherentRating", "label": "Inherent rating", "type": "text" },
+          { "key": "residualRating", "label": "Residual rating", "type": "text" },
+          { "key": "treatmentAction", "label": "Treatment", "type": "text" },
+          { "key": "treatmentPlan", "label": "Treatment plan", "type": "text" },
+          { "key": "riskOwner", "label": "Risk owner", "type": "person" },
+          { "key": "treatmentOwner", "label": "Treatment owner", "type": "person" },
+          { "key": "targetDate", "label": "Target date", "type": "date" },
+          { "key": "treatmentStatus", "label": "Treatment status", "type": "label", "family": "treatmentStatus" }
+        ]
+      },
+      "mitigation-controls": {
+        "heading": "Mitigation controls",
+        "columns": [
+          { "key": "riskNumber", "label": "Risk", "type": "record" },
+          { "key": "controlNumber", "label": "Control number", "type": "record" },
+          { "key": "controlName", "label": "Control", "type": "text" },
+          { "key": "implementationStatus", "label": "Status", "type": "text" },
+          { "key": "effectiveness", "label": "Effectiveness", "type": "text" }
+        ]
+      }
+    }
+  },
+  "reports": {
+    "risk-exposure": {
+      "slug": "risk-exposure-report",
+      "heading": "Risk exposure",
+      "tables": [
+        {
+          "key": "ratings",
+          "heading": "Inherent and residual rating",
+          "slug": "inherent-and-residual-rating",
+          "columns": [
+            { "key": "rating", "label": "Rating", "type": "text" },
+            { "key": "inherent", "label": "Inherent", "type": "number" },
+            { "key": "residual", "label": "Residual", "type": "number" },
+            { "key": "accepted", "label": "Accepted", "type": "number" }
+          ]
+        },
+        {
+          "key": "residual-by-treatment-status",
+          "heading": "Residual rating by treatment status",
+          "slug": "residual-rating-by-treatment-status",
+          "columns": [
+            { "key": "residualRating", "label": "Residual rating", "type": "text" },
+            { "key": "notStarted", "label": "Not Started", "type": "number" },
+            { "key": "inProgress", "label": "In Progress", "type": "number" },
+            { "key": "overdue", "label": "Overdue", "type": "number" },
+            { "key": "complete", "label": "Complete", "type": "number" },
+            { "key": "notProvided", "label": "Not provided", "type": "number" },
+            { "key": "total", "label": "Total", "type": "number" }
+          ]
+        },
+        {
+          "key": "exposed-systems",
+          "heading": "Most exposed Information Systems",
+          "slug": "most-exposed-information-systems",
+          "columns": [
+            { "key": "informationSystem", "label": "Information System", "type": "text" },
+            { "key": "critical", "label": "Critical", "type": "number" },
+            { "key": "high", "label": "High", "type": "number" },
+            { "key": "total", "label": "Total", "type": "number" }
+          ]
+        },
+        {
+          "key": "under-assessment",
+          "heading": "Under assessment",
+          "slug": "under-assessment",
+          "columns": [
+            { "key": "residualRating", "label": "Residual rating", "type": "text" },
+            { "key": "risks", "label": "Risks", "type": "number" }
+          ]
+        }
+      ]
+    },
+    "treatment-performance": {
+      "slug": "treatment-performance-report",
+      "heading": "Treatment performance",
+      "tables": [
+        {
+          "key": "due-state",
+          "heading": "Due state",
+          "slug": "due-state",
+          "columns": [
+            { "key": "dueState", "label": "Due state", "type": "text" },
+            { "key": "risks", "label": "Risks", "type": "number" }
+          ]
+        },
+        {
+          "key": "treatment-status",
+          "heading": "Treatment status",
+          "slug": "treatment-status",
+          "columns": [
+            { "key": "treatmentStatus", "label": "Treatment status", "type": "text" },
+            { "key": "risks", "label": "Risks", "type": "number" }
+          ]
+        }
+      ]
+    },
+    "assessment-throughput": {
+      "slug": "assessment-throughput-report",
+      "heading": "Assessment throughput",
+      "tables": [
+        {
+          "key": "released-per-month",
+          "heading": "Released per month",
+          "slug": "released-per-month",
+          "columns": [
+            { "key": "month", "label": "Month", "type": "text" },
+            { "key": "released", "label": "Released", "type": "number" }
+          ]
+        },
+        {
+          "key": "request-lifecycle",
+          "heading": "Assessment Requests by lifecycle state",
+          "slug": "assessment-requests-by-lifecycle-state",
+          "columns": [
+            { "key": "lifecycleState", "label": "Lifecycle state", "type": "text" },
+            { "key": "assessmentRequests", "label": "Assessment Requests", "type": "number" }
+          ]
+        }
+      ]
+    },
+    "control-effectiveness": {
+      "slug": "control-effectiveness-report",
+      "heading": "Control effectiveness",
+      "tables": [
+        {
+          "key": "implementation-status",
+          "heading": "Implementation status",
+          "slug": "implementation-status",
+          "columns": [
+            { "key": "implementationStatus", "label": "Implementation status", "type": "text" },
+            { "key": "mitigationControls", "label": "Mitigation controls", "type": "number" }
+          ]
+        },
+        {
+          "key": "effectiveness-rating",
+          "heading": "Effectiveness rating",
+          "slug": "effectiveness-rating",
+          "columns": [
+            { "key": "effectivenessRating", "label": "Effectiveness rating", "type": "text" },
+            { "key": "mitigationControls", "label": "Mitigation controls", "type": "number" }
+          ]
+        }
+      ]
+    }
+  },
+  "imports": {
+    "risk-types": {
+      "naturalKey": "name",
+      "exampleKey": "Example (CSRM skips this row)",
+      "columns": [
+        { "field": "name", "label": "Name", "kind": "text", "required": true, "maxLength": 255, "format": "Text, up to 255 characters" },
+        { "field": "description", "label": "Description", "kind": "text", "required": false, "maxLength": 10000, "format": "Text, up to 10,000 characters" }
+      ],
+      "readOnlyLabels": ["Applicable controls"]
+    },
+    "controls": {
+      "naturalKey": "controlNumber",
+      "exampleKey": "EXAMPLE",
+      "columns": [
+        { "field": "controlNumber", "label": "Control number", "kind": "text", "required": true, "maxLength": 255, "format": "Text, up to 255 characters" },
+        { "field": "name", "label": "Name", "kind": "text", "required": true, "maxLength": 255, "format": "Text, up to 255 characters" },
+        { "field": "description", "label": "Description", "kind": "text", "required": false, "maxLength": 10000, "format": "Text, up to 10,000 characters" },
+        {
+          "field": "controlType",
+          "label": "Type",
+          "kind": "enum",
+          "required": false,
+          "maxLength": 255,
+          "values": ["Preventive", "Detective", "Corrective", "Compensating"],
+          "format": "One of: Preventive, Detective, Corrective, Compensating"
+        },
+        { "field": "controlReference", "label": "Reference", "kind": "text", "required": false, "maxLength": 500, "format": "Text, up to 500 characters" },
+        { "field": "framework", "label": "Framework", "kind": "text", "required": true, "maxLength": 255, "format": "Text, up to 255 characters" },
+        {
+          "field": "frameworkVersion",
+          "label": "Framework version",
+          "kind": "text",
+          "required": false,
+          "maxLength": 255,
+          "format": "Text, up to 255 characters"
+        },
+        {
+          "field": "frameworkSource",
+          "label": "Framework source",
+          "kind": "text",
+          "required": false,
+          "maxLength": 2000,
+          "format": "Text, up to 2,000 characters"
+        }
+      ],
+      "readOnlyLabels": []
+    },
+    "information-systems": {
+      "naturalKey": "name",
+      "exampleKey": "Example (CSRM skips this row)",
+      "columns": [
+        { "field": "name", "label": "Name", "kind": "text", "required": true, "maxLength": 255, "format": "Text, up to 255 characters" },
+        { "field": "description", "label": "Description", "kind": "text", "required": false, "maxLength": 10000, "format": "Text, up to 10,000 characters" },
+        { "field": "systemType", "label": "Type", "kind": "text", "required": false, "maxLength": 255, "format": "Text, up to 255 characters" },
+        {
+          "field": "environment",
+          "label": "Environment",
+          "kind": "enum",
+          "required": false,
+          "maxLength": 255,
+          "values": ["Production", "Non-production"],
+          "format": "One of: Production, Non-production"
+        },
+        {
+          "field": "deploymentModel",
+          "label": "Deployment model",
+          "kind": "enum",
+          "required": false,
+          "maxLength": 255,
+          "values": ["On-prem", "Cloud", "SaaS"],
+          "format": "One of: On-prem, Cloud, SaaS"
+        },
+        {
+          "field": "businessCriticality",
+          "label": "Business criticality",
+          "kind": "text",
+          "required": false,
+          "maxLength": 255,
+          "format": "Text, up to 255 characters"
+        },
+        { "field": "internetFacing", "label": "Internet-facing", "kind": "boolean", "required": false, "maxLength": 5, "format": "Yes or No" },
+        { "field": "externalAccessRequired", "label": "External access required", "kind": "boolean", "required": false, "maxLength": 5, "format": "Yes or No" },
+        { "field": "hostingLocation", "label": "Hosting location", "kind": "text", "required": false, "maxLength": 500, "format": "Text, up to 500 characters" },
+        {
+          "field": "lifecycleState",
+          "label": "Lifecycle",
+          "kind": "enum",
+          "required": false,
+          "maxLength": 255,
+          "values": ["New", "Changed", "Existing", "Decommissioning"],
+          "format": "One of: New, Changed, Existing, Decommissioning"
+        }
+      ],
+      "readOnlyLabels": ["Owner"]
+    },
+    "information-assets": {
+      "naturalKey": "name",
+      "exampleKey": "Example (CSRM skips this row)",
+      "columns": [
+        { "field": "name", "label": "Name", "kind": "text", "required": true, "maxLength": 255, "format": "Text, up to 255 characters" },
+        { "field": "description", "label": "Description", "kind": "text", "required": false, "maxLength": 10000, "format": "Text, up to 10,000 characters" },
+        { "field": "location", "label": "Location", "kind": "text", "required": false, "maxLength": 500, "format": "Text, up to 500 characters" },
+        { "field": "type", "label": "Type", "kind": "text", "required": false, "maxLength": 255, "format": "Text, up to 255 characters" },
+        {
+          "field": "dataClassification",
+          "label": "Classification",
+          "kind": "enum",
+          "required": false,
+          "maxLength": 255,
+          "values": ["Public", "Internal", "Restricted", "Critical Infrastructure Sensitive"],
+          "format": "One of: Public, Internal, Restricted, Critical Infrastructure Sensitive"
+        },
+        {
+          "field": "confidentialityRating",
+          "label": "Confidentiality rating",
+          "kind": "text",
+          "required": false,
+          "maxLength": 255,
+          "format": "Text, up to 255 characters"
+        },
+        { "field": "integrityRating", "label": "Integrity rating", "kind": "text", "required": false, "maxLength": 255, "format": "Text, up to 255 characters" },
+        {
+          "field": "availabilityRating",
+          "label": "Availability rating",
+          "kind": "text",
+          "required": false,
+          "maxLength": 255,
+          "format": "Text, up to 255 characters"
+        },
+        { "field": "containsPersonalData", "label": "Contains personal data", "kind": "boolean", "required": false, "maxLength": 5, "format": "Yes or No" },
+        { "field": "containsLegalData", "label": "Contains legal data", "kind": "boolean", "required": false, "maxLength": 5, "format": "Yes or No" },
+        { "field": "containsCreditCardData", "label": "Contains credit card data", "kind": "boolean", "required": false, "maxLength": 5, "format": "Yes or No" },
+        { "field": "comments", "label": "Comments", "kind": "text", "required": false, "maxLength": 10000, "format": "Text, up to 10,000 characters" }
+      ],
+      "readOnlyLabels": []
+    }
+  }
+}

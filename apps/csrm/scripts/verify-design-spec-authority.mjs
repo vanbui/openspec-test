@@ -6,11 +6,11 @@ const directionReference = 'docs/design/csrm-design-direction.md';
 const specifications = [
   {
     label: 'Phase 01 UI specification',
-    path: '.planning/phases/01-monorepo-foundation-and-secure-application-shell/01-UI-SPEC.md',
+    path: '.planning/workstreams/csrm/phases/01-monorepo-foundation-and-secure-application-shell/01-UI-SPEC.md',
   },
   {
     label: 'Phase 06 UI specification',
-    path: '.planning/phases/06-administration-and-csv-imports/06-UI-SPEC.md',
+    path: '.planning/workstreams/csrm/phases/06-administration-and-csv-imports/06-UI-SPEC.md',
   },
 ];
 

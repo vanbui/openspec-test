@@ -42,6 +42,8 @@ const recordReads = [
 ] as const;
 
 vi.mock('server-only', () => ({}));
+// Phase 19 (19-12): the released header's Export is bound to this Server Action; its module reads services this file mocks.
+vi.mock('@/features/exports/export-actions', () => ({ exportReleasedAssessmentAction: vi.fn() }));
 vi.mock('next/navigation', () => ({
   notFound: mocks.notFound,
   usePathname: () => '/app/review',
@@ -71,6 +73,10 @@ vi.mock('@/features/assessments/assessment-service', () => ({
   listRiskTypes: mocks.listRiskTypes,
 }));
 vi.mock('@/features/requests/request-actions', () => ({ revertRequestToDraftAction: vi.fn() }));
+// Phase 16 (16-14): the assessment page's AI proposals read; the gate refuses before any read, so it is never reached then.
+vi.mock('@/features/risk-curation/risk-curation-service', () => ({ listRiskAiProposals: vi.fn(async () => ({ data: null, error: { status: 503 } })) }));
+vi.mock('@/features/questionnaire-ai/questionnaire-ai-service', () => ({ listQuestionnaireAiProposals: vi.fn(async () => ({ data: null, error: { status: 503 } })) }));
+vi.mock('@/features/questionnaire-ai/questionnaire-ai-actions', () => ({ getQuestionnaireProposalJobAction: vi.fn(), retryQuestionnaireProposalJobAction: vi.fn(), startQuestionnaireAiProposalsAction: vi.fn() }));
 vi.mock('@/features/questionnaires/questionnaire-actions', () => ({
   addQuestionnaireQuestionAction: vi.fn(),
   deleteQuestionnaireQuestionAction: vi.fn(),
@@ -183,8 +189,8 @@ describe('the analyst request route', () => {
     expectNoRecordRead();
     expect(screen.getByRole('heading', { level: 1, name: 'Assessment request review' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this request');
-    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing requests is for Security Analysts. Your own requests are in My Requests.');
-    expect(screen.getByRole('link', { name: 'Go to My Requests' })).toHaveAttribute('href', '/app/requests');
+    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing requests is for Security Analysts. Your own requests are in My requests.');
+    expect(screen.getByRole('link', { name: 'Go to My requests' })).toHaveAttribute('href', '/app/requests');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expectNoLinkIntoAnalystRoutes();
   });
@@ -205,7 +211,7 @@ describe('the analyst request route', () => {
 
     expect(mocks.granted).not.toHaveBeenCalled();
     expect(mocks.getRequest).not.toHaveBeenCalled();
-    expect(screen.getByRole('link', { name: 'Go to My Requests' })).toHaveAttribute('href', '/app/requests');
+    expect(screen.getByRole('link', { name: 'Go to My requests' })).toHaveAttribute('href', '/app/requests');
   });
 
   it('reads the request once for an analyst and renders it as before', async () => {
@@ -218,7 +224,7 @@ describe('the analyst request route', () => {
     expect(mocks.getRequest).toHaveBeenCalledWith('record-under-test');
     expect(screen.getByRole('heading', { level: 1, name: 'Vendor onboarding review' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Return to draft' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Go to My Requests' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Go to My requests' })).not.toBeInTheDocument();
   });
 
   /*
@@ -234,7 +240,8 @@ describe('the analyst request route', () => {
     },
   };
 
-  it('reads the questionnaire summary for the change count a replacement discards', async () => {
+  /* Phase 15 (15-UI-SPEC §8.3; D-09; U3): the count decides whether a replacement is offered at all. */
+  it('reads the questionnaire summary for the change count, and offers no Replace once analysts changed it', async () => {
     signInAsAnalyst();
     mocks.getRequest.mockResolvedValue({ data: requestInAnalystReview, error: null });
     mocks.getQuestionnaire.mockResolvedValue({ data: { documentId: 'questionnaire-under-review', revision: { eventCount: 3, lastEventAt: '2026-09-03T00:00:00.000Z', analystChangesSinceGeneration: 2 } }, error: null });
@@ -242,20 +249,17 @@ describe('the analyst request route', () => {
     render(await AssessmentRequestDetailContent(props()));
 
     expect(mocks.getQuestionnaire).toHaveBeenCalledWith('questionnaire-under-review');
-    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
-    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
-      .toHaveTextContent('discarding the 2 changes analysts made to its questions since it was generated');
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
+    expect(screen.getByText('Analysts have changed this questionnaire since it was generated, so replacing it would discard their work. Use AI proposals to change it instead.')).toBeInTheDocument();
   });
 
-  it('confirms a replacement without a count when the questionnaire summary cannot be read', async () => {
+  it('offers no Replace when the questionnaire summary cannot be read', async () => {
     signInAsAnalyst();
     mocks.getRequest.mockResolvedValue({ data: requestInAnalystReview, error: null });
 
     render(await AssessmentRequestDetailContent(props()));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Replace questionnaire' }));
-    expect(screen.getByRole('alertdialog', { name: 'Replace this questionnaire?' }))
-      .toHaveTextContent('discarding any changes analysts made to its questions since it was generated');
+    expect(screen.queryByRole('button', { name: 'Replace questionnaire' })).not.toBeInTheDocument();
   });
 
   /*
@@ -278,6 +282,19 @@ describe('the analyst request route', () => {
     expect(screen.queryByRole('button', { name: 'Generate questionnaire' })).not.toBeInTheDocument();
   });
 
+  /* Phase 15 (15-UI-SPEC §12; D-32): a requesting analyst generates without an instruction, before any questionnaire exists. */
+  it('gives a requesting analyst §12’s caption and no instruction field before the questionnaire exists', async () => {
+    signInAsAnalyst();
+    const viewer = { documentId: 'bob-id', displayName: 'Bob Doe' };
+    mocks.getRequest.mockResolvedValue({ data: { ...submittedRequest, assignment: { assignee: null, assignedBy: null, assignedAt: null, actions: [], ownRequest: true, history: [], viewer } }, error: null });
+
+    render(await AssessmentRequestDetailContent(props()));
+
+    expect(screen.getByRole('button', { name: 'Generate questionnaire' })).toBeInTheDocument();
+    expect(screen.getByText('You raised this request, so you can generate without an instruction. Another Security Analyst can give the AI one.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Instruction for the AI (optional)')).not.toBeInTheDocument();
+  });
+
   it('does not read the generation jobs when Strapi refuses an analyst the request', async () => {
     signInAsAnalyst();
     mocks.getRequest.mockResolvedValue({ data: null, error: { status: 403, message: 'Refused' } });
@@ -296,7 +313,7 @@ describe('the analyst request route', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this request');
     expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this request with your current access. Choose another from the assessment requests.');
     expect(screen.getByRole('link', { name: 'Back to assessment requests' })).toHaveAttribute('href', '/app/review/requests');
-    expect(screen.queryByRole('link', { name: 'Go to My Requests' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Go to My requests' })).not.toBeInTheDocument();
   });
 });
 
@@ -309,8 +326,8 @@ describe('the analyst questionnaire review route', () => {
     expectNoRecordRead();
     expect(screen.getByRole('heading', { level: 1, name: 'Questionnaire review' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this questionnaire');
-    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing questionnaires is for Security Analysts. To answer a questionnaire sent to you, open it from My Questionnaires.');
-    expect(screen.getByRole('link', { name: 'Go to My Questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
+    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing questionnaires is for Security Analysts. To answer a questionnaire sent to you, open it from My questionnaires.');
+    expect(screen.getByRole('link', { name: 'Go to My questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expectNoLinkIntoAnalystRoutes();
   });
@@ -334,7 +351,7 @@ describe('the analyst questionnaire review route', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this questionnaire');
     expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this questionnaire with your current access. Choose another from the questionnaire reviews.');
     expect(screen.getByRole('link', { name: 'Back to questionnaire reviews' })).toHaveAttribute('href', '/app/review/questionnaires');
-    expect(screen.queryByRole('link', { name: 'Go to My Questionnaires' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Go to My questionnaires' })).not.toBeInTheDocument();
   });
 });
 
@@ -347,8 +364,8 @@ describe('the analyst assessment review route', () => {
     expectNoRecordRead();
     expect(screen.getByRole('heading', { level: 1, name: 'Risk assessment review' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this assessment');
-    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing assessments is for Security Analysts. Assessments released to you are in My Risk Assessments.');
-    expect(screen.getByRole('link', { name: 'Go to My Risk Assessments' })).toHaveAttribute('href', '/app/assessments');
+    expect(screen.getByRole('alert')).toHaveTextContent('Reviewing assessments is for Security Analysts. Assessments released to you are in My risk assessments.');
+    expect(screen.getByRole('link', { name: 'Go to My risk assessments' })).toHaveAttribute('href', '/app/assessments');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expectNoLinkIntoAnalystRoutes();
   });
@@ -372,6 +389,6 @@ describe('the analyst assessment review route', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('You don’t have permission to review this assessment');
     expect(screen.getByRole('alert')).toHaveTextContent('You can’t review this assessment with your current access. Choose another from the risk assessments.');
     expect(screen.getByRole('link', { name: 'Back to risk assessments' })).toHaveAttribute('href', '/app/review/assessments');
-    expect(screen.queryByRole('link', { name: 'Go to My Risk Assessments' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Go to My risk assessments' })).not.toBeInTheDocument();
   });
 });

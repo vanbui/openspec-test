@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
@@ -24,6 +24,8 @@ export type RelationPickerGroup = { label: string; items: readonly RelationPicke
 
 export type RelationPickerProps = {
   label: string;
+  labelSuffix?: ReactNode;
+  descriptionId?: string;
   hint?: string;
   /** Names the record in the selected line: `Selected {noun}: {name}`. */
   noun: string;
@@ -62,6 +64,8 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null): void {
 
 export function RelationPicker({
   label,
+  labelSuffix,
+  descriptionId,
   hint,
   noun,
   nounPlural = `${noun}s`,
@@ -180,7 +184,7 @@ export function RelationPicker({
   else if (term && !error && results.length >= pageSize) status = `Showing the first ${pageSize} matches. Keep typing to narrow the list.`;
 
   // The chosen record is part of the description, so a screen reader hears it while the input is empty; the name stays the label.
-  const describedBy = [hint ? hintId : null, value ? selectedId : null, invalid && errorId ? errorId : null].filter(Boolean).join(' ') || undefined;
+  const describedBy = [hint ? hintId : null, value ? selectedId : null, descriptionId, invalid && errorId ? errorId : null].filter(Boolean).join(' ') || undefined;
   const listboxShown = isOpen && options.length > 0;
 
   const renderOption = (item: RelationPickerItem, index: number) => {
@@ -216,7 +220,7 @@ export function RelationPicker({
   return (
     <div className="grid min-w-0 gap-2">
       {/* The hint and the selected line sit outside the label, so the field's name is exactly its label. */}
-      <label className="text-sm font-medium" htmlFor={inputId}>{label}</label>
+      <div className="flex flex-wrap items-center gap-2"><label className="text-sm font-medium" htmlFor={inputId}>{label}</label>{labelSuffix}</div>
       {hint ? <p className="text-xs text-muted-foreground" id={hintId}>{hint}</p> : null}
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverAnchor asChild>

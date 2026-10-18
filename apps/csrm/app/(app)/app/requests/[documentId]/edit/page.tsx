@@ -4,11 +4,15 @@ import { cache } from 'react';
 
 import { PageHeader } from '@/components/csrm/page-header';
 import { ErrorState, PermissionDeniedState } from '@/components/states/states';
+import { listRequestAttachments } from '@/features/attachments/attachments-service';
+import { filesSectionFor } from '@/features/attachments/files-section';
 import { RequestForm } from '@/features/requests/request-form';
 import { toRequestFormValues } from '@/features/requests/request-form-values';
 import { canRequestorEdit } from '@/features/requests/request-domain';
 import { getRequest, hydrateInformationAssetSelections, hydrateInformationSystemSelections } from '@/features/requests/request-service';
+import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { recordRouteMetadata } from '@/lib/metadata/record-route-metadata';
+import { draftOwnerKey } from '@/lib/session-drafts/draft-owner-key';
 
 type EditRequestPageProps = { params: Promise<{ documentId: string }> };
 
@@ -44,13 +48,29 @@ export default async function EditRequestPage({ params }: EditRequestPageProps) 
   if (!requestResult.data) notFound();
   if (!canRequestorEdit(requestResult.data.requestStatus)) return <><UnavailableEditHeader /><PermissionDeniedState /></>;
 
+  const request = requestResult.data;
+  /*
+   * 14-UI-SPEC §2.3 (D-27; UI-D4): the edit form lists the draft's files and adds chosen files at once. As on the request
+   * page, the files are read only for a viewer the request read gave a file summary (D-18). Rendering the queue here also
+   * puts the upload action in this route, where the new-request form's actions post once its address is replaced
+   * (RESEARCH Pitfall 17).
+   */
+  const sessionAdapter = getSessionAdapter();
+  const [session, files] = await Promise.all([
+    sessionAdapter.current(),
+    request.attachments ? listRequestAttachments(request.documentId) : Promise.resolve(null),
+  ]);
+  const ownerKey = session ? draftOwnerKey(session) : null;
+
   return (
     <>
-      <PageHeader description={`${requestResult.data.requestNumber} · Draft`} title={editHeading} />
+      <PageHeader description={`${request.requestNumber} · Draft`} title={editHeading} />
       <RequestForm
         assets={assets.data ?? []}
-        defaultValues={toRequestFormValues(requestResult.data)}
-        documentId={requestResult.data.documentId}
+        defaultValues={toRequestFormValues(request)}
+        documentId={request.documentId}
+        draftOwnerKey={ownerKey}
+        files={filesSectionFor(request, files, { viewer: 'requestor', draftOwnerKey: ownerKey })}
         mode="edit"
         systems={systems.data ?? []}
       />

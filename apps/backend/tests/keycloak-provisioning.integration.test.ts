@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import type { Core } from "@strapi/strapi";
 
 import { IDAMBOX_USER_UID } from "../src/keycloak/provision-idambox-user";
 import {
@@ -44,6 +45,9 @@ const originalEnvironment = new Map(
 
 let strapi: RunningStrapi;
 let keycloak: Awaited<ReturnType<typeof startFakeKeycloakServer>>;
+const writes: Array<{ action: string; data: Record<string, unknown> }> = [];
+let failLinkage = false;
+let compiledDir: string;
 
 before(async () => {
   keycloak = await startFakeKeycloakServer();
@@ -73,8 +77,19 @@ before(async () => {
     createStrapi: (options: { appDir: string; distDir: string }) => RunningStrapi & { load: () => Promise<RunningStrapi> };
   };
   const compiled = await strapiPackage.compileStrapi({ appDir });
+  compiledDir = compiled.distDir;
   strapi = await strapiPackage.createStrapi(compiled).load();
   (strapi as unknown as { cron?: { destroy?: () => void } }).cron?.destroy?.();
+  (strapi as unknown as Core.Strapi).documents.use(async (context, next) => {
+    if (context.uid === IDAMBOX_USER_UID && ["create", "update"].includes(context.action)) {
+      const data = { ...(context.params as { data: Record<string, unknown> }).data };
+      writes.push({ action: context.action, data });
+      if (failLinkage && data.password === null && typeof data.externalSubject === "string") {
+        throw new Error("TEST_LINKAGE_FAILURE");
+      }
+    }
+    return next();
+  });
 });
 
 after(async () => {
@@ -96,6 +111,7 @@ function newUser(email: string, username: string) {
 }
 
 test("a created IdamBox user is linked to its Keycloak account and keeps no password", async () => {
+  writes.length = 0;
   const created = await strapi.documents(IDAMBOX_USER_UID).create({ data: newUser("ada@idambox.test", "ada") });
 
   const [account] = [...keycloak.users.values()].filter((user) => user.email === "ada@idambox.test");
@@ -106,6 +122,38 @@ test("a created IdamBox user is linked to its Keycloak account and keeps no pass
   const row = await storedUser("ada@idambox.test");
   assert.equal(row?.externalSubject, account.id);
   assert.equal(row?.password, null, "the password is not persisted in Strapi, not even as a hash");
+  assert.equal("password" in writes[0].data, false);
+  assert.deepEqual(writes[1], { action: "update", data: { externalSubject: account.id, password: null } });
+});
+
+test("omitted passwords provision without credentials and original invalid passwords fail before persistence", async () => {
+  const { password: _password, ...data } = newUser("no-password@idambox.test", "no-password");
+  const created = await strapi.documents(IDAMBOX_USER_UID).create({ data });
+  assert.equal((await storedUser(String(data.email)))?.password, null);
+  assert.deepEqual(keycloak.users.get(String(created.externalSubject))?.requiredActions, ["UPDATE_PASSWORD"]);
+  for (const password of ["short", 123456, {}, ""]) {
+    const calls = keycloak.requests.length;
+    await assert.rejects(strapi.documents(IDAMBOX_USER_UID).create({ data: { ...newUser("invalid@idambox.test", "invalid"), password } }));
+    assert.equal(await storedUser("invalid@idambox.test"), null);
+    assert.equal(keycloak.requests.length, calls);
+    await assert.rejects(strapi.documents(IDAMBOX_USER_UID).update({ documentId: created.documentId, data: { password } }));
+    assert.equal((await storedUser(String(data.email)))?.password, null);
+  }
+});
+
+test("nested Document Service cleanup failure rolls back and retry adopts the remote account without recursion", async () => {
+  failLinkage = true;
+  try {
+    await assert.rejects(strapi.documents(IDAMBOX_USER_UID).create({ data: newUser("cleanup@idambox.test", "cleanup") }), /TEST_LINKAGE_FAILURE/);
+  } finally { failLinkage = false; }
+  assert.equal(await storedUser("cleanup@idambox.test"), null);
+  const remote = [...keycloak.users.values()].find((user) => user.email === "cleanup@idambox.test");
+  assert.ok(remote);
+  const calls = keycloak.adminRequests().length;
+  const retry = await strapi.documents(IDAMBOX_USER_UID).create({ data: newUser("cleanup@idambox.test", "cleanup") });
+  assert.equal(retry.externalSubject, remote.id);
+  assert.equal(keycloak.adminRequests().length - calls, 3, "lookup, update and reset only");
+  assert.equal((await storedUser("cleanup@idambox.test"))?.password, null);
 });
 
 test("a Keycloak failure on create rolls the Strapi user back", async () => {
@@ -138,4 +186,30 @@ test("a Keycloak failure on update rolls the Strapi change back", async () => {
   assert.equal((await storedUser("alan@idambox.test"))?.firstName, "Alan");
   assert.equal(account?.firstName, "Alan");
   assert.equal(account?.password, "new-password-2");
+});
+
+test("sourced claim cleanup uses narrow nested authority and cleanup failure rolls ownership back", async () => {
+  const backend = strapi as unknown as Core.Strapi;
+  const application = await backend.documents("api::application.application").create({ data: { name: "IdamBox IAM", slug: "idambox-iam", applicationStatus: "active" } });
+  const fn = await backend.documents("api::function.function").create({ data: { name: "Identity Provisioning", application: application.documentId } });
+  await backend.documents("api::role.role").create({ data: { name: "Identity Provisioning", functions: [fn.documentId] } });
+  const { registerIdentitySource } = require(path.join(compiledDir, "src/iam/identity/source-registration")) as typeof import("../src/iam/identity/source-registration");
+  const { resolveSourcePrincipal } = require(path.join(compiledDir, "src/iam/identity/source-principal")) as typeof import("../src/iam/identity/source-principal");
+  const { createIdentityService } = require(path.join(compiledDir, "src/iam/identity/identity-service")) as typeof import("../src/iam/identity/identity-service");
+  const calls = keycloak.requests.length;
+  const source = await registerIdentitySource(backend, { name: "HR", username: "hr-service", email: "service@idambox.test", displayName: "HR" });
+  assert.equal(keycloak.requests.length, calls);
+  const principal = await resolveSourcePrincipal(backend, source.documentId); assert.ok(principal);
+  const service = createIdentityService(backend);
+  const user = await strapi.documents(IDAMBOX_USER_UID).create({ data: newUser("sourced@idambox.test", "sourced") });
+  const replacement = { username: "sourced", email: "sourced@idambox.test", displayName: "Sourced", accountStatus: "active" as const, sourceExternalId: "opaque-key" };
+  failLinkage = true;
+  try { await assert.rejects(service.replaceFromSource(principal, user.documentId, replacement), /TEST_LINKAGE_FAILURE/); }
+  finally { failLinkage = false; }
+  const unchanged = await backend.documents(IDAMBOX_USER_UID).findOne({ documentId: user.documentId, populate: { identitySource: true } });
+  assert.equal(unchanged?.identitySource, null); assert.equal(unchanged?.sourceIdentityKey, null);
+  assert.equal(unchanged?.displayName, "sourced"); assert.equal(unchanged?.password, null);
+  const outcome = await service.replaceFromSource(principal, user.documentId, replacement); assert.ok(outcome.ok);
+  assert.equal((await storedUser("sourced@idambox.test"))?.password, null);
+  await assert.rejects(backend.documents(IDAMBOX_USER_UID).update({ documentId: user.documentId, data: { externalSubject: "forged-subject" } }), /IAM_IDENTITY_FORBIDDEN/);
 });

@@ -4,6 +4,7 @@ import path from "node:path";
 import test, { after } from "node:test";
 
 import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
+import dashboardController from "../src/api/csrm-analyst-insight/controllers/dashboard";
 import { addUtcDays, utcToday } from "../src/csrm/insights/utc-date";
 
 /*
@@ -16,8 +17,13 @@ import { addUtcDays, utcToday } from "../src/csrm/insights/utc-date";
  * plus two draft requests that no analyst figure counts, so the fixtures below
  * are the only dashboard sources in this file's database. The recent activity
  * test adds its own requests, questionnaires and assessments after every figure
- * test has run. The High and Critical truncation test adds three more Risks,
+ * test has run. The High and Critical truncation test adds four more Risks,
  * which changes the Risk figures, so it runs last.
+ *
+ * D-40 to D-42: Risk exposure counts released open Risks, the accepted ones
+ * among them and the open Risks under assessment apart, each with the Risk
+ * Register's own named branch, so every rating count equals the register list
+ * filtered by that rating, state=open and its stage.
  *
  * Every served level is pinned literally and against its published closed
  * component, and the whole body is walked against DashboardSummaryResponse.
@@ -133,9 +139,14 @@ const REVIEW_QUEUE_KEYS = [
   "assessmentsInReview",
   "awaitingRequestor",
   "generationInProgress",
+  "mine",
   "questionnairesReadyForReview",
   "requiresAttention",
+  "unassigned",
 ];
+// Phase 13 (D-15): the viewer's own queue counts. No `open` count is served, because no surface shows it.
+const REVIEW_QUEUE_MINE_KEYS = ["awaitingRequestor", "generationInProgress", "requiresAttention", "withUnreadNotes"];
+const RISK_EXPOSURE_KEYS = ["released", "releasedAccepted", "underAssessment"];
 const RATING_COUNT_KEYS = ["Critical", "High", "Low", "Moderate", "notRated", "total"];
 const HIGH_CRITICAL_KEYS = ["rows", "total", "truncated"];
 const RISK_ROW_KEYS = ["documentId", "residualRating", "riskNumber", "riskStatement", "targetDate", "treatmentDueState"];
@@ -170,15 +181,39 @@ const REQUESTS = {
 } as const satisfies Record<string, RequestFixture>;
 type RequestName = keyof typeof REQUESTS;
 
-type RiskFixture = { residualRating: string | null; targetDate: string | null; closureDate?: string };
-/** Every exposure Risk is In Progress on AX. X1 is closed, so it never counts. */
+/*
+ * Each Risk's parent: AX, the in-review assessment of Q4; AD, the draft assessment of Q3; AR, the
+ * released assessment of RR (approved, with an approval date and an approver).
+ */
+type RiskParent = "AX" | "AD" | "AR";
+type RiskFixture = {
+  parent: RiskParent;
+  residualRating: string | null;
+  targetDate: string | null;
+  closureDate?: string;
+  treatmentAction?: "Accept" | "Treat";
+};
+/**
+ * Every exposure Risk is In Progress. Under assessment (AX and AD): C1, H1, H2, M1, MA, N1 and DL1;
+ * MA's Accept is a draft's, so it never counts as accepted (D-41). Released (AR): RC1, RH1, RM1 (the
+ * one accepted), RL1 and RO1, whose rating is off the ladder, so it is not rated. X1 and RX1 are
+ * closed, so they never count.
+ */
 const RISKS = {
-  C1: { residualRating: "Critical", targetDate: D(5) },
-  H1: { residualRating: "High", targetDate: D(-3) },
-  H2: { residualRating: "High", targetDate: null },
-  M1: { residualRating: "Moderate", targetDate: D(30) },
-  N1: { residualRating: null, targetDate: null },
-  X1: { residualRating: "Critical", targetDate: D(-10), closureDate: D(-1) },
+  C1: { parent: "AX", residualRating: "Critical", targetDate: D(5) },
+  H1: { parent: "AX", residualRating: "High", targetDate: D(-3) },
+  H2: { parent: "AX", residualRating: "High", targetDate: null },
+  M1: { parent: "AX", residualRating: "Moderate", targetDate: D(30) },
+  MA: { parent: "AX", residualRating: "Moderate", targetDate: null, treatmentAction: "Accept" },
+  N1: { parent: "AX", residualRating: null, targetDate: null },
+  X1: { parent: "AX", residualRating: "Critical", targetDate: D(-10), closureDate: D(-1) },
+  DL1: { parent: "AD", residualRating: "Low", targetDate: null },
+  RC1: { parent: "AR", residualRating: "Critical", targetDate: D(-4) },
+  RH1: { parent: "AR", residualRating: "High", targetDate: D(10) },
+  RM1: { parent: "AR", residualRating: "Moderate", targetDate: D(60), treatmentAction: "Accept" },
+  RL1: { parent: "AR", residualRating: "Low", targetDate: null, treatmentAction: "Treat" },
+  RO1: { parent: "AR", residualRating: "Severe", targetDate: null },
+  RX1: { parent: "AR", residualRating: "Moderate", targetDate: D(-20), closureDate: D(-2), treatmentAction: "Accept" },
 } as const satisfies Record<string, RiskFixture>;
 type RiskName = keyof typeof RISKS;
 
@@ -187,8 +222,10 @@ const riskStatement = (name: string): string => `P7D dashboard Risk ${name}`;
 
 type Fixtures = {
   requests: Record<RequestName, string>;
-  /** AX, the in-review parent of every exposure Risk. */
+  /** AX, the in-review parent of the Risks under assessment. */
   ax: string;
+  /** AR, the released parent of the released Risks. */
+  ar: string;
   risks: Record<RiskName | "P1", string>;
 };
 
@@ -229,17 +266,45 @@ function seedDashboardFixtures(): Promise<Fixtures> {
     }
     const ax = assessments.Q4;
     assert.ok(ax, "DASHBOARD_FIXTURE_AX_MISSING");
+    const ad = assessments.Q3;
+    assert.ok(ad, "DASHBOARD_FIXTURE_AD_MISSING");
 
+    /*
+     * AR: a released assessment, with the complete release facts (approved, an approval date and an
+     * approver). Its request is approved, so it is in no action queue, and the assessment is in
+     * neither the draft nor the in-review list. Its release, at a UTC midnight before today, is older
+     * than every controlled activity event.
+     */
+    const releasedRequest = await harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+      requestNumber: "P7D-RAR-RR",
+      title: "P7D dashboard request RR",
+      requestStatus: "approved",
+      requestor: owner,
+      submittedDate: at(D(-45)),
+    });
+    const ar = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+      assessmentNumber: "P7D-ASM-RR",
+      assessmentStatus: "approved",
+      summary: "P7D released assessment",
+      assessmentRequest: releasedRequest,
+      approvalDate: at(D(-25)),
+      assessmentDate: at(D(-25)),
+      approvedBy: analyst,
+      reviewedBy: analyst,
+    });
+
+    const parents: Record<RiskParent, string> = { AX: ax, AD: ad, AR: ar };
     const risks = {} as Record<RiskName | "P1", string>;
     for (const [name, fixture] of Object.entries(RISKS) as Array<[RiskName, RiskFixture]>) {
       risks[name] = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
         riskNumber: riskNumber(name),
         riskStatement: riskStatement(name),
-        assessment: ax,
+        assessment: parents[fixture.parent],
         treatmentStatus: "In Progress",
         ...(fixture.residualRating === null ? {} : { residualRating: fixture.residualRating }),
         ...(fixture.targetDate === null ? {} : { targetDate: fixture.targetDate }),
         ...(fixture.closureDate === undefined ? {} : { closureDate: fixture.closureDate }),
+        ...(fixture.treatmentAction === undefined ? {} : { treatmentAction: fixture.treatmentAction }),
       });
     }
 
@@ -272,8 +337,9 @@ function seedDashboardFixtures(): Promise<Fixtures> {
       residualRating: "Critical",
       treatmentStatus: "In Progress",
       targetDate: D(-6),
+      treatmentAction: "Accept",
     });
-    return { requests, ax, risks };
+    return { requests, ax, ar, risks };
   })();
   return fixtures;
 }
@@ -323,8 +389,8 @@ type ActivityRow = {
 type Summary = {
   today: string;
   dueSoonWindowDays: number;
-  reviewQueue: Record<string, number>;
-  riskExposure: Record<string, number>;
+  reviewQueue: Record<string, number> & { mine: Record<string, number> };
+  riskExposure: { released: Record<string, number>; releasedAccepted: Record<string, number>; underAssessment: Record<string, number> };
   highCriticalRisks: { rows: Array<Record<string, unknown>>; total: number; truncated: boolean };
   treatmentsDue: Record<string, number>;
   recentActivity: { rows: ActivityRow[]; truncated: boolean };
@@ -336,14 +402,18 @@ type Summary = {
  * summary, each section, each High and Critical row and each activity item) is
  * pinned literally and against its closed component.
  */
-async function readSummary(): Promise<Summary> {
-  const { status, body, text } = await readJson(SUMMARY_PATH);
+async function readSummary(identity?: string): Promise<Summary> {
+  const { status, body, text } = await readJson(SUMMARY_PATH, identity);
   assert.equal(status, 200, `DASHBOARD_SUMMARY_READ_FAILED: ${text}`);
   assertMatchesSpec(body, { $ref: "#/components/schemas/DashboardSummaryResponse" }, "DASHBOARD");
   const envelope = assertKeys(body, ENVELOPE_KEYS, "DASHBOARD_ENVELOPE", "DashboardSummaryResponse");
   const data = assertKeys(envelope.data, SUMMARY_KEYS, "DASHBOARD_SUMMARY", "DashboardSummary");
-  assertKeys(data.reviewQueue, REVIEW_QUEUE_KEYS, "DASHBOARD_REVIEW_QUEUE", "DashboardReviewQueue");
-  assertKeys(data.riskExposure, RATING_COUNT_KEYS, "DASHBOARD_RISK_EXPOSURE", "RatingCounts");
+  const queue = assertKeys(data.reviewQueue, REVIEW_QUEUE_KEYS, "DASHBOARD_REVIEW_QUEUE", "DashboardReviewQueue");
+  assertKeys(queue.mine, REVIEW_QUEUE_MINE_KEYS, "DASHBOARD_REVIEW_QUEUE_MINE", "DashboardReviewQueueMine");
+  const exposure = assertKeys(data.riskExposure, RISK_EXPOSURE_KEYS, "DASHBOARD_RISK_EXPOSURE", "DashboardRiskExposure");
+  for (const part of RISK_EXPOSURE_KEYS) {
+    assertKeys(exposure[part], RATING_COUNT_KEYS, `DASHBOARD_RISK_EXPOSURE_${part}`, "RatingCounts");
+  }
   const highCritical = assertKeys(data.highCriticalRisks, HIGH_CRITICAL_KEYS, "DASHBOARD_HIGH_CRITICAL", "DashboardHighCriticalRisks");
   assert.ok(Array.isArray(highCritical.rows), "DASHBOARD_HIGH_CRITICAL_ROWS_NOT_A_LIST");
   for (const [index, row] of (highCritical.rows as unknown[]).entries()) {
@@ -359,8 +429,8 @@ async function readSummary(): Promise<Summary> {
 }
 
 /** The total of a list the analyst can open, from its own pagination. */
-async function listTotal(pathName: string): Promise<number> {
-  const { status, body, text } = await readJson(pathName);
+async function listTotal(pathName: string, identity?: string): Promise<number> {
+  const { status, body, text } = await readJson(pathName, identity);
   assert.equal(status, 200, `LIST_READ_FAILED_${pathName}: ${text}`);
   const total = (body as { meta?: { pagination?: { total?: unknown } } } | null)?.meta?.pagination?.total;
   assert.ok(typeof total === "number" && Number.isSafeInteger(total), `LIST_TOTAL_MISSING_${pathName}`);
@@ -385,12 +455,33 @@ const riskRow = (created: Fixtures, name: string, residualRating: string, target
   treatmentDueState,
 });
 
+/*
+ * D-15 (Phase 13): each of the viewer's own counts, and the team's pick-up pool, equals the total of the queue read the
+ * Home opens for it, read by the same viewer: Assigned to me (`filters[assignee]=me`) by queue, its new notes over the
+ * open queue, and Requests' requires-attention queue with nobody holding the request.
+ */
+const VIEWER_COUNT_LISTS = [
+  ["requiresAttention", "/api/v1/assessment_requests?filters[queue]=requires-attention&filters[assignee]=me"],
+  ["awaitingRequestor", "/api/v1/assessment_requests?filters[queue]=awaiting-requestor&filters[assignee]=me"],
+  ["generationInProgress", "/api/v1/assessment_requests?filters[queue]=generation-in-progress&filters[assignee]=me"],
+  ["withUnreadNotes", "/api/v1/assessment_requests?filters[queue]=open&filters[assignee]=me&filters[notes]=unread"],
+] as const;
+const UNASSIGNED_LIST = "/api/v1/assessment_requests?filters[queue]=requires-attention&filters[assignee]=unassigned";
+
+async function assertViewerCountsEqualTheirLists(reviewQueue: Summary["reviewQueue"], label: string, identity?: string): Promise<void> {
+  for (const [key, pathName] of VIEWER_COUNT_LISTS) {
+    assert.equal(await listTotal(pathName, identity), reviewQueue.mine[key], `MINE_${key}_DIFFERS_FROM_ITS_LIST_${label}`);
+  }
+  assert.equal(await listTotal(UNASSIGNED_LIST, identity), reviewQueue.unassigned, `UNASSIGNED_DIFFERS_FROM_ITS_LIST_${label}`);
+}
+
 test("the review queue counts equal the totals of the review lists they open", async () => {
   assertSameUtcDay();
   await seedDashboardFixtures();
   const { reviewQueue } = await readSummary();
 
   // Q1, Q3, Q4 and Q5 require attention; Q2 waits on the Requestor. The boot drafts count nowhere.
+  // Nobody holds any of them yet, so the analyst's own counts are zero and all four wait for pick-up (D-15).
   assert.deepEqual(reviewQueue, {
     requiresAttention: 4,
     awaitingRequestor: 1,
@@ -398,7 +489,10 @@ test("the review queue counts equal the totals of the review lists they open", a
     questionnairesReadyForReview: 3,
     assessmentsDraft: 1,
     assessmentsInReview: 2,
+    mine: { requiresAttention: 0, awaitingRequestor: 0, generationInProgress: 0, withUnreadNotes: 0 },
+    unassigned: 4,
   }, "DASHBOARD_REVIEW_QUEUE");
+  await assertViewerCountsEqualTheirLists(reviewQueue, "BOB_BEFORE_PICK_UP");
 
   // D-21: each queue figure is the queue page's own total.
   assert.equal(await listTotal("/api/v1/assessment_requests"), reviewQueue.requiresAttention, "REQUIRES_ATTENTION_DIFFERS_FROM_THE_QUEUE");
@@ -427,38 +521,78 @@ test("the review queue counts equal the totals of the review lists they open", a
   assertSameUtcDay();
 });
 
-test("Risk exposure counts only open contextual Risks, and each rating equals the open Risk Register list", async () => {
+/** Each count of a RatingCounts with the register's own residualRating value: `none` for not rated (D-35). */
+const EXPOSURE_RATING_FILTERS = [
+  ["Critical", "Critical"],
+  ["High", "High"],
+  ["Moderate", "Moderate"],
+  ["Low", "Low"],
+  ["notRated", "none"],
+] as const;
+
+test("Risk exposure counts released open Risks apart from those under assessment, with the accepted released Risks, each equal to its Risk Register list (D-40, D-41, D-42)", async () => {
   assertSameUtcDay();
   await seedDashboardFixtures();
   const { riskExposure } = await readSummary();
 
-  // X1 is closed and P1's parent is only partially released: either would lift Critical to 2.
-  assert.deepEqual(riskExposure, { Critical: 1, High: 2, Moderate: 1, Low: 0, notRated: 1, total: 5 }, "DASHBOARD_RISK_EXPOSURE");
-  for (const rating of ["Critical", "High", "Moderate", "Low"] as const) {
-    assert.equal(
-      await listTotal(`/api/v1/risks?residualRating=${rating}&state=open`),
-      riskExposure[rating],
-      `EXPOSURE_DIFFERS_FROM_THE_REGISTER_${rating}`,
-    );
+  // RX1 is closed, RO1's rating is off the ladder, and P1's parent is only partially released.
+  assert.deepEqual(riskExposure.released, { Critical: 1, High: 1, Moderate: 1, Low: 1, notRated: 1, total: 5 }, "DASHBOARD_RELEASED_EXPOSURE");
+  // RM1 alone: RX1 is closed, MA's Accept is a draft's and P1 is in neither stage.
+  assert.deepEqual(riskExposure.releasedAccepted, { Critical: 0, High: 0, Moderate: 1, Low: 0, notRated: 0, total: 1 }, "DASHBOARD_ACCEPTED_EXPOSURE");
+  // The in-review AX and the draft AD; X1 is closed.
+  assert.deepEqual(riskExposure.underAssessment, { Critical: 1, High: 2, Moderate: 2, Low: 1, notRated: 1, total: 7 }, "DASHBOARD_UNDER_ASSESSMENT_EXPOSURE");
+
+  // D-40: each figure is the total of the register list it opens, filtered by its own stage.
+  const lists = [
+    ["released", riskExposure.released, "&stage=released"],
+    ["releasedAccepted", riskExposure.releasedAccepted, "&stage=released&treatmentAction=Accept"],
+    ["underAssessment", riskExposure.underAssessment, "&stage=under-assessment"],
+  ] as const;
+  for (const [label, counts, filters] of lists) {
+    for (const [key, value] of EXPOSURE_RATING_FILTERS) {
+      assert.equal(
+        await listTotal(`/api/v1/risks?residualRating=${value}&state=open${filters}`),
+        counts[key],
+        `EXPOSURE_DIFFERS_FROM_THE_REGISTER_${label}_${key}`,
+      );
+    }
+    assert.equal(await listTotal(`/api/v1/risks?state=open${filters}`), counts.total, `EXPOSURE_TOTAL_DIFFERS_FROM_THE_REGISTER_${label}`);
   }
-  assert.equal(await listTotal("/api/v1/risks?state=open"), riskExposure.total, "EXPOSURE_TOTAL_DIFFERS_FROM_THE_REGISTER");
+  // The two stages partition the open register, so the two figures are never one total read twice.
+  assert.equal(
+    await listTotal("/api/v1/risks?state=open"),
+    riskExposure.released.total + riskExposure.underAssessment.total,
+    "EXPOSURE_STAGES_DO_NOT_PARTITION_THE_OPEN_REGISTER",
+  );
   assertSameUtcDay();
 });
 
-test("the High and Critical residual Risks lead with Critical, then the earliest target date, each with its treatment due state", async () => {
+test("the High and Critical residual Risks list released open Risks only, Critical first, then the earliest target date, each with its treatment due state (D-42)", async () => {
   assertSameUtcDay();
   const created = await seedDashboardFixtures();
   const { highCriticalRisks } = await readSummary();
 
+  // C1, H1 and H2 are under assessment, X1 is closed and P1's parent is only partially released.
   assert.deepEqual(highCriticalRisks, {
     rows: [
-      riskRow(created, "C1", "Critical", D(5), "due-soon"),
-      riskRow(created, "H1", "High", D(-3), "overdue"),
-      riskRow(created, "H2", "High", null, "no-target-date"),
+      riskRow(created, "RC1", "Critical", D(-4), "overdue"),
+      riskRow(created, "RH1", "High", D(10), "due-soon"),
     ],
-    total: 3,
+    total: 2,
     truncated: false,
   }, "DASHBOARD_HIGH_CRITICAL_RISKS");
+  assert.equal(
+    highCriticalRisks.rows.some((row) => row.documentId === created.risks.C1),
+    false,
+    "DASHBOARD_HIGH_CRITICAL_LISTS_A_CRITICAL_RISK_UNDER_ASSESSMENT",
+  );
+  // D-37: the total is the sum of the two released lists the footer opens.
+  assert.equal(
+    (await listTotal("/api/v1/risks?residualRating=Critical&state=open&stage=released"))
+      + (await listTotal("/api/v1/risks?residualRating=High&state=open&stage=released")),
+    highCriticalRisks.total,
+    "HIGH_CRITICAL_TOTAL_DIFFERS_FROM_THE_RELEASED_LISTS",
+  );
   assertSameUtcDay();
 });
 
@@ -467,8 +601,12 @@ test("treatments due count the two treatment alert kinds over the alert list's o
   await seedDashboardFixtures();
   const { treatmentsDue } = await readSummary();
 
-  // H1 is overdue and C1 due soon. M1 is later, H2 and N1 have no target date, and X1 and P1 are out of scope.
-  assert.deepEqual(treatmentsDue, { overdue: 1, dueSoon: 1, total: 2 }, "DASHBOARD_TREATMENTS_DUE");
+  /*
+   * D-43: both stages count. H1 (under assessment) and RC1 (released) are overdue; C1 (under
+   * assessment) and RH1 (released) are due soon. M1 and RM1 are later, the others have no target date,
+   * and X1, RX1 and P1 are out of scope.
+   */
+  assert.deepEqual(treatmentsDue, { overdue: 2, dueSoon: 2, total: 4 }, "DASHBOARD_TREATMENTS_DUE");
   assert.equal(treatmentsDue.overdue, await alertCount("risk-treatment-overdue"), "OVERDUE_DIFFERS_FROM_THE_ALERT_SUMMARY");
   assert.equal(treatmentsDue.dueSoon, await alertCount("risk-treatment-due-soon"), "DUE_SOON_DIFFERS_FROM_THE_ALERT_SUMMARY");
   assert.equal(
@@ -735,7 +873,7 @@ test("recent activity lists the eight newest workflow events in the review scope
 });
 
 test("the High and Critical residual Risks are capped at five, flagged as truncated, and totalled in full", async () => {
-  // This test adds three more open High Risks, which changes the Risk figures, so it runs last.
+  // This test adds four more released, open High Risks, which changes the Risk figures, so it runs last.
   assertSameUtcDay();
   const harness = await harnessPromise;
   const created = await seedDashboardFixtures();
@@ -743,13 +881,14 @@ test("the High and Critical residual Risks are capped at five, flagged as trunca
     E1: { targetDate: D(-7) },
     E2: { targetDate: D(20) },
     E3: { targetDate: null },
+    E4: { targetDate: null },
   } as const;
   const risks = { ...created.risks } as Record<string, string>;
   for (const [name, fixture] of Object.entries(extra) as Array<[string, { targetDate: string | null }]>) {
     risks[name] = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
       riskNumber: riskNumber(name),
       riskStatement: riskStatement(name),
-      assessment: created.ax,
+      assessment: created.ar,
       residualRating: "High",
       treatmentStatus: "In Progress",
       ...(fixture.targetDate === null ? {} : { targetDate: fixture.targetDate }),
@@ -758,23 +897,251 @@ test("the High and Critical residual Risks are capped at five, flagged as trunca
   const withExtra: Fixtures = { ...created, risks: risks as Fixtures["risks"] };
 
   const { highCriticalRisks, riskExposure } = await readSummary();
-  // Critical first; then the High Risks by target date, undated last; undated ties by Risk number (E3 before H2).
+  // Released only. Critical first; then the High Risks by target date, undated last; undated ties by Risk number (E3 before E4).
   assert.deepEqual(highCriticalRisks, {
     rows: [
-      riskRow(withExtra, "C1", "Critical", D(5), "due-soon"),
+      riskRow(withExtra, "RC1", "Critical", D(-4), "overdue"),
       riskRow(withExtra, "E1", "High", D(-7), "overdue"),
-      riskRow(withExtra, "H1", "High", D(-3), "overdue"),
+      riskRow(withExtra, "RH1", "High", D(10), "due-soon"),
       riskRow(withExtra, "E2", "High", D(20), "later"),
       riskRow(withExtra, "E3", "High", null, "no-target-date"),
     ],
     total: 6,
     truncated: true,
   }, "DASHBOARD_HIGH_CRITICAL_RISKS_TRUNCATED");
-  assert.equal(riskExposure.High, 5, "DASHBOARD_HIGH_AFTER_EXTRA_RISKS");
+  assert.equal(riskExposure.released.High, 5, "DASHBOARD_RELEASED_HIGH_AFTER_EXTRA_RISKS");
   assert.equal(
-    await listTotal("/api/v1/risks?residualRating=High&state=open"),
-    riskExposure.High,
+    await listTotal("/api/v1/risks?residualRating=High&state=open&stage=released"),
+    riskExposure.released.High,
     "EXPOSURE_DIFFERS_FROM_THE_REGISTER_AFTER_EXTRA_RISKS",
   );
+  assertSameUtcDay();
+});
+
+/*
+ * D-15 (Phase 13; T-13-46): the summary's own counts belong to the viewer the policy resolved. Bob holds two requests
+ * that need him (one with a note from Jane he has not read), one with the Requestor (Jane's note read) and one
+ * released (an unread note, outside the open queue); the second analyst holds one that needs them, with Jane's note;
+ * one more waits for pick-up. Each analyst's figures are literal and equal to the lists they open, read as that
+ * analyst. Assignment and notes write no dashboard-counted Risk or activity fact, but the requests are new, so this
+ * test runs after every literal figure test.
+ */
+const jsonBody = (body: unknown, method = "POST"): RequestInit => ({ method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const notesPath = (requestId: string, suffix = "") => `/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes${suffix}`;
+
+async function addNote(requestId: string, identity: string, body: string): Promise<string> {
+  const harness = await harnessPromise;
+  const response = await harness.request({ path: notesPath(requestId), identity, init: jsonBody({ data: { body } }) });
+  assert.equal(response.status, 200, `NOTE_NOT_ADDED_${identity}: ${await response.clone().text()}`);
+  return String(((await response.json()) as { data: { documentId: string } }).data.documentId);
+}
+
+async function markRead(requestId: string, identity: string, throughNoteId: string): Promise<void> {
+  const harness = await harnessPromise;
+  const response = await harness.request({ path: notesPath(requestId, "/read"), identity, init: jsonBody({ data: { throughNoteId } }) });
+  assert.equal(response.status, 200, `NOTES_NOT_MARKED_READ_${identity}`);
+}
+
+async function pickUp(requestId: string, identity: string, analyst: string): Promise<void> {
+  const harness = await harnessPromise;
+  const response = await harness.request({
+    path: `/api/v1/assessment_requests/${encodeURIComponent(requestId)}/assignee`,
+    identity,
+    init: jsonBody({ data: { analyst, expectedAnalyst: null } }, "PUT"),
+  });
+  assert.equal(response.status, 200, `PICK_UP_FAILED_${identity}: ${await response.clone().text()}`);
+}
+
+test("each analyst's summary counts the requests that analyst holds, and the team's pick-up pool, each equal to its list (D-15)", async () => {
+  assertSameUtcDay();
+  const harness = await harnessPromise;
+  await seedDashboardFixtures();
+  const ids = harness.identities;
+  const { analyst: bob, secondAnalyst } = harness.users;
+  const before = (await readSummary()).reviewQueue;
+  const request = (name: string, requestStatus: string) => harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+    requestNumber: `P13D-RAR-${name}`,
+    title: `P13 dashboard request ${name}`,
+    requestStatus,
+    requestor: harness.users.owner,
+    submittedDate: at(D(-9)),
+  });
+
+  // B1: Bob holds it; Jane's note is new to him.
+  const b1 = await request("B1", "submitted");
+  await pickUp(b1, ids.analyst, bob);
+  const b1Note = await addNote(b1, ids.owner, "The supplier hosts the data in Sydney.");
+  // B2: Bob holds it; no notes.
+  const b2 = await request("B2", "submitted");
+  await pickUp(b2, ids.analyst, bob);
+  // B3: with the Requestor; Bob holds it and has read Jane's note.
+  const b3 = await request("B3", "questionnaire-in-progress");
+  await harness.createQuestionnaireLifecycleFixture({ requestDocumentId: b3, released: true, answerState: "draft" });
+  await pickUp(b3, ids.analyst, bob);
+  await markRead(b3, ids.analyst, await addNote(b3, ids.owner, "I will finish the answers on Friday."));
+  // B4: released and held by Bob, with a note nobody has read: outside the open queue, so never new work.
+  const b4 = await request("B4", "approved");
+  await harness.createQuestionnaireLifecycleFixture({ requestDocumentId: b4, released: true, answerState: "submitted" });
+  await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "P13D-ASM-B4",
+    assessmentStatus: "approved",
+    summary: "P13 dashboard released assessment B4",
+    assessmentRequest: b4,
+    approvalDate: at(D(-3)),
+    assessmentDate: at(D(-3)),
+    approvedBy: bob,
+    reviewedBy: bob,
+  });
+  await pickUp(b4, ids.analyst, bob);
+  await harness.createRequestNoteFixtures(b4, 1);
+  // S1: the second analyst holds it; Jane's note is new to both analysts, but it is not Bob's.
+  const s1 = await request("S1", "submitted");
+  await pickUp(s1, ids.secondAnalyst, secondAnalyst);
+  await addNote(s1, ids.owner, "Please call me about the contract.");
+  // U1: nobody holds it.
+  await request("U1", "submitted");
+
+  const bobs = (await readSummary()).reviewQueue;
+  assert.deepEqual(bobs.mine, { requiresAttention: 2, awaitingRequestor: 1, generationInProgress: 0, withUnreadNotes: 1 }, "BOB_MINE");
+  // The five Q fixtures and the activity test's requests are unchanged; U1 joins the pool.
+  assert.equal(bobs.unassigned, before.unassigned + 1, "BOB_UNASSIGNED");
+  assert.equal(bobs.requiresAttention, before.requiresAttention + 4, "TEAM_REQUIRES_ATTENTION");
+  await assertViewerCountsEqualTheirLists(bobs, "BOB");
+
+  const theirs = (await readSummary(ids.secondAnalyst)).reviewQueue;
+  assert.deepEqual(theirs.mine, { requiresAttention: 1, awaitingRequestor: 0, generationInProgress: 0, withUnreadNotes: 1 }, "SECOND_ANALYST_MINE");
+  // The team's figures are the same for every analyst; only `mine` is personal.
+  const { mine: _bobsOwn, ...bobsTeam } = bobs;
+  const { mine: _theirOwn, ...theirTeam } = theirs;
+  assert.deepEqual(theirTeam, bobsTeam, "TEAM_FIGURES_DIFFER_BY_VIEWER");
+  await assertViewerCountsEqualTheirLists(theirs, "SECOND_ANALYST", ids.secondAnalyst);
+
+  // Reading is personal: once Bob reads Jane's note on B1, his new-notes count drops and the second analyst's stays.
+  await markRead(b1, ids.analyst, b1Note);
+  assert.equal((await readSummary()).reviewQueue.mine.withUnreadNotes, 0, "BOB_READ_NOT_COUNTED");
+  assert.equal((await readSummary(ids.secondAnalyst)).reviewQueue.mine.withUnreadNotes, 1, "BOBS_READ_CHANGED_ANOTHER_ANALYST");
+  assertSameUtcDay();
+});
+
+test("the summary controller refuses a caller the policy resolved no viewer for, before any read (T-13-46)", async () => {
+  await harnessPromise;
+  let status: number | undefined;
+  let message: string | undefined;
+  const ctx: Record<string, unknown> = {
+    state: { csrmAuthorization: { analystInsightScope: "all", humanAnalyst: true } },
+    query: {},
+    forbidden(text: string) {
+      status = 403;
+      message = text;
+      return { data: null, error: { status: 403, message: text } };
+    },
+  };
+  const response = await dashboardController.summary(ctx) as { data?: unknown };
+  assert.equal(status, 403, "SUMMARY_WITHOUT_VIEWER_NOT_REFUSED");
+  assert.equal(message, "CSRM analyst insight access is denied.", "SUMMARY_WITHOUT_VIEWER_MESSAGE");
+  assert.equal(response.data, null, "SUMMARY_WITHOUT_VIEWER_LEAKED_DATA");
+});
+
+/*
+ * Phase 16 D-13, D-14, decision 11: a withdrawn Risk counts in no figure. WU, a Critical Risk with an overdue treatment
+ * on an in-review assessment of its own (which a withdrawal, an accepted edit, keeps in review: D-23), is withdrawn and reinstated through the 16-05 operations; WR, a Critical, accepted
+ * Risk with an overdue treatment on the released AR, carries the withdrawal facts through the fixture, as a Risk withdrawn
+ * before its assessment was released does (an API withdrawal is refused on a released assessment). Withdrawn, the two
+ * change no Risk figure; reinstated, each figure is back. The review queue and recent activity are request and
+ * assessment figures, compared too, apart from the activity rows the curation itself writes. This test adds Risks, so
+ * it runs last, and it leaves them withdrawn.
+ */
+type CurationOperation = "risk_withdrawals" | "risk_reinstatements";
+
+async function curateRisks(operation: CurationOperation, assessmentId: string, riskIds: readonly string[], reason: string): Promise<void> {
+  const harness = await harnessPromise;
+  const response = await harness.request({
+    path: `/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/${operation}`,
+    identity: harness.identities.analyst,
+    init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ riskIds, reason }) },
+  });
+  assert.equal(response.status, 200, `DASHBOARD_${operation}_FAILED: ${await response.clone().text()}`);
+}
+
+/** Every Risk figure of the summary, the parts a Risk can move; the review queue is kept to prove nothing else moved. */
+function riskFigures(summary: Summary): Record<string, unknown> {
+  return {
+    reviewQueue: summary.reviewQueue,
+    riskExposure: summary.riskExposure,
+    highCriticalRisks: summary.highCriticalRisks,
+    treatmentsDue: summary.treatmentsDue,
+  };
+}
+
+async function assertExposureEqualsTheRegister(label: string): Promise<void> {
+  const { riskExposure } = await readSummary();
+  const lists = [
+    ["released", riskExposure.released, "&stage=released"],
+    ["releasedAccepted", riskExposure.releasedAccepted, "&stage=released&treatmentAction=Accept"],
+    ["underAssessment", riskExposure.underAssessment, "&stage=under-assessment"],
+  ] as const;
+  for (const [part, counts, filters] of lists) {
+    for (const [key, value] of EXPOSURE_RATING_FILTERS) {
+      assert.equal(await listTotal(`/api/v1/risks?residualRating=${value}&state=open${filters}`), counts[key], `${label}_EXPOSURE_DIFFERS_FROM_THE_REGISTER_${part}_${key}`);
+    }
+    assert.equal(await listTotal(`/api/v1/risks?state=open${filters}`), counts.total, `${label}_EXPOSURE_TOTAL_DIFFERS_FROM_THE_REGISTER_${part}`);
+  }
+  const { treatmentsDue } = await readSummary();
+  assert.equal(treatmentsDue.overdue, await alertCount("risk-treatment-overdue"), `${label}_OVERDUE_DIFFERS_FROM_THE_ALERTS`);
+  assert.equal(treatmentsDue.dueSoon, await alertCount("risk-treatment-due-soon"), `${label}_DUE_SOON_DIFFERS_FROM_THE_ALERTS`);
+}
+
+test("a withdrawn Critical Risk with an overdue treatment changes no dashboard figure, and reinstating it restores each (Phase 16 D-13, D-14)", async () => {
+  assertSameUtcDay();
+  const harness = await harnessPromise;
+  const created = await seedDashboardFixtures();
+  const request = await harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+    requestNumber: "P7D-RAR-WD",
+    title: "P7D dashboard request WD",
+    requestStatus: "under-review",
+    requestor: harness.users.owner,
+    submittedDate: at(D(-9)),
+  });
+  const draft = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: "P7D-ASM-WD",
+    assessmentStatus: "in-review",
+    summary: "P7D dashboard withdrawal assessment",
+    assessmentRequest: request,
+    reviewedBy: harness.users.analyst,
+  });
+  const without = riskFigures(await readSummary());
+
+  const underAssessment = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
+    riskNumber: riskNumber("WU"), riskStatement: riskStatement("WU"), assessment: draft,
+    residualRating: "Critical", treatmentStatus: "In Progress", targetDate: D(-7), treatmentAction: "Treat",
+  });
+  const released = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
+    riskNumber: riskNumber("WR"), riskStatement: riskStatement("WR"), assessment: created.ar,
+    residualRating: "Critical", treatmentStatus: "In Progress", targetDate: D(-8), treatmentAction: "Accept",
+  });
+  const withRisks = riskFigures(await readSummary());
+  const exposure = (figures: Record<string, unknown>) => figures.riskExposure as Summary["riskExposure"];
+  assert.equal(exposure(withRisks).underAssessment.Critical, exposure(without).underAssessment.Critical + 1, "WU_NOT_IN_UNDER_ASSESSMENT");
+  assert.equal(exposure(withRisks).released.Critical, exposure(without).released.Critical + 1, "WR_NOT_IN_RELEASED");
+  assert.equal(exposure(withRisks).releasedAccepted.Critical, exposure(without).releasedAccepted.Critical + 1, "WR_NOT_ACCEPTED");
+  assert.notDeepEqual(withRisks.highCriticalRisks, without.highCriticalRisks, "WR_NOT_IN_HIGH_CRITICAL");
+  assert.notDeepEqual(withRisks.treatmentsDue, without.treatmentsDue, "WITHDRAWAL_FIXTURES_NOT_DUE");
+
+  const reason = "Proposed under the wrong Risk Type";
+  const withdraw = async () => {
+    await curateRisks("risk_withdrawals", draft, [underAssessment], reason);
+    await harness.setRiskWithdrawalFactsFixture(released, { withdrawnAt: new Date().toISOString(), withdrawnBy: harness.users.analyst, withdrawalReason: reason });
+  };
+  await withdraw();
+  assert.deepEqual(riskFigures(await readSummary()), without, "A_WITHDRAWN_RISK_CHANGED_A_DASHBOARD_FIGURE");
+  await assertExposureEqualsTheRegister("WITHDRAWN");
+
+  await curateRisks("risk_reinstatements", draft, [underAssessment], "Withdrawn by mistake");
+  await harness.setRiskWithdrawalFactsFixture(released, { withdrawnAt: null, withdrawnBy: null, withdrawalReason: null });
+  assert.deepEqual(riskFigures(await readSummary()), withRisks, "REINSTATING_DID_NOT_RESTORE_THE_DASHBOARD_FIGURES");
+  await assertExposureEqualsTheRegister("REINSTATED");
+
+  await withdraw();
+  assert.deepEqual(riskFigures(await readSummary()), without, "WITHDRAWN_AGAIN_CHANGED_A_DASHBOARD_FIGURE");
   assertSameUtcDay();
 });

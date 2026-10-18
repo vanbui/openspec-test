@@ -53,6 +53,10 @@ Issues live in GitHub Issues on `bproton-dev/csrm`, via the `gh` CLI. See `docs/
 
 Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), unchanged. See `docs/agents/triage-labels.md`.
 
+### GSD workstreams
+
+Each application under `apps/` is planned and built in its own GSD workstream, and all of them share `apps/backend`. CSRM is the `csrm` workstream (`.planning/workstreams/csrm/`). Select it with `/gsd-workstreams switch csrm` or pass `--ws csrm`. The shared-backend rules, and the rules that keep briefs and prompts free of checkout paths and branch names, are in `.planning/PROJECT.md` ("GSD Workstreams").
+
 ### Domain docs
 
 Single-context: one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.

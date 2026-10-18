@@ -1,5 +1,5 @@
-import { RiskDetails } from '@/features/risks/risk-details';
+import { RiskDetailsState } from '@/features/risks/risk-details-states';
 
 export default function RiskDetailsNotFound() {
-  return <RiskDetails state="not-available" />;
+  return <RiskDetailsState kind="not-available" />;
 }

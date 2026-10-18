@@ -50,10 +50,54 @@ export type DataTableColumn<TData extends object> = {
    * of forcing the table wide; the cell content clamps itself to two lines. The header is unchanged.
    */
   wrap?: boolean;
+  /**
+   * The header is for assistive technology only (an actions column, 14-UI-SPEC §3.2): the table keeps its header cell,
+   * so every column is named (1.3.1), and shows nothing in it.
+   */
+  headerHidden?: boolean;
 };
 
 /** X-3 bounds as mapped utilities: `min-w-56` is 14rem and `max-w-md` is 28rem. */
 const wrapColumnClassName = 'whitespace-normal min-w-56 max-w-md';
+
+/**
+ * Container widths from which a list's table is chosen over its cards (`tableFrom`). Each names the width its table
+ * needs, so the classes below are written out in full for Tailwind to find.
+ */
+export type DataTableContainerWidth = '54rem' | '60rem' | '65rem' | '70rem';
+
+/** Which elements show where: the cards, the table's scroller, the density toggle and the two loading layouts. */
+type LayoutClasses = { cards: string; table: string; toggle: string; loadingCards: string; loadingTable: string };
+
+/* Every list by default: the cards below 768px, the table from 768px (X-21), and the toggle only with the table (O5). */
+const viewportLayout: LayoutClasses = {
+  cards: 'md:hidden', table: 'hidden md:grid', toggle: 'max-md:hidden', loadingCards: 'md:hidden', loadingTable: 'hidden md:block',
+};
+
+/* The cards at every width, for a table that measured wider than its container. */
+const cardsLayout: LayoutClasses = { cards: '', table: 'hidden', toggle: 'hidden', loadingCards: '', loadingTable: 'hidden' };
+
+/* By the list's own width (its section is the `@container`): the table from the width it needs, the cards below it. */
+const containerLayouts: Readonly<Record<DataTableContainerWidth, LayoutClasses>> = {
+  '54rem': { cards: '@min-[54rem]:hidden', table: 'hidden @min-[54rem]:grid', toggle: '@max-[54rem]:hidden', loadingCards: '@min-[54rem]:hidden', loadingTable: 'hidden @min-[54rem]:block' },
+  '60rem': { cards: '@min-[60rem]:hidden', table: 'hidden @min-[60rem]:grid', toggle: '@max-[60rem]:hidden', loadingCards: '@min-[60rem]:hidden', loadingTable: 'hidden @min-[60rem]:block' },
+  '65rem': { cards: '@min-[65rem]:hidden', table: 'hidden @min-[65rem]:grid', toggle: '@max-[65rem]:hidden', loadingCards: '@min-[65rem]:hidden', loadingTable: 'hidden @min-[65rem]:block' },
+  '70rem': { cards: '@min-[70rem]:hidden', table: 'hidden @min-[70rem]:grid', toggle: '@max-[70rem]:hidden', loadingCards: '@min-[70rem]:hidden', loadingTable: 'hidden @min-[70rem]:block' },
+};
+
+function layoutClasses(tableFrom: DataTableContainerWidth | 'never' | undefined): LayoutClasses {
+  if (tableFrom === undefined) return viewportLayout;
+  return tableFrom === 'never' ? cardsLayout : containerLayouts[tableFrom];
+}
+
+/**
+ * What a list's row hook may set on a row's `tr` (14-UI-REVIEW UI-04): its classes, and `data-pending` while the row's
+ * change waits for the server, so the whole row can read as pending.
+ */
+export type DataTableRowProps = {
+  className?: string;
+  'data-pending'?: true | undefined;
+};
 
 export type DataTableFilter = {
   id: string;
@@ -68,6 +112,17 @@ export type DataTableProps<TData extends object> = {
   densityUserId: string;
   filters?: DataTableFilter[];
   getRowId: (row: TData) => string;
+  /**
+   * An opt-in row hook (14-UI-REVIEW UI-04): classes and `data-pending` for a row's `tr`, so a list can show a whole row as
+   * pending where its cells alone would leave part of it looking settled. Absent by default, so a table that does not
+   * ask renders every row exactly as before.
+   */
+  getRowProps?: (row: TData) => DataTableRowProps;
+  /**
+   * False for a list that is never paged (a request's files, at most 20 active ones; 14-UI-SPEC §3.2): no pager and no
+   * results count, because the section around it counts it. The density toggle stays. Defaults to true.
+   */
+  paginated?: boolean;
   onClearFilter?: (id: string) => void;
   onClearFilters?: () => void;
   onPageChange: (page: number) => void;
@@ -77,6 +132,13 @@ export type DataTableProps<TData extends object> = {
   pageSize: number;
   pageSizeOptions?: readonly number[];
   renderMobileCard: (row: TData) => ReactNode;
+  /**
+   * Which width chooses between the cards and the table. By default the viewport's: the cards below 768px and the table
+   * from 768px, as every list. A list whose table needs more room than its column may give (a request's files; the Phase
+   * 14 pilot's walk, D2; 14-UI-SPEC §3.2) names the width its table needs: its own width then chooses, the table from that
+   * width and the cards below it. `never` shows the cards at every width, for a table that measured wider than its list.
+   */
+  tableFrom?: DataTableContainerWidth | 'never';
   sorting?: SortingState;
   state: DataTableState;
   loadingLabel: string;
@@ -110,10 +172,11 @@ function SortIndicator({ direction }: { direction: false | 'asc' | 'desc' }) {
   return <ChevronsUpDown aria-hidden="true" className="text-muted-foreground" data-print="hidden" />;
 }
 
-function TableLoading<TData extends object>({ columns, density, label, pageSize }: {
+function TableLoading<TData extends object>({ columns, density, label, layout, pageSize }: {
   columns: DataTableColumn<TData>[];
   density: DataTableDensity;
   label: string;
+  layout: LayoutClasses;
   pageSize: number;
 }) {
   const rowClass = density === 'compact' ? 'h-9' : 'h-11';
@@ -121,7 +184,7 @@ function TableLoading<TData extends object>({ columns, density, label, pageSize 
   return (
     <div role="status" aria-label={label} aria-live="polite">
       <span className="sr-only">{label}</span>
-      <div data-slot="data-table-loading-mobile" className="space-y-2 md:hidden">
+      <div data-slot="data-table-loading-mobile" className={cn('space-y-2', layout.loadingCards)}>
         {Array.from({ length: pageSize }, (_, rowIndex) => (
           <div key={rowIndex} className={cn('space-y-2 rounded-lg border border-border bg-surface p-3', rowClass)}>
             <Skeleton className="h-3 w-2/5" />
@@ -129,13 +192,13 @@ function TableLoading<TData extends object>({ columns, density, label, pageSize 
           </div>
         ))}
       </div>
-      <div data-slot="data-table-loading-desktop" className="hidden overflow-hidden rounded-lg border border-border bg-surface md:block [&>[data-slot=table-container]]:overflow-visible">
+      <div data-slot="data-table-loading-desktop" className={cn('overflow-hidden rounded-lg border border-border bg-surface [&>[data-slot=table-container]]:overflow-visible', layout.loadingTable)}>
         <Table aria-label={`${label} layout`} className="text-[length:var(--text-table-size)]">
           <TableHeader className="border-b border-border bg-surface/95">
             <TableRow className="hover:bg-transparent">
               {columns.map((column, columnIndex) => (
                 <TableHead key={`${column.id ?? column.accessorKey}-${columnIndex}`} className={cn('h-10 px-4', tableHeaderMicroClassName)}>
-                  {column.header}
+                  {column.headerHidden ? <span className="sr-only">{column.header}</span> : column.header}
                 </TableHead>
               ))}
             </TableRow>
@@ -164,6 +227,8 @@ export function DataTable<TData extends object>({
   densityUserId,
   filters = [],
   getRowId,
+  getRowProps,
+  paginated = true,
   onClearFilter,
   onClearFilters,
   onPageChange,
@@ -175,6 +240,7 @@ export function DataTable<TData extends object>({
   renderMobileCard,
   sorting = [],
   state,
+  tableFrom,
   loadingLabel,
   stateSlots,
   totalCount,
@@ -244,9 +310,10 @@ export function DataTable<TData extends object>({
     setDensity(nextDensity);
   };
 
+  const layout = layoutClasses(tableFrom);
   const stateContent =
     state === 'loading' ? (
-      <TableLoading columns={columns} density={density} label={loadingLabel} pageSize={pageSize} />
+      <TableLoading columns={columns} density={density} label={loadingLabel} layout={layout} pageSize={pageSize} />
     ) : state === 'empty' ? (
       stateSlots.empty
     ) : state === 'error' ? (
@@ -256,7 +323,7 @@ export function DataTable<TData extends object>({
     ) : null;
 
   return (
-    <section className="space-y-3" aria-label={`${ariaLabel} controls`}>
+    <section className={cn('space-y-3', tableFrom !== undefined && tableFrom !== 'never' && '@container')} aria-label={`${ariaLabel} controls`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {filters.map((filter) => (
@@ -284,8 +351,8 @@ export function DataTable<TData extends object>({
         </div>
         {/* The chip labels and the counts print; the controls around them do not (X-4). */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {state === 'loading' ? null : <output className="tabular-nums">{new Intl.NumberFormat('en-AU').format(totalCount)} {totalCount === 1 ? 'result' : 'results'}</output>}
-          <Button type="button" variant="outline" size="sm" data-print="hidden" onClick={toggleDensity}>
+          {state === 'loading' || !paginated ? null : <output className="tabular-nums">{new Intl.NumberFormat('en-AU').format(totalCount)} {totalCount === 1 ? 'result' : 'results'}</output>}
+          <Button type="button" variant="outline" size="sm" className={layout.toggle} data-print="hidden" onClick={toggleDensity}>
             <Rows3 aria-hidden="true" />
             {density === 'default' ? 'Use compact density' : 'Use default density'}
           </Button>
@@ -298,7 +365,7 @@ export function DataTable<TData extends object>({
       ) : (
         <>
           {/* Cards are a list of records, so assistive technology announces the count. */}
-          <div data-slot="data-table-mobile" role="list" aria-label={ariaLabel} className="space-y-2 md:hidden">
+          <div data-slot="data-table-mobile" role="list" aria-label={ariaLabel} className={cn('space-y-2', layout.cards)}>
             {table.getRowModel().rows.map((row) => (
               <div key={row.id} role="listitem" className="rounded-lg border border-border bg-surface p-3">
                 {renderMobileCard(row.original)}
@@ -317,7 +384,8 @@ export function DataTable<TData extends object>({
               // table overflows, so it is the one keyboard users focus and the one sticky cells
               // anchor to. It is a one-cell grid so the end-edge scroll cue can share the table's
               // cell (globals.css).
-              'hidden scroll-pt-10 overflow-auto rounded-lg border border-border bg-surface md:grid [&>[data-slot=table-container]]:overflow-visible',
+              'scroll-pt-10 overflow-auto rounded-lg border border-border bg-surface [&>[data-slot=table-container]]:overflow-visible',
+              layout.table,
               overflow.overflowing && horizontalScrollRegionFocusClassName,
             )}
           >
@@ -363,7 +431,7 @@ export function DataTable<TData extends object>({
                               <SortIndicator direction={sorted} />
                             </button>
                           ) : (
-                            <span>{sourceColumn?.header}</span>
+                            <span className={cn(sourceColumn?.headerHidden && 'sr-only')}>{sourceColumn?.header}</span>
                           )}
                         </TableHead>
                       );
@@ -372,41 +440,46 @@ export function DataTable<TData extends object>({
                 ))}
               </TableHeader>
               <TableBody aria-label="Table body">
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className={cn(
-                      'scroll-mt-10 transition-colors duration-80 ease-standard hover:bg-surface-hover [&_button]:min-h-6 [&_button]:min-w-6',
-                      'group',
-                      rowClass,
-                    )}
-                  >
-                    {row.getAllCells().map((cell, index) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cn(
-                          'border-b border-border px-4 py-0 text-[length:var(--text-table-size)] group-last:border-b-0',
-                          columnClasses(columns[index]?.numeric),
-                          columns[index]?.wrap && wrapColumnClassName,
-                          sticky
-                            && index === 0
-                            && // The hover tint is an alpha colour, so it is layered over the opaque
-                            // surface rather than replacing it; otherwise scrolled cells show through.
-                            'sticky left-0 z-10 border-r border-border bg-surface group-hover:bg-[image:linear-gradient(var(--surface-hover),var(--surface-hover))] group-data-[state=selected]:bg-surface-selected',
-                        )}
-                      >
-                        <table.FlexRender cell={cell} />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                {table.getRowModel().rows.map((row) => {
+                  const rowProps = getRowProps?.(row.original);
+                  return (
+                    <TableRow
+                      key={row.id}
+                      className={cn(
+                        'scroll-mt-10 transition-colors duration-80 ease-standard hover:bg-surface-hover [&_button]:min-h-6 [&_button]:min-w-6',
+                        'group',
+                        rowClass,
+                        rowProps?.className,
+                      )}
+                      {...(rowProps?.['data-pending'] ? { 'data-pending': true } : {})}
+                    >
+                      {row.getAllCells().map((cell, index) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            'border-b border-border px-4 py-0 text-[length:var(--text-table-size)] group-last:border-b-0',
+                            columnClasses(columns[index]?.numeric),
+                            columns[index]?.wrap && wrapColumnClassName,
+                            sticky
+                              && index === 0
+                              && // The hover tint is an alpha colour, so it is layered over the opaque
+                              // surface rather than replacing it; otherwise scrolled cells show through.
+                              'sticky left-0 z-10 border-r border-border bg-surface group-hover:bg-[image:linear-gradient(var(--surface-hover),var(--surface-hover))] group-data-[state=selected]:bg-surface-selected',
+                          )}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         </>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+      {paginated ? <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
         {onPageSizeChange ? (
           <label className="flex items-center gap-2" data-print="hidden">
             Rows per page
@@ -447,7 +520,7 @@ export function DataTable<TData extends object>({
             <ChevronRight aria-hidden="true" />
           </Button>
         </div>
-      </div>
+      </div> : null}
     </section>
   );
 }

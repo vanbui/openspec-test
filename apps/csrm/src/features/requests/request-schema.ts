@@ -1,14 +1,21 @@
 import { z } from 'zod';
+import { aiInputsChangedSchema } from '@/features/ai-assistance/ai-generation-facts-schema';
+import { requestAttachmentSummarySchema } from '@/features/attachments/attachments-schema';
+import { requestAssignmentSchema } from '@/features/request-assignment/assignment-schema';
+import { notesClosedReasons } from '@/features/request-notes/notes-domain';
 import { REVERT_REASON_MAX_LENGTH, revertReasonSchema } from '@/lib/schemas/revert-reason';
 import {
   formatRequestDate,
+  requestHolders,
   requestSortValues,
   requestLifecycleStepKeys,
   requestStatuses,
   type CsrmAssessmentRequest,
+  type MyRequestList,
+  type MyRequestListQuery,
+  type MyRequestNotesFilter,
+  type RequestHolder,
   type RequestRelationSummary,
-  type RequestList,
-  type RequestListQuery,
   type RequestStatus,
 } from './request-domain';
 
@@ -16,6 +23,11 @@ const firstValue = (value: unknown): unknown => Array.isArray(value) ? value[0] 
 
 const queryText = z.preprocess(firstValue, z.string().trim().max(120).catch(''));
 const queryStatus = z.preprocess(firstValue, z.enum(requestStatuses).optional().catch(undefined));
+// Who holds the request (D-34): an unknown value is dropped, as an unknown status is (T-11-28).
+const queryHolder = z.preprocess(firstValue, z.enum(requestHolders).optional().catch(undefined));
+// New notes (D-24): an unknown value is dropped, as an unknown holder is.
+const myRequestNotesFilters = ['unread'] as const satisfies readonly MyRequestNotesFilter[];
+const queryNotes = z.preprocess(firstValue, z.enum(myRequestNotesFilters).optional().catch(undefined));
 const querySort = z.preprocess(firstValue, z.enum(requestSortValues).catch('updatedAt:desc'));
 const queryPage = z.preprocess((value) => {
   const parsed = Number(firstValue(value));
@@ -31,6 +43,8 @@ const queryPageSize = z.preprocess((value) => {
 export const requestListQuerySchema = z.object({
   q: queryText.default(''),
   status: queryStatus,
+  holder: queryHolder,
+  notes: queryNotes,
   sort: querySort.default('updatedAt:desc'),
   page: queryPage.default(1),
   pageSize: queryPageSize.default(10),
@@ -116,7 +130,7 @@ const requestLifecycleStepSchema = z.object({
 }).strict();
 const requestLifecycleSchema = z.object({
   currentKey: z.enum(requestLifecycleStepKeys), currentLabel: z.string().min(1), terminal: z.boolean(),
-  nextAction: z.object({ actor: z.enum(['requestor', 'analyst', 'none']), summary: z.string().min(1), href: z.string().min(1).optional() }).strict().nullable(),
+  nextAction: z.object({ actor: z.enum(['requestor', 'analyst', 'none']), holder: z.enum(requestHolders), summary: z.string().min(1), href: z.string().min(1).optional() }).strict().nullable(),
   steps: z.array(requestLifecycleStepSchema).length(8),
 }).strict().superRefine((value, context) => {
   const currentSteps = value.steps.filter((step) => step.state === 'current');
@@ -127,6 +141,20 @@ const requestLifecycleSchema = z.object({
     context.addIssue({ code: z.ZodIssueCode.custom, message: 'Lifecycle current key does not match its current step.' });
   }
 });
+
+/** The Requestor's assignment view (`AssessmentRequestRequestorAssignment`, D-17): the assignee's display name only. */
+export const requestorAssignmentSchema = z.object({
+  assignee: z.object({ displayName: z.string() }).strict().nullable(),
+}).strict();
+
+/**
+ * Who holds the request, as the request read serves it (Phase 13 D-09, D-16, D-17): the analyst view or the
+ * Requestor's, each closed, so a person carrying anything beyond a documentId and a display name fails the read.
+ */
+export const requestAssignmentViewSchema = z.union([requestAssignmentSchema, requestorAssignmentSchema]);
+
+/** `AssessmentRequestRevertActor`: the server's projection of who returned the request to draft (D-04). */
+const revertActorSchema = z.object({ documentId: documentIdSchema, displayName: z.string().nullable() }).strict();
 
 const transportRequestSchema = z.object({
   documentId: z.string().min(1),
@@ -155,7 +183,8 @@ const transportRequestSchema = z.object({
   lifecycle: requestLifecycleSchema.optional(),
   revertReason: z.string().nullish(),
   revertedAt: z.string().nullish(),
-  revertedBy: z.object({ documentId: documentIdSchema, displayName: z.string().nullish() }).nullish(),
+  revertedBy: revertActorSchema.nullish(),
+  assignment: requestAssignmentViewSchema.optional(),
 }).strip();
 
 const paginationSchema = z.object({
@@ -165,19 +194,75 @@ const paginationSchema = z.object({
   total: z.number().int().min(0),
 }).strip();
 
-export const requestListPayloadSchema = z.object({
-  data: z.array(transportRequestSchema),
-  meta: z.object({ pagination: paginationSchema }).strip(),
+/** The viewer's notes figures on the request read (`RequestNotesSummary`, D-24, D-25): closed, so nothing else crosses. */
+export const requestNotesSummarySchema = z.object({
+  total: z.number().int().min(0),
+  unread: z.number().int().min(0),
+  accepting: z.boolean(),
+  closedReason: z.enum(notesClosedReasons).nullable(),
+}).strict();
+
+/**
+ * The analyst's AI-inputs signal per target (`RequestAiInputs`, D-29; Phase 14 D-36): the one signal of the notes and the
+ * files that changed, closed, so a note's or file's text, a third target or a signal listing nothing fails.
+ */
+export const requestAiInputsSchema = z.object({
+  questionnaire: aiInputsChangedSchema.nullable(),
+  assessment: aiInputsChangedSchema.nullable(),
+}).strict();
+
+/**
+ * The request read, which always carries the viewer's notes summary and the AI-inputs signal, each or null (Phase 13),
+ * and the viewer's closed file summary only for a reader of the request's files (Phase 14 D-04 item 7, D-18).
+ */
+export const requestDetailPayloadSchema = z.object({
+  data: transportRequestSchema.extend({
+    notes: requestNotesSummarySchema.nullable(),
+    aiInputs: requestAiInputsSchema.nullable(),
+    attachments: requestAttachmentSummarySchema.optional(),
+  }),
 }).strip();
 
-export const requestDetailPayloadSchema = z.object({ data: transportRequestSchema }).strip();
+/**
+ * GET /v1/my_requests (D-02 item 6): closed at every level, so a field the
+ * contract does not publish (an assessment number, say) or an unknown holder
+ * fails the read rather than reaching a page (T-11-53).
+ */
+const myRequestItemSchema = z.object({
+  documentId: z.string().min(1),
+  requestNumber: z.string().min(1),
+  title: z.string().min(1),
+  requestStatus: z.enum(requestStatuses),
+  submittedDate: z.string().nullable(),
+  dueDate: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+  daysSinceSubmission: z.number().int().min(0).nullable(),
+  holder: z.enum(requestHolders),
+  stage: z.object({ key: z.enum(requestLifecycleStepKeys), label: z.string().min(1) }).strict(),
+  nextAction: z.object({ summary: z.string().min(1), href: z.string().min(1).optional() }).strict().nullable(),
+  returned: z.object({ reason: z.string().min(1).nullable(), at: z.string() }).strict().nullable(),
+  questionnaire: z.object({ documentId: z.string().min(1), answered: z.number().int().min(0), total: z.number().int().min(0) }).strict().nullable(),
+  // D-17: the Requestor sees the assignee's display name and nothing more.
+  assignee: z.object({ displayName: z.string() }).strict().nullable(),
+  unreadNotes: z.number().int().min(0),
+}).strict();
+
+export const myRequestListResponseSchema = z.object({
+  data: z.array(myRequestItemSchema),
+  meta: z.object({ pagination: paginationSchema.strict() }).strict(),
+}).strict();
+
+export function parseMyRequestListPayload(payload: unknown): MyRequestList {
+  const parsed = myRequestListResponseSchema.parse(payload);
+  return { items: parsed.data, pagination: parsed.meta.pagination };
+}
 
 export const requestMutationPayloadSchema = z.object({ data: transportRequestSchema }).strip();
 const statusCountSchema = z.number().int().nonnegative();
 
 /**
  * GET /v1/my_requests/status_summary: the signed-in actor's own requests
- * counted by status, closed at both levels. There is deliberately no check that
+ * counted by status and by holder, closed at every level. There is deliberately no check that
  * the counts sum to the total: the server owns the total, and the contract
  * parity guard synthesises every count independently.
  */
@@ -191,10 +276,14 @@ export const myRequestStatusSummaryResponseSchema = z.object({
     approved: statusCountSchema,
     closed: statusCountSchema,
     total: statusCountSchema,
+    // Who holds the caller's requests (D-02 item 6, D-11), required and closed.
+    byHolder: z.object({ requestor: statusCountSchema, analyst: statusCountSchema, none: statusCountSchema }).strict(),
+    // The caller's requests with notes new to them as the Requestor (D-24), required.
+    withUnreadNotes: statusCountSchema,
   }).strict(),
 }).strict();
 
-type MyRequestStatusSummaryCounts = z.infer<typeof myRequestStatusSummaryResponseSchema>['data'];
+type MyRequestStatusSummaryCounts = Omit<z.infer<typeof myRequestStatusSummaryResponseSchema>['data'], 'byHolder' | 'withUnreadNotes'>;
 
 /** The published key that carries each request status's count; total over the status vocabulary. */
 const statusSummaryKeys = {
@@ -212,10 +301,22 @@ export interface RequestStatusCount {
   count: number;
 }
 
-/** Parses the status summary into one count per request status, in lifecycle order. */
-export function parseMyRequestStatusSummaryPayload(payload: unknown): readonly RequestStatusCount[] {
+/** The caller's own requests by status, in lifecycle order, and by who holds them (D-11). */
+export interface MyRequestStatusSummary {
+  statuses: readonly RequestStatusCount[];
+  byHolder: Record<RequestHolder, number>;
+  /** The requests with notes new to the Requestor: the Requestor Home's new-notes row (D-24). */
+  withUnreadNotes: number;
+}
+
+/** Parses the status summary into one count per request status, in lifecycle order, and the holder counts. */
+export function parseMyRequestStatusSummaryPayload(payload: unknown): MyRequestStatusSummary {
   const counts = myRequestStatusSummaryResponseSchema.parse(payload).data;
-  return requestStatuses.map((status) => ({ status, count: counts[statusSummaryKeys[status]] }));
+  return {
+    statuses: requestStatuses.map((status) => ({ status, count: counts[statusSummaryKeys[status]] })),
+    byHolder: { requestor: counts.byHolder.requestor, analyst: counts.byHolder.analyst, none: counts.byHolder.none },
+    withUnreadNotes: counts.withUnreadNotes,
+  };
 }
 
 export const requestInventoryPayloadSchema = z.object({
@@ -257,48 +358,19 @@ function toRequest(value: z.infer<typeof transportRequestSchema>): CsrmAssessmen
     lifecycle: value.lifecycle,
     revertReason: value.revertReason ?? null,
     revertedAt: value.revertedAt ?? null,
-    revertedBy: value.revertedBy ? { documentId: value.revertedBy.documentId, displayName: value.revertedBy.displayName ?? null } : null,
+    revertedBy: value.revertedBy ? { documentId: value.revertedBy.documentId, displayName: value.revertedBy.displayName } : null,
+    assignment: value.assignment ?? null,
   };
 }
 
-export function parseRequestListQuery(input: unknown): RequestListQuery {
+export function parseRequestListQuery(input: unknown): MyRequestListQuery {
   const parsed = requestListQuerySchema.parse(input);
-  return { ...parsed, status: parsed.status };
-}
-
-export function parseRequestListPayload(payload: unknown): RequestList {
-  const parsed = requestListPayloadSchema.parse(payload);
-  return { requests: parsed.data.map(toRequest), pagination: parsed.meta.pagination };
-}
-
-export function parseRequestSummaryListPayload(payload: unknown): RequestList {
-  const parsed = parseRequestListPayload(payload);
-  return {
-    ...parsed,
-    requests: parsed.requests.map((request) => ({
-      ...request,
-      informationSystems: [],
-      informationAssets: [],
-      questionnaire: null,
-      assessment: null,
-    })),
-  };
-}
-
-export function parseRequestDashboardListPayload(payload: unknown): RequestList {
-  const parsed = parseRequestListPayload(payload);
-  return {
-    ...parsed,
-    requests: parsed.requests.map((request) => ({
-      ...request,
-      informationSystems: [],
-      informationAssets: [],
-    })),
-  };
+  return { ...parsed, status: parsed.status, holder: parsed.holder, notes: parsed.notes };
 }
 
 export function parseRequestDetailPayload(payload: unknown): CsrmAssessmentRequest {
-  return toRequest(requestDetailPayloadSchema.parse(payload).data);
+  const data = requestDetailPayloadSchema.parse(payload).data;
+  return { ...toRequest(data), notes: data.notes, aiInputs: data.aiInputs, ...(data.attachments ? { attachments: data.attachments } : {}) };
 }
 
 export function parseRequestMutationPayload(payload: unknown): RequestMutationResult {

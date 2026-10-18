@@ -40,3 +40,32 @@ export function readSeedControlFiles(root) {
 
   return { catalogueFiles, titleFile: titleFile[1] };
 }
+
+/*
+ * How the seed partitions catalogue Functions between Applications, read from its own declarations:
+ * every Function sits under the CSRM Application except the Identity Provisioning Function, which sits
+ * under the IAM Application.
+ */
+export function readSeedFunctionPartition(root) {
+  const seedSource = readFileSync(
+    join(root, "apps", "backend", "src", "bootstrap", "seed-csrm-data.ts"),
+    "utf8",
+  );
+  const csrmSlug = seedSource.match(/const CSRM_APPLICATION_SLUG = "([^"]+)";/);
+  const iamSlug = seedSource.match(/const IAM_APPLICATION_SLUG = "([^"]+)";/);
+  const iamFunctionId = seedSource.match(
+    /const IDENTITY_PROVISIONING_FUNCTION_ID = "([^"]+)";/,
+  );
+
+  if (!csrmSlug || !iamSlug || !iamFunctionId) {
+    throw new Error(
+      "CSRM seed must declare CSRM_APPLICATION_SLUG, IAM_APPLICATION_SLUG and IDENTITY_PROVISIONING_FUNCTION_ID",
+    );
+  }
+
+  return {
+    csrmApplicationSlug: csrmSlug[1],
+    iamApplicationSlug: iamSlug[1],
+    iamFunctionIds: [iamFunctionId[1]],
+  };
+}

@@ -10,19 +10,86 @@ import type { RiskRegisterQuery } from './risk-schema';
 export const riskRegisterRatings = ['Low', 'Moderate', 'High', 'Critical'] as const;
 export const riskRegisterTreatmentStatuses = ['Not Started', 'In Progress', 'Overdue', 'Complete'] as const;
 /**
+ * D-35, research Pitfall 11: the rating and treatment status filters add "none", which the server reads as a value
+ * null or off its vocabulary, exactly as the reports count Not rated and Not provided. The rows keep the closed
+ * vocabularies above.
+ */
+export const riskRegisterRatingFilterValues = [...riskRegisterRatings, 'none'] as const;
+export type RiskRegisterRatingFilter = (typeof riskRegisterRatingFilterValues)[number];
+export const riskRegisterTreatmentStatusFilterValues = [...riskRegisterTreatmentStatuses, 'none'] as const;
+export type RiskRegisterTreatmentStatusFilter = (typeof riskRegisterTreatmentStatusFilterValues)[number];
+/** UI-SPEC §9.5: a rating filter's words; "none" reads Not rated. */
+export function riskRegisterRatingFilterLabel(value: RiskRegisterRatingFilter): string {
+  return value === 'none' ? 'Not rated' : value;
+}
+/** UI-SPEC §9.5: the words for a treatment status filter of "none"; the four statuses read through the shared status mapping. */
+export const riskRegisterTreatmentStatusNoneLabel = 'Not provided';
+/**
  * The server-derived treatment due state of a register row (D-04, D-26). The
  * server evaluates it on its UTC date; the client renders it and never compares
  * dates itself.
  */
 export const riskTreatmentDueStates = ['overdue', 'due-soon', 'later', 'no-target-date', 'complete-or-closed'] as const;
 export type RiskTreatmentDueState = (typeof riskTreatmentDueStates)[number];
-export const riskRegisterMitigationStatuses = ['Existing', 'Planned', 'Implemented', 'Retired', 'none'] as const;
+/** D-35, UI-SPEC §9.5: the Due state filter's words for each state; the server applies the one rule. */
+export const riskTreatmentDueStateLabels = {
+  overdue: 'Overdue',
+  'due-soon': 'Due soon',
+  later: 'Due later',
+  'no-target-date': 'No target date',
+  'complete-or-closed': 'Complete or closed',
+} as const satisfies Record<RiskTreatmentDueState, string>;
+/** "none": no mitigation control; "any": at least one, whatever its status (D-35). */
+export const riskRegisterMitigationStatuses = ['Existing', 'Planned', 'Implemented', 'Retired', 'none', 'any'] as const;
+export const riskRegisterMitigationStatusLabels = {
+  Existing: 'Existing',
+  Planned: 'Planned',
+  Implemented: 'Implemented',
+  Retired: 'Retired',
+  none: 'No mitigation controls',
+  any: 'Any mitigation control',
+} as const satisfies Record<(typeof riskRegisterMitigationStatuses)[number], string>;
+/**
+ * D-35: a Risk with a mitigation control of this effectiveness; "none", one whose rating is not recorded. A Risk
+ * with several mitigation controls can match several values, so these lists never sum to the register.
+ */
+export const riskRegisterEffectivenessValues = ['Effective', 'Partially Effective', 'Ineffective', 'Not Assessed', 'none'] as const;
+export const riskRegisterEffectivenessLabels = {
+  Effective: 'Effective',
+  'Partially Effective': 'Partially Effective',
+  Ineffective: 'Ineffective',
+  'Not Assessed': 'Not Assessed',
+  none: 'Not provided',
+} as const satisfies Record<(typeof riskRegisterEffectivenessValues)[number], string>;
+/** D-35, research Pitfall 21: "none" lists the Risks with no impacted system; it never travels with a chosen system. */
+export const riskRegisterImpactedSystemValues = ['none'] as const;
 /** D-36: open means no closure date is recorded, closed means one is. Absent means both. */
-export const riskRegisterStates = ['open', 'closed'] as const;
+/** Open and closed read active Risks only; withdrawn lists the withdrawn Risks alone (Phase 16 D-08, UI-D9). */
+export const riskRegisterStates = ['open', 'closed', 'withdrawn'] as const;
 export const riskRegisterStateLabels = {
   open: 'Open',
   closed: 'Closed',
+  withdrawn: 'Withdrawn',
 } as const satisfies Record<(typeof riskRegisterStates)[number], string>;
+/** 16-UI-SPEC §11.1: the Risk state filter's default, which lists open and closed Risks and never a withdrawn one. */
+export const riskRegisterStateDefaultLabel = 'Open and closed';
+/** 16-UI-SPEC §11.2: the notice above the register while it lists withdrawn Risks (D-08, D-45). */
+export const riskRegisterWithdrawnNotice = 'Withdrawn risks don’t count in any assessment, figure or export. Only Security Analysts see them.';
+/**
+ * D-40, D-44: the two branches of the register's scope, decided by the server from the Risk's assessment.
+ * Released: the assessment carries the complete release facts. Under assessment: a draft or in-review
+ * assessment with none. Absent means both, which is every Risk the register lists.
+ */
+export const riskRegisterStages = ['released', 'under-assessment'] as const;
+export type RiskRegisterStage = (typeof riskRegisterStages)[number];
+export const riskRegisterStageLabels = {
+  released: 'Released',
+  'under-assessment': 'Under assessment',
+} as const satisfies Record<RiskRegisterStage, string>;
+/** D-02 item 3, D-44: the JDL treatment action, shown as recorded. */
+export const riskTreatmentActions = ['Accept', 'Treat'] as const;
+export type RiskTreatmentAction = (typeof riskTreatmentActions)[number];
+type RiskRegisterMarkerRow = { stage: RiskRegisterStage; treatmentAction: RiskTreatmentAction | null; accepted?: boolean };
 export const riskRegisterSortValues = [
   'riskNumber:asc', 'riskNumber:desc', 'riskStatement:asc', 'riskStatement:desc',
   'inherentRating:asc', 'inherentRating:desc', 'residualRating:asc', 'residualRating:desc',
@@ -47,6 +114,24 @@ export function calendarDate(value: unknown): string | undefined {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
     ? value
     : undefined;
+}
+
+/** The words a register row carries for the Risk's stage, under its Related assessment link (UI-SPEC §9.5); never colour alone. */
+export function riskRegisterStageMarker(row: { stage: RiskRegisterStage }): string {
+  return riskRegisterStageLabels[row.stage];
+}
+
+/**
+ * D-41, D-44: Accepted is the interim marker of the released treatment action, on a released Risk whose action
+ * is Accept and has no closure date. Strapi supplies this fact, including openness; a client never guesses it.
+ */
+export function isAcceptedRiskRow(row: RiskRegisterMarkerRow): boolean {
+  return row.accepted === true;
+}
+
+/** The card's one marker line: the stage, then " · Accepted" for an accepted Risk (UI-SPEC §9.5). */
+export function riskRegisterCardMarker(row: RiskRegisterMarkerRow): string {
+  return isAcceptedRiskRow(row) ? `${riskRegisterStageMarker(row)} · Accepted` : riskRegisterStageMarker(row);
 }
 
 export function formatRiskTargetDate(value: string | null): string {
@@ -84,18 +169,25 @@ export function readRiskRegisterQuery(input: Record<string, unknown>): RiskRegis
   if (targetDateFrom && targetDateTo && targetDateFrom > targetDateTo) throw new Error('RISK_REGISTER_QUERY_INVALID:targetDateTo');
   const page = Number(firstValue(input.page));
   const pageSize = Number(firstValue(input.pageSize));
+  const system = opaqueId(input.system);
   return {
     q,
-    treatmentStatus: oneOf(riskRegisterTreatmentStatuses, input.treatmentStatus),
-    inherentRating: oneOf(riskRegisterRatings, input.inherentRating),
-    residualRating: oneOf(riskRegisterRatings, input.residualRating),
+    treatmentStatus: oneOf(riskRegisterTreatmentStatusFilterValues, input.treatmentStatus),
+    inherentRating: oneOf(riskRegisterRatingFilterValues, input.inherentRating),
+    residualRating: oneOf(riskRegisterRatingFilterValues, input.residualRating),
     riskOwner: opaqueId(input.riskOwner),
     treatmentOwner: opaqueId(input.treatmentOwner),
     assessment: opaqueId(input.assessment),
-    system: opaqueId(input.system),
+    system,
     asset: opaqueId(input.asset),
     mitigationStatus: oneOf(riskRegisterMitigationStatuses, input.mitigationStatus),
     state: oneOf(riskRegisterStates, input.state),
+    stage: oneOf(riskRegisterStages, input.stage),
+    treatmentAction: oneOf(riskTreatmentActions, input.treatmentAction),
+    dueState: oneOf(riskTreatmentDueStates, input.dueState),
+    mitigationEffectiveness: oneOf(riskRegisterEffectivenessValues, input.mitigationEffectiveness),
+    // A chosen system wins over no impacted system, which Strapi refuses beside it.
+    impactedSystem: system ? undefined : oneOf(riskRegisterImpactedSystemValues, input.impactedSystem),
     targetDateFrom,
     targetDateTo,
     sort: oneOf(riskRegisterSortValues, input.sort) ?? 'targetDate:asc',

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import test, { after } from "node:test";
+import type { Core } from "@strapi/strapi";
+import { SCIM_ROUTES } from "../src/iam/scim/routes";
+import { seedCsrmData } from "../src/bootstrap/seed-csrm-data";
 
 import {
   startAuthorizationHttpHarness,
@@ -40,6 +43,15 @@ const inventoryFilename = path.join(repositoryDir, "docs", "references", "served
 const catalogueFilename = "idambox-csrm-role-function-api-catalogue.json";
 const WRITE_COMMAND = "SERVED_OPERATIONS_WRITE=1 pnpm --filter @csrm/strapi served-operations:write";
 const HTTP_METHODS: ReadonlySet<string> = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+const IAM_SCIM_RESERVATIONS = [
+  "GET:/scim/v2/Users", "POST:/scim/v2/Users",
+  "GET:/scim/v2/Users/{id}", "PUT:/scim/v2/Users/{id}", "PATCH:/scim/v2/Users/{id}", "DELETE:/scim/v2/Users/{id}",
+  "GET:/scim/v2/ServiceProviderConfig", "GET:/scim/v2/Schemas", "GET:/scim/v2/Schemas/{id}",
+  "GET:/scim/v2/ResourceTypes", "GET:/scim/v2/ResourceTypes/{id}",
+  "GET:/scim/v2/Groups", "GET:/scim/v2/Groups/{id}",
+  "POST:/scim/v2/Groups", "PUT:/scim/v2/Groups", "PATCH:/scim/v2/Groups", "DELETE:/scim/v2/Groups",
+  "POST:/scim/v2/Groups/{id}", "PUT:/scim/v2/Groups/{id}", "PATCH:/scim/v2/Groups/{id}", "DELETE:/scim/v2/Groups/{id}",
+] as const;
 const CSRM_AUTHORIZATION_POLICY = "global::csrm-authorization";
 
 type ObservedResponder = { status: number; handler: string | null; bodyShape: string };
@@ -95,14 +107,12 @@ const UNSERVED_REASONS: Readonly<Record<string, string>> = {
   "PATCH:/api/v1/alerts/{alertId}/acknowledge": `${PHASE_7_NOTE}: acknowledgement needs persisted per-analyst state, a datamodel change deferred beyond this milestone`,
   "GET:/api/v1/dashboard/alerts": `${PHASE_7_NOTE}: the dedicated GET /api/v1/alerts operation serves the dashboard`,
   "GET:/api/v1/dashboard/reports": `${PHASE_7_NOTE}: the dedicated GET /api/v1/reports operation serves the dashboard`,
-  "POST:/api/v1/reports/{reportKey}/export": `${PHASE_7_NOTE}: report export is deferred beyond this milestone`,
   "PATCH:/api/v1/questionnaires/{questionnaireId}/review_comments": PHASE_3_NOTE,
   "POST:/api/v1/questionnaires/{questionnaireId}/complete_review": PHASE_3_NOTE,
   "POST:/api/v1/risk_assessments/{assessmentId}/approve": RELEASE_TRIPLE,
   "POST:/api/v1/risk_assessments/{assessmentId}/submit_for_approval": RELEASE_TRIPLE,
-  "POST:/api/v1/risk_assessments/{assessmentId}/regenerate_draft": "reserved Phase 4 intent: superseded by the served assessment draft jobs (POST /api/v1/questionnaires/{questionnaireId}/generate_assessment and the /api/v1/assessment_draft_jobs routes)",
+  "POST:/api/v1/risk_assessments/{assessmentId}/regenerate_draft": "reserved Phase 4 intent: superseded by the targeted proposal operations POST /api/v1/risk_assessments/{assessmentId}/risk_suggestions and POST /api/v1/risks/{riskId}/rewrite (Phase 16 D-24); whole-draft regeneration is not offered",
   "GET:/api/v1/risk_assessments/due_for_review": "reserved Phase 4 intent: superseded by the served analyst review list (GET /api/v1/risk_assessments) and the Phase 7 dashboard and alerts",
-  "GET:/api/v1/my_requests": "reserved request alias: served by the owner-scoped core route GET /api/csrm-assessment-requests",
   "POST:/api/v1/assessment_requests": "reserved request alias: served by the core route POST /api/csrm-assessment-requests",
   "GET:/api/v1/assessment_requests/{requestId}": "reserved request alias: served by the core route GET /api/csrm-assessment-requests/{id}",
   "PATCH:/api/v1/assessment_requests/{requestId}": "reserved request alias: served by the core route PUT /api/csrm-assessment-requests/{id}",
@@ -119,7 +129,6 @@ const UNSERVED_REASONS: Readonly<Record<string, string>> = {
   "GET:/api/v1/control_implementations/{implementationId}": "reserved detail intent: a control implementation is read through its Risk (GET /api/v1/risks/{riskId}/control_implementations) and mutated through the served PATCH and DELETE /api/v1/control_implementations/{implementationId}",
   "GET:/api/v1/control_implementations/overdue": "reserved intent: superseded by the Phase 7 alerts and the Risk Register treatment due state",
   "GET:/api/v1/control_implementations/status_summary": "reserved intent: superseded by the Phase 7 analyst dashboard",
-  "GET:/api/v1/risks/export": "deferred beyond this milestone: Risk export is not served",
   "POST:/api/v1/risks/{riskId}/close": "deferred beyond this milestone: nothing closes a Risk yet",
   "GET:/api/v1/risks/overdue": "reserved intent: superseded by the Phase 7 alerts and the Risk Register state and treatment due filters",
   "GET:/api/v1/risks/status_summary": "reserved intent: superseded by the Phase 7 analyst dashboard summary",
@@ -155,7 +164,7 @@ const GENERIC_CORE_COLLECTIONS: ReadonlySet<string> = new Set([
 ]);
 
 /** IAM content types administered by IdamBox, whose core routers mount nothing (D-36). */
-const IAM_COLLECTIONS: ReadonlySet<string> = new Set(["applications", "functions", "function-apis", "idambox-users", "roles"]);
+const IAM_COLLECTIONS: ReadonlySet<string> = new Set(["applications", "functions", "function-apis", "idambox-users", "roles", "identity-sources", "keycloak-sync-outboxes"]);
 const IAM_BASES = [...IAM_COLLECTIONS].map((collection) => `/api/${collection}`);
 /** The generic reference-data reads D-44 unmounts; the /v1 selectors are the only read surface. */
 const GENERIC_REFERENCE_BASES = ["/api/csrm-information-systems", "/api/csrm-information-assets"];
@@ -217,7 +226,10 @@ function specOperationIndex(specification: JsonObject) {
     for (const [method, operation] of Object.entries(item)) {
       const upper = method.toUpperCase();
       if (!HTTP_METHODS.has(upper)) continue;
-      const key = `${upper}:/api${specPath}`;
+      const servers = (operation as JsonObject).servers ?? item.servers ?? specification.servers;
+      const server = servers?.[0]?.url;
+      const prefix = server === "/" ? "" : server === undefined ? "/api" : new URL(server, "http://contract.invalid").pathname.replace(/\/$/, "");
+      const key = `${upper}:${prefix}${specPath}`;
       exact.set(key, { specPath, operationId: String((operation as JsonObject).operationId ?? "") });
       byPosition.set(positional(key), key);
     }
@@ -388,7 +400,38 @@ function specOnlyReason(key: string, operationId: string, pluginRoutes: readonly
   if (pluginRoutes.some((route) => route.plugin === documentedBy)) {
     return `documented ${documentedBy} plugin operation; this Strapi mounts the plugin's routes under /api/${documentedBy} (see pluginRoutes), not at the documented path`;
   }
+  if (documentedBy === "upload") return UPLOAD_UNMOUNTED_REASON;
   return null;
+}
+
+/** 14-04 (D-08): the upload plugin's documented operations once its content-API routes are unmounted. */
+const UPLOAD_UNMOUNTED_REASON = "documented upload plugin operation; the application unmounts the plugin's content-API routes (Phase 14 D-08), so attachment files are reached only through CSRM's own operations";
+
+/** A GET route of the upload plugin's admin router (`@strapi/upload/dist/server/routes/admin.js`), mounted under /upload. */
+const UPLOAD_ADMIN_SETTINGS_PATH = "/upload/settings";
+
+function rootRouteProblems(routes: MountedContentApiRoutes): string[] {
+  const problems: string[] = [];
+  const root = routes.rootKoaLayers.flatMap(layer => layer.methods.filter(method => HTTP_METHODS.has(method)).map(method => ({ method, path: layer.path })));
+  const all = [...root, ...koaRouteLayers(routes)];
+  const declared = SCIM_ROUTES.map(route => ({ method: route.method, path: `/scim/v2${route.path}` }));
+  const key = (route: { method: string; path: string }) => `${route.method}:${route.path}`;
+  const expected = new Set(declared.map(key));
+  for (const route of declared) {
+    const id = key(route);
+    if (all.filter(layer => key(layer) === id).length !== 1 || root.filter(layer => key(layer) === id).length !== 1) problems.push(`SCIM_ROOT_LAYER_COUNT_${id}`);
+    const registrations = routes.rootRoutes.filter(entry => key(entry) === id);
+    if (registrations.length !== 1) { problems.push(`SCIM_REGISTRATION_COUNT_${id}`); continue; }
+    const config = registrations[0].config;
+    if (config.auth !== false) problems.push(`SCIM_DEFAULT_AUTH_${id}`);
+    const operation = catalogueUrlOf(route.method, route.path);
+    if (JSON.stringify(config.policies) !== JSON.stringify([{ name: "global::scim-source-bearer", config: { operation } }])) problems.push(`SCIM_SOURCE_POLICY_${id}`);
+  }
+  for (const route of [...all, ...routes.rootRoutes]) {
+    if (route.path.startsWith("/api/scim/v2")) problems.push(`SCIM_API_ALIAS_${key(route)}`);
+    if (route.path.startsWith("/scim/v2") && !expected.has(key(route))) problems.push(`SCIM_UNDECLARED_${key(route)}`);
+  }
+  return problems;
 }
 
 type BuiltInventory = { inventory: ServedOperationsInventory; problems: string[]; registrationProbe: RegistrationProbe };
@@ -401,6 +444,7 @@ async function buildInventory(harness: AuthorizationHttpHarness): Promise<BuiltI
   const routes = harness.listMountedContentApiRoutes();
   const layers = registeredLayers(routes);
   const koaLayers = koaRouteLayers(routes);
+  problems.push(...rootRouteProblems(routes));
   const webCallers = webCallersByCatalogueUrl();
 
   // The koa stack is the ground truth for what is mounted; the registries must describe it exactly.
@@ -480,6 +524,22 @@ async function buildInventory(harness: AuthorizationHttpHarness): Promise<BuiltI
     served.push(row);
     servedByUrl.set(catalogueUrl, row);
   }
+  // Root rows originate in observed registrations, checked against the actual root Koa stack above.
+  for (const route of routes.rootRoutes.filter(route => route.path.startsWith("/scim/v2"))) {
+    const catalogueUrl = catalogueUrlOf(route.method, route.path);
+    const specOperation = spec.find(catalogueUrl);
+    if (!specOperation) problems.push(`NOT_IN_SPEC_${catalogueUrl}`);
+    const grants = grantsFor(catalogueUrl);
+    if (grants.functionApiIds.length !== 1) problems.push(`SCIM_GRANT_COUNT_${catalogueUrl}`);
+    if (JSON.stringify(grants.roleIds) !== JSON.stringify(["role.identity_provisioning"])) problems.push(`SCIM_ROLE_SCOPE_${catalogueUrl}`);
+    const policy = ((route.config.policies ?? []) as Array<{ name: string; config: Record<string, unknown> }>).find(policy => policy.name === "global::scim-source-bearer");
+    const row: ServedOperation = { method: route.method, path: route.path, catalogueUrl,
+      apiName: route.apiName, routerFile: "iam/scim/routes.ts", handler: route.handler,
+      authStrategies: ["source-bearer"], policyOperation: typeof policy?.config?.operation === "string" ? policy.config.operation : null,
+      policyConfig: policy?.config ?? null, ...grants, specOperationId: specOperation?.operationId ?? null };
+    served.push(row); servedByUrl.set(catalogueUrl, row);
+  }
+
   served.sort((left, right) => byString(left.catalogueUrl, right.catalogueUrl));
 
   // Every web call names a served operation (SR-03): a documented path no router mounts still
@@ -617,6 +677,79 @@ test("the two catalogue copies are byte-identical", () => {
   assert.ok(authoritative.equals(bootstrap), "CATALOGUE_COPIES_DIFFER");
 });
 
+test("IAM serves every root SCIM operation with source authentication and no existing-role grants", async () => {
+  const { inventory } = await inventoryPromise;
+  const catalogue = parseJsonFile(path.join(repositoryDir, "docs/references", catalogueFilename), "CATALOGUE_UNREADABLE");
+  const role = catalogue.roles.find((entry: JsonObject) => entry.id === "role.identity_provisioning");
+  assert.ok(role);
+  assert.equal(role.name, "Identity Provisioning");
+  assert.deepEqual(role.functionIds, ["function.identity_provisioning.api"]);
+  const capability = catalogue.functions.find((entry: JsonObject) => entry.id === "function.identity_provisioning.api");
+  assert.ok(capability);
+  assert.equal(capability.name, "Identity Provisioning");
+  assert.equal("menuPath" in capability, false);
+  assert.deepEqual(capability.roleIds, [role.id]);
+  for (const existing of catalogue.roles.filter((entry: JsonObject) => entry.id !== role.id)) {
+    assert.equal(existing.functionIds.includes(capability.id), false);
+  }
+  const apis = catalogue.functionApis.filter((entry: JsonObject) => entry.functionId === capability.id);
+  assert.deepEqual(apis.map((entry: JsonObject) => entry.url).sort(), [...IAM_SCIM_RESERVATIONS].sort());
+  assert.deepEqual(capability.functionApiIds, apis.map((entry: JsonObject) => entry.id));
+  const harness = await harnessPromise;
+  const mounted = harness.listMountedContentApiRoutes();
+  for (const url of IAM_SCIM_RESERVATIONS) {
+    const row = inventory.served.find((entry) => entry.catalogueUrl === url);
+    assert.ok(row, url);
+    assert.deepEqual(row.authStrategies, ["source-bearer"]);
+    assert.deepEqual(row.policyConfig, { operation: url });
+    assert.equal(row.policyOperation, url);
+    assert.deepEqual(row.roleIds, ["role.identity_provisioning"]);
+    assert.equal(inventory.unserved.some(entry => entry.catalogueUrl === url), false);
+    const [method, routePath] = url.split(":");
+    const route = routePath.replace("{id}", "does-not-exist");
+    const response = await harness.request({ path: route, identity: harness.identities.analyst, init: { method } });
+    assert.equal(response.status, 401, `${url}: ${response.status}`);
+    assert.equal(response.headers.get("WWW-Authenticate"), "Bearer");
+    const alias = await harness.request({ path: `/api${route}`, init: { method } });
+    assert.ok(alias.status === 404 || alias.status === 405);
+
+  }
+});
+
+test("IAM Function belongs only to the active IAM Application and repeated seed preserves capability bindings", async () => {
+  await inventoryPromise;
+  const instance = (globalThis as typeof globalThis & { strapi: Core.Strapi }).strapi;
+  assert.ok(instance);
+  const applications = instance.documents("api::application.application");
+  const functions = instance.documents("api::function.function");
+  const iamApps = await applications.findMany({ filters: { slug: "idambox-iam" } });
+  assert.equal(iamApps.length, 1);
+  assert.equal(iamApps[0].name, "IdamBox IAM");
+  assert.equal(iamApps[0].applicationStatus, "active");
+  const snapshot = async () => ({
+    applications: await applications.findMany({ fields: ["documentId", "slug"], sort: ["slug:asc"], limit: 100 }),
+    functions: await functions.findMany({ fields: ["documentId", "name", "menuPath"], populate: { application: { fields: ["slug"] }, functionApis: { fields: ["documentId", "url"] } }, sort: ["name:asc"], limit: 1000 }),
+    roles: await instance.documents("api::role.role").findMany({ fields: ["documentId", "name"], populate: { functions: { fields: ["documentId"] } }, sort: ["name:asc"], limit: 100 }),
+  });
+  const before = await snapshot();
+  const iamFunction = before.functions.filter((entry) => entry.name === "Identity Provisioning");
+  assert.equal(iamFunction.length, 1);
+  assert.equal(iamFunction[0].application?.slug, "idambox-iam");
+  assert.equal(iamFunction[0].menuPath, null);
+  for (const entry of before.functions.filter((entry) => entry.name !== "Identity Provisioning")) {
+    assert.equal(entry.application?.slug, "idambox-csrm");
+  }
+  const previousSeedFlag = process.env.IDAMBOX_SEED_CSRM;
+  try {
+    process.env.IDAMBOX_SEED_CSRM = "true";
+    await seedCsrmData(instance);
+  } finally {
+    if (previousSeedFlag === undefined) delete process.env.IDAMBOX_SEED_CSRM;
+    else process.env.IDAMBOX_SEED_CSRM = previousSeedFlag;
+  }
+  assert.deepEqual(await snapshot(), before);
+});
+
 test("the eight administration import operations are served, documented and granted to the human Security Analyst only (D-06)", async () => {
   const { inventory } = await inventoryPromise;
   assert.equal(IMPORT_OPERATIONS.length, 8);
@@ -628,6 +761,57 @@ test("the eight administration import operations are served, documented and gran
     assert.ok(row.functionApiIds.length > 0, `IMPORT_OPERATION_NOT_CATALOGUED_${url}`);
     assert.deepEqual(row.roleIds, ["role.security_analyst"], `IMPORT_OPERATION_ROLES_${url}`);
     assert.deepEqual(row.webCallers, ["src/features/administration/administration-service.ts"], `IMPORT_OPERATION_WEB_CALLERS_${url}`);
+  }
+});
+
+/*
+ * Phase 13 (D-02, D-21): the two notes content types are reached only through the three notes operations. No core
+ * route serves either type, and nothing edits or deletes a note: 13-06 adds only the AI-input mark under a note.
+ */
+test("request notes are served by their three operations alone, with no core route and no edit or delete of a note (D-02, D-21)", async () => {
+  const { inventory } = await inventoryPromise;
+  const notesOperations = [
+    "GET:/api/v1/assessment_requests/{requestId}/notes",
+    "POST:/api/v1/assessment_requests/{requestId}/notes",
+    "POST:/api/v1/assessment_requests/{requestId}/notes/read",
+  ];
+  for (const url of notesOperations) {
+    const row = inventory.served.find((entry) => entry.catalogueUrl === url);
+    assert.ok(row, `NOTES_OPERATION_NOT_SERVED_${url}`);
+    assert.equal(row.apiName, "csrm-request-note", `NOTES_OPERATION_API_${url}`);
+    assert.equal(row.routerFile, "csrm-request-note/routes/request-notes.ts", `NOTES_OPERATION_ROUTER_${url}`);
+    assert.deepEqual(row.authStrategies, ["content-api-token"], `NOTES_OPERATION_NOT_TOKEN_ONLY_${url}`);
+    assert.deepEqual(row.policyConfig, { operation: url }, `NOTES_OPERATION_POLICY_${url}`);
+    assert.deepEqual(row.functionApiIds.map((id) => id.replace(/\.api\.\d+$/, "")), ["function.risk_assessment_requests.notes_api"], `NOTES_OPERATION_FUNCTION_${url}`);
+    assert.deepEqual([...row.roleIds].sort(), ["role.requestor", "role.security_analyst"], `NOTES_OPERATION_ROLES_${url}`);
+    assert.ok(row.specOperationId, `NOTES_OPERATION_NOT_IN_SPEC_${url}`);
+    assert.deepEqual(row.webCallers, ["src/features/request-notes/notes-service.ts"], `NOTES_OPERATION_WEB_CALLERS_${url}`);
+  }
+  // Phase 13 (D-26, D-30): the AI-input mark is the notes API's fourth route, held by its own human analyst-only Function.
+  const aiInputOperation = "PUT:/api/v1/assessment_requests/{requestId}/notes/{noteId}/ai_input";
+  const aiInputRow = inventory.served.find((entry) => entry.catalogueUrl === aiInputOperation);
+  assert.ok(aiInputRow, "NOTE_AI_INPUT_OPERATION_NOT_SERVED");
+  assert.equal(aiInputRow.routerFile, "csrm-request-note/routes/request-notes.ts", "NOTE_AI_INPUT_OPERATION_ROUTER");
+  assert.deepEqual(aiInputRow.authStrategies, ["content-api-token"], "NOTE_AI_INPUT_OPERATION_NOT_TOKEN_ONLY");
+  assert.deepEqual(aiInputRow.policyConfig, { operation: aiInputOperation }, "NOTE_AI_INPUT_OPERATION_POLICY");
+  assert.deepEqual(aiInputRow.functionApiIds, ["function.risk_assessment_requests.note_ai_input_api.api.01"], "NOTE_AI_INPUT_OPERATION_FUNCTION");
+  assert.deepEqual([...aiInputRow.roleIds], ["role.security_analyst"], "NOTE_AI_INPUT_OPERATION_ROLES");
+  assert.ok(aiInputRow.specOperationId, "NOTE_AI_INPUT_OPERATION_NOT_IN_SPEC");
+  assert.deepEqual(aiInputRow.webCallers, ["src/features/request-notes/notes-service.ts"], "NOTE_AI_INPUT_OPERATION_WEB_CALLERS");
+  assert.deepEqual(
+    inventory.served.filter((entry) => entry.apiName === "csrm-request-note").map((entry) => entry.catalogueUrl).sort(),
+    [...notesOperations, aiInputOperation].sort(),
+    "NOTES_API_SERVES_ANOTHER_ROUTE",
+  );
+  for (const row of inventory.served) {
+    assert.ok(!row.path.startsWith("/api/csrm-request-note"), `NOTES_CORE_ROUTE_MOUNTED_${row.method}_${row.path}`);
+    const underANote = row.path.startsWith("/api/v1/assessment_requests/:requestId/notes/:");
+    assert.ok(!(underANote && ["PUT", "PATCH", "DELETE"].includes(row.method) && !row.path.endsWith("/ai_input")), `NOTE_EDIT_OR_DELETE_SERVED_${row.method}_${row.path}`);
+  }
+  const harness = await harnessPromise;
+  for (const base of ["/api/csrm-request-notes", "/api/csrm-request-note-read-states"]) {
+    const read = await harness.request({ path: base, identity: harness.identities.analyst });
+    assert.equal(read.status, 404, `NOTES_CORE_BASE_SERVED_${base}_${read.status}`);
   }
 });
 
@@ -659,6 +843,21 @@ test("no application router serves the IAM or generic reference-data bases (D-36
     init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ selectedIds: [] }) },
   });
   assert.equal(selected.status, 200, `SELECTED_HYDRATION_${selected.status}`);
+});
+
+test("the upload plugin's content-API routes are unmounted while its admin routes stay mounted (D-08)", async () => {
+  const harness = await harnessPromise;
+  const { inventory } = await inventoryPromise;
+  const mounted = harness.listMountedContentApiRoutes();
+  assert.deepEqual(inventory.pluginRoutes.filter((route) => route.path.startsWith("/api/upload")), [], "UPLOAD_CONTENT_API_ROUTE_IN_INVENTORY");
+  assert.deepEqual(mounted.pluginRoutes.filter((route) => route.plugin === "upload"), [], "UPLOAD_CONTENT_API_ROUTE_MOUNTED");
+  assert.deepEqual(mounted.koaLayers.filter((layer) => layer.path.startsWith("/api/upload")), [], "UPLOAD_CONTENT_API_LAYER_MOUNTED");
+  for (const row of inventory.specOnly.filter((entry) => entry.operationId.startsWith("upload/"))) {
+    assert.equal(row.reason, UPLOAD_UNMOUNTED_REASON, `UPLOAD_SPEC_ONLY_REASON_${row.operationId}`);
+  }
+  // The admin panel's router is untouched: without an admin session its settings read is refused, not missing.
+  const adminSettings = await harness.request({ path: UPLOAD_ADMIN_SETTINGS_PATH, omitApiToken: true });
+  assert.equal(adminSettings.status, 401, `UPLOAD_ADMIN_ROUTE_${adminSettings.status}`);
 });
 
 test("users-permissions registration is disabled at every boot (D-37)", async () => {
@@ -697,4 +896,24 @@ test("the checked-in served-operations inventory matches the mounted Strapi", as
   const checkedIn = parseJsonFile(inventoryFilename, "SERVED_OPERATIONS_UNREADABLE");
   const difference = firstDifference(withoutGeneratedAt(checkedIn), withoutGeneratedAt(inventory));
   assert.equal(difference, null, `SERVED_OPERATIONS_DRIFT: run ${WRITE_COMMAND} (${difference})`);
+});
+
+
+test("root inventory rejects missing, duplicate, aliased and unprotected SCIM routes", async () => {
+  const routes = (await harnessPromise).listMountedContentApiRoutes();
+  assert.deepEqual(rootRouteProblems(routes), []);
+  const mutate = (change: (copy: MountedContentApiRoutes) => void, diagnostic: RegExp) => {
+    const copy = structuredClone(routes); change(copy);
+    assert.match(rootRouteProblems(copy).join(";"), diagnostic);
+  };
+  const index = routes.rootKoaLayers.findIndex(layer => layer.path === "/scim/v2/Users");
+  assert.ok(index >= 0);
+  mutate(copy => { copy.rootKoaLayers.splice(index, 1); }, /SCIM_ROOT_LAYER_COUNT/);
+  mutate(copy => { copy.rootKoaLayers.push(copy.rootKoaLayers[index]); }, /SCIM_ROOT_LAYER_COUNT/);
+  mutate(copy => { copy.rootKoaLayers.push({ path: "/api/scim/v2/Users", methods: ["GET"] }); }, /SCIM_API_ALIAS/);
+  mutate(copy => { copy.rootRoutes[0].config.auth = {}; }, /SCIM_DEFAULT_AUTH/);
+  mutate(copy => { copy.rootRoutes[0].config.policies = []; }, /SCIM_SOURCE_POLICY/);
+  mutate(copy => { copy.rootRoutes[0].config.policies = [{ name: "global::scim-source-bearer", config: { operation: "GET:/scim/v2/Groups" } }]; }, /SCIM_SOURCE_POLICY/);
+  mutate(copy => { copy.rootRoutes.pop(); }, /SCIM_REGISTRATION_COUNT/);
+  mutate(copy => { copy.rootKoaLayers.push({ path: "/scim/v2/Unexpected", methods: ["GET"] }); }, /SCIM_UNDECLARED/);
 });

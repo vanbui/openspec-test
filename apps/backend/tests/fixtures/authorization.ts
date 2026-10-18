@@ -116,6 +116,9 @@ export function createAuthorizationStrapi(options?: {
 
   return {
     documents(uid: string) {
+      if (uid === "api::identity-source.identity-source") {
+        return { findMany: async () => [] };
+      }
       if (uid === "api::idambox-user.idambox-user") {
         return {
           findOne: async ({ documentId }: { documentId: string }) =>

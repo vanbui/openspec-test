@@ -60,7 +60,7 @@ function stripTrailingSlash(value: string): string {
 }
 
 /**
- * Reads exactly the five `AUTH_*` names idp/README.md documents, in this order, and
+ * Reads exactly the five `AUTH_*` names docker/README.md documents, in this order, and
  * validates them. Missing or blank values are collected and reported together; a
  * malformed URL or a short secret is reported on its own. A production runtime
  * (NODE_ENV=production) accepts only https:// for `AUTH_URL` and the issuer, since the

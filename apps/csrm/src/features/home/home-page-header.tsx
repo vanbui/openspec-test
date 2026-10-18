@@ -2,10 +2,11 @@ import Link from 'next/link';
 
 import { PageHeader } from '@/components/csrm/page-header';
 import { buttonVariants } from '@/components/ui/button';
+import { pageHeadings } from '@/config/navigation/page-headings';
 
 /** Home's heading and description, the same for every actor (UI-SPEC §2.1, §5.1; UI-D3). */
 export const homePageCopy = {
-  title: 'Home',
+  title: pageHeadings.home,
   description: 'What needs your action, and where your work stands.',
 } as const;
 

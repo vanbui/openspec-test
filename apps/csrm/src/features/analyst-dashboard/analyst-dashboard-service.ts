@@ -83,8 +83,11 @@ export type DashboardUnit<T> = { status: 'ready'; data: T } | { status: 'unavail
 /** A bounded alert page in a widget: the rows shown and the exact total of the list the widget opens. */
 export type DashboardAlertList = { rows: readonly AlertItem[]; total: number };
 
-/** The four Needs action figures: the review-queue bucket and the three alert urgencies. */
-export type DashboardKpiCounts = { requiresAttention: number; overdue: number; dueSoon: number; attention: number };
+/**
+ * The four Needs action figures: the viewer's own Requires attention count (Phase 13 D-15) and the three alert
+ * urgencies.
+ */
+export type DashboardKpiCounts = { needsYourAction: number; overdue: number; dueSoon: number; attention: number };
 
 export type AnalystDashboardUnits = {
   kpi: DashboardUnit<DashboardKpiCounts>;
@@ -137,7 +140,8 @@ function kpiCounts(summary: DashboardSummary, alertSummary: TransportResult<Aler
   if (alertSummary.error) return unavailable;
   const { byUrgency } = alertSummary.data;
   return ready({
-    requiresAttention: summary.reviewQueue.requiresAttention,
+    // Tile 1 is the viewer's own work, Assigned to me's Requires attention total, never the team's queue (D-15).
+    needsYourAction: summary.reviewQueue.mine.requiresAttention,
     overdue: byUrgency.overdue,
     dueSoon: byUrgency['due-soon'],
     attention: byUrgency.attention,

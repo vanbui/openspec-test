@@ -150,3 +150,85 @@ export async function expectFocusNotObscured(page: Page, locator: Locator, label
   await expect(locator, `${label} has keyboard focus`).toBeFocused();
   expect(await expectActiveElementNotObscured(page, label), `${label} holds focus`).toBe(true);
 }
+
+/*
+ * D4 (the 13-19 walk): a focused field's indicator is painted whole. The indicator is the focused element's own visible
+ * outline or ring, or else that of the nearest ancestor inside `container` that draws one while focus is within it (a
+ * search row's focus-within ring). Its painted box, the border box grown by the outline's width and offset or by the
+ * ring's spread, must lie inside every ancestor that clips its overflow, so no edge of it is cut off. The check observes
+ * only, so it is soft: one local break shows it failing everywhere it is used.
+ */
+export async function expectFocusIndicatorUnclipped(container: Locator, label: string): Promise<void> {
+  const report = await container.evaluate((root) => {
+    const alphaOf = (color: string): number => {
+      if (color === 'transparent') return 0;
+      const legacy = /^rgba\((?:[^,]+,){3}\s*([\d.]+)\s*\)$/.exec(color);
+      if (legacy) return Number(legacy[1]);
+      const slash = /\/\s*([\d.]+)(%?)\s*\)$/.exec(color);
+      if (slash) return slash[2] === '%' ? Number(slash[1]) / 100 : Number(slash[1]);
+      return 1;
+    };
+    const layersOf = (shadow: string): string[] => {
+      const layers: string[] = [];
+      let depth = 0;
+      let current = '';
+      for (const character of shadow) {
+        if (character === '(') depth += 1;
+        if (character === ')') depth -= 1;
+        if (character === ',' && depth === 0) {
+          layers.push(current.trim());
+          current = '';
+        } else {
+          current += character;
+        }
+      }
+      if (current.trim()) layers.push(current.trim());
+      return layers;
+    };
+    /* How far a drawn, outset shadow layer reaches beyond the border box; 0 for an inset or invisible one. */
+    const reachOf = (layer: string): number => {
+      if (/\binset\b/.test(layer)) return 0;
+      const color = /^(?:[a-z-]+\([^)]*\)|[a-z]+)/i.exec(layer)?.[0] ?? '';
+      if (alphaOf(color) === 0) return 0;
+      const [x = 0, y = 0, blur = 0, spread = 0] = [...layer.slice(color.length).matchAll(/-?[\d.]+px/g)].map(([length]) => parseFloat(length));
+      return Math.max(Math.abs(x), Math.abs(y)) + blur + spread;
+    };
+
+    const active = document.activeElement;
+    if (!(active instanceof Element) || !root.contains(active)) return { ok: false, detail: 'focus is not inside the container' };
+    let indicator: { element: Element; grow: number; kind: string } | null = null;
+    for (let element: Element | null = active; element && root.contains(element); element = element.parentElement) {
+      const style = getComputedStyle(element);
+      if (style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0 && alphaOf(style.outlineColor) > 0) {
+        indicator = { element, grow: parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset), kind: `outline ${style.outlineWidth} offset ${style.outlineOffset}` };
+        break;
+      }
+      const reach = style.boxShadow === 'none' ? 0 : Math.max(0, ...layersOf(style.boxShadow).map(reachOf));
+      if (reach > 0) {
+        indicator = { element, grow: reach, kind: `ring ${style.boxShadow}` };
+        break;
+      }
+    }
+    if (!indicator) return { ok: false, detail: 'no focus indicator is drawn' };
+    const describe = (element: Element) => `<${element.tagName.toLowerCase()}${element.getAttribute('data-slot') ? ` data-slot=${element.getAttribute('data-slot')}` : ''}>`;
+    const rect = indicator.element.getBoundingClientRect();
+    const painted = { top: rect.top - indicator.grow, left: rect.left - indicator.grow, bottom: rect.bottom + indicator.grow, right: rect.right + indicator.grow };
+    for (let ancestor = indicator.element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      // The root's and the body's overflow apply to the viewport, which scrolls rather than cuts what it holds.
+      if (ancestor === document.documentElement || ancestor === document.body) continue;
+      const style = getComputedStyle(ancestor);
+      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+      const box = ancestor.getBoundingClientRect();
+      const top = box.top + ancestor.clientTop;
+      const left = box.left + ancestor.clientLeft;
+      const clip = { top, left, bottom: top + ancestor.clientHeight, right: left + ancestor.clientWidth };
+      const tolerance = 0.5;
+      if (painted.top < clip.top - tolerance || painted.left < clip.left - tolerance || painted.bottom > clip.bottom + tolerance || painted.right > clip.right + tolerance) {
+        const box4 = (edges: { top: number; left: number; bottom: number; right: number }) => `${Math.round(edges.top)},${Math.round(edges.left)} to ${Math.round(edges.bottom)},${Math.round(edges.right)}`;
+        return { ok: false, detail: `the ${indicator.kind} on ${describe(indicator.element)} (painted ${box4(painted)}) is cut by ${describe(ancestor)} (clips to ${box4(clip)})` };
+      }
+    }
+    return { ok: true, detail: `the ${indicator.kind} on ${describe(indicator.element)} is painted whole` };
+  });
+  expect.soft(report.ok, `${label}: the focus indicator is painted whole (${report.detail})`).toBe(true);
+}

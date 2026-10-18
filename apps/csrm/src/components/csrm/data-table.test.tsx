@@ -1,10 +1,11 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType, ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
+import ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installTestResizeObserver, stubHorizontalGeometry, TestResizeObserver } from '@/test/layout-stubs';
@@ -25,6 +26,7 @@ type TestColumn = {
   enableSorting?: boolean;
   numeric?: 'magnitude' | 'identity';
   wrap?: boolean;
+  headerHidden?: boolean;
 };
 
 type TestDataTableProps = {
@@ -34,6 +36,8 @@ type TestDataTableProps = {
   densityUserId: string;
   filters?: Array<{ id: string; label: string; value: string }>;
   getRowId: (row: RequestRow) => string;
+  getRowProps?: (row: RequestRow) => { className?: string; 'data-pending'?: true };
+  paginated?: boolean;
   onClearFilter?: (id: string) => void;
   onClearFilters?: () => void;
   onPageChange: (page: number) => void;
@@ -42,6 +46,7 @@ type TestDataTableProps = {
   page: number;
   pageSize: number;
   renderMobileCard: (row: RequestRow) => ReactNode;
+  tableFrom?: '54rem' | '60rem' | '65rem' | '70rem' | 'never';
   sorting?: Array<{ id: string; desc: boolean }>;
   state: 'populated' | 'loading' | 'empty' | 'error' | 'permission';
   loadingLabel: string;
@@ -403,11 +408,199 @@ describe('DataTable', () => {
     expect(host.querySelector('[role="region"]')).toBeNull();
   });
 
+  /*
+   * 14-UI-SPEC §3.2: a list that is never paged (a request's files, at most 20 active ones) shows no pager and no
+   * results count of its own; its section counts it. The density toggle stays.
+   */
+  it('shows no pager and no results count when the list is not paged, and keeps the density toggle', async () => {
+    const DataTable = await loadDataTable();
+    render(<DataTable {...registerProps({ paginated: false, totalCount: 2, pageSize: 2 })} />);
+
+    expect(screen.queryByText(/^Page \d+ of \d+$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Previous page' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ results?$/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use compact density' })).toBeInTheDocument();
+  });
+
+  /*
+   * The Phase 14 pilot's walk, O5 (G-4: purpose-built phone layouts): below 768px every list shows cards, whose layout no
+   * density changes, so the density toggle shows only where the table does.
+   */
+  it('shows the density toggle only where the table shows, never with the cards below 768px (O5)', async () => {
+    const DataTable = await loadDataTable();
+    const { container } = render(<DataTable {...registerProps({ paginated: false, totalCount: 2, pageSize: 2 })} />);
+
+    const toggle = screen.getByRole('button', { name: 'Use compact density' });
+    expect(container.querySelector('[data-slot="data-table-mobile"]'), 'the cards below 768px').toHaveClass('md:hidden');
+    expect(toggle, 'the toggle is hidden with the table below 768px').toHaveClass('max-md:hidden');
+    expect(toggle, 'and shows with it from 768px').not.toHaveClass('hidden');
+  });
+
+  /*
+   * The Phase 14 pilot's walk, D2 (X-21; 14-UI-SPEC §3.2): a list in a column narrower than the page names the width its
+   * table needs, and its own width then chooses: the table from that width, the cards below it, and the density toggle
+   * only with the table. `never` keeps the cards at every width.
+   */
+  it('chooses between the cards and the table by its own width when it names the width its table needs (D2)', async () => {
+    const DataTable = await loadDataTable();
+    const { container } = render(<DataTable {...registerProps({ paginated: false, totalCount: 2, pageSize: 2, tableFrom: '65rem' })} />);
+
+    expect(screen.getByRole('region', { name: 'Risk Register controls' }), 'the list is its own container').toHaveClass('@container');
+    const cards = container.querySelector('[data-slot="data-table-mobile"]');
+    expect(cards).toHaveClass('@min-[65rem]:hidden');
+    expect(cards).not.toHaveClass('md:hidden');
+    const scroller = container.querySelector('[data-slot="data-table-desktop"]');
+    expect(scroller).toHaveClass('hidden', '@min-[65rem]:grid');
+    expect(scroller).not.toHaveClass('md:grid');
+    expect(screen.getByRole('button', { name: 'Use compact density' })).toHaveClass('@max-[65rem]:hidden');
+  });
+
+  it('keeps the cards at every width, and no density toggle, when its table may never show (D2)', async () => {
+    const DataTable = await loadDataTable();
+    const { container } = render(<DataTable {...registerProps({ paginated: false, totalCount: 2, pageSize: 2, tableFrom: 'never' })} />);
+
+    expect(container.querySelector('[data-slot="data-table-mobile"]')!.className).not.toMatch(/hidden/);
+    expect(container.querySelector('[data-slot="data-table-desktop"]')).toHaveClass('hidden');
+    expect(container.querySelector('[data-slot="data-table-desktop"]')!.className).not.toMatch(/:grid/);
+    expect(screen.getByRole('button', { name: 'Use compact density' })).toHaveClass('hidden');
+  });
+
+  /* 14-UI-SPEC §3.2, 1.3.1: an actions column keeps its header for assistive technology and shows none. */
+  /*
+   * 14-UI-REVIEW UI-04 (the pilot's ruling): a list may ask for a row-level hook, so a whole row can read as pending (the
+   * §5 Optimistic UI pending opacity) where its cells alone would leave part of it looking settled. The hook is opt-in:
+   * a table that does not ask renders every row exactly as before, attribute for attribute and class for class, so no
+   * other table's markup changes.
+   */
+  it('adds nothing to a row unless the list asks for the row hook, so every other table’s rows are unchanged (UI-04)', async () => {
+    const DataTable = await loadDataTable();
+    render(<DataTable {...registerProps()} />);
+    const bodyRows = within(screen.getByRole('table', { name: 'Risk Register' })).getAllByRole('rowgroup')[1]!.querySelectorAll('tr');
+    expect(bodyRows).toHaveLength(2);
+    for (const row of bodyRows) {
+      expect(row.getAttributeNames().sort(), 'a row keeps only its slot and its classes').toEqual(['class', 'data-slot']);
+      expect(row.getAttribute('class')).toBe(
+        'border-b has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted scroll-mt-10 transition-colors duration-80 ease-standard hover:bg-surface-hover [&_button]:min-h-6 [&_button]:min-w-6 group h-11',
+      );
+    }
+  });
+
+  it('sets the row hook’s data attribute and class on the whole row when the list asks for it (UI-04)', async () => {
+    const DataTable = await loadDataTable();
+    const pendingClass = 'data-[pending=true]:opacity-60';
+    render(<DataTable {...registerProps({ getRowProps: (row) => (row.id === 'REQ-102' ? { className: pendingClass, 'data-pending': true } : { className: pendingClass }) })} />);
+    const row = (name: string) => screen.getByRole('cell', { name }).closest('tr')!;
+    expect(row('REQ-102')).toHaveAttribute('data-pending', 'true');
+    expect(row('REQ-102')).toHaveClass(pendingClass, 'group', 'h-11');
+    expect(row('REQ-101')).not.toHaveAttribute('data-pending');
+    expect(row('REQ-101')).toHaveClass(pendingClass, 'group', 'h-11');
+    expect(screen.getByRole('cell', { name: 'REQ-102' }), 'the cells stay as they were').not.toHaveAttribute('data-pending');
+  });
+
+  it('keeps a hidden column header for assistive technology only', async () => {
+    const DataTable = await loadDataTable();
+    const hidden: TestColumn[] = [...columns.slice(0, -1), { ...columns.at(-1)!, headerHidden: true }];
+    render(<DataTable {...registerProps({ columns: hidden })} />);
+
+    const header = screen.getByRole('columnheader', { name: 'Actions' });
+    expect(header.querySelector('.sr-only')).toHaveTextContent('Actions');
+    expect(screen.getByRole('columnheader', { name: 'Title' }).querySelector('.sr-only')).toBeNull();
+  });
+
   it('no longer accepts stickyFirstColumn: every DataTable sticks its identifier column while it overflows', () => {
     const retired: Partial<DataTableProps<RequestRow>> = {
       // @ts-expect-error stickyFirstColumn is retired (UI-SPEC section 5.2).
       stickyFirstColumn: true,
     };
     expect(retired).not.toHaveProperty('ariaLabel');
+  });
+});
+
+/*
+ * A phone card's first row holds the record's number and its status badge at opposite ends (UI-SPEC §7). When a long
+ * number and a long badge cannot share the row, the row wraps and the badge drops below the number; without the wrap,
+ * the badge left the Requests queue card at 320px (11-21, WCAG 1.4.10). A row that keeps the number in a column with
+ * the title lets that column grow from a small basis, so the badge stays beside it whenever the number fits and drops
+ * below only when it would cover the number. jsdom measures no layout, so this reads the source of every phone card;
+ * the e2e reflow proof measures them (accessibility.spec.ts).
+ */
+describe('phone card rows', () => {
+  type JsxNode = ts.JsxElement | ts.JsxSelfClosingElement;
+  type CardRow = { at: string; wraps: boolean; column?: { at: string; growsFromBasis: boolean } };
+
+  const tagName = (node: JsxNode, file: ts.SourceFile) => (ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName).getText(file);
+  const classText = (node: JsxNode, file: ts.SourceFile) => {
+    const attributes = ts.isJsxElement(node) ? node.openingElement.attributes : node.attributes;
+    const className = attributes.properties.find((attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(file) === 'className');
+    return className && ts.isJsxAttribute(className) ? className.initializer?.getText(file) ?? '' : '';
+  };
+  const descendantTags = (node: ts.Node, file: ts.SourceFile) => {
+    const names: string[] = [];
+    const visit = (child: ts.Node): void => {
+      if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) names.push(tagName(child, file));
+      ts.forEachChild(child, visit);
+    };
+    ts.forEachChild(node, visit);
+    return names;
+  };
+  const isBadge = (name: string) => name.endsWith('Badge') || name === 'TreatmentStatus';
+  const lineOf = (node: ts.Node, file: ts.SourceFile) => file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
+
+  /** Every row of a renderMobileCard that sets a record link and a badge at its two ends. */
+  function cardRows(path: string): CardRow[] {
+    const source = readFileSync(resolve(process.cwd(), path), 'utf8');
+    if (!source.includes('renderMobileCard=')) return [];
+    const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const rows: CardRow[] = [];
+    const visitCard = (node: ts.Node): void => {
+      if (ts.isJsxElement(node) && /\bjustify-between\b/.test(classText(node, file))) {
+        const inside = descendantTags(node, file);
+        if (inside.includes('RecordLink') && inside.some(isBadge)) {
+          const children = node.children.filter((child): child is JsxNode => ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child));
+          const column = children.some((child) => tagName(child, file) === 'RecordLink')
+            ? undefined
+            : children.find((child) => descendantTags(child, file).includes('RecordLink'));
+          const columnClass = column ? classText(column, file) : '';
+          rows.push({
+            at: `${path}:${lineOf(node, file)}`,
+            wraps: /\bflex-wrap\b/.test(classText(node, file)),
+            // `grow`, not `flex-1`: Tailwind 4's flex-1 is `flex: 1`, whose zero basis would contend with the basis.
+            ...(column ? { column: { at: `${path}:${lineOf(column, file)}`, growsFromBasis: /\bgrow\b/.test(columnClass) && /\bbasis-/.test(columnClass) } } : {}),
+          });
+        }
+      }
+      ts.forEachChild(node, visitCard);
+    };
+    const visit = (node: ts.Node): void => {
+      if (ts.isJsxAttribute(node) && node.name.getText(file) === 'renderMobileCard' && node.initializer) visitCard(node.initializer);
+      else ts.forEachChild(node, visit);
+    };
+    visit(file);
+    return rows;
+  }
+
+  const rows = ['src', 'app'].flatMap((root) => readdirSync(resolve(process.cwd(), root), { encoding: 'utf8', recursive: true })
+    .filter((path) => path.endsWith('.tsx') && !path.endsWith('.test.tsx'))
+    .flatMap((path) => cardRows(`${root}/${path.split(sep).join('/')}`)));
+
+  it('finds the number-and-badge row of every list’s phone card', () => {
+    expect(rows.map(({ at }) => at.replace(/:\d+$/, '')).sort()).toEqual([
+      'src/features/assessments/assessment-list.tsx',
+      'src/features/assessments/assessment-list.tsx',
+      'src/features/assessments/released-assessment.tsx',
+      'src/features/questionnaires/questionnaire-list.tsx',
+      'src/features/questionnaires/questionnaire-review-list.tsx',
+      'src/features/requests/request-table.tsx',
+      'src/features/risks/risk-register.tsx',
+    ]);
+  });
+
+  it('wraps each row, so a long badge drops below a long number instead of leaving the card', () => {
+    expect(rows.filter(({ wraps }) => !wraps).map(({ at }) => at)).toEqual([]);
+  });
+
+  it('grows a number-and-title column from a basis, so the badge stays beside it while the number fits', () => {
+    expect(rows.flatMap(({ column }) => (column && !column.growsFromBasis ? [column.at] : []))).toEqual([]);
   });
 });

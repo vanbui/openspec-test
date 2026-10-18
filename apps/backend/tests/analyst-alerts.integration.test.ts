@@ -651,3 +651,95 @@ test("ties on urgency, date, identifier and kind fall back to the source documen
   assert.equal(summary.total, full.pagination.total, "TIED_SUMMARY_TOTAL");
   assertSameUtcDay();
 });
+
+/*
+ * Phase 16 D-13, D-14: a withdrawn Risk raises no alert, nor does any Control Implementation on it. WU, a Critical Risk
+ * with an overdue treatment, an overdue planned control and an ineffective control past its review, sits on a draft
+ * assessment of its own and is withdrawn and reinstated through the 16-05 operations; WR, a Critical Risk with an
+ * overdue treatment and an overdue control on the released AR, carries the withdrawal facts through the fixture, as a
+ * Risk withdrawn before its assessment was released does. Withdrawn, the summary and every list page equal the alerts
+ * without them; reinstated, they are back. This test adds Risks, so it runs last, and it leaves them withdrawn.
+ */
+type CurationOperation = "risk_withdrawals" | "risk_reinstatements";
+
+async function curateRisks(operation: CurationOperation, assessmentId: string, riskIds: readonly string[], reason: string): Promise<void> {
+  const harness = await harnessPromise;
+  const response = await harness.request({
+    path: `/api/v1/risk_assessments/${encodeURIComponent(assessmentId)}/${operation}`,
+    identity: harness.identities.analyst,
+    init: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ riskIds, reason }) },
+  });
+  assert.equal(response.status, 200, `ALERTS_${operation}_FAILED: ${await response.clone().text()}`);
+}
+
+/** The summary and every alert, page by page, each total equal to its summary count. */
+async function everyAlert(label: string): Promise<{ summary: Record<string, unknown>; items: AlertItem[] }> {
+  const summary = await readSummary();
+  const items: AlertItem[] = [];
+  for (let page = 1; ; page += 1) {
+    const read = await readAlerts(`?pageSize=50&page=${page}`);
+    items.push(...read.items);
+    assert.equal(read.pagination.total, summary.total, `${label}_LIST_TOTAL_DISAGREES_WITH_SUMMARY`);
+    if (page >= read.pagination.pageCount) break;
+  }
+  assert.equal(items.length, summary.total, `${label}_ITEMS_DISAGREE_WITH_SUMMARY`);
+  return { summary, items };
+}
+
+test("a withdrawn Critical Risk with an overdue treatment and controls raises no alert, and reinstating it restores each (Phase 16 D-13, D-14)", async () => {
+  assertSameUtcDay();
+  const harness = await harnessPromise;
+  const created = await seedAlertFixtures();
+  const request = await harness.createFixtureDocument("api::csrm-assessment-request.csrm-assessment-request", {
+    requestNumber: requestNumber("PARENT-AW"),
+    title: parentRequestTitle("AW"),
+    requestStatus: "risk-assessment-drafted",
+    requestor: harness.users.owner,
+  });
+  const draft = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", {
+    assessmentNumber: assessmentNumber("AW"),
+    assessmentStatus: "draft",
+    summary: "P7A alert withdrawal assessment AW",
+    assessmentRequest: request,
+  });
+  const without = await everyAlert("WITHOUT");
+
+  const underAssessment = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
+    riskNumber: riskNumber("WU"), riskStatement: riskStatement("WU"), assessment: draft,
+    residualRating: "Critical", treatmentStatus: "Not Started", targetDate: D(-7), identifiedDate: D(-20),
+  });
+  const released = await harness.createFixtureDocument("api::csrm-risk.csrm-risk", {
+    riskNumber: riskNumber("WR"), riskStatement: riskStatement("WR"), assessment: created.assessments.AR,
+    residualRating: "Critical", treatmentStatus: "In Progress", targetDate: D(-9),
+  });
+  for (const [risk, fixture] of [
+    [underAssessment, { control: created.controls.one, controlStatus: "Planned", implementationDueDate: D(-1) }],
+    [underAssessment, { control: created.controls.two, controlStatus: "Implemented", effectivenessRating: "Ineffective", reviewDate: D(-7) }],
+    [released, { control: created.controls.one, controlStatus: "Planned", implementationDueDate: D(-2) }],
+  ] as const) {
+    await harness.createFixtureDocument("api::csrm-control-implementation.csrm-control-implementation", { risk, ...fixture });
+  }
+  const withRisks = await everyAlert("WITH");
+  const kindsOf = (alerts: { items: AlertItem[] }, riskId: string) => alerts.items
+    .filter((item) => item.source.documentId === riskId || item.link.documentId === riskId).map((item) => item.kind).sort();
+  assert.deepEqual(kindsOf(without, underAssessment), [], "WU_ALERTED_BEFORE_IT_EXISTED");
+  assert.ok(kindsOf(withRisks, underAssessment).includes("risk-treatment-overdue"), `WU_RAISES_NO_TREATMENT_ALERT_${kindsOf(withRisks, underAssessment).join(",")}`);
+  assert.ok(kindsOf(withRisks, released).includes("risk-treatment-overdue"), "WR_RAISES_NO_TREATMENT_ALERT");
+  assert.ok(withRisks.items.length >= without.items.length + 4, "WITHDRAWAL_FIXTURES_RAISE_TOO_FEW_ALERTS");
+
+  const reason = "Proposed under the wrong Risk Type";
+  const withdraw = async () => {
+    await curateRisks("risk_withdrawals", draft, [underAssessment], reason);
+    await harness.setRiskWithdrawalFactsFixture(released, { withdrawnAt: new Date().toISOString(), withdrawnBy: harness.users.analyst, withdrawalReason: reason });
+  };
+  await withdraw();
+  assert.deepEqual(await everyAlert("WITHDRAWN"), without, "A_WITHDRAWN_RISK_RAISED_AN_ALERT");
+
+  await curateRisks("risk_reinstatements", draft, [underAssessment], "Withdrawn by mistake");
+  await harness.setRiskWithdrawalFactsFixture(released, { withdrawnAt: null, withdrawnBy: null, withdrawalReason: null });
+  assert.deepEqual(await everyAlert("REINSTATED"), withRisks, "REINSTATING_DID_NOT_RESTORE_THE_ALERTS");
+
+  await withdraw();
+  assert.deepEqual(await everyAlert("WITHDRAWN_AGAIN"), without, "WITHDRAWN_AGAIN_RAISED_AN_ALERT");
+  assertSameUtcDay();
+});

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+import { RecordLink } from './record-link';
 
 /** Ink for every category, or the rating's own severity when the category is a Risk rating (§3.14). */
 export type BarChartTone = 'ink' | 'risk-low' | 'risk-moderate' | 'risk-high' | 'risk-critical';
@@ -19,7 +20,14 @@ type BarChartDatumBase = {
   partial?: boolean;
 };
 
-export type BarChartLinkedDatum = BarChartDatumBase & { href?: string };
+/**
+ * A second figure about a linked row (UI-SPEC §9.2, UI-D34): a text link with the record-link treatment after
+ * the row's own link, never inside it. `label` is its visible text and `accessibleName` its name, which begins
+ * with that text (SC 2.5.3).
+ */
+export type BarChartSecondaryLink = { href: string; label: string; accessibleName: string };
+
+export type BarChartLinkedDatum = BarChartDatumBase & { href?: string; secondary?: BarChartSecondaryLink };
 /** A figure's rows never link: the figure is hidden and its table is the text alternative. */
 export type BarChartFigureDatum = BarChartDatumBase & { href?: never };
 
@@ -120,6 +128,16 @@ function BarRowContent({ cue, datum, scaleMax }: { cue: 'chevron' | 'space' | 'n
 
 const barRowClassName = 'flex min-h-11 flex-col justify-center gap-1';
 
+/*
+ * A list with a secondary link is one grid whose rows share its columns (subgrid), so every mark keeps one
+ * scale. Below the widget's @md size the secondary link wraps beneath its row's count; from @md it sits on the
+ * row's line, in a column sized to the widest secondary link.
+ */
+const secondaryListClassName = 'grid grid-cols-1 @md:grid-cols-[minmax(0,1fr)_auto] @md:gap-x-4';
+const secondaryRowClassName = 'col-span-full grid grid-cols-subgrid';
+/* The record-link treatment at the touch-target height below md, as the dashboard's record links have it. */
+const secondaryLinkClassName = 'inline-flex min-h-11 items-center justify-self-end text-sm tabular-nums md:min-h-6 @md:self-center';
+
 function BarRows({
   ariaLabel,
   className,
@@ -136,19 +154,20 @@ function BarRows({
   scaleMax: number;
 }) {
   const linking = Boolean(linkUnit) && data.some((datum) => datum.href);
+  const withSecondary = Boolean(linkUnit) && data.some((datum) => datum.href && datum.secondary);
 
   // The list role is explicit: without markers, some screen readers drop list semantics and the list's name.
   return (
     <ul
       aria-label={ariaLabel}
       aria-labelledby={labelledBy}
-      className={cn('flex flex-col', className)}
+      className={cn(withSecondary ? secondaryListClassName : 'flex flex-col', className)}
       data-slot="bar-chart-bars"
       role="list"
     >
       {data.map((datum) =>
         linkUnit && datum.href ? (
-          <li key={datum.key}>
+          <li className={withSecondary ? secondaryRowClassName : undefined} key={datum.key}>
             <Link
               aria-label={`${datum.labelText}: ${valueFormat.format(datum.value)} ${unitFor(datum.value, linkUnit)}`}
               className={cn(
@@ -160,6 +179,18 @@ function BarRows({
             >
               <BarRowContent cue="chevron" datum={datum} scaleMax={scaleMax} />
             </Link>
+            {/* After the row's link, never inside it, so no link nests in another (UI-D34). */}
+            {datum.secondary ? (
+              <RecordLink aria-label={datum.secondary.accessibleName} className={secondaryLinkClassName} href={datum.secondary.href}>
+                {datum.secondary.label}
+              </RecordLink>
+            ) : null}
+          </li>
+        ) : withSecondary ? (
+          <li className={secondaryRowClassName} key={datum.key}>
+            <span className={barRowClassName}>
+              <BarRowContent cue={linking ? 'space' : 'none'} datum={datum} scaleMax={scaleMax} />
+            </span>
           </li>
         ) : (
           <li className={barRowClassName} key={datum.key}>
@@ -212,7 +243,8 @@ function Columns({ data, scaleMax }: { data: readonly BarChartFigureDatum[]; sca
  * - `labelled-values` is a named list. Each row exposes its label and value as text; a row with
  *   `href` is one link named `{labelText}: {value} {unit}`. Its visible words open that name (SC 2.5.3),
  *   so `labelText` is the label's visible text, context goes in `unit`, and a label that names itself
- *   (a rating badge) is rendered unlabelled inside the link.
+ *   (a rating badge) is rendered unlabelled inside the link. A linked row may add a `secondary` text link
+ *   after its own, in the same item; a list without one renders as a single flex column.
  * - `figure-with-table` hides the graphic from assistive technology; the section's visible table is
  *   its text alternative, so it can hold no link. Columns become bars below the `@md` container.
  */

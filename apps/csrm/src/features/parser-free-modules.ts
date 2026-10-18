@@ -54,4 +54,22 @@ export const parserFreeModules: readonly ParserFreeModule[] = [
     parsers: [],
     reason: 'Risk server actions validate input and delegate successful transport response parsing to risk-service.',
   },
+  {
+    modulePath: 'features/ai-assistance/ai-assistance-actions.ts',
+    mode: 'no-direct-response-parser',
+    parsers: [],
+    reason: 'The AI run Server Action validates its input and delegates response parsing to ai-assistance-service.',
+  },
+  {
+    modulePath: 'features/questionnaire-ai/questionnaire-ai-actions.ts',
+    mode: 'no-direct-response-parser',
+    parsers: [],
+    reason: delegatesTo('questionnaire-ai-service'),
+  },
+  {
+    modulePath: 'features/risk-curation/risk-curation-actions.ts',
+    mode: 'no-direct-response-parser',
+    parsers: [],
+    reason: delegatesTo('risk-curation-service'),
+  },
 ];

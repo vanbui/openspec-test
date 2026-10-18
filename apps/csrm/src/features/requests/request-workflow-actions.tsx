@@ -10,6 +10,7 @@ import { useViewerTimeZone } from '@/components/csrm/local-time';
 import { StatusBadge } from '@/components/csrm/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { useAttachmentQueue, useFilesInFlight } from '@/features/attachments/file-store';
 import { revertRequestToDraftAction, submitRequestAction } from './request-actions';
 import { canRequestorEdit, canRevertRequestToDraft, type CsrmAssessmentRequest } from './request-domain';
 import { toRequestFormValues } from './request-form-values';
@@ -26,15 +27,66 @@ import { formatInstant } from '@/lib/time/format-instant';
  * left the submitted actions showing after a return to draft in the same page session (UAT-037).
  */
 
-const submitDescription = 'A Security Analyst will review your request and send you a questionnaire to answer. Until they start work on it, you can return the request to draft to make changes.';
+export const submitDescription = 'A Security Analyst will review your request and send you a questionnaire to answer. Until they start work on it, you can return the request to draft to make changes.';
 
-export function RequestWorkflowActions({ request }: { request: CsrmAssessmentRequest }) {
+const count = new Intl.NumberFormat('en-AU');
+
+/** 14-UI-SPEC §2.4 (UI-D5): the submit dialog's line while a file on the page is waiting or being added. */
+export const submitWaitLine = 'Wait until your files are added, then submit.';
+
+/** §2.4: the line when files were not added; they do not block submission. */
+export function submitNotAddedLine(notAdded: number): string {
+  const one = notAdded === 1;
+  return `${count.format(notAdded)} ${one ? 'file wasn’t' : 'files weren’t'} added. Submit anyway, or retry ${one ? 'it' : 'them'} first.`;
+}
+
+export type SubmitFiles = {
+  /** True while a file on the request is waiting or being added: the confirm waits (UI-D5). */
+  waiting: boolean;
+  /** The line under the dialog's description, or null. */
+  line: string | null;
+  /** Submitting anyway forgets the draft's files not added (§1.5). */
+  clearKept: () => void;
+};
+
+/*
+ * §2.4 and §1.5 (UI-D5, UI-D35): what the submit dialog says of the draft's files, from the tab's file store. A file
+ * still on its way when the request becomes submitted would be refused for lacking a note (D-17), so the confirm waits
+ * for it. A file not added never blocks: the line names how many, and submitting clears them. Without the person's key
+ * (no file store) there is nothing to wait for.
+ */
+export function useSubmitFiles(ownerKey: string | null, requestId: string): SubmitFiles {
+  const inFlight = useFilesInFlight(ownerKey ?? '', requestId);
+  const [rows, dispatch] = useAttachmentQueue(ownerKey ?? '', requestId, 'draft');
+  const kept = rows.filter((row) => row.stage === 'refused' || row.stage === 'failed');
+  const waiting = ownerKey !== null && inFlight > 0;
+  return {
+    waiting,
+    line: waiting ? submitWaitLine : ownerKey !== null && kept.length > 0 ? submitNotAddedLine(kept.length) : null,
+    clearKept: () => {
+      for (const row of kept) dispatch({ type: 'remove', key: row.key });
+    },
+  };
+}
+
+/** The submit dialog's description with the files' line beneath it; the line is polite live text, so a change is said. */
+export function SubmitDescription({ line }: { line: string | null }) {
+  return (
+    <>
+      {submitDescription}
+      <span aria-live="polite" className="mt-2 block text-foreground empty:hidden">{line}</span>
+    </>
+  );
+}
+
+export function RequestWorkflowActions({ draftOwnerKey = null, request }: { request: CsrmAssessmentRequest; draftOwnerKey?: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const status = request.requestStatus;
   /* The viewer's local date, never a zone label (D-19), as one sentence the status reads with. */
   const submittedOn = formatInstant(request.submittedDate, { zone: useViewerTimeZone(), style: 'date' });
   const root = useRef<HTMLDivElement>(null);
+  const files = useSubmitFiles(draftOwnerKey, request.documentId);
   /* Set by a transition this component started; the refreshed status then moves focus once. */
   const transitioned = useRef(false);
 
@@ -72,6 +124,7 @@ export function RequestWorkflowActions({ request }: { request: CsrmAssessmentReq
       throw new Error('Submission failed');
     }
     transitioned.current = true;
+    files.clearKept();
     toast.success('Request submitted.');
     router.refresh();
   }
@@ -97,7 +150,7 @@ export function RequestWorkflowActions({ request }: { request: CsrmAssessmentReq
       {error ? <Alert variant="destructive"><AlertTitle>Request not submitted</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
       <div className="flex flex-wrap gap-3">
         <Link className={buttonVariants({ variant: 'outline' })} href={`/app/requests/${request.documentId}/edit`}>Edit request</Link>
-        <ConfirmDialog confirmLabel="Submit request" confirmVariant="default" description={submitDescription} errorMessage={error} onConfirm={submit} pendingLabel="Submitting request…" title="Submit this assessment request?" trigger={<Button type="button">Submit request</Button>} />
+        <ConfirmDialog confirmDisabled={files.waiting} confirmLabel="Submit request" confirmVariant="default" description={<SubmitDescription line={files.line} />} errorMessage={error} onConfirm={submit} pendingLabel="Submitting request…" title="Submit this assessment request?" trigger={<Button type="button">Submit request</Button>} />
       </div>
     </div>
   );

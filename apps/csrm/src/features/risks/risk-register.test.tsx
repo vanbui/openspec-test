@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { searchAfterPause } from '@/test/debounced-search';
 import { PageHeader } from '@/components/shell/app-shell';
 import type { RiskPickerOption, RiskRegisterItem, RiskRegisterPayload, RiskRegisterQuery } from './risk-schema';
 import { RiskRegisterTable } from './risk-register';
@@ -47,6 +48,9 @@ const overdueRisk: RiskRegisterItem = {
   targetDate: '2025-09-12',
   treatmentDueState: 'overdue',
   assessment: { documentId: 'assessment-alpha', assessmentNumber: 'RA-2026-001', title: 'Customer portal' },
+  accepted: false,
+  stage: 'released',
+  treatmentAction: 'Treat',
 };
 
 const undatedRisk: RiskRegisterItem = {
@@ -61,12 +65,15 @@ const undatedRisk: RiskRegisterItem = {
   targetDate: null,
   treatmentDueState: 'no-target-date',
   assessment: { documentId: 'assessment-beta', assessmentNumber: 'RA-2026-002', title: 'Payments review' },
+  accepted: false,
+  stage: 'under-assessment',
+  treatmentAction: null,
 };
 
 const selectedLabels: RiskRegisterPayload['meta']['selectedLabels'] = {
   riskOwner: { documentId: 'user-alice', label: 'Alice Analyst' },
   treatmentOwner: { documentId: 'user-bob', label: 'Bob Doe' },
-  assessment: { documentId: 'assessment-alpha', label: 'RA-2026-001' },
+  assessment: { documentId: 'assessment-alpha', label: 'RA-2026-001 · Customer portal' },
   system: { documentId: 'system-portal', label: 'Customer portal' },
   asset: { documentId: 'asset-identity', label: 'Identity records' },
 };
@@ -78,7 +85,7 @@ const options: {
   assets: readonly RiskPickerOption[];
 } = {
   owners: [{ documentId: 'user-bob', label: 'Bob Doe' }],
-  assessments: [{ documentId: 'assessment-alpha', label: 'RA-2026-001' }],
+  assessments: [{ documentId: 'assessment-alpha', label: 'RA-2026-001 · Customer portal' }],
   systems: [{ documentId: 'system-portal', label: 'Customer portal' }],
   assets: [{ documentId: 'asset-identity', label: 'Identity records' }],
 };
@@ -86,7 +93,7 @@ const options: {
 function renderRegister(overrides: Partial<React.ComponentProps<typeof RiskRegisterTable>> = {}) {
   return render(
     <>
-      <PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." />
+      <PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." />
       <RiskRegisterTable
         risks={[overdueRisk, undatedRisk]}
         query={query}
@@ -109,7 +116,7 @@ describe('RiskRegisterTable', () => {
   it('renders the honest responsive register contract with eight sortable columns', () => {
     renderRegister();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Risk Register' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Risk register' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Risk Register results' })).toBeInTheDocument();
     expect(screen.getByText('82 results')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 4')).toBeInTheDocument();
@@ -387,7 +394,7 @@ describe('RiskRegisterTable', () => {
 
     expect(screen.getByRole('button', { name: 'Filters (13)' })).toBeInTheDocument();
     expect(screen.getByText('Risk owner: Alice Analyst')).toBeInTheDocument();
-    expect(screen.getByText('Related assessment: RA-2026-001')).toBeInTheDocument();
+    expect(screen.getByText('Related assessment: RA-2026-001 · Customer portal')).toBeInTheDocument();
     expect(screen.getByText('Risk state: Open')).toBeInTheDocument();
     expect(screen.getByText('Target date from: 2025-01-01')).toBeInTheDocument();
     expect(screen.getByText('Target date to: 2025-12-31')).toBeInTheDocument();
@@ -406,13 +413,13 @@ describe('RiskRegisterTable', () => {
     for (const [label, value, search, optionLabel] of [
       ['Risk owner', 'user-bob', 'Bob', 'Bob Doe'],
       ['Treatment owner', 'user-bob', 'Bob', 'Bob Doe'],
-      ['Related assessment', 'assessment-alpha', 'RA', 'RA-2026-001'],
+      ['Related assessment', 'assessment-alpha', 'RA', 'RA-2026-001 · Customer portal'],
       ['Impacted system', 'system-portal', 'Portal', 'Customer portal'],
       ['Impacted asset', 'asset-identity', 'Identity', 'Identity records'],
     ] as const) {
       const combobox = screen.getByRole('combobox', { name: label });
-      await user.type(combobox, search);
-      await user.click(await screen.findByRole('option', { name: optionLabel }));
+      await searchAfterPause(combobox, search);
+      await user.click(screen.getByRole('option', { name: optionLabel }));
       expect(replace).toHaveBeenLastCalledWith(expect.stringContaining(`${label === 'Risk owner' ? 'riskOwner' : label === 'Treatment owner' ? 'treatmentOwner' : label === 'Related assessment' ? 'assessment' : label === 'Impacted system' ? 'system' : 'asset'}=${value}`), { scroll: false });
     }
     await user.selectOptions(screen.getByRole('combobox', { name: 'Mitigation-control status' }), 'Implemented');
@@ -517,9 +524,12 @@ describe('RiskRegisterTable', () => {
     const stateSelect = screen.getByRole('combobox', { name: 'Risk state' });
     expect(stateSelect).toHaveValue('');
     expect(within(stateSelect).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
-      ['', 'All'],
+      // Phase 16 D-08, UI-SPEC §11.1: the default reads Open and closed, since it never lists a withdrawn Risk.
+      ['', 'Open and closed'],
       ['open', 'Open'],
       ['closed', 'Closed'],
+      // Phase 16 D-08: the explicit value that alone lists withdrawn Risks.
+      ['withdrawn', 'Withdrawn'],
     ]);
     await user.selectOptions(stateSelect, 'Closed');
     expect(replace).toHaveBeenLastCalledWith('/app/risks?state=closed&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
@@ -534,12 +544,357 @@ describe('RiskRegisterTable', () => {
 
     // The mobile Sheet reuses the same labelled control with the active value.
     await user.click(screen.getByRole('button', { name: 'Filters (1)' }));
-    const sheet = screen.getByRole('dialog', { name: 'Risk Register filters' });
+    const sheet = screen.getByRole('dialog', { name: 'Risk register filters' });
     expect(within(sheet).getByRole('combobox', { name: 'Risk state' })).toHaveValue('open');
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByRole('button', { name: 'Remove Risk state filter' }));
     expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+  });
+
+  /*
+   * Phase 16 D-08, D-45, UI-D9, 16-UI-SPEC §11.1 and §11.2: withdrawn Risks are listed only when an analyst asks for
+   * them, under a notice that they count nowhere, each marked Withdrawn in words on its row and its card.
+   */
+  it('lists withdrawn Risks only under Risk state: Withdrawn, with the notice and a Withdrawn badge on each row and card (D-08, D-45)', async () => {
+    const user = userEvent.setup();
+    const notice = 'Withdrawn risks don’t count in any assessment, figure or export. Only Security Analysts see them.';
+    const view = renderRegister();
+    // The default view carries no notice and no Withdrawn badge.
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+    expect(screen.queryByText('Withdrawn', { exact: true })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Risk state' }), 'Withdrawn');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?state=withdrawn&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+    view.unmount();
+
+    replace.mockReset();
+    const withdrawnView = renderRegister({ query: { ...query, state: 'withdrawn' } });
+    expect(screen.getByText('Risk state: Withdrawn')).toBeInTheDocument();
+    const shown = screen.getByText(notice);
+    expect(shown).toHaveClass('text-sm', 'text-foreground-secondary');
+    expect(shown.querySelector('svg')).not.toBeNull();
+    // The notice sits above the table.
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    expect(shown.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]');
+    if (!mobile) throw new Error('Mobile Risk Register surface is missing.');
+    for (const riskNumber of ['RSK-2026-001', 'RSK-2026-002']) {
+      const row = within(table).getByRole('row', { name: new RegExp(riskNumber) });
+      const numberLink = within(row).getByRole('link', { name: riskNumber });
+      const cell = numberLink.closest('td') as HTMLElement;
+      const badge = within(cell).getByText('Withdrawn', { exact: true });
+      // A second line in the Risk number cell, after the number.
+      expect(numberLink.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING, `${riskNumber} badge follows the number`).toBeTruthy();
+      expect(badge.closest('[data-slot="badge"]'), `${riskNumber} row badge`).not.toBeNull();
+
+      const card = within(mobile).getByRole('link', { name: riskNumber }).closest('article') as HTMLElement;
+      const cardLink = within(card).getByRole('link', { name: riskNumber });
+      const cardBadge = within(card).getByText('Withdrawn', { exact: true });
+      expect(cardLink.compareDocumentPosition(cardBadge) & Node.DOCUMENT_POSITION_FOLLOWING, `${riskNumber} card badge follows the number`).toBeTruthy();
+    }
+
+    // A filtered-empty withdrawn list is the shared filtered empty state.
+    withdrawnView.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[]} query={{ ...query, state: 'withdrawn' }} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="empty" /></>);
+    expect(screen.getByRole('heading', { name: 'No Risks match these filters' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Clear filters' }).length).toBeGreaterThan(0);
+
+    // Clearing returns to Open and closed, with no notice.
+    withdrawnView.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[overdueRisk]} query={{ ...query, state: 'withdrawn' }} pagination={{ page: 1, pageSize: 25, pageCount: 1, total: 1 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" /></>);
+    await user.click(screen.getByRole('button', { name: 'Remove Risk state filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    withdrawnView.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[overdueRisk]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 1, total: 1 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" /></>);
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const stateSelect = screen.getByRole('combobox', { name: 'Risk state' });
+    expect(stateSelect).toHaveValue('');
+    expect(within(stateSelect).getByRole('option', { selected: true })).toHaveTextContent('Open and closed');
+  });
+
+  /*
+   * D-41, D-44, UI-SPEC §9.5: a row says in words whether its Risk is released or still under assessment, on a
+   * caption line under its Related assessment link, and its card says the same after the link. Never colour alone.
+   */
+  it('marks each row’s stage in text under its Related assessment link and on its card (D-44, UI-D36)', () => {
+    renderRegister();
+
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]');
+    if (!mobile) throw new Error('Mobile Risk Register surface is missing.');
+    for (const [riskNumber, assessmentNumber, stage] of [
+      ['RSK-2026-001', 'RA-2026-001', 'Released'],
+      ['RSK-2026-002', 'RA-2026-002', 'Under assessment'],
+    ] as const) {
+      const row = within(table).getByRole('row', { name: new RegExp(riskNumber) });
+      const assessmentLink = within(row).getByRole('link', { name: assessmentNumber });
+      const cell = assessmentLink.closest('td') as HTMLElement;
+      const marker = within(cell).getByText(stage, { exact: true });
+      // A second line at the caption size in the secondary text colour, after the link.
+      expect(marker.tagName, `${riskNumber} desktop marker is its own line`).not.toBe('SPAN');
+      expect(marker, `${riskNumber} desktop marker type`).toHaveClass('text-xs', 'text-foreground-secondary');
+      expect(assessmentLink.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING, `${riskNumber} marker follows the link`).toBeTruthy();
+      expect(within(row).getAllByText(stage, { exact: true }), `${riskNumber} one desktop marker`).toHaveLength(1);
+
+      const card = within(mobile).getByRole('link', { name: riskNumber }).closest('article') as HTMLElement;
+      const cardLink = within(card).getByRole('link', { name: assessmentNumber });
+      const cardMarker = within(card).getByText(stage, { exact: true });
+      expect(cardMarker, `${riskNumber} card marker type`).toHaveClass('text-xs', 'text-foreground-secondary');
+      expect(cardLink.compareDocumentPosition(cardMarker) & Node.DOCUMENT_POSITION_FOLLOWING, `${riskNumber} card marker follows the link`).toBeTruthy();
+    }
+    expect(within(table).queryByText('Accepted')).not.toBeInTheDocument();
+  });
+
+  it('offers Stage in More filters with its chip, in the phone sheet, and clears it with every filter (D-44, UI-SPEC §9.5)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const dialog = screen.getByRole('dialog', { name: 'More filters' });
+    const stageSelect = within(dialog).getByRole('combobox', { name: 'Stage' });
+    expect(stageSelect).toHaveValue('');
+    expect(within(stageSelect).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
+      ['', 'All'],
+      ['released', 'Released'],
+      ['under-assessment', 'Under assessment'],
+    ]);
+    // It follows Risk state in the panel.
+    const selects = within(dialog).getAllByRole('combobox').map((element) => element.getAttribute('aria-label'));
+    expect(selects.indexOf('Stage')).toBe(selects.indexOf('Risk state') + 1);
+    await user.selectOptions(stageSelect, 'Under assessment');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?stage=under-assessment&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+
+    replace.mockReset();
+    view.unmount();
+    renderRegister({ query: { ...query, stage: 'released', state: 'open', page: 3 }, pagination: { page: 3, pageSize: 25, pageCount: 4, total: 82 } });
+    expect(screen.getByText('Stage: Released')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Filters (2)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Risk register filters' });
+    expect(within(sheet).getByRole('combobox', { name: 'Stage' })).toHaveValue('released');
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Remove Stage filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?state=open&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+  });
+
+  /*
+   * D-41, D-44, UI-SPEC §9.5: a released Risk with Accept says Accepted on a caption line under its treatment
+   * status, and its card reads "Released · Accepted". A Risk still under assessment with Accept is not accepted.
+   */
+  it('marks a released Accept Risk as Accepted under its treatment status and on its card, and no Risk under assessment (D-41, D-44)', () => {
+    const acceptedRisk: RiskRegisterItem = { ...overdueRisk, documentId: 'risk-accepted', riskNumber: 'RSK-2026-030', treatmentAction: 'Accept', accepted: true };
+    const draftAcceptRisk: RiskRegisterItem = {
+      ...overdueRisk, documentId: 'risk-draft-accept', riskNumber: 'RSK-2026-031', treatmentAction: 'Accept', stage: 'under-assessment',
+    };
+    renderRegister({ risks: [acceptedRisk, draftAcceptRisk, overdueRisk] });
+
+    const table = screen.getByRole('table', { name: 'Risk Register results' });
+    const mobile = document.querySelector<HTMLElement>('[data-slot="data-table-mobile"]');
+    if (!mobile) throw new Error('Mobile Risk Register surface is missing.');
+    const row = (riskNumber: string) => within(table).getByRole('row', { name: new RegExp(riskNumber) });
+    const card = (riskNumber: string) => within(mobile).getByRole('link', { name: riskNumber }).closest('article') as HTMLElement;
+
+    const accepted = within(row('RSK-2026-030')).getByText('Accepted', { exact: true });
+    expect(accepted, 'the marker is a caption line').toHaveClass('text-xs', 'text-foreground-secondary');
+    const badge = row('RSK-2026-030').querySelector<HTMLElement>('[data-slot="badge"][data-tone]') as HTMLElement;
+    expect(badge, 'the treatment status badge').toHaveTextContent(/^In Progress$/);
+    expect(badge.closest('td'), 'the marker shares the treatment status cell').toBe(accepted.closest('td'));
+    expect(badge.compareDocumentPosition(accepted) & Node.DOCUMENT_POSITION_FOLLOWING, 'the marker follows the badge').toBeTruthy();
+    expect(within(card('RSK-2026-030')).getByText('Released · Accepted', { exact: true })).toHaveClass('text-xs', 'text-foreground-secondary');
+
+    for (const riskNumber of ['RSK-2026-031', 'RSK-2026-001']) {
+      expect(within(row(riskNumber)).queryByText(/Accepted/), `${riskNumber} desktop`).not.toBeInTheDocument();
+      expect(within(card(riskNumber)).queryByText(/Accepted/), `${riskNumber} card`).not.toBeInTheDocument();
+    }
+    expect(within(card('RSK-2026-031')).getByText('Under assessment', { exact: true })).toBeInTheDocument();
+    expect(within(card('RSK-2026-001')).getByText('Released', { exact: true })).toBeInTheDocument();
+  });
+
+  it('offers Treatment action in More filters with its chip, in the phone sheet, and clears it with every filter (D-44, UI-SPEC §9.5)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const dialog = screen.getByRole('dialog', { name: 'More filters' });
+    const actionSelect = within(dialog).getByRole('combobox', { name: 'Treatment action' });
+    expect(actionSelect).toHaveValue('');
+    expect(within(actionSelect).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
+      ['', 'All'],
+      ['Accept', 'Accept'],
+      ['Treat', 'Treat'],
+    ]);
+    // It follows Stage in the panel.
+    const selects = within(dialog).getAllByRole('combobox').map((element) => element.getAttribute('aria-label'));
+    expect(selects.indexOf('Treatment action')).toBe(selects.indexOf('Stage') + 1);
+    await user.selectOptions(actionSelect, 'Accept');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?treatmentAction=Accept&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+
+    replace.mockReset();
+    view.unmount();
+    renderRegister({ query: { ...query, stage: 'released', treatmentAction: 'Accept', state: 'open' } });
+    expect(screen.getByText('Treatment action: Accept')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters (3)' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Filters (3)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Risk register filters' });
+    expect(within(sheet).getByRole('combobox', { name: 'Treatment action' })).toHaveValue('Accept');
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Remove Treatment action filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?state=open&stage=released&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+  });
+
+  /*
+   * D-02 item 3, D-35, UI-SPEC §9.5: Due state lists the Risks behind each due-state figure, by the server's one
+   * rule. It follows Treatment action in More filters and the phone sheet, and its chip names the state in words.
+   */
+  it('offers Due state in More filters with its chip, in the phone sheet, and clears it with every filter (D-35, UI-SPEC §9.5)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const dialog = screen.getByRole('dialog', { name: 'More filters' });
+    const dueStateSelect = within(dialog).getByRole('combobox', { name: 'Due state' });
+    expect(dueStateSelect).toHaveValue('');
+    expect(within(dueStateSelect).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
+      ['', 'All'],
+      ['overdue', 'Overdue'],
+      ['due-soon', 'Due soon'],
+      ['later', 'Due later'],
+      ['no-target-date', 'No target date'],
+      ['complete-or-closed', 'Complete or closed'],
+    ]);
+    const selects = within(dialog).getAllByRole('combobox').map((element) => element.getAttribute('aria-label'));
+    expect(selects.indexOf('Due state')).toBe(selects.indexOf('Treatment action') + 1);
+    await user.selectOptions(dueStateSelect, 'Due later');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?dueState=later&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+
+    replace.mockReset();
+    view.unmount();
+    renderRegister({ query: { ...query, dueState: 'later', state: 'open', page: 3 }, pagination: { page: 3, pageSize: 25, pageCount: 4, total: 82 } });
+    expect(screen.getByText('Due state: Due later')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Filters (2)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Risk register filters' });
+    expect(within(sheet).getByRole('combobox', { name: 'Due state' })).toHaveValue('later');
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Remove Due state filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?state=open&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+  });
+
+  /*
+   * D-02 item 3, D-35, UI-SPEC §9.5: every figure that counts Risks has its register filter. The core selects
+   * offer Not rated and Not provided; More filters offers Mitigation-control effectiveness after Due state, Any
+   * mitigation control, and the No impacted system checkbox under the picker, exclusive with a chosen system.
+   */
+  it('offers Not rated and Not provided in the core selects, with their chips (D-35, UI-SPEC §9.5)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister();
+    for (const label of ['Inherent rating', 'Residual rating']) {
+      const select = screen.getAllByRole('combobox', { name: label })[0];
+      expect(within(select).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
+        ['', 'All'], ['Low', 'Low'], ['Moderate', 'Moderate'], ['High', 'High'], ['Critical', 'Critical'], ['none', 'Not rated'],
+      ]);
+    }
+    const status = screen.getAllByRole('combobox', { name: 'Treatment status' })[0];
+    expect(within(status).getAllByRole('option').at(-1)).toHaveValue('none');
+    expect(within(status).getAllByRole('option').at(-1)).toHaveTextContent('Not provided');
+    await user.selectOptions(screen.getAllByRole('combobox', { name: 'Residual rating' })[0], 'Not rated');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?residualRating=none&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+
+    view.unmount();
+    renderRegister({ query: { ...query, inherentRating: 'none', residualRating: 'none', treatmentStatus: 'none' } as RiskRegisterQuery });
+    expect(screen.getByText('Inherent rating: Not rated')).toBeInTheDocument();
+    expect(screen.getByText('Residual rating: Not rated')).toBeInTheDocument();
+    expect(screen.getByText('Treatment status: Not provided')).toBeInTheDocument();
+  });
+
+  it('offers Mitigation-control effectiveness and Any mitigation control in More filters, with their chips (D-35, UI-SPEC §9.5)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister();
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const dialog = screen.getByRole('dialog', { name: 'More filters' });
+    const effectiveness = within(dialog).getByRole('combobox', { name: 'Mitigation-control effectiveness' });
+    expect(within(effectiveness).getAllByRole('option').map((option) => [option.getAttribute('value'), option.textContent])).toEqual([
+      ['', 'All'],
+      ['Effective', 'Effective'],
+      ['Partially Effective', 'Partially Effective'],
+      ['Ineffective', 'Ineffective'],
+      ['Not Assessed', 'Not Assessed'],
+      ['none', 'Not provided'],
+    ]);
+    const selects = within(dialog).getAllByRole('combobox').map((element) => element.getAttribute('aria-label'));
+    expect(selects.indexOf('Mitigation-control effectiveness')).toBe(selects.indexOf('Due state') + 1);
+    await user.selectOptions(effectiveness, 'Effective');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?mitigationEffectiveness=Effective&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    const status = within(dialog).getByRole('combobox', { name: 'Mitigation-control status' });
+    expect(within(status).getAllByRole('option').map((option) => option.textContent)).toContain('Any mitigation control');
+    await user.selectOptions(status, 'Any mitigation control');
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?mitigationStatus=any&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+
+    replace.mockReset();
+    view.unmount();
+    renderRegister({ query: { ...query, mitigationEffectiveness: 'Effective', mitigationStatus: 'any' } as RiskRegisterQuery });
+    expect(screen.getByText('Mitigation-control effectiveness: Effective')).toBeInTheDocument();
+    expect(screen.getByText('Mitigation-control status: Any mitigation control')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Filters (2)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Risk register filters' });
+    expect(within(sheet).getByRole('combobox', { name: 'Mitigation-control effectiveness' })).toHaveValue('Effective');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+  });
+
+  it('offers No impacted system under the Impacted system picker, exclusive with a chosen system (D-35, UI-SPEC §9.5)', async () => {
+    const user = userEvent.setup();
+    const view = renderRegister({ query: { ...query, system: 'system-portal' }, selectedLabels });
+
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const dialog = screen.getByRole('dialog', { name: 'More filters' });
+    const noSystem = within(dialog).getByRole('checkbox', { name: 'No impacted system' });
+    expect(noSystem).not.toBeChecked();
+    await user.click(noSystem);
+    // Choosing no impacted system clears the chosen system.
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?impactedSystem=none&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+
+    replace.mockReset();
+    view.unmount();
+    renderRegister({ query: { ...query, impactedSystem: 'none' } as RiskRegisterQuery });
+    expect(screen.getByText('Impacted system: None')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const panel = screen.getByRole('dialog', { name: 'More filters' });
+    expect(within(panel).getByRole('checkbox', { name: 'No impacted system' })).toBeChecked();
+    // Choosing a system clears no impacted system.
+    await searchAfterPause(within(panel).getByRole('combobox', { name: 'Impacted system' }), 'Portal');
+    await user.click(screen.getByRole('option', { name: 'Customer portal' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?system=system-portal&sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Remove Impacted system filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/risks?sort=targetDate%3Aasc&pageSize=25', { scroll: false });
+  });
+
+  /* D-32, UI-SPEC §7.4: the chip names the assessment by its number and request title, even before the server's label. */
+  it('names the Related assessment chip by its number and request title (D-32)', () => {
+    renderRegister({ query: { ...query, assessment: 'assessment-alpha' }, selectedLabels: {} });
+    expect(screen.getByText('Related assessment: RA-2026-001 · Customer portal')).toBeInTheDocument();
   });
 
   it('reuses labelled date controls in the mobile Sheet and preserves values while loading', async () => {
@@ -548,11 +903,11 @@ describe('RiskRegisterTable', () => {
     const view = renderRegister({ query: datedQuery });
 
     await user.click(screen.getByRole('button', { name: 'Filters (2)' }));
-    const sheet = screen.getByRole('dialog', { name: 'Risk Register filters' });
+    const sheet = screen.getByRole('dialog', { name: 'Risk register filters' });
     expect(within(sheet).getByLabelText('Target date from')).toHaveValue('2025-01-01');
     expect(within(sheet).getByLabelText('Target date to')).toHaveValue('2025-12-31');
 
-    view.rerender(<><PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." /><RiskRegisterTable risks={[overdueRisk, undatedRisk]} query={datedQuery} pagination={{ page: 1, pageSize: 25, pageCount: 4, total: 82 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="loading" /></>);
+    view.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[overdueRisk, undatedRisk]} query={datedQuery} pagination={{ page: 1, pageSize: 25, pageCount: 4, total: 82 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="loading" /></>);
     expect(within(sheet).getByLabelText('Target date from')).toBeDisabled();
     expect(within(sheet).getByLabelText('Target date from')).toHaveValue('2025-01-01');
     expect(within(sheet).getByLabelText('Target date to')).toBeDisabled();
@@ -565,28 +920,28 @@ describe('RiskRegisterTable', () => {
     expect(screen.getByRole('status', { name: 'Loading Risk Register' })).toBeInTheDocument();
     expect(screen.queryByText('30 results')).not.toBeInTheDocument();
 
-    view.rerender(<><PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="empty" /></>);
+    view.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="empty" /></>);
     expect(screen.getByRole('heading', { name: 'No Risks yet' })).toBeInTheDocument();
 
-    view.rerender(<><PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." /><RiskRegisterTable risks={[]} query={{ ...query, q: 'missing' }} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="empty" /></>);
+    view.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[]} query={{ ...query, q: 'missing' }} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="empty" /></>);
     expect(screen.getByRole('heading', { name: 'No Risks match these filters' })).toBeInTheDocument();
 
-    view.rerender(<><PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="error" /></>);
-    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load the Risk Register');
+    view.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="error" /></>);
+    expect(screen.getByRole('alert')).toHaveTextContent('We couldn’t load the Risk register');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
 
-    view.rerender(<><PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="permission" /></>);
-    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the Risk Register');
+    view.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="permission" /></>);
+    expect(screen.getByRole('alert')).toHaveTextContent('You don’t have access to the Risk register');
     expect(screen.queryByRole('search')).not.toBeInTheDocument();
     expect(screen.queryByText(/results/)).not.toBeInTheDocument();
 
-    view.rerender(<><PageHeader title="Risk Register" description="Search and manage contextual Risks across authorised assessments." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="loading" /></>);
+    view.rerender(<><PageHeader title="Risk register" description="Search and manage Risks from released risk assessments and from those still under assessment." /><RiskRegisterTable risks={[]} query={query} pagination={{ page: 1, pageSize: 25, pageCount: 0, total: 0 }} selectedLabels={{}} pickerOptions={options} densityUserId="Bob Doe" state="loading" /></>);
     expect(screen.getByRole('status', { name: 'Loading Risk Register' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search Risks' })).toBeDisabled();
   });
 
   it('keeps the route server-owned, capability-gated, canonical, and typed', () => {
-    const page = readFileSync(resolve(process.cwd(), 'app/(app)/app/risks/page.tsx'), 'utf8');
+    const page = readFileSync(resolve(process.cwd(), 'app/(app)/app/risks/(register)/page.tsx'), 'utf8');
     expect(page).toContain('await searchParams');
     expect(page).toContain('riskRegisterQuerySchema');
     expect(page).toContain('searchRiskRegisterRelationsAction');
@@ -594,7 +949,6 @@ describe('RiskRegisterTable', () => {
     expect(page).toContain("'risk:manage'");
     expect(page).toContain('listRiskRegister');
     expect(page).not.toContain("'use client'");
-    expect(page).not.toMatch(/\bfetch\s*\(/);
     expect(page).not.toContain('targetDateFrom');
     expect(page).not.toContain('targetDateTo');
   });

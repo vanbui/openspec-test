@@ -20,28 +20,25 @@ import type {
   AssessmentRiskListItem,
   ControlImplementation,
   ReleasedAssessmentDetailForActor,
-  ReleasedAssessmentSummary,
+  ReleasedAssessmentListItem,
 } from './assessment-schema';
+import { AiAssistanceNotice } from '@/features/ai-assistance/ai-assistance-notice';
+import { assessmentRatings } from './assessment-domain';
 import { AssessmentLifecycleStepper } from './assessment-lifecycle-stepper';
 import { AssessmentRequestLink } from './assessment-request-link';
 import { formatCalendarDate, ReleasedRiskDetails } from './released-risk-details';
 import type { AssessmentCollectionQuery, CollectionPagination } from './assessment-service';
+import { formatRequestDate } from '@/features/requests/request-domain';
 import { usePathname, useRouter } from 'next/navigation';
-import { type FormEvent, useMemo } from 'react';
+import { type FormEvent, type ReactNode, useMemo } from 'react';
 
 export type ReleasedAssessmentListState = 'populated' | 'loading' | 'empty' | 'error' | 'permission';
 export type ReleasedAssessmentDetailState = 'populated' | 'empty' | 'error' | 'permission' | 'unavailable' | 'contract-mismatch';
 
 type ControlsByRisk = Readonly<Record<string, readonly ControlImplementation[]>>;
 
-const dateFormatter = new Intl.DateTimeFormat('en-AU', { dateStyle: 'long', timeZone: 'UTC' });
-
 function releasedAssessmentHref(documentId: string): string {
   return `/app/assessments/${encodeURIComponent(documentId)}`;
-}
-
-function formatDate(value: string | null): string {
-  return value ? dateFormatter.format(new Date(value)) : 'Not recorded';
 }
 
 function displayText(value: string | null): string {
@@ -52,12 +49,18 @@ function Definition({ label, value }: { label: string; value: React.ReactNode })
   return <div className="grid gap-1"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="text-sm text-foreground">{value}</dd></div>;
 }
 
-const releasedAssessmentColumns: DataTableColumn<ReleasedAssessmentSummary>[] = [
+/*
+ * UI-D29 and D-55: the request's title identifies each released assessment, as on the analyst list, and the release
+ * instant reads in the viewer's time zone in the long form (`27 September 2026`).
+ */
+const releasedAssessmentColumns: DataTableColumn<ReleasedAssessmentListItem>[] = [
   { accessorKey: 'assessmentNumber', header: 'Assessment', enableSorting: true, numeric: 'identity', cell: (_value, assessment) => <RecordLink href={releasedAssessmentHref(assessment.documentId)}>{assessment.assessmentNumber}</RecordLink> },
-  { accessorKey: 'summary', header: 'Summary', cell: (_value, assessment) => displayText(assessment.summary) },
+  { accessorKey: 'requestTitle', header: 'Request title', wrap: true, cell: (_value, assessment) => <span className="line-clamp-2">{assessment.requestTitle ?? 'Not recorded'}</span> },
   { accessorKey: 'overallRating', header: 'Overall rating', cell: (_value, assessment) => assessment.overallRating ? <RiskRatingBadge rating={assessment.overallRating} /> : <Badge variant="outline">Rating not recorded</Badge> },
-  { accessorKey: 'approvalDate', header: 'Released', enableSorting: true, cell: (_value, assessment) => formatDate(assessment.approvalDate) },
+  { accessorKey: 'approvalDate', header: 'Released', enableSorting: true, cell: (_value, assessment) => <LocalInstant fallback="Not recorded" style="date-long" value={assessment.approvalDate} /> },
 ];
+
+const clearedFilters = { q: '', status: undefined, overallRating: undefined, approvedFrom: undefined, approvedTo: undefined } as const;
 
 function sortingFor(sort: AssessmentCollectionQuery['sort']) {
   const [id, direction] = sort.split(':') as [string, 'asc' | 'desc'];
@@ -77,24 +80,30 @@ export function ReleasedAssessmentListSkeleton() {
   return <ReleasedAssessmentList assessments={[]} state="loading" />;
 }
 
-export function ReleasedAssessmentList({ assessments, pagination, query = { q: '', sort: 'generatedDate:desc', page: 1, pageSize: 25 }, state }: { assessments: readonly ReleasedAssessmentSummary[]; pagination?: CollectionPagination; query?: AssessmentCollectionQuery; state?: ReleasedAssessmentListState }) {
+export function ReleasedAssessmentList({ assessments, pagination, query = { q: '', sort: 'generatedDate:desc', page: 1, pageSize: 25 }, state }: { assessments: readonly ReleasedAssessmentListItem[]; pagination?: CollectionPagination; query?: AssessmentCollectionQuery; state?: ReleasedAssessmentListState }) {
   const pathname = usePathname();
   const router = useRouter();
   const resolvedPagination = pagination ?? { page: query.page, pageSize: query.pageSize, pageCount: assessments.length ? 1 : 0, total: assessments.length };
-  const navigate = (next: AssessmentCollectionQuery) => { const params = new URLSearchParams(); if (next.q) params.set('q', next.q); if (next.status) params.set('status', next.status); params.set('sort', next.sort); if (next.page > 1) params.set('page', String(next.page)); params.set('pageSize', String(next.pageSize)); router.replace(`${pathname}?${params.toString()}`, { scroll: false }); };
+  const navigate = (next: AssessmentCollectionQuery) => { const params = new URLSearchParams(); if (next.q) params.set('q', next.q); if (next.status) params.set('status', next.status); if (next.overallRating) params.set('overallRating', next.overallRating); if (next.approvedFrom) params.set('approvedFrom', next.approvedFrom); if (next.approvedTo) params.set('approvedTo', next.approvedTo); params.set('sort', next.sort); if (next.page > 1) params.set('page', String(next.page)); params.set('pageSize', String(next.pageSize)); router.replace(`${pathname}?${params.toString()}`, { scroll: false }); };
   const resetPage = (changes: Partial<AssessmentCollectionQuery>) => navigate({ ...query, ...changes, page: 1 });
   const filters = useMemo<DataTableFilter[]>(() => [
     ...(query.q ? [{ id: 'q', label: 'Search', value: query.q }] : []),
     // The chip reads the shared mapping, as the option does: the stored approved reads Released.
     ...(query.status ? [{ id: 'status', label: 'Status', value: statusLabel('assessment', query.status) }] : []),
-  ], [query.q, query.status]);
+    // A Home rating chip opens this list by overall rating (UI-SPEC §5.2); a released date range has no control here,
+    // so it shows only as chips, as on the analyst list, and the list never looks unfiltered.
+    ...(query.overallRating ? [{ id: 'overallRating', label: 'Overall rating', value: query.overallRating }] : []),
+    ...(query.approvedFrom ? [{ id: 'approvedFrom', label: 'Released from (UTC)', value: formatRequestDate(query.approvedFrom) ?? query.approvedFrom }] : []),
+    ...(query.approvedTo ? [{ id: 'approvedTo', label: 'Released to (UTC)', value: formatRequestDate(query.approvedTo) ?? query.approvedTo }] : []),
+  ], [query.q, query.status, query.overallRating, query.approvedFrom, query.approvedTo]);
+  const filtered = Boolean(query.q || query.status || query.overallRating || query.approvedFrom || query.approvedTo);
   const resolvedState = state ?? (assessments.length ? 'populated' : 'empty');
   const search = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const value = new FormData(event.currentTarget).get('q'); resetPage({ q: typeof value === 'string' ? value.trim() : '' }); };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end" data-print="hidden"><form className="flex flex-1 gap-2" role="search" onSubmit={search}><label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">Search risk assessments<Input aria-label="Search risk assessments" defaultValue={query.q} key={query.q} name="q" type="search" /></label><Button className="self-end" type="submit">Search</Button></form><label className="grid gap-1.5 text-sm font-medium text-foreground">Status<select aria-label="Filter by status" className="block h-9 min-w-48 rounded-md border border-input bg-surface px-3 text-sm text-foreground" value={query.status ?? ''} onChange={(event) => resetPage({ status: event.target.value as AssessmentCollectionQuery['status'] || undefined })}><option value="">All statuses</option><option value="approved">{statusLabel('assessment', 'approved')}</option></select></label></div>
-      <DataTable ariaLabel="My released risk assessments" columns={releasedAssessmentColumns} data={[...assessments]} densityUserId="released-assessments" filters={filters} getRowId={(assessment) => assessment.documentId} loadingLabel="Loading released risk assessments" onClearFilter={(id) => resetPage(id === 'q' ? { q: '' } : { status: undefined })} onClearFilters={() => resetPage({ q: '', status: undefined })} onPageChange={(page) => navigate({ ...query, page })} onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as AssessmentCollectionQuery['pageSize'] })} onSortingChange={(sorting) => resetPage({ sort: sortFor(sorting) })} page={resolvedPagination.page} pageSize={resolvedPagination.pageSize} renderMobileCard={(assessment) => <article className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-3"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={releasedAssessmentHref(assessment.documentId)}>{assessment.assessmentNumber}</RecordLink>{assessment.overallRating ? <RiskRatingBadge rating={assessment.overallRating} /> : <Badge variant="outline">Rating not recorded</Badge>}</div><p className="text-sm text-foreground">{displayText(assessment.summary)}</p><p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" />Released {formatDate(assessment.approvalDate)}</p></article>} sorting={sortingFor(query.sort)} state={resolvedState} stateSlots={{ empty: <EmptyState description="Assessments appear here after an authorised Security Analyst releases them." filtered={Boolean(query.q || query.status)} noun="released risk assessments" onClearFilters={() => resetPage({ q: '', status: undefined })} />, error: <ErrorState noun="released risk assessments" retry={() => router.refresh()} />, permission: <PermissionDeniedState area="released risk assessments" /> }} totalCount={resolvedPagination.total} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end" data-print="hidden"><form className="flex flex-1 gap-2" role="search" onSubmit={search}><label className="grid flex-1 gap-1.5 text-sm font-medium text-foreground">Search risk assessments<Input aria-label="Search risk assessments" defaultValue={query.q} key={query.q} name="q" type="search" /></label><Button className="self-end" type="submit">Search</Button></form><label className="grid gap-1.5 text-sm font-medium text-foreground">Status<select aria-label="Filter by status" className="block h-9 min-w-48 rounded-md border border-input bg-surface px-3 text-sm text-foreground" value={query.status ?? ''} onChange={(event) => resetPage({ status: event.target.value as AssessmentCollectionQuery['status'] || undefined })}><option value="">All statuses</option><option value="approved">{statusLabel('assessment', 'approved')}</option></select></label><label className="grid gap-1.5 text-sm font-medium text-foreground">Overall rating<select aria-label="Filter by overall rating" className="block h-9 min-w-48 rounded-md border border-input bg-surface px-3 text-sm text-foreground" value={query.overallRating ?? ''} onChange={(event) => resetPage({ overallRating: (event.target.value || undefined) as AssessmentCollectionQuery['overallRating'] })}><option value="">All ratings</option>{assessmentRatings.map((rating) => <option key={rating} value={rating}>{rating}</option>)}</select></label></div>
+      <DataTable ariaLabel="My released risk assessments" columns={releasedAssessmentColumns} data={[...assessments]} densityUserId="released-assessments" filters={filters} getRowId={(assessment) => assessment.documentId} loadingLabel="Loading released risk assessments" onClearFilter={(id) => resetPage(id === 'q' ? { q: '' } : { [id]: undefined })} onClearFilters={() => resetPage(clearedFilters)} onPageChange={(page) => navigate({ ...query, page })} onPageSizeChange={(pageSize) => resetPage({ pageSize: pageSize as AssessmentCollectionQuery['pageSize'] })} onSortingChange={(sorting) => resetPage({ sort: sortFor(sorting) })} page={resolvedPagination.page} pageSize={resolvedPagination.pageSize} renderMobileCard={(assessment) => <article className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-3"><RecordLink className="inline-flex min-h-6 items-center text-xs tabular-nums" href={releasedAssessmentHref(assessment.documentId)}>{assessment.assessmentNumber}</RecordLink>{assessment.overallRating ? <RiskRatingBadge rating={assessment.overallRating} /> : <Badge variant="outline">Rating not recorded</Badge>}</div><p className="line-clamp-3 break-words text-sm text-foreground">{assessment.requestTitle ?? 'Not recorded'}</p><p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" />Released <LocalInstant fallback="Not recorded" style="date-long" value={assessment.approvalDate} /></p></article>} sorting={sortingFor(query.sort)} state={resolvedState} stateSlots={{ empty: <EmptyState description="Assessments appear here after an authorised Security Analyst releases them." filtered={filtered} noun="released risk assessments" onClearFilters={() => resetPage(clearedFilters)} />, error: <ErrorState noun="released risk assessments" retry={() => router.refresh()} />, permission: <PermissionDeniedState area="released risk assessments" /> }} totalCount={resolvedPagination.total} />
     </div>
   );
 }
@@ -112,7 +121,7 @@ function AssessmentUnavailableNotice({ state }: { state: Exclude<ReleasedAssessm
       ? 'We couldn’t load this risk assessment'
       : 'This released risk assessment is unavailable';
   const description = permission
-    ? 'You can open released assessments for your own requests. Yours are listed in My Risk Assessments.'
+    ? 'You can open released assessments for your own requests. Yours are listed in My risk assessments.'
     : error
       ? 'Try again. If the problem continues, contact your administrator.'
       : 'Only complete assessments released for your own requests can be displayed.';
@@ -151,11 +160,14 @@ function ReleasedRisk({ controls, risk }: { controls: readonly ControlImplementa
 export function ReleasedAssessmentDetailView({
   assessment,
   controlsByRisk = {},
+  headerAction,
   risks = [],
   state,
 }: {
   assessment?: ReleasedAssessmentDetailForActor;
   controlsByRisk?: ControlsByRisk;
+  /** Phase 19 (19-UI-SPEC §1): `Print report`, then Export, rendered by the page after its reads. */
+  headerAction?: ReactNode;
   risks?: readonly AssessmentRiskListItem[];
   state: ReleasedAssessmentDetailState;
 }) {
@@ -164,6 +176,7 @@ export function ReleasedAssessmentDetailView({
   return (
     <article aria-label={`Released risk assessment ${assessment.assessmentNumber}`} className="space-y-8">
       <PageHeader
+        action={headerAction}
         status={<StatusBadge family="assessment" value={assessment.assessmentStatus} />}
         description={assessment.assessmentNumber}
         title="Released risk assessment"
@@ -172,6 +185,8 @@ export function ReleasedAssessmentDetailView({
       <AssessmentLifecycleStepper status={assessment.assessmentStatus} />
       <section className="space-y-4" aria-labelledby="assessment-overview">
         <h2 className="text-heading-md text-foreground" id="assessment-overview">Assessment overview</h2>
+        {/* IN-302 (12-UI-SPEC §10.1, §10.2): the notice speaks to the Requestor, who received the assessment. */}
+        {assessment.actor === 'requestor' && assessment.aiAssisted ? <AiAssistanceNotice /> : null}
         <Card><CardContent className="pt-6"><dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-1 sm:col-span-2 lg:col-span-3"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Summary</dt><dd className="whitespace-pre-wrap text-sm text-foreground">{displayText(assessment.summary)}</dd></div>
           <Definition label="Assessment status" value={statusLabel('assessment', assessment.assessmentStatus)} />
@@ -181,7 +196,6 @@ export function ReleasedAssessmentDetailView({
           <Definition label="Assessment date" value={<LocalInstant fallback="Not recorded" style="date-long" value={assessment.assessmentDate} />} />
           <Definition label="Next review date" value={formatCalendarDate(assessment.nextReviewDate)} />
           <Definition label="Release date" value={<LocalInstant fallback="Not recorded" style="date-long" value={assessment.approvalDate} />} />
-          <Definition label="Generated by" value={assessment.generatedBy?.displayName ?? 'Not recorded'} />
           <Definition label="Reviewed by" value={assessment.reviewedBy?.displayName ?? 'Not recorded'} />
           <Definition label="Released by" value={assessment.approvedBy?.displayName ?? 'Not recorded'} />
           <div className="grid gap-1 sm:col-span-2 lg:col-span-3"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Overall risk rationale</dt><dd className="whitespace-pre-wrap text-sm text-foreground">{displayText(assessment.overallRiskRationale)}</dd></div>

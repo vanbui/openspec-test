@@ -1,5 +1,6 @@
 import { assessmentReleasePopulate } from "../../csrm-assessment/services/assessment-workflow";
 import { questionnaireState } from "../../csrm-questionnaire/services/questionnaire-scope";
+import { activeRisks } from "../../../csrm/active-risk";
 
 type RecordValue = Record<string, unknown>;
 
@@ -55,7 +56,8 @@ export function requestActorFacts(state: unknown): ActorFacts {
  * its label both name the rating they count.
  */
 function residualRiskCounts(assessment: RecordValue): RecordValue {
-  const risks = Array.isArray(assessment.risks) ? assessment.risks : [];
+  // Phase 16 D-13 (Pitfall 3): only active Risks are counted, as every other reader counts them.
+  const risks = Array.isArray(assessment.risks) ? activeRisks(assessment.risks) : [];
   const counts: RecordValue = { Low: 0, Moderate: 0, High: 0, Critical: 0, total: risks.length };
   for (const risk of risks) {
     if (!isRecord(risk)) continue;
@@ -67,9 +69,9 @@ function residualRiskCounts(assessment: RecordValue): RecordValue {
   return counts;
 }
 
-/** Counts only populated contextual control-implementation records. */
+/** Counts only populated contextual control-implementation records of the active Risks (Phase 16 D-13). */
 function controlImplementationCount(assessment: RecordValue): number {
-  const risks = Array.isArray(assessment.risks) ? assessment.risks : [];
+  const risks = Array.isArray(assessment.risks) ? activeRisks(assessment.risks) : [];
   return risks.reduce((count, risk) => {
     if (!isRecord(risk)) return count;
     const controls = Array.isArray(risk.controlImplementations) ? risk.controlImplementations : [];

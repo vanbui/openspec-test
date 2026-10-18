@@ -7,6 +7,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams) => ({
   requestTimeoutMs: env.int("CSRM_AI_REQUEST_TIMEOUT_MS", 60000),
   reasoningEffort: env("CSRM_AI_REASONING_EFFORT", ""),
   completionTranscriptDiagnostics: env.bool("CSRM_AI_COMPLETION_TRANSCRIPT_DIAGNOSTICS", false),
+  dataClassificationCeiling: env("CSRM_AI_DATA_CLASSIFICATION_CEILING", ""),
   assessmentDraft: {
     baseURL: env("CSRM_AI_ASSESSMENT_BASE_URL"),
     apiKey: env("CSRM_AI_ASSESSMENT_API_KEY", ""),

@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "runId": "iam-journey-bf168559-16be-4efb-8367-45db6e22f62b",
+  "date": "2026-10-17T22:53:39.741Z",
+  "provenance": "live-keycloak-contract",
+  "keycloak": "26.6.1",
+  "observations": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true
+  },
+  "cleanup": true
+}

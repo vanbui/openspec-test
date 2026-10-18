@@ -10,15 +10,23 @@ import {
   InboxIcon,
   Table2Icon,
   TimerIcon,
+  UserRoundCheckIcon,
 } from 'lucide-react';
 
-import type { BarChartTone } from '@/components/csrm/bar-chart';
+import type { BarChartSecondaryLink, BarChartTone } from '@/components/csrm/bar-chart';
 import type { KpiTileIconTone } from '@/components/csrm/kpi-tile';
 import { alertsClearedDescription } from '../alerts/alert-presentation';
 import { assessmentRequestHref } from '../assessments/assessment-domain';
 import type { AssessmentRating } from '../assessments/assessment-schema';
 import { formatRiskTargetDate } from '../risks/risk-domain';
-import type { ActivityItem, ActivityKind, ActivityRecordType, DashboardReviewQueue, DashboardSummary } from './analyst-dashboard-schema';
+import type {
+  ActivityItem,
+  ActivityKind,
+  ActivityRecordType,
+  DashboardReviewQueue,
+  DashboardRiskExposure,
+  DashboardSummary,
+} from './analyst-dashboard-schema';
 import type {
   AnalystDashboard,
   AnalystDashboardUnits,
@@ -67,7 +75,7 @@ export const analystHomePermissionAction = { label: 'Return to sign in', href: '
 /* ---------------------------------------------------------------- KPI strip */
 
 export type DashboardKpiTile = {
-  key: 'requires-attention' | 'overdue' | 'due-soon' | 'attention';
+  key: 'needs-your-action' | 'overdue' | 'due-soon' | 'attention';
   caption: string;
   value: number;
   supportingText: string;
@@ -80,16 +88,19 @@ export type DashboardKpiTile = {
  * The four Needs action tiles (UI-SPEC §2.3). Each opens a list whose total is computed with the
  * tile's own predicate (D-18, D-24); the caption icons are the urgency set, so a tile matches the
  * badges on the list it opens. No tile carries a delta (UI-D6).
+ *
+ * Phase 13 (D-15; UI-SPEC §3): tile 1 is the viewer's own work, the requests assigned to them that require
+ * attention, and opens Assigned to me on that queue, whose total it equals.
  */
 export function dashboardKpiTiles(counts: DashboardKpiCounts, dueSoonWindowDays: number): DashboardKpiTile[] {
   return [
     {
-      key: 'requires-attention',
-      caption: 'Requires my attention',
-      value: counts.requiresAttention,
-      supportingText: 'Assessment Requests in your review queue',
-      href: '/app/review/requests',
-      icon: InboxIcon,
+      key: 'needs-your-action',
+      caption: 'Needs your action',
+      value: counts.needsYourAction,
+      supportingText: 'Requests assigned to you that need analyst action',
+      href: '/app/review/assigned?queue=requires-attention',
+      icon: UserRoundCheckIcon,
       iconTone: 'muted',
     },
     {
@@ -114,7 +125,8 @@ export function dashboardKpiTiles(counts: DashboardKpiCounts, dueSoonWindowDays:
       key: 'attention',
       caption: 'Needs attention',
       value: counts.attention,
-      supportingText: 'Untreated Critical Risks and ineffective Control Implementations',
+      // UI-D33: "mitigation controls" is the display term for Control Implementations.
+      supportingText: 'Untreated Critical Risks and ineffective mitigation controls',
       href: '/app/alerts?urgency=attention',
       icon: FlagIcon,
       iconTone: 'info',
@@ -165,8 +177,8 @@ export function dashboardWidgetCopy(dueSoonWindowDays: number): Record<Dashboard
       heading: 'Review queue',
       headingId: 'analyst-dashboard-review-queue-heading',
       icon: InboxIcon,
-      // Not every row is waiting work (Submitted counts finished work too), so the line names what each group counts.
-      description: 'Assessment Requests by queue, and Questionnaires and Risk Assessments by status.',
+      // Phase 13 (D-15; UI-SPEC §3): the viewer's own work leads, then the team's queue.
+      description: 'Your assigned requests first, then the team’s queue.',
       errorNoun: 'the review queue',
       empty: null,
       links: [],
@@ -175,26 +187,33 @@ export function dashboardWidgetCopy(dueSoonWindowDays: number): Record<Dashboard
       heading: 'Risk exposure',
       headingId: 'analyst-dashboard-risk-exposure-heading',
       icon: ChartBarIcon,
-      description: 'Open contextual Risks by residual rating.',
+      // D-42, UI-SPEC §9.2: the widget says in words which stage it counts.
+      description: 'Released Risks only. Open Risks by residual rating, with accepted Risks marked.',
       errorNoun: 'Risk exposure',
-      empty: { noun: 'open contextual Risks', description: 'Risks appear here when a Risk Assessment identifies them.' },
+      // The cleared released state; the under-assessment row still renders beneath it (UI-SPEC §9.2).
+      empty: { noun: 'released open Risks', description: 'Risks count here once their risk assessment is released.' },
       links: [],
     },
     highCritical: {
       heading: 'High and Critical residual Risks',
       headingId: 'analyst-dashboard-high-critical-heading',
       icon: Table2Icon,
-      description: 'Open Risks rated High or Critical after treatment, highest first.',
+      // D-42: released Risks only, and the description says so.
+      description: 'Released open Risks rated High or Critical after treatment, highest first.',
       errorNoun: 'High and Critical residual Risks',
-      empty: { noun: 'High or Critical residual Risks', description: 'Open Risks rated High or Critical after treatment appear here.' },
-      // The register has no multi-rating filter, so this list holds every open Risk, High and Critical first.
-      links: [{ label: 'Open Risk Register', href: '/app/risks?state=open&sort=residualRating:desc' }],
+      empty: { noun: 'released High or Critical residual Risks', description: 'Released open Risks rated High or Critical after treatment appear here.' },
+      // D-37, UI-SPEC §8.2: the list's total stays plain; each rating opens its own released open list.
+      links: [
+        { label: 'View Critical Risks', href: releasedExposureHref('Critical') },
+        { label: 'View High Risks', href: releasedExposureHref('High') },
+      ],
     },
     treatmentsDue: {
       heading: 'Treatments due',
       headingId: 'analyst-dashboard-treatments-due-heading',
       icon: TimerIcon,
-      description: `Risk treatments past their target date or due within ${window}, most overdue first.`,
+      // D-43: these figures keep both stages, and the words say so (UI-SPEC §9.4).
+      description: `Risk treatments past their target date or due within ${window}, most overdue first. Includes Risks under assessment.`,
       errorNoun: 'treatments due',
       empty: { noun: 'treatments due', description: `Treatments past their target date, or due within ${window}, appear here.` },
       links: [
@@ -206,7 +225,7 @@ export function dashboardWidgetCopy(dueSoonWindowDays: number): Record<Dashboard
       heading: 'Upcoming due dates',
       headingId: 'analyst-dashboard-upcoming-due-dates-heading',
       icon: CalendarDaysIcon,
-      description: `Due, target and review dates in the next ${window}, soonest first.`,
+      description: `Due, target and review dates in the next ${window}, soonest first. Includes Risks under assessment.`,
       errorNoun: 'upcoming due dates',
       empty: { noun: 'upcoming due dates', description: `Due, target and review dates in the next ${window} appear here.` },
       links: [{ label: 'View everything due soon', href: '/app/alerts?urgency=due-soon' }],
@@ -215,7 +234,7 @@ export function dashboardWidgetCopy(dueSoonWindowDays: number): Record<Dashboard
       heading: 'Top alerts',
       headingId: 'analyst-dashboard-top-alerts-heading',
       icon: BellIcon,
-      description: 'The most urgent alerts across your scope.',
+      description: 'The most urgent alerts across your scope, including Risks under assessment.',
       errorNoun: 'alerts',
       empty: { noun: 'alerts', description: alertsClearedDescription(dueSoonWindowDays) },
       links: [{ label: 'View all alerts', href: '/app/alerts' }],
@@ -252,6 +271,8 @@ function queueRow(key: string, label: string, count: number, href: string, noun:
 }
 
 const requestNoun = { one: 'Assessment Request', other: 'Assessment Requests' };
+/** The With new notes row names whose requests it counts (UI-SPEC §3). */
+const assignedRequestNoun = { one: 'Assessment Request assigned to you', other: 'Assessment Requests assigned to you' };
 const questionnaireNoun = { one: 'Questionnaire', other: 'Questionnaires' };
 const assessmentNoun = { one: 'Risk Assessment', other: 'Risk Assessments' };
 
@@ -263,15 +284,31 @@ const assessmentNoun = { one: 'Risk Assessment', other: 'Risk Assessments' };
  * Answers stay submitted after the Risk Assessment is drafted, reviewed and released, so the
  * Questionnaires figure includes finished work. It is labelled `Submitted`, as the list's Status
  * filter names it, and never as work awaiting review: the actionable request-level work is
- * `Requires my attention`. The contract keeps the field's name, `questionnairesReadyForReview`.
+ * `Needs your action` and the team's `Requires attention`. The contract keeps the field's name,
+ * `questionnairesReadyForReview`.
+ *
+ * Phase 13 (D-15, D-13; UI-SPEC §3): `Assigned to you` leads with the viewer's own counts, each opening Assigned
+ * to me with the same queue (or its new notes over the open queue); the team's group starts with the requests
+ * nobody holds, `Waiting for pick-up`. Every figure is the summary's, computed with its list's own predicate.
  */
 export function reviewQueueGroups(queue: DashboardReviewQueue): ReviewQueueGroup[] {
   return [
     {
+      key: 'assigned-to-you',
+      caption: 'Assigned to you',
+      rows: [
+        queueRow('needs-your-action', 'Needs your action', queue.mine.requiresAttention, '/app/review/assigned?queue=requires-attention', requestNoun),
+        queueRow('with-new-notes', 'With new notes', queue.mine.withUnreadNotes, '/app/review/assigned?notes=unread', assignedRequestNoun),
+        queueRow('awaiting-requestor', 'Awaiting Requestor', queue.mine.awaitingRequestor, '/app/review/assigned?queue=awaiting-requestor', requestNoun),
+        queueRow('generation-in-progress', 'Generation in progress', queue.mine.generationInProgress, '/app/review/assigned?queue=generation-in-progress', requestNoun),
+      ],
+    },
+    {
       key: 'assessment-requests',
       caption: 'Assessment Requests',
       rows: [
-        queueRow('requires-attention', 'Requires my attention', queue.requiresAttention, '/app/review/requests', requestNoun),
+        queueRow('waiting-for-pick-up', 'Waiting for pick-up', queue.unassigned, '/app/review/requests?assignee=unassigned', requestNoun),
+        queueRow('requires-attention', 'Requires attention', queue.requiresAttention, '/app/review/requests', requestNoun),
         queueRow('awaiting-requestor', 'Awaiting Requestor', queue.awaitingRequestor, '/app/review/requests?queue=awaiting-requestor', requestNoun),
         queueRow('generation-in-progress', 'Generation in progress', queue.generationInProgress, '/app/review/requests?queue=generation-in-progress', requestNoun),
       ],
@@ -296,17 +333,17 @@ export function reviewQueueGroups(queue: DashboardReviewQueue): ReviewQueueGroup
 
 /* ------------------------------------------------------------- risk exposure */
 
-type RatingCounts = DashboardSummary['riskExposure'];
-
 export type RiskExposureRow = {
   key: AssessmentRating | 'notRated';
   /** The rating whose badge labels the row, or null for Risks with none. */
   rating: AssessmentRating | null;
   labelText: string;
   value: number;
-  /** Only rated rows link: the register has no "not rated" filter. */
-  href?: string;
+  /** The released open register list of the row's rating; Not rated opens the `none` value (D-35). */
+  href: string;
   tone: BarChartTone;
+  /** `{n} accepted`, only when the row's accepted figure is above zero (D-41, UI-D34). */
+  accepted?: BarChartSecondaryLink;
 };
 
 /** Vertical severity lists run Critical to Low (UI-D5). */
@@ -321,34 +358,86 @@ const exposureTones = {
 } as const satisfies Record<AssessmentRating, BarChartTone>;
 
 /*
- * Names each exposure link "{Rating}: {n} open {Risk|Risks} by residual rating". The Phase 7 wording
+ * Names each exposure link "{Rating}: {n} released open {Risk|Risks} by residual rating". The Phase 7 wording
  * (§7.2) put "residual rating" between the rating and its count, so the link's visible words ("Critical
  * 2") were not the start of its name, which WCAG 2.5.3 Label in Name asks for (axe
  * label-content-name-mismatch, 08-12). The context now follows the count.
  */
-export const riskExposureUnit = { one: 'open Risk by residual rating', other: 'open Risks by residual rating' } as const;
+export const riskExposureUnit = { one: 'released open Risk by residual rating', other: 'released open Risks by residual rating' } as const;
 
-/** The exposure list's name: what its rows count. */
-export const riskExposureListLabel = 'Open contextual Risks by residual rating';
+/** The exposure list's name: what its rows count (UI-SPEC §9.2). */
+export const riskExposureListLabel = 'Released open Risks by residual rating';
+
+/** The register list a released exposure row opens: its residual rating (`none` for not rated), open and released. */
+function releasedExposureHref(residualRating: AssessmentRating | 'none'): string {
+  return `/app/risks?residualRating=${residualRating}&state=open&stage=released`;
+}
 
 /**
- * Open contextual Risks by residual rating (D-36). Each rated row opens the register with its own
- * rating and `state=open`, so the row and the list count the same Risks. Not rated is plain text and
- * appears only when it counts something.
+ * "{n} accepted", opening the row's released list with `treatmentAction=Accept`, named "{n} accepted {Rating}
+ * {Risk|Risks}"; null at zero, so an accepted link shows only above zero (UI-SPEC §9.2).
  */
-export function riskExposureRows(counts: RatingCounts): RiskExposureRow[] {
-  const rows: RiskExposureRow[] = exposureOrder.map((rating) => ({
+function acceptedLink(count: number, residualRating: AssessmentRating | 'none', labelText: string): BarChartSecondaryLink | null {
+  if (count <= 0) return null;
+  const label = `${formatCount(count)} accepted`;
+  return {
+    label,
+    href: `${releasedExposureHref(residualRating)}&treatmentAction=Accept`,
+    accessibleName: `${label} ${labelText} ${count === 1 ? 'Risk' : 'Risks'}`,
+  };
+}
+
+function withAccepted(row: Omit<RiskExposureRow, 'accepted'>, accepted: BarChartSecondaryLink | null): RiskExposureRow {
+  return accepted ? { ...row, accepted } : row;
+}
+
+/**
+ * Released open Risks by residual rating (D-40, D-42). Each row opens the register with its own rating,
+ * `state=open` and `stage=released`, so the row and the list count the same Risks; a Risk under
+ * assessment is never in a released row. Not rated links to the `none` value and appears only when it
+ * counts something. A row whose released Risks include accepted ones carries their link (D-41).
+ */
+export function riskExposureRows(exposure: DashboardRiskExposure): RiskExposureRow[] {
+  const { released, releasedAccepted } = exposure;
+  const rows: RiskExposureRow[] = exposureOrder.map((rating) => withAccepted({
     key: rating,
     rating,
     // The badge's visible word, so the link's name opens with what it shows.
     labelText: rating,
-    value: counts[rating],
-    href: `/app/risks?residualRating=${rating}&state=open`,
+    value: released[rating],
+    href: releasedExposureHref(rating),
     tone: exposureTones[rating],
-  }));
-  return counts.notRated > 0
-    ? [...rows, { key: 'notRated', rating: null, labelText: 'Not rated', value: counts.notRated, tone: 'ink' }]
-    : rows;
+  }, acceptedLink(releasedAccepted[rating], rating, rating)));
+  if (released.notRated === 0) return rows;
+  const notRated = { key: 'notRated', rating: null, labelText: 'Not rated', value: released.notRated, href: releasedExposureHref('none'), tone: 'ink' } as const;
+  return [...rows, withAccepted(notRated, acceptedLink(releasedAccepted.notRated, 'none', notRated.labelText))];
+}
+
+export type UnderAssessmentRow = {
+  label: 'Under assessment';
+  count: number;
+  countText: string;
+  href: string;
+  /** "Under assessment: {n} open {Risk|Risks} not yet released", which begins with the visible label and count. */
+  accessibleName: string;
+  caption: string;
+};
+
+/**
+ * The open Risks under assessment, apart from the released rows (D-41, D-42, UI-SPEC §9.2): one link row to
+ * the register's `stage=under-assessment` list, with a caption saying why they are not counted above. It
+ * renders at zero too.
+ */
+export function underAssessmentRow(exposure: DashboardRiskExposure): UnderAssessmentRow {
+  const count = exposure.underAssessment.total;
+  return {
+    label: 'Under assessment',
+    count,
+    countText: formatCount(count),
+    href: '/app/risks?state=open&stage=under-assessment',
+    accessibleName: `Under assessment: ${counted(count, 'open Risk', 'open Risks')} not yet released`,
+    caption: 'Not yet released, so not counted above.',
+  };
 }
 
 /* ------------------------------------------------------ High and Critical Risks */
@@ -486,15 +575,25 @@ export function recentActivityNote(activity: DashboardSummary['recentActivity'])
  * still states it.
  */
 export function emptyAnalystDashboard(dueSoonWindowDays: number): AnalystDashboard {
+  const noRisks = { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 };
   return {
     dueSoonWindowDays,
     units: {
-      kpi: { status: 'ready', data: { requiresAttention: 0, overdue: 0, dueSoon: 0, attention: 0 } },
+      kpi: { status: 'ready', data: { needsYourAction: 0, overdue: 0, dueSoon: 0, attention: 0 } },
       reviewQueue: {
         status: 'ready',
-        data: { requiresAttention: 0, awaitingRequestor: 0, generationInProgress: 0, questionnairesReadyForReview: 0, assessmentsDraft: 0, assessmentsInReview: 0 },
+        data: {
+          requiresAttention: 0,
+          awaitingRequestor: 0,
+          generationInProgress: 0,
+          questionnairesReadyForReview: 0,
+          assessmentsDraft: 0,
+          assessmentsInReview: 0,
+          mine: { requiresAttention: 0, awaitingRequestor: 0, generationInProgress: 0, withUnreadNotes: 0 },
+          unassigned: 0,
+        },
       },
-      riskExposure: { status: 'ready', data: { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 } },
+      riskExposure: { status: 'ready', data: { released: noRisks, releasedAccepted: noRisks, underAssessment: noRisks } },
       highCritical: { status: 'ready', data: { rows: [], total: 0, truncated: false } },
       treatmentsDue: { status: 'ready', data: { rows: [], total: 0 } },
       upcomingDueDates: { status: 'ready', data: { rows: [], total: 0 } },

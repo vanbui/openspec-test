@@ -9,8 +9,12 @@
 /** D-04, D-10: a treatment, request or review date from today to this many days ahead is due soon. */
 export const ALERT_DUE_SOON_WINDOW_DAYS = 14;
 
-/** D-13: the treatment-performance report counts treatments due within this many days. */
-export const TREATMENT_REPORT_DUE_WINDOW_DAYS = 30;
+/**
+ * D-38 (Phase 11): the treatment-performance report counts treatments due within the product's one due-soon
+ * window. This reverses Phase 7 D-13's 30 days, so "due soon" means the same on the Risk register, the alerts
+ * and the report, and the report's figure equals the due-soon alert list it opens.
+ */
+export const TREATMENT_REPORT_DUE_WINDOW_DAYS = ALERT_DUE_SOON_WINDOW_DAYS;
 
 /** D-12: the alert list page sizes, and the default. */
 export const ALERT_PAGE_SIZES = Object.freeze([5, 10, 25, 50] as const);

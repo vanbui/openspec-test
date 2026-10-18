@@ -1,7 +1,7 @@
 import type { Database } from "@strapi/database";
 
 import { REVIEWABLE_REQUEST_STATUSES } from "../../csrm-assessment-request/services/collection-scope";
-import { applyDisclosableParent } from "../../csrm-risk/services/risk-register";
+import { applyActiveRisk, applyDisclosableParent } from "../../csrm-risk/services/risk-register";
 import {
   ALERT_KINDS,
   ALERT_URGENCIES,
@@ -13,6 +13,7 @@ import {
 } from "../../../csrm/insights/alert-rules";
 import { ALERT_DUE_SOON_WINDOW_DAYS, ALERT_PAGE_SIZES } from "../../../csrm/insights/insight-constants";
 import { normaliseRating, type RiskRating } from "../../../csrm/insights/report-math";
+import { applyTreatmentDueStatePredicate, TREATMENT_DUE_DATE_COLUMN } from "../../../csrm/insights/treatment-due-state";
 import { addUtcDays, isUtcDate } from "../../../csrm/insights/utc-date";
 
 /*
@@ -230,9 +231,12 @@ function selectAlertColumns(connection: Knex, query: QueryBuilder, columns: Bran
   );
 }
 
-/** An open Risk inside the Risk Register scope. D-04: a closure date closes the treatment. */
+/**
+ * An open, active Risk inside the Risk Register scope. D-04: a closure date closes the treatment; Phase 16 D-13: a
+ * withdrawn Risk raises no alert (applyActiveRisk).
+ */
 function openDisclosableRisks(connection: Knex): QueryBuilder {
-  return applyDisclosableParent(connection.queryBuilder().from("csrm_risks as r")).whereNull("r.closure_date");
+  return applyActiveRisk(applyDisclosableParent(connection.queryBuilder().from("csrm_risks as r"))).whereNull("r.closure_date");
 }
 
 /*
@@ -245,7 +249,8 @@ function implementationsOnOpenDisclosableRisks(connection: Knex): QueryBuilder {
     .join("csrm_risks as r", "r.id", "ci_risk.csrm_risk_id")
     .leftJoin("csrm_control_implementations_control_lnk as ci_control", "ci_control.csrm_control_implementation_id", "ci.id")
     .leftJoin("csrm_controls as c", "c.id", "ci_control.csrm_control_id");
-  return applyDisclosableParent(query).whereNull("r.closure_date");
+  // Phase 16 D-13: a Control Implementation on a withdrawn Risk raises no alert.
+  return applyActiveRisk(applyDisclosableParent(query)).whereNull("r.closure_date");
 }
 
 /** D-29: only a submitted request that is still in review can alert; a draft never does. */
@@ -294,22 +299,24 @@ const REQUEST_SOURCE = {
 
 type BranchBuilder = (connection: Knex, window: AlertWindow) => QueryBuilder;
 
-/** One branch per kind (D-10). A NULL treatment status is never dropped by a bare `<>` (D-31). */
+/*
+ * One branch per kind (D-10). The two risk-treatment kinds read the shared due-state rule (D-04, G-16 seam): the
+ * same predicate as the Risk register's dueState filter and the treatment-performance report, on the alerts'
+ * window, with its governing date as the alert's date. A NULL treatment status is not Complete (D-31).
+ */
 const ALERT_BRANCHES: Readonly<Record<AlertKind, BranchBuilder>> = Object.freeze({
   "risk-treatment-overdue": (connection, window) => selectAlertColumns(
     connection,
-    openDisclosableRisks(connection)
-      .whereRaw("(r.treatment_status IS NULL OR r.treatment_status <> ?)", ["Complete"])
-      .where("r.target_date", "<", window.today),
-    { ...RISK_SOURCE, kind: "risk-treatment-overdue", urgency: "overdue", governingDate: "r.target_date" },
+    // Phase 20 (G-16) switches the governing date in treatment-due-state.ts; this figure follows it.
+    applyTreatmentDueStatePredicate(openDisclosableRisks(connection), "overdue", { today: window.today, windowDays: ALERT_DUE_SOON_WINDOW_DAYS }),
+    { ...RISK_SOURCE, kind: "risk-treatment-overdue", urgency: "overdue", governingDate: TREATMENT_DUE_DATE_COLUMN },
     window,
   ),
   "risk-treatment-due-soon": (connection, window) => selectAlertColumns(
     connection,
-    openDisclosableRisks(connection)
-      .whereRaw("(r.treatment_status IS NULL OR r.treatment_status <> ?)", ["Complete"])
-      .whereBetween("r.target_date", [window.today, window.end]),
-    { ...RISK_SOURCE, kind: "risk-treatment-due-soon", urgency: "due-soon", governingDate: "r.target_date" },
+    // Phase 20 (G-16) switches the governing date in treatment-due-state.ts; this figure follows it.
+    applyTreatmentDueStatePredicate(openDisclosableRisks(connection), "due-soon", { today: window.today, windowDays: ALERT_DUE_SOON_WINDOW_DAYS }),
+    { ...RISK_SOURCE, kind: "risk-treatment-due-soon", urgency: "due-soon", governingDate: TREATMENT_DUE_DATE_COLUMN },
     window,
   ),
   "request-overdue": (connection, window) => selectAlertColumns(

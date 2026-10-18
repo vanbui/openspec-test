@@ -93,6 +93,9 @@
       "relation": "oneToMany",
       "target": "api::csrm-risk.csrm-risk",
       "mappedBy": "assessment"
+    },
+    "aiProvenance": {
+      "type": "json"
     }
   }
 }

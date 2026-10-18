@@ -11,13 +11,14 @@ import { ReportSection } from './report-section';
 import { ReportTable } from './report-table';
 
 /**
- * The control-effectiveness report (UI-SPEC §4.4): Control Implementations on open contextual Risks,
- * the scope of the ineffective-control alert. Effectiveness is not the severity ladder, so both
- * charts are ink.
+ * The control-effectiveness report (UI-SPEC §4.4, §9.4): mitigation controls (Control
+ * Implementations) on open Risks in either stage, the scope of the ineffective-control alert (D-43).
+ * Effectiveness is not the severity ladder, so both charts are ink. The figures count mitigation controls,
+ * so they stay plain; each row header opens the Risks that hold them (D-36).
  */
 export function ControlEffectivenessReportView({ report }: { report: ControlEffectivenessReport }) {
   const copy = reportSectionCopy;
-  const empty = report.implementationStatus.total > 0 ? undefined : reportEmptyStates.controlImplementations;
+  const empty = report.implementationStatus.total > 0 ? undefined : reportEmptyStates.mitigationControls;
   const statuses = implementationStatusRows(report.implementationStatus);
   const ratings = effectivenessRatingRows(report.effectivenessRating);
 

@@ -1,0 +1,22 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_request_notes",
+  "info": {
+    "singularName": "csrm-request-note",
+    "pluralName": "csrm-request-notes",
+    "displayName": "CSRM Request Note",
+    "description": "An attributed, append-only, plain-text note on an assessment request (Phase 13, docs/contract-gaps/phase-13-request-notes.md)."
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "body": { "type": "text", "required": true },
+    "authorPart": { "type": "enumeration", "enum": ["requestor", "security-analyst"], "required": true },
+    "sequence": { "type": "integer", "required": true },
+    "postedAt": { "type": "datetime", "required": true },
+    "changesAiInputs": { "type": "boolean", "required": true, "default": false },
+    "aiInputLog": { "type": "json" },
+    "assessmentRequest": { "type": "relation", "relation": "manyToOne", "target": "api::csrm-assessment-request.csrm-assessment-request" },
+    "author": { "type": "relation", "relation": "manyToOne", "target": "api::idambox-user.idambox-user" }
+  }
+}

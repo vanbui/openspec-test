@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { CSRM_ANALYST_INSIGHT_OPERATIONS } from "../src/api/csrm-analyst-insight/operations";
+import { CSRM_ANALYST_INSIGHT_EXPORT_OPERATIONS, CSRM_ANALYST_INSIGHT_OPERATIONS } from "../src/api/csrm-analyst-insight/operations";
 import alertRoutes from "../src/api/csrm-analyst-insight/routes/alerts";
 import dashboardRoutes from "../src/api/csrm-analyst-insight/routes/dashboard";
 import reportRoutes from "../src/api/csrm-analyst-insight/routes/reports";
@@ -58,6 +58,15 @@ const SERVED_INSIGHT_ROUTES = [
     file: "csrm-analyst-insight/routes/alerts.ts",
   },
   {
+    // Phase 19 (19-08): the alert list's export, which also needs the alert list read it discloses.
+    operation: CSRM_ANALYST_INSIGHT_EXPORT_OPERATIONS.exportAlerts,
+    method: "GET",
+    path: "/v1/alerts/export",
+    handler: "api::csrm-analyst-insight.alerts.exportAlerts",
+    file: "csrm-analyst-insight/routes/alerts.ts",
+    underlyingRead: CSRM_ANALYST_INSIGHT_OPERATIONS.listAlerts,
+  },
+  {
     operation: CSRM_ANALYST_INSIGHT_OPERATIONS.listReports,
     method: "GET",
     path: "/v1/reports",
@@ -71,14 +80,26 @@ const SERVED_INSIGHT_ROUTES = [
     handler: "api::csrm-analyst-insight.reports.get",
     file: "csrm-analyst-insight/routes/reports.ts",
   },
+  {
+    // Phase 19 (19-09): the reserved report export, which also needs the report read it discloses.
+    operation: CSRM_ANALYST_INSIGHT_EXPORT_OPERATIONS.exportReport,
+    method: "POST",
+    path: "/v1/reports/:reportKey/export",
+    handler: "api::csrm-analyst-insight.reports.export",
+    file: "csrm-analyst-insight/routes/reports.ts",
+    underlyingRead: CSRM_ANALYST_INSIGHT_OPERATIONS.getReport,
+  },
 ] as const;
 
 /** A route's catalogue URL: `:name` path parameters are written `{name}` in the FunctionAPI catalogue. */
 const catalogueUrl = (method: string, routePath: string): string =>
   `${method}:/api${routePath.replace(/:([A-Za-z][A-Za-z0-9]*)/g, "{$1}")}`;
 
-/** D-06: catalogued operations that no router may serve. */
-const UNSERVED_PATH_FRAGMENTS = ['"/v1/alerts/:', '"/v1/dashboard/alerts"', '"/v1/dashboard/reports"', "/acknowledge", "/export"];
+/*
+ * D-06: catalogued operations that no router may serve. Phase 19 serves exports, so the bare "/export" fragment gave way
+ * to the two insight export paths then unserved; 19-08 served the alert export and 19-09 the report export.
+ */
+const UNSERVED_PATH_FRAGMENTS = ['"/v1/alerts/:', '"/v1/dashboard/alerts"', '"/v1/dashboard/reports"', "/acknowledge"];
 
 function routeSources(): Array<{ file: string; source: string }> {
   const apiDir = path.join(appDir, "src", "api");
@@ -112,8 +133,12 @@ test("every served analyst insight route is token-only, app-gated and asks for t
     assert.deepEqual(route.config?.auth, { strategies: ["content-api-token"] }, `INSIGHT_ROUTE_NOT_TOKEN_ONLY_${route.path}`);
     const policies = route.config?.policies ?? [];
     assert.equal(policies[0], "global::csrm-app-enabled", `INSIGHT_ROUTE_APP_GATE_NOT_FIRST_${route.path}`);
+    // An insight read's config is exactly its operation and the insight scope; an export's adds its list read (19-08).
+    const config = "underlyingRead" in served
+      ? { operation: served.operation, requireAnalystInsightScope: true, underlyingRead: served.underlyingRead }
+      : { operation: served.operation, requireAnalystInsightScope: true };
     assert.deepEqual(policies.slice(1), [
-      { name: "global::csrm-authorization", config: { operation: served.operation, requireAnalystInsightScope: true } },
+      { name: "global::csrm-authorization", config },
     ], `INSIGHT_ROUTE_POLICY_${route.path}`);
     assert.equal(served.operation, catalogueUrl(served.method, served.path), `INSIGHT_OPERATION_DOES_NOT_NAME_ITS_ROUTE_${route.path}`);
     assert.equal(`csrm-analyst-insight/${file}`, served.file, `INSIGHT_ROUTE_IN_THE_WRONG_ROUTER_${route.path}`);

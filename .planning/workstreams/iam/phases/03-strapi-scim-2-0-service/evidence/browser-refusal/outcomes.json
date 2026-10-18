@@ -1,0 +1,252 @@
+[
+  {
+    "scenario": "put-1440",
+    "stage": "prepare",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "baseline",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "stop",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "deactivate",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "refusal",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "pending",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "browser",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "start",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "recover",
+    "passed": true
+  },
+  {
+    "scenario": "put-1440",
+    "stage": "close",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "prepare",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "baseline",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "stop",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "deactivate",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "refusal",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "pending",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "browser",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "start",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "recover",
+    "passed": true
+  },
+  {
+    "scenario": "put-375",
+    "stage": "close",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "prepare",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "baseline",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "stop",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "deactivate",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "refusal",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "pending",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "browser",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "start",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "recover",
+    "passed": true
+  },
+  {
+    "scenario": "patch-1440",
+    "stage": "close",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "prepare",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "baseline",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "stop",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "deactivate",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "refusal",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "pending",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "browser",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "start",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "recover",
+    "passed": true
+  },
+  {
+    "scenario": "patch-375",
+    "stage": "close",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "prepare",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "baseline",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "stop",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "deactivate",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "refusal",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "pending",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "browser",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "start",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "recover",
+    "passed": true
+  },
+  {
+    "scenario": "delete-api",
+    "stage": "close",
+    "passed": true
+  }
+]

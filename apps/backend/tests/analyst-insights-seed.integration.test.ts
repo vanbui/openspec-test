@@ -60,6 +60,8 @@ const REQUEST_KEYS: readonly string[] = Object.values(ANALYST_INSIGHTS_FIXTURE.r
 const ASSESSMENT_KEYS: readonly string[] = Object.values(ANALYST_INSIGHTS_FIXTURE.assessments);
 const RISK_KEYS: readonly string[] = Object.values(ANALYST_INSIGHTS_FIXTURE.risks);
 const DAY_MS = 86_400_000;
+/** D-45: the one released, open, accepted Risk the browser proves the accepted marker and link with. */
+const ACCEPTED_RISK_NUMBER = "RSK-E2E-P7-ACCEPTED-001";
 
 let strapi: RunningStrapi;
 
@@ -181,8 +183,8 @@ test("the Phase 7 fixture is one record per stable key, related as the plan fixe
   await seedAt(now);
   assert.deepEqual(await counts(), afterFirst, "RESEED_CHANGED_RECORD_COUNTS");
 
-  // The fixture adds exactly five Risks (the Risk Register journey reads page 1 at 25 rows).
-  assert.equal((await findBy(UID.risk, { riskNumber: { $startsWith: "RSK-E2E-P7-" } })).length, 5, "FIXTURE_RISK_COUNT");
+  // The fixture adds exactly six Risks (the Risk Register journey reads page 1 at 25 rows).
+  assert.equal((await findBy(UID.risk, { riskNumber: { $startsWith: "RSK-E2E-P7-" } })).length, 6, "FIXTURE_RISK_COUNT");
   assert.equal((await findBy(UID.request, { requestNumber: { $startsWith: "RAR-E2E-P7-" } })).length, 4, "FIXTURE_REQUEST_COUNT");
   assert.equal((await findBy(UID.assessment, { assessmentNumber: { $startsWith: "ASM-E2E-P7-" } })).length, 2, "FIXTURE_ASSESSMENT_COUNT");
   assert.equal(await strapi.documents(UID.implementation).count(), 2, "FIXTURE_IMPLEMENTATION_COUNT");
@@ -215,14 +217,15 @@ test("the Phase 7 fixture is one record per stable key, related as the plan fixe
   }
   assert.equal(relation(released.assessmentRequest).requestNumber, requests.released.requestNumber, "RELEASED_ASSESSMENT_REQUEST");
 
-  const parentOf: Record<keyof typeof risks, string> = {
+  const parentOf: Record<string, string> = {
     overdue: assessments.mutable,
     dueSoon: assessments.mutable,
     critical: assessments.mutable,
     closed: assessments.mutable,
     released: assessments.released,
+    accepted: assessments.released,
   };
-  for (const [key, riskNumber] of Object.entries(risks) as Array<[keyof typeof risks, string]>) {
+  for (const [key, riskNumber] of Object.entries(risks) as Array<[string, string]>) {
     const risk = await single(UID.risk, { riskNumber: { $eq: riskNumber } }, { assessment: true, informationSystemImpacted: true });
     assert.equal(relation(risk.assessment).assessmentNumber, parentOf[key], `RISK_PARENT_${key}`);
     const linked = key === "overdue" || key === "critical";
@@ -248,6 +251,31 @@ test("the Phase 7 fixture is one record per stable key, related as the plan fixe
   assert.equal(relation(ineffective.control).controlNumber, ANALYST_INSIGHTS_FIXTURE.controlNumbers.ineffective, "INEFFECTIVE_CONTROL");
   assert.equal(ineffective.controlStatus, "Implemented", "INEFFECTIVE_STATUS");
   assert.equal(ineffective.effectivenessRating, "Ineffective", "INEFFECTIVE_RATING");
+});
+
+test("the Phase 7 fixture seeds exactly one released, open, accepted Moderate Risk, however often it runs (D-45)", async () => {
+  const now = new Date();
+  await seedAt(now);
+  await seedAt(now);
+
+  const accepted = await findBy(
+    UID.risk,
+    { riskNumber: { $startsWith: "RSK-E2E-P7-" }, treatmentAction: { $eq: "Accept" } },
+    { assessment: { populate: { approvedBy: true } } },
+  );
+  assert.equal(accepted.length, 1, "FIXTURE_ACCEPTED_RISK_COUNT");
+  const [risk] = accepted;
+  assert.equal(risk.riskNumber, ACCEPTED_RISK_NUMBER, "FIXTURE_ACCEPTED_RISK_NUMBER");
+  assert.equal(risk.residualRating, "Moderate", "FIXTURE_ACCEPTED_RISK_RATING");
+  assert.equal(risk.closureDate, null, "FIXTURE_ACCEPTED_RISK_IS_CLOSED");
+  assert.match(String(risk.riskStatement), /^Accepted fixture: /, "FIXTURE_ACCEPTED_RISK_STATEMENT");
+
+  // Released: its parent carries the complete release facts, so the register counts it under stage=released.
+  const parent = relation(risk.assessment);
+  assert.equal(parent.assessmentNumber, ANALYST_INSIGHTS_FIXTURE.assessments.released, "FIXTURE_ACCEPTED_RISK_PARENT");
+  assert.equal(parent.assessmentStatus, "approved", "FIXTURE_ACCEPTED_RISK_PARENT_STATUS");
+  assert.equal(typeof parent.approvalDate, "string", "FIXTURE_ACCEPTED_RISK_PARENT_APPROVAL_DATE");
+  assert.equal(relation(parent.approvedBy).email, "bob.doe@idambox.com", "FIXTURE_ACCEPTED_RISK_PARENT_APPROVER");
 });
 
 /** The fixture source that must raise each kind, found by its source identifier. */
@@ -283,12 +311,13 @@ test("with the seed's today, and for three days after, every alert kind lists it
     assert.equal(Number(releasedRisk.source_released), 1, `RELEASED_RISK_NOT_MARKED_RELEASED_DAY_${offset}`);
   }
 
-  // The closed Risk and the two requests without due dates never alert.
-  // A caller may leave the urgency out to read every urgency.
+  // The closed Risk, the accepted Moderate Risk without a target date and the two requests without due dates
+  // never alert, so the accepted fixture moves no alert figure. A caller may leave the urgency out to read every urgency.
   const everything = await repository.listPage({ kinds: [...ALERT_KINDS], page: 1, pageSize: 50, today: seedToday });
   const identifiers = new Set(everything.map((row) => row.source_identifier));
   for (const silent of [
     ANALYST_INSIGHTS_FIXTURE.risks.closed,
+    ACCEPTED_RISK_NUMBER,
     ANALYST_INSIGHTS_FIXTURE.requests.mutable.requestNumber,
     ANALYST_INSIGHTS_FIXTURE.requests.released.requestNumber,
     ANALYST_INSIGHTS_FIXTURE.assessments.mutable,

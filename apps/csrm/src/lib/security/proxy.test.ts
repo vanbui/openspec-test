@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { adapter } from 'next/dist/server/web/adapter';
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -151,10 +152,44 @@ describe('the proxy matcher', () => {
     },
   );
 
-  it('skips router prefetches, which render no document', () => {
-    expect(matches('/app/requests', { 'next-router-prefetch': '1' })).toBe(false);
+  // CR-402: a prefetch keeps its old treatment (no policy work, no session refresh) only while it declares no body; a
+  // request that declares one (a length, or a streamed body) runs the proxy, so the body gate sees it whatever it carries.
+  it('leaves out a bodiless prefetch, which renders no document, and runs for any prefetch-headed request that declares a body', () => {
+    expect(matches('/app/requests', { 'next-router-prefetch': '1', rsc: '1' })).toBe(false);
     expect(matches('/app/requests', { purpose: 'prefetch' })).toBe(false);
     expect(matches('/app/requests', { rsc: '1' })).toBe(true);
+    expect(matches('/app/requests', { 'next-router-prefetch': '1', rsc: '1', 'content-length': '7340032' })).toBe(true);
+    expect(matches('/app/requests', { purpose: 'prefetch', 'content-length': '0' })).toBe(true);
+    expect(matches('/sign-in', { 'next-router-prefetch': '1', 'transfer-encoding': 'chunked' })).toBe(true);
+    expect(matches('/_next/static/chunks/main.js', { 'next-router-prefetch': '1', 'content-length': '7340032' })).toBe(false);
+  });
+
+  /*
+   * Why the matcher, not proxy(), tells a router prefetch apart: Next removes its Flight headers (rsc,
+   * next-router-prefetch and the router's state headers) from the request before the proxy reads it, so inside proxy()
+   * a router prefetch looks like any other GET. `purpose` and `next-action` are not Flight headers and do arrive.
+   */
+  it('cannot see a router prefetch inside proxy(), because Next strips its headers first', async () => {
+    let seen: Headers | undefined;
+    await adapter({
+      handler: async (request) => {
+        seen = new Headers(request.headers);
+        return new Response(null);
+      },
+      page: 'middleware',
+      request: {
+        headers: { 'next-router-prefetch': '1', rsc: '1', purpose: 'prefetch', 'next-action': '7f00c0ffee', 'content-length': '12' },
+        method: 'GET',
+        url: 'http://127.0.0.1:3000/app/requests',
+        signal: new AbortController().signal,
+      },
+    });
+
+    expect(seen?.get('next-router-prefetch')).toBeNull();
+    expect(seen?.get('rsc')).toBeNull();
+    expect(seen?.get('purpose')).toBe('prefetch');
+    expect(seen?.get('next-action')).toBe('7f00c0ffee');
+    expect(seen?.get('content-length')).toBe('12');
   });
 });
 

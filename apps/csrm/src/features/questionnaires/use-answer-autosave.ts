@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SaveStatusValue } from '@/components/csrm/save-status';
+import { clearSessionDraft, writeSessionDraft } from '@/lib/session-drafts/session-drafts';
+import type { KeptUnsavedAnswer } from './questionnaire-domain';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
 
 /*
@@ -27,7 +29,7 @@ export type AutosaveStatus = SaveStatusValue;
 export type AutosaveOutcome =
   | { ok: true; savedAt: string }
   | { ok: false; failure: 'retryable' }
-  | { ok: false; failure: 'blocked'; message: string };
+  | { ok: false; failure: 'blocked'; message: string; reason?: string };
 
 /** `auto` for a debounced or blur save, `explicit` for Save draft and the save before submit. */
 export type AutosaveTrigger = 'auto' | 'explicit';
@@ -36,7 +38,15 @@ export type UseAnswerAutosaveOptions<Answers> = {
   save: (answers: Answers, trigger: AutosaveTrigger) => Promise<AutosaveOutcome>;
   getAnswers: () => Answers;
   debounceMs?: number;
+  /**
+   * Phase 15 (15-UI-SPEC §11.2; D-25, UI-D25, SD-1): where the unsaved answers are kept for the session when a save is
+   * refused because a Security Analyst took the questionnaire back. Without it nothing is kept beyond the page.
+   */
+  keepUnsaved?: { ownerKey: string; documentId: string; kept: (answers: Answers) => readonly KeptUnsavedAnswer[] } | null;
 };
+
+/* The refusal that means the Requestor's answers wait for the questionnaire to come back (15-UI-SPEC §11.2). */
+export const NOT_ANSWERABLE = 'QUESTIONNAIRE_NOT_ANSWERABLE';
 
 export type AnswerAutosave = {
   status: AutosaveStatus;
@@ -55,19 +65,30 @@ export type AnswerAutosave = {
   resume: () => void;
   /** The form was seeded again from a refreshed page: forget waiting work and any block. */
   reset: () => void;
+  /** Restored answers remain durable until their current snapshot is acknowledged. */
+  recover: () => void;
 };
 
 const retryableFailure: AutosaveOutcome = { ok: false, failure: 'retryable' };
 
-export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_500 }: UseAnswerAutosaveOptions<Answers>): AnswerAutosave {
+export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_500, keepUnsaved = null }: UseAnswerAutosaveOptions<Answers>): AnswerAutosave {
   const [status, setStatus] = useState<AutosaveStatus>({ kind: 'idle' });
 
   const saveRef = useRef(save);
   const getAnswersRef = useRef(getAnswers);
+  const keepRef = useRef(keepUnsaved);
   useEffect(() => {
     saveRef.current = save;
     getAnswersRef.current = getAnswers;
+    keepRef.current = keepUnsaved;
   });
+  /* The questionnaire was taken back: every later change is kept too, since no save can carry it. */
+  const keeping = useRef(false);
+  const keepAnswers = useCallback(() => {
+    const keep = keepRef.current;
+    if (!keep) return;
+    writeSessionDraft('unsaved-answers', keep.ownerKey, keep.documentId, JSON.stringify(keep.kept(getAnswersRef.current())));
+  }, []);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** A change is waiting for the timer (or for resume while paused). */
@@ -90,8 +111,12 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
   /* `perform` and `settle` call each other through this ref, so neither closes over a stale copy. */
   const performRef = useRef<(trigger: AutosaveTrigger) => Promise<AutosaveOutcome>>(async () => retryableFailure);
 
-  const settle = useCallback((outcome: AutosaveOutcome) => {
+  const settle = useCallback((outcome: AutosaveOutcome, savedSnapshot: string | null) => {
     if (!outcome.ok && outcome.failure === 'blocked') {
+      if (outcome.reason === NOT_ANSWERABLE) {
+        keeping.current = true;
+        keepAnswers();
+      }
       blocked.current = true;
       waiting.current = false;
       queued.current = false;
@@ -99,7 +124,19 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
       setStatus({ kind: 'failed', failure: 'blocked', message: outcome.message });
       return;
     }
-    if (outcome.ok) blocked.current = false;
+    if (outcome.ok) {
+      blocked.current = false;
+      if (keeping.current && keepRef.current) {
+        const keep = keepRef.current;
+        const currentSnapshot = JSON.stringify(keep.kept(getAnswersRef.current()));
+        if (currentSnapshot === savedSnapshot) {
+          clearSessionDraft('unsaved-answers', keep.ownerKey, keep.documentId);
+          keeping.current = false;
+        } else {
+          keepAnswers();
+        }
+      }
+    }
     if (queued.current) {
       queued.current = false;
       if (paused.current) {
@@ -115,15 +152,17 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
       return;
     }
     setStatus(outcome.ok ? { kind: 'saved', at: outcome.savedAt } : { kind: 'failed', failure: 'retryable' });
-  }, [clearTimer, showSaving]);
+  }, [clearTimer, keepAnswers, showSaving]);
 
   const perform = useCallback(async (trigger: AutosaveTrigger): Promise<AutosaveOutcome> => {
     clearTimer();
     waiting.current = false;
     showSaving();
+    const answers = getAnswersRef.current();
+    const savedSnapshot = keepRef.current ? JSON.stringify(keepRef.current.kept(answers)) : null;
     const attempt = (async () => {
       try {
-        return await saveRef.current(getAnswersRef.current(), trigger);
+        return await saveRef.current(answers, trigger);
       } catch {
         return retryableFailure;
       }
@@ -131,7 +170,7 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
     inFlight.current = attempt;
     const outcome = await attempt;
     inFlight.current = null;
-    settle(outcome);
+    settle(outcome, savedSnapshot);
     return outcome;
   }, [clearTimer, settle, showSaving]);
   useEffect(() => { performRef.current = perform; }, [perform]);
@@ -151,7 +190,10 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
   }, [clearTimer, perform]);
 
   const schedule = useCallback(() => {
-    if (blocked.current) return;
+    if (keeping.current) keepAnswers();
+    if (blocked.current) {
+      return;
+    }
     showSaving();
     clearTimer();
     if (inFlight.current) {
@@ -164,7 +206,13 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
       timer.current = null;
       sendWaiting(false);
     }, debounceMs);
-  }, [clearTimer, debounceMs, sendWaiting, showSaving]);
+  }, [clearTimer, debounceMs, keepAnswers, sendWaiting, showSaving]);
+
+  const recover = useCallback(() => {
+    keeping.current = true;
+    keepAnswers();
+    schedule();
+  }, [keepAnswers, schedule]);
 
   const flush = useCallback(() => sendWaiting(false), [sendWaiting]);
 
@@ -202,6 +250,7 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
     queued.current = false;
     blocked.current = false;
     paused.current = false;
+    keeping.current = false;
     setStatus({ kind: 'idle' });
   }, [clearTimer]);
 
@@ -221,7 +270,7 @@ export function useAnswerAutosave<Answers>({ save, getAnswers, debounceMs = 1_50
   }, []);
 
   const blocking = status.kind === 'saving' || status.kind === 'failed';
-  return { status, blocking, schedule, flush, saveNow, retry, pause, resume, reset };
+  return { status, blocking, schedule, flush, saveNow, retry, pause, resume, reset, recover };
 }
 
 /*

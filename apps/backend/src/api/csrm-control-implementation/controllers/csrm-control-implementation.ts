@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
 
+import { conflictDetails, type ConflictReason } from "../../../csrm/conflict-reasons";
 import {
   assertAnalystAssessmentScope,
   assertClosedAssessmentQuery,
@@ -22,11 +23,13 @@ function isRecord(value: unknown): value is RecordValue {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string): unknown {
+function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string, reason?: ConflictReason): unknown {
   const responder = status === 400 ? ctx.badRequest : status === 403 ? ctx.forbidden : status === 404 ? ctx.notFound : ctx.conflict;
-  if (typeof responder === "function") return responder.call(ctx, message);
+  // D-22: a workflow conflict names its closed reason, as the assessment and Risk controllers' do (CR-02, WR-103).
+  const details = conflictDetails(status === 409 ? reason : undefined);
+  if (typeof responder === "function") return details ? responder.call(ctx, message, details) : responder.call(ctx, message);
   ctx.status = status;
-  return { data: null, error: { status, message } };
+  return { data: null, error: { status, message, ...(details ? { details } : {}) } };
 }
 
 function routeId(ctx: RecordValue, name: "riskId" | "implementationId"): string | null {
@@ -48,7 +51,7 @@ function handleError(ctx: RecordValue, error: unknown): unknown {
   if (error instanceof AssessmentScopeError
     || error instanceof AssessmentWorkflowError
     || error instanceof ControlImplementationWorkflowError) {
-    return safeError(ctx, error.status, error.message);
+    return safeError(ctx, error.status, error.message, error instanceof AssessmentWorkflowError ? error.reason : undefined);
   }
   throw error;
 }

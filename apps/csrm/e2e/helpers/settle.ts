@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import { settleScrollInBrowser } from '../../src/lib/testing/settle-scroll';
 import { settleWidthInBrowser } from '../../src/lib/testing/settle-width';
 
 /** What a settled destination looks like: its URL, its exact document title and its level-one heading. */
@@ -36,4 +37,14 @@ export async function expectSettled(page: Page, expected: SettledExpectation, su
  */
 export async function settleElementWidth(element: Locator): Promise<void> {
   await element.evaluate(settleWidthInBrowser, { label: String(element), frameLimit: 120 });
+}
+
+/*
+ * Waits until an element's scroll position and the page's hold for three consecutive animation frames. A keyboard
+ * scroll animates (ArrowRight moves a table region 40px over about ten frames), so the first frame that has moved
+ * is not where the scroll stops. A scroll that never settles fails after 120 frames, naming the element and its
+ * last positions.
+ */
+export async function settleScrollPosition(element: Locator): Promise<void> {
+  await element.evaluate(settleScrollInBrowser, { label: String(element), frameLimit: 120 });
 }

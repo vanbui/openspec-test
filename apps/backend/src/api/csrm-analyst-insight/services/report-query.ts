@@ -66,3 +66,42 @@ export function parseReportRequest(reportKey: unknown, query: unknown): ReportRe
   if (keys.length > 0) throw new ReportQueryError();
   return { key: reportKey, period: null };
 }
+
+/** The keys a report export body may hold (D-16; UI-D5: no `columns`). */
+const REPORT_EXPORT_BODY_KEYS: ReadonlySet<string> = new Set(["format", "table", "timeZone", "query"]);
+/** The most query parameters a report export may pass to its report, and the longest value. */
+export const REPORT_EXPORT_QUERY_MAX_KEYS = 16;
+export const REPORT_EXPORT_QUERY_VALUE_MAX = 200;
+
+/** The report export's body once parsed: the report request, and the export controls the export pipeline validates. */
+export type ReportExportBody = {
+  readonly request: ReportRequest;
+  readonly format: unknown;
+  readonly table: unknown;
+  readonly timeZone: unknown;
+};
+
+/** The body's `query`: absent, or an object of at most 16 text values of at most 200 characters each. */
+function reportExportQuery(value: unknown): RecordValue {
+  if (value === undefined) return {};
+  if (!isRecord(value)) throw new ReportQueryError();
+  const entries = Object.entries(value);
+  if (entries.length > REPORT_EXPORT_QUERY_MAX_KEYS) throw new ReportQueryError();
+  if (entries.some(([, entry]) => typeof entry !== "string" || entry.length > REPORT_EXPORT_QUERY_VALUE_MAX)) throw new ReportQueryError();
+  return value;
+}
+
+/**
+ * POST /api/v1/reports/{reportKey}/export (Phase 19 D-16, D-22; UI-D5): the key must name a report (404 otherwise).
+ * The body is a closed object of `format`, `table`, `timeZone` and `query`; any other key, `columns` included, is a
+ * 400. `query` holds the report's own query parameters as text, parsed by parseReportRequest unchanged, so the export
+ * runs the report its read would. `format`, `table` and `timeZone` are validated by the export pipeline, which knows
+ * the report's tables.
+ */
+export function parseReportExportBody(reportKey: unknown, body: unknown): ReportExportBody {
+  if (!isReportKey(reportKey)) throw new ReportNotFoundError();
+  if (!isRecord(body)) throw new ReportQueryError();
+  if (Object.keys(body).some((key) => !REPORT_EXPORT_BODY_KEYS.has(key))) throw new ReportQueryError();
+  const request = parseReportRequest(reportKey, reportExportQuery(body.query));
+  return { request, format: body.format, table: body.table, timeZone: body.timeZone };
+}

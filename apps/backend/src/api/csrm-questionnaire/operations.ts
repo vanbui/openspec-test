@@ -1,7 +1,11 @@
 export const CSRM_QUESTIONNAIRE_OPERATIONS = {
   listMine: "GET:/api/v1/my_questionnaires",
+  // Phase 19 (D-04, D-13): the caller's own questionnaires exported whole, for every person through the birthright.
+  exportMine: "GET:/api/v1/my_questionnaires/export",
   statusSummary: "GET:/api/v1/my_questionnaires/status_summary",
   listAll: "GET:/api/v1/questionnaires",
+  // Phase 19 (D-04, D-13): the analyst review list exported whole, human Security Analyst only.
+  exportAll: "GET:/api/v1/questionnaires/export",
   reviewSummary: "GET:/api/v1/questionnaires/review_summary",
   findOne: "GET:/api/v1/questionnaires/{questionnaireId}",
   listQuestions: "GET:/api/v1/questionnaires/{questionnaireId}/questions",
@@ -16,4 +20,11 @@ export const CSRM_QUESTIONNAIRE_OPERATIONS = {
   getGenerationJob: "GET:/api/v1/questionnaire_generation_jobs/{jobId}",
   retryGenerationJob: "POST:/api/v1/questionnaire_generation_jobs/{jobId}/retry",
   getRequestGenerationJobs: "GET:/api/v1/assessment_requests/{requestId}/generation_jobs",
+  // Phase 15 (D-03): the questionnaire AI operations, each human analyst-only.
+  startAiProposals: "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+  listAiProposals: "GET:/api/v1/questionnaires/{questionnaireId}/ai_proposals",
+  startQuestionRewrite: "POST:/api/v1/questionnaires/{questionnaireId}/questions/{questionId}/rewrite",
+  getProposalJob: "GET:/api/v1/questionnaire_proposal_jobs/{jobId}",
+  retryProposalJob: "POST:/api/v1/questionnaire_proposal_jobs/{jobId}/retry",
+  decideAiProposals: "POST:/api/v1/questionnaires/{questionnaireId}/ai_proposal_decisions",
 } as const;

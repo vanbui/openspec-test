@@ -17,10 +17,18 @@ import {
   retryQuestionnaireGenerationJobAction,
   startQuestionnaireGenerationAction,
 } from './assessment-actions';
+import { aiJobFailureCopy, type AiPolicyStatus } from '../ai-assistance/ai-assistance-domain';
+import { AiPolicyGate } from '../ai-assistance/ai-policy-gate';
+import { ContextTooLargeFailure } from '../attachments/context-too-large-files';
 import type { QuestionnaireGenerationJob, RequestGenerationJobs } from './assessment-schema';
 import { settleGenerationAction } from './generation-failure-copy';
+import { generationRefusalMessage, servedReason } from './generation-refusal';
+import { InstructionField } from '../questionnaire-ai/instruction-field';
+import { hubProposalsLine, instructionTooLongLine, replaceOffer, type QuestionnaireAiProposalsView } from '../questionnaire-ai/questionnaire-ai-domain';
+import { HubProposalJob } from '../questionnaire-ai/hub-proposal-job';
+import { writeSessionDraft } from '@/lib/session-drafts/session-drafts';
 
-/** The request's questionnaire generation job as the jobs read serves it: the job and whether this viewer may retry it. */
+/** The request's questionnaire generation job as the jobs read serves it: the job and whether this viewer may retry it (the job's own canRetry). */
 export type SeededQuestionnaireGenerationJob = NonNullable<RequestGenerationJobs['questionnaireGeneration']>;
 
 export interface QuestionnaireGenerationJobTiming {
@@ -50,18 +58,28 @@ function questionnaireHref(questionnaireId: string): string {
   return `/app/review/questionnaires/${encodeURIComponent(questionnaireId)}`;
 }
 
-const replacementOpening = 'This generates a new questionnaire from the request and replaces this one';
-const replacementClosing = ' Requestor answers are never replaced. The new questionnaire stays in analyst review until you release it.';
-
-/**
- * What a replacement discards (UI-SPEC §3.2, D-08): the served count of analyst changes to the questions
- * since the latest generation (D-16). A count the read did not serve is never guessed.
+/*
+ * 15-UI-SPEC §8.3 (D-09, UI-D21): a replacement is offered only when nothing would be lost, so its confirmation has one
+ * description. Phase 10's one-change, n-change and unavailable-count descriptions are retired.
  */
-function replacementDescription(analystChanges: number | null | undefined): ReactNode {
-  if (analystChanges === 0) return `${replacementOpening}. No analyst has changed its questions since it was generated.${replacementClosing}`;
-  if (analystChanges === 1) return <>{`${replacementOpening}, discarding the `}<span className="tabular-nums">1</span>{` change an analyst made to its questions since it was generated.${replacementClosing}`}</>;
-  if (typeof analystChanges === 'number') return <>{`${replacementOpening}, discarding the `}<span className="tabular-nums">{analystChanges}</span>{` changes analysts made to its questions since it was generated.${replacementClosing}`}</>;
-  return `${replacementOpening}, discarding any changes analysts made to its questions since it was generated.${replacementClosing}`;
+const replacementDescription = 'This generates a new questionnaire from the request and replaces this one. No analyst has changed its questions and the Requestor hasn’t answered it, so nothing is lost. The new questionnaire stays in analyst review until you release it.';
+/* Without the proposals read (a requesting analyst, or a failed read), the served count decides (Phase 10's relation rule). */
+const ANALYST_CHANGES_LINE = 'Analysts have changed this questionnaire since it was generated, so replacing it would discard their work. Use AI proposals to change it instead.';
+const CHANGES_UNKNOWN_LINE = 'CSRM couldn’t check whether analysts have changed this questionnaire since it was generated, so it isn’t offered for replacement. Reload the page to check again.';
+
+/* The shortcut never confirms a destructive replacement: the analyst confirms with the dialog's own button. */
+const ignoreShortcut = () => undefined;
+
+type ReplaceDecision = { offered: true } | { offered: false; line: string | null; link: { label: string; href: string } | null };
+
+function replaceDecision(view: QuestionnaireAiProposalsView | null | undefined, analystChanges: number | null | undefined): ReplaceDecision {
+  if (view) {
+    const offer = replaceOffer(view);
+    if (offer.offered) return offer;
+    return { offered: false, line: offer.line, link: offer.link ? { label: offer.link.label, href: `${questionnaireHref(view.questionnaireId)}${offer.link.href}` } : null };
+  }
+  if (analystChanges === 0) return { offered: true };
+  return { offered: false, line: typeof analystChanges === 'number' ? ANALYST_CHANGES_LINE : CHANGES_UNKNOWN_LINE, link: null };
 }
 
 /**
@@ -70,17 +88,24 @@ function replacementDescription(analystChanges: number | null | undefined): Reac
  */
 const leaveAndReturn = 'You can leave this page. The status shows here when you come back.';
 /* UI-SPEC §12.1, §12.2 and §12.5; the draft card states the same copy. */
-const startedByAnotherAnalyst = 'Started by another Security Analyst.';
-const retryRestrictedToInitiator = 'Only the Security Analyst who started it can retry it.';
 const automaticChecksStopped = 'Automatic checks stopped after 30 seconds. Generation may still be running.';
 /* True because each registry hands back the request's active job instead of starting a second one (§12.5). */
 const jobsReadFailedNotice = 'We couldn’t check whether a generation is already running. If one is, starting generation shows its progress instead of starting another.';
 
+/*
+ * UI-SPEC §13 (D-18): a job a colleague started names them, whether it is queued, running or failed; the viewer's
+ * own job, including the attempt their retry started, shows no line. A person who can no longer be read is not named.
+ */
+function startedByLine(job: QuestionnaireGenerationJob): string | null {
+  return job.initiatedByViewer || !job.initiatedBy ? null : `Started by ${job.initiatedBy.displayName}.`;
+}
+
 type PollResult = { ok: true; entry: SeededQuestionnaireGenerationJob | null } | { ok: false; formError: string };
 
 /*
- * D-27: the by-id read and retry stay with the analyst who started the job, so a job this viewer may not
- * retry, or one a start handed back without saying whose it is, is followed through the request's jobs read.
+ * D-18: any analyst on the request may read a job by id, but the request's jobs read also follows a job that a
+ * colleague's start replaced, so a job the viewer did not start is followed through the request (the route is keyed
+ * on initiatedByViewer, never on canRetry). The by-id result's canRetry is the served job's own.
  */
 async function pollJob(requestId: string, jobId: string, byRequest: boolean): Promise<PollResult> {
   if (byRequest) {
@@ -88,8 +113,13 @@ async function pollJob(requestId: string, jobId: string, byRequest: boolean): Pr
     return result.ok ? { ok: true, entry: result.data.questionnaireGeneration } : { ok: false, formError: result.formError };
   }
   const result = await settleGenerationAction('questionnaireGeneration', () => getQuestionnaireGenerationJobAction({ jobId }));
-  return result.ok ? { ok: true, entry: { job: result.data, canRetry: true } } : { ok: false, formError: result.formError };
+  return result.ok ? { ok: true, entry: { job: result.data, canRetry: result.data.canRetry } } : { ok: false, formError: result.formError };
 }
+
+/* Phase 15 (15-UI-SPEC §3.1, §12): the Generate field's hint and the requesting analyst's caption. */
+const GENERATE_INSTRUCTION_HINT = 'Say what the questionnaire should focus on, for example “Cover the offshore support team and payroll data”. The AI already reads the request and the marked notes and files.';
+const OWN_REQUEST_GENERATE_CAPTION = 'You raised this request, so you can generate without an instruction. Another Security Analyst can give the AI one.';
+const INSTRUCTION_REASONS: ReadonlySet<string> = new Set(['INSTRUCTION_TOO_LONG', 'INSTRUCTION_CHARACTERS_NOT_ALLOWED', 'INSTRUCTION_REPEATS_REQUESTOR_TEXT']);
 
 const failureCopy = new Map<string, string>([
   ['REQUEST_NOT_ELIGIBLE', 'The request is no longer submitted, so a questionnaire can’t be generated for it.'],
@@ -102,17 +132,34 @@ const failureCopy = new Map<string, string>([
 export function QuestionnaireGenerationJob({
   requestId,
   action,
+  aiInputsChanged,
+  aiProposals = null,
   analystChangesSinceGeneration,
+  aiPolicy,
   questionnaireHref: existingQuestionnaireHref,
   questionnaireNumber,
   seededJob,
   jobsReadFailed = false,
   onJobStatusChange,
+  ownRequest = false,
+  ownerKey = null,
   timing = defaultTiming,
 }: {
   requestId: string;
   /** What the served questionnaire relation allows: `questionnaireGenerationAction` in request-domain. */
   action: QuestionnaireGenerationAction;
+  /**
+   * Phase 13 D-29 (13-UI-SPEC §10.2): the questionnaire's "AI inputs changed" block, rendered on the server by the hub page
+   * and handed through as a slot, set above the card's idle action or state line.
+   */
+  aiInputsChanged?: ReactNode;
+  /**
+   * Phase 15 (15-UI-SPEC §8.3, §8.4; D-09, D-29, D-33): the questionnaire's AI proposals read, which decides Replace and
+   * carries the proposals line and the hub's proposal job. `null` for a requesting analyst (D-32) or a failed read.
+   */
+  aiProposals?: QuestionnaireAiProposalsView | null;
+  /** The served AI data policy (D-29); absent when the jobs read failed. */
+  aiPolicy?: AiPolicyStatus | null;
   /** The existing questionnaire's analyst route, linked from the released hint (UI-SPEC §3.3). */
   questionnaireHref?: string;
   questionnaireNumber?: string | null;
@@ -128,10 +175,13 @@ export function QuestionnaireGenerationJob({
   /** Reports the shown job's status, or `null` for none, so the hub can say generation is in progress (§12.3). */
   onJobStatusChange?: (status: QuestionnaireGenerationJob['status'] | null) => void;
   timing?: QuestionnaireGenerationJobTiming;
+  /** Phase 15 D-32: the viewer raised this request, so they generate without an instruction (15-UI-SPEC §12). */
+  ownRequest?: boolean;
+  /** The draft owner key the instruction is kept under for the session (15-UI-SPEC §3.2). */
+  ownerKey?: string | null;
 }) {
+  /* D-18: the job carries whether this viewer may retry it and whether they started it, so the card keeps no copy. */
   const [job, setJob] = useState<QuestionnaireGenerationJob | null>(seededJob?.job ?? null);
-  /* `null`: not yet known, as after a start, which may hand back a job another analyst started. */
-  const [canRetry, setCanRetry] = useState<boolean | null>(seededJob ? seededJob.canRetry : null);
   const [announcement, setAnnouncement] = useState(seededJob ? statusCopy[seededJob.job.status] : '');
   /* A status check that failed (UI-SPEC §12.1 `Status unavailable`). */
   const [formError, setFormError] = useState<string | null>(null);
@@ -140,6 +190,10 @@ export function QuestionnaireGenerationJob({
   /* A refused replacement is shown inside its confirmation, which stays open (UI-SPEC §3.2, §10.2 I). */
   const [replacementError, setReplacementError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  /* Phase 15 (15-UI-SPEC §3.3; D-12): the optional instruction on Generate, and its refusal beside the field. */
+  const [instruction, setInstruction] = useState('');
+  const [instructionError, setInstructionError] = useState<string | null>(null);
+  const instructionRef = useRef<HTMLTextAreaElement>(null);
   const [timedOut, setTimedOut] = useState(false);
   const [pollCycle, setPollCycle] = useState(0);
   const mountedRef = useRef(true);
@@ -157,14 +211,13 @@ export function QuestionnaireGenerationJob({
 
   /*
    * `router.refresh()` and revalidation hand the card a new seed object with the same content, so the card
-   * resets only when the seeded job, its status or the viewer's retry right changes. A seed that disappears
+   * resets only when the seeded job, its status, the viewer's retry right or whose it is changes. A seed that disappears
    * (the job completed, so it is no longer seeded) leaves this session's job, and its review link, in place.
    */
-  const seededKey = seededJob ? `${seededJob.job.jobId}:${seededJob.job.status}:${seededJob.canRetry}` : null;
+  const seededKey = seededJob ? `${seededJob.job.jobId}:${seededJob.job.status}:${seededJob.job.canRetry}:${seededJob.job.initiatedByViewer}` : null;
   useEffect(() => {
     if (!seededJob) return;
     setJob(seededJob.job);
-    setCanRetry(seededJob.canRetry);
     activeJobIdRef.current = seededJob.job.jobId;
     setTimedOut(false);
     setFormError(null);
@@ -184,7 +237,7 @@ export function QuestionnaireGenerationJob({
       return;
     }
     const polledJobId = job.jobId;
-    const byRequest = canRetry !== true;
+    const byRequest = job.initiatedByViewer !== true;
     const handle = timing.setTimeout(() => {
       if (!mountedRef.current || requestInFlightRef.current) return;
       requestInFlightRef.current = true;
@@ -201,12 +254,10 @@ export function QuestionnaireGenerationJob({
           /* The server no longer holds a job for this request (D-26: jobs stay in the server process). */
           activeJobIdRef.current = null;
           setJob(null);
-          setCanRetry(null);
           setAnnouncement('');
           return;
         }
         activeJobIdRef.current = entry.job.jobId;
-        setCanRetry(entry.canRetry);
         setJob((current) => {
           if (current?.jobId !== entry.job.jobId || current.status !== entry.job.status) setAnnouncement(statusCopy[entry.job.status]);
           return entry.job;
@@ -222,7 +273,7 @@ export function QuestionnaireGenerationJob({
       });
     }, Math.min(timing.pollIntervalMs, remaining));
     return () => timing.clearTimeout(handle);
-  }, [canRetry, job, pollCycle, requestId, timedOut, timing]);
+  }, [job, pollCycle, requestId, timedOut, timing]);
 
   /** Starts generation; resolves `true` once a job exists, `false` when nothing started. */
   async function start(replaceUnansweredQuestionnaire: boolean): Promise<boolean> {
@@ -236,21 +287,38 @@ export function QuestionnaireGenerationJob({
     setFormError(null);
     setStartError(null);
     setReplacementError(null);
-    const result = await settleGenerationAction('questionnaireGeneration', () => startQuestionnaireGenerationAction({ requestId, replaceUnansweredQuestionnaire }));
+    const sent = ownRequest ? '' : instruction.trim() === '' ? '' : instruction;
+    const tooLong = instructionTooLongLine(sent.length);
+    if (tooLong) {
+      requestInFlightRef.current = false;
+      setPending(false);
+      setInstructionError(tooLong);
+      instructionRef.current?.focus();
+      return false;
+    }
+    setInstructionError(null);
+    const result = await settleGenerationAction('questionnaireGeneration', () => startQuestionnaireGenerationAction(sent ? { requestId, replaceUnansweredQuestionnaire, instruction: sent } : { requestId, replaceUnansweredQuestionnaire }));
+    /* WR-408, IN-303: a refusal by the AI data policy names the classification and the approved limit as they stand. */
+    const refusal = result.ok ? null : await generationRefusalMessage({ requestId, formError: result.formError, reason: servedReason(result), servedPolicy: aiPolicy });
     requestInFlightRef.current = false;
     if (!mountedRef.current) return false;
     setPending(false);
     if (!result.ok) {
-      if (replaceUnansweredQuestionnaire) setReplacementError(result.formError);
-      else setStartError(result.formError);
+      const reason = servedReason(result);
+      if (reason !== undefined && INSTRUCTION_REASONS.has(reason)) {
+        setInstructionError(result.formError);
+        instructionRef.current?.focus();
+      } else if (replaceUnansweredQuestionnaire) setReplacementError(refusal ?? result.formError);
+      else setStartError(refusal ?? result.formError);
       setAnnouncement('Questionnaire generation could not be started');
       return false;
     }
+    setInstruction('');
+    if (ownerKey) writeSessionDraft(replaceUnansweredQuestionnaire ? 'replacement-instruction' : 'generation-instruction', ownerKey, requestId, '');
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
     activeJobIdRef.current = result.data.jobId;
-    /* A start hands back the request's active job, which another analyst may have started (UI-SPEC §12.5). */
-    setCanRetry(null);
+    /* A start hands back the request's active job, which a colleague may have started; the job says whose it is (§12.5, §13). */
     setJob(result.data);
     setAnnouncement(statusCopy[result.data.status]);
     return true;
@@ -268,19 +336,20 @@ export function QuestionnaireGenerationJob({
     setFormError(null);
     setStartError(null);
     const result = await settleGenerationAction('questionnaireGeneration', () => retryQuestionnaireGenerationJobAction({ jobId: job.jobId }));
+    /* IN-104: Strapi refuses a retry by the AI data policy as it refuses an enqueue, so it reads the same way. */
+    const refusal = result.ok ? null : await generationRefusalMessage({ requestId, formError: result.formError, reason: servedReason(result), servedPolicy: aiPolicy });
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);
     if (!result.ok) {
-      setStartError(result.formError);
+      setStartError(refusal ?? result.formError);
       setAnnouncement('Questionnaire generation could not be retried');
       return;
     }
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
     activeJobIdRef.current = result.data.jobId;
-    /* Strapi lets only the analyst who started a job retry it, so this viewer started it. */
-    setCanRetry(true);
+    /* D-18, G-3: a retry is the retrying analyst's attempt, so the served job is now the viewer's own. */
     setJob(result.data);
     setAnnouncement(statusCopy[result.data.status]);
   }
@@ -301,18 +370,31 @@ export function QuestionnaireGenerationJob({
    * the only mutation it can reach is ConfirmDialog's `onConfirm` callback.
    */
   const replacementTrigger = <Button disabled={pending} type="button" variant="outline"><Sparkles aria-hidden="true" />Replace questionnaire</Button>;
-  const replace = <ConfirmDialog cancelLabel="Keep this questionnaire" confirmLabel="Replace questionnaire" confirmVariant="destructive" description={replacementDescription(analystChangesSinceGeneration)} errorMessage={replacementError} onConfirm={confirmReplacement} onDismiss={() => setReplacementError(null)} pendingLabel="Replacing questionnaire…" title="Replace this questionnaire?" trigger={replacementTrigger} />;
+  const replacementField = ownRequest ? <p className="text-sm text-foreground-secondary">{OWN_REQUEST_GENERATE_CAPTION}</p> : <InstructionField draft={{ kind: 'replacement-instruction', recordId: requestId, ownerKey }} error={instructionError} fieldRef={instructionRef} hint={GENERATE_INSTRUCTION_HINT} id={`replacement-instruction-${requestId}`} onChange={setInstruction} onSubmitShortcut={ignoreShortcut} value={instruction} />;
+  const replaceDialog = <ConfirmDialog cancelLabel="Keep this questionnaire" confirmLabel="Replace questionnaire" confirmVariant="destructive" description={replacementDescription} errorMessage={replacementError} onConfirm={confirmReplacement} onDismiss={() => setReplacementError(null)} pendingLabel="Replacing questionnaire…" title="Replace this questionnaire?" trigger={replacementTrigger}>{replacementField}</ConfirmDialog>;
+  const decision = replaceDecision(aiProposals, analystChangesSinceGeneration);
+  const replace = decision.offered ? replaceDialog : null;
+  const notReplaceableLine = !decision.offered && decision.line ? <p className="text-sm text-foreground-secondary">{decision.line}{decision.link ? <>{' '}<Link className="font-medium text-primary underline-offset-4 hover:underline" href={decision.link.href}>{decision.link.label}</Link></> : null}</p> : null;
+  const panelHref = aiProposals ? `${questionnaireHref(aiProposals.questionnaireId)}#ai-proposals` : null;
+  const proposalsLine = aiProposals && panelHref ? hubProposalsLine(aiProposals.openCount) : null;
   const questionnaireLabel = questionnaireNumber && existingQuestionnaireHref ? <RecordLink href={existingQuestionnaireHref}>{questionnaireNumber}</RecordLink> : (questionnaireNumber ?? 'the questionnaire');
   const releasedHint = <p className="text-sm text-foreground-secondary">This questionnaire has been released to the Requestor. To replace it, return {questionnaireLabel} to analyst review first.</p>;
   /* IN-201: a questionnaire that exists but is not served as released; the page knows no more than that. */
   const existsHint = <p className="text-sm text-foreground-secondary">A questionnaire already exists for this request.</p>;
   const replacementRefused = action === 'released' || action === 'exists';
   /* What the card offers with no job on it, per the served questionnaire relation (UI-SPEC §3.1). */
-  const idleAction = action === 'generate' ? generate : action === 'replace' ? replace : null;
+  const offeredAction = action === 'generate' ? generate : action === 'replace' ? replace : null;
+  /* 12-UI-SPEC §11.1: the policy gates the action wherever the card offers one. */
+  const idleAction = offeredAction ? <AiPolicyGate action={offeredAction} policy={aiPolicy} /> : null;
   const retryButton = <Button disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying questionnaire generation…' : 'Retry questionnaire generation'}</Button>;
-  const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription><p>{failureCopy.get(job.failureCode) ?? job.failureMessage}</p>{canRetry === false ? <p>{retryRestrictedToInitiator}</p> : null}</AlertDescription></Alert>
+  const startedBy = job ? startedByLine(job) : null;
+  /*
+   * 15-UI-SPEC §13 (D-29, D-33): CONTEXT_TOO_LARGE reads by the shared rule (the served notes sentence, the files, or 12
+   * §11.2's sentence); every other code keeps 12 §12.4's order.
+   */
+  const state = job?.status === 'failed' ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{job.failureCode === 'CONTEXT_TOO_LARGE' ? <ContextTooLargeFailure failure={job} fallback={aiJobFailureCopy('CONTEXT_TOO_LARGE') ?? job.failureMessage} requestId={requestId} /> : <p>{aiJobFailureCopy(job.failureCode) ?? failureCopy.get(job.failureCode) ?? job.failureMessage}</p>}{startedBy ? <p>{startedBy}</p> : null}</AlertDescription></Alert>
     : job?.status === 'completed' ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">Provider: {job.providerName} ({job.providerVersion}). Review the generated questionnaire before use.</p></div></div>
-      : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">{leaveAndReturn}</p>{canRetry === false ? <p className="text-sm text-muted-foreground">{startedByAnotherAnalyst}</p> : null}</div></div> : null;
+      : job ? <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy[job.status]}</p><p className="text-sm text-muted-foreground">{leaveAndReturn}</p>{startedBy ? <p className="text-sm text-muted-foreground">{startedBy}</p> : null}</div></div> : null;
 
   return <Card>
     <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -323,8 +405,14 @@ export function QuestionnaireGenerationJob({
       {job ? <Badge variant="outline">Attempt {job.attempt}</Badge> : null}
     </CardHeader>
     <CardContent className="space-y-4"><div aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</div>
+      {aiInputsChanged}
       {!job && jobsReadFailed && idleAction ? <p className="text-sm text-foreground-secondary">{jobsReadFailedNotice}</p> : null}
+      {!job && action === 'generate' && idleAction ? (ownRequest
+        ? <p className="text-sm text-foreground-secondary">{OWN_REQUEST_GENERATE_CAPTION}</p>
+        : <InstructionField draft={{ kind: 'generation-instruction', recordId: requestId, ownerKey }} error={instructionError} fieldRef={instructionRef} hint={GENERATE_INSTRUCTION_HINT} id={`generation-instruction-${requestId}`} onChange={setInstruction} onSubmitShortcut={() => void start(false)} value={instruction} />) : null}
       {!job ? idleAction : null}
+      {!job && action === 'replace' && idleAction && ownRequest ? <p className="text-sm text-foreground-secondary">{OWN_REQUEST_GENERATE_CAPTION}</p> : null}
+      {!job && action === 'replace' ? notReplaceableLine : null}
       {state}{startError ? <Alert role="alert" variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>Questionnaire generation couldn’t start</AlertTitle><AlertDescription>{startError}</AlertDescription></Alert> : null}
       {formError ? <Alert role="alert" variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>Status unavailable</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
       {timedOut ? <div className="grid gap-3 rounded-lg border border-border p-4"><div className="flex items-center gap-2"><Clock3 aria-hidden="true" /><p className="font-medium">Taking longer than expected</p></div><p className="text-sm text-muted-foreground">{automaticChecksStopped}</p><Button className="w-fit" onClick={checkAgain} type="button" variant="outline">Check again</Button></div> : null}
@@ -334,14 +422,20 @@ export function QuestionnaireGenerationJob({
         * acknowledged replacement instead (UI-SPEC §12.1), the only route out of
         * that state, unless the questionnaire has since been released.
         */}
-      {/* D-26: Retry stays with the analyst who started the job; anyone else may start a new one. */}
+      {/* D-18 (UI-SPEC §13): every analyst on the request may retry a failed job; one the viewer may not retry offers a new start. */}
+      {/* WR-308 (D-29): Retry and this Replace generate too, so the served policy gates them, without the idle caption. */}
       {job?.status === 'failed' && job.failureCode === 'QUESTIONNAIRE_REPLACEMENT_NOT_ACKNOWLEDGED'
-        ? (replacementRefused ? null : replace)
-        : job?.status === 'failed' ? (canRetry === false ? idleAction : retryButton) : null}
+        ? (replacementRefused ? null : replace ? <AiPolicyGate action={replace} caption={false} policy={aiPolicy} /> : notReplaceableLine)
+        : job?.status === 'failed' ? (job.canRetry ? <AiPolicyGate action={retryButton} caption={false} policy={aiPolicy} /> : idleAction) : null}
       {/* D-09 (UI-SPEC §3.3): a released questionnaire is never offered for replacement; say how to get there. */}
       {action === 'released' && (!job || job.status === 'failed') ? releasedHint : null}
       {action === 'exists' && (!job || job.status === 'failed') ? existsHint : null}
       {job?.status === 'completed' ? <Link className={buttonVariants()} href={questionnaireHref(job.questionnaire.documentId)}>Review generated questionnaire</Link> : null}
+      {/* 15-UI-SPEC §8.4 (D-29, D-33): the hub-started proposal job and the open proposals, never for a requesting analyst. */}
+      {aiProposals && panelHref ? <HubProposalJob panelHref={panelHref} requestId={requestId} timing={timing} view={aiProposals} /> : null}
+      {proposalsLine && panelHref ? (proposalsLine.linked
+        ? <p className="text-sm tabular-nums"><Link className="font-medium text-primary underline-offset-4 hover:underline" href={panelHref}>{proposalsLine.text}</Link></p>
+        : <p className="text-sm text-foreground-secondary">{proposalsLine.text}</p>) : null}
     </CardContent>
   </Card>;
 }

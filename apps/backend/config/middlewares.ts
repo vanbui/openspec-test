@@ -3,8 +3,9 @@ import type { Core } from '@strapi/strapi';
 import { CORS_ALLOWED_ORIGINS_VARIABLE, parseCorsAllowedOrigins } from '../src/utils/cors-allowed-origins';
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Middlewares => [
-  'strapi::logger',
+  'global::scim-request-logger',
   'strapi::errors',
+  'global::scim-boundary',
   'global::csrm-development-identity',
   'global::csrm-keycloak-identity',
   'strapi::security',
@@ -29,6 +30,8 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Middlewar
       },
     },
   },
+  // D-11, D-25: removes every multipart part's temporary file after every request, refused callers included.
+  'global::csrm-multipart-cleanup',
   'strapi::session',
   'strapi::favicon',
   'strapi::public',

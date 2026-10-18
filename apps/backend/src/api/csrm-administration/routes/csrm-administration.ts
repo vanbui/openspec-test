@@ -9,14 +9,55 @@ const policies = (operation: string) => [
   { name: "global::csrm-authorization", config: { operation, requireAnalystAdministrationScope: true } },
 ];
 
+/* 19-14 (D-13): an export also names the list read it discloses (underlyingRead), beside the Administration scope. */
+const exportPolicies = (operation: string, underlyingRead: string) => [
+  "global::csrm-app-enabled",
+  { name: "global::csrm-authorization", config: { operation, requireAnalystAdministrationScope: true, underlyingRead } },
+];
+
 const pickerPolicies = (pickerOperation: string, administrationListOperation: string) => [
   "global::csrm-app-enabled",
   { name: "global::csrm-authorization", config: { operation: pickerOperation, administrationListOperation } },
 ];
 
+/*
+ * Phase 19 (19-14; D-03 group 3, D-31, D-32, D-33): each collection's import template, error report and reference-list
+ * export, listed before the collection's `/:id` routes. All are human Security Analyst work through the Administration
+ * scope, granted by the collection's Administration Function (D-13).
+ */
+type FileRouteNames = {
+  segment: string;
+  template: keyof typeof CSRM_ADMINISTRATION_OPERATIONS;
+  errorReport: keyof typeof CSRM_ADMINISTRATION_OPERATIONS;
+  exportList: keyof typeof CSRM_ADMINISTRATION_OPERATIONS;
+  listRead: keyof typeof CSRM_ADMINISTRATION_OPERATIONS;
+};
+
+const fileRoutes = ({ segment, template, errorReport, exportList, listRead }: FileRouteNames) => [
+  {
+    method: "GET" as const, path: `/v1/${segment}/export`, handler: `api::csrm-administration.csrm-administration.${exportList}`,
+    config: {
+      auth: { strategies: ["content-api-token"] },
+      policies: exportPolicies(CSRM_ADMINISTRATION_OPERATIONS[exportList], CSRM_ADMINISTRATION_OPERATIONS[listRead]),
+    },
+  },
+  {
+    method: "GET" as const, path: `/v1/${segment}/import/template`, handler: `api::csrm-administration.csrm-administration.${template}`,
+    config: { auth: { strategies: ["content-api-token"] }, policies: policies(CSRM_ADMINISTRATION_OPERATIONS[template]) },
+  },
+  {
+    method: "POST" as const, path: `/v1/${segment}/import/error_report`, handler: `api::csrm-administration.csrm-administration.${errorReport}`,
+    config: { auth: { strategies: ["content-api-token"] }, policies: policies(CSRM_ADMINISTRATION_OPERATIONS[errorReport]) },
+  },
+];
+
 const config: Core.RouterConfig = {
   type: "content-api",
   routes: [
+    ...fileRoutes({ segment: "risk_types", template: "downloadRiskTypesImportTemplate", errorReport: "downloadRiskTypesImportErrorReport", exportList: "exportRiskTypes", listRead: "listRiskTypes" }),
+    ...fileRoutes({ segment: "controls", template: "downloadControlsImportTemplate", errorReport: "downloadControlsImportErrorReport", exportList: "exportControls", listRead: "listControls" }),
+    ...fileRoutes({ segment: "information_systems", template: "downloadInformationSystemsImportTemplate", errorReport: "downloadInformationSystemsImportErrorReport", exportList: "exportInformationSystems", listRead: "listInformationSystems" }),
+    ...fileRoutes({ segment: "information_assets", template: "downloadInformationAssetsImportTemplate", errorReport: "downloadInformationAssetsImportErrorReport", exportList: "exportInformationAssets", listRead: "listInformationAssets" }),
     {
       method: "POST", path: "/v1/risk_types", handler: "api::csrm-administration.csrm-administration.createRiskType",
       config: { auth: { strategies: ["content-api-token"] }, policies: policies(CSRM_ADMINISTRATION_OPERATIONS.createRiskType) },

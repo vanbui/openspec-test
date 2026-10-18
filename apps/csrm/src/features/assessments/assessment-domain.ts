@@ -135,6 +135,9 @@ export const assessmentRatingPresentation = {
  */
 export const assessmentStatuses = ['draft', 'in-review', 'approved', 'closed'] as const;
 
+/** The AssessmentRating ladder, Low to Critical, for the list rating filters that run in the browser (D-02 item 2). */
+export const assessmentRatings = ['Low', 'Moderate', 'High', 'Critical'] as const;
+
 export const riskWritableFields = [
   'issueStatement',
   'riskStatement',
@@ -250,6 +253,16 @@ export function assessmentSaveWrites(
   if (status === 'draft') return true;
   const initial = normalizeAssessmentDetails(assessmentDetailsFormValues(stored));
   return Object.keys(changedWritableValues(assessmentWritableFields, normalizeAssessmentDetails(values), initial)).length > 0;
+}
+
+/**
+ * The details an accepted Save assessment changed: those it sends with a value other than the stored one. Strapi marks
+ * each AI-written field among them `edited` in the same transaction (D-21), which the editor shows at once (WR-302).
+ */
+export function changedAssessmentDetails(values: AssessmentDetailsValues, stored: StoredAssessmentDetails): string[] {
+  const sent = normalizeAssessmentDetails(values);
+  const changed = changedWritableValues(assessmentWritableFields, sent, normalizeAssessmentDetails(assessmentDetailsFormValues(stored)));
+  return (Object.keys(changed) as (keyof AssessmentDetailsValues)[]).filter((field) => sent[field] !== undefined);
 }
 
 /**

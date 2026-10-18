@@ -4,7 +4,7 @@ import { BarChart } from '@/components/csrm/bar-chart';
 import { AlertRow } from '../alerts/alert-row';
 import {
   dueStateRows,
-  hasOpenContextualTreatments,
+  hasOpenTreatmentRisks,
   mostOverdueNote,
   overdueTreatmentsHref,
   reportEmptyStates,
@@ -50,13 +50,14 @@ function MostOverdueTreatments({ mostOverdue }: { mostOverdue: TreatmentPerforma
 }
 
 /**
- * The treatment-performance report (UI-SPEC §4.4). Due state follows the D-04 rule over open
- * treatments that are not Complete; treatment status is the value recorded on every open
- * contextual Risk. Both are categorical, so both charts are ink.
+ * The treatment-performance report (UI-SPEC §4.4, §9.4). Due state follows the one D-04 rule over
+ * open treatments that are not Complete, on the product's due-soon window (D-38); treatment status
+ * is the value recorded on every open Risk. Both include Risks under assessment (D-43), and both are
+ * categorical, so both charts are ink.
  */
 export function TreatmentPerformanceReportView({ report }: { report: TreatmentPerformanceReport }) {
   const copy = reportSectionCopy;
-  const openRisks = hasOpenContextualTreatments(report) ? undefined : reportEmptyStates.openContextualRisks;
+  const openRisks = hasOpenTreatmentRisks(report) ? undefined : reportEmptyStates.openRisks;
   const dueStates = dueStateRows(report);
   const statuses = treatmentStatusRows(report.treatmentStatus);
 

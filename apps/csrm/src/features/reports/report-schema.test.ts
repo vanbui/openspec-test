@@ -30,6 +30,7 @@ const riskExposure = {
   today: '2026-09-24',
   byResidualRating: { Critical: 2, High: 3, Moderate: 1, Low: 1, notRated: 1, total: 8 },
   byInherentRating: { Critical: 1, High: 3, Moderate: 1, Low: 1, notRated: 2, total: 8 },
+  acceptedByResidualRating: { Critical: 0, High: 1, Moderate: 1, Low: 0, notRated: 0, total: 2 },
   residualByTreatmentStatus: {
     Critical: statusCounts,
     High: { notStarted: 1, inProgress: 1, overdue: 0, complete: 0, notProvided: 1, total: 3 },
@@ -46,6 +47,7 @@ const riskExposure = {
     truncated: false,
     risksWithoutSystem: 1,
   },
+  underAssessment: { byResidualRating: { Critical: 1, High: 0, Moderate: 0, Low: 0, notRated: 1, total: 2 } },
 };
 const overdueRow = {
   id: 'risk-treatment-overdue:risk-1',
@@ -120,6 +122,15 @@ describe('report copy map', () => {
     ]);
   });
 
+  it('states each report\'s scope in its description (D-42, D-43, D-54)', () => {
+    expect(reportCopyEntries.map(({ key, description }) => [key, description])).toEqual([
+      ['risk-exposure', 'Released Risks by rating and treatment status, the most exposed Information Systems, and the Risks still under assessment.'],
+      ['treatment-performance', 'Risk treatments by due state and treatment status, and the most overdue treatments. Includes Risks under assessment.'],
+      ['assessment-throughput', 'Assessment Requests by lifecycle state, Risk Assessments released each month, and time from submission to release.'],
+      ['control-effectiveness', 'Mitigation controls on open Risks by implementation status and effectiveness rating. Includes Risks under assessment.'],
+    ]);
+  });
+
   it('recognises only the closed report keys, matched exactly', () => {
     for (const key of reportKeys) expect(isReportKey(key), key).toBe(true);
     for (const value of ['unknown', 'Risk-exposure', 'risk-exposure ', '', 'constructor', '__proto__', null, undefined, 6, ['risk-exposure']]) {
@@ -156,9 +167,22 @@ describe('report response parsers', () => {
     expect(parseReportPayload('assessment-throughput', { data: twelve })).toEqual(twelve);
   });
 
+  it('require the accepted and under-assessment counts beside the released risk-exposure sections (D-42)', () => {
+    const { acceptedByResidualRating: _accepted, ...withoutAccepted } = riskExposure;
+    const { underAssessment: _underAssessment, ...withoutUnderAssessment } = riskExposure;
+    expect(reportResponseSchemas['risk-exposure'].safeParse({ data: withoutAccepted }).success).toBe(false);
+    expect(reportResponseSchemas['risk-exposure'].safeParse({ data: withoutUnderAssessment }).success).toBe(false);
+    // The under-assessment figure is its own closed object, never a flat count or a second report.
+    expect(reportResponseSchemas['risk-exposure'].safeParse({ data: { ...riskExposure, underAssessment: riskExposure.underAssessment.byResidualRating } }).success).toBe(false);
+    expect(reportResponseSchemas['risk-exposure'].safeParse({ data: { ...riskExposure, underAssessment: { ...riskExposure.underAssessment, total: 2 } } }).success).toBe(false);
+    expect(parseReportPayload('risk-exposure', { data: riskExposure }).underAssessment.byResidualRating.total).toBe(2);
+    expect(parseReportPayload('risk-exposure', { data: riskExposure }).acceptedByResidualRating.total).toBe(2);
+  });
+
   it('refuse an unknown key in every branch and at every level', () => {
     const hostile: Array<[keyof typeof reports, unknown]> = [
       ['risk-exposure', { ...riskExposure, extra: 1 }],
+      ['risk-exposure', { ...riskExposure, acceptedByResidualRating: { ...riskExposure.acceptedByResidualRating, Extreme: 1 } }],
       ['risk-exposure', { ...riskExposure, byResidualRating: { ...riskExposure.byResidualRating, Extreme: 1 } }],
       ['risk-exposure', { ...riskExposure, residualByTreatmentStatus: { ...riskExposure.residualByTreatmentStatus, total: statusCounts } }],
       ['risk-exposure', { ...riskExposure, exposedSystems: { ...riskExposure.exposedSystems, rows: [{ ...riskExposure.exposedSystems.rows[0], owner: 'x' }] } }],

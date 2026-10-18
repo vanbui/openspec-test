@@ -39,6 +39,14 @@ const analystOwnRequestTitle = 'Azure Pipeline Decorator for all delivery pipeli
 const mutableRiskNumber = 'RSK-DEV-MUTABLE-001';
 // Duplicated by value from apps/backend/src/bootstrap/seed-analyst-insights.ts (the Phase 7 fixture).
 const phase7OverdueRiskNumber = 'RSK-E2E-P7-OVERDUE-001';
+/*
+ * Jane's request with the longest seeded number (its unbreakable `UNRELEASED-001` is about 84px at 12px) in the
+ * longest request status, `Questionnaire in progress` (seed-questionnaire-workflow.ts). The governance journey
+ * releases and submits its questionnaire, which keeps that status; no journey drafts its assessment. The RAR-E2E
+ * numbers are shorter, and beside that badge they fit a 320px card either way.
+ */
+const longCardRequestNumber = 'RAR-DEV-QUES-UNRELEASED-001';
+const longCardStatus = 'Questionnaire in progress';
 
 /*
  * Every settled destination: the exact document title each page module declares and the level-one
@@ -47,14 +55,16 @@ const phase7OverdueRiskNumber = 'RSK-E2E-P7-OVERDUE-001';
  */
 // Home is /app for every actor (D-16): the analyst's review summary or the Requestor's own work.
 const home: SettledExpectation = { url: /\/app$/, title: 'Home | IdamBox CSRM', heading: 'Home' };
-const myRequests: SettledExpectation = { url: /\/app\/requests$/, title: 'My Requests | IdamBox CSRM', heading: 'My Requests' };
-const newRequest: SettledExpectation = { url: /\/app\/requests\/new$/, title: 'New Request | IdamBox CSRM', heading: 'New assessment request' };
-const myQuestionnaires: SettledExpectation = { url: /\/app\/questionnaires$/, title: 'My Questionnaires | IdamBox CSRM', heading: 'My Questionnaires' };
-const myAssessments: SettledExpectation = { url: /\/app\/assessments$/, title: 'My Risk Assessments | IdamBox CSRM', heading: 'My Risk Assessments' };
+const myRequests: SettledExpectation = { url: /\/app\/requests$/, title: 'My requests | IdamBox CSRM', heading: 'My requests' };
+const newRequest: SettledExpectation = { url: /\/app\/requests\/new$/, title: 'New request | IdamBox CSRM', heading: 'New request' };
+const myQuestionnaires: SettledExpectation = { url: /\/app\/questionnaires$/, title: 'My questionnaires | IdamBox CSRM', heading: 'My questionnaires' };
+const myAssessments: SettledExpectation = { url: /\/app\/assessments$/, title: 'My risk assessments | IdamBox CSRM', heading: 'My risk assessments' };
 const requestDetailTitle = 'Assessment Request | IdamBox CSRM';
-const requestQueueTitle = 'Assessment Request Review | IdamBox CSRM';
-const requestQueueHeading = 'Assessment request review';
-const riskRegister: SettledExpectation = { url: /\/app\/risks$/, title: 'Risk Register | IdamBox CSRM', heading: 'Risk Register' };
+const requestQueueTitle = 'Requests | IdamBox CSRM';
+const requestQueueHeading = 'Requests';
+// The request hub is headed by its record and keeps its static detail title (UI-SPEC §2.1, UI-D40).
+const requestHubTitle = 'Assessment Request Review | IdamBox CSRM';
+const riskRegister: SettledExpectation = { url: /\/app\/risks$/, title: 'Risk register | IdamBox CSRM', heading: 'Risk register' };
 const notFound = { title: 'Page not found | IdamBox CSRM', heading: 'Page not found' } as const;
 const phase7Reports = [
   { route: '/app/reports/risk-exposure', heading: 'Risk exposure', title: 'Risk Exposure Report | IdamBox CSRM' },
@@ -74,13 +84,13 @@ const phase7Refusals: readonly Refusal[] = [
   { route: '/app/reports/risk-exposure', heading: 'Reports', title: 'Reports | IdamBox CSRM', permission: 'You don’t have access to reports' },
 ];
 const workspaceRefusals: readonly Refusal[] = [
-  { route: '/app/risks', heading: 'Risk Register', title: 'Risk Register | IdamBox CSRM', permission: 'You don’t have access to the Risk Register' },
+  { route: '/app/risks', heading: 'Risk register', title: 'Risk register | IdamBox CSRM', permission: 'You don’t have access to the Risk register' },
   { route: '/app/review/requests', heading: requestQueueHeading, title: requestQueueTitle, permission: 'You don’t have access to assessment requests' },
-  { route: '/app/review/questionnaires', heading: 'Questionnaire Review', title: 'Questionnaire Review | IdamBox CSRM', permission: 'You don’t have access to questionnaire reviews' },
-  { route: '/app/review/assessments', heading: 'Risk assessment review', title: 'Risk Assessment Review | IdamBox CSRM', permission: 'You don’t have access to risk assessments' },
+  { route: '/app/review/questionnaires', heading: 'Questionnaires', title: 'Questionnaires | IdamBox CSRM', permission: 'You don’t have access to questionnaire reviews' },
+  { route: '/app/review/assessments', heading: 'Risk assessments', title: 'Risk assessments | IdamBox CSRM', permission: 'You don’t have access to risk assessments' },
   // The Administration refusal is headed by the refused collection (STATE follow-up 2026-09-25).
   { route: '/app/admin/risk-types', heading: 'Risk Types', title: 'Risk Types | IdamBox CSRM', permission: 'You don’t have access to Administration records' },
-  { route: '/app/admin/controls/import', heading: 'Controls', title: 'Import Controls CSV | IdamBox CSRM', permission: 'You don’t have access to Administration records' },
+  { route: '/app/admin/controls/import', heading: 'Controls', title: 'Import Controls | IdamBox CSRM', permission: 'You don’t have access to Administration records' },
 ];
 
 /* The four Administration collections and their routes, each written out. */
@@ -212,10 +222,20 @@ const permissionState = (page: Page, heading: string): Guard => async (label) =>
   await expectNoErrorState(page, label);
 };
 
-/** The Requestor Home proves its seven lifecycle cards. */
-const lifecycleDashboard = (page: Page): Guard => async (label) => {
-  const cards = page.getByRole('region', { name: 'My Assessment Requests' }).getByRole('list', { name: 'My Assessment Requests by lifecycle state' }).getByRole('listitem');
-  await expect(cards, `${label} shows the seven lifecycle cards`).toHaveCount(7);
+/*
+ * The Requestor Home proves its sections (UI-SPEC §5.2, E14): Needs your action with its items, or, for a Requestor
+ * with no request at all, its first-use state, then With the Security Analyst and Released assessments.
+ */
+const requestorHomeSections = (page: Page, needsYou: 'items' | 'first-use'): Guard => async (label) => {
+  const needs = page.getByRole('region', { name: 'Needs your action', exact: true });
+  if (needsYou === 'items') {
+    await expect(needs.getByRole('listitem').first(), `${label} lists what needs the Requestor`).toBeVisible();
+  } else {
+    await expect(needs.getByRole('heading', { name: 'No requests yet', exact: true }), `${label} offers the first request`).toBeVisible();
+  }
+  for (const name of ['With the Security Analyst', 'Released assessments']) {
+    await expect(page.getByRole('region', { name, exact: true }), `${label} shows ${name}`).toBeVisible();
+  }
   await expectNoErrorState(page, label);
 };
 
@@ -231,7 +251,7 @@ const shows = (page: Page, what: string, locate: (page: Page) => Locator): Guard
   await expectNoErrorState(page, label);
 };
 
-const importGuidance = (page: Page): Guard => shows(page, 'Choose CSV file', (current) => current.getByRole('main').getByRole('button', { name: 'Choose CSV file', exact: true }));
+const importGuidance = (page: Page): Guard => shows(page, 'Choose file', (current) => current.getByRole('main').getByRole('button', { name: 'Choose file', exact: true }));
 
 /** The analyst Home proves its four KPI tiles, each with a figure. */
 const analystDashboardTiles = (page: Page): Guard => async (label) => {
@@ -317,7 +337,7 @@ test('has no axe violations on phase 06.8 governed questionnaire surfaces', asyn
   await page.getByRole('link', { name: requestTitle }).first().click();
   await expectAccessibleAtBothWidths(page, 'Requestor request hub', { url: /\/app\/requests\/[^/?]+$/, title: requestDetailTitle, heading: requestTitle }, shows(page, 'its request actions', (current) => current.getByRole('region', { name: 'Request actions' })));
   await page.goto('/app');
-  await expectAccessibleAtBothWidths(page, 'Requestor Home lifecycle cards', home, lifecycleDashboard(page));
+  await expectAccessibleAtBothWidths(page, 'Requestor Home sections', home, requestorHomeSections(page, 'items'));
 
   await switchActor(page, 'Security Analyst');
   await page.goto('/app/review/requests');
@@ -334,7 +354,7 @@ test('has no axe violations on phase 06.8 governed questionnaire surfaces', asyn
   const awaitingRequest = page.getByRole('link', { name: requestTitle }).first();
   await expect(awaitingRequest, 'the request still awaits its Requestor, so the awaiting-requestor queue lists it').toBeVisible();
   await awaitingRequest.click();
-  await expectAccessibleAtBothWidths(page, 'analyst request hub', { url: /\/app\/review\/requests\/[^/?]+$/, title: requestQueueTitle, heading: requestTitle }, shows(page, 'the request context', (current) => current.getByRole('main').getByRole('heading', { name: 'Request context', exact: true })));
+  await expectAccessibleAtBothWidths(page, 'analyst request hub', { url: /\/app\/review\/requests\/[^/?]+$/, title: requestHubTitle, heading: requestTitle }, shows(page, 'the request context', (current) => current.getByRole('main').getByRole('heading', { name: 'Request context', exact: true })));
 });
 
 test('has no axe violations on phase 06.9 assessment lifecycle detail surfaces', async ({ page }) => {
@@ -379,7 +399,7 @@ test('has no axe violations on the CSV import guidance', async ({ page }) => {
   await attachCspCollector(page);
   await signInAs(page, 'Security Analyst');
   await page.goto('/app/admin/risk-types/import');
-  await expectAccessibleAtBothWidths(page, 'CSV import guidance', { url: /\/app\/admin\/risk-types\/import$/, title: 'Import Risk Types CSV | IdamBox CSRM', heading: 'Import Risk Types from CSV' }, importGuidance(page));
+  await expectAccessibleAtBothWidths(page, 'CSV import guidance', { url: /\/app\/admin\/risk-types\/import$/, title: 'Import Risk Types | IdamBox CSRM', heading: 'Import Risk Types' }, importGuidance(page));
 });
 
 /* The first record of an Administration list, and the heading its edit page carries (the record's name). */
@@ -421,8 +441,8 @@ test('has no axe violations on the analyst lists, create forms, records and admi
     { route: '/app/requests/new', surface: 'analyst new request', expected: newRequest, guard: formField(page, 'Request title') },
     { route: '/app/questionnaires', surface: 'analyst My Questionnaires', expected: myQuestionnaires, guard: populatedOrEmptyList(page) },
     { route: '/app/assessments', surface: 'analyst My Risk Assessments', expected: myAssessments, guard: populatedOrEmptyList(page) },
-    { route: '/app/review/questionnaires', surface: 'analyst questionnaire review list', expected: { url: /\/app\/review\/questionnaires$/, title: 'Questionnaire Review | IdamBox CSRM', heading: 'Questionnaire Review' }, guard: populatedList(page, analystReviewTitle) },
-    { route: '/app/review/assessments', surface: 'analyst risk assessment review list', expected: { url: /\/app\/review\/assessments$/, title: 'Risk Assessment Review | IdamBox CSRM', heading: 'Risk assessment review' }, guard: populatedList(page, analystAssessmentNumber) },
+    { route: '/app/review/questionnaires', surface: 'analyst questionnaire review list', expected: { url: /\/app\/review\/questionnaires$/, title: 'Questionnaires | IdamBox CSRM', heading: 'Questionnaires' }, guard: populatedList(page, analystReviewTitle) },
+    { route: '/app/review/assessments', surface: 'analyst risk assessment review list', expected: { url: /\/app\/review\/assessments$/, title: 'Risk assessments | IdamBox CSRM', heading: 'Risk assessments' }, guard: populatedList(page, analystAssessmentNumber) },
     { route: analystAssessment, surface: 'analyst risk assessment editor', expected: { url: routeUrl(analystAssessment), title: 'Risk Assessment Review | IdamBox CSRM', heading: 'Risk assessment review' }, guard: shows(page, 'its identified Risks', (current) => current.getByRole('main').getByRole('heading', { name: 'Identified Risks', exact: true })) },
     { route: '/app/risks', surface: 'analyst Risk Register', expected: riskRegister, guard: populatedList(page, mutableRiskNumber) },
     { route: risk, surface: 'analyst Risk details', expected: { url: routeUrl(risk), title: 'Risk Details | IdamBox CSRM', heading: mutableRiskNumber }, guard: shows(page, 'its statement and classification', (current) => current.getByRole('region', { name: 'Risk statement and classification' })) },
@@ -430,7 +450,7 @@ test('has no axe violations on the analyst lists, create forms, records and admi
       { route: collection.list, surface: `analyst ${collection.plural}`, expected: { url: routeUrl(collection.list), title: `${collection.plural} | IdamBox CSRM`, heading: collection.plural }, guard: populatedList(page) },
       { route: collection.create, surface: `analyst create ${collection.label}`, expected: { url: routeUrl(collection.create), title: `Create ${collection.label} | IdamBox CSRM`, heading: `Create ${collection.label}` }, guard: formField(page, collection.firstField) },
       { route: href, surface: `analyst ${collection.label} record`, expected: { url: routeUrl(href), title: `${collection.label} Details | IdamBox CSRM`, heading }, guard: shows(page, `Edit ${collection.label}`, (current) => current.getByRole('main').getByRole('button', { name: `Edit ${collection.label}`, exact: true })) },
-      { route: collection.upload, surface: `analyst ${collection.plural} CSV import`, expected: { url: routeUrl(collection.upload), title: `Import ${collection.plural} CSV | IdamBox CSRM`, heading: `Import ${collection.plural} from CSV` }, guard: importGuidance(page) },
+      { route: collection.upload, surface: `analyst ${collection.plural} CSV import`, expected: { url: routeUrl(collection.upload), title: `Import ${collection.plural} | IdamBox CSRM`, heading: `Import ${collection.plural}` }, guard: importGuidance(page) },
     ]),
     // An unknown collection raises notFound() in the shell; its streamed status stays 200 (08-09).
     { route: '/app/admin/not-a-collection', surface: 'analyst in-shell not-found', expected: { url: /\/app\/admin\/not-a-collection$/, ...notFound }, guard: shows(page, 'Go to Home', (current) => current.getByRole('main').getByRole('link', { name: 'Go to Home', exact: true })) },
@@ -444,7 +464,7 @@ test('has no axe violations on the Requestor lists, record edit and refusal rout
   const janesRequest = await recordHref(page, '/app/requests', requestTitle);
 
   await sweep(page, [
-    { route: '/app', surface: 'Requestor Home', expected: home, guard: lifecycleDashboard(page) },
+    { route: '/app', surface: 'Requestor Home', expected: home, guard: requestorHomeSections(page, 'items') },
     { route: '/app/requests', surface: 'Requestor My Requests', expected: myRequests, guard: populatedList(page, requestTitle) },
     { route: '/app/requests/new', surface: 'Requestor new request', expected: newRequest, guard: formField(page, 'Request title') },
     /*
@@ -473,16 +493,26 @@ test('has no axe violations for the Secondary Requestor lists and the denials of
   await switchActor(page, 'Secondary Requestor');
   const main = (current: Page) => current.getByRole('main');
   await sweep(page, [
-    { route: '/app', surface: 'Secondary Requestor Home', expected: home, guard: lifecycleDashboard(page) },
+    { route: '/app', surface: 'Secondary Requestor Home', expected: home, guard: requestorHomeSections(page, 'first-use') },
     { route: '/app/requests', surface: 'Secondary Requestor My Requests', expected: myRequests, guard: emptyList(page) },
     { route: '/app/requests/new', surface: 'Secondary Requestor new request', expected: newRequest, guard: formField(page, 'Request title') },
     { route: '/app/questionnaires', surface: 'Secondary Requestor My Questionnaires', expected: myQuestionnaires, guard: emptyList(page) },
     { route: '/app/assessments', surface: 'Secondary Requestor My Risk Assessments', expected: myAssessments, guard: emptyList(page) },
     /*
-     * Jane's request: Strapi refuses it (403), so the page shows the shared permission state under the
-     * page's heading, which names the page and never the record (D-18).
+     * Jane's request: Strapi refuses it (403), and the page renders its not-found state, titled by it, as for a
+     * missing request, so it never confirms the request exists (Phase 13, 13-UI-SPEC §8.6, O1 of the 13-19 walk,
+     * changed deliberately from the permission state). No notes surface reaches it.
      */
-    { route: janesRequest, surface: 'Secondary Requestor on Jane’s request', expected: { url: routeUrl(janesRequest), title: requestDetailTitle, heading: 'Assessment request' }, guard: permissionState(page, 'You don’t have access to this area') },
+    {
+      route: janesRequest,
+      surface: 'Secondary Requestor on Jane’s request',
+      expected: { url: routeUrl(janesRequest), ...notFound },
+      guard: async (label) => {
+        await shows(page, 'Go to Home', (current) => main(current).getByRole('link', { name: 'Go to Home', exact: true }))(label);
+        await expect(main(page).locator('[data-state-kind="permission"]'), `${label} is not the permission state`).toHaveCount(0);
+        await expect(page.getByRole('region', { name: 'Notes', exact: true }), `${label} shows no notes`).toHaveCount(0);
+      },
+    },
     // Jane's questionnaire: Strapi refuses it (403), and the page renders the questionnaire's own permission copy.
     { route: janesQuestionnaire, surface: 'Secondary Requestor on Jane’s questionnaire', expected: { url: routeUrl(janesQuestionnaire), title: 'Questionnaire | IdamBox CSRM', heading: 'Questionnaire unavailable' }, guard: shows(page, 'the questionnaire permission copy', (current) => main(current).getByRole('alert').filter({ hasText: 'You don’t have permission to view this questionnaire' })) },
     /*
@@ -612,8 +642,8 @@ test('keyboard operability of dialogs and sheets', async ({ page }) => {
   for (const width of widths) {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
     await page.goto('/app/admin/risk-types/import');
-    await expectSettled(page, { url: /\/app\/admin\/risk-types\/import$/, title: 'Import Risk Types CSV | IdamBox CSRM', heading: 'Import Risk Types from CSV' }, `the CSV import at ${width}px`);
-    await expectFocusVisible(page.getByRole('button', { name: 'Choose CSV file', exact: true }), `Choose CSV file at ${width}px`);
+    await expectSettled(page, { url: /\/app\/admin\/risk-types\/import$/, title: 'Import Risk Types | IdamBox CSRM', heading: 'Import Risk Types' }, `the CSV import at ${width}px`);
+    await expectFocusVisible(page.getByRole('button', { name: 'Choose file', exact: true }), `Choose file at ${width}px`);
   }
   await expectNoCspViolations(page, 'the keyboard proofs');
 });
@@ -677,6 +707,41 @@ async function expectTabStopsNeverObscured(page: Page, label: string): Promise<{
   return { checked, endOfPage };
 }
 
+/*
+ * WCAG 1.4.10 Reflow inside each phone card (11-21): every badge in a list's cards lies within its card's border box
+ * and covers none of the card's links. At 320px a long request number beside the `Questionnaire in progress` badge
+ * pushed the badge out of the Requests queue card, and where a list keeps the number in a column with the title, a
+ * narrow column let the number run under the badge. Returns how many cards it measured.
+ */
+async function expectPhoneCardsHoldTheirBadges(page: Page, label: string): Promise<number> {
+  const measure = () => page.evaluate(() => {
+    const problems: string[] = [];
+    const shown = (element: Element) => element.getClientRects().length > 0;
+    const text = (element: Element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 48);
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-slot="data-table-mobile"] > [role="listitem"]')).filter(shown);
+    for (const card of cards) {
+      const box = card.getBoundingClientRect();
+      const links = Array.from(card.querySelectorAll<HTMLElement>('a')).filter(shown);
+      for (const badge of Array.from(card.querySelectorAll<HTMLElement>('[data-slot="badge"]')).filter(shown)) {
+        const own = badge.getBoundingClientRect();
+        if (own.left < box.left - 0.5 || own.right > box.right + 0.5 || own.top < box.top - 0.5 || own.bottom > box.bottom + 0.5) {
+          problems.push(`"${text(badge)}" spans ${own.left.toFixed(1)} to ${own.right.toFixed(1)}, outside its card's ${box.left.toFixed(1)} to ${box.right.toFixed(1)} ("${text(card)}")`);
+        }
+        for (const link of links) {
+          if (link.contains(badge)) continue;
+          const other = link.getBoundingClientRect();
+          const across = Math.min(own.right, other.right) - Math.max(own.left, other.left);
+          const down = Math.min(own.bottom, other.bottom) - Math.max(own.top, other.top);
+          if (across > 0.5 && down > 0.5) problems.push(`"${text(badge)}" covers the link "${text(link)}" ("${text(card)}")`);
+        }
+      }
+    }
+    return { cards: cards.length, problems };
+  });
+  await expect.poll(async () => (await measure()).problems, { message: `${label}: every phone card holds its badges` }).toEqual([]);
+  return (await measure()).cards;
+}
+
 test('focus is never obscured and text reflows', async ({ page }) => {
   test.setTimeout(600_000);
   await attachCspCollector(page);
@@ -695,7 +760,7 @@ test('focus is never obscured and text reflows', async ({ page }) => {
   journeyPages.push(
     { role: 'Security Analyst', route: analystAssessment, surface: 'the risk assessment editor', expected: { url: routeUrl(analystAssessment), title: 'Risk Assessment Review | IdamBox CSRM', heading: 'Risk assessment review' } },
     { role: 'Security Analyst', route: '/app/risks', surface: 'the Risk Register', expected: riskRegister },
-    { role: 'Security Analyst', route: '/app/admin/risk-types/import', surface: 'the CSV import', expected: { url: /\/app\/admin\/risk-types\/import$/, title: 'Import Risk Types CSV | IdamBox CSRM', heading: 'Import Risk Types from CSV' } },
+    { role: 'Security Analyst', route: '/app/admin/risk-types/import', surface: 'the CSV import', expected: { url: /\/app\/admin\/risk-types\/import$/, title: 'Import Risk Types | IdamBox CSRM', heading: 'Import Risk Types' } },
   );
 
   const measured: string[] = [];
@@ -715,15 +780,86 @@ test('focus is never obscured and text reflows', async ({ page }) => {
         await expectTextSpacingLosesNothing(page, label);
         measured.push(`${label}: ${stops.checked} Tab presses clear${stops.endOfPage ? ' (then Tab left the page)' : ''}, text spacing kept`);
       }
-      // WCAG 1.4.10 Reflow: at 320 CSS px the page scrolls in one direction only.
-      await page.setViewportSize({ width: 320, height: 568 });
-      await page.goto(journeyPage.route);
-      await expectSettled(page, journeyPage.expected, `${journeyPage.surface} at 320px`);
+      // 305px models the content space beside a 15px classic scrollbar in a 320px viewport.
+      for (const width of [320, 305]) {
+        await page.setViewportSize({ width, height: 568 });
+        await page.goto(journeyPage.route);
+        await expectSettled(page, journeyPage.expected, `${journeyPage.surface} at ${width}px`);
+        await expect.poll(
+          () => page.evaluate(() => document.documentElement.scrollWidth),
+          { message: `${journeyPage.surface} reflows into ${width}px with no horizontal page scroll` },
+        ).toBeLessThanOrEqual(width);
+        const cards = await expectPhoneCardsHoldTheirBadges(page, `${journeyPage.surface} at ${width}px`);
+        measured.push(`${journeyPage.surface} at ${width}px: no horizontal scroll${cards ? `, ${cards} phone cards hold their badges` : ''}`);
+      }
+    }
+  }
+
+  // Each list must render real cards: an error, empty state or omitted list cannot satisfy this sweep.
+  const cardLists: { role: SignInRole; route: string; expected: SettledExpectation }[] = [
+    { role: 'Requestor', route: '/app/questionnaires', expected: myQuestionnaires },
+    { role: 'Requestor', route: '/app/assessments', expected: myAssessments },
+    { role: 'Security Analyst', route: '/app/review/requests?queue=all', expected: { url: /\/app\/review\/requests\?queue=all$/, title: requestQueueTitle, heading: requestQueueHeading } },
+    { role: 'Security Analyst', route: '/app/review/questionnaires', expected: { url: /\/app\/review\/questionnaires$/, title: 'Questionnaires | IdamBox CSRM', heading: 'Questionnaires' } },
+    { role: 'Security Analyst', route: '/app/review/assessments', expected: { url: /\/app\/review\/assessments$/, title: 'Risk assessments | IdamBox CSRM', heading: 'Risk assessments' } },
+    { role: 'Security Analyst', route: '/app/alerts', expected: { url: /\/app\/alerts$/, title: 'Alerts | IdamBox CSRM', heading: 'Alerts' } },
+  ];
+  for (const list of cardLists) {
+    if (actor !== list.role) {
+      await switchActor(page, list.role);
+      actor = list.role;
+    }
+    for (const width of [320, 305]) {
+      const label = `${list.route} as ${list.role} at ${width}px`;
+      await page.setViewportSize({ width, height: 568 });
+      await page.goto(list.route);
+      await expectSettled(page, list.expected, label);
+      await expect(page.locator('[data-slot="data-table-mobile"] > [role="listitem"]').first(), `${label} renders a populated card list`).toBeVisible();
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), { message: `${label} has no horizontal page scroll` }).toBeLessThanOrEqual(width);
+      const cards = await expectPhoneCardsHoldTheirBadges(page, label);
+      expect(cards, `${label} measured real cards`).toBeGreaterThan(0);
+      measured.push(`${label}: ${cards} phone cards hold their badges, no horizontal scroll`);
+    }
+  }
+
+  // 11-21: the longest seeded number beside the longest request status, one card in the analyst's queue and one in
+  // the Requestor's own list, each found by its number at 320px.
+  const longCards: { role: SignInRole; route: string; surface: string; list: string; expected: SettledExpectation }[] = [
+    {
+      role: 'Security Analyst',
+      route: `/app/review/requests?queue=all&q=${longCardRequestNumber}`,
+      surface: 'the Requests queue card',
+      list: 'Assessment requests for review',
+      expected: { url: /\/app\/review\/requests\?/, title: requestQueueTitle, heading: requestQueueHeading },
+    },
+    {
+      role: 'Requestor',
+      route: `/app/requests?q=${longCardRequestNumber}`,
+      surface: 'the My requests card',
+      list: 'My assessment requests',
+      expected: { url: /\/app\/requests\?/, title: myRequests.title, heading: myRequests.heading },
+    },
+  ];
+  for (const longCard of longCards) {
+    if (actor !== longCard.role) {
+      await switchActor(page, longCard.role);
+      actor = longCard.role;
+    }
+    for (const width of [320, 305]) {
+      const label = `${longCard.surface} at ${width}px`;
+      await page.setViewportSize({ width, height: 568 });
+      await page.goto(longCard.route);
+      await expectSettled(page, longCard.expected, label);
+      const card = page.getByRole('list', { name: longCard.list, exact: true }).getByRole('listitem');
+      await expect(card, `${label} shows the one fixture request`).toHaveCount(1);
+      await expect(card.getByRole('link', { name: longCardRequestNumber, exact: true }), `${label} shows the long number`).toBeVisible();
+      await expect(card.locator('[data-slot="badge"]').filter({ hasText: longCardStatus }), `${label} shows the long status`).toHaveCount(1);
       await expect.poll(
         () => page.evaluate(() => document.documentElement.scrollWidth),
-        { message: `${journeyPage.surface} reflows into 320px with no horizontal page scroll` },
-      ).toBeLessThanOrEqual(320);
-      measured.push(`${journeyPage.surface} at 320px: no horizontal scroll`);
+        { message: `${label} has no horizontal page scroll` },
+      ).toBeLessThanOrEqual(width);
+      expect(await expectPhoneCardsHoldTheirBadges(page, label), `${label} measures its one card`).toBe(1);
+      measured.push(`${label}: the badge stays inside the card and clear of the number`);
     }
   }
   test.info().annotations.push({ type: 'focus, reflow and text spacing', description: measured.join('; ') });
@@ -833,7 +969,7 @@ test('picker lists pass axe while open at 1440 and 375', async ({ page }) => {
     await page.goto('/app/risks');
     await expectSettled(page, riskRegister, `the Risk Register at ${width}px`);
     await page.getByRole('button', width === 375 ? { name: /^Filters \(\d+\)$/ } : { name: 'More filters' }).click();
-    const filters = page.getByRole('dialog', { name: width === 375 ? 'Risk Register filters' : 'More filters' });
+    const filters = page.getByRole('dialog', { name: width === 375 ? 'Risk register filters' : 'More filters' });
     await expect(filters, `the filters open as a named dialog at ${width}px`).toBeVisible();
     results.push(await expectOpenListAccessible(page, filters.getByRole('combobox', { name: 'Risk owner', exact: true }), 'Bob', `Risk Register Risk owner filter at ${width}px`));
     await page.keyboard.press('Escape');

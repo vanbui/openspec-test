@@ -73,6 +73,9 @@ const identities = {
 
 const fakeStrapi = {
   documents(uid: string) {
+    if (uid === "api::identity-source.identity-source") {
+      return { findMany: async () => [] };
+    }
     if (uid === "api::idambox-user.idambox-user") {
       return {
         findOne: async ({ documentId }: { documentId: string }) =>
@@ -124,8 +127,17 @@ for (const operation of insightOperations) {
     const result = await authorize(identities.humanAnalyst, config);
     assert.equal(result.allowed, true);
     assert.deepEqual(result.messages, []);
-    // Only the insight scope is granted: no Risk Register, review or administration scope widens with it.
-    assert.deepEqual(result.decision, { assessmentRequestActor: "analyst", analystInsightScope: "all" });
+    // Only the insight scope is granted: no Risk Register, review or administration scope widens with it. The two
+    // Phase 13 facts (T-13-09) say who the resolved caller is, never what it may read.
+    assert.deepEqual(result.decision, {
+      assessmentRequestActor: "analyst",
+      humanAnalyst: true,
+      eligibleHumanAnalyst: true,
+      canMarkNoteAiInputs: false,
+      canUseAttachmentAiInputs: false,
+      viewerId: identities.humanAnalyst.id,
+      analystInsightScope: "all",
+    });
   });
 
   test(`an automation identity is refused ${operation} by the guard even when mis-granted`, async () => {

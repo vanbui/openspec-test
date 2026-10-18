@@ -73,6 +73,8 @@ type KeyRoute =
 const ROUTE_BUDGET_OVERRIDES: Partial<Record<KeyRoute, Partial<Budget>>> = {
   // Inherent: the Requestor's answers are validated in the browser by a zod schema built from the questions (react-hook-form's zodResolver), so the route carries zod's full API (64,389 bytes delivered); 1.5 × the 328,599-byte median, rounded up.
   '/app/questionnaires/{documentId}': { deliveredJsBytes: 500_000 },
+  // Inherent: Phase 12 D-37 puts the AI review UI in the editor (field markers, per-record review bars and the decision hook beside every Risk form), measured 304,218 bytes after plan 12-16 once a duplicated chunk group was removed (quick 261007-jbs); 1.5 × that median, rounded up.
+  '/app/review/assessments/{documentId}': { deliveredJsBytes: 460_000 },
 };
 
 type KeyRouteEntry = {
@@ -92,10 +94,10 @@ const main = (page: Page) => page.getByRole('main');
 const KEY_ROUTES: readonly KeyRouteEntry[] = [
   {
     route: '/app', actor: 'Requestor', title: 'Home | IdamBox CSRM', heading: 'Home',
-    populated: (page) => page.getByRole('region', { name: 'My Assessment Requests' }).getByRole('list', { name: 'My Assessment Requests by lifecycle state' }),
+    populated: (page) => page.getByRole('region', { name: 'Needs your action', exact: true }).getByRole('list'),
   },
   {
-    route: '/app/requests', actor: 'Requestor', title: 'My Requests | IdamBox CSRM', heading: 'My Requests',
+    route: '/app/requests', actor: 'Requestor', title: 'My requests | IdamBox CSRM', heading: 'My requests',
     populated: (page) => main(page).locator('a.record-link'),
   },
   {
@@ -126,7 +128,7 @@ const KEY_ROUTES: readonly KeyRouteEntry[] = [
     populated: (page) => page.locator('section[aria-labelledby="assessment-lifecycle-heading"]'),
   },
   {
-    route: '/app/risks', actor: 'Security Analyst', title: 'Risk Register | IdamBox CSRM', heading: 'Risk Register',
+    route: '/app/risks', actor: 'Security Analyst', title: 'Risk register | IdamBox CSRM', heading: 'Risk register',
     populated: (page) => main(page).getByRole('link', { name: 'RSK-DEV-MUTABLE-001', exact: true }),
   },
   {
@@ -321,13 +323,42 @@ async function measureSample(browser: Browser, entry: KeyRouteEntry, path: strin
   }
 }
 
+/*
+ * The Phase 8 baseline's largest post-hydration prefetch download, on the analyst's former dashboard at
+ * /app/review (docs/performance/phase-08-baseline.md, finding 1). Phase 11 records the analyst's /app
+ * beside it after rebuilding the sidebar (UI-SPEC §1.7, UI-D8). A record, never a budget.
+ */
+const PHASE_8_POST_HYDRATION_BASELINE = { route: '/app/review', actor: 'Security Analyst', maxDeliveredJsBytes: 176_293 } as const;
+
+/* What the router prefetched after hydration across a route's samples: recorded apart, never budgeted. */
+type PostHydrationPrefetch = {
+  medianDeliveredJsBytes: number;
+  maxDeliveredJsBytes: number;
+  samplesWithPrefetch: number;
+  phase8Baseline?: typeof PHASE_8_POST_HYDRATION_BASELINE;
+};
+
 type RecordedRoute = RouteSummary & {
   budget: Budget;
   browserVersion: string;
   measuredAt: string;
   samples: (Omit<RouteSample, 'assetUrls'> & { unreferencedJsBytes: number; unreferencedScriptCount: number; documentScriptsAfterLoad: number })[];
+  postHydrationPrefetch: PostHydrationPrefetch;
   firstSampleAssets: Asset[];
 };
+
+function postHydrationPrefetch(summary: RouteSummary, unreferenced: readonly Unreferenced[]): PostHydrationPrefetch {
+  const bytes = unreferenced.map((sample) => sample.jsBytes).sort((left, right) => left - right);
+  const middle = Math.floor(bytes.length / 2);
+  const medianDeliveredJsBytes = bytes.length === 0 ? 0 : bytes.length % 2 === 1 ? bytes[middle] : Math.round((bytes[middle - 1] + bytes[middle]) / 2);
+  const analystHome = summary.route === '/app' && summary.actor === 'Security Analyst';
+  return {
+    medianDeliveredJsBytes,
+    maxDeliveredJsBytes: bytes.at(-1) ?? 0,
+    samplesWithPrefetch: bytes.filter((value) => value > 0).length,
+    ...(analystHome ? { phase8Baseline: PHASE_8_POST_HYDRATION_BASELINE } : {}),
+  };
+}
 
 /* Keeps this route's summary, samples and first sample's assets in the run's JSON record, replacing any earlier entry for its route and actor. */
 function recordSummary(summary: RouteSummary, samples: readonly RouteSample[], unreferenced: readonly Unreferenced[], firstSampleAssets: Asset[], budget: Budget, browserVersion: string): void {
@@ -353,6 +384,7 @@ function recordSummary(summary: RouteSummary, samples: readonly RouteSample[], u
       unreferencedScriptCount: unreferenced[index].scriptCount,
       documentScriptsAfterLoad: unreferenced[index].documentScriptsAfterLoad,
     })),
+    postHydrationPrefetch: postHydrationPrefetch(summary, unreferenced),
     firstSampleAssets,
   };
   // /app is measured once per actor (each actor's Home), so a record is one route and one actor.
@@ -381,3 +413,54 @@ for (const entry of KEY_ROUTES) {
     expect(findBudgetBreaches(summary, budget), JSON.stringify({ ...printed, assetCount: assetUrls.length })).toEqual([]);
   });
 }
+
+/*
+ * Quick find's dialog stays out of every route's first load (D-52, UI-SPEC §4.7): the header control ships on every
+ * route, and the budgets above measure each route with it in the shell. The dialog's own code is fetched only once the
+ * Search control takes focus (or a pointer enters it) or the shortcut is pressed. Its module is recognised by a class
+ * name only the dialog renders, so a script that holds it is the dialog's chunk, whatever its hashed name. The scripts
+ * a page fetched are read from its own resource timing list, and each is read once again through the context's request
+ * client, because the body of a request the router abandoned never arrives in the page.
+ */
+const QUICK_FIND_DIALOG_MARKER = 'quick-find-skeleton-row';
+
+async function quickFindDialogFetched(page: Page, read: Map<string, boolean>): Promise<boolean> {
+  const scripts = await page.evaluate(() => performance.getEntriesByType('resource').map((entry) => entry.name)
+    .filter((name) => { const url = new URL(name); return url.pathname.startsWith('/_next/static/') && url.pathname.endsWith('.js'); }));
+  for (const script of scripts) {
+    if (!read.has(script)) read.set(script, (await (await page.request.get(script)).text()).includes(QUICK_FIND_DIALOG_MARKER));
+  }
+  return scripts.some((script) => read.get(script));
+}
+
+test('quick find’s dialog code is requested only after the Search control is focused or the shortcut is pressed', async ({ browser }) => {
+  test.setTimeout(120_000);
+  for (const opening of ['focus', 'shortcut'] as const) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    try {
+      const page = await context.newPage();
+      const read = new Map<string, boolean>();
+      await signInAs(page, 'Requestor');
+      await page.waitForLoadState('load');
+      expect(await quickFindDialogFetched(page, read), `before the ${opening}, no script holds the dialog`).toBe(false);
+
+      // An open modal hides the page from assistive technology, so the control is found with hidden elements included, which
+      // also counts the aria-hidden shortcut hint in its name (Search Ctrl K): the name is matched from its start.
+      const control = page.getByRole('banner', { includeHidden: true }).getByRole('button', { name: /^Search\b/, includeHidden: true });
+      if (opening === 'focus') {
+        await control.focus();
+        await expect(page.getByRole('dialog', { name: 'Search' }), 'focus alone does not open quick find').toHaveCount(0);
+      } else {
+        // Pressed again only until the hydrated shell answers (aria-expanded), never twice once it has.
+        await expect(async () => {
+          if ((await control.getAttribute('aria-expanded')) !== 'true') await page.keyboard.press('Control+K');
+          await expect(control).toHaveAttribute('aria-expanded', 'true', { timeout: 2_000 });
+        }).toPass();
+        await expect(page.getByRole('combobox', { name: 'Search by number or title' })).toBeFocused();
+      }
+      await expect.poll(() => quickFindDialogFetched(page, read), { message: `after the ${opening}, the dialog’s chunk is requested` }).toBe(true);
+    } finally {
+      await context.close();
+    }
+  }
+});

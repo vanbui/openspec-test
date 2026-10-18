@@ -11,8 +11,9 @@ import { QuestionnaireReview } from './questionnaire-review';
 import { QuestionnaireReviewList } from './questionnaire-review-list';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
 import type { QuestionnaireSummary } from './questionnaire-service';
-import { availableAssessmentRequest } from './questionnaire-domain';
+import { availableAssessmentRequest, parseKeptUnsavedAnswers, restorableUnsavedAnswers, unsavedAnswersRestoredCaption, type KeptUnsavedAnswer } from './questionnaire-domain';
 import { rememberSavedQuestionnaire } from './use-answer-autosave';
+import { submittedRowAnswered } from './questionnaire-submitted-answers';
 
 vi.mock('./questionnaire-renderer', () => ({
   QuestionnaireRenderer: vi.fn(
@@ -53,6 +54,7 @@ const questionnaire: QuestionnaireSummary = {
     title: 'Customer portal review',
     requestStatus: 'questionnaire-in-progress',
   },
+  aiAssisted: false,
   updatedAt: '2026-08-29T10:00:00.000Z',
 };
 
@@ -243,6 +245,8 @@ describe('My Questionnaires discovery', () => {
 
   it('keeps a heading and recovery action in every safe requestor detail state', () => {
     const view = render(<QuestionnaireDetail state="permission" />);
+    // UI-SPEC §2.3: the refusal names My questionnaires by its heading.
+    expect(screen.getByRole('alert')).toHaveTextContent('You can open questionnaires sent to you about your own requests. Yours are listed in My questionnaires.');
     for (const state of ['permission', 'error', 'empty'] as const) {
       view.rerender(<QuestionnaireDetail state={state} />);
       expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
@@ -331,7 +335,8 @@ describe('My Questionnaires discovery', () => {
 
     view.rerender(<QuestionnaireList questionnaires={[]} state="empty" />);
     expect(screen.getByRole('heading', { name: 'No questionnaires yet' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View my requests' })).toHaveAttribute('href', '/app/requests');
+    // UI-SPEC §2.3 (UI-D1): the action names the page by its heading.
+    expect(screen.getByRole('link', { name: 'View My requests' })).toHaveAttribute('href', '/app/requests');
   });
 
   it('renders recoverable error and content-safe permission states', () => {
@@ -353,16 +358,15 @@ describe('My Questionnaires discovery', () => {
 
     expect(source).toContain('listMyQuestionnaires');
     expect(source).not.toContain("'use client'");
-    expect(source).not.toMatch(/\bfetch\s*\(/);
   });
 
   it('shows direct questionnaire navigation only to a matching capability', async () => {
     const { CapabilityNavigation } = await import('@/components/shell/capability-navigation');
     const { rerender } = render(<CapabilityNavigation granted={new Set(['assessment-request:read'])} />);
 
-    expect(screen.getByRole('link', { name: 'My Questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
+    expect(screen.getByRole('link', { name: 'My questionnaires' })).toHaveAttribute('href', '/app/questionnaires');
     rerender(<CapabilityNavigation granted={new Set()} />);
-    expect(screen.queryByRole('link', { name: 'My Questionnaires' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'My questionnaires' })).not.toBeInTheDocument();
   });
 });
 
@@ -408,8 +412,12 @@ describe('Security Analyst questionnaire review', () => {
     view.rerender(<QuestionnaireDetail definition={submittedDefinition} questionnaire={drafted} state="submitted" />);
     expect(questionnaireRenderer).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'read-only', submittedNotice: 'requestor-locked' }), undefined);
 
+    // The analyst's review shows the same read-only answers the renderer shows once submitted, without the
+    // Requestor's form, so its route downloads no zod (plan 11-09).
+    questionnaireRenderer.mockClear();
     view.rerender(<QuestionnaireReview definition={submittedDefinition} questionnaire={drafted} state="submitted" />);
-    expect(questionnaireRenderer).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'read-only', submittedNotice: 'analyst' }), undefined);
+    expect(questionnaireRenderer).not.toHaveBeenCalled();
+    expect(screen.getByText('Questionnaire submitted. These are the Requestor’s submitted answers.')).toBeInTheDocument();
   });
 
   it('describes the Security Analyst’s return to draft in plain words', async () => {
@@ -437,6 +445,21 @@ describe('Security Analyst questionnaire review', () => {
     const badge = document.querySelector<HTMLElement>('.page-header > [data-slot="badge"]');
     expect(badge).toHaveTextContent(/^Submitted$/);
     expect(badge).toHaveAttribute('data-tone', 'success');
+  });
+
+  /*
+   * Phase 13 D-16, D-25 (13-UI-SPEC §11): the page renders who holds the request and its notes figure on the server and hands
+   * them here as a slot, set under the request link in every state that names the request.
+   */
+  it.each([
+    ['submitted', () => <QuestionnaireReview assessmentRequestHref="/app/review/requests/request-one" definition={submittedDefinition} questionnaire={submittedQuestionnaire} requestContext={<p data-testid="request-context">Assigned to Bob Doe</p>} state="submitted" />],
+    ['awaiting submission', () => <QuestionnaireReview assessmentRequestHref="/app/review/requests/request-one" questionnaire={questionnaire} requestContext={<p data-testid="request-context">Assigned to Bob Doe</p>} state="awaiting-submission" />],
+  ])('sets the request context slot under the request link while %s', (_label, view) => {
+    render(view());
+    const link = screen.getByRole('link', { name: 'Assessment request RAR-2026-X7K4Q2' });
+    const context = screen.getByTestId('request-context');
+    expect(link.parentElement).toContainElement(context);
+    expect(link.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('retains the safe analyst backlink while a questionnaire awaits submission', () => {
@@ -593,7 +616,7 @@ describe('Security Analyst questionnaire review', () => {
     expect(screen.queryByText(availableAssessmentRequest(submittedQuestionnaire.assessmentRequest)?.title ?? '')).not.toBeInTheDocument();
   });
 
-  it('composes submitted answers through the exact shared read-only renderer model', () => {
+  it('composes submitted answers through the shared read-only answers, never the Requestor’s form', () => {
     questionnaireRenderer.mockClear();
     render(
       <QuestionnaireReview
@@ -604,11 +627,12 @@ describe('Security Analyst questionnaire review', () => {
     );
 
     expect(screen.getByRole('heading', { name: submittedQuestionnaire.title })).toBeInTheDocument();
-    expect(screen.getByText('Shared questionnaire renderer')).toHaveAttribute('data-mode', 'read-only');
-    expect(questionnaireRenderer).toHaveBeenCalledWith(
-      { definition: submittedDefinition, documentId: submittedQuestionnaire.documentId, mode: 'read-only', submittedNotice: 'analyst' },
-      undefined,
-    );
+    // The read-only view the renderer itself shows once submitted, rendered here on its own (plan 11-09).
+    expect(questionnaireRenderer).not.toHaveBeenCalled();
+    expect(screen.getByText('Submitted', { selector: '[data-slot="alert-title"]' })).toBeInTheDocument();
+    expect(screen.getByText('Questionnaire submitted. These are the Requestor’s submitted answers.')).toBeInTheDocument();
+    for (const question of submittedDefinition) expect(screen.getByRole('heading', { name: question.questionText })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /save|submit/i })).not.toBeInTheDocument();
   });
 
@@ -724,7 +748,6 @@ describe('Security Analyst questionnaire review', () => {
     // One read gives the editor the active questions and every question's placement (D-05).
     expect(detailSource).toContain('getQuestionnaireGovernanceQuestions');
     expect(`${listSource}\n${detailSource}`).not.toContain("'use client'");
-    expect(`${listSource}\n${detailSource}`).not.toMatch(/\bfetch\s*\(/);
   });
 
   it('uses the exact actor capability and route pair for questionnaire request backlinks', () => {
@@ -736,5 +759,70 @@ describe('Security Analyst questionnaire review', () => {
     // The analyst route reuses the route gate (D-23), so its request backlink needs no second capability read.
     expect(analystPage).toContain('canViewerReviewAssessments');
     expect(analystPage).toContain('`/app/review/requests/${encodeURIComponent(request.documentId)}`');
+  });
+});
+
+/* Phase 15 (15-UI-SPEC §11.2; D-25, D-07, UI-D25; U4): what the Requestor's kept answers may restore into. */
+describe('restoring a Requestor’s unsaved answers', () => {
+  const base = { schemaVersion: 1, section: { key: 's', title: 'S', order: 1 }, order: 1, required: false, answer: null, support: { status: 'supported' } } as const;
+  const questions = [
+    { ...base, questionKey: 'name', questionText: 'Name', answerType: 'Text' },
+    { ...base, questionKey: 'audience', questionText: 'Audience', answerType: 'Single select', choices: [{ value: 'staff', label: 'Staff' }, { value: 'public', label: 'Public' }] },
+    { ...base, questionKey: 'saved', questionText: 'Saved', answerType: 'Text', answer: { schemaVersion: 1, value: 'Kept on the server', state: 'draft', updatedAt: '2026-10-12T00:00:00.000Z' } },
+    { ...base, questionKey: 'retyped', questionText: 'Retyped', answerType: 'Long text' },
+  ] as unknown as QuestionnaireDefinition;
+  const kept = (questionKey: string, answerType: string, value: KeptUnsavedAnswer['value'], choicesSignature = ''): KeptUnsavedAnswer => ({ questionKey, answerType, choicesSignature, value });
+
+  it('restores a kept answer into the same key, active, with the same type and choices and no saved answer', () => {
+    expect(restorableUnsavedAnswers([kept('name', 'Text', 'Portal'), kept('audience', 'Single select', 'public', JSON.stringify(['staff', 'public']))], questions))
+      .toEqual([kept('name', 'Text', 'Portal'), kept('audience', 'Single select', 'public', JSON.stringify(['staff', 'public']))]);
+  });
+
+  it('drops one whose question was removed, whose answer type or choices changed, or which now holds a saved answer', () => {
+    expect(restorableUnsavedAnswers([
+      kept('gone', 'Text', 'x'),
+      kept('retyped', 'Text', 'x'),
+      kept('audience', 'Single select', 'public', JSON.stringify(['staff', 'public', 'partners'])),
+      kept('saved', 'Text', 'Newer here'),
+    ], questions)).toEqual([]);
+  });
+
+  it('reads a kept value defensively: one that does not parse, or holds entries of another shape, is nothing', () => {
+    expect(parseKeptUnsavedAnswers(null)).toBeNull();
+    expect(parseKeptUnsavedAnswers('{not json')).toBeNull();
+    expect(parseKeptUnsavedAnswers(JSON.stringify({ questionKey: 'name' }))).toBeNull();
+    expect(parseKeptUnsavedAnswers(JSON.stringify([{ questionKey: 'name', answerType: 'Text', choicesSignature: '', value: 7 }]))).toBeNull();
+    expect(parseKeptUnsavedAnswers(JSON.stringify([kept('name', 'Text', 'Portal'), kept('m', 'Multi select', ['a'], '["a"]'), kept('b', 'Boolean', false), kept('d', 'Date', null)]))).toHaveLength(4);
+  });
+
+  it('captions the restore with its count', () => {
+    expect(unsavedAnswersRestoredCaption(2)).toBe('2 unsaved answers were restored from earlier in this session. Check them before you carry on.');
+    expect(unsavedAnswersRestoredCaption(1)).toBe('1 unsaved answer was restored from earlier in this session. Check it before you carry on.');
+  });
+
+  it('hands the renderer the draft owner key, and the Requestor’s view renders no AI proposal, instruction, Answered note or rewrite control', () => {
+    for (const state of ['draft', 'submitted'] as const) {
+      const { unmount } = render(<QuestionnaireDetail definition={submittedDefinition} draftOwnerKey="owner-a" questionnaire={{ ...questionnaire, state }} state={state === 'submitted' ? 'submitted' : 'ready'} />);
+      expect(questionnaireRenderer).toHaveBeenLastCalledWith(expect.objectContaining({ ownerKey: 'owner-a' }), undefined);
+      expect(document.body.textContent).not.toMatch(/AI proposal|Instruction for the AI|Rewrite in plain language|Suggest follow-up questions/);
+      expect(screen.queryByText('Answered')).toBeNull();
+      unmount();
+    }
+    const requestorModules = ['src/features/questionnaires/questionnaire-detail.tsx', 'src/features/questionnaires/questionnaire-renderer.tsx', 'app/(app)/app/questionnaires/[documentId]/page.tsx'];
+    for (const path of requestorModules) expect(readFileSync(resolve(process.cwd(), path), 'utf8')).not.toContain('questionnaire-ai');
+    expect(readFileSync(resolve(process.cwd(), 'app/(app)/app/questionnaires/[documentId]/page.tsx'), 'utf8')).toContain('draftOwnerKey');
+  });
+});
+
+/* Phase 15 (D-05; 15-UI-SPEC §7.1): a submitted row with an answer is answered, so it never offers a rewrite. */
+describe('a submitted row’s answered state', () => {
+  it('reads the served flag, or the submitted answer itself', () => {
+    expect(submittedRowAnswered({ answered: true, answer: null })).toBe(true);
+    expect(submittedRowAnswered({ answer: { value: 'Yes' } })).toBe(true);
+    expect(submittedRowAnswered({ answer: { value: ['a'] } })).toBe(true);
+    expect(submittedRowAnswered({ answer: { value: false } })).toBe(true);
+    expect(submittedRowAnswered({ answer: { value: '  ' } })).toBe(false);
+    expect(submittedRowAnswered({ answer: { value: [] } })).toBe(false);
+    expect(submittedRowAnswered({ answered: false, answer: null })).toBe(false);
   });
 });

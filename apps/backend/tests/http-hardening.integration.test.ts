@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
 
@@ -168,5 +170,156 @@ test("the admin panel's same-origin requests are answered exactly as before", as
     const sameOrigin = await harness.request({ path, omitApiToken: true, init: { method, headers: { origin: harness.baseUrl } } });
     assert.equal(sameOrigin.status, withoutOrigin.status, `SAME_ORIGIN_STATUS_CHANGED_${label}`);
     assert.deepEqual(await sameOrigin.json(), await withoutOrigin.json(), `SAME_ORIGIN_BODY_CHANGED_${label}`);
+  }
+});
+
+/*
+ * 14-04 (D-06, D-07; ROADMAP success criterion 2): attachment bytes are kept privately through one storage port, under
+ * a generated key, byte for byte, and nothing serves them: not /uploads/, which serves public/, and not the private
+ * provider's own /csrm-private/ URL, which no middleware routes. The provider itself is unit-tested in
+ * attachment-storage.unit.test.ts.
+ */
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
+const strapiDir = path.resolve(__dirname, "..", "..", "..");
+const attachmentFixture = (name: string) => readFileSync(path.join(strapiDir, "tests", "fixtures", "attachments", name));
+const STORAGE_KEY = /^csrm_[0-9a-f]{32}$/;
+
+function filesUnder(directory: string): string[] {
+  return existsSync(directory) ? readdirSync(directory, { recursive: true, encoding: "utf8" }) : [];
+}
+
+test("the storage port keeps PNG and JPEG bytes privately under a generated key and returns them unchanged", async () => {
+  const harness = await harnessPromise;
+  const storage = harness.attachmentStorage();
+  const publicUploads = path.join(strapiDir, "public", "uploads");
+  const publicBefore = filesUnder(publicUploads);
+  for (const [type, name, ext] of [["png", "diagram.png", ".png"], ["jpeg", "photo.jpg", ".jpg"]] as const) {
+    const bytes = attachmentFixture(name);
+    const stored = await storage.put(bytes, { type });
+    assert.match(stored.hash, STORAGE_KEY, `STORAGE_KEY_NOT_GENERATED_${type}`);
+    assert.equal(stored.ext, ext, `STORAGE_EXTENSION_${type}`);
+    assert.ok(Buffer.from(await storage.read(stored.fileId)).equals(bytes), `STORAGE_BYTES_CHANGED_${type}`);
+
+    const record = await harness.findUploadFileRecord(stored.fileId);
+    assert.ok(record, `UPLOAD_FILE_RECORD_MISSING_${type}`);
+    assert.equal(record.provider, "local", `UPLOAD_FILE_PROVIDER_${type}`);
+    assert.equal(record.name, `${stored.hash}${ext}`, `UPLOAD_FILE_NAME_NOT_THE_KEY_${type}`);
+    assert.equal(record.hash, stored.hash, `UPLOAD_FILE_HASH_${type}`);
+    // The file content type has no sizeInBytes attribute; `size` is the plugin's kilobytes, two decimals.
+    assert.equal(Number(record.size), Math.round((bytes.length / 1000) * 100) / 100, `UPLOAD_FILE_SIZE_${type}`);
+    assert.equal(record.formats ?? null, null, `UPLOAD_FILE_DERIVED_FORMATS_${type}`);
+
+    const kept = path.join(harness.attachmentStorageDirectory(), `${stored.hash}${ext}`);
+    assert.ok(readFileSync(kept).equals(bytes), `STORAGE_FILE_NOT_IN_PRIVATE_DIRECTORY_${type}`);
+  }
+  assert.deepEqual(filesUnder(publicUploads), publicBefore, "ATTACHMENT_WRITTEN_UNDER_PUBLIC_UPLOADS");
+  const fromPublic = path.relative(path.join(strapiDir, "public"), harness.attachmentStorageDirectory());
+  assert.ok(fromPublic.startsWith("..") || path.isAbsolute(fromPublic), "PRIVATE_DIRECTORY_INSIDE_PUBLIC");
+});
+
+test("nothing serves a stored attachment: /uploads/ and /csrm-private/ answer 404 with none of its bytes, and remove deletes it", async () => {
+  const harness = await harnessPromise;
+  const storage = harness.attachmentStorage();
+  const bytes = attachmentFixture("diagram.png");
+  const stored = await storage.put(bytes, { type: "png" });
+  const key = `${stored.hash}${stored.ext}`;
+  for (const servedPath of [`/uploads/${key}`, `/csrm-private/${key}`, `/api/csrm-private/${key}`]) {
+    for (const omitApiToken of [false, true]) {
+      const response = await harness.request({ path: servedPath, identity: harness.identities.analyst, omitApiToken });
+      const body = Buffer.from(await response.arrayBuffer());
+      assert.equal(response.status, 404, `ATTACHMENT_SERVED_${servedPath}_${omitApiToken ? "NO_TOKEN" : "TOKEN"}`);
+      assert.equal(body.indexOf(bytes.subarray(0, 64)), -1, `ATTACHMENT_BYTES_IN_RESPONSE_${servedPath}`);
+    }
+  }
+
+  await storage.remove(stored.fileId);
+  assert.equal(existsSync(path.join(harness.attachmentStorageDirectory(), key)), false, "REMOVE_LEFT_THE_FILE");
+  assert.equal(await harness.findUploadFileRecord(stored.fileId), null, "REMOVE_LEFT_THE_RECORD");
+});
+
+/*
+ * 14-04 (D-08; R-08-02): with private files in the upload plugin, its content-API routes would let the full-access
+ * token holder list their metadata, upload unscanned files or delete them, so the application unmounts all five for
+ * every caller. An unmounted /api path answers a GET with 404 and a mutation with 405 (strapi-http-hardening.md,
+ * "Unmounted paths"). The admin panel's own upload routes are a separate router and stay (served-operations test).
+ */
+const UPLOAD_CONTENT_API_PROBES = [
+  { method: "GET", path: "/api/upload/files", status: 404 },
+  { method: "GET", path: "/api/upload/files/page", status: 404 },
+  { method: "GET", path: "/api/upload/files/1", status: 404 },
+  { method: "POST", path: "/api/upload", status: 405 },
+  { method: "DELETE", path: "/api/upload/files/1", status: 405 },
+] as const;
+
+test("the upload plugin's content-API routes are unmounted for every caller, the full-access token included", async () => {
+  const harness = await harnessPromise;
+  const before = await harness.countUploadFileRecords();
+  const callers: Array<[label: string, caller: { identity?: string; omitApiToken?: boolean }]> = [
+    ["TOKEN", {}],
+    ["OWNER", { identity: harness.identities.owner }],
+    ["OTHER", { identity: harness.identities.otherRequestor }],
+    ["ANALYST", { identity: harness.identities.analyst }],
+    ["SERVICE_AGENT", { identity: harness.identities.serviceAnalystAgent }],
+    ["NO_TOKEN", { identity: harness.identities.analyst, omitApiToken: true }],
+  ];
+  for (const probe of UPLOAD_CONTENT_API_PROBES) {
+    for (const [label, caller] of callers) {
+      const init: RequestInit = probe.method === "POST" ? { method: "POST", body: new FormData() } : { method: probe.method };
+      const response = await harness.request({ path: probe.path, ...caller, init });
+      const text = await response.text();
+      assert.equal(response.status, probe.status, `UPLOAD_CONTENT_API_MOUNTED_${probe.method}_${probe.path}_${label}: ${text.slice(0, 200)}`);
+    }
+  }
+  assert.equal(await harness.countUploadFileRecords(), before, "UPLOAD_FILE_RECORDS_CHANGED");
+});
+
+/*
+ * 14-RESEARCH Pitfalls 2 and 3 (D-11, D-25, T-14-16): strapi::body removes only the temporary file of a part named
+ * `files`, and never when a later middleware throws; a route's own middlewares never run for a refused caller. The
+ * global csrm-multipart-cleanup middleware removes every part's temporary file after every request.
+ */
+const PROBE_PART_BYTES = 777_777;
+
+function temporaryProbeFiles(since: number): string[] {
+  const directory = os.tmpdir();
+  return readdirSync(directory).filter((name) => {
+    try {
+      const stats = statSync(path.join(directory, name));
+      return stats.isFile() && stats.size === PROBE_PART_BYTES && stats.mtimeMs >= since;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/*
+ * WR-304: the probes cover both outcomes. Three are refused (the unmounted upload routes under both part names, and a CSV
+ * import the policy refuses before its route runs), and one is accepted: Jane adds a probe-sized text file to a fresh
+ * draft of hers through the attachment upload, 201. Each answers its own expected status, and no temporary file of the
+ * probe's size survives any of them.
+ */
+test("no multipart temporary file survives a request, whatever the part name and whether the caller was refused or the upload accepted (WR-304)", async () => {
+  const harness = await harnessPromise;
+  const since = Date.now() - 1_000;
+  const part = (name: string, filename: string, type: string, bytes: Uint8Array = randomBytes(PROBE_PART_BYTES)) => {
+    const form = new FormData();
+    form.set(name, new File([bytes], filename, { type }));
+    return form;
+  };
+  const draft = await harness.createAssessmentRequestFixture({ requestNumber: "HARDEN-PROBE-001", title: "Temporary file probe", requestStatus: "draft", requestor: "owner" });
+  // Text the content check accepts, exactly the probe's size.
+  const acceptedText = Buffer.alloc(PROBE_PART_BYTES, "Probe line for the temporary file check.\n", "utf8");
+  const probes: Array<[label: string, path: string, form: FormData, status: number, identity?: string]> = [
+    ["UPLOAD_FILE_PART", "/api/upload", part("file", "probe.bin", "application/octet-stream"), 405],
+    ["UPLOAD_FILES_PART", "/api/upload", part("files", "probe.bin", "application/octet-stream"), 405],
+    // No identity: the policy refuses the import before its route runs.
+    ["REFUSED_CSV_IMPORT", "/api/v1/risk_types/import/preview", part("file", "probe.csv", "text/csv"), 403],
+    ["ACCEPTED_ATTACHMENT", `/api/v1/assessment_requests/${encodeURIComponent(draft)}/attachments`, part("file", "probe.txt", "text/plain", acceptedText), 201, harness.identities.owner],
+  ];
+  for (const [label, requestPath, form, status, identity] of probes) {
+    const response = await harness.request({ path: requestPath, ...(identity ? { identity } : {}), init: { method: "POST", body: form } });
+    const text = await response.text();
+    assert.equal(response.status, status, `MULTIPART_PROBE_${label}_UNEXPECTED_STATUS: ${text.slice(0, 200)}`);
+    assert.deepEqual(temporaryProbeFiles(since), [], `MULTIPART_TEMPORARY_FILE_LEFT_${label}`);
   }
 });

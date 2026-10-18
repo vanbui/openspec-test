@@ -49,6 +49,7 @@ export function RoleSwitcher({ role }: { role: DevelopmentRole }) {
         <option>Requestor</option>
         <option>Secondary Requestor</option>
         <option>Security Analyst</option>
+        <option>Second Security Analyst</option>
       </select>
       <p>Development-only UI fixture. Strapi remains the authorization authority.</p>
     </form>

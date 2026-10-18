@@ -70,3 +70,30 @@ describe('createStrapiClient in OIDC mode (docs/adr/0004)', () => {
     await expect(clientOptionsFor('sentinel-access-token')).rejects.toThrow('CSRM API configuration is invalid.');
   });
 });
+
+it('current backend 403 removes capabilities using the real typed client with unchanged credentials', async () => {
+  vi.resetModules();
+  vi.doUnmock('openapi-fetch');
+  const identityToken = vi.fn().mockResolvedValue('same-existing-token');
+  vi.doMock('@/lib/auth/development-session-adapter', () => ({ getSessionAdapter: () => ({ identityToken }) }));
+  const requests: Request[] = [];
+  const fetchMock = vi.fn(async (request: Request) => {
+    requests.push(request);
+    return requests.length === 1
+      ? Response.json({ data: { displayName: 'Gate Person', functions: [], operations: ['GET:/api/v1/my_requests'] } })
+      : Response.json({ error: { status: 403, name: 'ForbiddenError', message: 'Forbidden' } }, { status: 403 });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  try {
+    const { strapiGrantedCapabilities } = await import('@/lib/capabilities/strapi-capabilities');
+    expect(await strapiGrantedCapabilities()).toEqual(new Set(['assessment-request:read']));
+    expect(await strapiGrantedCapabilities()).toEqual(new Set());
+    expect(requests).toHaveLength(2);
+    for (const request of requests) {
+      expect(request.url).toBe('https://strapi.example.test/api/v1/me/access');
+      expect(request.headers.get('authorization')).toBe('Bearer configured-oidc-credential');
+      expect(request.headers.get('x-csrm-identity-token')).toBe('same-existing-token');
+      expect(request.headers.has('x-csrm-dev-identity')).toBe(false);
+    }
+  } finally { vi.unstubAllGlobals(); }
+});

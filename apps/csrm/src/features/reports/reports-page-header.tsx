@@ -1,8 +1,9 @@
 import { PageHeader } from '@/components/csrm/page-header';
+import { pageHeadings } from '@/config/navigation/page-headings';
 
 /** The Reports index copy (UI-SPEC §7.1). */
-export const reportsPageTitle = 'Reports';
-export const reportsPageDescription = 'Read-only reports computed from current records in your authorised scope.';
+export const reportsPageTitle = pageHeadings.reports;
+export const reportsPageDescription = 'Read-only reports computed from the current records you can open.';
 
 /**
  * The Reports header. The index, its loading and error boundaries, the report error boundary and

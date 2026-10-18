@@ -29,6 +29,8 @@ import { parseRevertReason } from "../../csrm-assessment-request/services/revert
 import { ASSESSMENT_STAGE_REQUEST_STATUSES, parseAnswerEnvelope, type AnswerEnvelope } from "./questionnaire-workflow";
 import { projectAnalystRevision, projectQuestionnaire } from "./questionnaire-scope";
 import { lockQuestionnaireAndRequest } from "./questionnaire-row-locks";
+import { allocateQuestionKey, createBatchAllocation } from "./questionnaire-placement";
+import { assertNoOpenProposals } from "./questionnaire-proposal-gates";
 import type { ConflictReason } from "../../../csrm/conflict-reasons";
 
 type RecordValue = Record<string, unknown>;
@@ -194,17 +196,29 @@ async function serializeGovernanceMutation<T>(documentId: string, work: () => Pr
   }
 }
 
-async function runGovernanceMutation<T>(input: GovernanceWorkflowInput, work: () => Promise<T>): Promise<T> {
-  assertAnalystGovernanceActor(input);
-  if (typeof input.questionnaireDocumentId !== "string" || input.questionnaireDocumentId.length === 0) {
+/**
+ * The questionnaire's governance lock (Phase 15 D-16, D-22, D-26; W-8): the one in-process tail every governance write
+ * on the questionnaire waits on, then one transaction holding the request's row and the questionnaire's row (CR-101's
+ * order). Every append to the governance log happens inside it, so no two writers read the same log and one overwrites
+ * the other's event (15-RESEARCH Pitfall 2). It is the actor-free core of `runGovernanceMutation`; an AI proposal job
+ * completes inside it, never its provider call. Never nest it for one questionnaire (the tail would wait on itself), and
+ * inside it use the Document Service or `strapi.db.query`, never raw knex, which the transaction does not bind.
+ */
+export async function withQuestionnaireGovernanceLock<T>(strapi: GovernanceStrapi, questionnaireDocumentId: string, work: () => Promise<T>): Promise<T> {
+  if (typeof questionnaireDocumentId !== "string" || questionnaireDocumentId.length === 0) {
     throw new QuestionnaireGovernanceError(400, "CSRM questionnaire identifier is invalid.");
   }
-  return serializeGovernanceMutation(input.questionnaireDocumentId, () =>
-    input.strapi.db.transaction(async ({ trx }) => {
+  return serializeGovernanceMutation(questionnaireDocumentId, () =>
+    strapi.db.transaction(async ({ trx }) => {
       // CR-101: the request row, then the questionnaire row, before the work reads anything.
-      await lockQuestionnaireAndRequest(input.strapi, input.questionnaireDocumentId, trx);
+      await lockQuestionnaireAndRequest(strapi, questionnaireDocumentId, trx);
       return work();
     }));
+}
+
+async function runGovernanceMutation<T>(input: GovernanceWorkflowInput, work: () => Promise<T>): Promise<T> {
+  assertAnalystGovernanceActor(input);
+  return withQuestionnaireGovernanceLock(input.strapi, input.questionnaireDocumentId, work);
 }
 
 const GOVERNANCE_POPULATE = {
@@ -357,6 +371,10 @@ export async function releaseQuestionnaire(input: GovernanceWorkflowInput): Prom
   return runGovernanceMutation(input, async () => {
     const questionnaire = await loadGovernanceQuestionnaire(input);
     assertReleasable(questionnaire);
+    // Phase 15 D-08: nothing reaches the Requestor while an AI proposal is undecided or a proposal job is running.
+    await assertNoOpenProposals(input.strapi as never, input.questionnaireDocumentId, (reason) => {
+      throw new QuestionnaireGovernanceError(409, "CSRM questionnaire cannot be released while AI proposals are open.", reason);
+    });
     const releasedAt = (input.now ?? new Date()).toISOString();
     const actorDocumentId = input.actorDocumentId as string;
     let governanceLog;
@@ -388,7 +406,7 @@ export async function releaseQuestionnaire(input: GovernanceWorkflowInput): Prom
   });
 }
 
-function questionOptions(question: QuestionnaireDefinitionQuestion): RecordValue {
+export function questionOptions(question: QuestionnaireDefinitionQuestion): RecordValue {
   return {
     schemaVersion: 2,
     questionKey: question.questionKey,
@@ -405,7 +423,7 @@ function questionOptions(question: QuestionnaireDefinitionQuestion): RecordValue
  * A definition error on add or edit is a placement or section clash, typically another analyst's
  * change saved first (D-06), so the analyst is told to reload; a log error is its own reason.
  */
-function governanceConflict(error: unknown): never {
+export function governanceConflict(error: unknown): never {
   if (error instanceof QuestionnaireGovernanceError) throw error;
   if (error instanceof QuestionnaireDefinitionError) {
     throw new QuestionnaireGovernanceError(409, "CSRM questionnaire definition cannot be changed.", "DEFINITION_CONFLICT");
@@ -414,15 +432,6 @@ function governanceConflict(error: unknown): never {
     throw new QuestionnaireGovernanceError(409, "CSRM questionnaire definition cannot be changed.", "HISTORY_UNAVAILABLE");
   }
   throw error;
-}
-
-function questionKeyFromText(text: string, definition: QuestionnaireDefinitionQuestion[]): string {
-  const base = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 110) || "question";
-  const existing = new Set(definition.map((question) => question.questionKey));
-  for (let suffix = 1; ; suffix += 1) {
-    const candidate = suffix === 1 ? base : `${base}-${suffix}`;
-    if (!existing.has(candidate)) return candidate;
-  }
 }
 
 /*
@@ -441,7 +450,7 @@ function resultForGovernance(questionnaire: RecordValue, clearedAnswers: Array<{
   };
 }
 
-function questionByDocumentId(questionnaire: RecordValue, documentId: string): QuestionnaireDefinitionQuestion {
+export function questionByDocumentId(questionnaire: RecordValue, documentId: string): QuestionnaireDefinitionQuestion {
   const definition = parseQuestionnaireDefinition(questionnaire.questions);
   const question = definition.find((candidate) => candidate.documentId === documentId);
   if (!question) throw new QuestionnaireGovernanceError(404, "CSRM questionnaire question was not found.");
@@ -454,7 +463,21 @@ function questionByDocumentId(questionnaire: RecordValue, documentId: string): Q
  * revised question's text for a cleared answer. The snapshot is appended with the event, before
  * any write, so a log that cannot take it leaves nothing behind.
  */
-function appendQuestionEvent(questionnaire: RecordValue, kind: "question-added" | "question-edited" | "question-deleted" | "answer-cleared", questionKey: string, questionText: string, input: GovernanceWorkflowInput, explanation?: string): unknown {
+/**
+ * The AI source a question event carries when a confirmed AI proposal, or the Undo of one, wrote it (Phase 15 D-26):
+ * the run, the item and whether the analyst edited the proposal first; an Undo adds `aiUndo: true`.
+ */
+export type QuestionEventSource = { runId: string; itemKey: string; aiEdited: boolean; aiUndo?: true };
+
+export function appendQuestionEvent(
+  questionnaire: RecordValue,
+  kind: "question-added" | "question-edited" | "question-deleted" | "question-restored" | "answer-cleared",
+  questionKey: string,
+  questionText: string,
+  input: Pick<GovernanceWorkflowInput, "now" | "actorDocumentId">,
+  explanation?: string,
+  source?: QuestionEventSource,
+): unknown {
   const snapshot = questionTextSnapshot(questionText);
   return appendOrConflict(questionnaire.governanceLog, {
     schemaVersion: 1,
@@ -464,6 +487,7 @@ function appendQuestionEvent(questionnaire: RecordValue, kind: "question-added" 
     questionKey,
     ...(snapshot ? { questionText: snapshot } : {}),
     ...(explanation ? { explanation } : {}),
+    ...(source ? { runId: source.runId, itemKey: source.itemKey, aiEdited: source.aiEdited, ...(source.aiUndo ? { aiUndo: true } : {}) } : {}),
   });
 }
 
@@ -496,7 +520,7 @@ export async function deleteQuestionnaireQuestion(input: GovernanceWorkflowInput
   });
 }
 
-function candidateQuestion(question: QuestionnaireDefinitionQuestion, payload: QuestionMutationPayload): QuestionnaireDefinitionQuestion {
+export function candidateQuestion(question: QuestionnaireDefinitionQuestion, payload: QuestionMutationPayload): QuestionnaireDefinitionQuestion {
   const answerType = payload.answerType ?? question.answerType;
   const choices = payload.choices === undefined
     ? (answerType === "Single select" || answerType === "Multi select" ? question.choices : undefined)
@@ -521,7 +545,7 @@ function candidateQuestion(question: QuestionnaireDefinitionQuestion, payload: Q
   };
 }
 
-function validateDefinition(definition: QuestionnaireDefinitionQuestion[]): QuestionnaireDefinitionQuestion[] {
+export function validateDefinition(definition: QuestionnaireDefinitionQuestion[]): QuestionnaireDefinitionQuestion[] {
   return parseQuestionnaireDefinition(definition.map((question) => ({
     documentId: question.documentId,
     questionText: question.questionText,
@@ -538,11 +562,13 @@ export async function addQuestionnaireQuestion(input: GovernanceWorkflowInput): 
     const questionnaire = await loadGovernanceQuestionnaire(input);
     assertQuestionMutationStage(questionnaire);
     const definition = parseQuestionnaireDefinition(questionnaire.questions);
+    // One key rule for manual and AI additions (Phase 15 D-13): unique among every key, removed questions included.
+    const questionKey = allocateQuestionKey(payload.questionText as string, createBatchAllocation(definition));
     const question: QuestionnaireDefinitionQuestion = {
-      documentId: `new-${questionKeyFromText(payload.questionText as string, definition)}`,
+      documentId: `new-${questionKey}`,
       questionText: payload.questionText as string,
       answerType: payload.answerType as QuestionnaireAnswerType,
-      questionKey: questionKeyFromText(payload.questionText as string, definition),
+      questionKey,
       section: payload.section as QuestionnaireDefinitionQuestion["section"],
       order: payload.order as number,
       required: payload.required as boolean,

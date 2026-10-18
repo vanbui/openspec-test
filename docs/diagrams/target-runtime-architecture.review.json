@@ -1,0 +1,20 @@
+{
+  "diagram_type": "architecture",
+  "output": "target-runtime-architecture.html",
+  "specification_sha256": "3332c31e68ade567aa70ac9b0a9a2b6847775810bfe87bc0f20b53761105fbae",
+  "artifact_sha256": "170d3c8c1b16a6321584b4025a83b6a3f6d26a54574c360cc7526acd224d224d",
+  "artifact_bytes": 816176,
+  "validation": "9/9 showcase, 0 errors, 0 warnings",
+  "browser_evidence": "passed",
+  "browser_receipt": "target-runtime-architecture.visual-check.json",
+  "visual_review": "passed",
+  "review_method": "Image-capable review of the four artifact-bound screenshots in default READ / Still / Classic state",
+  "inspected_screenshots": [
+    "target-runtime-architecture.visual-check.1440x900.light.png",
+    "target-runtime-architecture.visual-check.1440x900.dark.png",
+    "target-runtime-architecture.visual-check.2048x1320.light.png",
+    "target-runtime-architecture.visual-check.2048x1320.dark.png"
+  ],
+  "observations": "Trust boundaries, relationship directions, labels, component text and cards are readable in both themes. No visible label clipping, opaque-node crossings or overlapping cards. The main diagram and cards fit the desktop screen.",
+  "correction_rounds": 1
+}

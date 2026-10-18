@@ -55,13 +55,14 @@ default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-sr
 
 ### The matcher
 
-`proxy.ts` runs for `'/((?!_next/static/|_next/image$|icon\\.png$).*)'` unless the request carries `next-router-prefetch` or `purpose: prefetch`, the matcher the Next CSP guide recommends with each exclusion anchored.
+`proxy.ts` runs for `'/((?!_next/static/|_next/image$|icon\\.png$).*)'`, the matcher the Next CSP guide recommends with each exclusion anchored. A request that carries `next-router-prefetch` or `purpose: prefetch` is skipped only while it declares no body; one that declares a body (`Content-Length` or `Transfer-Encoding`) runs the proxy like any other (Phase 14 stage B, CR-402).
 
 - **Excluded:** static files (`/_next/static/`, every script and stylesheet the pages load), optimised images (exactly `/_next/image`; the matcher tests the path without its query) and the favicon (exactly `/icon.png`). None of these is a document, so a policy on them would govern nothing.
 - **Anchored (SR-05):** each exclusion names one real path. Until the phase code review the lookahead was unanchored and its dot unescaped, so `/iconXpng`, `/icon.png-x`, `/_next/staticfoo` and `/_next/imagery` skipped the proxy and rendered the not-found document with no policy and no nonce. A URL that only resembles an exclusion now renders under the policy; `proxy.test.ts` and `production-hardening.spec.ts` prove it.
-- **Also excluded:** a router prefetch, which fetches data for a later navigation and renders no document.
+- **Also excluded, while bodiless:** a prefetch, which fetches data for a later navigation and renders no document, so it gets no policy work and no session refresh. Until the Phase 14 code review the exclusion held whatever the request carried, so a POST with either prefetch header skipped the Server Action body gate too (CR-402). It now holds only for a request that declares no body (under HTTP/1.1, which Next's server speaks, a request with neither `Content-Length` nor `Transfer-Encoding` has none), so the body gate sees every request with a body. The exclusion has to be in the matcher: Next strips the router's `next-router-prefetch` header from the request before `proxy()` reads it, so inside the function a router prefetch looks like any other GET.
+- **The body gate runs first:** before any policy work, `proxy()` answers 413 to a POST over 6 MiB, or one with no decimal `Content-Length`, unless it is a `multipart/form-data` post on one of the four pages that add files (Phase 14 D-25; `src/lib/security/action-body-limit.ts`; R-08-04 in `phase-08-residual-risks.md`).
 - **Static headers still apply:** Next applies `headers()` from `next.config.ts` to every path before the proxy runs, so excluded requests keep the static headers. This was observed on a `/_next/static` script.
-- **Server Actions pass the proxy:** a Server Action is a POST to its page's path. The proxy only adds headers. Authorization stays in each action and in Strapi.
+- **Server Actions pass the proxy:** a Server Action is a POST to its page's path. The proxy only adds headers, after the body gate above has admitted the post. Authorization stays in each action and in Strapi.
 - The application has no `/api` routes.
 
 ## The development policy (`next dev`)
@@ -149,7 +150,7 @@ default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-sr
 | Proof | What it shows |
 |---|---|
 | `apps/csrm/src/lib/security/content-security-policy.test.ts` | The exact production and development policies. The development branch differs by `'unsafe-eval'` alone. The HTTPS upgrade is sent only over HTTPS. The nonce is validated, never echoed, and read back by Next's own extractor. |
-| `apps/csrm/src/lib/security/proxy.test.ts` | One nonce is set on the request (as `x-nonce` and inside the policy) and the same policy on the response. Every request gets a fresh nonce. The policy follows the protocol and `NODE_ENV`. The matcher skips static files, images, the favicon and prefetches, and runs for any URL that only resembles one of them. The root layout renders every page per request. |
+| `apps/csrm/src/lib/security/proxy.test.ts` | One nonce is set on the request (as `x-nonce` and inside the policy) and the same policy on the response. Every request gets a fresh nonce. The policy follows the protocol and `NODE_ENV`. The matcher skips static files, images, the favicon and a prefetch that declares no body, and runs for any URL that only resembles one of them and for any prefetch-headed request that declares a body. Next strips the router's prefetch header before `proxy()` reads the request (pinned through Next's own proxy wrapper). The root layout renders every page per request. |
 | `apps/csrm/src/lib/security/security-headers.test.ts` | The static header rule for every path. HSTS is sent only by production builds and never with `preload`. No static CSP is set. `poweredByHeader` is off. |
 | `apps/csrm/src/lib/security/instrumentation-client.test.ts` | Zod is jitless in the browser, and parsing is unchanged. |
 | `apps/csrm/src/lib/security/server-only-boundary.test.ts`, `output-safety.test.ts` | D-22 and D-21 as above. |

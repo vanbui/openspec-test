@@ -70,6 +70,7 @@ function stubLocalAuthEnv(): void {
 }
 
 beforeEach(() => {
+  stubLocalAuthEnv();
   mocks.authFactoryCalls.count = 0;
   mocks.redirect.mockReset().mockImplementation((location: string) => {
     throw new RedirectSignal(location);
@@ -166,6 +167,24 @@ describe('getSessionAdapter switching on the OIDC flag', () => {
 });
 
 describe('OidcSessionAdapter.current', () => {
+  it('provides an opaque stable identity across token refreshes and separates users with identical display fields', async () => {
+    stubOidcMode();
+    stubLocalAuthEnv();
+    const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+    const adapter = new OidcSessionAdapter();
+    mocks.auth.mockResolvedValue({ user: { name: 'Requestor' }, expires: '2026-09-30T00:00:00.000Z' });
+    mocks.getToken.mockResolvedValue({ sub: 'first-private-subject', accessToken: 'old-token' });
+    const first = await adapter.current();
+    expect(first?.identityKey).toMatch(/^[a-f0-9]{64}$/);
+    mocks.getToken.mockResolvedValue({ sub: 'first-private-subject', accessToken: 'refreshed-token' });
+    expect((await adapter.current())?.identityKey).toBe(first?.identityKey);
+    mocks.getToken.mockResolvedValue({ sub: 'second-private-subject' });
+    const second = await adapter.current();
+    expect(second?.identityKey).not.toBe(first?.identityKey);
+    expect(JSON.stringify(first)).not.toContain('first-private-subject');
+    expect(JSON.stringify(first)).not.toContain('old-token');
+  });
+
   it('resolves the display name from the Auth.js session user, falling back through email to a default', async () => {
     vi.resetModules();
     stubOidcMode();
@@ -176,18 +195,18 @@ describe('OidcSessionAdapter.current', () => {
       user: { name: ' Jane Doe ', email: ' jane.doe@idambox.com ' },
       expires: '2026-09-30T00:00:00.000Z',
     });
-    await expect(adapter.current()).resolves.toEqual({ displayName: 'Jane Doe', email: 'jane.doe@idambox.com' });
+    await expect(adapter.current()).resolves.toEqual({ displayName: 'Jane Doe', email: 'jane.doe@idambox.com', identityKey: expect.any(String) });
 
     mocks.auth.mockResolvedValueOnce({ user: { name: ' Jane Doe ' }, expires: '2026-09-30T00:00:00.000Z' });
     const withoutEmail = await adapter.current();
-    expect(withoutEmail).toEqual({ displayName: 'Jane Doe' });
+    expect(withoutEmail).toEqual({ displayName: 'Jane Doe', identityKey: expect.any(String) });
     expect(withoutEmail).not.toHaveProperty('email');
 
     mocks.auth.mockResolvedValueOnce({ user: { name: '', email: 'jane.doe@idambox.com' }, expires: '2026-09-30T00:00:00.000Z' });
-    await expect(adapter.current()).resolves.toEqual({ displayName: 'jane.doe@idambox.com', email: 'jane.doe@idambox.com' });
+    await expect(adapter.current()).resolves.toEqual({ displayName: 'jane.doe@idambox.com', email: 'jane.doe@idambox.com', identityKey: expect.any(String) });
 
     mocks.auth.mockResolvedValueOnce({ user: {}, expires: '2026-09-30T00:00:00.000Z' });
-    await expect(adapter.current()).resolves.toEqual({ displayName: 'Signed-in user' });
+    await expect(adapter.current()).resolves.toEqual({ displayName: 'Signed-in user', identityKey: expect.any(String) });
 
     mocks.auth.mockResolvedValueOnce(null);
     await expect(adapter.current()).resolves.toBeNull();
@@ -443,4 +462,23 @@ describe('handleOidcAuthRequest', () => {
     expect(await postResponse.text()).toBe('post-ok');
     expect(mocks.handlers.POST).toHaveBeenCalledWith(request);
   });
+});
+
+it('rechecks current capabilities while preserving the same unexpired session and token after refusal', async () => {
+  stubOidcMode();
+  const { OidcSessionAdapter } = await import('./oidc-session-adapter');
+  const adapter = new OidcSessionAdapter();
+  mocks.auth.mockResolvedValue({ user: { name: 'Gate Person' } });
+  mocks.getToken.mockResolvedValue({ sub: 'gate-person', accessToken: 'unchanged-unexpired-token', accessTokenExpiresAt: Math.floor(Date.now() / 1000) + 600 });
+  mocks.strapiGrantedCapabilities.mockResolvedValueOnce(new Set(['assessment-request:read'])).mockResolvedValueOnce(new Set());
+  const before = await adapter.current();
+  expect(before).not.toBeNull();
+  expect(await adapter.capabilitiesFor(before!).granted()).toEqual(new Set(['assessment-request:read']));
+  const token = await adapter.identityToken();
+  expect(await adapter.capabilitiesFor(before!).granted()).toEqual(new Set());
+  expect(await adapter.current()).toEqual(before);
+  expect(await adapter.identityToken()).toBe(token);
+  expect(mocks.strapiGrantedCapabilities).toHaveBeenCalledTimes(2);
+  expect(mocks.signIn).not.toHaveBeenCalled();
+  expect(mocks.signOut).not.toHaveBeenCalled();
 });

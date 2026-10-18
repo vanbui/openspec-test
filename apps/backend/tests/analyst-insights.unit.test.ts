@@ -31,6 +31,7 @@ import {
   deriveTreatmentDueState,
   isTreatmentOpen,
 } from "../src/csrm/insights/treatment-due-state";
+import * as treatmentDueStateModule from "../src/csrm/insights/treatment-due-state";
 import {
   ALERT_KINDS,
   ALERT_URGENCIES,
@@ -163,7 +164,9 @@ test("normalizeDateTime turns epoch milliseconds, Dates and ISO strings into one
 
 test("the insight thresholds and caps are named constants with pinned values", () => {
   assert.equal(ALERT_DUE_SOON_WINDOW_DAYS, 14);
-  assert.equal(TREATMENT_REPORT_DUE_WINDOW_DAYS, 30);
+  // D-38: "due soon" has one meaning, so the treatment report's window is the alerts' (reversing Phase 7 D-13's 30).
+  assert.equal(TREATMENT_REPORT_DUE_WINDOW_DAYS, 14);
+  assert.equal(TREATMENT_REPORT_DUE_WINDOW_DAYS, ALERT_DUE_SOON_WINDOW_DAYS);
   assert.deepEqual(ALERT_PAGE_SIZES, [5, 10, 25, 50]);
   assert.equal(ALERT_DEFAULT_PAGE_SIZE, 25);
   assert.ok((ALERT_PAGE_SIZES as readonly number[]).includes(ALERT_DEFAULT_PAGE_SIZE));
@@ -233,6 +236,46 @@ test("the due-state rule refuses a today that is not a UTC calendar date and a w
   assert.throws(() => deriveTreatmentDueState(treatment({ targetDate: null }), "24/09/2026"), RangeError);
   assert.throws(() => deriveTreatmentDueState(treatment({ targetDate: "2026-09-24" }), TODAY, -1), RangeError);
   assert.throws(() => deriveTreatmentDueState(treatment({ targetDate: "2026-09-24" }), TODAY, 1.5), RangeError);
+});
+
+/*
+ * G-16 seam (Phase 7 D-04): the due state has one switch point. The rule for one Risk and its SQL mirror for a
+ * list or a count live in one module and read one governing date, so Phase 20 switches every due or overdue
+ * figure from targetDate to treatmentResolveDate in one place.
+ */
+test("the due-state rule and its SQL mirror share one module and one governing date (G-16)", () => {
+  const seam = treatmentDueStateModule as Record<string, unknown>;
+  assert.equal(typeof seam.deriveTreatmentDueState, "function", "THE_RULE_FOR_ONE_RISK");
+  assert.equal(typeof seam.applyTreatmentDueStatePredicate, "function", "THE_SQL_MIRROR_IS_NOT_BESIDE_THE_RULE");
+  assert.equal(seam.TREATMENT_DUE_DATE_COLUMN, "r.target_date", "THE_GOVERNING_DATE_COLUMN");
+  const source = readFileSync(path.join(appDir, "src", "csrm", "insights", "treatment-due-state.ts"), "utf8");
+  assert.ok(
+    source.includes("Phase 20 (G-16) switches this rule's governing date from targetDate to treatmentResolveDate"),
+    "THE_PHASE_20_SWITCH_COMMENT",
+  );
+  const register = readFileSync(path.join(appDir, "src", "api", "csrm-risk", "services", "risk-register.ts"), "utf8");
+  assert.match(register, /applyTreatmentDueStatePredicate\(/, "THE_REGISTER_DOES_NOT_READ_THE_SHARED_PREDICATE");
+});
+
+/*
+ * G-16 seam, plan 11-17: the treatment-performance report's due-state counts and the two risk-treatment alert
+ * kinds read the same shared predicate as the register, so Phase 20's one switch covers the register, the alerts
+ * and the report. Each call says so, and neither module writes its own due comparison on the target date.
+ */
+test("the treatment report and the risk-treatment alerts read the shared due-state rule, with the Phase 20 comment at each call (G-16)", () => {
+  const services = path.join(appDir, "src", "api", "csrm-analyst-insight", "services");
+  const switchComment = "Phase 20 (G-16) switches the governing date in treatment-due-state.ts; this figure follows it.";
+  for (const file of ["report-repository.ts", "alert-repository.ts"]) {
+    const source = readFileSync(path.join(services, file), "utf8");
+    const calls = source.match(/applyTreatmentDueStatePredicate\(/g) ?? [];
+    assert.ok(calls.length > 0, `${file}_DOES_NOT_READ_THE_SHARED_PREDICATE`);
+    const comments = source.split(switchComment).length - 1;
+    assert.ok(comments >= calls.length, `${file}_A_CALL_WITHOUT_THE_PHASE_20_COMMENT (${calls.length} calls, ${comments} comments)`);
+    // No due comparison of its own on the governing date: no `target_date <`, `>` or BETWEEN outside the rule.
+    assert.doesNotMatch(source, /target_date\s*[<>]|"r\.target_date",\s*"[<>]=?"|whereBetween\("r\.target_date"/, `${file}_WRITES_ITS_OWN_DUE_COMPARISON`);
+  }
+  const alerts = readFileSync(path.join(services, "alert-repository.ts"), "utf8");
+  assert.match(alerts, /governingDate: TREATMENT_DUE_DATE_COLUMN/, "THE_ALERT_GOVERNING_DATE_IS_NOT_THE_RULE'S");
 });
 
 /* ------------------------------------------------------------- alert-rules */

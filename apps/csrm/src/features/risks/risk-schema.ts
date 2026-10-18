@@ -1,13 +1,20 @@
 import { z } from 'zod';
 
 import { parseAdministrationListPayload } from '../administration/administration-schema';
+import { riskWithdrawalSchema } from '../assessments/assessment-schema';
 import {
   calendarDate,
+  riskRegisterEffectivenessValues,
+  riskRegisterImpactedSystemValues,
   riskRegisterMitigationStatuses,
+  riskRegisterRatingFilterValues,
   riskRegisterRatings,
   riskRegisterSortValues,
+  riskRegisterStages,
   riskRegisterStates,
+  riskRegisterTreatmentStatusFilterValues,
   riskRegisterTreatmentStatuses,
+  riskTreatmentActions,
   riskTreatmentDueStates,
   type RiskPickerOption,
 } from './risk-domain';
@@ -15,14 +22,26 @@ import {
 // The vocabularies live in the zod-free risk-domain.ts, so client components can read them without zod.
 export {
   formatRiskTargetDate,
+  riskRegisterEffectivenessLabels,
+  riskRegisterEffectivenessValues,
+  riskRegisterImpactedSystemValues,
+  riskRegisterMitigationStatusLabels,
   riskRegisterMitigationStatuses,
+  riskRegisterRatingFilterValues,
   riskRegisterRatings,
   riskRegisterSortValues,
+  riskRegisterStageLabels,
+  riskRegisterStages,
   riskRegisterStateLabels,
   riskRegisterStates,
+  riskRegisterTreatmentStatusFilterValues,
   riskRegisterTreatmentStatuses,
+  riskTreatmentActions,
+  riskTreatmentDueStateLabels,
   riskTreatmentDueStates,
   type RiskPickerOption,
+  type RiskRegisterStage,
+  type RiskTreatmentAction,
   type RiskTreatmentDueState,
 } from './risk-domain';
 
@@ -47,14 +66,19 @@ const targetDateQuerySchema = z.string()
 
 export const riskRegisterQuerySchema = z.object({
   q: queryText.default(''),
-  treatmentStatus: optionalEnum(riskRegisterTreatmentStatuses),
-  inherentRating: optionalEnum(riskRegisterRatings),
-  residualRating: optionalEnum(riskRegisterRatings),
+  treatmentStatus: optionalEnum(riskRegisterTreatmentStatusFilterValues),
+  inherentRating: optionalEnum(riskRegisterRatingFilterValues),
+  residualRating: optionalEnum(riskRegisterRatingFilterValues),
   riskOwner: optionalOpaqueId,
   treatmentOwner: optionalOpaqueId,
   assessment: optionalOpaqueId,
   system: optionalOpaqueId,
   asset: optionalOpaqueId,
+  stage: optionalEnum(riskRegisterStages),
+  treatmentAction: optionalEnum(riskTreatmentActions),
+  dueState: optionalEnum(riskTreatmentDueStates),
+  mitigationEffectiveness: optionalEnum(riskRegisterEffectivenessValues),
+  impactedSystem: optionalEnum(riskRegisterImpactedSystemValues),
   mitigationStatus: optionalEnum(riskRegisterMitigationStatuses),
   state: optionalEnum(riskRegisterStates),
   targetDateFrom: targetDateQuerySchema,
@@ -70,6 +94,11 @@ export const riskRegisterQuerySchema = z.object({
       message: 'Target date to must not precede Target date from.',
     });
   }
+}).overwrite((query) => {
+  // Research Pitfall 21: no impacted system never travels with a chosen system, which Strapi refuses; the system wins.
+  if (!query.system || !query.impactedSystem) return query;
+  const { impactedSystem: _dropped, ...withSystem } = query;
+  return withSystem;
 });
 
 export type RiskRegisterQuery = z.infer<typeof riskRegisterQuerySchema>;
@@ -95,6 +124,11 @@ export function serializeRiskRegisterQuery(query: RiskRegisterQuery): RiskRegist
     ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
     ...(parsed.system ? { system: parsed.system } : {}),
     ...(parsed.asset ? { asset: parsed.asset } : {}),
+    ...(parsed.stage ? { stage: parsed.stage } : {}),
+    ...(parsed.treatmentAction ? { treatmentAction: parsed.treatmentAction } : {}),
+    ...(parsed.dueState ? { dueState: parsed.dueState } : {}),
+    ...(parsed.mitigationEffectiveness ? { mitigationEffectiveness: parsed.mitigationEffectiveness } : {}),
+    ...(parsed.impactedSystem ? { impactedSystem: parsed.impactedSystem } : {}),
     ...(parsed.mitigationStatus ? { mitigationStatus: parsed.mitigationStatus } : {}),
     ...(parsed.state ? { state: parsed.state } : {}),
     ...(parsed.targetDateFrom ? { targetDateFrom: parsed.targetDateFrom } : {}),
@@ -121,6 +155,10 @@ const selectedLabelSchema = z.object({
   documentId: documentIdSchema,
   label: z.string().trim().min(1).max(255),
 }).strict();
+const selectedAssessmentLabelSchema = selectedLabelSchema.extend({
+  // Two valid 255-character fields joined by " · ", matching the assessment picker.
+  label: z.string().trim().min(1).max(513),
+});
 
 export const riskRegisterItemSchema = z.object({
   documentId: documentIdSchema,
@@ -133,6 +171,10 @@ export const riskRegisterItemSchema = z.object({
   targetDate: z.iso.date().nullable(),
   treatmentDueState: z.enum(riskTreatmentDueStates),
   assessment: assessmentSchema,
+  // D-44: the server decides the stage from the Risk's assessment; the client only says it in words.
+  stage: z.enum(riskRegisterStages),
+  treatmentAction: z.enum(riskTreatmentActions).nullable(),
+  accepted: z.boolean(),
 }).strict();
 
 export const riskRegisterPayloadSchema = z.object({
@@ -147,7 +189,7 @@ export const riskRegisterPayloadSchema = z.object({
     selectedLabels: z.object({
       riskOwner: selectedLabelSchema.optional(),
       treatmentOwner: selectedLabelSchema.optional(),
-      assessment: selectedLabelSchema.optional(),
+      assessment: selectedAssessmentLabelSchema.optional(),
       system: selectedLabelSchema.optional(),
       asset: selectedLabelSchema.optional(),
     }).strict(),
@@ -228,6 +270,8 @@ export const riskDetailSchema = z.object({
   informationAssetImpacted: detailNamedRelationSchema.nullable(),
   assessment: detailAssessmentSchema,
   controlImplementations: z.array(detailControlImplementationSchema).max(1_000),
+  /** Null on an active Risk; who withdrew it, when and why otherwise (Phase 16 D-45). */
+  withdrawal: riskWithdrawalSchema.nullable(),
 }).strict();
 
 export const riskDetailPayloadSchema = z.object({ data: riskDetailSchema }).strict();
@@ -262,6 +306,9 @@ const assessmentSummarySchema = z.object({
   generatedDate: z.iso.datetime({ offset: true }).nullable(),
   generatedBy: userSchema.nullable(),
   approvalDate: z.iso.datetime({ offset: true }).nullable(),
+  requestTitle: z.string().min(1).max(255).nullable(),
+  riskCount: z.number().int().nonnegative(),
+  highestResidualRating: ratingSchema.nullable(),
 }).strict();
 
 const pickerSchemas = {
@@ -316,8 +363,9 @@ export function parseRiskPickerPayload(kind: RiskPickerKind, payload: unknown): 
     : pickerResponseSchema(kind).parse(payload).data as unknown[];
   const options = data.map((entry) => {
     const value = entry as Record<string, unknown>;
+    // X-4: an assessment reads `{assessment number} · {request title}`, or its number alone without a title (D-32).
     const label = kind === 'owners' ? value.displayName
-      : kind === 'assessments' ? value.assessmentNumber
+      : kind === 'assessments' ? (value.requestTitle ? `${String(value.assessmentNumber)} · ${String(value.requestTitle)}` : value.assessmentNumber)
         : kind === 'controls' ? `${String(value.controlNumber)} — ${String(value.name)}`
           : value.name;
     return { documentId: String(value.documentId), label: String(label) };

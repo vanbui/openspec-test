@@ -6,6 +6,13 @@ import { seedRequestDetails } from "./seed-request-details";
 const OWNER_EMAIL = "jane.doe@idambox.com";
 const ANALYST_EMAIL = "bob.doe@idambox.com";
 const NON_OWNER_EMAIL = "maya.requestor@idambox.com";
+/**
+ * D-31: a second human Security Analyst for development and E2E only, so a request can be handed to a colleague and
+ * a colleague can follow the work. It has no Keycloak fixture subject (ADR 0004): the development identity header
+ * names it by email, and the gate below keeps it out of every other deployment.
+ */
+export const SECOND_ANALYST_EMAIL = "sam.analyst@idambox.com";
+const SECURITY_ANALYST_ROLE_NAME = "Security Analyst";
 
 export const ASSESSMENT_NAVIGATION_LIFECYCLE_FIXTURE = {
   analystAssessmentNumber: "ASM-E2E-NAV-ANALYST-001",
@@ -31,6 +38,12 @@ async function requiredUser(userService: SeedDocumentService, email: string): Pr
   const [user] = await userService.findMany({ filters: { email: { $eq: email } }, limit: 1 });
   if (!user) throw new Error(`Assessment navigation lifecycle fixture user ${email} was not found.`);
   return user;
+}
+
+async function requiredRole(roleService: SeedDocumentService, name: string): Promise<SeedDocument> {
+  const [role] = await roleService.findMany({ filters: { name: { $eq: name } }, limit: 1 });
+  if (!role) throw new Error(`Assessment navigation lifecycle fixture role ${name} was not found.`);
+  return role;
 }
 
 async function reconcile(
@@ -59,6 +72,16 @@ export async function seedAssessmentNavigationLifecycle(strapi: Core.Strapi): Pr
     displayName: "Maya Requestor",
     accountStatus: "active",
     roles: [],
+  });
+  const securityAnalystRole = await requiredRole(service(strapi, "api::role.role"), SECURITY_ANALYST_ROLE_NAME);
+  await reconcile(userService, { email: { $eq: SECOND_ANALYST_EMAIL } }, {
+    email: SECOND_ANALYST_EMAIL,
+    username: "sam.analyst",
+    firstName: "Sam",
+    lastName: "Analyst",
+    displayName: "Sam Analyst",
+    accountStatus: "active",
+    roles: [securityAnalystRole.documentId],
   });
   const [owner, analyst] = await Promise.all([
     requiredUser(userService, OWNER_EMAIL),

@@ -97,24 +97,37 @@ export async function revertRequestToDraftAction(input: unknown): Promise<Reques
   return { ok: true, data: result.data };
 }
 
-export async function createRequestAction(input: unknown): Promise<RequestActionResult> {
+/**
+ * How a save ends (14-UI-SPEC §2.2; D-26; UI-D3). Without options it revalidates the request pages and redirects to the
+ * draft, as it always has. With `stayOnPage` the form is about to send its files to the draft: the action returns the
+ * draft and neither revalidates nor redirects, because either would re-render the route for the address the form has
+ * just replaced and unmount the queue (RESEARCH Pitfall 18). The form moves on itself once every file has settled. The
+ * option only changes where the person goes next; Strapi authorises the save the same way either way.
+ */
+export type RequestSaveOptions = { stayOnPage?: boolean };
+
+const staysOnPage = (options: unknown): boolean => typeof options === 'object' && options !== null && (options as RequestSaveOptions).stayOnPage === true;
+
+export async function createRequestAction(input: unknown, options?: RequestSaveOptions): Promise<RequestActionResult> {
   const parsed = requestDraftSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error);
 
   const result = await createRequest(parsed.data);
   if (result.error !== null) return serviceFailure(result.error);
+  if (staysOnPage(options)) return { ok: true, data: result.data };
 
   revalidateRequestPages();
   redirect(`/app/requests/${result.data.documentId}`);
 }
 
-export async function updateRequestAction(input: unknown): Promise<RequestActionResult> {
+export async function updateRequestAction(input: unknown, options?: RequestSaveOptions): Promise<RequestActionResult> {
   const parsed = requestUpdateSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error);
 
   const { documentId, ...fields } = parsed.data;
   const result = await updateRequest(documentId, fields);
   if (result.error !== null) return serviceFailure(result.error);
+  if (staysOnPage(options)) return { ok: true, data: result.data };
 
   revalidateRequestPages(result.data.documentId);
   redirect(`/app/requests/${result.data.documentId}`);

@@ -8,6 +8,7 @@ const get = vi.hoisted(() => vi.fn());
 const replace = vi.hoisted(() => vi.fn());
 
 vi.mock('server-only', () => ({}));
+vi.mock('@/lib/capabilities/analyst-review-gate', () => ({ canViewerReviewAssessments: async () => true }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/app/review',
   useRouter: () => ({ refresh: vi.fn(), replace }),
@@ -50,12 +51,20 @@ function publishedEnum(path: string, name: string): readonly string[] {
   return values;
 }
 
+/* The queue read names its viewer (13-12). */
+const viewer = { documentId: 'bob-id', displayName: 'Bob Doe' };
 const emptyPage = {
+  data: { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 }, viewer } },
+  response: { status: 200 },
+};
+const emptyResult = { data: { records: [], pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 }, viewer }, error: null };
+/* The assessment lists keep the shared collection meta, with no viewer. */
+const emptyAssessmentPage = {
   data: { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } },
   response: { status: 200 },
 };
-const emptyResult = { data: { records: [], pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }, error: null };
-const queues = ['requires-attention', 'awaiting-requestor', 'generation-in-progress', 'released'] as const;
+const emptyAssessmentResult = { data: { records: [], pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }, error: null };
+const queues = ['requires-attention', 'awaiting-requestor', 'generation-in-progress', 'released', 'all'] as const;
 
 function offeredStatuses(): string[] {
   const select = screen.getByRole('combobox', { name: 'Filter by status' });
@@ -103,6 +112,41 @@ describe('Analyst request review status filter', () => {
   });
 });
 
+/*
+ * D-30: the request queue's search matches the request number or the title, so it travels as filters[q], and the
+ * queue select's All requests travels as filters[queue]=all. Both are checked against the published parameters.
+ */
+describe('Analyst request queue search and All requests', () => {
+  it('sends the search term as filters[q] and every offered queue as a published value', async () => {
+    const publishedQueues = publishedEnum('/v1/assessment_requests', 'filters[queue]');
+    render(<AssessmentRequestList requests={[]} />);
+    const offeredQueues = [...screen.getByRole('combobox', { name: 'Filter by queue' }).querySelectorAll('option')].map((option) => option.value);
+    expect(offeredQueues).toEqual([...publishedQueues]);
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search by number or title' }), { target: { value: ' RAR-2026-5WWFVQ ' } });
+    fireEvent.submit(screen.getByRole('search'));
+    const [href] = replace.mock.lastCall as [string];
+    const params = Object.fromEntries(new URL(href, 'http://localhost').searchParams);
+    expect(params.q).toBe('RAR-2026-5WWFVQ');
+
+    get.mockResolvedValueOnce(emptyPage);
+    await listAssessmentRequests(parseAssessmentRequestReviewQuery({ ...params, queue: 'all' }));
+    expect(get).toHaveBeenLastCalledWith('/v1/assessment_requests', {
+      params: {
+        query: {
+          'filters[q]': 'RAR-2026-5WWFVQ',
+          'filters[queue]': 'all',
+          sort: 'submittedDate:desc',
+          'pagination[page]': 1,
+          'pagination[pageSize]': 25,
+        },
+      },
+    });
+    const parameters = (specification.paths['/v1/assessment_requests']?.get?.parameters ?? []).map((parameter) => parameter.name);
+    expect(parameters).toContain('filters[q]');
+  });
+});
+
 describe('Analyst assessment status filter', () => {
   it('sends every offered status as a value the published contract accepts', async () => {
     const published = publishedEnum('/v1/risk_assessments', 'status');
@@ -110,14 +154,14 @@ describe('Analyst assessment status filter', () => {
     const offered = offeredStatuses();
 
     for (const status of offered) {
-      get.mockResolvedValueOnce(emptyPage);
+      get.mockResolvedValueOnce(emptyAssessmentPage);
       const result = await listAnalystAssessments(parseAssessmentCollectionQuery(choose(status)));
 
       expect(get).toHaveBeenLastCalledWith('/v1/risk_assessments', {
         params: { query: { sort: 'generatedDate:desc', page: 1, pageSize: 25, status } },
       });
       expect(published, `${status} offered on the assessment list`).toContain(status);
-      expect(result).toEqual(emptyResult);
+      expect(result).toEqual(emptyAssessmentResult);
     }
     expect(offered).toEqual([...published]);
   });
@@ -130,9 +174,17 @@ describe('the Released queue', () => {
     title: `Released request ${index}`,
     requestStatus,
     submittedDate: '2026-09-01T00:00:00.000Z',
+    requestorName: 'Jane Doe',
+    assessmentType: 'BAU' as const,
+    businessCriticality: 'Low' as const,
+    dueDate: null,
+    daysSinceSubmission: 30,
+    assignee: { documentId: 'bob-id', displayName: 'Bob Doe' },
+    pickUp: 'not-offered' as const,
+    unreadNotes: 0,
   });
   const page = (data: readonly unknown[]) => ({
-    data: { data, meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: data.length } } },
+    data: { data, meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: data.length }, viewer } },
     response: { status: 200 },
   });
 
@@ -141,7 +193,7 @@ describe('the Released queue', () => {
     get.mockResolvedValueOnce(page(records));
 
     await expect(listAssessmentRequests(parseAssessmentRequestReviewQuery({ queue: 'released' }))).resolves.toEqual({
-      data: { records, pagination: { page: 1, pageSize: 25, pageCount: 1, total: 2 } },
+      data: { records, pagination: { page: 1, pageSize: 25, pageCount: 1, total: 2 }, viewer },
       error: null,
     });
   });
@@ -182,7 +234,7 @@ describe('an Analyst status choice that matches nothing', () => {
   });
 
   it('renders the shared empty-filter state, not the error state, for a closed assessment status', async () => {
-    get.mockResolvedValueOnce(emptyPage);
+    get.mockResolvedValueOnce(emptyAssessmentPage);
     render(await AssessmentListContent({ searchParams: Promise.resolve({ status: 'closed' }) }));
 
     expect(get).toHaveBeenCalledWith('/v1/risk_assessments', {

@@ -152,7 +152,8 @@ test("neither the Security Analyst Agent nor the Requestor role holds an analyst
 test("the Dashboard, Reports and Alerts menu Functions keep only their unserved FunctionAPIs", async () => {
   for (const [name, menuPath, urls] of [
     ["Dashboard", "Dashboard:Dashboard", ["GET:/api/v1/dashboard/alerts", "GET:/api/v1/dashboard/reports"]],
-    ["Reports", "Reports:Reports", ["POST:/api/v1/reports/{reportKey}/export"]],
+    // Phase 19 (19-09): the report export moved to the human-only Report Export API, leaving the menu Function none.
+    ["Reports", "Reports:Reports", []],
     ["Alerts", "Reports:Alerts", ["GET:/api/v1/alerts/{alertId}", "PATCH:/api/v1/alerts/{alertId}/acknowledge"]],
   ] as const) {
     const functions = await strapi.documents("api::function.function").findMany({

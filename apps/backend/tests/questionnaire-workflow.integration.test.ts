@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test, { after } from "node:test";
 
 import {
@@ -12,6 +14,22 @@ import { startAuthorizationHttpHarness } from "./helpers/strapi-http-harness";
 
 const harnessPromise = startAuthorizationHttpHarness();
 after(async () => (await harnessPromise).close());
+
+test("D6: an unrelated Requestor learns no take-back state, while the owner receives QUESTIONNAIRE_NOT_ANSWERABLE", async () => {
+  const harness = await harnessPromise;
+  const { questionnaireId } = await harness.seedUatALikeRequest("D6-OWNER-STATE");
+  const returned = await request(`/api/v1/questionnaires/${questionnaireId}/return_to_review`, harness.identities.analyst, revertRequest({ reason: "Review the questions." }));
+  assert.equal(returned.status, 200);
+  for (const [suffix, method] of [["answers", "PATCH"], ["submit", "POST"]] as const) {
+    const init = { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: [] }) };
+    const stranger = await request(`/api/v1/questionnaires/${questionnaireId}/${suffix}`, harness.identities.otherRequestor, init);
+    assert.equal(stranger.status, 403, "UNRELATED_REQUESTOR_NOT_DENIED");
+    assert.ok(!(await stranger.text()).includes("QUESTIONNAIRE_NOT_ANSWERABLE"), "STATE_DISCLOSED_TO_UNRELATED_REQUESTOR");
+    const owner = await request(`/api/v1/questionnaires/${questionnaireId}/${suffix}`, harness.identities.owner, init);
+    assert.equal(owner.status, 409, "OWNER_STATE_NOT_CONFLICT");
+    assert.deepEqual(((await owner.json()) as { error: { details: unknown } }).error.details, { reason: "QUESTIONNAIRE_NOT_ANSWERABLE" });
+  }
+});
 
 async function request(path: string, identity?: string, init: RequestInit = {}) {
   const harness = await harnessPromise;
@@ -41,7 +59,7 @@ test("mounted questionnaire reads enforce owner and explicit analyst scope", asy
 
   const requestBaseline = await request("/api/csrm-assessment-requests?pagination[pageSize]=1", harness.identities.owner);
   assert.equal(requestBaseline.status, 200, "BASELINE_REQUEST_AUTHORIZATION_FAILED");
-  const ownerListResponse = await request("/api/v1/my_questionnaires", harness.identities.owner);
+  const ownerListResponse = await request("/api/v1/my_questionnaires?q=Owner&pageSize=100", harness.identities.owner);
   assert.equal(ownerListResponse.status, 200, "UNEXPECTED_OWNER_LIST_STATUS");
   const ownerList = rows(await payload(ownerListResponse));
   assert.ok(ownerList.some((item) => item.documentId === fixtures.questionnaires.ownerDraft), "UNEXPECTED_OWNER_DRAFT_ABSENT");
@@ -60,13 +78,13 @@ test("mounted questionnaire reads enforce owner and explicit analyst scope", asy
   assert.doesNotMatch(await hostileList.text(), /Other Requestor secret draft|QUES-OTHER-DRAFT-001/, "UNEXPECTED_HOSTILE_FILTER_LEAK");
 
   const scopedList = rows(await payload(await request(
-    "/api/v1/my_questionnaires?page=1&pageSize=1&sort=updatedAt:desc",
+    "/api/v1/my_questionnaires?q=Owner&page=1&pageSize=1&sort=updatedAt:desc",
     harness.identities.owner,
   )));
   assert.equal(scopedList.some((item) => item.documentId === fixtures.questionnaires.otherDraft), false, "UNEXPECTED_OTHER_QUESTIONNAIRE_LEAK_PAGED");
 
   const boundedList = await payload(await request(
-    "/api/v1/my_questionnaires?page=1&pageSize=1&sort=updatedAt:desc",
+    "/api/v1/my_questionnaires?q=Owner&page=1&pageSize=1&sort=updatedAt:desc",
     harness.identities.owner,
   ));
   assert.equal(rows(boundedList).length, 1, "UNEXPECTED_BOUNDED_LIST_SIZE");
@@ -95,9 +113,10 @@ test("mounted questionnaire reads enforce owner and explicit analyst scope", asy
   assert.deepEqual(await harness.getQuestionnaire(fixtures.questionnaires.otherDraft), otherQuestionnaireBefore, "UNEXPECTED_DENIED_QUESTIONNAIRE_CHANGE");
   assert.deepEqual(await harness.getQuestion(fixtures.questions.otherDraft), otherQuestionBefore, "UNEXPECTED_DENIED_QUESTION_CHANGE");
 
-  const analystList = await request("/api/v1/questionnaires", harness.identities.analyst);
+  const analystList = await request("/api/v1/questionnaires?pageSize=100", harness.identities.analyst);
   assert.equal(analystList.status, 200, "UNEXPECTED_ANALYST_LIST_STATUS");
-  assert.ok(rows(await payload(analystList)).some((item) => item.documentId === fixtures.questionnaires.otherDraft), "UNEXPECTED_ANALYST_SCOPE");
+  const analystRows = rows(await payload(analystList));
+  assert.ok(analystRows.some((item) => item.documentId === fixtures.questionnaires.otherDraft), "UNEXPECTED_ANALYST_SCOPE");
   const analystSubmittedQuestions = rows(await payload(await request(
     `/api/v1/questionnaires/${fixtures.questionnaires.ownerSubmitted}/questions`,
     harness.identities.analyst,
@@ -117,12 +136,28 @@ test("mounted questionnaire reads enforce owner and explicit analyst scope", asy
   }
   assert.equal((await request("/api/v1/my_questionnaires")).status, 403, "UNEXPECTED_ANONYMOUS_LIST_STATUS");
 
+  const allOwnerRows = rows(await payload(await request("/api/v1/my_questionnaires?pageSize=100", harness.identities.owner)));
   const statusSummary = await request("/api/v1/my_questionnaires/status_summary", harness.identities.owner);
   assert.equal(statusSummary.status, 200, "UNEXPECTED_OWNER_SUMMARY_STATUS");
-  assert.deepEqual((await payload(statusSummary)).data, { notStarted: 0, draft: 1, submitted: 1, total: 2 }, "UNEXPECTED_OWNER_SUMMARY");
+  const ownerStates = allOwnerRows.reduce<{ "not-started": number; draft: number; submitted: number }>((counts, row) => {
+    const state = String(row.state);
+    if (state === "not-started" || state === "draft" || state === "submitted") {
+      const key = state as "not-started" | "draft" | "submitted";
+      counts[key] += 1;
+    }
+    return counts;
+  }, { "not-started": 0, draft: 0, submitted: 0 });
+  assert.deepEqual((await payload(statusSummary)).data, {
+    notStarted: ownerStates["not-started"], draft: ownerStates.draft, submitted: ownerStates.submitted, total: allOwnerRows.length,
+  }, "UNEXPECTED_OWNER_SUMMARY");
   const reviewSummary = await request("/api/v1/questionnaires/review_summary", harness.identities.analyst);
   assert.equal(reviewSummary.status, 200, "UNEXPECTED_REVIEW_SUMMARY_STATUS");
-  assert.deepEqual((await payload(reviewSummary)).data, { awaitingSubmission: 2, readyForReview: 1, total: 3 }, "UNEXPECTED_REVIEW_SUMMARY");
+  const reviewCounts = {
+    awaitingSubmission: analystRows.filter((item) => item.state === "not-started" || item.state === "draft").length,
+    readyForReview: analystRows.filter((item) => item.state === "submitted").length,
+    total: analystRows.length,
+  };
+  assert.deepEqual((await payload(reviewSummary)).data, reviewCounts, "UNEXPECTED_REVIEW_SUMMARY");
 
   for (const [method, path] of [
     ["GET", "/api/csrm-questionnaires"],
@@ -158,7 +193,7 @@ test("mounted questionnaire status filtering keeps authorized rows and totals on
   assert.ok(ownerDraftRows.every((item) => item.state === "draft"), "OWNER_DRAFT_STATUS_MISMATCH");
   assert.equal(ownerDraft.meta?.pagination?.total, ownerDraftRows.length, "OWNER_DRAFT_STATUS_TOTAL_MISMATCH");
 
-  const ownerSubmitted = await list("/api/v1/my_questionnaires?status=submitted&page=1&pageSize=25", harness.identities.owner);
+  const ownerSubmitted = await list("/api/v1/my_questionnaires?status=submitted&q=Owner&page=1&pageSize=25", harness.identities.owner);
   const ownerSubmittedRows = rows(ownerSubmitted);
   assert.deepEqual(ownerSubmittedRows.map((item) => item.documentId), [fixtures.questionnaires.ownerSubmitted], "OWNER_SUBMITTED_STATUS_SCOPE_BYPASSED");
   assert.ok(ownerSubmittedRows.every((item) => item.state === "submitted"), "OWNER_SUBMITTED_STATUS_MISMATCH");
@@ -281,6 +316,8 @@ test("mounted questionnaire mutations enforce ownership, allowlisting, and immut
 test("mounted conditional submission projects the active batch as complete everywhere", async () => {
   const harness = await harnessPromise;
   const fixture = await harness.seedConditionalQuestionnaireFixture();
+  const summaryBefore = (await payload(await request("/api/v1/my_questionnaires/status_summary", harness.identities.owner))).data as Record<string, number>;
+  const analystSummaryBefore = (await payload(await request("/api/v1/questionnaires/review_summary", harness.identities.analyst))).data as Record<string, number>;
 
   const submitted = await request(`/api/v1/questionnaires/${fixture.questionnaire}/submit`, harness.identities.owner, {
     method: "POST",
@@ -303,7 +340,7 @@ test("mounted conditional submission projects the active batch as complete every
   const ownerDetail = await payload(await request(`/api/v1/questionnaires/${fixture.questionnaire}`, harness.identities.owner));
   assert.equal((ownerDetail.data as Record<string, unknown>)?.state, "submitted", "UNEXPECTED_CONDITIONAL_OWNER_DETAIL_STATE");
   const ownerSummary = await payload(await request("/api/v1/my_questionnaires/status_summary", harness.identities.owner));
-  assert.equal((ownerSummary.data as Record<string, unknown>)?.submitted, 3, "UNEXPECTED_CONDITIONAL_OWNER_SUMMARY");
+  assert.equal((ownerSummary.data as Record<string, unknown>)?.submitted, summaryBefore.submitted + 1, "UNEXPECTED_CONDITIONAL_OWNER_SUMMARY");
 
   // Paged at 25 by default, and the analyst sees every questionnaire the
   // harness seeds, so this asks for a page wide enough to hold the fixture.
@@ -312,7 +349,7 @@ test("mounted conditional submission projects the active batch as complete every
   const analystDetail = await payload(await request(`/api/v1/questionnaires/${fixture.questionnaire}`, harness.identities.analyst));
   assert.equal((analystDetail.data as Record<string, unknown>)?.state, "submitted", "UNEXPECTED_CONDITIONAL_ANALYST_DETAIL_STATE");
   const analystSummary = await payload(await request("/api/v1/questionnaires/review_summary", harness.identities.analyst));
-  assert.equal((analystSummary.data as Record<string, unknown>)?.readyForReview, 3, "UNEXPECTED_CONDITIONAL_ANALYST_SUMMARY");
+  assert.equal((analystSummary.data as Record<string, unknown>)?.readyForReview, analystSummaryBefore.readyForReview + 1, "UNEXPECTED_CONDITIONAL_ANALYST_SUMMARY");
 
   const analystQuestions = rows(await payload(await request(
     `/api/v1/questionnaires/${fixture.questionnaire}/questions`,
@@ -464,4 +501,288 @@ test("mounted questionnaire answer and reversal conflicts name their reason and 
   await assertConflictReason(harness, assessedInProgress, revert(assessedInProgress.questionnaireId), "ASSESSMENT_STARTED", "REVERT_WITH_ASSESSMENT");
   const notEligible = await fixture({ requestStatus: "submitted", questions: [{ key: "service", order: 1, answer: submittedAnswer("Submitted answer") }] });
   await assertConflictReason(harness, notEligible, revert(notEligible.questionnaireId), "REQUEST_NOT_ELIGIBLE", "REVERT_NOT_ELIGIBLE");
+});
+
+/*
+ * Phase 13 D-29 (success criterion 5; G-3): after a questionnaire is generated, an analyst's questionnaire read and
+ * request read say which notes changed its AI inputs since that generation: marked since the run that generated it, or
+ * included by that run and since unmarked. A generation with the note marked clears the signal. The Requestor never
+ * sees it, on the request read or the questionnaire read.
+ */
+async function generationOutcome(jobId: string, identity: string): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const response = await request(`/api/v1/questionnaire_generation_jobs/${encodeURIComponent(jobId)}`, identity);
+    assert.equal(response.status, 200, "AI_INPUTS_GENERATION_JOB_READ");
+    const job = (await payload(response)).data as Record<string, unknown>;
+    if (job.status === "completed" || job.status === "failed") return job;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.fail("AI_INPUTS_GENERATION_DID_NOT_FINISH");
+}
+
+async function generateQuestionnaireAs(identity: string, requestId: string, replace: boolean): Promise<string> {
+  const queued = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/generate_questionnaire`, identity, {
+    method: "POST",
+    ...(replace ? { headers: { "content-type": "application/json" }, body: JSON.stringify({ replaceUnansweredQuestionnaire: true }) } : {}),
+  });
+  assert.equal(queued.status, 202, `AI_INPUTS_GENERATION_NOT_QUEUED_${replace ? "REPLACE" : "FIRST"}`);
+  const job = await generationOutcome(String(((await payload(queued)).data as Record<string, unknown>).jobId), identity);
+  assert.equal(job.status, "completed", `AI_INPUTS_GENERATION_FAILED_${String(job.failureCode)}`);
+  return String((job.questionnaire as Record<string, unknown>).documentId);
+}
+
+async function setNoteMark(requestId: string, noteId: string, identity: string, changesAiInputs: boolean): Promise<void> {
+  const response = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes/${encodeURIComponent(noteId)}/ai_input`, identity, {
+    method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { changesAiInputs } }),
+  });
+  assert.equal(response.status, 200, `AI_INPUTS_MARK_${String(changesAiInputs).toUpperCase()}_STATUS`);
+}
+
+async function readJson(path: string, identity: string, diagnostic: string): Promise<{ data: Record<string, unknown>; text: string }> {
+  const response = await request(path, identity);
+  assert.equal(response.status, 200, diagnostic);
+  const text = await response.text();
+  return { data: (JSON.parse(text) as { data: Record<string, unknown> }).data, text };
+}
+
+test("mounted analyst reads say which marked notes changed the questionnaire's AI inputs since it was generated, and the Requestor's never do (D-29)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "QWF-AI-INPUTS-001", title: "AI inputs signal request", requestStatus: "submitted", submittedDate: "2026-10-01T00:00:00.000Z", requestor: "owner",
+  });
+  const questionnaireId = await generateQuestionnaireAs(analyst, requestId, false);
+  const questionnairePath = `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`;
+  const requestPath = `/api/csrm-assessment-requests/${encodeURIComponent(requestId)}`;
+  const generationOf = async () => ((await readJson(questionnairePath, analyst, "AI_INPUTS_ANALYST_QUESTIONNAIRE_READ")).data.generation as Record<string, unknown>);
+
+  // Generated with nothing marked, and nothing marked since: no change.
+  assert.equal((await generationOf()).aiInputsChanged, null, "AI_INPUTS_CHANGED_BEFORE_ANY_NOTE");
+
+  const added = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes`, owner, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { body: "The vendor now hosts the payroll files in a second region." } }),
+  });
+  assert.equal(added.status, 200, "AI_INPUTS_JANE_NOTE");
+  const note = (await payload(added)).data as Record<string, unknown>;
+  await setNoteMark(requestId, String(note.documentId), analyst, true);
+
+  const marked = { count: 1, notes: [{ documentId: note.documentId, part: "requestor", sequence: 1, postedAt: note.postedAt, change: "marked" }], files: [] };
+  assert.deepEqual((await generationOf()).aiInputsChanged, marked, "AI_INPUTS_MARKED_NOTE_NOT_LISTED");
+  // WR-202: the Security Analyst Agent reads the analyst questionnaire too, but the signal is human analyst work only.
+  const agentQuestionnaire = await readJson(questionnairePath, harness.identities.serviceAnalystAgent, "AI_INPUTS_AGENT_QUESTIONNAIRE_READ");
+  const agentGeneration = agentQuestionnaire.data.generation as Record<string, unknown> | null;
+  assert.ok(agentGeneration !== null && typeof agentGeneration === "object", "AI_INPUTS_AGENT_QUESTIONNAIRE_GENERATION_MISSING");
+  assert.equal(agentGeneration.aiInputsChanged, null, "AI_INPUTS_AGENT_QUESTIONNAIRE_SIGNAL");
+  assert.ok(!agentQuestionnaire.text.includes(String(note.documentId)), "AI_INPUTS_AGENT_QUESTIONNAIRE_SAW_THE_NOTE");
+  const bobRequest = (await readJson(requestPath, analyst, "AI_INPUTS_BOB_REQUEST_READ")).data;
+  assert.deepEqual(bobRequest.aiInputs, { questionnaire: marked, assessment: null }, "AI_INPUTS_BOB_REQUEST_READ_SIGNAL");
+  const janeRequest = await readJson(requestPath, owner, "AI_INPUTS_JANE_REQUEST_READ");
+  assert.equal(janeRequest.data.aiInputs, null, "AI_INPUTS_JANE_REQUEST_READ_SIGNAL");
+  assert.ok(!janeRequest.text.includes("aiInputsChanged") && !janeRequest.text.includes('"change"'), "AI_INPUTS_JANE_REQUEST_READ_DISCLOSED");
+
+  // A generation that included the marked note clears the signal.
+  assert.equal(await generateQuestionnaireAs(analyst, requestId, true), questionnaireId, "AI_INPUTS_REPLACEMENT_CHANGED_QUESTIONNAIRE");
+  assert.equal((await generationOf()).aiInputsChanged, null, "AI_INPUTS_INCLUDED_NOTE_STILL_LISTED");
+  assert.deepEqual(((await readJson(requestPath, analyst, "AI_INPUTS_BOB_REQUEST_AFTER_REPLACEMENT")).data.aiInputs as Record<string, unknown>).questionnaire, null, "AI_INPUTS_REQUEST_READ_AFTER_REPLACEMENT");
+
+  // Unmarking a note that generation included is a change too.
+  await setNoteMark(requestId, String(note.documentId), analyst, false);
+  const unmarked = { count: 1, notes: [{ documentId: note.documentId, part: "requestor", sequence: 1, postedAt: note.postedAt, change: "unmarked" }], files: [] };
+  assert.deepEqual((await generationOf()).aiInputsChanged, unmarked, "AI_INPUTS_UNMARKED_NOTE_NOT_LISTED");
+  assert.deepEqual(((await readJson(requestPath, analyst, "AI_INPUTS_BOB_REQUEST_AFTER_UNMARK")).data.aiInputs as Record<string, unknown>).questionnaire, unmarked, "AI_INPUTS_REQUEST_READ_AFTER_UNMARK");
+
+  // Released to Jane, her questionnaire read carries no generation block and no signal.
+  assert.equal((await request(`${questionnairePath}/release`, analyst, { method: "POST" })).status, 200, "AI_INPUTS_RELEASE");
+  const janeQuestionnaire = await readJson(questionnairePath, owner, "AI_INPUTS_JANE_QUESTIONNAIRE_READ");
+  assert.ok(!("generation" in janeQuestionnaire.data), "AI_INPUTS_JANE_QUESTIONNAIRE_GENERATION");
+  for (const forbidden of ["aiInputsChanged", '"change"', String(note.documentId)]) {
+    assert.ok(!janeQuestionnaire.text.includes(forbidden), `AI_INPUTS_JANE_QUESTIONNAIRE_DISCLOSED_${forbidden}`);
+  }
+});
+
+async function addRequestNote(requestId: string, identity: string, body: string): Promise<Record<string, unknown>> {
+  const response = await request(`/api/v1/assessment_requests/${encodeURIComponent(requestId)}/notes`, identity, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { body } }),
+  });
+  assert.equal(response.status, 200, "AI_INPUTS_NOTE_POST");
+  return (await payload(response)).data as Record<string, unknown>;
+}
+
+/** A questionnaire generated before Phase 12 (its generation facts and no run), released to Jane, with one question. */
+async function legacyGeneratedQuestionnaire(label: string): Promise<{ requestId: string; questionnaireId: string }> {
+  const harness = await harnessPromise;
+  const at = "2026-09-01T00:00:00.000Z";
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: `QWF-AI-INPUTS-${label}`, title: `AI inputs ${label.toLowerCase()} request`, requestStatus: "questionnaire-in-progress", submittedDate: "2026-08-30T00:00:00.000Z", requestor: "owner",
+  });
+  const questionnaireId = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: `QUES-AI-INPUTS-${label}`, title: `AI inputs ${label.toLowerCase()}`, assessmentRequest: requestId,
+    generatedDate: at, generatedBy: harness.users.analyst, providerName: "legacy-provider", providerVersion: "1",
+    releasedAt: at, releasedBy: harness.users.analyst, governanceLog: [{ schemaVersion: 1, kind: "released", at, by: harness.users.analyst }],
+  });
+  await harness.createFixtureDocument("api::csrm-question.csrm-question", {
+    questionText: "Which service does this request cover?", answerType: "Text", answer: null, questionnaire: questionnaireId,
+    options: { schemaVersion: 1, questionKey: "service", section: { key: "context", title: "Context", order: 0 }, order: 0, required: true },
+  });
+  return { requestId, questionnaireId };
+}
+
+/*
+ * Phase 13 D-29: a questionnaire generated before Phase 12 has no run, so it compares by its generatedDate: a note marked
+ * after it is listed. A questionnaire that was never generated has no baseline, so no signal, on either read.
+ */
+test("mounted questionnaire generated before run records compares by its generation date, and a seeded one has no signal (D-29)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const legacy = await legacyGeneratedQuestionnaire("LEGACY");
+  const legacyPath = `/api/v1/questionnaires/${encodeURIComponent(legacy.questionnaireId)}`;
+  const legacyGeneration = async () => ((await readJson(legacyPath, analyst, "AI_INPUTS_LEGACY_READ")).data.generation as Record<string, unknown>);
+  const note = await addRequestNote(legacy.requestId, owner, "The payroll files now go to a second processor.");
+  assert.equal((await legacyGeneration()).aiInputsChanged, null, "AI_INPUTS_LEGACY_UNMARKED_NOTE_LISTED");
+  await setNoteMark(legacy.requestId, String(note.documentId), analyst, true);
+  const generation = await legacyGeneration();
+  assert.equal(generation.runId, null, "AI_INPUTS_LEGACY_HAS_A_RUN");
+  const marked = { count: 1, notes: [{ documentId: note.documentId, part: "requestor", sequence: 1, postedAt: note.postedAt, change: "marked" }], files: [] };
+  assert.deepEqual(generation.aiInputsChanged, marked, "AI_INPUTS_LEGACY_MARKED_NOTE_NOT_LISTED");
+  const legacyRequest = (await readJson(`/api/csrm-assessment-requests/${encodeURIComponent(legacy.requestId)}`, analyst, "AI_INPUTS_LEGACY_REQUEST_READ")).data;
+  assert.deepEqual(legacyRequest.aiInputs, { questionnaire: marked, assessment: null }, "AI_INPUTS_LEGACY_REQUEST_READ_SIGNAL");
+
+  // Seeded by hand, never generated: no generation block and no signal, even with a marked note.
+  const seededRequest = await harness.createAssessmentRequestFixture({
+    requestNumber: "QWF-AI-INPUTS-SEEDED", title: "AI inputs seeded request", requestStatus: "questionnaire-in-progress", submittedDate: "2026-08-30T00:00:00.000Z", requestor: "owner",
+  });
+  const seededQuestionnaire = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", {
+    questionnaireNumber: "QUES-AI-INPUTS-SEEDED", title: "AI inputs seeded", assessmentRequest: seededRequest,
+  });
+  const seededNote = await addRequestNote(seededRequest, owner, "A note on a questionnaire nobody generated.");
+  await setNoteMark(seededRequest, String(seededNote.documentId), analyst, true);
+  const seeded = (await readJson(`/api/v1/questionnaires/${encodeURIComponent(seededQuestionnaire)}`, analyst, "AI_INPUTS_SEEDED_READ")).data;
+  assert.ok(!("generation" in seeded), "AI_INPUTS_SEEDED_GENERATION");
+  const seededRead = (await readJson(`/api/csrm-assessment-requests/${encodeURIComponent(seededRequest)}`, analyst, "AI_INPUTS_SEEDED_REQUEST_READ")).data;
+  assert.deepEqual(seededRead.aiInputs, { questionnaire: null, assessment: null }, "AI_INPUTS_SEEDED_REQUEST_READ_SIGNAL");
+});
+
+/*
+ * Phase 13 D-16, D-25 (REQ-08 criterion 1): the analyst's questionnaire read names who holds the request, whether the
+ * viewer may pick it up, and the notes figures, for the page to server-render; Jane's read carries neither.
+ */
+test("mounted analyst questionnaire read's request summary carries the assignee, the pick-up state and the notes; Jane's carries neither (D-16, D-25)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const fixture = await legacyGeneratedQuestionnaire("SUMMARY");
+  const path = `/api/v1/questionnaires/${encodeURIComponent(fixture.questionnaireId)}`;
+  await addRequestNote(fixture.requestId, owner, "Jane's first note on the request.");
+  const summaryFor = async (identity: string, diagnostic: string) => (await readJson(path, identity, diagnostic)).data.assessmentRequest as Record<string, unknown>;
+
+  const before = await summaryFor(analyst, "SUMMARY_BOB_BEFORE_PICK_UP");
+  assert.equal(before.availability, "available", "SUMMARY_NOT_AVAILABLE");
+  assert.deepEqual(before.assignment, { assignee: null, pickUp: "allowed" }, "SUMMARY_ASSIGNMENT_BEFORE_PICK_UP");
+  assert.deepEqual(before.notes, { total: 1, unread: 1 }, "SUMMARY_NOTES_BEFORE_PICK_UP");
+
+  const pickUp = await request(`/api/v1/assessment_requests/${encodeURIComponent(fixture.requestId)}/assignee`, analyst, {
+    method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { analyst: harness.users.analyst, expectedAnalyst: null } }),
+  });
+  assert.equal(pickUp.status, 200, "SUMMARY_PICK_UP");
+  const after = await summaryFor(analyst, "SUMMARY_BOB_AFTER_PICK_UP");
+  assert.deepEqual(after.assignment, { assignee: { documentId: harness.users.analyst, displayName: "Bob Doe" }, pickUp: "not-offered" }, "SUMMARY_ASSIGNMENT_AFTER_PICK_UP");
+  assert.deepEqual(after.notes, { total: 1, unread: 1 }, "SUMMARY_NOTES_AFTER_PICK_UP");
+
+  const jane = await summaryFor(owner, "SUMMARY_JANE_READ");
+  assert.equal(jane.assignment, null, "SUMMARY_JANE_ASSIGNMENT");
+  assert.equal(jane.notes, null, "SUMMARY_JANE_NOTES");
+});
+
+// Tests compile into `.tmp/tests-dist/tests`; three parents resolve apps/backend.
+const ATTACHMENT_FIXTURES = path.resolve(__dirname, "..", "..", "..", "tests", "fixtures", "attachments");
+const VENDOR_PACK = readFileSync(path.join(ATTACHMENT_FIXTURES, "vendor-security-pack.pdf"));
+const DATA_FLOW = readFileSync(path.join(ATTACHMENT_FIXTURES, "data-flow.docx"));
+
+function attachmentsPath(requestId: string): string {
+  return `/api/v1/assessment_requests/${encodeURIComponent(requestId)}/attachments`;
+}
+
+/** Uploads one file as `identity`, posted with a note of theirs on a submitted request, and returns its documentId. */
+async function addRequestFile(requestId: string, identity: string, fileName: string, bytes: Uint8Array): Promise<string> {
+  const note = await addRequestNote(requestId, identity, `${fileName} is attached.`);
+  const form = new FormData();
+  form.set("file", new File([bytes], fileName));
+  form.set("noteId", String(note.documentId));
+  const response = await request(attachmentsPath(requestId), identity, { method: "POST", body: form });
+  assert.equal(response.status, 201, `FILES_UPLOAD_${fileName}: ${await response.clone().text()}`);
+  return String(((await payload(response)).data as Record<string, unknown>).documentId);
+}
+
+async function putAttachment(requestId: string, attachmentId: string, action: "ai_input" | "removal", identity: string, data: Record<string, unknown>): Promise<void> {
+  const response = await request(`${attachmentsPath(requestId)}/${encodeURIComponent(attachmentId)}/${action}`, identity, {
+    method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data }),
+  });
+  assert.equal(response.status, 200, `FILES_${action.toUpperCase()}: ${await response.clone().text()}`);
+}
+
+/*
+ * Phase 14 D-27 (14-UI-SPEC §6.1): the analyst's questionnaire read's request summary says how many files the request holds
+ * and how many are included in the AI inputs, for the page to server-render under the request link; Jane's carries neither.
+ */
+test("mounted analyst questionnaire read's request summary counts the request's files and those in the AI inputs; Jane's carries none (D-27)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const fixture = await legacyGeneratedQuestionnaire("FILES");
+  const questionnairePath = `/api/v1/questionnaires/${encodeURIComponent(fixture.questionnaireId)}`;
+  const summaryFor = async (identity: string, diagnostic: string) => (await readJson(questionnairePath, identity, diagnostic)).data.assessmentRequest as Record<string, unknown>;
+
+  assert.deepEqual((await summaryFor(analyst, "FILES_BOB_BEFORE_ANY_FILE")).files, { count: 0, included: 0 }, "FILES_BEFORE_ANY_FILE");
+
+  const packId = await addRequestFile(fixture.requestId, owner, "vendor-security-pack.pdf", VENDOR_PACK);
+  const dataFlowId = await addRequestFile(fixture.requestId, owner, "data-flow.docx", DATA_FLOW);
+  await putAttachment(fixture.requestId, packId, "ai_input", analyst, { included: true });
+  assert.deepEqual((await summaryFor(analyst, "FILES_BOB_TWO_FILES")).files, { count: 2, included: 1 }, "FILES_TWO_FILES_ONE_INCLUDED");
+
+  // A removed file no longer counts.
+  await putAttachment(fixture.requestId, dataFlowId, "removal", owner, { removed: true });
+  assert.deepEqual((await summaryFor(analyst, "FILES_BOB_AFTER_REMOVAL")).files, { count: 1, included: 1 }, "FILES_AFTER_REMOVAL");
+
+  const jane = await readJson(questionnairePath, owner, "FILES_JANE_READ");
+  assert.equal((jane.data.assessmentRequest as Record<string, unknown>).files, null, "FILES_JANE_SUMMARY");
+  assert.ok(!jane.text.includes('"included"'), "FILES_JANE_SAW_THE_AI_INCLUSION");
+});
+
+/*
+ * Phase 14 D-36 (14-UI-SPEC §6.2; 14-PLAN-CHECK iteration 2, S-1): after Bob generates the questionnaire with the vendor
+ * pack included, he includes the register and excludes the pack, changing no note. The signal names both files, with no
+ * note, on his questionnaire read and on his request read alike; Jane's reads carry no signal.
+ */
+test("mounted analyst reads say which files changed the questionnaire's AI inputs since it was generated, with no note changed, and Jane's never do (D-36)", async () => {
+  const harness = await harnessPromise;
+  const { analyst, owner } = harness.identities;
+  const requestId = await harness.createAssessmentRequestFixture({
+    requestNumber: "QWF-AI-INPUTS-FILE-SIGNAL", title: "AI inputs file signal request", requestStatus: "submitted", submittedDate: "2026-10-01T00:00:00.000Z", requestor: "owner",
+  });
+  const csvId = await addRequestFile(requestId, owner, "register.csv", new TextEncoder().encode("asset,owner\nPayroll register,Human Resources\n"));
+  const packId = await addRequestFile(requestId, owner, "vendor-security-pack.pdf", VENDOR_PACK);
+  await putAttachment(requestId, packId, "ai_input", analyst, { included: true });
+  const questionnaireId = await generateQuestionnaireAs(analyst, requestId, false);
+  const questionnairePath = `/api/v1/questionnaires/${encodeURIComponent(questionnaireId)}`;
+  const requestPath = `/api/csrm-assessment-requests/${encodeURIComponent(requestId)}`;
+  const generationOf = async () => ((await readJson(questionnairePath, analyst, "FILES_SIGNAL_QUESTIONNAIRE_READ")).data.generation as Record<string, unknown>);
+
+  // Generated with exactly the pack included: nothing changed.
+  assert.equal((await generationOf()).aiInputsChanged, null, "FILES_SIGNAL_BEFORE_ANY_CHANGE");
+
+  await putAttachment(requestId, csvId, "ai_input", analyst, { included: true });
+  await putAttachment(requestId, packId, "ai_input", analyst, { included: false });
+  const changed = {
+    count: 2,
+    notes: [],
+    files: [
+      { documentId: csvId, fileName: "register.csv", change: "included" },
+      { documentId: packId, fileName: "vendor-security-pack.pdf", change: "excluded" },
+    ],
+  };
+  assert.deepEqual((await generationOf()).aiInputsChanged, changed, "FILES_SIGNAL_NOT_LISTED");
+  const bobRequest = (await readJson(requestPath, analyst, "FILES_SIGNAL_BOB_REQUEST_READ")).data;
+  assert.deepEqual(bobRequest.aiInputs, { questionnaire: changed, assessment: null }, "FILES_SIGNAL_REQUEST_READ_DISAGREES");
+
+  const janeRequest = await readJson(requestPath, owner, "FILES_SIGNAL_JANE_REQUEST_READ");
+  assert.equal(janeRequest.data.aiInputs, null, "FILES_SIGNAL_JANE_REQUEST_READ_SIGNAL");
+  assert.ok(!janeRequest.text.includes('"change"'), "FILES_SIGNAL_JANE_REQUEST_READ_DISCLOSED");
 });

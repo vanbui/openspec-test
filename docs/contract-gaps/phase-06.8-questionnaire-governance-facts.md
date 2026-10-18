@@ -188,3 +188,73 @@ do not carry it.
   - Replacing a released questionnaire is refused before the job and again inside it, so no history describes a version the Requestor could see.
   - The write discipline (append in the same transaction, refuse when the log cannot take the event) keeps the record complete for audit.
 - **10-CONTEXT:** D-01, D-09, D-10 and D-16 to D-18.
+
+## Phase 15 amendment (2026-10-01): AI proposal events and restored questions
+
+Decided in Phase 15 (15-CONTEXT D-01, D-09, D-12 and D-26 to D-28) and written on 2026-10-11 by plan 15-01, before any code writes these events. Like the Phase 10 amendments, it extends the `governanceLog` event envelope and the published contract. It is an envelope amendment, not a content-type change: no attribute of `CsrmQuestionnaire` or `CsrmQuestion` changes, and no file under `apps/backend/src/api/*/content-types/` changes in Phase 15. The AI proposals themselves and their decisions live in the run record (`docs/contract-gaps/phase-12-ai-run-record-and-provenance.md`, "Phase 15 amendment (2026-10-01)"); this log records what they did to the questionnaire.
+
+**Two added kinds.** The closed event vocabulary gains:
+
+- `ai-proposal`: a Security Analyst asked the AI for proposals. It is appended in the transaction that completes a `questionnaire-proposals` or `question-rewrite` run, including a run whose items lapse because the questionnaire froze; a run that fails writes no event.
+- `question-restored`: a question removed by a confirmed AI proposal was restored by that confirmation's Undo.
+
+**The added keys.** Ten optional keys, each closed and bounded, and each allowed only on the kinds named here (any other combination is refused):
+
+| Key | Value |
+| --- | --- |
+| `runId` | the AI run's documentId, 1 to 255 characters |
+| `itemKey` | the proposal item's key, `i-1` to `i-30` |
+| `aiEdited` | boolean: the analyst edited the proposal before confirming it |
+| `aiUndo` | `true`: the event reverses a confirmation |
+| `scope` | `questionnaire` or `question` |
+| `instruction` | the analyst's instruction, 1 to 500 characters (the log's existing text bound, the run's `instruction` bound) |
+| `instructionSource` | `plain-language-preset` or `default-task`, written when no instruction was given |
+| `providerName`, `providerVersion` | the run's provider, 1 to 255 characters each |
+| `itemCount` | the items the run kept, an integer from 0 to 30 |
+
+**Which events carry them.**
+
+- **`ai-proposal`** carries `by` (the initiating analyst), `at`, `runId`, `scope`, exactly one of `instruction` or `instructionSource`, `providerName`, `providerVersion` and `itemCount`, and, for the `question` scope, `questionKey` and `questionText` (Phase 10's snapshot rule) naming the rewritten question.
+- **`question-added`, `question-edited` and `question-deleted` written by a confirmation** carry `runId`, `itemKey` and `aiEdited` together, with `by` the confirming analyst and the question's `questionKey` and `questionText` as Phase 10 records them.
+- **An Undo** writes the reverse event with the same `runId`, `itemKey` and `aiEdited` and adds `aiUndo: true`, with `by` the undoing analyst: an undone addition writes `question-deleted`, an undone change `question-edited`, and an undone removal `question-restored` (which requires `questionKey` and may carry `questionText`).
+- **`regenerated`** gains `instruction`, or `instructionSource: "default-task"` when no instruction was given (D-12). Events written before carry neither.
+- A rejection, and the Undo of a rejection, write no governance event: they change no question, and the run's decision events record them.
+
+**Version and write discipline.** The event stays at `schemaVersion` 1: keys are not versioned (the Phase 10 precedent), and the closed parser still rejects every key and kind it does not declare. Writes stay append-only, in the same transaction as the change they document, under "Write Discipline" above. A log that cannot take an event (full at 1,000 events, or unreadable) refuses with `HISTORY_UNAVAILABLE` and nothing is written: a decision is refused, and a proposal run fails with that code and keeps no proposal. The two start operations check for a free slot before a job is queued.
+
+**The release gate is unchanged.** It still reads only `releasedAt` and `releasedBy`, never this log (see "Approved Compatibility Extension").
+
+**The change count (D-09).** `analystChangesSinceGeneration` counts `question-restored` beside `question-added`, `question-edited` and `question-deleted`: a confirmed AI proposal and its Undo are analyst changes. The narrowed questionnaire replacement reads that count and refuses with 409 `QUESTIONNAIRE_HAS_ANALYST_CHANGES` when it is above 0. An unreadable log still counts nothing toward the refusal; the replacement then fails with `HISTORY_UNAVAILABLE` as today.
+
+**Who reads them.**
+
+- **The analyst projection** carries every key of these events, with actor names resolved as today.
+- **The Requestor projection** never carries an AI kind or key:
+  - it drops every `ai-proposal` event;
+  - it drops a confirmation and its Undo (the same `runId` and `itemKey`) when no `released` event lies between them, so a change the Requestor never saw leaves no trace;
+  - it removes every AI key from the events it keeps;
+  - it projects an unpaired `question-restored` (an Undo after a release) like any question change, with `kind` and `at` only, and Phase 10's per-round summary counts it among changes.
+
+The published schemas `QuestionnaireGovernanceEvent` and `QuestionnaireRevisionTimelineEvent` declare both kinds and the ten keys with the same bounds, and say that the Requestor projection never carries them.
+
+### Affected Workstreams
+
+`apps/backend` is shared by every workstream (`.planning/PROJECT.md`, "GSD Workstreams"). On 2026-10-11 that section's workstream table lists one workstream, `csrm`, whose application (`apps/csrm`) is the only reader of `CsrmQuestionnaire.governanceLog` and of the operations that serve it. This amendment is backward compatible for any later reader: logs written before it parse unchanged and no stored log is migrated; every change is additive, or a narrowing reached only by the `csrm` workstream's application, which changes its closed parsers in the same plan as the server (the 06.9 lesson); and no content type, attribute, relation or existing grant changes.
+
+It changes these existing schemas and behaviours:
+
+- **The governance and revision-timeline events.** `QuestionnaireGovernanceEvent` and `QuestionnaireRevisionTimelineEvent`, served by the questionnaire read (`GET /api/v1/questionnaires/{questionnaireId}`), the governance results (release, return to review, and the question add, edit and delete) and the timeline, gain the kinds `ai-proposal` and `question-restored` and the ten optional AI keys, in the analyst projection only.
+- **The Requestor projection** drops them, and drops confirmation and Undo pairs within one round (D-26).
+- **The analyst change count** (`analystChangesSinceGeneration`) counts `question-restored`, and the narrowed replacement reads that count (D-26, D-09; the run record's amendment lists the replacement's new refusals).
+
+Phase 15 amendment status: **approved by the pilot on 2026-10-11** (G-6), for the two kinds, the ten keys and the kinds they may appear on, the Requestor projection and the change count exactly as this amendment states them. Plan 15-02 and every later Phase 15 plan write these events only after this line.
+
+What the pilot checked:
+
+- **JDL**: no attribute of `CsrmQuestionnaire` or `CsrmQuestion` changes. The amendment extends only the `governanceLog` envelope this record governs, at `schemaVersion` 1 as the Phase 10 amendments did, and the closed parser still refuses any undeclared kind or key, and any key on a kind it is not allowed on.
+- **API contract**: `QuestionnaireGovernanceEvent` and `QuestionnaireRevisionTimelineEvent` gain two kinds and ten optional keys, in the analyst projection only; no required field is added.
+- **AGENTS.md**: the release gate still reads only `releasedAt` and `releasedBy`, never the log; authorisation and projection stay server-side.
+- **The Requestor projection stays minimal**: it never carries an AI kind, key, instruction or provider. A confirmation and its Undo inside one analyst-review round leave no trace, because the Requestor never saw either, and an Undo after a release reads as an ordinary question change.
+- **Audit (D-26)**: every completed proposal run leaves an `ai-proposal` event with its initiating analyst, time, scope, instruction or its source, provider and item count, whatever later happens to its items. Every confirmed change names its run and item and whether the analyst edited it first. Writes stay append-only, in the transaction they document, and refuse with `HISTORY_UNAVAILABLE` when the log cannot take the event.
+- **The change count**: counting `question-restored` keeps the narrowed replacement honest about analyst work (D-09).
+- **Residual noted**: the log's 1,000-event bound is Phase 10's. A questionnaire with very heavy AI use could reach it; decisions then refuse with `HISTORY_UNAVAILABLE` rather than lose history, which is the right direction for an audit log.

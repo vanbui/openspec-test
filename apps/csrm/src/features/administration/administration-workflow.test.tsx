@@ -1,8 +1,11 @@
 import '@testing-library/jest-dom/vitest';
 
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { installTestResizeObserver, stubHorizontalGeometry, TestResizeObserver } from '@/test/layout-stubs';
@@ -10,6 +13,9 @@ import { applicableControlOptions } from './applicable-controls';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
 const get = vi.hoisted(() => vi.fn());
+const importMocks = vi.hoisted(() => ({ saveFile: vi.fn(), toastSuccess: vi.fn(), toastDismiss: vi.fn() }));
+vi.mock('@/lib/files/save-file', () => ({ saveFile: importMocks.saveFile }));
+vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: importMocks.toastSuccess, dismiss: importMocks.toastDismiss, error: vi.fn() }) }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/app/admin/risk-types', useRouter: () => router }));
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
@@ -47,6 +53,7 @@ type AdministrationWorkspaceProps = {
   query: { q: string; sort: string; page: number; pageSize: number; framework?: string; controlType?: string };
   pagination: { page: number; pageSize: number; pageCount: number; total: number };
   onSearch: (value: string) => void;
+  exportButton?: ReactNode;
 };
 type AdministrationFormProps = {
   kind: 'risk-types' | 'controls' | 'information-systems' | 'information-assets';
@@ -57,11 +64,13 @@ type AdministrationFormProps = {
   createAction?: (input: unknown) => Promise<unknown>;
   updateAction?: (input: unknown) => Promise<unknown>;
 };
-type CsvPreviewRow = { rowNumber: number; naturalKey: string; state: 'create' | 'update' | 'unchanged' | 'rejected' | 'ambiguous'; issues: readonly string[] };
+type CsvPreviewRow = { rowNumber: number; naturalKey: string; state: 'create' | 'update' | 'unchanged' | 'rejected' | 'ambiguous' | 'similar'; issues: readonly string[] };
 type CsvImportFlowProps = {
   kind: 'risk-types' | 'controls' | 'information-systems' | 'information-assets';
   previewAction: (formData: FormData) => Promise<unknown>;
   commitAction: (formData: FormData) => Promise<unknown>;
+  templateAction?: (input: unknown) => Promise<unknown>;
+  errorReportAction?: (formData: FormData) => Promise<unknown>;
 };
 type WorkspaceModule = {
   AdministrationAccessDenied: ComponentType<{ kind?: AdministrationWorkspaceProps['kind'] }>;
@@ -95,21 +104,28 @@ function previewData(rows: readonly CsvPreviewRow[]) {
     rowNumber: row.rowNumber,
     naturalKey: row.naturalKey,
     state: row.state,
-    matchedDocumentId: row.state === 'update' || row.state === 'unchanged' ? `matched-${row.rowNumber}` : null,
+    matchedDocumentId: row.state === 'update' || row.state === 'unchanged' || row.state === 'similar' ? `matched-${row.rowNumber}` : null,
+    matchedName: row.state === 'similar' ? `Stored ${row.naturalKey}` : row.state === 'update' || row.state === 'unchanged' ? row.naturalKey : null,
     values: { name: row.naturalKey },
     changes: row.state === 'update' ? [{ field: 'description', before: 'Before', after: 'After' }] : [],
     issues: row.issues.map((message) => ({ code: 'ROW_ISSUE', field: null, message })),
   }));
-  const summary = Object.fromEntries(['create', 'update', 'unchanged', 'rejected', 'ambiguous'].map((state) => [state, normalizedRows.filter((row) => row.state === state).length]));
-  return { fileName: 'risk-types.csv', previewDigest: `sha256:${'1'.repeat(64)}`, limits: { maxBytes: 5_242_880, maxRows: 5_000 }, summary, rows: normalizedRows };
+  const summary = Object.fromEntries(['create', 'update', 'unchanged', 'rejected', 'ambiguous', 'similar'].map((state) => [state, normalizedRows.filter((row) => row.state === state).length]));
+  return { fileName: 'risk-types.csv', previewDigest: `sha256:${'1'.repeat(64)}`, limits: { maxBytes: 5_242_880, maxRows: 5_000 }, summary, warnings: [] as string[], notes: [] as string[], readOnlyColumns: [] as string[], rows: normalizedRows };
 }
 
-async function renderPreview(CsvImportFlow: ImportModule['CsvImportFlow'], rows: readonly CsvPreviewRow[], commitAction = vi.fn()) {
+async function renderPreview(
+  CsvImportFlow: ImportModule['CsvImportFlow'],
+  rows: readonly CsvPreviewRow[],
+  commitAction = vi.fn(),
+  extra: Partial<ReturnType<typeof previewData>> = {},
+  actions: Pick<CsvImportFlowProps, 'errorReportAction' | 'templateAction'> = {},
+) {
   const user = userEvent.setup();
-  const previewAction = vi.fn().mockResolvedValue({ ok: true, data: previewData(rows) });
-  const view = render(<CsvImportFlow kind="risk-types" previewAction={previewAction} commitAction={commitAction} />);
-  await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
-  await user.upload(screen.getByLabelText(/CSV file/i), new File(['name,description\r\nExample,value'], 'risk-types.csv', { type: 'text/csv' }));
+  const previewAction = vi.fn().mockResolvedValue({ ok: true, data: { ...previewData(rows), ...extra } });
+  const view = render(<CsvImportFlow kind="risk-types" previewAction={previewAction} commitAction={commitAction} {...actions} />);
+  await user.click(screen.getByRole('button', { name: 'Choose file' }));
+  await user.upload(screen.getByLabelText('File to import', { selector: 'input' }), new File(['name,description\r\nExample,value'], 'risk-types.csv', { type: 'text/csv' }));
   await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
   const previewHeading = await screen.findByRole('heading', { level: 2, name: 'Review rows' });
   expect(previewHeading).toHaveClass('text-heading-lg');
@@ -123,10 +139,26 @@ describe('ADMIN-01 ADMIN-02 ADMIN-03 administration workspace', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Risk Types' })).toBeInTheDocument();
     expect(screen.getByText('1 result')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Create Risk Type' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Import CSV' })).toBeInTheDocument();
+    // 19-UI-SPEC §1, §10: `Import` (was `Import CSV`), and no Export unless the page passes one.
+    expect(screen.getByRole('link', { name: 'Import' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Export/ })).not.toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Risk Types results' })).toBeInTheDocument();
     expect(document.querySelector('[data-slot="data-table-mobile"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  /*
+   * 19-15 (19-UI-SPEC §1, UI-D1, X-30; the Export placement pattern): Export is the header wrapper's last child, after
+   * Create {singular} and Import, inside the unchanged md:flex-row-reverse wrapper, so Create keeps its place on desktop.
+   */
+  it('places Export last in the header, after Create and Import, inside the unchanged reversed wrapper', async () => {
+    const { AdministrationWorkspace } = await loadWorkspace();
+    render(<AdministrationWorkspace {...baseWorkspaceProps} exportButton={<button type="button">Export Risk Types</button>} />);
+    const create = screen.getByRole('link', { name: 'Create Risk Type' });
+    const wrapper = create.parentElement!;
+    expect(wrapper).toHaveClass('flex', 'w-full', 'flex-col', 'gap-2', 'md:w-auto', 'md:flex-row-reverse');
+    expect(Array.from(wrapper.children).map((child) => child.textContent)).toEqual(['Create Risk Type', 'Import', 'Export Risk Types']);
+    expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/app/admin/risk-types/import');
   });
 
   it('renders bounded Control states and submits only the closed reusable-Control fields', async () => {
@@ -750,13 +782,15 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     ] as const;
     for (const candidate of cases) {
       const view = render(<CsvImportFlow kind={candidate.kind} previewAction={vi.fn()} commitAction={vi.fn()} />);
-      expect(screen.getByRole('heading', { level: 1, name: `Import ${candidate.label} from CSV` })).toBeInTheDocument();
+      // 19-15 (19-UI-SPEC §5.1, §10): the title names no format, since a workbook imports too.
+      expect(screen.getByRole('heading', { level: 1, name: `Import ${candidate.label}` })).toBeInTheDocument();
       expect(screen.getByRole('cell', { name: candidate.column })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: `Return to ${candidate.label}` })).toHaveAttribute('href', candidate.listPath);
-      // The heading names the collection, so the template pill stays short enough for 375px (UI-SPEC section 11 addendum).
+      // The heading names the collection, so the template pills stay short enough for 375px (UI-SPEC section 11 addendum).
       expect(screen.getByRole('button', { name: 'Download CSV template' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Download .+ CSV template/ })).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Choose CSV file' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Download Excel template' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Download .+ (CSV|Excel) template/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Choose file' })).toBeInTheDocument();
       view.unmount();
     }
   });
@@ -765,7 +799,7 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     const { CsvImportFlow } = await loadImportFlow();
     render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} />);
 
-    const table = screen.getByRole('table', { name: 'Risk Type CSV columns' });
+    const table = screen.getByRole('table', { name: 'Risk Type columns in the file' });
     const scroller = scrollerOf(table);
     const container = table.closest('[data-slot="table-container"]')!;
     expect(scroller).not.toBe(container);
@@ -778,10 +812,30 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     stubHorizontalGeometry(scroller, { scrollWidth: 480, clientWidth: 311 });
     act(() => TestResizeObserver.notifyAll());
 
-    expect(screen.getByRole('region', { name: 'Risk Type CSV columns, scrolls horizontally' })).toBe(scroller);
+    expect(screen.getByRole('region', { name: 'Risk Type columns in the file, scrolls horizontally' })).toBe(scroller);
     expect(scroller).toHaveAttribute('tabindex', '0');
     expect(scroller).toHaveAttribute('data-overflow', 'true');
     for (const attribute of ['role', 'tabindex']) expect(container).not.toHaveAttribute(attribute);
+  });
+
+  /*
+   * 19-UI-SPEC review amendment R2: the import takes CSV and Excel, so its words name the file, not CSV, and a step not
+   * yet reached is announced by its state.
+   */
+  it('names the columns and rows by the file, and announces a step not yet reached as Not started (R2)', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const { container, unmount } = render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} />);
+    expect(screen.getByRole('table', { name: 'Risk Type columns in the file' })).toBeInTheDocument();
+    const steps = within(screen.getByRole('list', { name: 'Import progress' })).getAllByRole('listitem');
+    expect(steps.slice(1).map((step) => step.querySelector('.sr-only')?.textContent)).toEqual(['Not started', 'Not started', 'Not started', 'Not started']);
+    expect(container.textContent).not.toMatch(/Future step|CSV columns/);
+    unmount();
+
+    await renderPreview(CsvImportFlow, [{ rowNumber: 2, naturalKey: 'Created row', state: 'create', issues: [] }]);
+    const preview = screen.getByRole('table', { name: 'Risk Type import preview' });
+    expect(within(preview).getAllByRole('columnheader')[0]).toHaveTextContent(/^File row$/);
+    expect(screen.getByText('File row 2')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/CSV row/);
   });
 
   it('leaves focus with the page on first render and moves it to the step heading only on a step change', async () => {
@@ -789,7 +843,7 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     const user = userEvent.setup();
     render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} />);
     expect(screen.getByRole('heading', { level: 2, name: 'Guidance' })).not.toHaveFocus();
-    await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
+    await user.click(screen.getByRole('button', { name: 'Choose file' }));
     expect(screen.getByRole('heading', { level: 2, name: 'Select file' })).toHaveFocus();
   });
 
@@ -797,7 +851,8 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
   it('UAT-054 explains matching, the final check and the key column in plain words', async () => {
     const { CsvImportFlow } = await loadImportFlow();
     const controls = render(<CsvImportFlow kind="controls" previewAction={vi.fn()} commitAction={vi.fn()} />);
-    expect(screen.getByText('A row whose control number matches an existing control updates it. Other valid rows create new controls. Unchanged, rejected and ambiguous rows are never written.')).toBeInTheDocument();
+    // 19-UI-SPEC §5.3: Phase 10's sentence, with the row that waits for a choice.
+    expect(screen.getByText('A row whose control number matches an existing control updates it. Other valid rows create new controls. A row whose name matches an existing one only by capitals or spacing waits for your choice. Unchanged, rejected and ambiguous rows are never written.')).toBeInTheDocument();
     controls.unmount();
 
     const rows: CsvPreviewRow[] = [{ rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] }];
@@ -812,8 +867,8 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     const { CsvImportFlow } = await loadImportFlow();
     const user = userEvent.setup();
     render(<CsvImportFlow kind="risk-types" previewAction={vi.fn().mockResolvedValue({ unexpected: true })} commitAction={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
-    await user.upload(screen.getByLabelText(/CSV file/i), new File(['name\r\nExample'], 'risk-types.csv', { type: 'text/csv' }));
+    await user.click(screen.getByRole('button', { name: 'Choose file' }));
+    await user.upload(screen.getByLabelText('File to import', { selector: 'input' }), new File(['name\r\nExample'], 'risk-types.csv', { type: 'text/csv' }));
     await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
     expect(await screen.findByText('The preview couldn’t be loaded. Choose the file again to retry.', { selector: '#csv-file-error' })).toBeInTheDocument();
   });
@@ -860,16 +915,25 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     expect(screen.getByRole('table', { name: 'Risk Type import preview' }).querySelectorAll('tbody tr')).toHaveLength(1);
   });
 
+  /* 19-15 (D-25; 19-UI-SPEC §5.4): the browser checks the extension and the 5 MB size, and words a refusal with S2. */
   it('rejects file bounds before preview service invocation', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ applyAccept: false });
     const { CsvImportFlow } = await loadImportFlow();
     const previewAction = vi.fn();
     render(<CsvImportFlow kind="risk-types" previewAction={previewAction} commitAction={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Choose CSV file' }));
+    await user.click(screen.getByRole('button', { name: 'Choose file' }));
     const file = new File([new Uint8Array(5_242_881)], 'too-large.csv', { type: 'text/csv' });
-    await user.upload(screen.getByLabelText(/CSV file/i), file);
+    await user.upload(screen.getByLabelText('File to import', { selector: 'input' }), file);
     await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/too large|5 MiB/i);
+    const refusal = await screen.findByRole('alert');
+    expect(refusal).toHaveTextContent('This file is too large');
+    expect(refusal).toHaveTextContent('“too-large.csv” is 5.1 MB. The limit is 5 MB. Split the rows into smaller files and import each.');
+
+    await user.upload(screen.getByLabelText('File to import', { selector: 'input' }), new File(['x'], 'legacy.xls', { type: 'application/vnd.ms-excel' }));
+    await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+    const typeRefusal = await screen.findByRole('alert');
+    expect(typeRefusal).toHaveTextContent('Choose a CSV or Excel file');
+    expect(typeRefusal).toHaveTextContent('“legacy.xls” isn’t a CSV or Excel workbook (.xlsx).');
     expect(previewAction).not.toHaveBeenCalled();
   });
 
@@ -887,7 +951,7 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
     const confirm = screen.getByRole('button', { name: 'Confirm import' });
     expect(confirm).toBeDisabled();
-    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the create and update rows.' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
     await user.click(confirm);
     expect(commitAction).toHaveBeenCalledTimes(1);
     const submitted = commitAction.mock.calls[0]?.[0] as FormData;
@@ -899,11 +963,24 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     expect(resultsScroller).toHaveAttribute('data-overflow', 'false');
   });
 
+  /* 19-13 (19-UI-SPEC §5.6, UI-D16, X-32): a similar row's badge comes from the import-only map, with its own label. */
+  it('shows a row matched by similar name with its own badge, and counts it among the states', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    await renderPreview(CsvImportFlow, [
+      { rowNumber: 2, naturalKey: 'credential misuse', state: 'similar', issues: [] },
+      { rowNumber: 3, naturalKey: 'Create', state: 'create', issues: [] },
+    ]);
+    const table = screen.getByRole('table', { name: 'Risk Type import preview' });
+    const similarBadge = within(table).getByText('Matched by similar name').closest('[data-tone]');
+    expect(similarBadge).toHaveAttribute('data-tone', 'warning');
+    expect(screen.getByRole('button', { name: 'Matched by similar name (1)' })).toBeInTheDocument();
+  });
+
   it('traverses backward and forward with focus, live status, authoritative results, and no automatic retry', async () => {
     const { CsvImportFlow } = await loadImportFlow();
     const commitAction = vi.fn().mockResolvedValue({ ok: true, data: {
       fileName: 'risk-types.csv', previewDigest: `sha256:${'1'.repeat(64)}`, limits: { maxBytes: 5_242_880, maxRows: 5_000 },
-      summary: { create: 1, update: 1, unchanged: 1, rejected: 1, ambiguous: 1 },
+      summary: { create: 1, update: 1, unchanged: 1, rejected: 1, ambiguous: 1, skipped: 0 },
       previewChanged: 1,
       rows: [
         { rowNumber: 2, naturalKey: 'Create', state: 'create', documentId: 'risk-type-2', issues: [] },
@@ -931,7 +1008,7 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     first.view.unmount();
     const second = await renderPreview(CsvImportFlow, previewRows, commitAction);
     await second.user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
-    await second.user.click(screen.getByRole('checkbox', { name: 'I have reviewed the create and update rows.' }));
+    await second.user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
     await second.user.click(screen.getByRole('button', { name: 'Confirm import' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Import completed with rejected rows' })).toHaveFocus();
     for (const text of ['Created 1', 'Updated 1', 'Unchanged 1', 'Rejected 1', 'Ambiguous 1']) {
@@ -942,6 +1019,588 @@ describe('ADMIN-04 five-step CSV import workflow', () => {
     expect(within(screen.getByRole('table', { name: 'Risk Type import results' })).getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Risk Types' })).toHaveAttribute('href', '/app/admin/risk-types');
     expect(commitAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+/*
+ * Phase 19 (19-15 Task 1; D-25, D-27, D-31; 19-UI-SPEC §5.1 to §5.5): the import reads nothing in the browser, offers
+ * Strapi's two templates, and shows the preview's ignored columns and notes.
+ */
+describe('CSV-02 the import reads files through Strapi alone', () => {
+  const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+  beforeEach(() => {
+    installTestResizeObserver();
+    importMocks.saveFile.mockReset();
+    importMocks.toastSuccess.mockReset();
+  });
+
+  it('titles the Information Systems import, explains its columns and how values are read, and offers both templates, Excel first', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    render(<CsvImportFlow kind="information-systems" previewAction={vi.fn()} commitAction={vi.fn()} templateAction={vi.fn()} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Import Information Systems' })).toBeInTheDocument();
+    expect(screen.getByText('Import a CSV or Excel file. You review every row before anything is created or updated.')).toBeInTheDocument();
+
+    const table = screen.getByRole('table', { name: 'Information System columns in the file' });
+    expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Column', 'Also accepted as', 'Required', 'Format and allowed values']);
+    const internetFacing = within(table).getByRole('row', { name: /Internet-facing/ });
+    expect(within(internetFacing).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Internet-facing', 'internetFacing', 'Optional', 'Yes or No']);
+    expect(within(within(table).getByRole('row', { name: /^Name/ })).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Name', 'name', 'Required', 'Text, up to 255 characters']);
+
+    const rules = screen.getByRole('list', { name: 'How values are read' });
+    expect(within(rules).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Headers match whatever their capitals and spacing, by the column name or the name in the template.',
+      'Yes/No columns accept Yes, No, Y, N, TRUE or FALSE.',
+      'A blank cell leaves an existing value unchanged. To empty an optional value, type #CLEAR.',
+      'Columns that aren’t listed here are ignored, and you’ll see which.',
+      'If you edit in Excel, use the Excel template or an Excel export: Excel removes leading zeros (0042) and changes date-like text when it opens a CSV.',
+    ]);
+
+    const actions = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(actions.indexOf('Download Excel template')).toBeLessThan(actions.indexOf('Download CSV template'));
+    expect(actions.indexOf('Choose file')).toBeLessThan(actions.indexOf('Download Excel template'));
+  });
+
+  it('saves the Excel template Strapi serves and names it in the toast', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const user = userEvent.setup();
+    const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+    let finish: (value: unknown) => void = () => undefined;
+    const templateAction = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+    render(<CsvImportFlow kind="information-systems" previewAction={vi.fn()} commitAction={vi.fn()} templateAction={templateAction} />);
+
+    await user.click(screen.getByRole('button', { name: 'Download Excel template' }));
+    expect(templateAction).toHaveBeenCalledWith({ kind: 'information-systems', format: 'xlsx' });
+    expect(screen.getByRole('button', { name: 'Downloading…' })).toHaveAttribute('aria-disabled', 'true');
+    await act(async () => finish({ ok: true, fileName: 'information-systems-import-template.xlsx', contentType: XLSX_TYPE, bytes }));
+
+    expect(importMocks.saveFile).toHaveBeenCalledWith({ fileName: 'information-systems-import-template.xlsx', contentType: XLSX_TYPE, bytes });
+    expect(importMocks.toastSuccess).toHaveBeenCalledWith('Downloaded information-systems-import-template.xlsx', expect.objectContaining({ duration: 5_000 }));
+    expect(screen.getByRole('button', { name: 'Download Excel template' })).toBeEnabled();
+  });
+
+  it('keeps a refused template download on the Guidance step with S3’s copy and Try again', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const user = userEvent.setup();
+    const templateAction = vi.fn()
+      .mockResolvedValueOnce({ ok: false, refusal: { message: 'We couldn’t download the template.', action: 'Try again' } })
+      .mockResolvedValueOnce({ ok: true, fileName: 'risk-types-import-template.csv', contentType: 'text/csv; charset=utf-8', bytes: new Uint8Array([0xef, 0xbb, 0xbf]) });
+    render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} templateAction={templateAction} />);
+
+    await user.click(screen.getByRole('button', { name: 'Download CSV template' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t download the template.');
+    expect(importMocks.saveFile).not.toHaveBeenCalled();
+    expect(importMocks.toastSuccess).not.toHaveBeenCalled();
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(templateAction).toHaveBeenLastCalledWith({ kind: 'risk-types', format: 'csv' });
+    expect(importMocks.saveFile).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('We couldn’t download the template.')).not.toBeInTheDocument();
+    // FE4-04 (WCAG 2.4.3): Try again removes itself, so focus moves to the template it retried, never to the page body.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download CSV template' })).toHaveFocus());
+  });
+
+  it('moves focus to the template button when a retried template is refused again (FE4-04)', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const user = userEvent.setup();
+    const refused = { ok: false, refusal: { message: 'We couldn’t download the template.', action: 'Try again' } };
+    const templateAction = vi.fn().mockResolvedValue(refused);
+    render(<CsvImportFlow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} templateAction={templateAction} />);
+
+    await user.click(screen.getByRole('button', { name: 'Download Excel template' }));
+    await user.click(within(await screen.findByRole('alert')).getByRole('button', { name: 'Try again' }));
+
+    expect(templateAction).toHaveBeenCalledTimes(2);
+    expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t download the template.');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download Excel template' })).toHaveFocus());
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('uploads an .xlsx after checking only its extension and size, and shows the columns Strapi will ignore', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    const user = userEvent.setup();
+    const read = { arrayBuffer: vi.fn(), text: vi.fn(), stream: vi.fn() };
+    const workbook = Object.assign(new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04])], 'risk-types.xlsx', { type: XLSX_TYPE }), read);
+    const readAsArrayBuffer = vi.spyOn(FileReader.prototype, 'readAsArrayBuffer');
+    const readAsText = vi.spyOn(FileReader.prototype, 'readAsText');
+    onTestFinished(() => { readAsArrayBuffer.mockRestore(); readAsText.mockRestore(); });
+    const previewAction = vi.fn().mockResolvedValue({ ok: true, data: { ...previewData([{ rowNumber: 2, naturalKey: 'Credential misuse', state: 'create', issues: [] }]), fileName: 'risk-types.xlsx', warnings: ['Owner', 'Notes column'] } });
+    render(<CsvImportFlow kind="risk-types" previewAction={previewAction} commitAction={vi.fn()} templateAction={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Choose file' }));
+    const input = screen.getByLabelText('File to import', { selector: 'input' });
+    expect(input).toHaveAttribute('type', 'file');
+    expect(input).toHaveAttribute('accept', '.csv,.xlsx');
+    expect(input).not.toHaveAttribute('multiple');
+    expect(screen.getByText('A CSV (UTF-8) or Excel workbook (.xlsx), up to 5 MB and 5,000 rows.')).toBeInTheDocument();
+    await user.upload(input, workbook);
+    expect(screen.getByText('risk-types.xlsx · 4 bytes')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+    await screen.findByRole('heading', { level: 2, name: 'Review rows' });
+
+    const sent = previewAction.mock.calls[0]?.[0] as FormData;
+    expect(sent.get('kind')).toBe('risk-types');
+    expect((sent.get('file') as File).name).toBe('risk-types.xlsx');
+    for (const method of Object.values(read)) expect(method).not.toHaveBeenCalled();
+    expect(readAsArrayBuffer).not.toHaveBeenCalled();
+    expect(readAsText).not.toHaveBeenCalled();
+
+    const ignored = screen.getByText('Some columns will be ignored').closest('[data-slot="alert"]')!;
+    expect(ignored).toHaveTextContent('These columns aren’t part of the Risk Type import: “Owner”, “Notes column”. Their values won’t be imported.');
+  });
+
+  it('names each note the preview carries, in its own line', async () => {
+    const { CsvImportFlow } = await loadImportFlow();
+    await renderPreview(CsvImportFlow, [{ rowNumber: 3, naturalKey: 'Credential misuse', state: 'create', issues: [] }], vi.fn(), {
+      notes: ['issues-column', 'read-only-columns', 'example-row'],
+      readOnlyColumns: ['Applicable controls'],
+    });
+    for (const line of [
+      'The Issues column from an error report is ignored.',
+      'Columns from a Risk Types export that can’t be imported are ignored: Applicable controls.',
+      'Row 2 is the template’s example row, so it’s skipped.',
+    ]) {
+      expect(screen.getByText(line)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Some columns will be ignored')).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * Phase 19 (19-15 Task 2; D-26, D-30, D-32; X-32, X-14; 19-UI-SPEC §5.4 to §5.8, §6 S2 and S3, §7): a file Strapi can't
+ * read says how to fix it, a near-match name waits for the Security Analyst's own choice, and the rows that weren't
+ * imported come back as a file to correct.
+ */
+describe('CSV-03 file refusals, near-match decisions and error reports in the import flow', () => {
+  const STORED = 'UAT-B: Core customer billing system';
+  const ISSUES_NAME = 'risk-types-import-issues-2026-10-17.csv';
+
+  beforeEach(() => {
+    installTestResizeObserver();
+    importMocks.saveFile.mockReset();
+    importMocks.toastSuccess.mockReset();
+    importMocks.toastDismiss.mockReset();
+  });
+
+  /** A preview with one create row and two rows matched by similar name to stored records. */
+  function similarPreview() {
+    const data = previewData([
+      { rowNumber: 2, naturalKey: 'New risk', state: 'create', issues: [] },
+      { rowNumber: 3, naturalKey: 'uat-b: core customer billing system', state: 'similar', issues: [] },
+      { rowNumber: 4, naturalKey: 'UAT-B:  Core customer billing  platform', state: 'similar', issues: [] },
+    ]);
+    return { ...data, rows: data.rows.map((row) => (row.state === 'similar' ? { ...row, matchedName: row.rowNumber === 3 ? STORED : 'UAT-B: Core customer billing platform' } : row)) };
+  }
+
+  async function renderSimilar(commitAction = vi.fn(), errorReportAction = vi.fn()) {
+    const preview = similarPreview();
+    const rendered = await renderPreview(loadedFlow!, [], commitAction, preview, { errorReportAction });
+    return { ...rendered, preview };
+  }
+
+  let loadedFlow: ImportModule['CsvImportFlow'] | null = null;
+  beforeEach(async () => {
+    loadedFlow = (await loadImportFlow()).CsvImportFlow;
+  });
+
+  const previewTable = () => screen.getByRole('table', { name: 'Risk Type import preview' });
+  const decisionGroup = (rowNumber: number) => within(previewTable()).getByRole('radiogroup', { name: `Decision for row ${rowNumber}` });
+
+  it('S2 shows a file Strapi refused as a warning alert with its numbered steps, keeps the file and focuses the title', async () => {
+    const user = userEvent.setup();
+    const steps = [
+      '1. In Excel, choose File > Save As.',
+      '2. Choose “CSV UTF-8 (Comma delimited) (*.csv)” and save.',
+      '3. Choose the new file here. Or upload the Excel workbook (.xlsx) itself.',
+    ];
+    const previewAction = vi.fn().mockResolvedValue({
+      ok: false,
+      formError: 'Save the file as CSV UTF-8',
+      refusal: { family: 'file', reason: 'IMPORT_ENCODING_WINDOWS_1252', title: 'Save the file as CSV UTF-8', body: 'This file is in Excel’s older “CSV (Comma delimited)” format, which can garble names with accents or symbols.', steps },
+    });
+    const Flow = loadedFlow!;
+    render(<Flow kind="risk-types" previewAction={previewAction} commitAction={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Choose file' }));
+    await user.upload(screen.getByLabelText('File to import', { selector: 'input' }), new File([Buffer.from('Name\r\nCafé', 'latin1')], 'excel.csv', { type: 'text/csv' }));
+    await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+
+    const title = await screen.findByText('Save the file as CSV UTF-8');
+    expect(title).toHaveFocus();
+    const alert = title.closest('[data-slot="alert"]') as HTMLElement;
+    expect(alert).toHaveClass('bg-warning-subtle');
+    // FE4-03 (accessibility contract 4.1.3): focus moves to the refusal, so it is not also a live region; it is read once.
+    expect(alert).not.toHaveAttribute('role');
+    expect(alert.closest('[aria-live], [role="alert"], [role="status"]')).toBeNull();
+    expect(alert).toHaveTextContent('This file is in Excel’s older “CSV (Comma delimited)” format, which can garble names with accents or symbols.');
+    expect(within(alert).getAllByRole('listitem').map((item) => item.textContent)).toEqual(steps);
+    // The alert sits above the field, and the chosen file stays listed.
+    expect(alert.compareDocumentPosition(screen.getByLabelText('File to import', { selector: 'input' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText('excel.csv · 10 bytes')).toBeInTheDocument();
+    const open = vi.spyOn(screen.getByLabelText('File to import', { selector: 'input' }) as HTMLInputElement, 'click');
+    await user.click(within(alert).getByRole('button', { name: 'Choose another file' }));
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('heading', { level: 2, name: 'Select file' })).toBeInTheDocument();
+  });
+
+  /* FE4-11: a commit whose result can't be read is an unknown outcome, said once; no message is thrown and dropped. */
+  it.each([
+    ['a result it can’t read', () => vi.fn().mockResolvedValue({ ok: true })],
+    ['a failure reaching it', () => vi.fn().mockRejectedValue(new Error('network'))],
+  ])('says the import outcome is unknown after %s', async (_case, commit) => {
+    const { user } = await renderPreview(loadedFlow!, [{ rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] }], commit());
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm import' }));
+
+    const alert = (await screen.findByText('Import outcome unknown')).closest('[data-slot="alert"]') as HTMLElement;
+    expect(alert).toHaveTextContent('We couldn’t confirm whether the import completed. Check the collection before trying again.');
+    expect(within(alert).getByRole('link', { name: 'View Risk Types' })).toBeInTheDocument();
+    const source = readFileSync(resolve(process.cwd(), 'src/features/administration/csv-import-flow.tsx'), 'utf8');
+    expect(source).not.toContain('The selected file is unavailable.');
+    expect(source).not.toContain('The import result couldn’t be loaded');
+  });
+
+  it('S3 says an expired review must be checked again and offers Choose file again', async () => {
+    const commitAction = vi.fn().mockResolvedValue({
+      ok: false,
+      formError: 'This review has expired. Choose the file again to check it.',
+      refusal: { family: 'step', step: 'review-expired', message: 'This review has expired. Choose the file again to check it.', action: 'Choose file again' },
+    });
+    const { user } = await renderPreview(loadedFlow!, [{ rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] }], commitAction);
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm import' }));
+    const alert = (await screen.findByText('This review has expired. Choose the file again to check it.')).closest('[data-slot="alert"]') as HTMLElement;
+    await user.click(within(alert).getByRole('button', { name: 'Choose file again' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Select file' })).toHaveFocus();
+  });
+
+  it('Matched by similar name rows wait for a decision with nothing chosen, counted by the panel and held by the gate', async () => {
+    const { user } = await renderSimilar();
+    const row = within(previewTable()).getByRole('row', { name: /Row 3/ });
+    expect(within(row).getByText('Matched by similar name').closest('[data-tone]')).toHaveAttribute('data-tone', 'warning');
+    expect(within(row).getByText(`Similar to the existing Risk Type “${STORED}”.`)).toBeInTheDocument();
+    const group = decisionGroup(3);
+    const radios = within(group).getAllByRole('radio');
+    expect(radios.map((radio) => radio.getAttribute('aria-checked'))).toEqual(['false', 'false']);
+    expect(within(group).getByRole('radio', { name: `Update “${STORED}”` })).toBeInTheDocument();
+    expect(within(group).getByRole('radio', { name: 'Skip this row' })).toBeInTheDocument();
+    expect(within(group).getByText('Uses this row’s other values and keeps the existing name.')).toBeInTheDocument();
+    expect(within(group).getByText(`Leaves “${STORED}” as it is.`)).toBeInTheDocument();
+
+    const panel = screen.getByText('2 rows match an existing name only by capitals or spacing').closest('[data-slot="alert"]') as HTMLElement;
+    expect(panel).toHaveTextContent('Choose to update the existing Risk Type or skip the row. No new Risk Types are created for these rows.');
+    expect(within(panel).getByText('0 of 2 decided')).toHaveAttribute('aria-live', 'polite');
+
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Review rows' })).toBeInTheDocument();
+    expect(screen.getByText('Choose Update or Skip for 2 more rows.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Matched by similar name (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(decisionGroup(3)).getAllByRole('radio')[0]).toHaveFocus();
+
+    await user.click(within(decisionGroup(3)).getByRole('radio', { name: `Update “${STORED}”` }));
+    expect(within(panel).getByText('1 of 2 decided')).toBeInTheDocument();
+    expect(within(within(previewTable()).getByRole('row', { name: /Row 3/ })).getByText('Your choice: Update')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    expect(screen.getByText('Choose Update or Skip for 1 more row.')).toBeInTheDocument();
+    expect(within(decisionGroup(4)).getAllByRole('radio')[0]).toHaveFocus();
+  });
+
+  it('Update all and Skip all set every similar row, with an Undo toast only when they replace a choice', async () => {
+    const { user } = await renderSimilar();
+    const checked = () => [3, 4].map((rowNumber) => within(decisionGroup(rowNumber)).getAllByRole('radio').map((radio) => radio.getAttribute('aria-checked')).join(','));
+    await user.click(screen.getByRole('button', { name: 'Update all 2' }));
+    expect(checked()).toEqual(['true,false', 'true,false']);
+    expect(importMocks.toastSuccess).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Skip all 2' }));
+    expect(checked()).toEqual(['false,true', 'false,true']);
+    expect(importMocks.toastSuccess).toHaveBeenCalledTimes(1);
+    const [message, options] = importMocks.toastSuccess.mock.calls[0] as [string, { action?: { label: string; onClick: (event: unknown) => void } }];
+    expect(message).toBe('Set 2 rows to Skip');
+    expect(options.action?.label).toBe('Undo');
+    act(() => options.action!.onClick({}));
+    expect(checked()).toEqual(['true,false', 'true,false']);
+
+    await user.click(screen.getByRole('button', { name: 'Show these rows' }));
+    expect(screen.getByRole('button', { name: 'Matched by similar name (2)' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  /* FE4-08 (X-14): an Undo belongs to the review it was offered in; another file's preview takes none of its choices. */
+  it('lets a bulk Undo still in view restore nothing onto another file’s preview', async () => {
+    const { user, previewAction } = await renderSimilar();
+    await user.click(screen.getByRole('button', { name: 'Update all 2' }));
+    await user.click(screen.getByRole('button', { name: 'Skip all 2' }));
+    const [, options] = importMocks.toastSuccess.mock.calls[0] as [string, { action?: { label: string; onClick: (event: unknown) => void } }];
+    expect(options.action?.label).toBe('Undo');
+
+    previewAction.mockResolvedValueOnce({ ok: true, data: { ...similarPreview(), previewDigest: `sha256:${'3'.repeat(64)}` } });
+    await user.click(screen.getByRole('button', { name: 'Back to file selection' }));
+    await user.click(within(screen.getByText('Choosing another file clears your 2 choices.').closest('[data-slot="alert"]') as HTMLElement).getByRole('button', { name: 'Choose another file' }));
+    await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+    await screen.findByRole('heading', { level: 2, name: 'Review rows' });
+    expect(screen.getByText('0 of 2 decided')).toBeInTheDocument();
+
+    act(() => options.action!.onClick({}));
+    expect(screen.getByText('0 of 2 decided')).toBeInTheDocument();
+    for (const rowNumber of [3, 4]) {
+      for (const radio of within(decisionGroup(rowNumber)).getAllByRole('radio')) expect(radio).toHaveAttribute('aria-checked', 'false');
+    }
+  });
+
+  it('keeps the choices between Review and Confirm, and the new-file guard asks before clearing them', async () => {
+    const { user } = await renderSimilar();
+    await user.click(within(decisionGroup(3)).getByRole('radio', { name: 'Skip this row' }));
+    await user.click(within(decisionGroup(4)).getByRole('radio', { name: /^Update/ }));
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Confirm import' })).toBeInTheDocument();
+    expect(screen.getByText(/This import will create 1 and update 1 Risk Types, including 1 matched by similar name\. 1 row will be skipped: 1 you chose to skip\./)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Back to review rows' }));
+    expect(within(decisionGroup(3)).getByRole('radio', { name: 'Skip this row' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(decisionGroup(4)).getByRole('radio', { name: /^Update/ })).toHaveAttribute('aria-checked', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Back to file selection' }));
+    const guard = screen.getByText('Choosing another file clears your 2 choices.').closest('[data-slot="alert"]') as HTMLElement;
+    await user.click(within(guard).getByRole('button', { name: 'Keep reviewing' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Review rows' })).toBeInTheDocument();
+    expect(screen.queryByText('Choosing another file clears your 2 choices.')).not.toBeInTheDocument();
+    expect(within(decisionGroup(3)).getByRole('radio', { name: 'Skip this row' })).toHaveAttribute('aria-checked', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Back to file selection' }));
+    await user.click(within(screen.getByText('Choosing another file clears your 2 choices.').closest('[data-slot="alert"]') as HTMLElement).getByRole('button', { name: 'Choose another file' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Select file' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+    await screen.findByRole('heading', { level: 2, name: 'Review rows' });
+    expect(screen.getByText('0 of 2 decided')).toBeInTheDocument();
+  });
+
+  it('the commit sends each similar row’s decision, and Results show Skipped by you', async () => {
+    const commitAction = vi.fn().mockResolvedValue({ ok: true, data: {
+      fileName: 'risk-types.csv', previewDigest: `sha256:${'1'.repeat(64)}`, resultToken: `sha256:${'2'.repeat(64)}`, limits: { maxBytes: 5_242_880, maxRows: 5_000 },
+      summary: { create: 1, update: 1, unchanged: 0, rejected: 0, ambiguous: 0, skipped: 1 },
+      previewChanged: 0,
+      rows: [
+        { rowNumber: 2, naturalKey: 'New risk', state: 'create', documentId: 'risk-type-2', issues: [] },
+        { rowNumber: 3, naturalKey: 'uat-b: core customer billing system', state: 'similar', decision: 'skip', issues: [] },
+        { rowNumber: 4, naturalKey: 'UAT-B:  Core customer billing  platform', state: 'similar', decision: 'update', documentId: 'risk-type-4', issues: [] },
+      ],
+    } });
+    const { user } = await renderSimilar(commitAction);
+    await user.click(within(decisionGroup(4)).getByRole('radio', { name: /^Update/ }));
+    await user.click(within(decisionGroup(3)).getByRole('radio', { name: 'Skip this row' }));
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm import' }));
+    const sent = commitAction.mock.calls[0]?.[0] as FormData;
+    expect(sent.get('decisions')).toBe('{"3":"skip","4":"update"}');
+    expect(sent.get('confirmed')).toBe('true');
+
+    await screen.findByRole('heading', { level: 2, name: 'Import complete' });
+    for (const text of ['Created 1', 'Updated 1', 'Unchanged 0', 'Rejected 0', 'Ambiguous 0', 'Skipped by you 1']) expect(screen.getByText(text)).toBeInTheDocument();
+    const results = screen.getByRole('table', { name: 'Risk Type import results' });
+    const skipped = within(results).getAllByRole('row')[2]!;
+    expect(within(skipped).getByText('Matched by similar name')).toBeInTheDocument();
+    expect(within(skipped).getByText('Skipped by your choice.')).toBeInTheDocument();
+    expect(within(within(results).getAllByRole('row')[3]!).getByRole('link', { name: 'View record' })).toHaveAttribute('href', '/app/admin/risk-types/risk-type-4');
+    // Only the person's own skip was left out, so there is nothing to correct.
+    expect(screen.queryByRole('button', { name: 'Download error report' })).not.toBeInTheDocument();
+  });
+
+  it('returns to Review rows with the similar filter when the commit misses a decision', async () => {
+    const commitAction = vi.fn().mockResolvedValue({
+      ok: false,
+      formError: 'Choose Update or Skip for every row matched by similar name, then confirm again.',
+      refusal: { family: 'step', step: 'decision-missing', message: 'Choose Update or Skip for every row matched by similar name, then confirm again.', action: null },
+    });
+    const { user } = await renderSimilar(commitAction);
+    await user.click(screen.getByRole('button', { name: 'Update all 2' }));
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm import' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Review rows' })).toHaveFocus();
+    expect(screen.getByText('Choose Update or Skip for every row matched by similar name, then confirm again.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Matched by similar name (2)' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('offers the error report at Review with the preview token and at Results with the result token, then saves it', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    const errorReportAction = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }))
+      .mockResolvedValueOnce({ ok: false, refusal: { message: 'We couldn’t prepare the error report.', action: 'Try again' } })
+      .mockResolvedValueOnce({ ok: true, fileName: ISSUES_NAME, contentType: 'text/csv; charset=utf-8', bytes: new Uint8Array([0xef, 0xbb, 0xbf, 0x4e]), rowCount: 1 });
+    const commitAction = vi.fn().mockResolvedValue({ ok: true, data: {
+      fileName: 'risk-types.csv', previewDigest: `sha256:${'1'.repeat(64)}`, resultToken: `sha256:${'2'.repeat(64)}`, limits: { maxBytes: 5_242_880, maxRows: 5_000 },
+      summary: { create: 1, update: 0, unchanged: 0, rejected: 1, ambiguous: 0, skipped: 0 },
+      previewChanged: 0,
+      rows: [
+        { rowNumber: 2, naturalKey: 'Create', state: 'create', documentId: 'risk-type-2', issues: [] },
+        { rowNumber: 3, naturalKey: 'Rejected', state: 'rejected', issues: [{ code: 'REQUIRED_VALUE', field: 'name', message: 'Enter a name.' }] },
+      ],
+    } });
+    const { user } = await renderPreview(loadedFlow!, [
+      { rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] },
+      { rowNumber: 3, naturalKey: 'Rejected', state: 'rejected', issues: ['Enter a name.'] },
+    ], commitAction, {}, { errorReportAction });
+
+    expect(screen.getByText('The rows that weren’t imported, exactly as in your file, with an Issues column. Correct them and import the file again.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Download error report' }));
+    expect(screen.getByRole('button', { name: 'Preparing error report…' })).toHaveAttribute('aria-disabled', 'true');
+    const atReview = errorReportAction.mock.calls[0]?.[0] as FormData;
+    expect(atReview.get('kind')).toBe('risk-types');
+    expect((atReview.get('file') as File).name).toBe('risk-types.csv');
+    expect(atReview.get('previewDigest')).toBe(`sha256:${'1'.repeat(64)}`);
+    expect(atReview.get('resultToken')).toBeNull();
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, 0x4e]);
+    await act(async () => finish({ ok: true, fileName: ISSUES_NAME, contentType: 'text/csv; charset=utf-8', bytes, rowCount: 1 }));
+    expect(importMocks.saveFile).toHaveBeenCalledWith({ fileName: ISSUES_NAME, contentType: 'text/csv; charset=utf-8', bytes });
+    expect(importMocks.toastSuccess).toHaveBeenCalledWith(`Downloaded ${ISSUES_NAME}`, expect.objectContaining({ description: '1 row to correct.' }));
+
+    await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm import' }));
+    await screen.findByRole('heading', { level: 2, name: 'Import completed with rejected rows' });
+    await user.click(screen.getByRole('button', { name: 'Download error report' }));
+    const atResults = errorReportAction.mock.calls[1]?.[0] as FormData;
+    expect(atResults.get('resultToken')).toBe(`sha256:${'2'.repeat(64)}`);
+    expect(atResults.get('previewDigest')).toBeNull();
+    expect(await screen.findByText('We couldn’t prepare the error report.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(importMocks.saveFile).toHaveBeenCalledTimes(1);
+
+    // FE4-04 (WCAG 2.4.3): Try again removes itself, so focus moves to the error report it retried, never the page body.
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(importMocks.saveFile).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download error report' })).toHaveFocus());
+  });
+
+  /* FE4-05 (19-UI-SPEC §5.5, §9 G-4): each summary figure selects its state's rows; a zero figure is plain text. */
+  it('selects a state’s rows from its summary figure, and leaves a zero figure plain', async () => {
+    const { user } = await renderPreview(loadedFlow!, [
+      { rowNumber: 2, naturalKey: 'Created row', state: 'create', issues: [] },
+      { rowNumber: 3, naturalKey: 'First rejected', state: 'rejected', issues: ['Enter a name.'] },
+      { rowNumber: 4, naturalKey: 'Second rejected', state: 'rejected', issues: ['Enter a name.'] },
+    ], vi.fn(), {}, { errorReportAction: vi.fn() });
+
+    const figure = screen.getByRole('button', { name: '2 Rejected' });
+    expect(figure).toHaveTextContent(/^2$/);
+    expect(figure).toHaveAttribute('aria-pressed', 'false');
+    await user.click(figure);
+
+    const table = previewTable();
+    expect(within(table).getByText('First rejected')).toBeInTheDocument();
+    expect(within(table).getByText('Second rejected')).toBeInTheDocument();
+    expect(within(table).queryByText('Created row')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rejected (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '2 Rejected' })).toHaveAttribute('aria-pressed', 'true');
+    // The four states with no rows show their 0 as plain text.
+    expect(screen.queryAllByRole('button', { name: /^0 / })).toHaveLength(0);
+    expect(screen.getAllByText(/^0$/)).toHaveLength(4);
+  });
+
+  it('offers no error report at Review when every row will be written or is unchanged', async () => {
+    await renderPreview(loadedFlow!, [
+      { rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] },
+      { rowNumber: 3, naturalKey: 'Unchanged', state: 'unchanged', issues: [] },
+    ], vi.fn(), {}, { errorReportAction: vi.fn() });
+    expect(screen.queryByRole('button', { name: 'Download error report' })).not.toBeInTheDocument();
+  });
+
+  /* 19-UI-REVIEW (pilot ruling, 2026-10-17): the import flow's audit warnings, each proved before its fix. */
+  describe('the UI review (19-UI-REVIEW)', () => {
+    it('UI-01 keeps focus on a pending template button, read-only by aria-disabled, and a second press sends nothing', async () => {
+      const user = userEvent.setup();
+      let finish: (value: unknown) => void = () => undefined;
+      const templateAction = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+      const Flow = loadedFlow!;
+      render(<Flow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} templateAction={templateAction} />);
+
+      await user.click(screen.getByRole('button', { name: 'Download Excel template' }));
+      const pending = screen.getByRole('button', { name: 'Downloading…' });
+      expect(pending).toBeEnabled();
+      expect(pending).toHaveAttribute('aria-disabled', 'true');
+      expect(pending).toHaveFocus();
+      const other = screen.getByRole('button', { name: 'Download CSV template' });
+      expect(other).toBeEnabled();
+      expect(other).toHaveAttribute('aria-disabled', 'true');
+      await user.click(pending);
+      await user.click(other);
+      expect(templateAction).toHaveBeenCalledTimes(1);
+
+      await act(async () => finish({ ok: true, fileName: 'risk-types-import-template.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', bytes: new Uint8Array([0x50]) }));
+      expect(screen.getByRole('button', { name: 'Download Excel template' })).not.toHaveAttribute('aria-disabled');
+      expect(screen.getByRole('button', { name: 'Download CSV template' })).toHaveFocus();
+    });
+
+    it('UI-01 and UI-11 keep focus on a pending error report button, and announce its refusal', async () => {
+      let finish: (value: unknown) => void = () => undefined;
+      const errorReportAction = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+      const { user } = await renderPreview(loadedFlow!, [
+        { rowNumber: 2, naturalKey: 'Create', state: 'create', issues: [] },
+        { rowNumber: 3, naturalKey: 'Rejected', state: 'rejected', issues: ['Enter a name.'] },
+      ], vi.fn(), {}, { errorReportAction });
+
+      await user.click(screen.getByRole('button', { name: 'Download error report' }));
+      const pending = screen.getByRole('button', { name: 'Preparing error report…' });
+      expect(pending).toBeEnabled();
+      expect(pending).toHaveFocus();
+      await user.click(pending);
+      expect(errorReportAction).toHaveBeenCalledTimes(1);
+
+      await act(async () => finish({ ok: false, refusal: { message: 'We couldn’t prepare the error report.', action: 'Try again' } }));
+      expect(screen.getByText('We couldn’t prepare the error report.').closest('[role="alert"]')).not.toBeNull();
+    });
+
+    it('UI-02 and UI-03 make the similar panel no alert, and describe each undecided group by the gate line', async () => {
+      const { user } = await renderSimilar();
+      const panel = screen.getByText('2 rows match an existing name only by capitals or spacing').closest('[data-slot="alert"]') as HTMLElement;
+      expect(panel).not.toHaveAttribute('role', 'alert');
+      expect(within(panel).getByText('0 of 2 decided')).toHaveAttribute('aria-live', 'polite');
+
+      await user.click(screen.getByRole('button', { name: 'Continue to confirmation' }));
+      const gate = screen.getByText('Choose Update or Skip for 2 more rows.').closest('p') as HTMLElement;
+      expect(gate.id).not.toBe('');
+      expect(decisionGroup(3).getAttribute('aria-describedby')?.split(' ')).toContain(gate.id);
+      expect(decisionGroup(4).getAttribute('aria-describedby')?.split(' ')).toContain(gate.id);
+
+      await user.click(within(decisionGroup(3)).getByRole('radio', { name: `Update “${STORED}”` }));
+      expect(decisionGroup(3).getAttribute('aria-describedby') ?? '').not.toContain(gate.id);
+      expect(decisionGroup(4).getAttribute('aria-describedby')?.split(' ')).toContain(gate.id);
+    });
+
+    it('UI-07 to UI-10 keep the review on the §3.9 and §3.10 scales', async () => {
+      await renderSimilar();
+      // UI-07: a summary figure is the 20px heading step, as a button and as plain text.
+      const figure = screen.getByRole('button', { name: '1 Create' });
+      expect(figure).toHaveClass('text-heading-md');
+      expect(figure).not.toHaveClass('text-2xl');
+      for (const zero of screen.getAllByText(/^0$/)) expect(zero).toHaveClass('text-heading-md');
+      // UI-08: a phone card's File row label is weight 500, never a 700 strong.
+      const cards = screen.getAllByText(/^File row \d+$/).filter((label) => label.closest('[data-slot="csv-import-mobile"]'));
+      expect(cards.length).toBeGreaterThan(0);
+      for (const label of cards) {
+        expect(label.tagName).not.toBe('STRONG');
+        expect(label).toHaveClass('font-medium');
+      }
+      // UI-09: the step body's blocks are 24px apart.
+      expect(screen.getByRole('heading', { level: 2, name: 'Review rows' }).closest('[data-slot="card"]')?.querySelector('[data-slot="card-content"]')).toHaveClass('gap-6');
+      // UI-10: a similar row's decision sits 16px below its details.
+      expect(decisionGroup(3)).toHaveClass('mt-4');
+    });
+
+    it('UI-11 and UI-12 announce Choose one file to check. with its icon, and name the file field as a group', async () => {
+      const user = userEvent.setup();
+      const Flow = loadedFlow!;
+      render(<Flow kind="risk-types" previewAction={vi.fn()} commitAction={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Choose file' }));
+
+      const group = screen.getByRole('group', { name: 'File to import' });
+      expect(within(group).getByRole('button', { name: 'Choose file' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Validate and preview' }));
+      const line = screen.getByText('Choose one file to check.');
+      expect(line.closest('[role="alert"]')).not.toBeNull();
+      expect(line.closest('[role="alert"]')?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    });
   });
 });
 
@@ -986,7 +1645,7 @@ describe('D-29 Risk Type control search on the server', () => {
 });
 
 describe('ADMIN-01 capability-gated Administration discovery', () => {
-  it('grants and renders the Administration group only for Bob', async () => {
+  it('grants and renders the Reference data section only for Bob', async () => {
     const [{ DevelopmentCapabilityAdapter }, { CapabilityNavigation }] = await Promise.all([
       import('@/lib/capabilities/development-capabilities'),
       import('@/components/shell/capability-navigation'),
@@ -997,13 +1656,13 @@ describe('ADMIN-01 capability-gated Administration discovery', () => {
     expect(bob.has('administration:manage' as never)).toBe(true);
     expect(jane.has('administration:manage' as never)).toBe(false);
     const view = render(<CapabilityNavigation granted={bob} />);
-    expect(screen.getByRole('group', { name: 'Administration' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reference data' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Risk Types' })).toHaveAttribute('href', '/app/admin/risk-types');
     expect(screen.getByRole('link', { name: 'Controls' })).toHaveAttribute('href', '/app/admin/controls');
     expect(screen.getByRole('link', { name: 'Information Systems' })).toHaveAttribute('href', '/app/admin/information-systems');
     expect(screen.getByRole('link', { name: 'Information Assets' })).toHaveAttribute('href', '/app/admin/information-assets');
     view.rerender(<CapabilityNavigation granted={jane} />);
-    expect(screen.queryByRole('group', { name: 'Administration' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Reference data' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Risk Types' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Information Systems' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Information Assets' })).not.toBeInTheDocument();

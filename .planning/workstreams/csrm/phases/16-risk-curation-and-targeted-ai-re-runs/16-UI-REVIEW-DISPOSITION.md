@@ -1,0 +1,31 @@
+---
+phase: "16"
+status: complete
+implementation_blockers: 0
+verification_warnings: 2
+ui_review: 16-UI-REVIEW.md
+rulings: the stage B worker's, 2026-10-16, for the pilot to confirm
+---
+
+# Phase 16 UI review disposition
+
+The independent UI audit (`16-UI-REVIEW.md`, 2026-10-16, committed in `a7e032d7`) scored 21/24 against `16-UI-SPEC.md` (with its R1 and R4 amendments) and the design direction (X-27 to X-29). It was a code-only audit at `14bd22a8`, after the stage A code review: no server was started, so nothing was rendered. It raised one blocker, UI-01, and six warnings, UI-02 to UI-07.
+
+The blocker and the one warning that departs from the contract (UI-03) are fixed test-first: the new test failed on the code before the fix and passes after it, and each row names the test and its failure. Two warnings (UI-02, UI-04) are not changed, with the evidence that the value is the shipped one the contract keeps. UI-06 follows the shipped X-13 pattern. The two that need a browser or a person (UI-05, UI-07) are operator follow-ups in `16-UAT.md`; the final gate's Playwright run (axe at 375 and 1440 on every Phase 16 state) is their automated backstop.
+
+Focused checks after the fixes:
+- web typecheck: clean.
+- `src/features/assessments`, `src/features/risk-curation`, `src/features/ai-assistance` and `src/components`: 85 files, 1,476 tests, all passed (after UI-01); `src/features/risk-curation` and `src/features/assessments`: 812 tests, all passed (after UI-03).
+- The final full gate (`16-15-SUMMARY.md`, "Phase gate (final run, after the code review)") runs every suite once at one HEAD after these fixes.
+
+| Finding | Disposition | Evidence and next action |
+|---|---|---|
+| UI-01 (BLOCKER) | Fixed, `72b875ed` (RED), `45da8c1e` (GREEN) | The Accessibility contract (4.1.2) asks for `aria-expanded` and `aria-controls` on every toggle. `Withdraw risk` and `Reinstate risk` now name their reason form, whose id `curationFormId(act, riskId)` (`risk-{id}-{withdraw\|reinstate}-form`) sits on the `<form>` in both layouts, so the bottom sheet below 768px carries it too. Both `Reject remaining` buttons (the suggestions group and the AI rewrite) name a holder, `rejectRemainingId(runId)`, that stays in the page and is `hidden` while collapsed, so the reference always resolves (the withdrawn card's `Show details` pattern). The compact `Show sources` toggle became `SourcesToggle`, which owns a `useId`, because both comparison layouts are in the markup and a shared id would repeat. Tests: `risk-editor.test.tsx :: names the reason form each card action opens: Withdraw risk and Reinstate risk carry aria-controls (UI-01, …)` failed before with `WITHDRAW_NO_ARIA_CONTROLS: expected null to be truthy`; `ai-proposals-section.test.tsx :: names the reason row Reject remaining opens, present while it is collapsed (UI-01, …)` and `risk-rewrite.test.tsx :: names what Reject remaining and each Show sources reveal, one target per layout (UI-01, …)` failed before with `REJECT_REMAINING_NO_ARIA_CONTROLS`. The last also requires every `Show sources` target to be unique and present. All three pass after. No copy changed. These components load only on `/app/review/assessments/{documentId}`, so the two near-limit routes are untouched. |
+| UI-02 | Not changed (shipped value) | `gap-5` is the Phase 10 Risk list's own spacing: `assessment-editor.tsx` at `PHASE_16_BASE` (`01dc4118`, line 395) is `grid min-w-0 gap-5`, and FE3-01 split that list into the two `Show` lists, which keep it. 20px is a §3.9 step (the direction's scale is 2, 4, 8, 12, 16, 20, 24 …), so it adds no value, and 16-UI-SPEC's Spacing keeps "the Risk card" at its shipped spacing. Changing it would change the rhythm of every active Risk card from Phase 10, outside this phase's contract. |
+| UI-03 | Fixed, `4e98f71f` (RED), `f8720df4` (GREEN) | The withdrawn card is new in this phase (X-27, §6.4), and the Spacing table sets 16px "between a card's blocks". `withdrawn-risk-card.tsx` is `grid gap-4`. `withdrawn-risk-card.test.tsx :: separates the card’s blocks by 16px, as the Spacing table asks (UI-03)` failed before (`toHaveClass("grid gap-4")` received the `gap-3` classes) and passes after. |
+| UI-04 | Not changed (shipped pattern) | The error lines follow the app's shipped field-error line, icon and text 6px apart: the source-owned shadcn `FormMessage` (`components/ui/form.tsx:151`, `flex items-start gap-1.5 … text-destructive`), `SaveStatus`'s failure line (`save-status.tsx:63`) and Phase 15's instruction field (`instruction-field.tsx:86`), all at `01dc4118`. 16-UI-SPEC's 4px row covers eyebrows, notes and badges, and "existing primitives keep their shipped spacing". If the direction should move every error line to 4px, that is an app-wide change to the shared primitive for a shared-UI pass, not a Phase 16 one. |
+| UI-05 | Operator follow-up (`16-UAT.md` test 3) | NVDA and keyboard-only behaviour cannot be proved from code. Automated backstops already green at the stage A gate: the keyboard paths in the unit tests (Enter and Escape on the reason forms, focus after withdraw, reinstate, Undo and decisions) and `risk-curation.spec.ts` with axe at 375 and 1440. |
+| UI-06 | Not changed (shipped X-13 pattern) | `risk-history-frame.tsx` builds the X-13 full-screen-on-phone sheet from the shadcn source's own Radix primitive, as Phase 12's X-13 frame does (`ai-run-sheet-frame.tsx`, at `01dc4118`); the source-owned `Sheet` has no full-screen-below-768px variant, and §8.1 names the X-13 sheet. Its `animate-in`, `fade-*` and `slide-*` classes are the inert ones `.planning/WINDOWS.md` entry 8 records (14-UI-REVIEW UI-02) for the shared-UI pass that corrects "the other sheets and dialogs that use the same inert classes"; this frame is one of them. |
+| UI-07 | Operator follow-up (`16-UAT.md` test 4) | Reflow and the rendered hierarchy need a browser. The final gate's Playwright run exercises every Phase 16 surface at 375 and 1440 with axe, and the visual review at 375, 768 and 1440 is listed for the operator, as Phase 15's was. |
+
+**Pilot ruling (2026-10-16):** the UI-01 and UI-03 fixes are accepted. UI-02, UI-04 and UI-06 stay unchanged on the evidence above; the app-wide error-line and sheet-animation questions belong to the shared-UI pass in `.planning/WINDOWS.md`. The stage B leave-warning copy is approved as written.

@@ -126,17 +126,17 @@ async function expectStateMeaning(page: Page, route: string, state: UiState, wid
     // Since 06.6 every list surface renders its states through the shared primitives, so
     // they share one recovery contract: a "Try again" button that refreshes in place, and a
     // "Go to Home" link on permission denial. Home is where that link leads, so neither
-    // Home offers it: both refuse with "Return to sign in" (UI-D19); the analyst Home's error
-    // retries in place, and the Requestor Home keeps its own recovery link until plan 11-09.
+    // Home offers it: both refuse with "Return to sign in" (UI-D19), and both Homes' errors
+    // retry in place (E17, UI-SPEC §5.4). `actor` only names whose Home /app is in the messages.
     // Only assert an href when the affordance is a link.
-    const homeRecovery = actor === 'Requestor' ? { name: 'View My Requests', href: '/app/requests' } : { name: 'Try again' };
+    const where = route === '/app' ? `${route} (${actor}’s Home)` : route;
     const recovery: { name: string; href?: string } | undefined = route === '/app'
-      ? state === 'permission' ? { name: 'Return to sign in', href: '/sign-in' } : homeRecovery
+      ? state === 'permission' ? { name: 'Return to sign in', href: '/sign-in' } : { name: 'Try again' }
       : state === 'permission' ? { name: 'Go to Home', href: '/app' } : { name: 'Try again' };
     if (recovery?.href) {
-      await expect(boundary.getByRole('link', { name: recovery.name }), `${route} ${state} ${width}px preserves its visible recovery link`).toHaveAttribute('href', recovery.href);
+      await expect(boundary.getByRole('link', { name: recovery.name }), `${where} ${state} ${width}px preserves its visible recovery link`).toHaveAttribute('href', recovery.href);
     } else if (recovery) {
-      await expect(boundary.getByRole('button', { name: recovery.name }), `${route} ${state} ${width}px preserves its visible recovery control`).toBeVisible();
+      await expect(boundary.getByRole('button', { name: recovery.name }), `${where} ${state} ${width}px preserves its visible recovery control`).toBeVisible();
     } else {
       await expect(boundary.getByRole('link'), `${route} ${state} ${width}px deliberately has no recovery link`).toHaveCount(0);
     }
@@ -164,7 +164,7 @@ test.describe('dashboard state matrix', () => {
     await signInAsRequestor(page);
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 }); await page.goto('/app');
-      await expect(page.getByRole('region', { name: 'My Assessment Requests' }), `the Requestor Home renders its content at ${width}px before its type scan`).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Needs your action', exact: true }), `the Requestor Home renders its content at ${width}px before its type scan`).toBeVisible();
       expect(await typographyViolations(page), `the Requestor Home at ${width}px contains typography outside the document contract`).toEqual([]);
     }
     for (const width of viewports) for (const state of states) {
@@ -202,18 +202,17 @@ test.describe('dashboard state matrix', () => {
     await signInAsRequestor(page);
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/app?__e2eState=populated&__e2ePartial=draft-requests-error');
-      // The widget section carries aria-labelledby, so address it as a labelled region.
-      // Walking up from the heading is off by one - it nests h2 > div > div > CardHeader >
-      // section, so three hops land on CardHeader and miss the alert in its CardContent sibling.
-      const failedWidget = page.getByRole('region', { name: 'Draft requests' });
-      await expect(failedWidget.getByRole('alert'), `partial dashboard failure is an alert at ${width}px`).toBeVisible();
-      // The failed widget renders the shared compact error state; the in-page skip link was
-      // retired in 06.6 because the remaining widgets follow it directly.
-      await expect(failedWidget.locator('[data-slot="state"][data-state-kind="error"]'), `failed widget uses the shared error state at ${width}px`).toBeVisible();
-      await expect(failedWidget.locator('a[href*="/app/requests/"]'), 'failed widget must not fabricate a request record').toHaveCount(0);
-      await expect(page.getByRole('heading', { name: 'Questionnaires in progress' }), `safe sibling remains visible at ${width}px`).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Recently released assessments' }), `safe sibling remains visible at ${width}px`).toBeVisible();
+      await page.goto('/app?__e2eState=populated&__e2ePartial=requestor-home-with-analyst-error');
+      // Each Home section carries aria-labelledby, so address it as a labelled region (E15, D-23).
+      const failedWidget = page.getByRole('region', { name: 'With the Security Analyst', exact: true });
+      await expect(failedWidget.getByRole('alert'), `partial Home failure is an alert at ${width}px`).toBeVisible();
+      await expect(failedWidget.getByRole('alert')).toContainText('We couldn’t load requests with the Security Analyst');
+      // The failed section renders the shared compact error state with Try again.
+      await expect(failedWidget.locator('[data-slot="state"][data-state-kind="error"]'), `failed section uses the shared error state at ${width}px`).toBeVisible();
+      await expect(failedWidget.getByRole('button', { name: 'Try again' })).toBeVisible();
+      await expect(failedWidget.locator('a[href*="/app/requests/"]'), 'failed section must not fabricate a request record').toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Needs your action', exact: true }), `safe sibling remains visible at ${width}px`).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Released assessments', exact: true }), `safe sibling remains visible at ${width}px`).toBeVisible();
       await expectNoSeriousAxeViolations(page);
     }
   });
@@ -232,10 +231,11 @@ test.describe('dashboard state matrix', () => {
       await expect(page.locator('[data-state-kind="error"]'), `only Top alerts failed at ${width}px`).toHaveCount(1);
       const reviewQueue = page.getByRole('region', { name: 'Review queue', exact: true });
       await expect(reviewQueue, `the Review queue sibling remains visible at ${width}px`).toBeVisible();
-      await expect(reviewQueue.getByRole('link'), `the Review queue sibling keeps its queue rows at ${width}px`).toHaveCount(6);
+      // Phase 13 (D-15): the Assigned to you group's four rows and Waiting for pick-up join the six team rows.
+      await expect(reviewQueue.getByRole('link'), `the Review queue sibling keeps its queue rows at ${width}px`).toHaveCount(11);
       const riskExposure = page.getByRole('region', { name: 'Risk exposure', exact: true });
       await expect(riskExposure, `the Risk exposure sibling remains visible at ${width}px`).toBeVisible();
-      await expect(riskExposure.getByRole('list', { name: 'Open contextual Risks by residual rating' }), `the Risk exposure sibling keeps its figures at ${width}px`).toBeVisible();
+      await expect(riskExposure.getByRole('list', { name: 'Released open Risks by residual rating' }), `the Risk exposure sibling keeps its figures at ${width}px`).toBeVisible();
       await expectNoSeriousAxeViolations(page);
     }
   });
@@ -301,17 +301,30 @@ test.describe('design-system type contract', () => {
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 }); await page.goto('/app');
       const roleNote = page.locator('.role-switcher p'); await expect(roleNote).toHaveCSS('font-size', '12px'); await expect(roleNote).toHaveCSS('font-weight', '400');
-      for (const rating of ['Low', 'Moderate', 'High', 'Critical']) {
-        const count = page.getByLabel(new RegExp(`${rating} released assessments: \\d+$`)).locator('span').last();
+      // E16: the rating chips (UI-SPEC §5.2, §8.1). A count above zero is a link named
+      // "{Rating}: {n} released risk {assessment|assessments}"; a zero is plain.
+      const chips = page.getByRole('list', { name: 'Released assessments by overall rating', exact: true }).getByRole('listitem');
+      await expect(chips).toHaveCount(4);
+      for (const [index, rating] of ['Low', 'Moderate', 'High', 'Critical'].entries()) {
+        const chip = chips.nth(index);
+        const count = chip.locator('[data-slot="rating-count"]');
         await expect(count).toHaveCSS('font-size', '14px'); await expect(count).toHaveCSS('font-weight', '500'); await expect(count).toHaveCSS('font-variant-numeric', /tabular-nums/);
+        const value = Number(((await count.textContent()) ?? '').replace(/[^\d]/g, ''));
+        const link = chip.getByRole('link');
+        if (value > 0) {
+          await expect(link).toHaveAccessibleName(`${rating}: ${value} released risk ${value === 1 ? 'assessment' : 'assessments'}`);
+          await expect(link).toHaveAttribute('href', `/app/assessments?overallRating=${rating}`);
+        } else {
+          await expect(link, `a zero ${rating} count is plain`).toHaveCount(0);
+        }
       }
       await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
     }
     await signIn(page);
     for (const width of viewports) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/app/admin/controls'); const administration = page.locator('aside.sidebar nav').getByText('Administration', { exact: true });
-      await expect(administration).toHaveCSS('font-size', '11px'); await expect(administration).toHaveCSS('text-transform', 'uppercase');
+      await page.goto('/app/admin/controls'); const referenceData = page.locator('aside.sidebar nav').getByText('Reference data', { exact: true });
+      await expect(referenceData).toHaveCSS('font-size', '11px'); await expect(referenceData).toHaveCSS('text-transform', 'uppercase');
       // DataTable renders its mobile card variant below md, so there is no table to assert
       // at 375px by design. The header repair is a desktop-table concern only.
       if (width >= 768) {
@@ -855,7 +868,7 @@ test.describe('components at the direction values', () => {
     for (const width of [375, 1440] as const) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/app/requests/new');
-      await expect(page.getByRole('heading', { level: 1, name: 'New assessment request' }), `the new request form shows at ${width}px`).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'New request', exact: true }), `the new request form shows at ${width}px`).toBeVisible();
       const { fields } = await expectTypeTokens(page, `/app/requests/new at ${width}px`);
       for (const tag of ['input', 'textarea', 'select'] as const) {
         expect(fields.some((field) => field.tag === tag), `the new request form shows a ${tag} at ${width}px`).toBe(true);
@@ -885,7 +898,7 @@ test.describe('components at the direction values', () => {
       await page.goto('/app/admin/risk-types');
       const actions = [
         header.getByRole('link', { name: 'Create Risk Type', exact: true }),
-        header.getByRole('link', { name: 'Import CSV', exact: true }),
+        header.getByRole('link', { name: 'Import', exact: true }),
       ];
       for (const action of actions) await expect(action, `the Risk Types header action shows at ${width}px`).toBeVisible();
       const headerBox = await header.boundingBox();

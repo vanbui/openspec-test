@@ -123,7 +123,8 @@ coverage
 
 .env
 license.txt
-exports
+# Strapi's data-transfer output at the app root only: src/csrm/exports is source (19-04).
+/exports
 .strapi
 dist
 build

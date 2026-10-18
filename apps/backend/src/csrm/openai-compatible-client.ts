@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { isDevelopmentRuntime } from "./ai/data-policy";
 
 export type CsrmAiOperation = "assessmentDraft" | "questionnaireGeneration";
 export type CsrmAiOperationConfig = {
@@ -24,7 +25,7 @@ export class CsrmAiProviderError extends Error {
 type AiConfig = Omit<CsrmAiOperationConfig, "baseURL" | "apiKey" | "model" | "maxOutputTokens"> & Record<CsrmAiOperation, Pick<CsrmAiOperationConfig, "baseURL" | "apiKey" | "model" | "maxOutputTokens">>;
 
 export function logCompletionDiagnostic(config: CsrmAiOperationConfig, payload: Record<string, unknown>) {
-  if (config.completionTranscriptDiagnostics) globalThis.strapi.log.info(JSON.stringify(payload));
+  if (config.completionTranscriptDiagnostics && isDevelopmentRuntime()) globalThis.strapi.log.info(JSON.stringify(payload));
 }
 
 function diagnosticProviderError(error: unknown): Record<string, unknown> {

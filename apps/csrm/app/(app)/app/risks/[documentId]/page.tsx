@@ -9,6 +9,7 @@ import type { RequestRelationSummary } from '@/features/requests/request-domain'
 import { getRequest } from '@/features/requests/request-service';
 import { getSessionAdapter } from '@/lib/auth/development-session-adapter';
 import { can, type Capability } from '@/lib/capabilities/capability-adapter';
+import { draftOwnerKey } from '@/lib/session-drafts/draft-owner-key';
 
 type RiskDetailsPageProps = { params: Promise<{ documentId: string }> };
 
@@ -49,7 +50,9 @@ export async function RiskDetailsContent({ params }: RiskDetailsPageProps) {
   if (result.error?.status === 403) return <RiskDetails state="permission" />;
   if (result.error?.status === 404) return <RiskDetails state="not-available" />;
   if (result.error) return <RiskDetails state="error" />;
-  if (result.data.parentLock === 'released') return <RiskDetails detail={result.data} />;
+  const ownerKey = session ? draftOwnerKey(session) : null;
+  // A released or withdrawn Risk is read-only (D-45), so it needs no editor options and reads nothing more.
+  if (result.data.parentLock === 'released' || result.data.withdrawal) return <RiskDetails detail={result.data} ownerKey={ownerKey} />;
 
   // No option list is loaded whole (D-28): the pickers search the control library and the inventories, the Risk
   // Types carry their applicable controls (D-31), and the Risk's own relations name its system and asset (D-30).
@@ -69,6 +72,7 @@ export async function RiskDetailsContent({ params }: RiskDetailsPageProps) {
   return (
     <RiskDetails
       detail={result.data}
+      ownerKey={ownerKey}
       options={{
         riskTypes: riskTypes.data ?? [],
         users,

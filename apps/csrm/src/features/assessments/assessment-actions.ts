@@ -6,7 +6,9 @@ import type { RelationPickerItem } from '@/components/csrm/relation-picker';
 import { listAdministrationControls } from '@/features/administration/administration-service';
 import { parseAdministrationQuery } from '@/features/administration/administration-schema';
 import type { ConflictReason } from '@/lib/api/conflict-reasons';
-import { refusalMessage } from '@/lib/api/refusal-copy';
+import { assessmentEditRefusalMessage, refusalMessage } from '@/lib/api/refusal-copy';
+import { aiProposalStartRefusalCopy } from '@/features/questionnaire-ai/questionnaire-ai-refusal-copy';
+import { riskCurationRefusal } from '@/features/risk-curation/risk-curation-refusal-copy';
 import { generationFailureMessage, type GenerationOperation, type GenerationSubject } from './generation-failure-copy';
 
 import {
@@ -15,6 +17,7 @@ import {
   deleteControlImplementation,
   getAssessmentDraftJob,
   getAnalystAssessment,
+  listControlImplementations,
   releaseAssessment,
   searchActiveUsers,
   retryAssessmentDraftJob,
@@ -64,7 +67,12 @@ const requestIdInputSchema = z.object({ requestId: documentIdSchema }).strict();
 const questionnaireGenerationInputSchema = z.object({
   requestId: documentIdSchema,
   replaceUnansweredQuestionnaire: z.boolean(),
+  /* Phase 15 D-12, D-18: no length cap here, so Strapi's INSTRUCTION_TOO_LONG reaches the field; a blank one is none. */
+  instruction: z.string().optional().transform((value) => (value === undefined || value.trim() === '' ? undefined : value)),
 }).strict();
+
+/* Phase 15 (15-UI-SPEC §13 Q1 and family I): the instruction refusals, shown beside the field. */
+const INSTRUCTION_REASONS: ReadonlySet<string> = new Set(['INSTRUCTION_TOO_LONG', 'INSTRUCTION_CHARACTERS_NOT_ALLOWED', 'INSTRUCTION_REPEATS_REQUESTOR_TEXT']);
 const assessmentInputSchema = z.object({
   assessmentId: documentIdSchema,
   values: assessmentUpdateInputSchema,
@@ -140,16 +148,22 @@ function serviceFailure(
   status: number | undefined,
   values?: Record<string, unknown>,
   release = false,
+  reason?: ConflictReason,
 ): AssessmentServerActionResult<never> {
   let formError: string;
+  /* FE3-05 (§6.5): a Risk withdrawn meanwhile names its reason, so the page reads the Risk again. */
+  const withdrawn = status === 409 && !release && reason === 'RISK_WITHDRAWN';
   if (status === 400) formError = 'The submitted assessment data is invalid. Check the fields and try again.';
   else if (status === 403) formError = 'You do not have permission to change this assessment.';
   else if (status === 404) formError = 'This assessment is no longer available.';
   else if (status === 409 && release) formError = 'This assessment changed or is not ready for release. Reload and try again.';
-  else if (status === 409) formError = 'This assessment changed. Reload and try again.';
+  /* Phase 16 §6.5 (16-UI-SPEC §13 R1): an edit or control change on a Risk withdrawn meanwhile says so. Server-only copy. */
+  else if (withdrawn) formError = riskCurationRefusal({ status, reason }, 'edit').message;
+  /* WR-103: a refusal a reload can't fix reads its own sentence. */
+  else if (status === 409) formError = assessmentEditRefusalMessage(reason) ?? 'This assessment changed. Reload and try again.';
   else formError = 'The assessment service is unavailable. Please try again later.';
 
-  return { ok: false, ...(values ? { values } : {}), formError };
+  return { ok: false, ...(values ? { values } : {}), formError, ...(withdrawn ? { reason } : {}) };
 }
 
 /**
@@ -164,6 +178,19 @@ function generationFailure(
 ): AssessmentServerActionResult<never> {
   if (error.status !== 409) return generationReadFailure(operation, error.status, subject);
   return { ok: false, formError: refusalMessage(operation, error.reason), ...(error.reason ? { reason: error.reason } : {}) };
+}
+
+/*
+ * Phase 15 (D-18, D-32): a refused instruction reads Q1's sentence, kept beside the field; a 403 OWN_REQUEST reads family
+ * I's sentence for an instruction on a request the analyst raised. Anything else reads as before.
+ */
+function instructionRefusal(error: { status?: number; reason?: ConflictReason }, instruction: string | undefined): AssessmentServerActionResult<never> | null {
+  const { status, reason } = error;
+  if (reason !== undefined && INSTRUCTION_REASONS.has(reason)) {
+    return { ok: false, formError: aiProposalStartRefusalCopy({ status, reason }, instruction === undefined ? {} : { instructionLength: instruction.length }).text, reason };
+  }
+  if (status === 403 && reason === 'OWN_REQUEST') return { ok: false, formError: refusalMessage('questionnaireGeneration', reason), reason };
+  return null;
 }
 
 /** A generation status check that failed: worded about what it reads (WR-205). */
@@ -218,6 +245,15 @@ export async function refreshAnalystAssessmentAction(input: unknown): Promise<As
   return { ok: true, data: result.data };
 }
 
+/* A Risk's mitigation controls, read again after an AI suggestion adds or removes one (12-UI-SPEC §5). */
+export async function listControlImplementationsAction(input: unknown): Promise<AssessmentServerActionResult<readonly ControlImplementation[]>> {
+  const parsed = z.object({ riskId: documentIdSchema }).strict().safeParse(input);
+  if (!parsed.success) return validationFailure(parsed.error, input);
+  const result = await listControlImplementations(parsed.data.riskId);
+  if (result.error) return serviceFailure(result.error.status);
+  return { ok: true, data: result.data ?? [] };
+}
+
 export async function retryAssessmentDraftJobAction(input: unknown): Promise<AssessmentServerActionResult<AssessmentDraftJob>> {
   const parsed = jobIdInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
@@ -236,8 +272,11 @@ function revalidateQuestionnaireGeneration(requestId: string, questionnaireId?: 
 export async function startQuestionnaireGenerationAction(input: unknown): Promise<AssessmentServerActionResult<QuestionnaireGenerationJob>> {
   const parsed = questionnaireGenerationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
-  const result = await startQuestionnaireGeneration(parsed.data.requestId, parsed.data.replaceUnansweredQuestionnaire);
-  if (result.error) return generationFailure('questionnaireGeneration', result.error, 'record');
+  const { requestId, replaceUnansweredQuestionnaire, instruction } = parsed.data;
+  const result = instruction === undefined
+    ? await startQuestionnaireGeneration(requestId, replaceUnansweredQuestionnaire)
+    : await startQuestionnaireGeneration(requestId, replaceUnansweredQuestionnaire, instruction);
+  if (result.error) return instructionRefusal(result.error, instruction) ?? generationFailure('questionnaireGeneration', result.error, 'record');
   revalidateQuestionnaireGeneration(parsed.data.requestId, result.data.status === 'completed' ? result.data.questionnaire.documentId : undefined);
   return { ok: true, data: result.data };
 }
@@ -311,7 +350,7 @@ export async function saveAssessmentAction(input: unknown): Promise<AssessmentSe
   const parsed = assessmentInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await updateAssessment(parsed.data.assessmentId, parsed.data.values);
-  if (result.error) return serviceFailure(result.error.status, parsed.data.values);
+  if (result.error) return serviceFailure(result.error.status, parsed.data.values, false, result.error.reason);
   revalidateAssessmentPages(parsed.data.assessmentId);
   return { ok: true, data: result.data };
 }
@@ -329,7 +368,7 @@ export async function updateRiskAction(input: unknown): Promise<AssessmentServer
   const parsed = updateRiskInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await updateRisk(parsed.data.riskId, parsed.data.values);
-  if (result.error) return serviceFailure(result.error.status, parsed.data.values);
+  if (result.error) return serviceFailure(result.error.status, parsed.data.values, false, result.error.reason);
   revalidateAssessmentPages(parsed.data.assessmentId);
   return { ok: true, data: result.data };
 }
@@ -338,7 +377,7 @@ export async function createControlImplementationAction(input: unknown): Promise
   const parsed = createControlImplementationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await createControlImplementation(parsed.data.riskId, parsed.data.values);
-  if (result.error) return serviceFailure(result.error.status, parsed.data.values);
+  if (result.error) return serviceFailure(result.error.status, parsed.data.values, false, result.error.reason);
   revalidateAssessmentPages(parsed.data.assessmentId);
   return { ok: true, data: result.data };
 }
@@ -347,7 +386,7 @@ export async function updateControlImplementationAction(input: unknown): Promise
   const parsed = updateControlImplementationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await updateControlImplementation(parsed.data.implementationId, parsed.data.values);
-  if (result.error) return serviceFailure(result.error.status, parsed.data.values);
+  if (result.error) return serviceFailure(result.error.status, parsed.data.values, false, result.error.reason);
   revalidateAssessmentPages(parsed.data.assessmentId);
   return { ok: true, data: result.data };
 }
@@ -356,7 +395,8 @@ export async function deleteControlImplementationAction(input: unknown): Promise
   const parsed = deleteControlImplementationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailure(parsed.error, input);
   const result = await deleteControlImplementation(parsed.data.implementationId);
-  if (result.error) return serviceFailure(result.error.status);
+  /* CR-02 with WR-103: a removal the AI review history can't record is refused for that reason, which a reload can't fix. */
+  if (result.error) return serviceFailure(result.error.status, undefined, false, result.error.reason);
   revalidateAssessmentPages(parsed.data.assessmentId);
   return { ok: true, data: undefined };
 }

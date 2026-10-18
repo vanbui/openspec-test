@@ -92,8 +92,16 @@ const summary = {
     questionnairesReadyForReview: 3,
     assessmentsDraft: 1,
     assessmentsInReview: 2,
+    // Phase 13 (D-15): the viewer's own counts, apart from the team's, and the team's pick-up pool.
+    mine: { requiresAttention: 2, awaitingRequestor: 1, generationInProgress: 0, withUnreadNotes: 1 },
+    unassigned: 3,
   },
-  riskExposure: { Critical: 1, High: 2, Moderate: 1, Low: 0, notRated: 1, total: 5 },
+  // D-40 to D-42: released, released and accepted, and under assessment, apart.
+  riskExposure: {
+    released: { Critical: 1, High: 2, Moderate: 1, Low: 0, notRated: 1, total: 5 },
+    releasedAccepted: { Critical: 0, High: 1, Moderate: 1, Low: 0, notRated: 0, total: 2 },
+    underAssessment: { Critical: 2, High: 0, Moderate: 0, Low: 1, notRated: 0, total: 3 },
+  },
   highCriticalRisks: { rows: [criticalRow, undatedHighRow], total: 3, truncated: false },
   treatmentsDue: { overdue: 1, dueSoon: 1, total: 2 },
   recentActivity: { rows: [releasedActivity, numberlessActivity, generatedActivity], truncated: true },
@@ -160,10 +168,18 @@ describe('analyst dashboard service', () => {
       ['an unknown due state', { ...summary, highCriticalRisks: { ...summary.highCriticalRisks, rows: [{ ...criticalRow, treatmentDueState: 'overdue-soon' }] } }],
       ['six High and Critical rows', { ...summary, highCriticalRisks: { rows: Array.from({ length: 6 }, () => criticalRow), total: 6, truncated: true } }],
       ['a negative count', { ...summary, reviewQueue: { ...summary.reviewQueue, requiresAttention: -1 } }],
+      ['a missing viewer block', { ...summary, reviewQueue: { ...summary.reviewQueue, mine: undefined } }],
+      ['a missing pick-up pool', { ...summary, reviewQueue: { ...summary.reviewQueue, unassigned: undefined } }],
+      ['an open count in the viewer block', { ...summary, reviewQueue: { ...summary.reviewQueue, mine: { ...summary.reviewQueue.mine, open: 4 } } }],
+      ['a negative viewer count', { ...summary, reviewQueue: { ...summary.reviewQueue, mine: { ...summary.reviewQueue.mine, withUnreadNotes: -1 } } }],
       ['a fractional count', { ...summary, treatmentsDue: { ...summary.treatmentsDue, total: 2.5 } }],
       ['an extra section', { ...summary, alerts: [] }],
       ['a missing section', { ...summary, recentActivity: undefined }],
-      ['an extra exposure key', { ...summary, riskExposure: { ...summary.riskExposure, Extreme: 0 } }],
+      ['an extra exposure key', { ...summary, riskExposure: { ...summary.riskExposure, unreleased: summary.riskExposure.underAssessment } }],
+      ['an extra rating in a stage', { ...summary, riskExposure: { ...summary.riskExposure, released: { ...summary.riskExposure.released, Extreme: 0 } } }],
+      ['a missing stage', { ...summary, riskExposure: { released: summary.riskExposure.released, releasedAccepted: summary.riskExposure.releasedAccepted } }],
+      // The Phase 7 flat shape counted both stages as one total; it is refused, never read as released (D-42).
+      ['the flat exposure of both stages', { ...summary, riskExposure: summary.riskExposure.released }],
       ['a window of zero days', { ...summary, dueSoonWindowDays: 0 }],
     ];
     for (const [label, data] of refused) expect(parses(data), label).toBe(false);
@@ -272,7 +288,8 @@ function deferred<T>() {
 }
 
 const readyUnits = {
-  kpi: { status: 'ready', data: { requiresAttention: 4, overdue: 3, dueSoon: 5, attention: 2 } },
+  // Phase 13 (D-15): tile 1 is the viewer's own Requires attention count (2), never the team's (4).
+  kpi: { status: 'ready', data: { needsYourAction: 2, overdue: 3, dueSoon: 5, attention: 2 } },
   reviewQueue: { status: 'ready', data: summary.reviewQueue },
   riskExposure: { status: 'ready', data: summary.riskExposure },
   highCritical: { status: 'ready', data: summary.highCriticalRisks },

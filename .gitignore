@@ -35,6 +35,12 @@ apps/backend/yarn.lock
 # GSD workflow runtime state (per-run dispatch sentinel and the per-session milestone lock)
 .gsd/
 .planning/milestone.lock
+.planning/workstreams/*/milestone.lock
+# The shared active-workstream marker is each developer's own selection
+.planning/active-workstream
 
 # Browser automation output
 .playwright-mcp/
+
+# GSD temporary runtime files
+.planning/tmp/

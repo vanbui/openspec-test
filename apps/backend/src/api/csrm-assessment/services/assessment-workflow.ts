@@ -1,19 +1,33 @@
-import { activeQuestionnaireDefinition, getVisibleQuestionKeys, isQuestionnaireValueValid, parseQuestionnaireDefinition, type QuestionnaireValue } from "../../csrm-questionnaire/services/questionnaire-definition";
+import { submittedQuestionAnswers, QuestionnaireNotSubmittedError, buildAssessmentContextFor, failureAttachmentIds, failureAttachmentsEntry, resolveContextAttachments, type ContextAttachmentReader, type ResolvedContextAttachment } from "../../../csrm/ai/assessment-context-loader";
+import { AssessmentContextTooLargeError } from "../../../csrm/ai/assessment-context";
+import { aiPolicyRefusalMessage, evaluateAiDataPolicy, readAiDataPolicyConfiguration } from "../../../csrm/ai/data-policy";
+import { createRunningAiRun, completeAiRun, failAiRun, appendAiRunDecisions, AiRunRecordError, runProposalEnvelope, type AiRunDecisionEvent } from "../../csrm-ai-run/services/ai-run-record";
+import { ASSESSMENT_AI_FIELDS, RISK_AI_FIELDS, RISK_STATEMENT_FIELDS, applyAiFieldEdit, parseAssessmentAiProvenance, parseRiskAiProvenance, proposedFieldsOf, type AssessmentAiProvenanceV1, type RiskAiProvenanceV1 } from "./ai-provenance";
+import type { ConflictReason } from "../../../csrm/conflict-reasons";
+import type { Core } from "@strapi/strapi";
 import { createWithRiskNumber } from "../../csrm-risk/services/risk-number";
 import { createWithAssessmentNumber } from "./assessment-number";
-import { createAssessmentDraftRegistry, type AssessmentDraftJobActor, type AssessmentDraftJobRecord } from "./assessment-draft-registry";
-import { parseAssessmentDraftProposal, type AssessmentDraftContext } from "./assessment-draft-provider";
+import { recordRiskHistory } from "../../csrm-risk-history-event/services/risk-history";
+import { RISK_HISTORY_FIELDS, RISK_HISTORY_RELATIONS_POPULATE, riskChanges } from "../../../csrm/risk-history-changes";
+import { assertNoOpenProposals } from "../../csrm-questionnaire/services/questionnaire-proposal-gates";
+import { createAssessmentDraftRegistry, AssessmentDraftJobFailure, safeAssessmentDraftFailure, type AssessmentDraftJobActor, type AssessmentDraftJobRecord, type AssessmentDraftJobExecution } from "./assessment-draft-registry";
+import { parseAssessmentDraftProposal, type AssessmentDraftProposal, type AssessmentRiskDraftProposal } from "./assessment-draft-provider";
 import { deterministicAssessmentDraftProvider } from "./deterministic-assessment-draft-provider";
 import { openaiCompatibleAssessmentDraftProvider } from "./openai-compatible-assessment-draft-provider";
 import { CSRM_AI_PROVIDER_MODE } from "../../../csrm/ai-provider-selection";
+import { RISK_RATINGS, type RiskRating } from "../../../csrm/risk-scale";
+import { activeRisks } from "../../../csrm/active-risk";
+import { DATA_CLASSIFICATIONS } from "../../../csrm/ai/data-policy";
+import { generationJobViewerFacts, resolveGenerationJobInitiators, type GenerationJobViewerFacts } from "../../../csrm/generation-job-viewer";
+import { openRiskProposalSummary } from "../../../csrm/ai/risk-proposals/risk-proposals-read";
 
 type RecordValue = Record<string, unknown>;
 
-export const ASSESSMENT_RATINGS = ["Low", "Moderate", "High", "Critical"] as const;
-export type AssessmentRating = typeof ASSESSMENT_RATINGS[number];
+export const ASSESSMENT_RATINGS = RISK_RATINGS;
+export type AssessmentRating = RiskRating;
 
 export class AssessmentWorkflowError extends Error {
-  constructor(public readonly status: 400 | 404 | 409, message: string) {
+  constructor(public readonly status: 400 | 403 | 404 | 409, message: string, public readonly reason?: ConflictReason) {
     super(message);
     this.name = "AssessmentWorkflowError";
   }
@@ -45,7 +59,6 @@ function activeAssessmentDraftProvider() {
 }
 
 const CONTROL_EFFECTIVENESS = ["Effective", "Partially Effective", "Ineffective", "Not Assessed"] as const;
-const DATA_CLASSIFICATIONS = ["Public", "Internal", "Restricted", "Critical Infrastructure Sensitive"] as const;
 const RISK_VELOCITIES = ["Low", "Moderate", "High", "Very High"] as const;
 const TREATMENT_ACTIONS = ["Accept", "Treat"] as const;
 const TREATMENT_STATUSES = ["Not Started", "In Progress", "Overdue", "Complete"] as const;
@@ -125,11 +138,47 @@ export function isReleased(value: unknown): boolean {
     && isDateTime(value.approvalDate);
 }
 
-export function assertMutableAssessment(value: unknown): void {
-  if (!isRecord(value)) throw new AssessmentWorkflowError(409, "CSRM assessment is not mutable.");
+/** An assessment that can still change: draft or in review, with no release fact. */
+export function isMutableAssessment(value: unknown): boolean {
+  if (!isRecord(value)) return false;
   const hasReleaseFact = value.assessmentStatus === "approved" || value.approvedBy != null || value.approvalDate != null;
-  if (hasReleaseFact || (value.assessmentStatus !== "draft" && value.assessmentStatus !== "in-review")) {
-    throw new AssessmentWorkflowError(409, "CSRM assessment is not mutable.");
+  return !hasReleaseFact && (value.assessmentStatus === "draft" || value.assessmentStatus === "in-review");
+}
+
+export function assertMutableAssessment(value: unknown): void {
+  if (!isMutableAssessment(value)) throw new AssessmentWorkflowError(409, "CSRM assessment is not mutable.", "ASSESSMENT_NOT_MUTABLE");
+}
+
+/** The person changing an assessment: the resolved IdamBox User's documentId. */
+export type AssessmentActor = { documentId: string };
+
+/**
+ * Phase 16 D-22: the one server-side guard that decides whether this actor may change this assessment now. Every
+ * mutation of an assessment, its Risks and their control implementations passes it inside the locked transaction
+ * (withMutableAssessmentMutation), and every Phase 16 entry point and AI run checks it. Today it refuses a blank actor
+ * (400) and an assessment that is not mutable (409 ASSESSMENT_NOT_MUTABLE: released, closed, or carrying any release
+ * fact). It takes the actor so the later rules land here and nowhere else, each with its own closed reason:
+ *
+ * - Phase 17 adds G-11's rule: a nominated risk owner of the assessment is refused.
+ * - Phase 17.1 adds ASSESS-24's acceptance-round lock: no change while an acceptance round is open.
+ *
+ * The edit transition is not part of the guard (D-23): a caller decides it from what its change did.
+ */
+export function assertAssessmentEditable(input: { assessment: unknown; actor: AssessmentActor }): void {
+  if (!isRecord(input.actor) || !isNonEmptyString(input.actor.documentId)) {
+    throw new AssessmentWorkflowError(400, "CSRM assessment mutation data is invalid.");
+  }
+  assertMutableAssessment(input.assessment);
+}
+
+/** The guard's non-throwing form: false where the guard refuses with a 409. A 400 (a blank actor) still throws. */
+export function isAssessmentEditable(input: { assessment: unknown; actor: AssessmentActor }): boolean {
+  try {
+    assertAssessmentEditable(input);
+    return true;
+  } catch (error) {
+    if (error instanceof AssessmentWorkflowError && error.status === 409) return false;
+    throw error;
   }
 }
 
@@ -226,6 +275,17 @@ const ASSESSMENT_RELEASE_REQUIREMENTS = [
   { key: "overallRiskRationale", label: "Overall risk rationale" },
 ] as const;
 
+const AI_REVIEW_REQUIREMENT = { key: "aiProposalsReviewed", label: "Review of AI proposals" } as const;
+/* Phase 16 D-42: every risk AI proposal ("Suggest more risks", "Rewrite this risk") has a human decision. */
+const AI_DECISIONS_REQUIREMENT = { key: "aiProposalsDecided", label: "Decisions on AI proposals", destination: "ai-proposals" } as const;
+
+/**
+ * Facts release readiness reads beside the assessment record (Phase 16 D-42). `openAiProposals` is the assessment's
+ * open risk AI proposal count, derived from its runs (`openRiskProposalSummary`). The release path and the analyst
+ * detail pass it; the pre-edit transition leaves it out, so its readiness stays field completeness only.
+ */
+export type ReleaseReadinessFacts = { openAiProposals: number };
+
 const RISK_RELEASE_REQUIREMENTS = [
   { key: "riskStatement", label: "Risk statement" },
   { key: "inherentLikelihood", label: "Inherent likelihood" },
@@ -260,22 +320,59 @@ function riskNumber(value: unknown): string {
   return value;
 }
 
+/*
+ * Phase 16 D-12, D-13 (16-RESEARCH Pitfall 2): the Risks release readiness counts, in their order. Both readiness
+ * functions iterate this one list, so a `risks[index]` path names the same Risk in each. A withdrawn Risk drops out
+ * (activeRisks); an entry that is not a record stays, so readiness keeps failing closed on it as before.
+ */
+function releaseReadinessRisks(risks: readonly unknown[]): unknown[] {
+  const active = new Set(activeRisks(risks));
+  return risks.filter((risk) => !isRecord(risk) || active.has(risk));
+}
+
 function requirementState(missing: ReadonlySet<string>, path: string): "met" | "outstanding" {
   return missing.has(path) ? "outstanding" : "met";
 }
 
-/** Converts internal validation paths into the bounded analyst-facing checklist. */
-export function projectReleaseReadiness(value: unknown): ProjectedReleaseReadiness {
-  const validation = validateReleaseReadiness(value);
+/*
+ * CR-01: the review of AI proposals a record's stored aiProvenance asks for. Null (or absent) is a record from before
+ * AI provenance and asks for none. Any other value that does not parse closed stands for AI proposals whose review can
+ * no longer be shown, so it fails closed: the review stays outstanding until an administrator repairs the record.
+ */
+function aiReviewOf(stored: unknown, parse: (value: unknown) => AssessmentAiProvenanceV1 | RiskAiProvenanceV1 | null): "none" | "met" | "outstanding" {
+  if (stored === null || stored === undefined) return "none";
+  const envelope = parse(stored);
+  if (!envelope) return "outstanding";
+  if (Object.keys(envelope.fields).length === 0) return "none";
+  return proposedFieldsOf(envelope).length > 0 ? "outstanding" : "met";
+}
+
+/**
+ * Converts internal validation paths into the bounded analyst-facing checklist. Walk D13(a): the checklist is for an
+ * assessment that can still be released, so one that can no longer change (released, closed, or carrying any release
+ * fact) presents no requirement, met or outstanding: not ready, with an empty list, the contract's ReleaseReadiness.
+ */
+export function projectReleaseReadiness(value: unknown, facts?: ReleaseReadinessFacts): ProjectedReleaseReadiness {
+  if (isRecord(value) && !isMutableAssessment(value)) return { ready: false, requirements: [] };
+  const validation = validateReleaseReadiness(value, facts);
   const missing = new Set(validation.missing);
   const assessment = isRecord(value) ? value : null;
-  const risks = assessment && Array.isArray(assessment.risks) ? assessment.risks : [];
+  // Phase 16 D-13 (Pitfall 2): the same active Risks validateReleaseReadiness iterates, so each risks[index] path
+  // names the same Risk in both functions. A withdrawn Risk has no row.
+  const risks = assessment && Array.isArray(assessment.risks) ? releaseReadinessRisks(assessment.risks) : [];
   const requirements: ReleaseReadinessRequirement[] = ASSESSMENT_RELEASE_REQUIREMENTS.map(({ key, label }) => ({
     scope: "assessment",
     key,
     label,
     state: requirementState(missing, key),
   }));
+  if (assessment && aiReviewOf(assessment.aiProvenance, parseAssessmentAiProvenance) !== "none") {
+    requirements.push({ scope: "assessment", ...AI_REVIEW_REQUIREMENT, state: requirementState(missing, AI_REVIEW_REQUIREMENT.key), destination: "assessment-details" });
+  }
+  if (facts) {
+    const { key, label, destination } = AI_DECISIONS_REQUIREMENT;
+    requirements.push({ scope: "assessment", key, label, state: requirementState(missing, key), destination });
+  }
 
   if (assessment && Array.isArray(assessment.risks)) {
     for (let index = 0; index < risks.length; index += 1) {
@@ -284,9 +381,10 @@ export function projectReleaseReadiness(value: unknown): ProjectedReleaseReadine
       const destination = riskDestination(risk.documentId);
       const stableRiskNumber = riskNumber(risk.riskNumber);
       const prefix = `risks[${index}]`;
-      const definitions = risk.treatmentAction === "Treat"
+      const definitions: Array<{ key: string; label: string }> = risk.treatmentAction === "Treat"
         ? [...RISK_RELEASE_REQUIREMENTS, ...TREAT_RISK_RELEASE_REQUIREMENTS]
-        : RISK_RELEASE_REQUIREMENTS;
+        : [...RISK_RELEASE_REQUIREMENTS];
+      if (aiReviewOf(risk.aiProvenance, parseRiskAiProvenance) !== "none") definitions.push(AI_REVIEW_REQUIREMENT);
       for (const { key, label } of definitions) {
         const path = key === "controlImplementations"
           && missing.has(`${prefix}.controlImplementations.control`)
@@ -314,7 +412,7 @@ export function projectReleaseReadiness(value: unknown): ProjectedReleaseReadine
   return { ready: requirements.every((requirement) => requirement.state === "met"), requirements };
 }
 
-export function validateReleaseReadiness(value: unknown): ReleaseReadiness {
+export function validateReleaseReadiness(value: unknown, facts?: ReleaseReadinessFacts): ReleaseReadiness {
   const missing: string[] = [];
   if (!isRecord(value)) return { ready: false, missing: ["assessment"] };
   if (value.assessmentStatus !== "in-review") missing.push("assessmentStatus");
@@ -322,17 +420,25 @@ export function validateReleaseReadiness(value: unknown): ReleaseReadiness {
   if (!isNonEmptyString(value.summary)) missing.push("summary");
   if (!isAssessmentRating(value.overallRating)) missing.push("overallRating");
   if (!isNonEmptyString(value.overallRiskRationale)) missing.push("overallRiskRationale");
-  if (!Array.isArray(value.risks) || value.risks.length === 0) {
+  if (aiReviewOf(value.aiProvenance, parseAssessmentAiProvenance) === "outstanding") missing.push("aiProposalsReviewed");
+  // Phase 16 D-42: outstanding while any risk AI proposal is open (a damaged run counts none, so it fails open).
+  if (facts && facts.openAiProposals > 0) missing.push(AI_DECISIONS_REQUIREMENT.key);
+  // Phase 16 D-12, D-13: only active Risks count. An incomplete withdrawn Risk never blocks release, and an
+  // assessment whose Risks are all withdrawn has "At least one Risk" outstanding. The release path and the
+  // pre-edit transition read readiness through this function, so they inherit the rule.
+  const risks = Array.isArray(value.risks) ? releaseReadinessRisks(value.risks) : [];
+  if (risks.length === 0) {
     missing.push("risks");
     return { ready: false, missing };
   }
 
-  value.risks.forEach((risk, index) => {
+  risks.forEach((risk, index) => {
     const prefix = `risks[${index}]`;
     if (!isRecord(risk)) {
       missing.push(prefix);
       return;
     }
+    if (aiReviewOf(risk.aiProvenance, parseRiskAiProvenance) === "outstanding") missing.push(`${prefix}.aiProposalsReviewed`);
     const requiredStrings = ["riskStatement", "inherentLikelihood", "highestInherentConsequence", "residualLikelihood", "highestResidualConsequence"];
     for (const field of requiredStrings) if (!isNonEmptyString(risk[field])) missing.push(`${prefix}.${field}`);
     for (const field of ["inherentRating", "residualRating"]) if (!isAssessmentRating(risk[field])) missing.push(`${prefix}.${field}`);
@@ -427,10 +533,64 @@ const assessmentMutationPopulate = {
   approvedBy: true,
 };
 
+export type AssessmentMutationTransition = "accepted-edit" | "none";
+
+/*
+ * WR-103: a decision on an AI proposal, and an edit of a proposed or accepted AI field, are recorded in the run's
+ * decision history inside the mutation's transaction. A history that cannot take the record (the run was deleted, its
+ * history no longer parses, or it is full at AI_RUN_BOUNDS.decisionEvents) refuses the change with its own closed
+ * reason, and the transaction rolls back: no decision and no AI field edit is ever applied without its audit record.
+ * Repairing the run is an administrator's task; the refusal says so to the analyst.
+ */
+export async function appendAiRunDecisionsWithinMutation(strapi: unknown, runId: string, events: readonly AiRunDecisionEvent[]): Promise<void> {
+  try {
+    await appendAiRunDecisions(strapi as Core.Strapi, runId, events);
+  } catch (error) {
+    if (error instanceof AiRunRecordError) throw new AssessmentWorkflowError(409, error.safeMessage, "AI_RUN_RECORD_UNAVAILABLE");
+    throw error;
+  }
+}
+
+/**
+ * Phase 16 D-22 (16-RESEARCH Pitfall 1): the actor-free core of every assessment mutation. It serialises on the
+ * assessment, opens the transaction, takes the row lock and loads the assessment through the release relation set
+ * (404 when it is gone), then runs `work` inside that transaction. It applies no guard and no transition. Never nest
+ * it for the same assessment: the inner call would wait on the queue its caller holds. Transaction-scoped inner
+ * functions (createRiskWithinMutation, updateRiskWithinMutation, the control implementation ones) never call it, so a
+ * batch calls them as often as it needs inside one lock.
+ */
+export async function withAssessmentLock<T>(
+  strapi: AssessmentMutationStrapi,
+  assessmentDocumentId: string,
+  work: (context: { assessment: RecordValue; trx: unknown }) => Promise<T>,
+): Promise<T> {
+  if (!isNonEmptyString(assessmentDocumentId)) throw new AssessmentWorkflowError(400, "CSRM assessment mutation data is invalid.");
+  return serializeAssessmentMutation(strapi, assessmentDocumentId, async () =>
+    strapi.db.transaction(async ({ trx }) => {
+      await lockAssessment(strapi, assessmentDocumentId, trx);
+      // Reloaded through the release relation set so pre-edit readiness is
+      // computed from the same record the release path would read.
+      const assessment = await strapi.documents("api::csrm-assessment.csrm-assessment").findOne({
+        documentId: assessmentDocumentId,
+        populate: assessmentReleasePopulate,
+      });
+      if (!assessment) throw new AssessmentWorkflowError(404, "CSRM assessment was not found.");
+      return work({ assessment, trx });
+    }));
+}
+
+/**
+ * The analyst mutation wrapper: the lock core, the one editable guard (D-22), then `mutate`, then the accepted-edit
+ * transition when the selected `transition` says so (D-23). `transition` is a value or a function of the mutation's
+ * result (default `accepted-edit`); a caller whose change may change nothing passes
+ * `(result) => result.changed ? "accepted-edit" : "none"`, so a no-op withdraws no review. The transition is computed
+ * from the state captured before the mutation and written after it.
+ */
 export async function withMutableAssessmentMutation<T>(input: {
   strapi: AssessmentMutationStrapi;
   assessmentDocumentId: string;
   analystDocumentId: string;
+  transition?: AssessmentMutationTransition | ((result: T) => AssessmentMutationTransition);
   mutate: (context: {
     assessment: RecordValue;
     assessmentRequest: RecordValue;
@@ -440,62 +600,67 @@ export async function withMutableAssessmentMutation<T>(input: {
   if (!isNonEmptyString(input.assessmentDocumentId) || !isNonEmptyString(input.analystDocumentId)) {
     throw new AssessmentWorkflowError(400, "CSRM assessment mutation data is invalid.");
   }
-  return serializeAssessmentMutation(input.strapi, input.assessmentDocumentId, async () =>
-    input.strapi.db.transaction(async ({ trx }) => {
-      await lockAssessment(input.strapi, input.assessmentDocumentId, trx);
-      const assessments = input.strapi.documents("api::csrm-assessment.csrm-assessment");
-      // Reloaded through the release relation set so pre-edit readiness is
-      // computed from the same record the release path would read.
-      const assessment = await assessments.findOne({
-        documentId: input.assessmentDocumentId,
-        populate: assessmentReleasePopulate,
-      });
-      if (!assessment) throw new AssessmentWorkflowError(404, "CSRM assessment was not found.");
-      assertMutableAssessment(assessment);
-      const assessmentRequest = isRecord(assessment.assessmentRequest) ? assessment.assessmentRequest : null;
-      if (!assessmentRequest || !isNonEmptyString(assessmentRequest.documentId)) {
-        throw new AssessmentWorkflowError(409, "CSRM assessment edit transition is invalid.");
-      }
-      const transition = transitionForAcceptedEdit({
-        assessmentStatus: assessment.assessmentStatus,
-        requestStatus: assessmentRequest.requestStatus,
-        reviewedBy: assessment.reviewedBy,
-        releaseReady: validateReleaseReadiness(assessment).ready,
-      }, input.analystDocumentId);
-      const result = await input.mutate({ assessment, assessmentRequest, transaction: trx });
-      await assessments.update({
+  return withAssessmentLock(input.strapi, input.assessmentDocumentId, async ({ assessment, trx }) => {
+    assertAssessmentEditable({ assessment, actor: { documentId: input.analystDocumentId } });
+    const assessmentRequest = isRecord(assessment.assessmentRequest) ? assessment.assessmentRequest : null;
+    if (!assessmentRequest || !isNonEmptyString(assessmentRequest.documentId)) {
+      throw new AssessmentWorkflowError(409, "CSRM assessment edit transition is invalid.");
+    }
+    const captured: AcceptedEditState = {
+      assessmentStatus: assessment.assessmentStatus,
+      requestStatus: assessmentRequest.requestStatus,
+      reviewedBy: assessment.reviewedBy,
+      releaseReady: validateReleaseReadiness(assessment).ready,
+    };
+    const result = await input.mutate({ assessment, assessmentRequest, transaction: trx });
+    const selectedTransition = typeof input.transition === "function" ? input.transition(result) : input.transition ?? "accepted-edit";
+    if (selectedTransition === "accepted-edit") {
+      const wasDraft = captured.assessmentStatus === "draft";
+      const transition = transitionForAcceptedEdit(captured, input.analystDocumentId);
+      await input.strapi.documents("api::csrm-assessment.csrm-assessment").update({
         documentId: input.assessmentDocumentId,
         data: {
           assessmentStatus: transition.assessmentStatus,
           reviewedBy: relationDocumentId(transition.reviewedBy) ?? transition.reviewedBy,
         },
       });
-      if (assessment.assessmentStatus === "draft") {
+      if (wasDraft) {
         await input.strapi.documents("api::csrm-assessment-request.csrm-assessment-request").update({
           documentId: String(assessmentRequest.documentId),
           data: { requestStatus: transition.requestStatus },
         });
       }
-      return result;
-    }));
+    }
+    return result;
+  });
 }
 
 export async function updateAssessment(input: {
   strapi: AssessmentMutationStrapi;
   assessmentDocumentId: string;
   analystDocumentId: string;
+  /** Verifier W-3: the editor holds the update through the human Security Analyst Role, so its edit reviews an AI field. */
+  humanAnalyst: boolean;
   body: unknown;
 }): Promise<RecordValue> {
   await withMutableAssessmentMutation({
     strapi: input.strapi,
     assessmentDocumentId: input.assessmentDocumentId,
     analystDocumentId: input.analystDocumentId,
-    mutate: async () => {
+    mutate: async ({ assessment }) => {
       const data = parseWritableAssessmentFields(input.body);
+      const provenance = parseAssessmentAiProvenance(assessment.aiProvenance);
+      const valueChanged = provenance ? Object.keys(data).filter((field) => data[field] !== assessment[field]) : [];
+      const at = new Date().toISOString();
+      // D-21, verifier W-3: who edits decides each changed AI field's review state, in this transaction with its run event.
+      const edit = provenance ? applyAiFieldEdit(provenance, valueChanged, { documentId: input.analystDocumentId, humanAnalyst: input.humanAnalyst }, at) : null;
       await input.strapi.documents("api::csrm-assessment.csrm-assessment").update({
         documentId: input.assessmentDocumentId,
-        data,
+        data: { ...data, ...(edit?.fields.length ? { aiProvenance: edit.provenance } : {}) },
       });
+      if (provenance && edit?.fields.length) await appendAiRunDecisionsWithinMutation(input.strapi, provenance.runId, [
+        { schemaVersion: 1, kind: "edited", at, by: input.analystDocumentId, target: "assessment", fields: edit.fields },
+      ]);
     },
   });
   const updated = await input.strapi.documents("api::csrm-assessment.csrm-assessment").findOne({
@@ -515,23 +680,18 @@ export async function releaseAssessment(input: {
   if (!isNonEmptyString(input.assessmentDocumentId) || !isNonEmptyString(input.analystDocumentId)) {
     throw new AssessmentWorkflowError(400, "CSRM assessment release data is invalid.");
   }
-  await serializeAssessmentMutation(input.strapi, input.assessmentDocumentId, async () =>
-    input.strapi.db.transaction(async ({ trx }) => {
-      await lockAssessment(input.strapi, input.assessmentDocumentId, trx);
+  await withAssessmentLock(input.strapi, input.assessmentDocumentId, async ({ assessment }) => {
       const assessments = input.strapi.documents("api::csrm-assessment.csrm-assessment");
-      const assessment = await assessments.findOne({
-        documentId: input.assessmentDocumentId,
-        populate: assessmentReleasePopulate,
-      });
-      if (!assessment) throw new AssessmentWorkflowError(404, "CSRM assessment was not found.");
-      assertMutableAssessment(assessment);
+      assertAssessmentEditable({ assessment, actor: { documentId: input.analystDocumentId } });
       const assessmentRequest = isRecord(assessment.assessmentRequest) ? assessment.assessmentRequest : null;
       if (!assessmentRequest
         || !isNonEmptyString(assessmentRequest.documentId)
         || assessmentRequest.requestStatus !== "under-review") {
         throw new AssessmentWorkflowError(409, "CSRM assessment is not ready for release.");
       }
-      const readiness = validateReleaseReadiness(assessment);
+      // Phase 16 D-42: inside the transaction, every risk AI proposal must be decided before release.
+      const proposals = await openRiskProposalSummary(input.strapi as never, input.assessmentDocumentId);
+      const readiness = validateReleaseReadiness(assessment, { openAiProposals: proposals.openCount });
       if (!readiness.ready) throw new AssessmentWorkflowError(409, "CSRM assessment is not ready for release.");
       const releasedAt = (input.now ?? (() => new Date()))().toISOString();
       await assessments.update({
@@ -547,7 +707,7 @@ export async function releaseAssessment(input: {
         documentId: String(assessmentRequest.documentId),
         data: { requestStatus: "approved" },
       });
-    }));
+    });
   const released = await input.strapi.documents("api::csrm-assessment.csrm-assessment").findOne({
     documentId: input.assessmentDocumentId,
     populate: assessmentReleasePopulate,
@@ -606,6 +766,7 @@ type DraftDocumentService = {
 
 type AssessmentDraftStrapi = {
   documents: (uid: string) => DraftDocumentService;
+  config: { get: (key: string) => unknown };
   db: {
     transaction: <T>(work: (context: { trx: unknown }) => Promise<T>) => Promise<T>;
     queryBuilder: (uid: string) => {
@@ -618,15 +779,14 @@ type AssessmentDraftStrapi = {
   };
 };
 
+const AI_PROPOSALS_OPEN_MESSAGE = "Decide every AI proposal on the questionnaire before generating the assessment draft.";
+
 export class AssessmentDraftWorkflowError extends Error {
-  constructor(public readonly status: 400 | 403 | 404 | 409, message: string) {
+  constructor(public readonly status: 400 | 403 | 404 | 409, message: string, public readonly reason?: ConflictReason) {
     super(message);
     this.name = "AssessmentDraftWorkflowError";
   }
 }
-
-type SubmittedAnswer = AssessmentDraftContext["answers"][number];
-type RiskTypeContext = AssessmentDraftContext["riskTypes"][number] & { documentId: string };
 
 function relationDocumentId(value: unknown): string | null {
   if (typeof value === "string" && value.length > 0) return value;
@@ -635,56 +795,13 @@ function relationDocumentId(value: unknown): string | null {
     : null;
 }
 
-function submittedAnswers(questionnaire: RecordValue): SubmittedAnswer[] {
-  const definition = parseQuestionnaireDefinition(questionnaire.questions);
-  // D-07: deleted questions are retained as history but never become assessment input.
-  const activeDefinition = activeQuestionnaireDefinition(definition);
-  const envelopes = new Map<string, RecordValue>();
-  for (const question of activeDefinition) {
-    if (isRecord(question.answer)) envelopes.set(question.questionKey, question.answer);
+function submittedAnswers(questionnaire: RecordValue): ReturnType<typeof submittedQuestionAnswers> {
+  try {
+    return submittedQuestionAnswers(questionnaire);
+  } catch (error) {
+    if (error instanceof QuestionnaireNotSubmittedError) throw new AssessmentDraftWorkflowError(409, error.message);
+    throw error;
   }
-  const values = Object.fromEntries(activeDefinition.map((question) => [
-    question.questionKey,
-    envelopes.get(question.questionKey)?.value ?? null,
-  ])) as Record<string, QuestionnaireValue>;
-  const visible = new Set(getVisibleQuestionKeys(definition, values));
-  return activeDefinition
-    .filter((question) => visible.has(question.questionKey))
-    .map((question) => {
-      const answer = envelopes.get(question.questionKey);
-      if (!answer
-        || answer.schemaVersion !== 1
-        || answer.state !== "submitted"
-        || typeof answer.submittedAt !== "string"
-        || !Number.isFinite(Date.parse(answer.submittedAt))
-        || !isQuestionnaireValueValid(question, answer.value)) {
-        throw new AssessmentDraftWorkflowError(409, "CSRM questionnaire is not submitted.");
-      }
-      return { questionKey: question.questionKey, value: answer.value as SubmittedAnswer["value"] };
-    })
-    .sort((left, right) => left.questionKey.localeCompare(right.questionKey));
-}
-
-async function loadRiskTypeContext(strapi: AssessmentDraftStrapi): Promise<RiskTypeContext[]> {
-  const supported = new Set(["Internet Exposure", "Personal Information Handling", "Third-Party Dependency"]);
-  const rows = await strapi.documents("api::csrm-risk-type.csrm-risk-type").findMany({
-    filters: { name: { $in: [...supported] } },
-    populate: { applicableControls: true },
-    limit: supported.size,
-  });
-  const riskTypes = rows.flatMap((row): RiskTypeContext[] => {
-    if (typeof row.documentId !== "string" || typeof row.name !== "string" || !supported.has(row.name)) return [];
-    const applicableControls = Array.isArray(row.applicableControls)
-      ? row.applicableControls.flatMap((control) => isRecord(control) && typeof control.controlNumber === "string"
-        ? [{ controlNumber: control.controlNumber }]
-        : [])
-      : [];
-    return [{ documentId: row.documentId, name: row.name, applicableControls: applicableControls.sort((a, b) => a.controlNumber.localeCompare(b.controlNumber)) }];
-  }).sort((left, right) => left.name.localeCompare(right.name));
-  if (riskTypes.length !== supported.size) {
-    throw new AssessmentDraftWorkflowError(409, "CSRM assessment draft reference data is unavailable.");
-  }
-  return riskTypes;
 }
 
 async function loadDraftTarget(strapi: AssessmentDraftStrapi, questionnaireDocumentId: string) {
@@ -693,7 +810,7 @@ async function loadDraftTarget(strapi: AssessmentDraftStrapi, questionnaireDocum
   }
   const questionnaire = await strapi.documents("api::csrm-questionnaire.csrm-questionnaire").findOne({
     documentId: questionnaireDocumentId,
-    populate: { assessmentRequest: { populate: { assessment: true } }, questions: true },
+    populate: { assessmentRequest: { populate: { assessment: true, informationAssets: true } }, questions: true },
   });
   if (!questionnaire) throw new AssessmentDraftWorkflowError(404, "CSRM questionnaire was not found.");
   const request = isRecord(questionnaire.assessmentRequest) ? questionnaire.assessmentRequest : null;
@@ -705,12 +822,13 @@ async function loadDraftTarget(strapi: AssessmentDraftStrapi, questionnaireDocum
     if (request.requestStatus !== "risk-assessment-drafted") {
       throw new AssessmentDraftWorkflowError(409, "CSRM assessment draft already exists.");
     }
-    return { questionnaire, request, existingAssessmentId, answers: [] as SubmittedAnswer[] };
+    return { questionnaire, request, existingAssessmentId };
   }
   if (request.requestStatus !== "questionnaire-in-progress") {
     throw new AssessmentDraftWorkflowError(409, "CSRM questionnaire cannot generate an assessment draft.");
   }
-  return { questionnaire, request, existingAssessmentId: null, answers: submittedAnswers(questionnaire) };
+  submittedAnswers(questionnaire);
+  return { questionnaire, request, existingAssessmentId: null };
 }
 
 async function lockAssessmentRequest(strapi: AssessmentDraftStrapi, documentId: string, transaction: unknown): Promise<void> {
@@ -722,32 +840,86 @@ async function lockAssessmentRequest(strapi: AssessmentDraftStrapi, documentId: 
   await query.execute<unknown>();
 }
 
-async function persistAssessmentDraft(
-  strapi: AssessmentDraftStrapi,
-  questionnaireDocumentId: string,
-  initiatingAnalystDocumentId: string,
-): Promise<{ assessmentId: string }> {
+function initialAssessmentAiProvenance(proposal: AssessmentDraftProposal, runId: string): AssessmentAiProvenanceV1 {
+  const sources: Record<string, string[]> = {
+    summary: proposal.summarySources, overallRiskRationale: proposal.overallRiskRationaleSources,
+    recommendationsSummary: proposal.recommendationsSummarySources,
+  };
+  return { schemaVersion: 1, runId, proposalKey: "assessment", fields: Object.fromEntries(ASSESSMENT_AI_FIELDS.map((name) =>
+    [name, { state: "proposed", ...(name in sources ? { sources: sources[name] } : {}) }])) };
+}
+/**
+ * A proposed Risk's AI provenance: each AI-written field `proposed`, with its citations on the statement fields, and its
+ * suggested controls as Phase 12 suggestions. The draft keeps its facts without `runId` (the envelope's run); a Risk
+ * added from a "Suggest more risks" item (Phase 16 D-25, D-33) passes `options` so each field names the suggestion run
+ * and the envelope's `proposalKey` names the item.
+ */
+export function initialRiskAiProvenance(risk: AssessmentRiskDraftProposal, runId: string, options: { fieldRunIds?: boolean; proposalKey?: string } = {}): RiskAiProvenanceV1 {
+  const fields = Object.fromEntries(RISK_AI_FIELDS.filter((name) =>
+    name === "riskType" || name === "informationSystemImpacted" && risk.informationSystem !== null
+    || name === "informationAssetImpacted" && risk.informationAsset !== null
+    || name === "dataClassification" && risk.dataClassification !== null
+    || !["informationSystemImpacted", "informationAssetImpacted", "dataClassification"].includes(name)
+  ).map((name) => [name, { state: "proposed", ...(RISK_STATEMENT_FIELDS.includes(name as typeof RISK_STATEMENT_FIELDS[number])
+    ? { sources: risk.sources[name as keyof typeof risk.sources] } : {}), ...(options.fieldRunIds ? { runId } : {}) }]));
+  return {
+    schemaVersion: 1, runId, proposalKey: options.proposalKey ?? risk.proposalKey, fields,
+    uncitedClaims: risk.uncitedClaims,
+    suggestions: risk.suggestedControls.map((suggestion) => ({ key: suggestion.controlNumber, ...suggestion, state: "proposed" as const })),
+    adjustments: risk.adjustments,
+  };
+}
+/*
+ * WR-206 and IN-103 (D-20: every provider call has exactly one run, which completes or fails). When the request has
+ * gained an assessment elsewhere by the time the draft's transaction holds it, the provider's proposal is not saved.
+ * The run still ends: failed, with this closed code, recorded outside the transaction as every run failure is. The job
+ * reports the assessment the request holds, as the pre-check does for a request that already has one.
+ */
+const ASSESSMENT_ALREADY_EXISTS = {
+  code: "ASSESSMENT_ALREADY_EXISTS",
+  message: "An assessment already exists for this request, so this draft was not saved.",
+} as const;
+
+export async function persistAssessmentDraft(strapi: AssessmentDraftStrapi, job: AssessmentDraftJobExecution): Promise<{ assessmentId: string }> {
+  const { questionnaireId: questionnaireDocumentId, initiatingAnalystDocumentId } = job;
   const target = await loadDraftTarget(strapi, questionnaireDocumentId);
   if (target.existingAssessmentId) return { assessmentId: target.existingAssessmentId };
-  const riskTypes = await loadRiskTypeContext(strapi);
-  const proposal = parseAssessmentDraftProposal(await activeAssessmentDraftProvider().generate({
-    answers: target.answers,
-    riskTypes,
-  }));
-  const riskTypeIds = new Map(riskTypes.map((riskType) => [riskType.name, riskType.documentId]));
+  const core = strapi as unknown as Core.Strapi;
+  const requestId = String(target.request.documentId);
+  let built: Awaited<ReturnType<typeof buildAssessmentContextFor>>;
+  try { built = await buildAssessmentContextFor(strapi, { operation: "assessment-draft", requestId, questionnaireId: questionnaireDocumentId }); }
+  // D-33: the failure keeps the files the refused context included, which the analyst's job reads name.
+  catch (error) { if (error instanceof AssessmentContextTooLargeError) throw new AssessmentDraftJobFailure(error.code, error.safeMessage, error.attachmentDocumentIds); throw error; }
+  if (built.policy.status === "refused") throw new AssessmentDraftJobFailure(built.policy.reason ?? "AI_POLICY_NOT_CONFIGURED", aiPolicyRefusalMessage(built.policy) ?? "The request cannot be sent to the provider.");
+  const provider = activeAssessmentDraftProvider();
+  const run = await createRunningAiRun(core, {
+    operation: "assessment-draft", initiatedBy: initiatingAnalystDocumentId, providerName: provider.name,
+    providerVersion: provider.version, assessmentRequest: requestId, contextSummary: built.context.summary,
+    jobId: job.jobId, attempt: job.attempt, questionnaire: questionnaireDocumentId,
+  });
   const generatedAt = new Date().toISOString();
-
-  return strapi.db.transaction(async ({ trx }) => {
+  let outcome: { assessmentId: string; saved: boolean };
+  try {
+  const proposal = parseAssessmentDraftProposal(await provider.generate(built), built.context.allowed);
+  // WR-104 (D-06): a proposal the run record cannot keep (over 1 MB) is invalid provider output, refused before anything is saved.
+  const envelope = runProposalEnvelope(proposal as unknown as RecordValue, proposal.adjustments);
+  if (!envelope) throw new AssessmentDraftJobFailure("PROVIDER_OUTPUT_INVALID", "Provider returned invalid output.");
+  outcome = await strapi.db.transaction(async ({ trx }) => {
     await lockAssessmentRequest(strapi, String(target.request.documentId), trx);
     const authoritativeRequest = await strapi.documents("api::csrm-assessment-request.csrm-assessment-request").findOne({
       documentId: String(target.request.documentId),
       populate: { assessment: true },
     });
     const existingAssessmentId = relationDocumentId(authoritativeRequest?.assessment);
-    if (existingAssessmentId) return { assessmentId: existingAssessmentId };
+    if (existingAssessmentId) return { assessmentId: existingAssessmentId, saved: false };
     if (!authoritativeRequest || authoritativeRequest.requestStatus !== "questionnaire-in-progress") {
       throw new AssessmentDraftWorkflowError(409, "CSRM assessment draft state changed.");
     }
+    // Phase 15 D-08, again inside the transaction: an item reopened while the job ran fails it before anything is saved.
+    // The draft path keeps locking only the request row (15-RESEARCH §M).
+    await assertNoOpenProposals(strapi as never, questionnaireDocumentId, (reason) => {
+      throw new AssessmentDraftJobFailure(reason, AI_PROPOSALS_OPEN_MESSAGE);
+    });
 
     const assessment = await createWithAssessmentNumber((assessmentNumber) =>
       strapi.documents("api::csrm-assessment.csrm-assessment").create({ data: {
@@ -755,24 +927,28 @@ async function persistAssessmentDraft(
         assessmentStatus: "draft",
         generatedDate: generatedAt,
         generatedBy: initiatingAnalystDocumentId,
-        providerName: activeAssessmentDraftProvider().name,
-        providerVersion: activeAssessmentDraftProvider().version,
+        providerName: provider.name,
+        providerVersion: provider.version,
         summary: proposal.summary,
         overallRating: proposal.overallRating,
         recommendationsSummary: proposal.recommendationsSummary,
         overallRiskRationale: proposal.overallRiskRationale,
+        aiProvenance: initialAssessmentAiProvenance(proposal, run.documentId),
         assessmentRequest: String(target.request.documentId),
       } }));
     if (typeof assessment.documentId !== "string") throw new Error("Assessment draft persistence failed.");
 
     for (const risk of proposal.risks) {
-      const riskType = riskTypeIds.get(risk.riskTypeName);
-      if (!riskType) throw new AssessmentDraftWorkflowError(409, "CSRM assessment draft reference data changed.");
-      await createWithRiskNumber((riskNumber) =>
+      const riskType = risk.riskTypeName === null ? null : built.context.allowed.riskTypes[risk.riskTypeName];
+      if (risk.riskTypeName !== null && !riskType) throw new AssessmentDraftWorkflowError(409, "CSRM assessment draft reference data changed.");
+      const created = await createWithRiskNumber((riskNumber) =>
         strapi.documents("api::csrm-risk.csrm-risk").create({ data: {
           riskNumber,
           assessment: assessment.documentId,
           riskType,
+          informationSystemImpacted: risk.informationSystem,
+          informationAssetImpacted: risk.informationAsset,
+          dataClassification: risk.dataClassification,
           issueStatement: risk.issueStatement,
           riskStatement: risk.riskStatement,
           riskCategory: risk.riskCategory,
@@ -790,14 +966,37 @@ async function persistAssessmentDraft(
           treatmentAction: risk.treatmentAction,
           treatmentPlan: risk.treatmentPlan,
           treatmentStatus: "Not Started",
+          aiProvenance: initialRiskAiProvenance(risk, run.documentId),
         } }));
+      if (typeof created.documentId !== "string") throw new Error("Assessment draft persistence failed.");
+      // Phase 16 D-19: a drafted Risk's history starts with its creation by the draft run, in the draft's transaction,
+      // listing each starting value with `from: null` (the approved record).
+      const stored = await strapi.documents("api::csrm-risk.csrm-risk").findOne({ documentId: created.documentId, populate: RISK_HISTORY_RELATIONS_POPULATE });
+      if (!stored) throw new Error("Assessment draft persistence failed.");
+      await recordRiskHistory(strapi, {
+        kind: "created",
+        riskDocumentId: created.documentId,
+        assessmentDocumentId: assessment.documentId,
+        actorDocumentId: initiatingAnalystDocumentId,
+        sourceKind: "ai-run",
+        aiRunDocumentId: run.documentId,
+        changes: { fields: riskChanges(null, stored, RISK_HISTORY_FIELDS) },
+      });
     }
     await strapi.documents("api::csrm-assessment-request.csrm-assessment-request").update({
       documentId: String(target.request.documentId),
       data: { requestStatus: "risk-assessment-drafted" },
     });
-    return { assessmentId: assessment.documentId };
+    await completeAiRun(core, run.documentId, { proposal: envelope, assessment: assessment.documentId });
+    return { assessmentId: assessment.documentId, saved: true };
   });
+  } catch (error) {
+    // IN-102: the run records the code and message the job records for the same failure.
+    await failAiRun(core, run.documentId, safeAssessmentDraftFailure(error));
+    throw error;
+  }
+  if (!outcome.saved) await failAiRun(core, run.documentId, ASSESSMENT_ALREADY_EXISTS);
+  return { assessmentId: outcome.assessmentId };
 }
 
 type AssessmentDraftRegistry = ReturnType<typeof createAssessmentDraftRegistry>;
@@ -808,21 +1007,32 @@ function draftRegistry(strapi: AssessmentDraftStrapi): AssessmentDraftRegistry {
   const existing = assessmentDraftRegistries.get(key);
   if (existing) return existing;
   const created = createAssessmentDraftRegistry({
-    execute: ({ questionnaireId, initiatingAnalystDocumentId }) =>
-      persistAssessmentDraft(strapi, questionnaireId, initiatingAnalystDocumentId),
+    execute: (job) => persistAssessmentDraft(strapi, job),
   });
   assessmentDraftRegistries.set(key, created);
   return created;
 }
 
-function draftActor(analystDocumentId: string): AssessmentDraftJobActor {
+/**
+ * Who reads or acts on a draft job: the resolved IdamBox User's documentId and, from the policy (13-03), whether the
+ * route admitted them through the human Security Analyst role. D-18: that fact, never a constant, opens every job to
+ * the human analyst, so a later route that reuses this workflow cannot widen by accident; without it a caller stays
+ * with the jobs they started (fail closed).
+ */
+export type DraftJobViewer = { analystDocumentId: string; humanAnalyst?: boolean };
+
+function draftActor(analystDocumentId: string, humanAnalyst?: boolean): AssessmentDraftJobActor {
   if (typeof analystDocumentId !== "string" || analystDocumentId.length === 0) {
     throw new AssessmentDraftWorkflowError(403, "CSRM assessment draft job access is denied.");
   }
-  return { documentId: analystDocumentId, canReadAllDraftJobs: false };
+  return { documentId: analystDocumentId, canReadAllDraftJobs: humanAnalyst === true };
 }
 
-export function projectAssessmentDraftJob(job: AssessmentDraftJobRecord): RecordValue {
+/*
+ * The bounded draft job projection, with the D-18 facts for its viewer (generation-job-viewer.ts). Phase 14 D-33: a
+ * CONTEXT_TOO_LARGE failure also names the files it counted (failureAttachments), by their current names in `names`.
+ */
+export function projectAssessmentDraftJob(job: AssessmentDraftJobRecord, viewer: GenerationJobViewerFacts, names: ReadonlyMap<string, ResolvedContextAttachment> = new Map()): RecordValue {
   return {
     jobId: job.jobId,
     questionnaireId: job.questionnaireId,
@@ -831,47 +1041,93 @@ export function projectAssessmentDraftJob(job: AssessmentDraftJobRecord): Record
     ...(job.startedAt ? { startedAt: job.startedAt } : {}),
     ...(job.completedAt ? { completedAt: job.completedAt } : {}),
     ...(job.assessmentId ? { assessmentId: job.assessmentId } : {}),
-    ...(job.failure ? { failureCode: job.failure.code, failureMessage: job.failure.message } : {}),
+    ...(job.failure ? { failureCode: job.failure.code, failureMessage: job.failure.message, ...failureAttachmentsEntry(job.failure, names) } : {}),
     status: job.status,
+    canRetry: viewer.canRetry,
+    initiatedBy: viewer.initiatedBy,
+    initiatedByViewer: viewer.initiatedByViewer,
   };
+}
+
+/* Projects one draft job for its viewer, resolving its initiator's display name and its failure's files with one bounded read each. */
+async function projectDraftJobFor(strapi: AssessmentDraftStrapi, job: AssessmentDraftJobRecord, actor: AssessmentDraftJobActor): Promise<RecordValue> {
+  const initiators = await resolveGenerationJobInitiators(strapi, [job.initiatingAnalystDocumentId]);
+  const names = await resolveContextAttachments(strapi as unknown as ContextAttachmentReader, failureAttachmentIds(job.failure));
+  return projectAssessmentDraftJob(job, generationJobViewerFacts({
+    initiatorDocumentId: job.initiatingAnalystDocumentId,
+    viewerDocumentId: actor.documentId,
+    canRetry: draftRegistry(strapi).mayRetry(job, actor),
+    initiators,
+  }), names);
+}
+
+/* D-28: the AI data policy a draft for this request would face, refused with a 409 and its reason before any job is queued. */
+function refuseDraftByAiDataPolicy(strapi: AssessmentDraftStrapi, request: RecordValue): void {
+  const assets = Array.isArray(request.informationAssets) ? request.informationAssets.filter(isRecord) : [];
+  const policy = evaluateAiDataPolicy({ assets, ...readAiDataPolicyConfiguration(strapi) });
+  if (policy.status === "refused") throw new AssessmentDraftWorkflowError(409, aiPolicyRefusalMessage(policy) ?? "The request cannot be sent to the provider.", policy.reason ?? undefined);
 }
 
 export async function generateAssessment(input: {
   strapi: AssessmentDraftStrapi;
   questionnaireDocumentId: string;
-  analystDocumentId: string;
-}): Promise<RecordValue> {
-  await loadDraftTarget(input.strapi, input.questionnaireDocumentId);
-  return projectAssessmentDraftJob(draftRegistry(input.strapi).enqueue({
+} & DraftJobViewer): Promise<RecordValue> {
+  const target = await loadDraftTarget(input.strapi, input.questionnaireDocumentId);
+  refuseDraftByAiDataPolicy(input.strapi, target.request);
+  const actor = draftActor(input.analystDocumentId, input.humanAnalyst);
+  // Phase 15 D-08: the draft waits for every AI proposal on the questionnaire, refused before anything is queued.
+  await assertNoOpenProposals(input.strapi as never, input.questionnaireDocumentId, (reason) => {
+    throw new AssessmentDraftWorkflowError(409, AI_PROPOSALS_OPEN_MESSAGE, reason);
+  });
+  // A start may hand back the questionnaire's active job, which another analyst started; the projection says so.
+  return projectDraftJobFor(input.strapi, draftRegistry(input.strapi).enqueue({
     questionnaireId: input.questionnaireDocumentId,
-    initiatingAnalystDocumentId: draftActor(input.analystDocumentId).documentId,
+    initiatingAnalystDocumentId: actor.documentId,
     providerName: activeAssessmentDraftProvider().name,
     providerVersion: activeAssessmentDraftProvider().version,
-  }));
+  }), actor);
 }
 
-export function getAssessmentDraftJob(input: {
+export async function getAssessmentDraftJob(input: {
   strapi: AssessmentDraftStrapi;
   jobId: string;
-  analystDocumentId: string;
-}): RecordValue {
-  return projectAssessmentDraftJob(draftRegistry(input.strapi).get(input.jobId, draftActor(input.analystDocumentId)));
+} & DraftJobViewer): Promise<RecordValue> {
+  const actor = draftActor(input.analystDocumentId, input.humanAnalyst);
+  return projectDraftJobFor(input.strapi, draftRegistry(input.strapi).get(input.jobId, actor), actor);
 }
 
-/** D-25: the questionnaire's current draft job, projected as the by-id read projects it, with the viewer's retry right. */
+/**
+ * D-25, D-18: the questionnaire's current draft job as the registry holds it, with whether this viewer may retry it.
+ * The caller projects it (projectAssessmentDraftJob), so the request's jobs read resolves both jobs' initiators at once.
+ */
 export function latestAssessmentDraftJobForQuestionnaire(
   strapi: AssessmentDraftStrapi,
   questionnaireId: string,
-  viewerDocumentId: string,
-): { job: RecordValue; canRetry: boolean } | null {
-  const latest = draftRegistry(strapi).latestForQuestionnaire(questionnaireId, draftActor(viewerDocumentId).documentId);
-  return latest ? { job: projectAssessmentDraftJob(latest.job), canRetry: latest.canRetry } : null;
+  viewer: DraftJobViewer,
+): { job: AssessmentDraftJobRecord; canRetry: boolean } | null {
+  return draftRegistry(strapi).latestForQuestionnaire(questionnaireId, draftActor(viewer.analystDocumentId, viewer.humanAnalyst));
 }
 
-export function retryAssessmentDraftJob(input: {
+/*
+ * IN-104 and WR-308 (D-28): a retry is a new attempt, so the AI data policy that refuses an enqueue refuses a retry the
+ * same way, with the same 409 reason, before anything is queued: no new attempt and no run. The registry first answers
+ * for the job (404, or 403 for a caller who may not follow it), and a job that has not failed keeps its own 409. A
+ * request that can no longer be read is left to the job's execution, which re-checks everything before any run or
+ * provider call. D-18: the retry is the retrying analyst's attempt (the registry re-attributes it).
+ */
+export async function retryAssessmentDraftJob(input: {
   strapi: AssessmentDraftStrapi;
   jobId: string;
-  analystDocumentId: string;
-}): RecordValue {
-  return projectAssessmentDraftJob(draftRegistry(input.strapi).retry(input.jobId, draftActor(input.analystDocumentId)));
+} & DraftJobViewer): Promise<RecordValue> {
+  const registry = draftRegistry(input.strapi);
+  const actor = draftActor(input.analystDocumentId, input.humanAnalyst);
+  const job = registry.get(input.jobId, actor);
+  if (job.status === "failed") {
+    const questionnaire = await input.strapi.documents("api::csrm-questionnaire.csrm-questionnaire").findOne({
+      documentId: job.questionnaireId,
+      populate: { assessmentRequest: { populate: { informationAssets: true } } },
+    });
+    if (questionnaire && isRecord(questionnaire.assessmentRequest)) refuseDraftByAiDataPolicy(input.strapi, questionnaire.assessmentRequest);
+  }
+  return projectDraftJobFor(input.strapi, registry.retry(input.jobId, actor), actor);
 }

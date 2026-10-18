@@ -12,19 +12,43 @@ vi.stubGlobal('ResizeObserver', class ResizeObserver {
   unobserve() {}
   disconnect() {}
 });
-import { QuestionnaireGovernance } from './questionnaire-governance';
+const aiActions = vi.hoisted(() => ({ decideQuestionnaireAiProposalsAction: vi.fn(), startQuestionnaireAiProposalsAction: vi.fn(), getQuestionnaireProposalJobAction: vi.fn(), retryQuestionnaireProposalJobAction: vi.fn() }));
+vi.mock('../questionnaire-ai/questionnaire-ai-actions', () => aiActions);
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() } }));
+import { AiProposalsPanelClient } from '../questionnaire-ai/ai-proposals-panel-client';
+import type { QuestionnaireAiProposalsView } from '../questionnaire-ai/questionnaire-ai-domain';
+import { proposalsFixture } from '../questionnaire-ai/test-fixtures';
+import { QuestionFormScope, QuestionnaireGovernance, ReleasedQuestionList, useOpenQuestionForm } from './questionnaire-governance';
 import type { QuestionPlacement } from './questionnaire-placement';
 import type { QuestionnaireDefinition } from './questionnaire-schema';
+import { getQuestionnaireGovernanceQuestions } from './questionnaire-service';
+const questionsGet = vi.hoisted(() => vi.fn());
+vi.mock('server-only', () => ({}));
+vi.mock('../../lib/api/transport/server-client', () => ({ createStrapiClient: async () => ({ GET: questionsGet }), normalizeTransportError: vi.fn() }));
 
 /** The placement set the analyst read serves for these active questions (no removed ones). */
 function placementsOf(questions: QuestionnaireDefinition): QuestionPlacement[] {
   return questions.map((question) => ({ documentId: question.documentId ?? question.questionKey, questionKey: question.questionKey, questionText: question.questionText, section: question.section, order: question.order, removed: false }));
 }
 
-const questionnaire = { documentId: 'questionnaire-1', questionnaireNumber: 'QUES-1', title: 'Questionnaire', state: 'draft' as const, progress: { answered: 0, total: 1, percent: 0 }, assessmentRequest: { availability: 'available' as const, documentId: 'request-1', requestNumber: 'RAR-1', title: 'Request', requestStatus: 'questionnaire-in-progress' as const }, updatedAt: '2026-09-20T00:00:00.000Z', release: null };
+const questionnaire = { documentId: 'questionnaire-1', questionnaireNumber: 'QUES-1', title: 'Questionnaire', state: 'draft' as const, progress: { answered: 0, total: 1, percent: 0 }, assessmentRequest: { availability: 'available' as const, documentId: 'request-1', requestNumber: 'RAR-1', title: 'Request', requestStatus: 'questionnaire-in-progress' as const }, updatedAt: '2026-09-20T00:00:00.000Z', release: null, aiAssisted: false };
 const definition = [{ documentId: 'question-1', questionText: 'Is it protected?', answerType: 'Boolean' as const, schemaVersion: 1 as const, questionKey: 'protected', section: { key: 'general', title: 'General', order: 0 }, order: 0, required: true, answer: null, support: { status: 'supported' as const } }];
 
 describe('QuestionnaireGovernance', () => {
+  it('restores focus to the mounted AI panel status after a successful take-back (D3)', async () => {
+    actions.returnQuestionnaireToAnalystReviewAction.mockResolvedValueOnce({ ok: true });
+    const status = document.createElement('p');
+    status.tabIndex = -1;
+    status.dataset.aiProposalsStatus = '';
+    document.body.append(status);
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={{ ...questionnaire, release: { releasedAt: '2026-09-20T00:00:00.000Z', releasedBy: null } }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Return to analyst review' }));
+    const dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByLabelText('Reason'), { target: { value: 'Needs corrections' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Return to analyst review' }));
+    await vi.waitFor(() => expect(status).toHaveFocus());
+    status.remove();
+  });
   it('renders the analyst-only control matrix with text state labels', () => {
     render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />);
     expect(screen.getByRole('heading', { name: 'Analyst review' })).toBeInTheDocument();
@@ -461,5 +485,185 @@ describe('QuestionnaireGovernance question forms (UI-SPEC §1)', () => {
     expect(notice).not.toHaveTextContent('hosted:');
     await user.click(within(notice).getByRole('button', { name: 'Dismiss notice' }));
     expect(screen.queryByText('Answers cleared by this revision')).not.toBeInTheDocument();
+  });
+});
+
+/* 12-UI-SPEC §8 (D-17, D-22, D-35): question origin markers, help text and the release description. */
+describe('AI-proposed questions in analyst review', () => {
+  const base = definition[0];
+  const generated = [
+    { ...base, documentId: 'q-1', questionKey: 'one', questionText: 'Generated question?', order: 0, aiOrigin: 'generated' as const, helpText: 'Answer yes if it is encrypted.' },
+    { ...base, documentId: 'q-2', questionKey: 'two', questionText: 'Edited question?', order: 1, aiOrigin: 'generated-edited' as const },
+    { ...base, documentId: 'q-3', questionKey: 'three', questionText: 'Added question?', order: 2, aiOrigin: 'analyst-added' as const },
+    { ...base, documentId: 'q-4', questionKey: 'four', questionText: 'Seeded question?', order: 3 },
+    { ...base, documentId: 'q-5', questionKey: 'five', questionText: 'Another generated?', order: 4, aiOrigin: 'generated' as const },
+  ];
+  const renderGenerated = (overrides: Partial<Omit<typeof questionnaire, 'release'>> & { release?: { releasedAt: string; releasedBy: null } | null } = {}) =>
+    render(<QuestionnaireGovernance definition={generated} placements={placementsOf(generated)} questionnaire={{ ...questionnaire, ...overrides }} />);
+  const row = (text: string) => screen.getByText(text).closest('li') as HTMLElement;
+
+  beforeEach(() => { for (const action of Object.values(actions)) action.mockReset(); });
+
+  it('marks where each question came from, on its caption line', () => {
+    renderGenerated();
+    expect(within(row('Generated question?')).getByText('AI proposed')).toBeInTheDocument();
+    expect(within(row('Edited question?')).getByText('Edited')).toBeInTheDocument();
+    expect(within(row('Added question?')).getByText('Added by analyst')).toBeInTheDocument();
+    expect(within(row('Seeded question?')).queryByText(/AI proposed|Edited|Added by analyst/)).not.toBeInTheDocument();
+    expect(within(row('Generated question?')).getByText('Help text: Answer yes if it is encrypted.')).toHaveClass('whitespace-pre-wrap');
+  });
+
+  /*
+   * IN-402 (12-UI-SPEC §8.2): no origin marker of any kind once released, on the governance panel or the released
+   * questions under it, as the review page renders them. The match is exact, because "Edited question?" is a question's
+   * own text, which stays.
+   */
+  it('shows no origin marker once the questionnaire is released', () => {
+    const released = { ...questionnaire, release: { releasedAt: '2026-09-20T00:00:00.000Z', releasedBy: null } };
+    render(<><QuestionnaireGovernance definition={generated} placements={placementsOf(generated)} questionnaire={released} /><ReleasedQuestionList definition={generated} /></>);
+    expect(screen.getByText('Edited question?')).toBeInTheDocument();
+    expect(screen.getByText('Added question?')).toBeInTheDocument();
+    expect(screen.queryAllByText(/^(AI proposed|Edited|Added by analyst)$/)).toEqual([]);
+  });
+
+  it('says release records the review of the AI-proposed questions', async () => {
+    const user = userEvent.setup();
+    renderGenerated();
+    await user.click(screen.getByRole('button', { name: 'Release questionnaire' }));
+    expect(screen.getByRole('alertdialog', { name: 'Release this questionnaire?' })).toHaveAccessibleDescription(
+      'The Requestor can view this questionnaire after release. Releasing also records that you reviewed its 2 AI-proposed questions.',
+    );
+  });
+
+  it('edits help text in the question form, within 2,000 characters', async () => {
+    const user = userEvent.setup();
+    actions.editQuestionnaireQuestionAction.mockResolvedValue({ ok: true, data: { questions: generated } });
+    renderGenerated();
+    await user.click(screen.getByRole('button', { name: 'Edit question: Generated question?' }));
+    const form = screen.getByRole('form', { name: 'Edit question' });
+    const help = within(form).getByLabelText('Help text');
+    expect(help).toHaveValue('Answer yes if it is encrypted.');
+    expect(help).toHaveAccessibleDescription('Shown to the Requestor under the question. Keep it to one or two sentences.');
+    fireEvent.change(help, { target: { value: 'x'.repeat(2_001) } });
+    await user.click(within(form).getByRole('button', { name: 'Save question' }));
+    expect(within(form).getByText('Keep the help text to 2,000 characters or fewer.')).toBeInTheDocument();
+    expect(help).toHaveFocus();
+    expect(actions.editQuestionnaireQuestionAction).not.toHaveBeenCalled();
+    fireEvent.change(help, { target: { value: 'Answer yes only if every copy is encrypted.' } });
+    await user.click(within(form).getByRole('button', { name: 'Save question' }));
+    await vi.waitFor(() => expect(actions.editQuestionnaireQuestionAction).toHaveBeenCalledWith(expect.objectContaining({
+      input: expect.objectContaining({ helpText: 'Answer yes only if every copy is encrypted.' }),
+    })));
+  });
+});
+
+/*
+ * Phase 15 UI-D10 (15-UI-SPEC §2.4, §5.2): one question form open across the editor and the AI proposals panel. While the
+ * editor's form is open, the panel's Confirm, Edit then confirm and start are disabled with one caption, and Reject stays;
+ * while an Edit, then confirm form is open, the editor's Add, Edit, Delete and Release are disabled.
+ */
+describe('one open question form across the editor and the AI proposals panel (UI-D10)', () => {
+  const view = { ...(proposalsFixture as unknown as QuestionnaireAiProposalsView), jobs: [] };
+  const panel = <AiProposalsPanelClient ownerKey="owner-a" requestId="request-1" view={view} />;
+
+  it('an open editor form disables the panel’s Confirm, Edit then confirm and start, and keeps Reject', async () => {
+    render(<QuestionFormScope><QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />{panel}</QuestionFormScope>);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Add question$/ })[0]!);
+    expect(screen.getByRole('button', { name: 'Confirm: Are payment files signed before upload?' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit, then confirm: Are payment files signed before upload?' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reject: Are payment files signed before upload?' })).toBeEnabled();
+    expect(screen.getByText('Save or discard the open question before you confirm proposals or ask the AI.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Suggest follow-up questions' })).toBeDisabled();
+  });
+
+  it('an open Edit, then confirm form disables the editor’s Add, Edit, Delete and Release', () => {
+    render(<QuestionFormScope><QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />{panel}</QuestionFormScope>);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit, then confirm: Are payment files signed before upload?' }));
+    for (const button of screen.getAllByRole('button', { name: /^Add question/ })) expect(button).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Edit question/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Release questionnaire/ })).toBeDisabled();
+  });
+
+  it('reads nothing open outside a scope', () => {
+    let seen: ReturnType<typeof useOpenQuestionForm> | null = null;
+    function Probe() { seen = useOpenQuestionForm(); return null; }
+    render(<Probe />);
+    expect(seen).toMatchObject({ editorFormOpen: false, panelFormOpen: false });
+  });
+});
+
+/* Phase 15 (15-UI-SPEC §7.1, §8.1, §9.2; D-05, D-08, D-27, D-30; U1): fixed questions, AI origins and the release gate. */
+describe('answered notes, AI origins and the release gate (Phase 15)', () => {
+  it('renders the protected Answered note from the analyst transport question list without exposing answer text', async () => {
+    questionsGet.mockResolvedValueOnce({ data: { data: [{
+      documentId: 'question-1', questionText: 'Is it protected?', answerType: 'Boolean', answered: true, answer: null,
+      options: { schemaVersion: 1, questionKey: 'protected', section: { key: 'general', title: 'General', order: 0 }, order: 0, required: true },
+    }] }, response: { status: 200 } });
+    const result = await getQuestionnaireGovernanceQuestions('questionnaire-1');
+    expect(result.error).toBeNull();
+    render(<QuestionnaireGovernance definition={result.data!.definition} placements={result.data!.placements} questionnaire={questionnaire} />);
+    expect(screen.getByText(/the AI can’t change or remove it/).closest('[data-answered-note]')).toHaveTextContent('Answered');
+  });
+  it('marks an answered question with the Answered note, never its answer, and nothing without the flag', () => {
+    render(<QuestionnaireGovernance definition={[{ ...definition[0]!, answered: true }]} placements={placementsOf(definition)} questionnaire={questionnaire} />);
+    const note = screen.getByText('Answered');
+    expect(note.closest('[data-answered-note]')).toHaveTextContent('Answered - the AI can’t change or remove it');
+    expect(note.closest('[data-answered-note]')!.querySelector('svg')).not.toBeNull();
+  });
+
+  it('shows no Answered note for a question served without the flag', () => {
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} />);
+    expect(screen.queryByText('Answered')).toBeNull();
+  });
+
+  it('names a confirmed or edited AI proposal’s question by its origin', () => {
+    const confirmed = { ...definition[0]!, aiOrigin: 'proposal-confirmed' as const };
+    const edited = { ...definition[0]!, documentId: 'question-2', questionKey: 'edited', questionText: 'Edited one?', order: 1, aiOrigin: 'proposal-edited' as const };
+    render(<QuestionnaireGovernance definition={[confirmed, edited]} placements={placementsOf([confirmed, edited])} questionnaire={questionnaire} />);
+    expect(screen.getByText('Confirmed AI proposal')).toBeInTheDocument();
+    expect(screen.getByText('Edited AI proposal')).toBeInTheDocument();
+  });
+
+  it('replaces Release questionnaire with the line while proposals are open, linking the count to the panel', () => {
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} releaseGate={{ openCount: 3, activeJob: false }} />);
+    expect(screen.queryByRole('button', { name: /Release questionnaire/ })).toBeNull();
+    expect(screen.getByText(/^Decide the/).closest('p')).toHaveTextContent('Decide the 3 open AI proposals before you release this questionnaire.');
+    expect(screen.getByRole('link', { name: '3 open AI proposals' })).toHaveAttribute('href', '#ai-proposals');
+  });
+
+  it('says the AI is preparing proposals while a job is active', () => {
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} releaseGate={{ openCount: 0, activeJob: true }} />);
+    expect(screen.getByText('The AI is preparing proposals. Decide them before you release this questionnaire.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to AI proposals' })).toHaveAttribute('href', '#ai-proposals');
+    expect(screen.queryByRole('button', { name: /Release questionnaire/ })).toBeNull();
+  });
+
+  it('keeps Release questionnaire with nothing open', () => {
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} releaseGate={{ openCount: 0, activeJob: false }} />);
+    expect(screen.getByRole('button', { name: /Release questionnaire/ })).toBeInTheDocument();
+  });
+
+  it('for a requesting analyst, who is served no count, shows the countless line once a release is refused for open proposals', async () => {
+    actions.releaseQuestionnaireAction.mockResolvedValueOnce({ ok: false, formError: 'This questionnaire has open AI proposals. Decide them before you release it.', reason: 'AI_PROPOSALS_OPEN' });
+    render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} releaseGate={{ openCount: null, activeJob: false }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Release questionnaire/ }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Release this questionnaire?' });
+    await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: 'Release questionnaire' })); });
+    expect(await within(dialog).findByText('This questionnaire has open AI proposals. Decide them before you release it.')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText('This questionnaire has open AI proposals. Another Security Analyst decides them before release.')).toBeInTheDocument();
+  });
+
+  it('lets the requesting analyst retry release after a soft refreshed seed without disclosing proposal counts', async () => {
+    actions.releaseQuestionnaireAction.mockResolvedValueOnce({ ok: false, formError: 'This questionnaire has open AI proposals. Decide them before you release it.', reason: 'AI_PROPOSALS_OPEN' });
+    const page = render(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={questionnaire} releaseGate={{ openCount: null, activeJob: false }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Release questionnaire' }));
+    const dialog = screen.getByRole('alertdialog');
+    await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: 'Release questionnaire' })); });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText('This questionnaire has open AI proposals. Another Security Analyst decides them before release.')).toBeInTheDocument();
+    page.rerender(<QuestionnaireGovernance definition={definition} placements={placementsOf(definition)} questionnaire={{ ...questionnaire }} releaseGate={{ openCount: null, activeJob: false }} />);
+    expect(screen.getByRole('button', { name: 'Release questionnaire' })).toBeInTheDocument();
+    expect(screen.queryByText(/\d+ open AI proposals/)).toBeNull();
   });
 });

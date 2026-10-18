@@ -1,0 +1,2761 @@
+[
+  {
+    "sequence": 1,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/{resource}/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 2,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/{resource}/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 3,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/{resource}/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 4,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/{resource}/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 5,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/{resource}/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 6,
+    "scenario": "lookup",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 7,
+    "scenario": "lookup",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users?filter=userName%20eq%20%22iam-scim-gate-8a7dd3b414bc%22",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 8,
+    "scenario": "create",
+    "origin": "connector",
+    "invocation": "POST /shadows",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 9,
+    "scenario": "create",
+    "origin": "connector",
+    "invocation": "POST /shadows",
+    "request": {
+      "method": "POST",
+      "path": "/scim/v2/Users",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "active": true,
+        "displayName": "Gate Person",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "type": "work",
+            "primary": true
+          }
+        ],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "groups": [],
+        "name": {
+          "familyName": "Person",
+          "givenName": "Gate"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:slack:profile:2.0:User"
+        ],
+        "title": "Gate Joiner",
+        "userName": "iam-scim-gate-8a7dd3b414bc"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Joiner",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 10,
+    "scenario": "read",
+    "origin": "connector",
+    "invocation": "GET /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 11,
+    "scenario": "read",
+    "origin": "connector",
+    "invocation": "GET /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Joiner",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 12,
+    "scenario": "read",
+    "origin": "connector",
+    "invocation": "GET /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 13,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 14,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 5,
+        "startIndex": 1,
+        "itemsPerPage": 5,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_2}}",
+            "userName": "jane.doe",
+            "emails": [
+              {
+                "value": "jane.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Jane",
+              "familyName": "Doe"
+            },
+            "displayName": "Jane Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_2}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_3}}",
+            "userName": "bob.doe",
+            "emails": [
+              {
+                "value": "bob.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Bob",
+              "familyName": "Doe"
+            },
+            "displayName": "Bob Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_3}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_4}}",
+            "userName": "maya.requestor",
+            "emails": [
+              {
+                "value": "maya.requestor@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Maya",
+              "familyName": "Requestor"
+            },
+            "displayName": "Maya Requestor",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_4}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_5}}",
+            "userName": "sam.analyst",
+            "emails": [
+              {
+                "value": "sam.analyst@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Sam",
+              "familyName": "Analyst"
+            },
+            "displayName": "Sam Analyst",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_5}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User",
+              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            ],
+            "id": "{{USER_ID_1}}",
+            "userName": "iam-scim-gate-8a7dd3b414bc",
+            "externalId": "iam-scim-gate-8a7dd3b414bc",
+            "emails": [
+              {
+                "value": "gate.joiner@idambox.test",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Gate",
+              "familyName": "Person"
+            },
+            "displayName": "Gate Person",
+            "active": true,
+            "title": "Gate Joiner",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+              "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+            },
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_1}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 15,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 16,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 17,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 18,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 19,
+    "scenario": "list",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 20,
+    "scenario": "filter",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 21,
+    "scenario": "filter",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users?filter=userName%20eq%20%22iam-scim-gate-8a7dd3b414bc%22",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 1,
+        "startIndex": 1,
+        "itemsPerPage": 1,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User",
+              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            ],
+            "id": "{{USER_ID_1}}",
+            "userName": "iam-scim-gate-8a7dd3b414bc",
+            "externalId": "iam-scim-gate-8a7dd3b414bc",
+            "emails": [
+              {
+                "value": "gate.joiner@idambox.test",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Gate",
+              "familyName": "Person"
+            },
+            "displayName": "Gate Person",
+            "active": true,
+            "title": "Gate Joiner",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+              "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+            },
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_1}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 22,
+    "scenario": "filter",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 23,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 24,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 5,
+        "startIndex": 1,
+        "itemsPerPage": 5,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_2}}",
+            "userName": "jane.doe",
+            "emails": [
+              {
+                "value": "jane.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Jane",
+              "familyName": "Doe"
+            },
+            "displayName": "Jane Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_2}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_3}}",
+            "userName": "bob.doe",
+            "emails": [
+              {
+                "value": "bob.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Bob",
+              "familyName": "Doe"
+            },
+            "displayName": "Bob Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_3}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_4}}",
+            "userName": "maya.requestor",
+            "emails": [
+              {
+                "value": "maya.requestor@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Maya",
+              "familyName": "Requestor"
+            },
+            "displayName": "Maya Requestor",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_4}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_5}}",
+            "userName": "sam.analyst",
+            "emails": [
+              {
+                "value": "sam.analyst@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Sam",
+              "familyName": "Analyst"
+            },
+            "displayName": "Sam Analyst",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_5}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User",
+              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            ],
+            "id": "{{USER_ID_1}}",
+            "userName": "iam-scim-gate-8a7dd3b414bc",
+            "externalId": "iam-scim-gate-8a7dd3b414bc",
+            "emails": [
+              {
+                "value": "gate.joiner@idambox.test",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Gate",
+              "familyName": "Person"
+            },
+            "displayName": "Gate Person",
+            "active": true,
+            "title": "Gate Joiner",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+              "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+            },
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_1}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 25,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 26,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 27,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 28,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 29,
+    "scenario": "page",
+    "origin": "connector",
+    "invocation": "POST /shadows/search",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 30,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 31,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Joiner",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 32,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 33,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Gate Person",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Person",
+          "givenName": "Gate"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "title": "Gate Mover",
+        "userName": "iam-scim-gate-8a7dd3b414bc"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Mover",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 34,
+    "scenario": "multi-value",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 35,
+    "scenario": "multi-value",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Mover",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 36,
+    "scenario": "multi-value",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 37,
+    "scenario": "multi-value",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Gate Person",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Person",
+          "givenName": "Gate"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "iam-scim-gate-8a7dd3b414bc"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Mover",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 38,
+    "scenario": "multi-value",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "PATCH",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+        ],
+        "Operations": [
+          {
+            "op": "remove",
+            "path": "emails[value eq \"gate.joiner@idambox.test\"]"
+          },
+          {
+            "op": "add",
+            "path": "emails",
+            "value": [
+              {
+                "type": "work",
+                "value": "gate.mover@idambox.test",
+                "primary": "true"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Mover",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 39,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 40,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": true,
+        "title": "Gate Mover",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 41,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 42,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "PATCH /shadows/{shadow}",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "active": false,
+        "displayName": "Gate Person",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Person",
+          "givenName": "Gate"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "iam-scim-gate-8a7dd3b414bc"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "iam-scim-gate-8a7dd3b414bc",
+        "externalId": "iam-scim-gate-8a7dd3b414bc",
+        "emails": [
+          {
+            "value": "gate.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Gate",
+          "familyName": "Person"
+        },
+        "displayName": "Gate Person",
+        "active": false,
+        "title": "Gate Mover",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "iam-scim-gate-8a7dd3b414bc"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 43,
+    "scenario": "delete",
+    "origin": "connector",
+    "invocation": "DELETE /shadows/{shadow}",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 44,
+    "scenario": "delete",
+    "origin": "connector",
+    "invocation": "DELETE /shadows/{shadow}",
+    "request": {
+      "method": "DELETE",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 204,
+      "headers": {},
+      "body": null
+    }
+  },
+  {
+    "sequence": 45,
+    "scenario": "schemas",
+    "origin": "direct-probe",
+    "invocation": "GET /scim/v2/Schemas",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Schemas",
+      "headers": {
+        "accept": "application/scim+json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/scim+json"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 3,
+        "startIndex": 1,
+        "itemsPerPage": 3,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:Schema"
+            ],
+            "id": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "name": "User",
+            "description": "Supported Core User projection.",
+            "attributes": [
+              {
+                "name": "id",
+                "type": "string",
+                "multiValued": false,
+                "description": "Stable server-issued document identifier.",
+                "required": false,
+                "mutability": "readOnly",
+                "returned": "always",
+                "caseExact": true,
+                "uniqueness": "global"
+              },
+              {
+                "name": "externalId",
+                "type": "string",
+                "multiValued": false,
+                "description": "Exact source identifier, required on create/replacement and immutable after ownership is established.",
+                "required": true,
+                "mutability": "immutable",
+                "returned": "default",
+                "caseExact": true,
+                "uniqueness": "none"
+              },
+              {
+                "name": "userName",
+                "type": "string",
+                "multiValued": false,
+                "description": "User name.",
+                "required": true,
+                "mutability": "readWrite",
+                "returned": "default",
+                "caseExact": false,
+                "uniqueness": "server"
+              },
+              {
+                "name": "name",
+                "type": "complex",
+                "multiValued": false,
+                "description": "Supported name parts.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default",
+                "subAttributes": [
+                  {
+                    "name": "givenName",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "Given name.",
+                    "required": false,
+                    "mutability": "readWrite",
+                    "returned": "default",
+                    "caseExact": false,
+                    "uniqueness": "none"
+                  },
+                  {
+                    "name": "familyName",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "Family name.",
+                    "required": false,
+                    "mutability": "readWrite",
+                    "returned": "default",
+                    "caseExact": false,
+                    "uniqueness": "none"
+                  }
+                ]
+              },
+              {
+                "name": "displayName",
+                "type": "string",
+                "multiValued": false,
+                "description": "Display name; omitted or blank input derives from name parts, then userName.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default",
+                "caseExact": false,
+                "uniqueness": "none"
+              },
+              {
+                "name": "active",
+                "type": "boolean",
+                "multiValued": false,
+                "description": "Account status; omitted create/replacement input defaults to true.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default"
+              },
+              {
+                "name": "emails",
+                "type": "complex",
+                "multiValued": true,
+                "description": "Only the selected primary email is stored and returned; ambiguous selections are rejected.",
+                "required": true,
+                "mutability": "readWrite",
+                "returned": "default",
+                "subAttributes": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "Selected email address.",
+                    "required": true,
+                    "mutability": "readWrite",
+                    "returned": "default",
+                    "caseExact": false,
+                    "uniqueness": "server"
+                  },
+                  {
+                    "name": "primary",
+                    "type": "boolean",
+                    "multiValued": false,
+                    "description": "Returned true for the selected address.",
+                    "required": false,
+                    "mutability": "readWrite",
+                    "returned": "default"
+                  }
+                ]
+              },
+              {
+                "name": "title",
+                "type": "string",
+                "multiValued": false,
+                "description": "Job title.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default",
+                "caseExact": false,
+                "uniqueness": "none"
+              },
+              {
+                "name": "meta",
+                "type": "complex",
+                "multiValued": false,
+                "description": "Available server metadata.",
+                "required": false,
+                "mutability": "readOnly",
+                "returned": "default",
+                "subAttributes": [
+                  {
+                    "name": "resourceType",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "User resource type.",
+                    "required": false,
+                    "mutability": "readOnly",
+                    "returned": "default",
+                    "caseExact": true,
+                    "uniqueness": "none"
+                  },
+                  {
+                    "name": "location",
+                    "type": "reference",
+                    "multiValued": false,
+                    "description": "Rooted resource location.",
+                    "required": false,
+                    "mutability": "readOnly",
+                    "returned": "default",
+                    "caseExact": true,
+                    "referenceTypes": [
+                      "uri"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "meta": {
+              "resourceType": "Schema",
+              "location": "/scim/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:Schema"
+            ],
+            "id": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+            "name": "EnterpriseUser",
+            "description": "Optional supported Enterprise User fields.",
+            "attributes": [
+              {
+                "name": "employeeNumber",
+                "type": "string",
+                "multiValued": false,
+                "description": "Employee number; matching data, not an ownership key.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default",
+                "caseExact": false,
+                "uniqueness": "none"
+              },
+              {
+                "name": "department",
+                "type": "string",
+                "multiValued": false,
+                "description": "Department.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default",
+                "caseExact": false,
+                "uniqueness": "none"
+              }
+            ],
+            "meta": {
+              "resourceType": "Schema",
+              "location": "/scim/v2/Schemas/urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:Schema"
+            ],
+            "id": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "name": "Group",
+            "description": "Standard Group schema; this service returns no Groups and does not support Group writes.",
+            "attributes": [
+              {
+                "name": "displayName",
+                "type": "string",
+                "multiValued": false,
+                "description": "Human-readable Group name.",
+                "required": true,
+                "mutability": "readWrite",
+                "returned": "default",
+                "caseExact": false,
+                "uniqueness": "none"
+              },
+              {
+                "name": "members",
+                "type": "complex",
+                "multiValued": true,
+                "description": "Group members.",
+                "required": false,
+                "mutability": "readWrite",
+                "returned": "default",
+                "subAttributes": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "Member identifier.",
+                    "required": false,
+                    "mutability": "immutable",
+                    "returned": "default",
+                    "caseExact": false,
+                    "uniqueness": "none"
+                  },
+                  {
+                    "name": "$ref",
+                    "type": "reference",
+                    "multiValued": false,
+                    "description": "Member resource URI.",
+                    "required": false,
+                    "mutability": "immutable",
+                    "returned": "default",
+                    "caseExact": false,
+                    "referenceTypes": [
+                      "User",
+                      "Group"
+                    ]
+                  },
+                  {
+                    "name": "type",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "Member resource type.",
+                    "required": false,
+                    "mutability": "immutable",
+                    "returned": "default",
+                    "caseExact": false,
+                    "uniqueness": "none",
+                    "canonicalValues": [
+                      "User",
+                      "Group"
+                    ]
+                  },
+                  {
+                    "name": "display",
+                    "type": "string",
+                    "multiValued": false,
+                    "description": "Human-readable member name.",
+                    "required": false,
+                    "mutability": "readOnly",
+                    "returned": "default",
+                    "caseExact": false,
+                    "uniqueness": "none"
+                  }
+                ]
+              }
+            ],
+            "meta": {
+              "resourceType": "Schema",
+              "location": "/scim/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 46,
+    "scenario": "config",
+    "origin": "direct-probe",
+    "invocation": "GET /scim/v2/ServiceProviderConfig",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ServiceProviderConfig",
+      "headers": {
+        "accept": "application/scim+json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/scim+json"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
+        ],
+        "patch": {
+          "supported": true
+        },
+        "bulk": {
+          "supported": false,
+          "maxOperations": 0,
+          "maxPayloadSize": 0
+        },
+        "filter": {
+          "supported": true,
+          "maxResults": 500
+        },
+        "changePassword": {
+          "supported": false
+        },
+        "sort": {
+          "supported": false
+        },
+        "etag": {
+          "supported": false
+        },
+        "authenticationSchemes": [
+          {
+            "name": "Bearer Token",
+            "description": "Identity Source bearer token",
+            "type": "oauthbearertoken",
+            "primary": true
+          }
+        ],
+        "meta": {
+          "resourceType": "ServiceProviderConfig",
+          "location": "/scim/v2/ServiceProviderConfig"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 47,
+    "scenario": "groups",
+    "origin": "direct-probe",
+    "invocation": "GET /scim/v2/Groups",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/scim+json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/scim+json"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  }
+]

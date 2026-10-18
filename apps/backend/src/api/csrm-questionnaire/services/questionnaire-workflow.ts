@@ -38,6 +38,14 @@ function isRecord(value: unknown): value is RecordValue {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/* D-17: the parsed definition does not carry help text, so a mutation result reads it from the stored question. */
+function helpTextOf(questionnaire: RecordValue, questionDocumentId: string): string | null {
+  const stored = Array.isArray(questionnaire.questions)
+    ? questionnaire.questions.find((question) => isRecord(question) && question.documentId === questionDocumentId)
+    : undefined;
+  return isRecord(stored) && typeof stored.helpText === "string" ? stored.helpText : null;
+}
+
 function exactKeys(value: RecordValue, allowed: readonly string[]): boolean {
   return Object.keys(value).every((key) => allowed.includes(key));
 }
@@ -300,6 +308,19 @@ async function loadReversalWorkflow(input: WorkflowInput): Promise<{
   }
 }
 
+/*
+ * Phase 15 D-25 (W-7): the release fact, re-read inside the locked transaction. The route's policy refuses a Requestor
+ * write on a questionnaire that is not released, but an analyst can return it to review between that check and this
+ * transaction; the row lock and this re-check close the window, so no Requestor answer lands while a confirmed AI
+ * proposal may be changing the questions.
+ */
+function assertReleasedForAnswers(questionnaire: RecordValue): void {
+  const releasedAt = questionnaire.releasedAt;
+  if (!(releasedAt instanceof Date || (typeof releasedAt === "string" && releasedAt.length > 0))) {
+    throw new QuestionnaireWorkflowError(409, "CSRM questionnaire is not answerable.", "QUESTIONNAIRE_NOT_ANSWERABLE");
+  }
+}
+
 async function persistAnswers(
   strapi: WorkflowStrapi,
   definition: QuestionnaireDefinitionQuestion[],
@@ -320,6 +341,7 @@ export async function saveAnswers(input: WorkflowInput): Promise<RecordValue> {
   const updates = parseAnswerMutationPayload(input.body);
   return runQuestionnaireMutation(input, async () => {
     const { questionnaire, request, definition } = await loadWorkflow(input);
+    assertReleasedForAnswers(questionnaire);
     const requestStatus = nextRequestStatusAfterDraft(String(request.requestStatus));
     const answers = normalizeDraftAnswers(definition, answerMap(definition), updates, input.now);
     await persistAnswers(input.strapi, definition, answers);
@@ -329,7 +351,7 @@ export async function saveAnswers(input: WorkflowInput): Promise<RecordValue> {
         data: { requestStatus },
       });
     }
-    return { ...questionnaire, assessmentRequest: { ...request, requestStatus }, questions: definition.map((question) => ({ ...question, answer: answers[question.questionKey] ?? null })) };
+    return { ...questionnaire, assessmentRequest: { ...request, requestStatus }, questions: definition.map((question) => ({ ...question, helpText: helpTextOf(questionnaire, question.documentId), answer: answers[question.questionKey] ?? null })) };
   });
 }
 
@@ -337,6 +359,7 @@ export async function submitQuestionnaire(input: WorkflowInput): Promise<RecordV
   const updates = input.body === undefined ? [] : parseAnswerMutationPayload(input.body);
   return runQuestionnaireMutation(input, async () => {
     const { questionnaire, request, definition } = await loadWorkflow(input);
+    assertReleasedForAnswers(questionnaire);
     const requestStatus = nextRequestStatusAfterDraft(String(request.requestStatus));
     const current = answerMap(definition);
     const draft = updates.length ? normalizeDraftAnswers(definition, current, updates, input.now) : current;
@@ -348,7 +371,7 @@ export async function submitQuestionnaire(input: WorkflowInput): Promise<RecordV
         data: { requestStatus },
       });
     }
-    return { ...questionnaire, assessmentRequest: { ...request, requestStatus }, questions: definition.map((question) => ({ ...question, answer: submitted[question.questionKey] ?? null })) };
+    return { ...questionnaire, assessmentRequest: { ...request, requestStatus }, questions: definition.map((question) => ({ ...question, helpText: helpTextOf(questionnaire, question.documentId), answer: submitted[question.questionKey] ?? null })) };
   });
 }
 
@@ -394,7 +417,7 @@ export async function revertQuestionnaireToDraft(input: WorkflowInput): Promise<
       revertReason: reason,
       revertedAt: (input.now ?? new Date()).toISOString(),
       revertedBy: input.actorDocumentId,
-      questions: definition.map((question) => ({ ...question, answer: drafts[question.questionKey] ?? null })),
+      questions: definition.map((question) => ({ ...question, helpText: helpTextOf(questionnaire, question.documentId), answer: drafts[question.questionKey] ?? null })),
     };
   });
 }

@@ -3,9 +3,12 @@ import { resolve } from 'node:path';
 import { Suspense, use, type ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'sonner';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { searchAfterPause } from '@/test/debounced-search';
 
 import type {
+  AiFieldReview,
   AnalystAssessmentDetail,
   AssessmentRiskListItem,
   ControlImplementation,
@@ -15,6 +18,8 @@ import type {
 } from './assessment-schema';
 import { controlImplementationWritableFields, riskWritableFields } from './assessment-schema';
 import { canMutateAssessment } from './assessment-domain';
+import type { AiProvenanceHeaderProps } from '@/features/ai-assistance/ai-provenance-domain';
+import type { RiskAiProposals, RiskAiRunFacts, RiskProposalJob } from '@/features/risk-curation/risk-curation-domain';
 
 const actionMocks = vi.hoisted(() => ({
   createControlImplementationAction: vi.fn(),
@@ -26,7 +31,31 @@ const actionMocks = vi.hoisted(() => ({
   updateControlImplementationAction: vi.fn(),
   updateRiskAction: vi.fn(),
 }));
+const decisionMock = vi.hoisted(() => vi.fn());
 vi.mock('./assessment-actions', () => actionMocks);
+vi.mock('@/features/ai-assistance/ai-assistance-actions', () => ({ decideAiProposalsAction: decisionMock }));
+/* Phase 16 (16-14): the risk curation and AI proposal actions the editor's cards and section send, and the router they refresh. */
+const curationActions = vi.hoisted(() => ({
+  withdrawRisksAction: vi.fn(),
+  reinstateRisksAction: vi.fn(),
+  undoWithdrawalAction: vi.fn(),
+  undoReinstatementAction: vi.fn(),
+  readRiskHistoryAction: vi.fn(),
+  startRiskSuggestionsAction: vi.fn(),
+  startRiskRewriteAction: vi.fn(),
+  readRiskProposalJobAction: vi.fn(),
+  retryRiskProposalJobAction: vi.fn(),
+  readRiskAiProposalsAction: vi.fn(),
+  decideRiskProposalsAction: vi.fn(),
+}));
+const routerRefresh = vi.hoisted(() => vi.fn());
+const routerReplace = vi.hoisted(() => vi.fn((href: string) => { window.history.replaceState(window.history.state, '', href); }));
+vi.mock('@/features/risk-curation/risk-curation-actions', () => curationActions);
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/app/review/assessments/assessment%2Fid',
+  useRouter: () => ({ push: vi.fn(), refresh: routerRefresh, replace: routerReplace }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 class TestResizeObserver {
   observe() {}
@@ -38,6 +67,7 @@ vi.stubGlobal('ResizeObserver', TestResizeObserver);
 Element.prototype.scrollIntoView ??= () => {};
 
 import { TimeZoneProvider } from '@/components/csrm/local-time';
+import { installTestResizeObserver } from '@/test/layout-stubs';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import {
   AssessmentEditor,
@@ -49,6 +79,7 @@ import { RiskEditor } from './risk-editor';
 const analyst = { documentId: 'bob-id', displayName: 'Bob Doe' };
 const assessment: AnalystAssessmentDetail = {
   actor: 'analyst',
+  released: false,
   documentId: 'assessment/id',
   assessmentNumber: 'ASM-0042',
   assessmentStatus: 'in-review',
@@ -67,6 +98,8 @@ const assessment: AnalystAssessmentDetail = {
   approvedBy: null,
   risks: [],
   ownerLabels: [analyst],
+  generation: null,
+  aiProvenance: null,
   releaseReadiness: {
     ready: true,
     requirements: [
@@ -139,6 +172,7 @@ const searchOwners = vi.fn(async () => ({ ok: true as const, data: [analyst] }))
 
 const releasedAssessment: AnalystAssessmentDetail = {
   ...assessment,
+  released: true,
   assessmentStatus: 'approved',
   assessmentDate: '2026-08-30T02:00:00.000Z',
   approvalDate: '2026-08-30T02:00:00.000Z',
@@ -300,6 +334,21 @@ describe('analyst assessment editor contract', () => {
     expect(releasedBadge).toHaveTextContent(/^Released$/);
     expect(releasedBadge).toHaveAttribute('data-tone', 'success');
     expect(releasedBadge).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('places a passed header action last in the header, after the status, and renders none by default', () => {
+    const plain = render(<AssessmentEditor {...editorProps} />);
+    expect(plain.container.querySelector('.page-header-actions')).toBeNull();
+    plain.unmount();
+
+    const { container } = render(<AssessmentEditor {...editorProps} headerAction={<a href="/app/review/assessments/assessment-1/report">Print report</a>} />);
+    const header = container.querySelector<HTMLElement>('.page-header')!;
+    const actions = header.lastElementChild as HTMLElement;
+    expect(actions).toHaveClass('page-header-actions');
+    expect(within(actions).getByRole('link', { name: 'Print report' })).toBeInTheDocument();
+    const badge = header.querySelector('[data-slot="badge"]')!;
+    expect(badge.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(actions).not.toContainElement(badge as HTMLElement);
   });
 
   it('renders the analyst request link and shared read-only lifecycle context', () => {
@@ -583,8 +632,8 @@ describe('analyst assessment editor contract', () => {
         // The control owner is chosen with the owner search over every active user (D-28).
         expect(field).toHaveAttribute('role', 'combobox');
         searchOwners.mockResolvedValueOnce({ ok: true, data: [zoe] });
-        fireEvent.change(field, { target: { value: 'Zoe' } });
-        fireEvent.click(await screen.findByRole('option', { name: 'Zoe Owner' }));
+        await searchAfterPause(field, 'Zoe');
+        fireEvent.click(screen.getByRole('option', { name: 'Zoe Owner' }));
       } else if (field instanceof HTMLSelectElement) {
         const next = [...field.options].map((option) => option.value).find((value) => value !== field.value) ?? '';
         fireEvent.change(field, { target: { value: next } });
@@ -834,8 +883,8 @@ describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 a
     expect(screen.getByText('Selected owner: Bob Doe')).toBeInTheDocument();
     expect(document.querySelector('select[name="controlOwner"]')).toBeNull();
 
-    await userEvent.type(owner, 'Zo');
-    await userEvent.click(await screen.findByRole('option', { name: 'Zoe Owner' }));
+    await searchAfterPause(owner, 'Zo');
+    await userEvent.click(screen.getByRole('option', { name: 'Zoe Owner' }));
     expect(searchOwners).toHaveBeenLastCalledWith({ search: 'Zo' });
     expect(screen.getByText('Selected owner: Zoe Owner')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Save mitigation control' }));
@@ -849,8 +898,8 @@ describe('the control owner and save confirmations (D-28, D-33, UI-SPEC §13.2 a
     const region = screen.getByRole('region', { name: 'Mitigation controls for RSK-0042' });
     const owner = within(region).getByRole('combobox', { name: 'Control owner' });
     expect(owner.tagName).toBe('INPUT');
-    await userEvent.type(owner, 'Zo');
-    expect(await screen.findByRole('option', { name: 'Zoe Owner' })).toBeInTheDocument();
+    await searchAfterPause(owner, 'Zo');
+    expect(screen.getByRole('option', { name: 'Zoe Owner' })).toBeInTheDocument();
     expect(searchOwners).toHaveBeenCalledWith({ search: 'Zo' });
   });
 
@@ -1154,6 +1203,32 @@ describe('readiness-gated release', () => {
     expect(within(screen.getByRole('list', { name: 'Release requirements' })).getAllByRole('link')).toHaveLength(15);
   });
 
+  /*
+   * Walk D13(a) (12-UI-SPEC §10.2): Strapi still projects release readiness for a record that can no longer change, with
+   * its assessment status outstanding because it is no longer in review. A released or closed record presents no
+   * release requirement at all: release is behind it, and the alert above says why the record is read-only.
+   */
+  it('presents no release requirement once the assessment can no longer change', () => {
+    const servedAfterRelease = {
+      ready: false,
+      requirements: [
+        { scope: 'assessment' as const, key: 'assessmentStatus', label: 'Assessment status', state: 'outstanding' as const },
+        { scope: 'assessment' as const, key: 'summary', label: 'Assessment summary', state: 'met' as const },
+        { scope: 'risk' as const, key: 'riskStatement', label: 'Risk statement', state: 'met' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
+      ],
+    };
+    for (const [status, notice] of [['approved', 'Assessment released'], ['closed', 'Assessment is read-only']] as const) {
+      const view = render(<AssessmentEditor {...editorProps} assessment={{ ...releasedAssessment, assessmentStatus: status, releaseReadiness: servedAfterRelease }} riskListItems={[riskListItem]} />);
+      expect(screen.getByText(notice), status).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Release readiness' }), status).not.toBeInTheDocument();
+      expect(screen.queryByText(/release requirements (are )?met/), status).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: /release requirements/i }), status).not.toBeInTheDocument();
+      expect(screen.queryByText('Outstanding'), status).not.toBeInTheDocument();
+      expect(screen.queryByText('Assessment status'), status).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it('offers release only for the in-review analyst presentation', () => {
     const view = render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, assessmentStatus: 'draft' }} />);
     expect(screen.queryByRole('button', { name: 'Release assessment' })).not.toBeInTheDocument();
@@ -1174,7 +1249,8 @@ describe('readiness-gated release', () => {
     expect(notice?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // No affordance may release or re-review without a real save.
     expect(screen.queryByRole('button', { name: 'Release assessment' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /re-?review|record review|withdraw/i })).not.toBeInTheDocument();
+    // Phase 16's `Withdraw risk {n}` withdraws a Risk, not the review, so only a control naming the review counts here.
+    expect(screen.queryByRole('button', { name: /re-?review|record review|withdraw (the )?(completed )?review/i })).not.toBeInTheDocument();
   });
 
   it('shows no withdrawn-review notice for a drafted assessment that was never reviewed', () => {
@@ -1429,5 +1505,838 @@ describe('the read-only assessment details', () => {
     render(<AssessmentEditor {...editorProps} assessment={{ ...releasedAssessment, nextReviewDate: null }} />);
 
     expect(definitionValue('Next review date')).toHaveTextContent(/^Not provided$/);
+  });
+});
+
+describe('proposal review in the Risk form', () => {
+  // Each test queues its own decision answers; one a failed test left unused never reaches the next.
+  beforeEach(() => { decisionMock.mockReset(); });
+
+  /*
+   * WR-404 (D-36, no lost input): in the editor a decision's re-read hands the form a new Risk, so the test delivers
+   * one. A form that reset, remounted or rebased its values on that Risk would lose the unsaved revision.
+   */
+  it('keeps an unsaved value while another field is confirmed and the refreshed Risk arrives', async () => {
+    const fields: AiFieldReview[] = [
+      { field: 'issueStatement', state: 'proposed', by: null, at: null, sources: [] },
+      { field: 'riskCause', state: 'proposed', by: null, at: null, sources: [] },
+    ];
+    const proposedRisk = {
+      ...risk,
+      aiProvenance: { runId: 'run-1', proposalKey: 'proposal-1', uncitedClaims: [], suggestions: [], adjustments: [], outstanding: 2, fields },
+    };
+    decisionMock.mockResolvedValueOnce({ ok: true, data: { applied: 1, unchanged: 0 } });
+    const editor = (current: typeof proposedRisk) => <RiskEditor assessmentId="assessment/id" mode="edit" onDecision={async () => {}} options={editorProps} risk={current} searchOwners={searchOwners} />;
+    const { rerender } = render(editor(proposedRisk));
+    const cause = screen.getByRole('textbox', { name: 'Risk cause' });
+    fireEvent.change(cause, { target: { value: 'Unsaved analyst revision' } });
+    expect(screen.getByText('Edited, not saved')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Risk cause' })).toHaveAccessibleDescription('Edited, not saved');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Issue statement' }));
+    await waitFor(() => expect(decisionMock).toHaveBeenCalledWith({ assessmentId: 'assessment/id', decisions: [{ target: { kind: 'risk', riskId: 'risk-1' }, action: 'accept', fields: ['issueStatement'] }] }));
+    await act(async () => {});
+
+    // The re-read's Risk: a new object, with the confirmed field accepted and the other still proposed.
+    rerender(editor({ ...proposedRisk, aiProvenance: { ...proposedRisk.aiProvenance, outstanding: 1, fields: [{ ...fields[0], state: 'accepted' }, fields[1]] } }));
+    expect(screen.getByRole('textbox', { name: 'Risk cause' })).toHaveValue('Unsaved analyst revision');
+    expect(screen.getByRole('textbox', { name: 'Risk cause' })).toHaveAccessibleDescription('Edited, not saved');
+    expect(screen.getByRole('textbox', { name: 'Issue statement' })).toHaveAccessibleDescription('Confirmed');
+  });
+
+  /* 12-UI-SPEC §4 (12-17): where each statement came from, and the claims the AI could not support. */
+  it('cites each statement’s sources under its field and flags uncited ones and unsupported claims', () => {
+    const citedRisk = {
+      ...risk,
+      aiProvenance: {
+        runId: 'run-1', proposalKey: 'proposal-1', suggestions: [], adjustments: [], outstanding: 2,
+        uncitedClaims: ['Recovery time objectives are not documented.'],
+        fields: [
+          { field: 'issueStatement', state: 'proposed' as const, by: null, at: null, sources: [] },
+          { field: 'riskStatement', state: 'proposed' as const, by: null, at: null, sources: [
+            { key: 'answer.payment-files', kind: 'answer' as const, label: 'Are payment files signed before upload?', section: 'Payment processing', classification: null },
+            { key: 'system-1', kind: 'system' as const, label: 'HR and payroll platform', section: null, classification: null },
+          ] },
+          { field: 'riskType', state: 'proposed' as const, by: null, at: null, sources: null },
+        ],
+      },
+    };
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" onDecision={async () => {}} options={editorProps} requestId="request-1" risk={citedRisk} searchOwners={searchOwners} />);
+    const sources = screen.getByRole('list', { name: 'Sources for Risk statement' });
+    expect(screen.getByRole('textbox', { name: 'Risk statement' }).compareDocumentPosition(sources) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(sources).getByRole('button', { name: 'Answer: Are payment files signed before upload?' })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(within(sources).getByText('System: HR and payroll platform')).toBeInTheDocument();
+    expect(screen.getAllByText('No source cited')).toHaveLength(1);
+    expect(screen.queryByRole('list', { name: 'Sources for Risk type' })).not.toBeInTheDocument();
+    // Named by its Risk, so each Risk's claims are their own landmark (axe landmark-unique).
+    expect(screen.getByRole('region', { name: 'Claims to check for RSK-0042' })).toHaveTextContent('“Recovery time objectives are not documented.”');
+  });
+
+  const proposed = (...fields: string[]) => fields.map((field) => ({ field, state: 'proposed' as const, by: null, at: null, sources: [] }));
+  const reviewRisk = (documentId: string, riskNumber: string, ...fields: string[]) => ({
+    ...risk, documentId, riskNumber,
+    aiProvenance: { runId: 'run-1', proposalKey: `proposal-${documentId}`, uncitedClaims: [], suggestions: [], adjustments: [], outstanding: fields.length, fields: proposed(...fields) },
+  });
+
+  /*
+   * Walk D13(c) (12-UI-SPEC §3.4, §3.5, UI-D3): a pre-filled value's note and the treatment action's note are part of
+   * their field's description, after the marker, while the field is proposed; once it is reviewed, both go.
+   */
+  it('names the pre-fill and treatment action notes in their fields’ descriptions while the field is proposed', async () => {
+    const noted = {
+      ...risk,
+      riskType: null,
+      treatmentAction: 'Accept' as const,
+      residualRating: 'Moderate' as const,
+      aiProvenance: { runId: 'run-1', proposalKey: 'proposal-1', uncitedClaims: [], suggestions: [], adjustments: [], outstanding: 3, fields: proposed('riskType', 'dataClassification', 'treatmentAction') },
+    };
+    decisionMock.mockResolvedValueOnce({ ok: true, data: { applied: 1, unchanged: 0 } });
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" onDecision={async () => {}} options={editorProps} risk={noted} searchOwners={searchOwners} />);
+    expect(screen.getByRole('combobox', { name: 'Risk type' })).toHaveAccessibleDescription('AI proposed The AI found no Risk Type that fits this Risk. Choose one, or confirm to leave it unset.');
+    expect(screen.getByRole('combobox', { name: 'Data classification' })).toHaveAccessibleDescription('AI proposed Taken from Customer data.');
+    expect(screen.getByRole('combobox', { name: 'Treatment action' })).toHaveAccessibleDescription('AI proposed Proposed because the residual rating is Moderate. The treatment plan holds the AI’s reason.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Treatment action' }));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Treatment action' })).toHaveAccessibleDescription('Confirmed'));
+    expect(screen.queryByText(/^Proposed because the residual rating/)).not.toBeInTheDocument();
+  });
+
+  /*
+   * D-11 (stage B WR-203): an AI-proposed Accept with no rationale reaches the editor as Treat with the adjustment
+   * `accept-without-rationale`, and its Treatment action says why, in its description, while proposed (12-UI-SPEC §3.5).
+   */
+  it('names why Treat is proposed when the AI gave its Accept no reason', () => {
+    const noReason = 'The AI proposed Accept without giving a reason, so Treat is proposed instead. Accept needs its reason in the treatment plan.';
+    const treated = {
+      ...risk,
+      treatmentAction: 'Treat' as const,
+      residualRating: 'Moderate' as const,
+      treatmentPlan: 'The AI proposed Accept without giving a reason, so Treat is proposed instead. Replace this with the plan to treat this risk.',
+      aiProvenance: { runId: 'run-1', proposalKey: 'proposal-1', uncitedClaims: [], suggestions: [], adjustments: ['accept-without-rationale'], outstanding: 2, fields: proposed('treatmentAction', 'treatmentPlan') },
+    };
+    render(<RiskEditor assessmentId="assessment/id" mode="edit" onDecision={async () => {}} options={editorProps} risk={treated} searchOwners={searchOwners} />);
+    expect(screen.getByRole('combobox', { name: 'Treatment action' })).toHaveAccessibleDescription(`AI proposed ${noReason}`);
+    expect(screen.getByText(noReason)).toBeVisible();
+  });
+
+  /* IN-304: a decision Strapi has not answered yet dims only the markers it decides (12-UI-SPEC §6.1). */
+  it('dims only the marker being decided while the decision is pending', async () => {
+    const answer = deferred<unknown>();
+    decisionMock.mockReturnValueOnce(answer.promise);
+    const { container } = render(<RiskEditor assessmentId="assessment/id" mode="edit" onDecision={async () => {}} options={editorProps} risk={reviewRisk('risk-1', 'RSK-0042', 'issueStatement', 'riskStatement', 'riskCause')} searchOwners={searchOwners} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Issue statement' }));
+    const marker = (field: string) => container.querySelector(`#risk-risk-1-${field}-ai-marker`)?.parentElement;
+    expect(marker('issueStatement')).toHaveAttribute('data-pending', 'true');
+    expect(marker('riskStatement')).toHaveAttribute('data-pending', 'false');
+    expect(marker('riskCause')).toHaveAttribute('data-pending', 'false');
+    await act(async () => answer.resolve({ ok: true, data: { applied: 1, unchanged: 0 } }));
+    expect(marker('issueStatement')).toHaveAttribute('data-pending', 'false');
+  });
+
+  it('dims only the assessment details marker being decided while the decision is pending', async () => {
+    const answer = deferred<unknown>();
+    decisionMock.mockReturnValueOnce(answer.promise);
+    const details = { ...assessment, aiProvenance: { runId: 'run-1', adjustments: [], outstanding: 2, fields: proposed('summary', 'overallRiskRationale') } };
+    const { container } = render(<AssessmentEditor {...editorProps} assessment={details} risks={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Summary' }));
+    expect(container.querySelector('#assessment-summary-ai-marker')?.parentElement).toHaveAttribute('data-pending', 'true');
+    expect(container.querySelector('#assessment-overallRiskRationale-ai-marker')?.parentElement).toHaveAttribute('data-pending', 'false');
+    await act(async () => answer.resolve({ ok: true, data: { applied: 1, unchanged: 0 } }));
+  });
+
+  /* WR-303: Refresh page re-reads the assessment in place, so an unsaved edit in another Risk survives the toast action. */
+  it('keeps an unsaved edit in another Risk when Refresh page answers a refused decision', async () => {
+    const first = reviewRisk('risk-1', 'RSK-0042', 'issueStatement', 'riskStatement');
+    const second = reviewRisk('risk-2', 'RSK-0043', 'issueStatement', 'riskStatement');
+    actionMocks.refreshAnalystAssessmentAction.mockClear().mockResolvedValue({ ok: true, data: { ...assessment, risks: [{ ...first }, { ...second }] } });
+    decisionMock.mockResolvedValueOnce({ ok: false, status: 409, reason: 'AI_PROPOSAL_ALREADY_DECIDED', kind: 'blocked', formError: 'This proposal is no longer open. Refresh the page to see where it stands.' });
+    const refused = vi.spyOn(toast, 'error').mockImplementation(() => 'refused');
+    try {
+      render(<AssessmentEditor {...editorProps} controlImplementations={{}} risks={[first, second]} />);
+      fireEvent.change(screen.getAllByRole('textbox', { name: 'Risk statement' })[1], { target: { value: 'An unsaved revision of the second Risk.' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Confirm Issue statement' })[0]);
+      await waitFor(() => expect(refused).toHaveBeenCalledWith('Proposal not confirmed', expect.anything()));
+      const refresh = (refused.mock.calls[0][1] as { action?: { label: string; onClick: (event: never) => void } } | undefined)?.action;
+      expect(refresh?.label).toBe('Refresh page');
+      expect(actionMocks.refreshAnalystAssessmentAction).not.toHaveBeenCalled();
+      act(() => refresh?.onClick({} as never));
+      await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id' }));
+      await act(async () => {});
+      expect(screen.getAllByRole('textbox', { name: 'Risk statement' })[1]).toHaveValue('An unsaved revision of the second Risk.');
+      expect(screen.getAllByRole('button', { name: 'Confirm Issue statement' })).toHaveLength(2);
+    } finally {
+      refused.mockRestore();
+    }
+  });
+});
+
+/*
+ * WR-302 (D-21, D-24): Strapi marks an AI field `edited` in the same transaction as an accepted save that changes it, and
+ * records a decision before it answers. The editor shows both as soon as Strapi answers, keeps them when the read that
+ * follows fails, and says that read failed instead of passing over it.
+ */
+describe('the review state after a save or a decision, when the read that follows fails (WR-302)', () => {
+  const refreshFailed = { ok: false, formError: 'The assessment service is unavailable. Please try again later.' };
+  const facts = (...fields: string[]) => fields.map((field) => ({ field, state: 'proposed' as const, by: null, at: null, sources: [] }));
+  const suggested = {
+    key: 'UATA-001', control: { documentId: 'control-9', controlNumber: 'UATA-001', name: 'File integrity verification', description: null },
+    rationale: 'Applicable to Internet Exposure risks.', state: 'proposed' as const, by: null, at: null, implementation: null,
+  };
+  const proposedRisk = {
+    ...risk,
+    aiProvenance: { runId: 'run-1', proposalKey: 'proposal-risk-1', uncitedClaims: [], suggestions: [suggested], adjustments: [], outstanding: 2, fields: facts('issueStatement', 'treatmentPlan') },
+  };
+  // Save assessment answers with the assessment details only (assessmentDetailSchema), never the analyst's AI facts.
+  const { actor: _actor, risks: _risks, ownerLabels: _owners, releaseReadiness: _readiness, generation: _generation, aiProvenance: _facts, ...servedDetails } = assessment;
+  const notRefreshed = ['Assessment not refreshed', expect.objectContaining({
+    description: 'We couldn’t load this assessment’s latest review state and release readiness, so the page may be out of date. Try again.',
+    duration: Infinity,
+    action: expect.objectContaining({ label: 'Try again' }),
+  })] as const;
+  let warning: MockInstance<typeof toast.warning>;
+  let success: MockInstance<typeof toast.success>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    decisionMock.mockReset();
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue(refreshFailed);
+    warning = vi.spyOn(toast, 'warning').mockImplementation(() => 'refresh-failed');
+    success = vi.spyOn(toast, 'success').mockImplementation(() => 'decided');
+  });
+  afterEach(() => {
+    warning.mockRestore();
+    success.mockRestore();
+  });
+
+  it('marks a saved AI-proposed Risk field Edited, with no Confirm, and says the assessment was not refreshed', async () => {
+    actionMocks.updateRiskAction.mockResolvedValueOnce({ ok: true, data: { documentId: 'risk-1', riskNumber: 'RSK-0042', riskStatement: risk.riskStatement, inherentRating: risk.inherentRating, residualRating: risk.residualRating } });
+    render(<AssessmentEditor {...editorProps} controlImplementations={{}} risks={[proposedRisk]} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Treatment plan' }), { target: { value: 'Rotate the signing keys every quarter.' } });
+    expect(screen.getByRole('textbox', { name: 'Treatment plan' })).toHaveAccessibleDescription('Edited, not saved');
+    await userEvent.click(screen.getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id' }));
+    await act(async () => {});
+
+    expect(screen.getByRole('textbox', { name: 'Treatment plan' })).toHaveAccessibleDescription('Edited');
+    expect(screen.queryByRole('button', { name: 'Confirm Treatment plan' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'AI review for RSK-0042' })).toHaveTextContent('1 AI-proposed field to review');
+    expect(screen.getByRole('button', { name: 'Confirm remaining (1) on RSK-0042' })).toBeInTheDocument();
+    expect(warning).toHaveBeenCalledWith(...notRefreshed);
+  });
+
+  it('marks a saved AI-proposed assessment detail Edited, with no Confirm, when the read after the save fails', async () => {
+    const details = { ...assessment, aiProvenance: { runId: 'run-1', adjustments: [], outstanding: 2, fields: facts('summary', 'overallRiskRationale') } };
+    actionMocks.saveAssessmentAction.mockImplementationOnce(async ({ values }: { values: { summary?: string } }) => ({ ok: true, data: { ...servedDetails, summary: values.summary ?? null } }));
+    render(<AssessmentEditor {...editorProps} assessment={details} risks={[]} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Summary' }), { target: { value: 'An analyst’s own summary.' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Save assessment' }));
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id' }));
+    await act(async () => {});
+
+    expect(screen.getByRole('textbox', { name: 'Summary' })).toHaveAccessibleDescription('Edited');
+    expect(screen.queryByRole('button', { name: 'Confirm Summary' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'AI review for the assessment details' })).toHaveTextContent('1 AI-proposed field to review');
+    expect(screen.getByRole('textbox', { name: 'Overall risk rationale' })).toHaveAccessibleDescription('AI proposed');
+    expect(warning).toHaveBeenCalledWith(...notRefreshed);
+  });
+
+  it('keeps a confirmed field Confirmed, with no Confirm, once the decision is recorded and the read after it fails', async () => {
+    decisionMock.mockResolvedValueOnce({ ok: true, data: { applied: 1, unchanged: 0 } });
+    render(<AssessmentEditor {...editorProps} controlImplementations={{}} risks={[proposedRisk]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Issue statement' }));
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Issue statement confirmed on RSK-0042.', expect.anything()));
+    await act(async () => {});
+
+    expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id' });
+    expect(screen.getByRole('textbox', { name: 'Issue statement' })).toHaveAccessibleDescription('Confirmed');
+    expect(screen.queryByRole('button', { name: 'Confirm Issue statement' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'AI review for RSK-0042' })).toHaveTextContent('1 AI-proposed field to review');
+    expect(warning).toHaveBeenCalledWith(...notRefreshed);
+  });
+
+  it('keeps a dismissed suggestion dismissed once the dismissal is recorded and the read after it fails', async () => {
+    decisionMock.mockResolvedValueOnce({ ok: true, data: { applied: 1, unchanged: 0 } });
+    render(<AssessmentEditor {...editorProps} controlImplementations={{}} risks={[proposedRisk]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss suggestion: UATA-001 · File integrity verification' }));
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Suggestion dismissed: UATA-001 · File integrity verification.', expect.anything()));
+    await act(async () => {});
+
+    expect(screen.queryByRole('button', { name: 'Add as planned control: UATA-001 · File integrity verification' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show dismissed suggestions (1)' })).toBeInTheDocument();
+    expect(warning).toHaveBeenCalledWith(...notRefreshed);
+  });
+
+  it('reads the assessment again from Try again, and shows what that read returns', async () => {
+    decisionMock.mockResolvedValueOnce({ ok: true, data: { applied: 1, unchanged: 0 } });
+    render(<AssessmentEditor {...editorProps} controlImplementations={{}} risks={[proposedRisk]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Issue statement' }));
+    await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
+    const served = { ...proposedRisk, aiProvenance: { ...proposedRisk.aiProvenance, outstanding: 0, fields: proposedRisk.aiProvenance.fields.map((fact) => ({ ...fact, state: 'accepted' as const })) } };
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValueOnce({ ok: true, data: { ...assessment, risks: [served] } });
+    const tryAgain = (warning.mock.calls[0][1] as { action?: { label: string; onClick: (event: never) => void } } | undefined)?.action;
+    await act(async () => { tryAgain?.onClick({} as never); });
+
+    expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByRole('group', { name: 'AI review for RSK-0042' })).toHaveTextContent('All AI proposals reviewed'));
+    expect(warning).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* WR-404: the AI review UI as the editor renders it, from the served facts, while unreleased and after release. */
+describe('the AI review UI in the assessment editor (WR-404)', () => {
+  const fact = (field: string, state: 'proposed' | 'accepted' | 'edited' = 'proposed', sources: { key: string; kind: 'answer' | 'system'; label: string; section: string | null; classification: string | null }[] = []) => ({ field, state, by: null, at: null, sources });
+  const answerSource = { key: 'answer.payment-files', kind: 'answer' as const, label: 'Are payment files signed before upload?', section: 'Payment processing', classification: null };
+  const suggestedControl = {
+    key: 'UATA-001', control: { documentId: 'control-9', controlNumber: 'UATA-001', name: 'File integrity verification', description: null },
+    rationale: 'Applicable to Internet Exposure risks.', state: 'proposed' as const, by: null, at: null, implementation: null,
+  };
+  const reviewedRisk = {
+    ...risk,
+    aiProvenance: {
+      runId: 'run-1', proposalKey: 'proposal-risk-1', uncitedClaims: ['Recovery time objectives are not documented.'], suggestions: [suggestedControl], adjustments: [], outstanding: 2,
+      fields: [fact('issueStatement'), fact('riskStatement', 'proposed', [answerSource]), fact('riskCause', 'accepted')],
+    },
+  };
+  const detailFacts = { runId: 'run-1', adjustments: [], outstanding: 2, fields: [fact('summary', 'proposed', [answerSource]), fact('overallRating'), fact('recommendationsSummary', 'accepted')] };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    decisionMock.mockReset();
+  });
+
+  /*
+   * WR-305, walk D5 (12-UI-SPEC §3.3): the badge's name is extended by visually hidden text after its label, not by an
+   * `aria-label` on a generic span, which assistive technology ignores; and one field is one field.
+   */
+  it('extends the Risk card’s AI proposed badge with its count in visually hidden text, in the singular for one field', async () => {
+    const oneProposed = { ...risk, documentId: 'risk-2', riskNumber: 'RSK-0043', aiProvenance: { ...reviewedRisk.aiProvenance, proposalKey: 'proposal-risk-2', suggestions: [], outstanding: 1, fields: [fact('issueStatement'), fact('riskCause', 'edited')] } };
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: false, formError: 'The assessment service is unavailable. Please try again later.' });
+    decisionMock.mockResolvedValueOnce({ ok: true, data: { applied: 1, unchanged: 0 } });
+    const warning = vi.spyOn(toast, 'warning').mockImplementation(() => 'refresh-failed');
+    const success = vi.spyOn(toast, 'success').mockImplementation(() => 'decided');
+    try {
+      render(<AssessmentEditor {...editorProps} controlImplementations={{}} risks={[reviewedRisk, oneProposed]} />);
+      const badgeCount = (riskId: string) => {
+        const header = document.getElementById(`risk-${riskId}`)!.querySelector<HTMLElement>('[data-slot="card-header"]')!;
+        const badge = within(header).getByText('AI proposed');
+        expect(badge).toHaveAttribute('data-slot', 'badge');
+        const group = badge.parentElement!;
+        expect(group).not.toHaveAttribute('aria-label');
+        expect(within(group).getByText(/^: \d+ fields? to review$/)).toHaveClass('sr-only');
+        return group.textContent;
+      };
+      expect(badgeCount('risk-1')).toBe('AI proposed: 2 fields to review');
+      expect(badgeCount('risk-2')).toBe('AI proposed: 1 field to review');
+
+      // A recorded Confirm counts at once, and stays counted when the read after it fails (WR-302).
+      fireEvent.click(within(document.getElementById('risk-risk-1')!).getByRole('button', { name: 'Confirm Issue statement' }));
+      await waitFor(() => expect(success).toHaveBeenCalled());
+      await act(async () => {});
+      expect(badgeCount('risk-1')).toBe('AI proposed: 1 field to review');
+    } finally {
+      warning.mockRestore();
+      success.mockRestore();
+    }
+  });
+
+  it('marks the AI-written assessment details, names each marker in its field’s description, and shows their review bar', () => {
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, aiProvenance: detailFacts }} risks={[]} />);
+    const details = screen.getByRole('region', { name: 'Assessment details' });
+    expect(within(details).getByRole('textbox', { name: 'Summary' })).toHaveAccessibleDescription('AI proposed');
+    expect(within(details).getByRole('combobox', { name: 'Overall rating' })).toHaveAccessibleDescription('AI proposed');
+    expect(within(details).getByRole('textbox', { name: 'Recommendations' })).toHaveAccessibleDescription('Confirmed');
+    expect(within(details).getByRole('combobox', { name: 'Overall control effectiveness' })).not.toHaveAccessibleDescription();
+    expect(within(details).getByRole('button', { name: 'Confirm Summary' })).toBeInTheDocument();
+    expect(within(details).getByRole('button', { name: 'Confirm Overall rating' })).toBeInTheDocument();
+    expect(within(details).queryByRole('button', { name: 'Confirm Recommendations' })).not.toBeInTheDocument();
+    const bar = within(details).getByRole('group', { name: 'AI review for the assessment details' });
+    expect(bar).toHaveTextContent('2 AI-proposed fields to review');
+    expect(within(bar).getByRole('button', { name: 'Confirm remaining (2) in the assessment details' })).toBeInTheDocument();
+    expect(within(details).getByRole('list', { name: 'Sources for Summary' })).toBeInTheDocument();
+  });
+
+  it('shows no marker, review bar, source, claim or suggestion once the assessment is released (12-UI-SPEC §10.2)', () => {
+    render(<AssessmentEditor {...editorProps} assessment={{ ...releasedAssessment, aiProvenance: detailFacts }} controlImplementations={{ 'risk-1': [implementation] }} riskListItems={[riskListItem]} risks={[reviewedRisk]} />);
+    expect(screen.getByText('Assessment released')).toBeInTheDocument();
+    expect(screen.queryByText('AI proposed')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Confirm remaining/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Confirm/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^AI review for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: /^Sources for / })).not.toBeInTheDocument();
+    expect(screen.queryByText('No source cited')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /^Claims (to check|the AI couldn’t support)/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Suggested by AI')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /^Suggested by AI/ })).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * Phase 16 (16-UI-SPEC §1, §6.3, §6.4, §9.1, §10.1, §16 U1 and E2; D-08, D-12, D-42, D-45, UI-D2, UI-D9): the editor places
+ * the AI proposals section before Identified Risks, splits the Risks with the Show filter, and lists the new readiness item.
+ */
+describe('risk curation and AI proposals in the assessment editor (16-14)', () => {
+  const allowed = { allowed: true, reason: null } as const;
+  const withdrawalFacts = { at: '2026-10-14T01:00:00.000Z', by: analyst, reason: 'Duplicate of RSK-0042' };
+  const secondRisk = { ...risk, documentId: 'risk-2', riskNumber: 'RSK-0043', riskStatement: 'Payment files may be altered.' };
+  const withdrawnRisk = { ...risk, documentId: 'risk-3', riskNumber: 'RSK-0044', riskStatement: 'An old duplicate of the portal risk.', withdrawal: withdrawalFacts };
+  const proposalsRead = (overrides: Partial<RiskAiProposals> = {}): RiskAiProposals => ({
+    assessmentId: 'assessment/id',
+    editable: true,
+    openCount: 0,
+    openByRisk: [],
+    lastAskedAt: null,
+    actions: { suggest: allowed, rewrite: allowed, decide: allowed },
+    runs: [],
+    items: [],
+    jobs: [],
+    ...overrides,
+  });
+  const curatedEditor = (extra: Partial<Parameters<typeof AssessmentEditor>[0]> = {}) => (
+    <AssessmentEditor {...editorProps} controlImplementations={{}} ownerKey="owner-a" proposals={proposalsRead()} risks={[risk, secondRisk, withdrawnRisk]} {...extra} />
+  );
+  const rewriteJob = (riskId: string, status: RiskProposalJob['status'], jobId = 'job-1'): RiskProposalJob => ({
+    jobId, operation: 'risk-rewrite', assessmentId: 'assessment/id', riskId, status, attempt: 1, queuedAt: '2026-10-15T01:00:00.000Z',
+    startedAt: null, completedAt: null, runId: null, failureCode: null, failureMessage: null, initiatedBy: analyst, initiatedByViewer: true, canRetry: false,
+  });
+  const noChangeRun: RiskAiRunFacts = {
+    runId: 'run-w', operation: 'risk-rewrite', initiatedBy: analyst, startedAt: '2026-10-15T01:00:00.000Z', completedAt: '2026-10-15T01:01:00.000Z',
+    providerName: null, providerVersion: null, instruction: null, focus: null, riskId: 'risk-1', outcome: 'no-change', counts: { items: 0, open: 0 }, adjustments: [],
+  };
+  const card = (riskId: string) => document.getElementById(`risk-${riskId}`)!;
+  const shownCards = () => [...document.querySelectorAll<HTMLElement>('[data-risk-list]:not([hidden]) [data-risk-card]')];
+
+  /*
+   * A card's AI rewrite section and the Risk history sheet are code-split (D-48), and a first load transforms the module:
+   * under a full parallel suite that alone can outlast a find query's timeout. Loading them once here leaves each test
+   * waiting only on the editor.
+   */
+  beforeAll(async () => {
+    await Promise.all([import('@/features/risk-curation/risk-rewrite'), import('@/features/risk-curation/risk-history-sheet')]);
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/app/review/assessments/assessment%2Fid');
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [risk, secondRisk, withdrawnRisk] } });
+  });
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    window.sessionStorage.clear();
+  });
+
+  it('places AI proposals before Identified Risks and splits the Risks with the Show filter, kept in the address', async () => {
+    render(curatedEditor());
+
+    const proposalsHeading = screen.getByRole('heading', { level: 2, name: 'AI proposals' });
+    const risksHeading = screen.getByRole('heading', { level: 2, name: 'Identified Risks' });
+    expect(proposalsHeading.compareDocumentPosition(risksHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.getElementById('ai-proposals')).toHaveAttribute('tabindex', '-1');
+
+    const show = screen.getByRole('radiogroup', { name: 'Show' });
+    const active = within(show).getByRole('radio', { name: 'Active (2)' });
+    const withdrawn = within(show).getByRole('radio', { name: 'Withdrawn (1)' });
+    expect(active).toBeChecked();
+    expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-1', 'risk-risk-2']);
+    expect(screen.getByRole('button', { name: 'Add Risk' })).toBeInTheDocument();
+
+    await userEvent.click(withdrawn);
+    expect(withdrawn).toBeChecked();
+    expect(window.location.search).toBe('?risks=withdrawn');
+    // Through the router, with no scroll, so its tree follows the address and a later refresh keeps the page in place.
+    expect(routerReplace).toHaveBeenLastCalledWith('/app/review/assessments/assessment%2Fid?risks=withdrawn', { scroll: false });
+    // Choosing an option moves no focus (§6.3): it stays on the option chosen.
+    expect(withdrawn).toHaveFocus();
+    expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-3']);
+    expect(card('risk-3')).toHaveAttribute('data-withdrawn');
+    expect(within(card('risk-3')).getByText('Reason: “Duplicate of RSK-0042”')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Risk' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(show).getByRole('radio', { name: 'Active (2)' }));
+    expect(window.location.search).toBe('');
+    expect(routerReplace).toHaveBeenLastCalledWith('/app/review/assessments/assessment%2Fid', { scroll: false });
+    expect(shownCards()).toHaveLength(2);
+  });
+
+  it('keeps unsaved Risk and new-Risk input across a Show change (FE3-01)', async () => {
+    render(curatedEditor());
+    const statement = within(card('risk-1')).getByRole('textbox', { name: 'Risk statement' });
+    fireEvent.change(statement, { target: { value: 'An unsaved statement' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Add Risk' }));
+    const create = screen.getByRole('button', { name: 'Add risk' }).closest('form')!;
+    fireEvent.change(within(create).getByLabelText('Risk statement'), { target: { value: 'A new risk in progress' } });
+
+    const show = screen.getByRole('radiogroup', { name: 'Show' });
+    await userEvent.click(within(show).getByRole('radio', { name: 'Withdrawn (1)' }));
+    expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-3']);
+    expect(screen.queryByRole('button', { name: 'Add risk' })).not.toBeInTheDocument();
+    await userEvent.click(within(show).getByRole('radio', { name: 'Active (2)' }));
+
+    expect(within(card('risk-1')).getByRole('textbox', { name: 'Risk statement' })).toHaveValue('An unsaved statement');
+    const reopened = screen.getByRole('button', { name: 'Add risk' }).closest('form')!;
+    expect(within(reopened).getByLabelText('Risk statement')).toHaveValue('A new risk in progress');
+  });
+
+  it('keeps the lists and their unsaved input when a later read of the page fails, offering Try again (Note 1)', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockImplementation(() => 'not-refreshed');
+    try {
+      const { rerender } = render(curatedEditor());
+      fireEvent.change(within(card('risk-1')).getByRole('textbox', { name: 'Risk statement' }), { target: { value: 'An unsaved statement' } });
+      await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Show' })).getByRole('radio', { name: 'Withdrawn (1)' }));
+
+      // The page's read for the new address fails.
+      rerender(<AssessmentEditor state="error" />);
+
+      expect(screen.queryByText('We couldn’t load this assessment')).not.toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Withdrawn (1)' })).toBeChecked();
+      expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-3']);
+      // The Active list is hidden while Withdrawn is chosen, and keeps its form.
+      expect(within(card('risk-1')).getByRole('textbox', { name: 'Risk statement', hidden: true })).toHaveValue('An unsaved statement');
+      await waitFor(() => expect(warning).toHaveBeenCalledWith('Assessment not refreshed', expect.objectContaining({
+        description: 'We couldn’t load this assessment’s latest review state and release readiness, so the page may be out of date. Try again.',
+        action: expect.objectContaining({ label: 'Try again' }),
+      })));
+      const retry = (warning.mock.calls.at(-1)![1] as { action: { onClick: (event: unknown) => void } }).action;
+      act(() => retry.onClick({}));
+      expect(routerRefresh).toHaveBeenCalled();
+
+      // A refusal still replaces the editor: navigation visibility is not authorisation.
+      rerender(<AssessmentEditor state="permission" />);
+      expect(screen.getByText('You don’t have permission to review this assessment')).toBeInTheDocument();
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
+  it('chooses the list a Risk card link names, then lands on the card (FE3-06)', async () => {
+    const requirements = [{ scope: 'risk' as const, key: 'riskStatement', label: 'Risk statement', state: 'outstanding' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' }];
+    render(curatedEditor({ assessment: { ...assessment, releaseReadiness: { ready: false, requirements } }, riskFilter: 'withdrawn' }));
+    expect(screen.getByRole('radio', { name: 'Withdrawn (1)' })).toBeChecked();
+
+    await userEvent.click(screen.getByRole('link', { name: 'RSK-0042: 1 outstanding' }));
+
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Active (2)' })).toBeChecked());
+    expect(routerReplace).toHaveBeenLastCalledWith(expect.not.stringContaining('risks=withdrawn'), { scroll: false });
+    await waitFor(() => expect(card('risk-1')).toHaveFocus());
+  });
+
+  it('closes the history sheet and lands on AI proposals when Show in AI proposals is followed (FE3-07)', async () => {
+    const added = {
+      id: 'event-5', kind: 'created' as const, occurredAt: '2026-10-14T03:00:00.000Z', actor: analyst, sourceKind: 'ai-run' as const,
+      aiRunId: null, proposalItem: 's-1', reason: null, undo: false, changes: { schemaVersion: 1 as const, fields: [] },
+    };
+    curationActions.readRiskHistoryAction.mockResolvedValue({ ok: true, data: { events: [added], pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 }, recordedFrom: '2026-10-01T00:00:00.000Z' } });
+    render(curatedEditor());
+    await userEvent.click(within(card('risk-1')).getByRole('button', { name: 'History of RSK-0042' }));
+    const sheet = await screen.findByRole('dialog', { name: 'History of RSK-0042' });
+
+    await userEvent.click(await within(sheet).findByRole('link', { name: 'Show in AI proposals' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'History of RSK-0042' })).not.toBeInTheDocument());
+    await waitFor(() => expect(document.getElementById('ai-proposals')).toHaveFocus());
+  });
+
+  it('closes the history sheet of a released Risk the same way (FE3-07)', async () => {
+    const added = {
+      id: 'event-5', kind: 'created' as const, occurredAt: '2026-10-14T03:00:00.000Z', actor: analyst, sourceKind: 'ai-run' as const,
+      aiRunId: null, proposalItem: 's-1', reason: null, undo: false, changes: { schemaVersion: 1 as const, fields: [] },
+    };
+    curationActions.readRiskHistoryAction.mockResolvedValue({ ok: true, data: { events: [added], pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 }, recordedFrom: '2026-10-01T00:00:00.000Z' } });
+    render(curatedEditor({ assessment: releasedAssessment, proposals: proposalsRead({ editable: false }), riskListItems: [riskListItem], risks: [risk] }));
+    await userEvent.click(within(card('risk-1')).getByRole('button', { name: 'History of RSK-0042' }));
+    const sheet = await screen.findByRole('dialog', { name: 'History of RSK-0042' });
+
+    await userEvent.click(await within(sheet).findByRole('link', { name: 'Show in AI proposals' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'History of RSK-0042' })).not.toBeInTheDocument());
+    await waitFor(() => expect(document.getElementById('ai-proposals')).toHaveFocus());
+  });
+
+  it('offers no Confirm for a residual change that would leave a High rating under an AI-confirmed Accept (FE4-07)', async () => {
+    const accepted = {
+      ...risk,
+      treatmentAction: 'Accept',
+      aiProvenance: { runId: 'run-1', proposalKey: 'proposal-1', uncitedClaims: [], suggestions: [], adjustments: [], outstanding: 0, fields: [{ field: 'treatmentAction', state: 'accepted' as const, by: analyst, at: '2026-10-14T01:00:00.000Z', sources: null }] },
+    } as AnalystRisk;
+    const raised = {
+      runId: 'run-w', itemKey: 'u-residual-rating', kind: 'change' as const, state: 'open' as const, stale: false, riskId: 'risk-1', unitKey: 'u-residual-rating',
+      fields: ['residualLikelihood', 'highestResidualConsequence', 'residualRating'],
+      current: { residualLikelihood: 'Possible', highestResidualConsequence: 'Moderate', residualRating: 'Moderate' },
+      proposed: { residualLikelihood: 'Likely', highestResidualConsequence: 'Major', residualRating: 'High' },
+      similarTo: null, aiAccept: false, acceptBlocked: null, sources: [], uncited: [], suggestedControls: [], decision: null, addedRisk: null, canUndo: false,
+    };
+    render(curatedEditor({ risks: [accepted, secondRisk], proposals: proposalsRead({ openCount: 1, openByRisk: [{ riskId: 'risk-1', count: 1 }], runs: [{ ...noChangeRun, outcome: 'items' as const, counts: { items: 1, open: 1 } }], items: [raised] }) }));
+    expect(await within(card('risk-1')).findAllByRole('button', { name: 'Reject: Residual rating on RSK-0042' })).not.toHaveLength(0);
+    expect(within(card('risk-1')).queryAllByRole('button', { name: 'Confirm: Residual rating on RSK-0042' })).toHaveLength(0);
+  });
+
+  it('ids each Risk card by its documentId and links to it encoded, as the hash landing decodes it (FE3-12)', () => {
+    const slashed = { ...risk, documentId: 'risk/1' } as AnalystRisk;
+    render(curatedEditor({ risks: [slashed, secondRisk, withdrawnRisk], proposals: proposalsRead({ openCount: 1, openByRisk: [{ riskId: 'risk/1', count: 1 }] }) }));
+    const slashedCard = document.getElementById('risk-risk/1');
+    expect(slashedCard).toHaveAttribute('data-risk-card');
+    expect(within(slashedCard!).getByRole('link', { name: '1 AI change to review' })).toHaveAttribute('href', '#risk-risk%2F1-rewrite');
+    expect(document.getElementById('risk-risk-3')).toHaveAttribute('data-withdrawn');
+  });
+
+  it('offers no Rewrite this risk while that Risk’s rewrite is queued or running (FE4-04)', () => {
+    curationActions.readRiskProposalJobAction.mockReturnValue(new Promise(() => undefined));
+    render(curatedEditor({ proposals: proposalsRead({ jobs: [rewriteJob('risk-1', 'queued'), rewriteJob('risk-2', 'running', 'job-2')] }) }));
+    expect(within(card('risk-1')).queryByRole('button', { name: 'Rewrite this risk: RSK-0042' })).not.toBeInTheDocument();
+    expect(within(card('risk-2')).queryByRole('button', { name: 'Rewrite this risk: RSK-0043' })).not.toBeInTheDocument();
+  });
+
+  it('offers Rewrite this risk again once that Risk’s rewrite failed (FE4-04)', () => {
+    render(curatedEditor({ proposals: proposalsRead({ jobs: [{ ...rewriteJob('risk-1', 'failed'), failureCode: 'PROVIDER_ERROR' }] }) }));
+    expect(within(card('risk-1')).getByRole('button', { name: 'Rewrite this risk: RSK-0042' })).toBeInTheDocument();
+    expect(within(card('risk-2')).getByRole('button', { name: 'Rewrite this risk: RSK-0043' })).toBeInTheDocument();
+  });
+
+  it('stops following a started rewrite once it completes, and offers Rewrite this risk again (FE4-05)', async () => {
+    const started = rewriteJob('risk-1', 'queued', 'job-w');
+    curationActions.startRiskRewriteAction.mockResolvedValue({ ok: true, data: started });
+    curationActions.readRiskProposalJobAction.mockResolvedValue({ ok: true, data: { ...started, status: 'completed', runId: 'run-w' } });
+    const { rerender } = render(curatedEditor());
+    fireEvent.click(within(card('risk-1')).getByRole('button', { name: 'Rewrite this risk: RSK-0042' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Rewrite RSK-0042' });
+    fireEvent.click(await within(dialog).findByRole('button', { name: 'Rewrite risk' }));
+    expect(await within(card('risk-1')).findByText('The AI is rewriting RSK-0042')).toBeInTheDocument();
+    await waitFor(() => expect(curationActions.readRiskProposalJobAction).toHaveBeenCalledTimes(1), { timeout: 5_000 });
+
+    // The page's next read: the job is done and serves no job for the Risk.
+    rerender(curatedEditor({ proposals: proposalsRead({ runs: [{ ...noChangeRun, outcome: 'items' as const }] }) }));
+    expect(await within(card('risk-1')).findByRole('button', { name: 'Rewrite this risk: RSK-0042' })).toBeInTheDocument();
+    expect(within(card('risk-1')).queryByText('The AI is rewriting RSK-0042')).not.toBeInTheDocument();
+    expect(curationActions.readRiskProposalJobAction).toHaveBeenCalledTimes(1);
+  });
+
+  for (const width of ['wide', 'phone'] as const) {
+    it(`moves focus to the started rewrite’s status line once the AI is asked, ${width} (FE4-03)`, async () => {
+      if (width === 'phone') {
+        vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(max-width: 767px)', media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+        installTestResizeObserver();
+      }
+      try {
+        const started = rewriteJob('risk-1', 'queued', 'job-w');
+        curationActions.startRiskRewriteAction.mockResolvedValue({ ok: true, data: started });
+        curationActions.readRiskProposalJobAction.mockReturnValue(new Promise(() => undefined));
+        render(curatedEditor());
+        fireEvent.click(within(card('risk-1')).getByRole('button', { name: 'Rewrite this risk: RSK-0042' }));
+        const dialog = await screen.findByRole('dialog', { name: 'Rewrite RSK-0042' });
+        fireEvent.click(await within(dialog).findByRole('button', { name: 'Rewrite risk' }));
+        const status = await within(card('risk-1')).findByText('The AI is rewriting RSK-0042');
+        await waitFor(() => expect(status).toHaveFocus());
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  }
+
+  it('keeps a served rewrite’s no-change outcome after the page reads it again (FE4-05)', async () => {
+    const running = { ...rewriteJob('risk-1', 'running', 'job-w'), initiatedBy: { documentId: 'ada-id', displayName: 'Ada Analyst' }, initiatedByViewer: false };
+    curationActions.readRiskProposalJobAction.mockResolvedValue({ ok: true, data: { ...running, status: 'completed', runId: 'run-w' } });
+    const { rerender } = render(curatedEditor({ proposals: proposalsRead({ jobs: [running] }) }));
+    expect(await within(card('risk-1')).findByText('The AI is rewriting RSK-0042')).toBeInTheDocument();
+    await waitFor(() => expect(curationActions.readRiskProposalJobAction).toHaveBeenCalledTimes(1), { timeout: 5_000 });
+
+    rerender(curatedEditor({ proposals: proposalsRead({ runs: [noChangeRun] }) }));
+    expect(await within(card('risk-1')).findByText('The AI proposed no changes to RSK-0042.')).toBeInTheDocument();
+  });
+
+  it('opens the list the address names', () => {
+    render(curatedEditor({ riskFilter: 'withdrawn' }));
+    expect(screen.getByRole('radio', { name: 'Withdrawn (1)' })).toBeChecked();
+    expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-3']);
+  });
+
+  it('withdraws a Risk from its card: it moves to Withdrawn, the counts follow and the toast offers Undo', async () => {
+    curationActions.withdrawRisksAction.mockResolvedValue({ ok: true, data: { applied: ['risk-2'], unchanged: [] } });
+    const nowWithdrawn = { ...secondRisk, withdrawal: { at: '2026-10-15T01:00:00.000Z', by: analyst, reason: 'Out of scope' } };
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [risk, nowWithdrawn, withdrawnRisk] } });
+    const success = vi.spyOn(toast, 'success').mockImplementation(() => 'withdrawn');
+    try {
+      render(curatedEditor());
+      await userEvent.click(within(card('risk-2')).getByRole('button', { name: 'Withdraw risk RSK-0043' }));
+      await userEvent.type(within(card('risk-2')).getByRole('textbox', { name: 'Reason for withdrawing' }), 'Out of scope');
+      await userEvent.click(within(card('risk-2')).getByRole('button', { name: 'Withdraw risk' }));
+
+      await waitFor(() => expect(curationActions.withdrawRisksAction).toHaveBeenCalledWith({ assessmentId: 'assessment/id', riskIds: ['risk-2'], reason: 'Out of scope' }));
+      await waitFor(() => expect(screen.getByRole('radio', { name: 'Active (1)' })).toBeInTheDocument());
+      expect(screen.getByRole('radio', { name: 'Withdrawn (2)' })).toBeInTheDocument();
+      expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-1']);
+      await waitFor(() => expect(success).toHaveBeenCalledWith('RSK-0043 withdrawn.', expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) })));
+    } finally {
+      success.mockRestore();
+    }
+  });
+
+  it('returns focus to Withdraw risk when the form a refusal reopened is kept (FE3-03)', async () => {
+    curationActions.withdrawRisksAction.mockResolvedValue({ ok: false, kind: 'blocked', status: 409, reason: 'ASSESSMENT_NOT_MUTABLE', message: 'This assessment can no longer be changed, so the risk wasn’t withdrawn. Refresh the page to see its current state.' });
+    render(curatedEditor());
+    await userEvent.click(within(card('risk-2')).getByRole('button', { name: 'Withdraw risk RSK-0043' }));
+    await userEvent.type(within(card('risk-2')).getByRole('textbox', { name: 'Reason for withdrawing' }), 'Out of scope{Enter}');
+
+    const reopened = await waitFor(() => within(card('risk-2')).getByRole('textbox', { name: 'Reason for withdrawing' }));
+    await waitFor(() => expect(reopened).toHaveFocus());
+    expect(within(card('risk-2')).getByRole('alert')).toHaveTextContent('This assessment can no longer be changed');
+    await userEvent.keyboard('{Escape}');
+
+    expect(within(card('risk-2')).queryByRole('textbox', { name: 'Reason for withdrawing' })).not.toBeInTheDocument();
+    await waitFor(() => expect(within(card('risk-2')).getByRole('button', { name: 'Withdraw risk RSK-0043' })).toHaveFocus());
+  });
+
+  it('reads the Risks again when a mitigation control change is refused because the Risk was withdrawn meanwhile (FE3-05)', async () => {
+    const formError = 'This risk has been withdrawn, so it can’t be changed. Reinstate it to change it.';
+    actionMocks.updateRiskAction.mockResolvedValue({ ok: false, formError, reason: 'RISK_WITHDRAWN' });
+    actionMocks.updateControlImplementationAction.mockResolvedValue({ ok: false, formError, reason: 'RISK_WITHDRAWN' });
+    const elsewhere = { at: '2026-10-15T01:00:00.000Z', by: analyst, reason: 'Withdrawn in another tab' };
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [{ ...risk, withdrawal: elsewhere }, secondRisk, withdrawnRisk] } });
+    render(curatedEditor({ controlImplementations: { 'risk-1': [implementation] } }));
+
+    const evidence = within(card('risk-1')).getByRole('textbox', { name: 'Evidence' });
+    fireEvent.change(evidence, { target: { value: 'Newer report' } });
+    await userEvent.click(within(card('risk-1')).getByRole('button', { name: 'Save mitigation control' }));
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Withdrawn (2)' })).toBeInTheDocument());
+    expect(screen.getByRole('radio', { name: 'Active (1)' })).toBeInTheDocument();
+  });
+
+  it('reads the Risks again when a Risk edit is refused because the Risk was withdrawn meanwhile (FE3-05)', async () => {
+    const formError = 'This risk has been withdrawn, so it can’t be changed. Reinstate it to change it.';
+    actionMocks.updateRiskAction.mockResolvedValue({ ok: false, formError, reason: 'RISK_WITHDRAWN' });
+    const elsewhere = { at: '2026-10-15T01:00:00.000Z', by: analyst, reason: 'Withdrawn in another tab' };
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: { ...assessment, risks: [risk, { ...secondRisk, withdrawal: elsewhere }, withdrawnRisk] } });
+    render(curatedEditor());
+
+    fireEvent.change(within(card('risk-2')).getByRole('textbox', { name: 'Risk statement' }), { target: { value: 'A stale edit' } });
+    await userEvent.click(within(card('risk-2')).getByRole('button', { name: 'Save risk' }));
+    await waitFor(() => expect(actionMocks.refreshAnalystAssessmentAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Withdrawn (2)' })).toBeInTheDocument());
+    expect(shownCards().map((element) => element.id)).toEqual(['risk-risk-1']);
+  });
+
+  it('reads §6.3’s empty lists: every Risk withdrawn, none withdrawn while editable, and none withdrawn once released', () => {
+    const allWithdrawn = render(curatedEditor({ risks: [{ ...risk, withdrawal: withdrawalFacts }] }));
+    expect(screen.getByRole('radio', { name: 'Active (0)' })).toBeChecked();
+    expect(screen.getByText('No active risks')).toBeInTheDocument();
+    expect(screen.getByText('Every risk in this assessment has been withdrawn. Add a risk, ask the AI for more risks, or reinstate one under Withdrawn.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Risk' })).toBeInTheDocument();
+    allWithdrawn.unmount();
+
+    const noneWithdrawn = render(curatedEditor({ riskFilter: 'withdrawn', risks: [risk] }));
+    expect(screen.getByText('No withdrawn risks')).toBeInTheDocument();
+    expect(screen.getByText('Risks you withdraw are kept here with their reasons, and can be reinstated while the assessment is being edited.')).toBeInTheDocument();
+    noneWithdrawn.unmount();
+
+    render(curatedEditor({ assessment: releasedAssessment, controlImplementations: { 'risk-1': [implementation] }, riskFilter: 'withdrawn', riskListItems: [riskListItem], risks: [risk] }));
+    expect(screen.getByText('No withdrawn risks')).toBeInTheDocument();
+    expect(screen.getByText('No risk was withdrawn from this assessment.')).toBeInTheDocument();
+  });
+
+  it('lists Decisions on AI proposals outstanding with its open count, linked to the section, and no row for a withdrawn Risk', () => {
+    const requirements = [
+      { scope: 'assessment' as const, key: 'aiProposalsDecided', label: 'Decisions on AI proposals', state: 'outstanding' as const, destination: 'ai-proposals' },
+      { scope: 'risk' as const, key: 'riskStatement', label: 'Risk statement', state: 'met' as const, riskNumber: 'RSK-0042', destination: 'risk-risk-1' },
+    ];
+    render(curatedEditor({ assessment: { ...assessment, releaseReadiness: { ready: false, requirements } }, proposals: proposalsRead({ openCount: 2 }) }));
+
+    const outstanding = screen.getByRole('list', { name: 'Release requirements' });
+    const item = within(outstanding).getByRole('link', { name: 'Decisions on AI proposals' });
+    expect(item).toHaveAttribute('href', '#ai-proposals');
+    const row = item.closest('li')!;
+    expect(within(row).getByText('Outstanding')).toBeInTheDocument();
+    expect(within(row).getByText('2 open')).toHaveClass('tabular-nums');
+    expect(screen.queryByRole('link', { name: /RSK-0044/ })).not.toBeInTheDocument();
+  });
+
+  it('links the header’s open AI proposals to the section and adds no form to Identified Risks at rest', () => {
+    const provenance: AiProvenanceHeaderProps = {
+      kind: 'assessment',
+      generation: { generatedAt: '2026-10-14T00:00:00.000Z', generatedBy: analyst, providerName: null, providerVersion: null, runId: 'run-1' },
+      released: false,
+      review: { kind: 'counts', outstanding: 0, firstDestination: null },
+    };
+    render(curatedEditor({ controlImplementations: { 'risk-1': [implementation] }, proposals: proposalsRead({ openCount: 2 }), provenance }));
+
+    expect(screen.getByRole('link', { name: '2 open AI proposals' })).toHaveAttribute('href', '#ai-proposals');
+    // One form per active Risk and one per mitigation control, as before Phase 16: no withdraw, reinstate, reject or rewrite form.
+    const region = screen.getByRole('region', { name: 'Identified Risks' });
+    expect(region.querySelectorAll('form')).toHaveLength(3);
+  });
+});
+
+/*
+ * Phase 16 (16-UI-SPEC §9.1, §9.2, §12.1, §12.3; D-15, D-29, UI-D25, UI-D30): the overall-rating hint, what stays after
+ * release, and the requesting analyst's readiness caption.
+ */
+describe('the overall-rating hint and the locked states (16-14)', () => {
+  const allowed = { allowed: true, reason: null } as const;
+  const proposalsRead: RiskAiProposals = {
+    assessmentId: 'assessment/id', editable: true, openCount: 0, openByRisk: [], lastAskedAt: null,
+    actions: { suggest: allowed, rewrite: allowed, decide: allowed }, runs: [], items: [], jobs: [],
+  };
+  const highRisk = { ...risk, residualRating: 'High' as const };
+  const withdrawnCritical = { ...risk, documentId: 'risk-3', riskNumber: 'RSK-0044', residualRating: 'Critical' as const, withdrawal: { at: '2026-10-14T01:00:00.000Z', by: analyst, reason: 'Duplicate' } };
+  const hintLine = 'The highest residual rating among the active risks is High. The overall rating is Moderate.';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/app/review/assessments/assessment%2Fid');
+    actionMocks.refreshAnalystAssessmentAction.mockResolvedValue({ ok: true, data: assessment });
+  });
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  it('hints the highest active residual rating under Overall rating, and Use High sets the field without saving', async () => {
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, overallRating: 'Moderate' }} controlImplementations={{}} proposals={proposalsRead} risks={[highRisk, withdrawnCritical]} />);
+
+    const details = screen.getByRole('region', { name: 'Assessment details' });
+    const overall = within(details).getByRole('combobox', { name: 'Overall rating' });
+    expect(within(details).getByText(hintLine)).toBeInTheDocument();
+    expect(overall).toHaveAccessibleDescription(hintLine);
+    await userEvent.click(within(details).getByRole('button', { name: 'Use High' }));
+
+    expect(overall).toHaveValue('High');
+    expect(overall).toHaveFocus();
+    expect(within(details).queryByText(hintLine)).not.toBeInTheDocument();
+    expect(actionMocks.saveAssessmentAction).not.toHaveBeenCalled();
+  });
+
+  it('shows no hint when the ratings match, when no active Risk is rated, or once released', () => {
+    const matching = render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, overallRating: 'High' }} controlImplementations={{}} risks={[highRisk]} />);
+    expect(screen.queryByText(/^The highest residual rating among the active risks/)).not.toBeInTheDocument();
+    matching.unmount();
+
+    const unrated = render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, overallRating: 'Moderate' }} controlImplementations={{}} risks={[{ ...risk, residualRating: null }, withdrawnCritical]} />);
+    expect(screen.queryByText(/^The highest residual rating among the active risks/)).not.toBeInTheDocument();
+    unrated.unmount();
+
+    render(<AssessmentEditor {...editorProps} assessment={{ ...releasedAssessment, overallRating: 'Moderate' }} riskListItems={[riskListItem]} risks={[highRisk]} />);
+    expect(screen.queryByText(/^The highest residual rating among the active risks/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Use / })).not.toBeInTheDocument();
+  });
+
+  it('offers no curation, AI or discard control once released, and keeps Show, withdrawn cards and History', async () => {
+    render(<AssessmentEditor {...editorProps} assessment={releasedAssessment} controlImplementations={{ 'risk-1': [implementation] }} proposals={{ ...proposalsRead, editable: false }} riskListItems={[riskListItem]} risks={[risk, withdrawnCritical]} />);
+
+    for (const name of [/^Withdraw risk/, /^Reinstate risk/, /^Rewrite this risk/, /^Suggest more risks/, /^Confirm/, /^Reject/, /^Discard new risk/, /^Add Risk$/, /^Actions for/]) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: 'History of RSK-0042' })).toBeInTheDocument();
+    expect(screen.getByText('This assessment has been released, so the AI can no longer propose changes and its risks can’t be withdrawn or reinstated.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Withdrawn (1)' }));
+    const withdrawnCard = document.getElementById('risk-risk-3')!;
+    expect(within(withdrawnCard).getByText('Reason: “Duplicate”')).toBeInTheDocument();
+    expect(within(withdrawnCard).getByRole('button', { name: 'History of RSK-0044' })).toBeInTheDocument();
+    expect(within(withdrawnCard).queryByRole('button', { name: /^Reinstate risk/ })).not.toBeInTheDocument();
+  });
+
+  it('gives the requesting analyst the readiness caption with no link and no count', () => {
+    const requirements = [{ scope: 'assessment' as const, key: 'aiProposalsDecided', label: 'Decisions on AI proposals', state: 'outstanding' as const, destination: 'ai-proposals' }];
+    render(<AssessmentEditor {...editorProps} assessment={{ ...assessment, releaseReadiness: { ready: false, requirements } }} controlImplementations={{}} proposals={null} risks={[risk]} viewerRaisedRequest />);
+
+    const outstanding = screen.getByRole('list', { name: 'Release requirements' });
+    expect(within(outstanding).queryByRole('link', { name: 'Decisions on AI proposals' })).not.toBeInTheDocument();
+    const row = within(outstanding).getByText('Decisions on AI proposals').closest('li')!;
+    expect(within(row).getByText('This assessment has open AI proposals. Another Security Analyst decides them before release.')).toBeInTheDocument();
+    expect(within(row).queryByText(/\d+ open/)).not.toBeInTheDocument();
   });
 });

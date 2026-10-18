@@ -2,7 +2,7 @@ import { isKeycloakProvisioningEnabled } from "./config";
 import { developmentIdentityEnabled } from "../utils/development-identity-enabled";
 
 /*
- * The fixed Keycloak user ids that idp/keycloak/import/idambox-realm.json gives
+ * The fixed Keycloak user ids that docker/keycloak/import/idambox-realm.json gives
  * the two local fixture people, so a local Keycloak sign-in resolves to the
  * seeded IdamBox User through externalSubject (docs/adr/0004). The two files
  * must change together.

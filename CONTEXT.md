@@ -22,6 +22,10 @@ _Avoid_: Business owner, Sponsor (the request's `sponsor` is a different relatio
 The person a Security Analyst names on a High or Critical risk, whose decision the risk appetite needs as well as the risk owner's, or for Critical risk instead of it (decision 8, G-14). The JDL has no name for this part; it is a person named on the record, not an IdamBox Role.
 _Avoid_: Approver or Peer approver (a peer approval is a second Security Analyst's, decision 17), Sponsor, Delegate
 
+**Accepted (exposure marker)**:
+Phase 11 D-41's interim presentation of a released, open Risk whose recorded `CsrmTreatmentAction` is `ACCEPT`. Until Phase 17.1 supplies acceptance facts, this marker records the released treatment action, not a risk owner's decision. An unreleased proposal or a Risk with a closure date is never marked Accepted. Phase 17.1 refines the predicate with the acceptor, authority and review date.
+_Avoid_: treating the interim marker as evidence of formal owner acceptance
+
 **Submit final assessment**:
 The Security Analyst's action that asks for acceptance. It opens an acceptance round in which each risk owner and executive approver decides their risks, and it locks the analyst's editing until the round is recalled, returned or ended by release (G-13). It releases nothing.
 _Avoid_: Submit for approval (the catalogue's unserved `submit_for_approval` intent), Send for sign-off, Release
@@ -38,9 +42,25 @@ _Avoid_: Owner (a risk owner decides risks, G-11), Handler
 An attributed, append-only plain-text message on an Assessment Request between its Requestor and the Security Analysts, from the request's first submission until its assessment is released (COLLAB-01, Phase 13). A Security Analyst can mark a note as changing the AI inputs, and only marked notes reach the AI, as untrusted text. Risk owners and other participants do not read notes: their channel is the contest point.
 _Avoid_: Comment, Message, Contest point (a challenge to an assessment under acceptance)
 
+**Attachment**:
+A supporting file attached to an Assessment Request by its Requestor or a Security Analyst (CsrmRequestAttachment, COLLAB-02, Phase 14): added to the draft at intake or, after submission, with a note that says what it is; kept in private storage, downloadable only after its malware check passes, removed softly and on the record, and read by the AI only when a Security Analyst includes its text. Visible copy calls it a "file" (Files, Add files); "attachment" is the record and API term. Risk owners and other participants do not read attachments.
+_Avoid_: Upload (the transfer, not the record), Document, Evidence (Phase 20's treatment evidence files)
+
 **Confirm (AI proposal)**:
 The Security Analyst's review of an AI-proposed value, risk, control or question: confirming makes it the analyst's own content, and the API records it as `accept` (Phase 12). Visible copy says "Confirm", never "Accept", because Accept is the risk owner's decision (G-14). The analyst's negative is "Dismiss" for a suggestion and "Reject" for a proposed change (decision 6).
 _Avoid_: Accept, Approve (for an analyst's review of AI output)
+
+**AI run**:
+One recorded provider call for one AI operation (questionnaire generation or an assessment draft now; later phases add operations), with the Security Analyst who initiated it, the provider and model, a summary of what was sent (never the Requestor's own text), its outcome and the history of review decisions on what it proposed. It is stored as `CsrmAiRun`, the approved Phase 12 contract gap. A Requestor never sees one.
+_Avoid_: Job (a generation job is the queued work that produces a run), Prompt log, Transcript
+
+**AI proposal**:
+An AI-written value or suggestion on a record, marked "AI proposed" until a Security Analyst confirms or edits it (see Confirm (AI proposal); the API's decision is `accept`). Confirming is the analyst's review, never the risk owner's Accept (see Accept, Treat). Release waits until every proposal on the assessment has been reviewed. On a questionnaire, an AI proposal can add, change or remove a question, and a Security Analyst confirms, edits then confirms, or rejects each one.
+_Avoid_: AI decision, Recommendation (an analyst's recommendation is their own content)
+
+**Information classification (request)**:
+The highest recorded classification among the request's selected information assets (Public < Internal < Restricted < Critical Infrastructure Sensitive), or Internal when none is classified. The AI provider receives a request's information only when this is within the limit it is approved for (the ceiling the operator configures).
+_Avoid_: Data classification (alone: a single asset's `dataClassification` is one input), Sensitivity, Security level
 
 **Withdrawn (Risk)**:
 A persisted, unreleased `CsrmRisk` that a Security Analyst has taken out of its assessment, recording who, when and why (decision 6, Phase 16). It keeps its number, fields and history, is read-only until a Security Analyst reinstates it with a reason, and counts nowhere: not in release readiness, figures, registers, or any Requestor or participant read. Only Security Analysts see it. No persisted risk is ever deleted.
@@ -55,3 +75,25 @@ The product label for a `CsrmAssessmentRequest` whose `requestStatus` holds the 
 _Avoid_: Complete, Done, Resolved, Accepted
 
 A request released before this flow keeps `approved`, which reads "Released" from Phase 11 (decision 16). A closed request's assessment stays `approved` and reads "Released"; the assessment's own `closed` status is unused.
+
+## Identity lifecycle
+
+**Identity Source**:
+The customer's authoritative record of its workforce, typically the HR system, from which people are brought into IdamBox. An IdamBox User that came from one carries that source.
+_Avoid_: HR feed, Source system, Hub (the identity engine is not an Identity Source)
+
+**Identity engine**:
+The IAM component (midPoint) that reads Identity Sources, decides each person's joiner, mover and leaver changes, and provisions IdamBox Users. It is not an Identity Source and not an IdamBox Role.
+_Avoid_: Hub, Identity Source, IdP (Keycloak authenticates; it is not the identity engine)
+
+**Identity**:
+A person as the identity engine holds them, linking their Identity Source records to their IdamBox User.
+_Avoid_: User, Account (when meaning the person across systems)
+
+**IdamBox User**:
+A person's (or a service's) record inside IdamBox (`IdamBoxUser`), which holds their status and IdamBox Roles. An Identity has at most one.
+_Avoid_: Account (in product copy), Identity
+
+**Sourced user, Manual user**:
+An IdamBox User provisioned from an Identity Source, and one created inside IdamBox. A sourced user's identity attributes and status belong to its Identity Source and are read-only in IdamBox; its IdamBox Roles are always granted inside IdamBox. A manual user is never changed by an Identity Source.
+_Avoid_: Synced user, Local user, Imported user

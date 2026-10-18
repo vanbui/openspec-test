@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/app/assessments', useRouter: () => ({ replace: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/app/assessments', useRouter: vi.fn(() => ({ replace: vi.fn() })) }));
+
+import { useRouter } from 'next/navigation';
 
 import { TimeZoneProvider } from '@/components/csrm/local-time';
 
@@ -31,15 +33,18 @@ const releasedSummary: ReleasedAssessmentSummary = {
   generatedDate: '2026-08-29T23:00:00.000Z',
   generatedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' },
   approvalDate: '2026-08-30T01:00:00.000Z',
+  requestTitle: 'Customer portal assessment',
+  riskCount: 3,
+  highestResidualRating: 'Moderate',
 };
 
-const releasedDetail: ReleasedAssessmentDetailForActor = {
+/* D10: the released view's projection, exactly what the view renders (no record id, generator or generation date). */
+const releasedDetail: Extract<ReleasedAssessmentDetailForActor, { actor: 'requestor' }> = {
   actor: 'requestor',
-  documentId: 'assessment/id with spaces',
+  aiAssisted: true,
   assessmentNumber: 'ASM-0042',
   assessmentStatus: 'approved',
   assessmentDate: '2026-08-30T01:00:00.000Z',
-  generatedDate: '2026-08-29T23:00:00.000Z',
   nextReviewDate: '2027-02-28',
   approvalDate: '2026-08-30T01:00:00.000Z',
   summary: 'Released customer portal assessment.',
@@ -48,7 +53,6 @@ const releasedDetail: ReleasedAssessmentDetailForActor = {
   recommendationsSummary: 'Prioritise the planned access control.',
   overallRiskRationale: 'Internet exposure and privileged access drive the rating.',
   assessmentRequest: { documentId: 'request-42', requestNumber: 'RAR-2026-0042', title: 'Customer portal security assessment', requestStatus: 'approved' },
-  generatedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' },
   reviewedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' },
   approvedBy: { documentId: 'analyst-1', displayName: 'Bob Doe' },
 };
@@ -131,14 +135,17 @@ describe('owner-released assessment inventory', () => {
       expect(link).toHaveAttribute('href', '/app/assessments/assessment%2Fid%20with%20spaces');
       expect(link).toHaveClass('record-link');
     }
-    const ratings = screen.getAllByText('High').map((rating) => rating.closest('[data-slot="badge"]'));
+    // The table's and the card's rating badges; the Overall rating select offers High as an option too.
+    const ratings = [...container.querySelectorAll('[data-slot="data-table-desktop"], [data-slot="data-table-mobile"]')]
+      .flatMap((surface) => within(surface as HTMLElement).getAllByText('High'))
+      .map((rating) => rating.closest('[data-slot="badge"]'));
     expect(ratings).toHaveLength(2);
     for (const rating of ratings) {
       expect(rating).toBeInTheDocument();
       expect(rating?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
-    for (const summary of screen.getAllByText('Released customer portal assessment.')) {
-      expect(summary.closest('a')).toBeNull();
+    for (const title of screen.getAllByText('Customer portal assessment')) {
+      expect(title.closest('a')).toBeNull();
     }
     expect(container.querySelector('tr[tabindex], article[tabindex]')).toBeNull();
   });
@@ -191,6 +198,7 @@ describe('owner-released assessment inventory', () => {
       'Search risk assessments',
       'Search',
       'Filter by status',
+      'Filter by overall rating',
       'Use compact density',
       'Sort by Assessment',
       'Sort by Released',
@@ -203,6 +211,81 @@ describe('owner-released assessment inventory', () => {
     expect(route).toContain('listMyReleasedAssessments');
     expect(route).not.toContain('listAnalystAssessments');
     expect(route).not.toContain('assessmentStatus ===');
+  });
+});
+
+/*
+ * UI-D29, D-55 and UI-SPEC §7.2: My risk assessments identifies each assessment by its request's title, reads its
+ * release date in the viewer's zone in the long form, and narrows by overall rating, which a Home rating chip opens.
+ */
+describe('My risk assessments columns and overall rating filter', () => {
+  function desktopRows(container: HTMLElement) {
+    const table = container.querySelector<HTMLElement>('[data-slot="data-table-desktop"]');
+    expect(table).not.toBeNull();
+    return within(table as HTMLElement).getAllByRole('row');
+  }
+
+  it('heads Assessment, Request title, Overall rating and Released, the release date long and local', () => {
+    const { container } = render(
+      <TimeZoneProvider zone="Australia/Brisbane">
+        <ReleasedAssessmentList assessments={[{ ...releasedSummary, approvalDate: '2026-09-26T23:30:00.000Z' }]} />
+      </TimeZoneProvider>,
+    );
+    const [header, row] = desktopRows(container);
+
+    expect(within(header).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Assessment', 'Request title', 'Overall rating', 'Released',
+    ]);
+    const cells = within(row).getAllByRole('cell');
+    expect(cells.map((cell) => cell.textContent)).toEqual(['ASM-0042', 'Customer portal assessment', 'High', '27 September 2026']);
+    expect(within(cells[3]).getByText('27 September 2026').tagName).toBe('TIME');
+    expect(screen.queryByText('Released customer portal assessment.')).not.toBeInTheDocument();
+  });
+
+  it('wraps the request title as a long-text column and reads Not recorded when the request has none', () => {
+    const { container } = render(<ReleasedAssessmentList assessments={[{ ...releasedSummary, requestTitle: null }]} />);
+    const title = within(desktopRows(container)[1]).getAllByRole('cell')[1];
+
+    expect(title).toHaveClass('whitespace-normal');
+    expect(within(title).getByText('Not recorded')).toHaveClass('line-clamp-2');
+  });
+
+  it('shows the number with its rating, the request title and the long local release date on each card', () => {
+    const { container } = render(
+      <TimeZoneProvider zone="Australia/Brisbane">
+        <ReleasedAssessmentList assessments={[{ ...releasedSummary, approvalDate: '2026-09-26T23:30:00.000Z' }]} />
+      </TimeZoneProvider>,
+    );
+    const card = container.querySelector<HTMLElement>('[data-slot="data-table-mobile"] article') as HTMLElement;
+    const lines = [...card.children] as HTMLElement[];
+
+    expect(lines).toHaveLength(3);
+    expect(within(lines[0]).getByRole('link', { name: 'ASM-0042' })).toBeInTheDocument();
+    expect(within(lines[0]).getByText('High').closest('[data-slot="badge"]')).not.toBeNull();
+    expect(lines[1]).toHaveTextContent(/^Customer portal assessment$/);
+    expect(lines[2]).toHaveTextContent(/^Released 27 September 2026$/);
+  });
+
+  it('offers an Overall rating select, preselected and shown as a chip from the URL, and clears it with the other filters', () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({ replace } as unknown as ReturnType<typeof useRouter>);
+    const { rerender } = render(<ReleasedAssessmentList assessments={[releasedSummary]} />);
+    const rating = screen.getByRole('combobox', { name: 'Filter by overall rating' });
+
+    expect(rating.closest('label')?.firstChild?.textContent).toBe('Overall rating');
+    expect([...rating.querySelectorAll('option')].map((option) => [option.textContent, option.value])).toEqual([
+      ['All ratings', ''], ['Low', 'Low'], ['Moderate', 'Moderate'], ['High', 'High'], ['Critical', 'Critical'],
+    ]);
+    fireEvent.change(rating, { target: { value: 'Critical' } });
+    expect(replace).toHaveBeenLastCalledWith('/app/assessments?overallRating=Critical&sort=generatedDate%3Adesc&pageSize=25', { scroll: false });
+
+    rerender(<ReleasedAssessmentList assessments={[releasedSummary]} query={{ q: 'portal', sort: 'generatedDate:desc', page: 1, pageSize: 25, overallRating: 'High' }} />);
+    expect(screen.getByRole('combobox', { name: 'Filter by overall rating' })).toHaveValue('High');
+    expect(screen.getByRole('button', { name: 'Remove Overall rating filter' }).parentElement).toHaveTextContent('Overall rating: High');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Overall rating filter' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/assessments?q=portal&sort=generatedDate%3Adesc&pageSize=25', { scroll: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(replace).toHaveBeenLastCalledWith('/app/assessments?sort=generatedDate%3Adesc&pageSize=25', { scroll: false });
   });
 });
 
@@ -253,6 +336,32 @@ describe('immutable released assessment detail', () => {
     expect(within(view).queryByText('Approved by')).not.toBeInTheDocument();
     expect(within(view).getByText('Each Risk with its ratings, treatment and the controls that mitigate it.')).toBeInTheDocument();
     expect(view.textContent).not.toMatch(/authoritative/i);
+  });
+
+  /* UAT-032 (12-UI-SPEC §10, D-23): the Requestor learns that AI assisted and an analyst reviewed, and nothing more. */
+  it('tells the Requestor that AI assisted and a Security Analyst reviewed, with no generator row', () => {
+    const { container } = render(<ReleasedAssessmentDetailView assessment={releasedDetail} risks={[risk]} controlsByRisk={{ [risk.documentId]: [implementation] }} state="populated" />);
+    const overview = screen.getByRole('heading', { level: 2, name: 'Assessment overview' }).parentElement as HTMLElement;
+    const notice = within(overview).getByText('AI helped prepare the first draft of this assessment. A Security Analyst reviewed it before releasing it to you.');
+    expect(notice.parentElement?.querySelector('svg.lucide-sparkles')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(overview).queryByText('Generated by')).not.toBeInTheDocument();
+    expect(definition(overview, 'Reviewed by')).toHaveTextContent(/^Bob Doe$/);
+    expect(definition(overview, 'Released by')).toHaveTextContent(/^Bob Doe$/);
+    expect(container.textContent).not.toMatch(/AI proposed|Provider|Model|run-/);
+  });
+
+  /* IN-302 (12-UI-SPEC §10.1, §10.2): the notice speaks to the Requestor; an analyst reading this view is not its recipient. */
+  it('shows the AI notice to the Requestor only, never to an analyst reading the released view', () => {
+    // FE4-01: the analyst's parse now keeps the AI fact for the paper; the screen still never shows them the sentence.
+    render(<ReleasedAssessmentDetailView assessment={{ ...releasedDetail, aiAssisted: true, actor: 'analyst' }} risks={[risk]} controlsByRisk={{ [risk.documentId]: [implementation] }} state="populated" />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Assessment overview' })).toBeInTheDocument();
+    expect(screen.queryByText(/AI helped prepare/)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('releasing it to you');
+  });
+
+  it('shows no AI notice for an assessment written without AI', () => {
+    render(<ReleasedAssessmentDetailView assessment={{ ...releasedDetail, aiAssisted: false }} risks={[risk]} controlsByRisk={{ [risk.documentId]: [implementation] }} state="populated" />);
+    expect(screen.queryByText(/AI helped prepare/)).not.toBeInTheDocument();
   });
 
   it('shows the assessment and release dates in the viewer’s local time and keeps calendar dates as stored (D-19)', () => {
@@ -455,13 +564,22 @@ describe('immutable released assessment detail', () => {
 
     rerender(<ReleasedAssessmentDetailView state="permission" />);
     expect(screen.getByRole('alert')).toHaveTextContent('permission');
+    // UI-SPEC §2.3: the refusal names My risk assessments by its heading.
+    expect(screen.getByRole('alert')).toHaveTextContent('You can open released assessments for your own requests. Yours are listed in My risk assessments.');
   });
 
   it('uses only released detail descendants and maps missing records through notFound', () => {
     const route = readFileSync(resolve(process.cwd(), 'app/(app)/app/assessments/[documentId]/page.tsx'), 'utf8');
-    expect(route).toContain('getReleasedAssessment');
-    expect(route).toContain('listReleasedAssessmentRisks');
-    expect(route).toContain('listReleasedControlImplementations');
+    // Phase 19 (19-12, D-23): the reads moved to the shared loader the report routes use too; the Requestor's loader
+    // makes exactly the released reads, and the page maps its not-found result through notFound().
+    const loader = readFileSync(resolve(process.cwd(), 'src/features/assessments/released-assessment-report.ts'), 'utf8');
+    const requestorLoader = loader.slice(loader.indexOf('export const readReleasedAssessment'), loader.indexOf('export const readAnalystReleasedAssessment'));
+    expect(loader).toContain('cache(getReleasedAssessment)');
+    expect(requestorLoader).toContain('listReleasedAssessmentRisks');
+    expect(requestorLoader).toContain('listReleasedControlImplementations');
+    expect(requestorLoader).not.toContain('getAnalystAssessment');
+    expect(requestorLoader).not.toContain('listAssessmentRisks');
+    expect(route).toContain('loadRequestorReleasedAssessment');
     expect(route).toContain('notFound()');
     expect(route).not.toContain('getAnalystAssessment');
     expect(route).not.toContain('listAssessmentRisks');

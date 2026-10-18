@@ -16,7 +16,14 @@
  * `questionnaire-definition.ts` and the answer-envelope parser: anything it does
  * not recognise is rejected. Read paths treat a rejection as an empty log so a
  * malformed envelope degrades the narrative rather than the record.
+ *
+ * Phase 15 (D-26, the approved 06.8 amendment) adds the `ai-proposal` and `question-restored` kinds and ten AI keys,
+ * each allowed only on the kinds the amendment names, still at `schemaVersion` 1. Only the analyst projection carries
+ * them; `projectGovernanceEventsForRequestor` removes every AI kind and key before the Requestor's projection.
  */
+
+import { INSTRUCTION_MAX_LENGTH } from "../../../csrm/ai/analyst-instruction";
+import { isProposalItemKey, PROPOSAL_ITEMS_MAX } from "../../../csrm/ai/proposal-items";
 
 type RecordValue = Record<string, unknown>;
 
@@ -36,12 +43,49 @@ export const GOVERNANCE_EVENT_KINDS = Object.freeze([
    * questions replaced and the analyst changes discarded.
    */
   "regenerated",
+  /*
+   * Phase 15 D-26: a Security Analyst asked the AI for proposals. Written in the transaction that completes a
+   * `questionnaire-proposals` or `question-rewrite` run; a run that fails writes none.
+   */
+  "ai-proposal",
+  /* Phase 15 D-26: the Undo of a confirmed AI removal restored the question. */
+  "question-restored",
 ] as const);
 
-/* The analyst question changes a replacement discards (D-16): the cleared answers they caused are not counted. */
-const ANALYST_QUESTION_CHANGE_KINDS: ReadonlySet<GovernanceEventKind> = new Set(["question-added", "question-edited", "question-deleted"]);
+/*
+ * The analyst question changes a replacement discards (D-16): the cleared answers they caused are not counted. A
+ * confirmed AI proposal and its Undo are analyst changes too, so a restored question counts (Phase 15 D-09, D-26).
+ */
+const ANALYST_QUESTION_CHANGE_KINDS: ReadonlySet<GovernanceEventKind> = new Set(["question-added", "question-edited", "question-deleted", "question-restored"]);
 
 export type GovernanceEventKind = (typeof GOVERNANCE_EVENT_KINDS)[number];
+
+export const AI_PROPOSAL_SCOPES = Object.freeze(["questionnaire", "question"] as const);
+export const GOVERNANCE_INSTRUCTION_SOURCES = Object.freeze(["plain-language-preset", "default-task"] as const);
+
+/**
+ * The AI keys of the approved 06.8 amendment (Phase 15 D-26). Each is allowed only on the kinds the amendment names:
+ * the request on `ai-proposal`; the run, item and edit flag on a question change a confirmation or its Undo wrote; the
+ * instruction or its source on `regenerated`.
+ */
+export type GovernanceEventAiKeys = {
+  /** The AI run's documentId. */
+  runId?: string;
+  /** The proposal item's key, `i-1` to `i-30`. */
+  itemKey?: string;
+  /** The analyst edited the proposal before confirming it. */
+  aiEdited?: boolean;
+  /** The event reverses a confirmation. */
+  aiUndo?: true;
+  scope?: (typeof AI_PROPOSAL_SCOPES)[number];
+  instruction?: string;
+  /** Written when no instruction was given. */
+  instructionSource?: (typeof GOVERNANCE_INSTRUCTION_SOURCES)[number];
+  providerName?: string;
+  providerVersion?: string;
+  /** The items the run kept, 0 to 30. */
+  itemCount?: number;
+};
 
 export type GovernanceEvent = {
   schemaVersion: 1;
@@ -57,7 +101,22 @@ export type GovernanceEvent = {
    */
   questionText?: string;
   explanation?: string;
-};
+} & GovernanceEventAiKeys;
+
+const GOVERNANCE_AI_KEYS = [
+  "runId",
+  "itemKey",
+  "aiEdited",
+  "aiUndo",
+  "scope",
+  "instruction",
+  "instructionSource",
+  "providerName",
+  "providerVersion",
+  "itemCount",
+] as const satisfies readonly (keyof GovernanceEventAiKeys)[];
+
+type GovernanceAiKey = (typeof GOVERNANCE_AI_KEYS)[number];
 
 const GOVERNANCE_EVENT_KEYS = [
   "schemaVersion",
@@ -68,9 +127,26 @@ const GOVERNANCE_EVENT_KEYS = [
   "questionKey",
   "questionText",
   "explanation",
+  ...GOVERNANCE_AI_KEYS,
 ] as const;
 
+/* The amendment's map from each kind to the AI keys it may carry; every other kind carries none. */
+const CONFIRMATION_AI_KEYS: readonly GovernanceAiKey[] = ["runId", "itemKey", "aiEdited", "aiUndo"];
+const AI_KEYS_BY_KIND: Readonly<Record<GovernanceEventKind, readonly GovernanceAiKey[]>> = Object.freeze({
+  released: [],
+  "returned-to-review": [],
+  "question-added": CONFIRMATION_AI_KEYS,
+  "question-edited": CONFIRMATION_AI_KEYS,
+  "question-deleted": CONFIRMATION_AI_KEYS,
+  "answer-cleared": [],
+  regenerated: ["instruction", "instructionSource"],
+  "ai-proposal": ["runId", "scope", "instruction", "instructionSource", "providerName", "providerVersion", "itemCount"],
+  "question-restored": CONFIRMATION_AI_KEYS,
+});
+
 const MAX_ACTOR_LENGTH = 255;
+const MAX_RUN_ID_LENGTH = 255;
+const MAX_PROVIDER_LENGTH = 255;
 const MAX_REASON_LENGTH = 500;
 const MAX_QUESTION_KEY_LENGTH = 120;
 const MAX_EXPLANATION_LENGTH = 500;
@@ -114,9 +190,77 @@ function isGovernanceEventKind(value: unknown): value is GovernanceEventKind {
   return typeof value === "string" && (GOVERNANCE_EVENT_KINDS as readonly string[]).includes(value);
 }
 
+function optionalMember<T extends string>(value: unknown, members: readonly T[]): T | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !(members as readonly string[]).includes(value)) throw new GovernanceLogError();
+  return value as T;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new GovernanceLogError();
+  return value;
+}
+
+function optionalItemCount(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > PROPOSAL_ITEMS_MAX) throw new GovernanceLogError();
+  return value;
+}
+
+function ensure(condition: boolean): void {
+  if (!condition) throw new GovernanceLogError();
+}
+
+/*
+ * "Keys and their kinds" of the approved 06.8 amendment (Phase 15 D-26). An AI key on a kind that may not carry it is
+ * refused, and so is any combination the amendment does not describe:
+ * - `ai-proposal` requires the run, its scope, the provider, the item count and exactly one of the instruction or its
+ *   source; the `question` scope names its question (key and text) and the `questionnaire` scope names none.
+ * - A question change written by a confirmation carries the run, the item and the edit flag together; its Undo adds
+ *   `aiUndo: true`. A restored question requires its key, and carries the run and the item together when it has them.
+ * - `regenerated` may carry the instruction or, with none given, the default-task source, never both.
+ */
+function parseAiKeys(value: RecordValue, kind: GovernanceEventKind, questionKey: string | undefined, questionText: string | undefined): GovernanceEventAiKeys {
+  const allowed = AI_KEYS_BY_KIND[kind];
+  for (const key of GOVERNANCE_AI_KEYS) {
+    if (value[key] !== undefined && !allowed.includes(key)) throw new GovernanceLogError();
+  }
+  if (value.aiUndo !== undefined && value.aiUndo !== true) throw new GovernanceLogError();
+  if (value.itemKey !== undefined && !isProposalItemKey(value.itemKey)) throw new GovernanceLogError();
+  const keys: GovernanceEventAiKeys = {
+    runId: optionalBoundedString(value.runId, MAX_RUN_ID_LENGTH),
+    itemKey: value.itemKey as string | undefined,
+    aiEdited: optionalBoolean(value.aiEdited),
+    aiUndo: value.aiUndo as true | undefined,
+    scope: optionalMember(value.scope, AI_PROPOSAL_SCOPES),
+    instruction: optionalBoundedString(value.instruction, INSTRUCTION_MAX_LENGTH),
+    instructionSource: optionalMember(value.instructionSource, GOVERNANCE_INSTRUCTION_SOURCES),
+    providerName: optionalBoundedString(value.providerName, MAX_PROVIDER_LENGTH),
+    providerVersion: optionalBoundedString(value.providerVersion, MAX_PROVIDER_LENGTH),
+    itemCount: optionalItemCount(value.itemCount),
+  };
+  const has = (key: GovernanceAiKey) => keys[key] !== undefined;
+  if (kind === "ai-proposal") {
+    ensure(has("runId") && has("scope") && has("providerName") && has("providerVersion") && has("itemCount"));
+    ensure(has("instruction") !== has("instructionSource"));
+    ensure(keys.scope === "question" ? questionKey !== undefined && questionText !== undefined : questionKey === undefined && questionText === undefined);
+  } else if (kind === "question-added" || kind === "question-edited" || kind === "question-deleted") {
+    if (CONFIRMATION_AI_KEYS.some(has)) ensure(has("runId") && has("itemKey") && has("aiEdited"));
+  } else if (kind === "question-restored") {
+    ensure(questionKey !== undefined);
+    if (CONFIRMATION_AI_KEYS.some(has)) ensure(has("runId") && has("itemKey"));
+  } else if (kind === "regenerated") {
+    ensure(!(has("instruction") && has("instructionSource")));
+    ensure(keys.instructionSource === undefined || keys.instructionSource === "default-task");
+  }
+  return Object.fromEntries(Object.entries(keys).filter(([, entry]) => entry !== undefined)) as GovernanceEventAiKeys;
+}
+
 /**
  * Validates one governance event against the closed schema and returns a frozen
- * normalised copy. Only the keys the schema declares survive.
+ * normalised copy. Only the keys the schema declares survive, and an AI key only on
+ * a kind the Phase 15 amendment allows it on.
  */
 export function parseGovernanceEvent(value: unknown): GovernanceEvent {
   if (!isRecord(value)) throw new GovernanceLogError();
@@ -127,6 +271,7 @@ export function parseGovernanceEvent(value: unknown): GovernanceEvent {
   const questionKey = optionalBoundedString(value.questionKey, MAX_QUESTION_KEY_LENGTH);
   const questionText = optionalBoundedString(value.questionText, MAX_QUESTION_TEXT_LENGTH);
   const explanation = optionalBoundedString(value.explanation, MAX_EXPLANATION_LENGTH);
+  const aiKeys = parseAiKeys(value, value.kind, questionKey, questionText);
   return Object.freeze({
     schemaVersion: GOVERNANCE_LOG_SCHEMA_VERSION as 1,
     kind: value.kind,
@@ -136,6 +281,7 @@ export function parseGovernanceEvent(value: unknown): GovernanceEvent {
     ...(questionKey === undefined ? {} : { questionKey }),
     ...(questionText === undefined ? {} : { questionText }),
     ...(explanation === undefined ? {} : { explanation }),
+    ...aiKeys,
   });
 }
 
@@ -173,6 +319,39 @@ export function appendGovernanceEvent(existing: unknown, event: unknown): Govern
   const appended = parseGovernanceEvent(event);
   if (current.length + 1 > GOVERNANCE_LOG_MAX_ENTRIES) throw new GovernanceLogError();
   return [...current, appended];
+}
+
+/**
+ * The events a Requestor's history may hold (Phase 15 D-26, D-07). Pure; the scope module's Requestor projection
+ * calls it before narrowing each event to its `kind`, `at` and `explanation`.
+ *
+ * - Every `ai-proposal` is dropped: the Requestor never learns the AI was asked.
+ * - A confirmation (an event with `runId` and `itemKey` and no `aiUndo`) and its Undo (the first later event of the
+ *   same run and item with `aiUndo`) are both dropped when no `released` event lies between them: the Requestor never
+ *   saw that change, so it leaves no trace. A pair a release splits stays, and each reads as an ordinary change.
+ * - Every AI key is removed from the events kept.
+ */
+export function projectGovernanceEventsForRequestor(events: readonly GovernanceEvent[]): GovernanceEvent[] {
+  const dropped = new Set<number>();
+  events.forEach((confirmation, index) => {
+    if (confirmation.runId === undefined || confirmation.itemKey === undefined || confirmation.aiUndo !== undefined) return;
+    for (let later = index + 1; later < events.length; later += 1) {
+      const candidate = events[later]!;
+      if (candidate.kind === "released") return;
+      if (candidate.aiUndo === true && !dropped.has(later) && candidate.runId === confirmation.runId && candidate.itemKey === confirmation.itemKey) {
+        dropped.add(index);
+        dropped.add(later);
+        return;
+      }
+    }
+  });
+  return events
+    .filter((event, index) => event.kind !== "ai-proposal" && !dropped.has(index))
+    .map((event) => {
+      const kept: RecordValue = { ...event };
+      for (const key of GOVERNANCE_AI_KEYS) delete kept[key];
+      return Object.freeze(kept) as GovernanceEvent;
+    });
 }
 
 /**

@@ -48,6 +48,28 @@ afterEach(() => {
 });
 
 describe('useAnswerAutosave timing (UI-SPEC §6.2)', () => {
+  it('keeps newer recovered edits when an earlier save succeeds and the follow-up fails', async () => {
+    window.sessionStorage.clear();
+    const first = deferred();
+    const answers = { current: 'Recovered first' };
+    const save = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({ ok: false, failure: 'retryable' });
+    const { result } = renderHook(() => useAnswerAutosave({
+      save, getAnswers: () => answers.current,
+      keepUnsaved: { ownerKey: 'recovery-owner', documentId: 'recovery-q', kept: (value) => [{ questionKey: 'q', answerType: 'Text', choicesSignature: '', value }] },
+    }));
+    const key = 'csrm-draft:unsaved-answers:recovery-owner:recovery-q';
+    act(() => { result.current.recover(); result.current.flush(); });
+    answers.current = 'Recovered newer';
+    act(() => result.current.schedule());
+    await act(async () => { first.resolve(saved()); await first.promise; });
+    await settle();
+    expect(result.current.status).toEqual({ kind: 'failed', failure: 'retryable' });
+    expect(window.sessionStorage.getItem(key)).toContain('Recovered newer');
+    save.mockResolvedValue(saved());
+    act(() => result.current.retry());
+    await settle();
+    expect(window.sessionStorage.getItem(key)).toBeNull();
+  });
   it('starts in idle and does not block navigation', () => {
     const save = vi.fn();
     const { result } = setup(save);
@@ -183,7 +205,7 @@ describe('useAnswerAutosave failures (UI-SPEC §6.1, research Pitfall 7)', () =>
   });
 
   it('a blocked failure keeps its message, blocks navigation and ignores later changes and retries', async () => {
-    const message = 'This questionnaire is no longer open for answers, so your latest answers weren’t saved.';
+    const message = 'A Security Analyst has taken this questionnaire back to update it, so your latest answers weren’t saved. They’re kept on this page, and you can carry on when it’s sent back to you.';
     const save = vi.fn().mockResolvedValue({ ok: false, failure: 'blocked', message });
     const { result } = setup(save);
 

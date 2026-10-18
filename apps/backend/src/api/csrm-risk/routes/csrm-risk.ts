@@ -8,11 +8,12 @@ const policies = (operation: string) => [
   { name: "global::csrm-authorization", config: { operation } },
 ];
 
-const riskRegisterPolicies = (operation: string) => [
+/* Phase 19 (D-13): an export route names its list read as `underlyingRead`, beside the register's own scope. */
+const riskRegisterPolicies = (operation: string, underlyingRead?: string) => [
   "global::csrm-app-enabled",
   {
     name: "global::csrm-authorization",
-    config: { operation, requireAnalystRiskRegisterScope: true },
+    config: { operation, requireAnalystRiskRegisterScope: true, ...(underlyingRead === undefined ? {} : { underlyingRead }) },
   },
 ];
 
@@ -32,6 +33,13 @@ const config: Core.RouterConfig = {
       path: "/v1/risks",
       handler: "api::csrm-risk.csrm-risk.listRiskRegister",
       config: { auth: { strategies: ["content-api-token"] }, policies: riskRegisterPolicies(CSRM_RISK_OPERATIONS.listRegister) },
+    },
+    /* Registered before /v1/risks/:riskId, so the export never reaches the detail route (19-RESEARCH Pitfall 1). */
+    {
+      method: "GET",
+      path: "/v1/risks/export",
+      handler: "api::csrm-risk.csrm-risk.exportRiskRegister",
+      config: { auth: { strategies: ["content-api-token"] }, policies: riskRegisterPolicies(CSRM_RISK_OPERATIONS.exportRegister, CSRM_RISK_OPERATIONS.listRegister) },
     },
     {
       method: "GET",

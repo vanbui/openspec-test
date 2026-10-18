@@ -1,10 +1,15 @@
 import {
-  assertMutableAssessment,
+  appendAiRunDecisionsWithinMutation,
   parseWritableControlImplementationFields,
   type AssessmentMutationStrapi,
   withMutableAssessmentMutation,
 } from "../../csrm-assessment/services/assessment-workflow";
+import { parseRiskAiProvenance, restoreSuggestionsOfRemovedImplementation } from "../../csrm-assessment/services/ai-provenance";
 import { projectControlImplementationControlSummary } from "../../csrm-assessment/services/assessment-scope";
+import { isRegisteredSourceServiceUser } from "../../../iam/identity/source-principal";
+import { assertRiskActive, historySourceFields, type HistorySource } from "../../csrm-risk/services/risk-workflow";
+import { controlImplementationChanges, type RiskHistoryControl } from "../../../csrm/risk-history-changes";
+import { recordRiskHistory, type RiskHistoryEntry } from "../../csrm-risk-history-event/services/risk-history";
 
 type RecordValue = Record<string, unknown>;
 type DocumentService = {
@@ -114,6 +119,9 @@ async function resolveReferences(
   if ("controlOwner" in data && data.controlOwner !== null) {
     const ownerDocumentId = documentId(data.controlOwner);
     if (!ownerDocumentId) throw new ControlImplementationWorkflowError(400, "CSRM ControlImplementation owner is invalid.");
+    if (await isRegisteredSourceServiceUser(strapi, ownerDocumentId)) {
+      throw new ControlImplementationWorkflowError(400, "CSRM ControlImplementation owner is invalid.");
+    }
     const owner = await strapi.documents(USER_UID).findOne({ documentId: ownerDocumentId });
     if (!owner || owner.accountStatus !== "active") {
       throw new ControlImplementationWorkflowError(400, "CSRM ControlImplementation owner is invalid.");
@@ -170,6 +178,173 @@ export async function listRiskControlImplementationDocuments(
   });
 }
 
+/** Who changes the implementation and where the change comes from, for the Risk's history row (D-19, D-20). */
+type InnerHistoryInput = { actorDocumentId: string; source: HistorySource };
+
+/* The control a history row names (D-20): by number and name, as the analyst knows it. */
+function historyControl(implementation: RecordValue): RiskHistoryControl {
+  const control = isRecord(implementation.control) ? implementation.control : null;
+  const controlDocumentId = documentId(control);
+  if (!control || !controlDocumentId || typeof control.controlNumber !== "string" || control.controlNumber.length === 0) {
+    throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation control is invalid.");
+  }
+  return { documentId: controlDocumentId, controlNumber: control.controlNumber, name: typeof control.name === "string" ? control.name : "" };
+}
+
+async function recordImplementationHistory(
+  strapi: ControlImplementationWorkflowStrapi,
+  input: InnerHistoryInput & {
+    kind: "control-implementation-added" | "control-implementation-updated" | "control-implementation-removed";
+    riskDocumentId: string;
+    assessmentDocumentId: string;
+    implementation: RecordValue;
+    fields: RiskHistoryEntry["changes"]["fields"];
+  },
+): Promise<void> {
+  await recordRiskHistory(strapi, {
+    kind: input.kind,
+    riskDocumentId: input.riskDocumentId,
+    assessmentDocumentId: input.assessmentDocumentId,
+    actorDocumentId: input.actorDocumentId,
+    ...historySourceFields(input.source),
+    changes: { fields: input.fields, control: historyControl(input.implementation) },
+  });
+}
+
+/*
+ * The create, update and remove steps shared by the manual routes and the AI suggestion decisions (12-13, D-12;
+ * Phase 16 D-07, D-19, D-20). They run inside the caller's withMutableAssessmentMutation, never their own: a nested
+ * mutation would wait on the serialisation queue the caller already holds. Each refuses a withdrawn Risk
+ * (RISK_WITHDRAWN) and records its change in the Risk's history in the caller's transaction.
+ */
+export async function createControlImplementationWithinMutation(
+  strapi: ControlImplementationWorkflowStrapi,
+  input: InnerHistoryInput & { riskDocumentId: string; assessmentDocumentId: string; body: unknown },
+): Promise<RecordValue & { changed: boolean }> {
+  const parsed = parseWritableControlImplementationFields(input.body);
+  const authoritativeRisk = await requireRisk(strapi, input.riskDocumentId);
+  if (authoritativeRisk.assessmentDocumentId !== input.assessmentDocumentId) {
+    throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation ancestor changed.");
+  }
+  assertRiskActive(authoritativeRisk.risk);
+  const data = await resolveReferences(strapi, parsed, true);
+  const created = await strapi.documents(IMPLEMENTATION_UID).create({ data: {
+    ...data,
+    risk: input.riskDocumentId,
+  } });
+  const implementation = await loadProjectedImplementation(strapi, created);
+  await recordImplementationHistory(strapi, {
+    ...input,
+    kind: "control-implementation-added",
+    implementation,
+    fields: controlImplementationChanges(null, implementation),
+  });
+  return { ...implementation, changed: true };
+}
+
+export async function updateControlImplementationWithinMutation(
+  strapi: ControlImplementationWorkflowStrapi,
+  input: InnerHistoryInput & { implementationDocumentId: string; riskDocumentId: string; assessmentDocumentId: string; body: unknown },
+): Promise<RecordValue & { changed: boolean }> {
+  const parsed = parseWritableControlImplementationFields(input.body);
+  const authoritative = await requireImplementation(strapi, input.implementationDocumentId);
+  if (!sameAncestor(authoritative.implementation, input.riskDocumentId, input.assessmentDocumentId)) {
+    throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation ancestor changed.");
+  }
+  assertRiskActive(authoritative.implementation.risk);
+  const data = await resolveReferences(strapi, parsed, false);
+  const before = authoritative.implementation;
+  // Relations compare by documentId, so whether anything changes is known before any label is read.
+  if (controlImplementationChanges(before, { ...before, ...data }).length === 0) {
+    return { ...(await loadProjectedImplementation(strapi, before)), changed: false };
+  }
+  const updated = await strapi.documents(IMPLEMENTATION_UID).update({
+    documentId: input.implementationDocumentId,
+    data,
+  });
+  const after = await loadProjectedImplementation(strapi, updated);
+  const fields = controlImplementationChanges(before, after);
+  if (fields.length === 0) return { ...after, changed: false };
+  await recordImplementationHistory(strapi, { ...input, kind: "control-implementation-updated", implementation: after, fields });
+  return { ...after, changed: true };
+}
+
+export async function removeControlImplementationWithinMutation(
+  strapi: ControlImplementationWorkflowStrapi,
+  input: InnerHistoryInput & { implementationDocumentId: string; riskDocumentId: string; assessmentDocumentId: string },
+): Promise<{ documentId: string; changed: boolean }> {
+  const authoritative = await requireImplementation(strapi, input.implementationDocumentId);
+  if (!sameAncestor(authoritative.implementation, input.riskDocumentId, input.assessmentDocumentId)) {
+    throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation ancestor changed.");
+  }
+  assertRiskActive(authoritative.implementation.risk);
+  // D-20: the removal stays a hard delete of the implementation; its row keeps every value it held.
+  await recordImplementationHistory(strapi, {
+    ...input,
+    kind: "control-implementation-removed",
+    implementation: authoritative.implementation,
+    fields: controlImplementationChanges(authoritative.implementation, null),
+  });
+  await strapi.documents(IMPLEMENTATION_UID).delete({ documentId: input.implementationDocumentId });
+  return { documentId: input.implementationDocumentId, changed: true };
+}
+
+/* The writable fields of an implementation, relations as document ids: equal snapshots mean nobody changed it. */
+export function controlImplementationWritableSnapshot(implementation: RecordValue): Record<string, string | null> {
+  const text = (value: unknown): string | null => typeof value === "string" ? value : null;
+  return {
+    control: documentId(implementation.control),
+    controlOwner: documentId(implementation.controlOwner),
+    controlStatus: text(implementation.controlStatus),
+    effectivenessRating: text(implementation.effectivenessRating),
+    evidence: text(implementation.evidence),
+    implementationDueDate: text(implementation.implementationDueDate),
+    implementedDate: text(implementation.implementedDate),
+    reviewDate: text(implementation.reviewDate),
+  };
+}
+
+/* An implementation with its control and owner populated, or null when it no longer exists. */
+export async function findControlImplementationForSnapshot(
+  strapi: ControlImplementationWorkflowStrapi,
+  implementationDocumentId: string,
+): Promise<RecordValue | null> {
+  return strapi.documents(IMPLEMENTATION_UID).findOne({
+    documentId: implementationDocumentId,
+    populate: { control: true, controlOwner: true, risk: true },
+  });
+}
+
+/* The documentIds of the risk's control implementations (CR-02: whether the control a suggestion added is still there). */
+export async function controlImplementationIdsForRisk(
+  strapi: ControlImplementationWorkflowStrapi,
+  riskDocumentId: string,
+): Promise<Set<string>> {
+  const rows = await strapi.documents(IMPLEMENTATION_UID).findMany({
+    filters: { risk: { documentId: { $eq: riskDocumentId } } },
+    limit: 1_000,
+  });
+  return new Set(rows.map((row) => documentId(row)).filter((id): id is string => id !== null));
+}
+
+/* The control document ids already implemented on the risk, so a suggestion of one of them changes nothing. */
+export async function implementedControlIdsForRisk(
+  strapi: ControlImplementationWorkflowStrapi,
+  riskDocumentId: string,
+): Promise<Set<string>> {
+  const rows = await strapi.documents(IMPLEMENTATION_UID).findMany({
+    filters: { risk: { documentId: { $eq: riskDocumentId } } },
+    populate: { control: true },
+    limit: 1_000,
+  });
+  return new Set(rows.map((row) => documentId(row.control)).filter((id): id is string => id !== null));
+}
+
+function withoutChanged(result: RecordValue & { changed: boolean }): RecordValue {
+  const { changed: _changed, ...record } = result;
+  return record;
+}
+
 export async function createRiskControlImplementation(input: {
   strapi: ControlImplementationWorkflowStrapi;
   riskDocumentId: string;
@@ -177,26 +352,21 @@ export async function createRiskControlImplementation(input: {
   body: unknown;
 }): Promise<RecordValue> {
   assertDocumentId(input.riskDocumentId, "CSRM Risk identifier is invalid.");
-  const parsed = parseWritableControlImplementationFields(input.body);
+  parseWritableControlImplementationFields(input.body);
   const { assessmentDocumentId } = await requireRisk(input.strapi, input.riskDocumentId);
-  return withMutableAssessmentMutation({
+  return withoutChanged(await withMutableAssessmentMutation({
     strapi: input.strapi,
     assessmentDocumentId,
     analystDocumentId: input.analystDocumentId,
-    mutate: async ({ assessment }) => {
-      assertMutableAssessment(assessment);
-      const authoritativeRisk = await requireRisk(input.strapi, input.riskDocumentId);
-      if (authoritativeRisk.assessmentDocumentId !== assessmentDocumentId) {
-        throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation ancestor changed.");
-      }
-      const data = await resolveReferences(input.strapi, parsed, true);
-      const created = await input.strapi.documents(IMPLEMENTATION_UID).create({ data: {
-        ...data,
-        risk: input.riskDocumentId,
-      } });
-      return loadProjectedImplementation(input.strapi, created);
-    },
-  });
+    transition: (result) => result.changed ? "accepted-edit" : "none",
+    mutate: () => createControlImplementationWithinMutation(input.strapi, {
+      riskDocumentId: input.riskDocumentId,
+      assessmentDocumentId,
+      body: input.body,
+      actorDocumentId: input.analystDocumentId,
+      source: { kind: "analyst" },
+    }),
+  }));
 }
 
 export async function updateControlImplementation(input: {
@@ -206,26 +376,46 @@ export async function updateControlImplementation(input: {
   body: unknown;
 }): Promise<RecordValue> {
   assertDocumentId(input.implementationDocumentId, "CSRM ControlImplementation identifier is invalid.");
-  const parsed = parseWritableControlImplementationFields(input.body);
+  parseWritableControlImplementationFields(input.body);
   const candidate = await requireImplementation(input.strapi, input.implementationDocumentId);
-  return withMutableAssessmentMutation({
+  return withoutChanged(await withMutableAssessmentMutation({
     strapi: input.strapi,
     assessmentDocumentId: candidate.assessmentDocumentId,
     analystDocumentId: input.analystDocumentId,
-    mutate: async ({ assessment }) => {
-      assertMutableAssessment(assessment);
-      const authoritative = await requireImplementation(input.strapi, input.implementationDocumentId);
-      if (!sameAncestor(authoritative.implementation, candidate.riskDocumentId, candidate.assessmentDocumentId)) {
-        throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation ancestor changed.");
-      }
-      const data = await resolveReferences(input.strapi, parsed, false);
-      const updated = await input.strapi.documents(IMPLEMENTATION_UID).update({
-        documentId: input.implementationDocumentId,
-        data,
-      });
-      return loadProjectedImplementation(input.strapi, updated);
-    },
-  });
+    // D-23: an edit that changes nothing withdraws no review.
+    transition: (result) => result.changed ? "accepted-edit" : "none",
+    mutate: () => updateControlImplementationWithinMutation(input.strapi, {
+      implementationDocumentId: input.implementationDocumentId,
+      riskDocumentId: candidate.riskDocumentId,
+      assessmentDocumentId: candidate.assessmentDocumentId,
+      body: input.body,
+      actorDocumentId: input.analystDocumentId,
+      source: { kind: "analyst" },
+    }),
+  }));
+}
+
+/*
+ * CR-02 (D-12, UI-D12): an analyst who removes a Planned control that an AI suggestion added sends that suggestion back
+ * to proposed, as its Undo does, and the run's history records the `restored` event, in the removal's transaction. So
+ * the review record never says a removed control is added, and the analyst can add the suggestion again. A history that
+ * can't take the event refuses the removal with AI_RUN_RECORD_UNAVAILABLE, and the transaction rolls it back (WR-103).
+ */
+async function restoreSuggestionsOfRemovedImplementationWithinMutation(
+  strapi: ControlImplementationWorkflowStrapi,
+  input: { implementationDocumentId: string; riskDocumentId: string; analystDocumentId: string },
+): Promise<void> {
+  const risk = await strapi.documents(RISK_UID).findOne({ documentId: input.riskDocumentId });
+  const provenance = risk ? parseRiskAiProvenance(risk.aiProvenance) : null;
+  if (!provenance) return;
+  const at = new Date().toISOString();
+  const outcome = restoreSuggestionsOfRemovedImplementation(provenance, input.implementationDocumentId, input.analystDocumentId, at);
+  if (!outcome) return;
+  await strapi.documents(RISK_UID).update({ documentId: input.riskDocumentId, data: { aiProvenance: outcome.provenance } });
+  await appendAiRunDecisionsWithinMutation(strapi, provenance.runId, outcome.restored.map((item) => ({
+    schemaVersion: 1 as const, kind: "restored" as const, at, by: input.analystDocumentId, target: input.riskDocumentId,
+    item, implementation: input.implementationDocumentId,
+  })));
 }
 
 export async function deleteControlImplementation(input: {
@@ -239,13 +429,21 @@ export async function deleteControlImplementation(input: {
     strapi: input.strapi,
     assessmentDocumentId: candidate.assessmentDocumentId,
     analystDocumentId: input.analystDocumentId,
-    mutate: async ({ assessment }) => {
-      assertMutableAssessment(assessment);
-      const authoritative = await requireImplementation(input.strapi, input.implementationDocumentId);
-      if (!sameAncestor(authoritative.implementation, candidate.riskDocumentId, candidate.assessmentDocumentId)) {
-        throw new ControlImplementationWorkflowError(409, "CSRM ControlImplementation ancestor changed.");
-      }
-      await input.strapi.documents(IMPLEMENTATION_UID).delete({ documentId: input.implementationDocumentId });
+    transition: (result) => result.changed ? "accepted-edit" : "none",
+    mutate: async () => {
+      const removed = await removeControlImplementationWithinMutation(input.strapi, {
+        implementationDocumentId: input.implementationDocumentId,
+        riskDocumentId: candidate.riskDocumentId,
+        assessmentDocumentId: candidate.assessmentDocumentId,
+        actorDocumentId: input.analystDocumentId,
+        source: { kind: "analyst" },
+      });
+      await restoreSuggestionsOfRemovedImplementationWithinMutation(input.strapi, {
+        implementationDocumentId: input.implementationDocumentId,
+        riskDocumentId: candidate.riskDocumentId,
+        analystDocumentId: input.analystDocumentId,
+      });
+      return removed;
     },
   });
 }

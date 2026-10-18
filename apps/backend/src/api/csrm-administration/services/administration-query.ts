@@ -123,6 +123,21 @@ export function parseAdministrationQuery(kind: AdministrationKind | string, inpu
   return result;
 }
 
+/** An Administration list's query as its export takes it (19-14; D-05): the list's filters, search and sort, never a page. */
+export type AdministrationExportQuery = Omit<AdministrationQuery, "page" | "pageSize">;
+
+/**
+ * The export twin of parseAdministrationQuery (19-14; D-04, D-05): the same closed parser, refusing `page` and `pageSize`,
+ * so an export holds exactly the records the list would page through.
+ */
+export function parseAdministrationExportQuery(kind: AdministrationKind | string, input: unknown): AdministrationExportQuery {
+  if (entries(input).some(([key]) => key === "page" || key === "pageSize")) {
+    throw new AdministrationValidationError("CSRM Administration query is invalid.");
+  }
+  const { page: _page, pageSize: _pageSize, ...query } = parseAdministrationQuery(kind, input);
+  return query;
+}
+
 function trimmedText(value: unknown, max: number, nullable: boolean): string | null {
   if (nullable && value === null) return null;
   if (typeof value !== "string") throw new AdministrationValidationError();
@@ -217,6 +232,20 @@ export function parseAdministrationMutation(
 
 export function normalizeAdministrationNaturalKey(value: string): string {
   return value.trim().normalize("NFKC").toLocaleLowerCase("en-AU");
+}
+
+/** The exact tier of an import's natural-key match (19-13; D-30): the trimmed key in Unicode NFC. */
+export function administrationExactKey(value: string): string {
+  return value.trim().normalize("NFC");
+}
+
+/**
+ * The similar tier (19-13; D-30): NFKC, `en-AU` lower case and collapsed whitespace. A name equal to a stored one only
+ * under this key is "Matched by similar name" and waits for a decision. JavaScript has no full case folding, so `ß`/`SS`
+ * and the dotless `ı` are not folded (19-RESEARCH Pitfall 20). Uniqueness keeps normalizeAdministrationNaturalKey.
+ */
+export function administrationSimilarKey(value: string): string {
+  return value.trim().normalize("NFKC").toLocaleLowerCase("en-AU").replace(/\s+/gu, " ");
 }
 
 function projectedControlIds(value: unknown): string[] | undefined {

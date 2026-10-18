@@ -69,10 +69,19 @@ function clientConfig(baseUrl: string, overrides: Partial<KeycloakProvisioningCo
   };
 }
 
-/** Runs `action` with the Keycloak variables replaced by `values` and every other one untouched. */
+/**
+ * IN-303: the settings register() validates for attachments before Keycloak (14-03), cleared around it, so the
+ * ambient environment never decides a Keycloak outcome: with none set, attachments are simply not configured.
+ */
+function attachmentEnvKeys(): string[] {
+  return ["NODE_ENV", "CSRM_ENVIRONMENT", ...Object.keys(process.env).filter((key) => /^CSRM_(ATTACHMENT|CLAMAV)_/.test(key))];
+}
+
+/** Runs `action` with the Keycloak variables replaced by `values`, the attachment settings cleared and every other one untouched. */
 async function withKeycloakEnv<T>(values: Record<string, string>, action: () => T | Promise<T>): Promise<T> {
-  const saved = KEYCLOAK_ENV_KEYS.map((key) => [key, process.env[key]] as const);
-  for (const key of KEYCLOAK_ENV_KEYS) delete process.env[key];
+  const keys = [...KEYCLOAK_ENV_KEYS, ...attachmentEnvKeys()];
+  const saved = keys.map((key) => [key, process.env[key]] as const);
+  for (const key of keys) delete process.env[key];
   Object.assign(process.env, values);
   try {
     return await action();
@@ -105,8 +114,22 @@ function fakeStrapi() {
   const logs = { info: [] as string[], error: [] as string[] };
   let transactions = 0;
   const strapi = {
-    config: { get: () => undefined },
-    documents: { use: (middleware: unknown) => middlewares.push(middleware) },
+    // register() also validates the attachment settings (14-03), which reads the app root and stores its result.
+    config: { get: () => undefined, set: () => undefined },
+    dirs: { app: { root: process.cwd() } },
+    // ...installs the private local provider on the upload plugin and unmounts its content-API routes (14-04).
+    plugin: () => ({ provider: { extend: () => undefined }, routes: { "content-api": { routes: [] } } }),
+    // Keycloak linkage writes back through the Document Service; recorded in the query-layer shape below.
+    documents: Object.assign((uid: string) => ({
+      findMany: async () => [],
+      update: async ({ documentId, data }: { documentId: string; data: Record<string, unknown> }) => {
+        assert.equal(uid, IDAMBOX_USER_UID);
+        updates.push({ where: { documentId }, data });
+        return { documentId, ...data };
+      },
+    }), {
+      use: (middleware: unknown) => middlewares.push(middleware),
+    }),
     db: {
       transaction: async (callback: () => Promise<unknown>) => {
         transactions += 1;
@@ -201,9 +224,13 @@ test("Strapi register skips Keycloak entirely when provisioning is disabled", as
     const fake = fakeStrapi();
     const { calls } = await withKeycloakEnv(flag === undefined ? {} : { IDAMBOX_KEYCLOAK_PROVISIONING: flag }, () =>
       withFetchForbidden(() => application.register({ strapi: fake.strapi })));
-    assert.equal(fake.middlewares.length, 0, "no document middleware is registered");
+    // Only the always-on identity write guard (02-07); no Keycloak provisioning middleware.
+    assert.equal(fake.middlewares.length, 1, "only the identity write guard is registered");
     assert.equal(calls, 0, "no network call is made");
-    assert.deepEqual(fake.logs, { info: [], error: [] });
+    // The one line register() writes is the attachment settings summary (14-03); Keycloak writes nothing.
+    const keycloakInfo = fake.logs.info.filter((line) => !line.startsWith("CSRM attachments"));
+    assert.deepEqual({ info: keycloakInfo, error: fake.logs.error }, { info: [], error: [] });
+    assert.equal(fake.logs.info.filter((line) => line.startsWith("CSRM attachments")).length, 1, "NOT_EXACTLY_ONE_ATTACHMENT_LINE (IN-303)");
   }
 });
 
@@ -215,7 +242,8 @@ test("Strapi register refuses to start when provisioning is enabled with incompl
       (error: unknown) => error instanceof KeycloakProvisioningConfigurationError && error.message.includes("KEYCLOAK_ADMIN_CLIENT_SECRET"),
     );
   });
-  assert.equal(fake.middlewares.length, 0);
+  // The identity write guard registers before the Keycloak configuration is read.
+  assert.equal(fake.middlewares.length, 1);
 });
 
 test("enabled provisioning registers one middleware at startup without contacting Keycloak or logging the secret", async () => {
@@ -532,8 +560,32 @@ test("a Keycloak failure fails the write, skips the write-back and logs no secre
     );
     assert.deepEqual(fake.updates, []);
     assert.equal(fake.logs.error.length, 1);
-    assert.match(fake.logs.error[0] ?? "", /doc-jane; the create is rolled back\. Keycloak create user failed with HTTP 503\./);
+    assert.equal(fake.logs.error[0], "Keycloak provisioning failed for IdamBox user doc-jane; the create is rolled back.");
     assertNoSecrets(fake.logs.error[0] ?? "");
+  } finally {
+    await keycloak.close();
+  }
+});
+
+test("provisioning rollback logs withhold remote error fields for create and update", async () => {
+  const keycloak = await startFakeKeycloakServer();
+  try {
+    for (const action of ["create", "update"] as const) {
+      const fake = fakeStrapi();
+      const middleware = createIdamboxUserProvisioningMiddleware(fake.strapi, new KeycloakAdminClient(clientConfig(keycloak.baseUrl)));
+      keycloak.failNext("GET /admin", { status: 503, body: JSON.stringify({
+        errorMessage: "private.person@example.test injected-credential-sentinel\nforged-log-line",
+        error: "private-error-sentinel",
+      }) });
+      await assert.rejects(
+        runMiddleware(middleware, { uid: IDAMBOX_USER_UID, action,
+          params: { documentId: "doc-jane", data: { email: "jane.doe@idambox.com" } } }, async () => user()),
+        (error: unknown) => error instanceof KeycloakProvisioningError && error.status === 503,
+      );
+      assert.deepEqual(fake.updates, []);
+      assert.equal(fake.transactions(), 1);
+      assert.deepEqual(fake.logs.error, [`Keycloak provisioning failed for IdamBox user doc-jane; the ${action} is rolled back.`]);
+    }
   } finally {
     await keycloak.close();
   }

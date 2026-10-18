@@ -109,6 +109,32 @@ describe('assessment Server Action boundary', () => {
     ]);
   });
 
+  /* Phase 15 (15-UI-SPEC §3.3, §12, §13 family I; D-12, D-18, D-32): the optional instruction and its refusals. */
+  it('sends an instruction with questionnaire generation, and refuses a non-string instruction without calling', async () => {
+    const job = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: '2026-08-30T01:02:03.000Z', status: 'queued' };
+    startQuestionnaireGeneration.mockResolvedValueOnce(success(job));
+    await expect(actions.startQuestionnaireGenerationAction({ requestId: 'request-1', replaceUnansweredQuestionnaire: false, instruction: 'Cover the offshore support team and payroll data' })).resolves.toEqual({ ok: true, data: job });
+    expect(startQuestionnaireGeneration).toHaveBeenCalledWith('request-1', false, 'Cover the offshore support team and payroll data');
+    startQuestionnaireGeneration.mockClear();
+    await expect(actions.startQuestionnaireGenerationAction({ requestId: 'request-1', replaceUnansweredQuestionnaire: false, instruction: 42 })).resolves.toMatchObject({ ok: false });
+    expect(startQuestionnaireGeneration).not.toHaveBeenCalled();
+  });
+
+  it('reads an instruction refusal with Q1’s sentence and its reason, and OWN_REQUEST with family I’s', async () => {
+    startQuestionnaireGeneration.mockResolvedValueOnce({ data: null, error: { message: 'raw', status: 400, reason: 'INSTRUCTION_REPEATS_REQUESTOR_TEXT' } });
+    await expect(actions.startQuestionnaireGenerationAction({ requestId: 'request-1', replaceUnansweredQuestionnaire: false, instruction: 'The vendor processes payroll.' })).resolves.toEqual({
+      ok: false,
+      formError: 'The instruction repeats a long passage of the Requestor’s own words. The AI already reads the request and the marked notes and files, so say what to focus on in your own words.',
+      reason: 'INSTRUCTION_REPEATS_REQUESTOR_TEXT',
+    });
+    startQuestionnaireGeneration.mockResolvedValueOnce({ data: null, error: { message: 'raw', status: 403, reason: 'OWN_REQUEST' } });
+    await expect(actions.startQuestionnaireGenerationAction({ requestId: 'request-1', replaceUnansweredQuestionnaire: false, instruction: 'Cover payroll.' })).resolves.toEqual({
+      ok: false,
+      formError: 'A Security Analyst can’t give the AI an instruction on a request they raised. Generate without one, or ask another Security Analyst.',
+      reason: 'OWN_REQUEST',
+    });
+  });
+
   it('accepts only the request identifier and replacement acknowledgement for questionnaire generation', async () => {
     const job = { jobId: 'job-1', requestId: 'request-1', providerName: 'Configured provider', providerVersion: '1', attempt: 1, queuedAt: '2026-08-30T01:02:03.000Z', status: 'queued' };
     startQuestionnaireGeneration.mockResolvedValueOnce(success(job));
@@ -230,6 +256,60 @@ describe('assessment Server Action boundary', () => {
       values: input.values,
       formError: expect.stringContaining(message),
     });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  /* WR-103: a save whose AI review history can't take its record is refused for that reason, which a reload can't fix. */
+  it('reads an assessment or Risk save refused by the AI review history as that refusal, retaining values', async () => {
+    const formError = 'The review history of this assessment’s AI proposals can’t record more changes, so your changes weren’t saved. Contact your administrator.';
+    const conflict = { data: null, error: { message: 'raw internal detail', status: 409, reason: 'AI_RUN_RECORD_UNAVAILABLE' } };
+    updateAssessment.mockResolvedValueOnce(conflict);
+    updateRisk.mockResolvedValueOnce(conflict);
+
+    await expect(actions.saveAssessmentAction({ assessmentId: 'assessment-1', values: { summary: 'Keep this value' } }))
+      .resolves.toEqual({ ok: false, values: { summary: 'Keep this value' }, formError });
+    await expect(actions.updateRiskAction({ assessmentId: 'assessment-1', riskId: 'risk-1', values: { riskStatement: 'Keep this statement' } }))
+      .resolves.toEqual({ ok: false, values: { riskStatement: 'Keep this statement' }, formError });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  /* Phase 16 §6.5 (16-UI-SPEC §13 R1): a Risk withdrawn meanwhile refuses its edit and its control changes in R1's words. */
+  it('reads a Risk or mitigation control change refused because the Risk was withdrawn as R1’s sentence, retaining values', async () => {
+    const formError = 'This risk has been withdrawn, so it can’t be changed. Reinstate it to change it.';
+    const withdrawn = { data: null, error: { message: 'raw internal detail', status: 409, reason: 'RISK_WITHDRAWN' } };
+    updateRisk.mockResolvedValueOnce(withdrawn);
+    updateControlImplementation.mockResolvedValueOnce(withdrawn);
+    createControlImplementation.mockResolvedValueOnce(withdrawn);
+    deleteControlImplementation.mockResolvedValueOnce(withdrawn);
+
+    // FE3-05: the closed reason comes back too, so the page reads the Risk again (§6.5).
+    const reason = 'RISK_WITHDRAWN';
+    await expect(actions.updateRiskAction({ assessmentId: 'assessment-1', riskId: 'risk-1', values: { riskStatement: 'Keep this statement' } }))
+      .resolves.toEqual({ ok: false, values: { riskStatement: 'Keep this statement' }, formError, reason });
+    await expect(actions.updateControlImplementationAction({ assessmentId: 'assessment-1', implementationId: 'implementation-1', values: { evidence: 'Keep this evidence' } }))
+      .resolves.toEqual({ ok: false, values: { evidence: 'Keep this evidence' }, formError, reason });
+    await expect(actions.createControlImplementationAction({ assessmentId: 'assessment-1', riskId: 'risk-1', values: { control: 'control-1', evidence: 'Keep this evidence' } }))
+      .resolves.toEqual({ ok: false, values: expect.objectContaining({ evidence: 'Keep this evidence' }), formError, reason });
+    await expect(actions.deleteControlImplementationAction({ assessmentId: 'assessment-1', implementationId: 'implementation-1' }))
+      .resolves.toEqual({ ok: false, formError, reason });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  /*
+   * CR-02 with WR-103: removing a planned control an AI suggestion added proposes that suggestion again, recorded in the
+   * run's history, so a history that can't take the record refuses the removal with its own reason, which a reload
+   * can't fix. Any other conflict keeps the generic sentence.
+   */
+  it('reads a mitigation control removal refused by the AI review history as that refusal', async () => {
+    deleteControlImplementation.mockResolvedValueOnce({ data: null, error: { message: 'raw internal detail', status: 409, reason: 'AI_RUN_RECORD_UNAVAILABLE' } });
+    deleteControlImplementation.mockResolvedValueOnce({ data: null, error: { message: 'raw internal detail', status: 409, reason: 'ASSESSMENT_NOT_MUTABLE' } });
+    const input = { assessmentId: 'assessment-1', implementationId: 'implementation-1' };
+
+    await expect(actions.deleteControlImplementationAction(input)).resolves.toEqual({
+      ok: false,
+      formError: 'The review history of this assessment’s AI proposals can’t record more changes, so your changes weren’t saved. Contact your administrator.',
+    });
+    await expect(actions.deleteControlImplementationAction(input)).resolves.toEqual({ ok: false, formError: 'This assessment changed. Reload and try again.' });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 

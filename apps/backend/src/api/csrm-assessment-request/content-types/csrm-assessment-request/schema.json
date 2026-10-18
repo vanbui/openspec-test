@@ -83,6 +83,26 @@
       "relation": "manyToOne",
       "target": "api::idambox-user.idambox-user"
     },
+    "assignedAnalyst": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user",
+      "private": true
+    },
+    "assignedAt": {
+      "type": "datetime",
+      "private": true
+    },
+    "assignedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user",
+      "private": true
+    },
+    "assignmentLog": {
+      "type": "json",
+      "private": true
+    },
     "dueDate": {
       "type": "date"
     },

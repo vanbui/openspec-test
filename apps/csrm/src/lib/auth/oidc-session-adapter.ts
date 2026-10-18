@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { createHash, randomUUID } from 'node:crypto';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
@@ -77,8 +78,12 @@ export class OidcSessionAdapter implements SessionAdapter {
 
     const email = user.email?.trim();
     const displayName = user.name?.trim() || email || 'Signed-in user';
+    // The Auth.js public session deliberately omits sub. Read it only from the encrypted server cookie;
+    // hashing prevents the subject reaching client props. Missing subjects discard caches on every render.
+    const token = await readSessionToken();
+    const identityKey = createHash('sha256').update(typeof token?.sub === 'string' && token.sub ? token.sub : randomUUID()).digest('hex');
 
-    return { displayName, ...(email ? { email } : {}) };
+    return { displayName, identityKey, ...(email ? { email } : {}) };
   }
 
   async setDevelopmentRole(_role: DevelopmentRole): Promise<void> {

@@ -2,6 +2,8 @@ import type { Core } from "@strapi/strapi";
 
 import { KeycloakAdminClient } from "./admin-client";
 import { readKeycloakProvisioningConfig } from "./config";
+import { isInitialSourceServiceCreate, isRegisteredSourceService, isKeycloakLinkage } from "../iam/identity/write-context";
+import { writeKeycloakLinkage } from "../iam/identity/keycloak-linkage";
 import { IDAMBOX_USER_UID, type IdamBoxUserDocument, provisionIdamboxUser } from "./provision-idambox-user";
 
 type DocumentMiddleware = Parameters<Core.Strapi["documents"]["use"]>[0];
@@ -56,14 +58,30 @@ export function createIdamboxUserProvisioningMiddleware(
     }
 
     const data = readWriteData(context.params);
-    // Captured before next(): the document service replaces it with a bcrypt hash.
+    if (isKeycloakLinkage(strapi, (context.params as { documentId?: string }).documentId, data)) return next();
+    const initialServiceCreate = context.action === "create" && isInitialSourceServiceCreate(strapi, data);
+    const mirrorsChanged = PROVISIONED_FIELDS.some((field) => field in data);
+    // Validate the original input before omitting it from Document Service persistence.
+    if (data.password != null && (typeof data.password !== "string" || data.password.length < 6)) {
+      throw new Error("IAM_IDENTITY_INVALID_INPUT");
+    }
     const password = typeof data.password === "string" && data.password.trim() !== "" ? data.password : null;
+    delete data.password;
 
     return strapi.db.transaction(async () => {
       const result = await next();
       const user = asIdamboxUser(result);
       if (!user) return result;
-      if (context.action === "update" && user.externalSubject && !PROVISIONED_FIELDS.some((field) => field in data)) {
+      if (initialServiceCreate || (context.action === "update" && await isRegisteredSourceService(strapi, user.documentId))) {
+        return result;
+      }
+      if (context.action === "update" && (user.accountStatus === "inactive" || (user.externalSubject && !mirrorsChanged))) {
+        // The always-on outer ownership boundary commits inactive status and outbox
+        // together under the user lock. Even lookup/token requests are forbidden here.
+        if ((result as { password?: unknown }).password != null) {
+          await writeKeycloakLinkage(strapi, user.documentId, user.externalSubject ?? null);
+          Object.assign(result as object, { password: null });
+        }
         return result;
       }
 
@@ -72,18 +90,12 @@ export function createIdamboxUserProvisioningMiddleware(
         externalSubject = await provisionIdamboxUser(client, user, password);
       } catch (error) {
         strapi.log.error(
-          `Keycloak provisioning failed for IdamBox user ${user.documentId}; the ${context.action} is rolled back. `
-            + (error instanceof Error ? error.message : "Unknown error."),
+          `Keycloak provisioning failed for IdamBox user ${user.documentId}; the ${context.action} is rolled back.`,
         );
         throw error;
       }
 
-      // D-12/D-18: store the Keycloak id and clear the transient password. The
-      // query layer skips document validation, which a null password would fail.
-      await strapi.db.query(IDAMBOX_USER_UID).update({
-        where: { documentId: user.documentId },
-        data: { externalSubject, password: null },
-      });
+      await writeKeycloakLinkage(strapi, user.documentId, externalSubject);
       return Object.assign(result as object, { externalSubject, password: null }) as typeof result;
     });
   };

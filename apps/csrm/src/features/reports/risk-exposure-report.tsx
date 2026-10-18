@@ -4,9 +4,11 @@ import type { AssessmentRating } from '../assessments/assessment-schema';
 import {
   exposedSystemBars,
   exposedSystemRows,
+  exposedSystemsNoteLinks,
   exposedSystemsNotes,
   hasHighOrCriticalResidualRisk,
-  hasOpenContextualRisks,
+  hasReleasedOpenRisks,
+  hasRisksUnderAssessment,
   ratingRows,
   ratingScaleMax,
   ratingTableRows,
@@ -14,7 +16,9 @@ import {
   reportSectionCopy,
   residualByTreatmentStatusRows,
   treatmentStatusColumns,
+  underAssessmentRows,
   type RatingRow,
+  type UnderAssessmentRow,
 } from './report-presentation';
 import type { RiskExposureReport } from './report-schema';
 import { ReportSection } from './report-section';
@@ -35,6 +39,17 @@ function ratingBars(rows: readonly RatingRow[], measure: 'inherent' | 'residual'
     label: row.rating ? <RiskRatingBadge rating={row.rating} /> : row.label,
     labelText: row.label,
     value: row[measure],
+    tone: row.rating ? ratingTones[row.rating] : 'ink',
+  } as const));
+}
+
+/** The Under assessment bars, Critical to Low then Not rated, each toned by its rating (§3.14). */
+function underAssessmentBars(rows: readonly UnderAssessmentRow[]) {
+  return rows.map((row) => ({
+    key: row.key,
+    label: row.rating ? <RiskRatingBadge rating={row.rating} /> : row.label,
+    labelText: row.label,
+    value: row.values[0] ?? 0,
     tone: row.rating ? ratingTones[row.rating] : 'ink',
   } as const));
 }
@@ -60,12 +75,19 @@ function RatingMultiples({ rows }: { rows: readonly RatingRow[] }) {
   );
 }
 
-/** The risk-exposure report (UI-SPEC §4.4): open contextual Risks only, as the register's state=open. */
+/**
+ * The risk-exposure report (UI-SPEC §4.4, §9.3). The first three sections count released open Risks
+ * (the register's state=open and stage=released); the Under assessment section counts the open Risks
+ * whose risk assessment is not yet released, apart, so the two stages are never read as one total.
+ */
 export function RiskExposureReportView({ report }: { report: RiskExposureReport }) {
   const copy = reportSectionCopy;
-  const ratings = ratingRows(report.byInherentRating, report.byResidualRating);
-  const openRisks = hasOpenContextualRisks(report);
+  const ratings = ratingRows(report.byInherentRating, report.byResidualRating, report.acceptedByResidualRating);
+  const released = hasReleasedOpenRisks(report);
+  const releasedEmpty = released ? undefined : reportEmptyStates.releasedOpenRisks;
   const systems = exposedSystemRows(report.exposedSystems);
+  const underAssessment = underAssessmentRows(report.underAssessment.byResidualRating);
+  const systemsEmpty = releasedEmpty ?? (hasHighOrCriticalResidualRisk(report.exposedSystems) ? undefined : reportEmptyStates.highOrCriticalResidualRisks);
 
   return (
     <>
@@ -73,14 +95,14 @@ export function RiskExposureReportView({ report }: { report: RiskExposureReport 
         caption={copy.ratings.caption}
         chart={<RatingMultiples rows={ratings} />}
         description={copy.ratings.description}
-        empty={openRisks ? undefined : reportEmptyStates.openContextualRisks}
+        empty={releasedEmpty}
         id="risk-exposure-ratings"
         table={<ReportTable caption={copy.ratings.caption} columns={copy.ratings.columns} rowHeader={copy.ratings.rowHeader} rows={ratingTableRows(ratings)} />}
       />
       <ReportSection
         caption={copy.residualByTreatmentStatus.caption}
         description={copy.residualByTreatmentStatus.description}
-        empty={openRisks ? undefined : reportEmptyStates.openContextualRisks}
+        empty={releasedEmpty}
         id="risk-exposure-treatment-status"
         // A rating-by-status matrix needs more than two series, so it is a table only (§3.14).
         table={(
@@ -97,10 +119,19 @@ export function RiskExposureReportView({ report }: { report: RiskExposureReport 
         caption={copy.exposedSystems.caption}
         chart={systems.length > 0 ? <BarChart data={exposedSystemBars(report.exposedSystems)} presentation="figure-with-table" /> : undefined}
         description={copy.exposedSystems.description}
-        empty={hasHighOrCriticalResidualRisk(report.exposedSystems) ? undefined : reportEmptyStates.highOrCriticalResidualRisks}
+        empty={systemsEmpty}
         id="risk-exposure-information-systems"
+        noteLinks={exposedSystemsNoteLinks(report.exposedSystems)}
         notes={exposedSystemsNotes(report.exposedSystems)}
         table={systems.length > 0 ? <ReportTable caption={copy.exposedSystems.caption} columns={copy.exposedSystems.columns} rowHeader={copy.exposedSystems.rowHeader} rows={systems} /> : undefined}
+      />
+      <ReportSection
+        caption={copy.underAssessment.caption}
+        chart={<BarChart data={underAssessmentBars(underAssessment)} presentation="figure-with-table" />}
+        description={copy.underAssessment.description}
+        empty={hasRisksUnderAssessment(report) ? undefined : reportEmptyStates.risksUnderAssessment}
+        id="risk-exposure-under-assessment"
+        table={<ReportTable caption={copy.underAssessment.caption} columns={copy.underAssessment.columns} rowHeader={copy.underAssessment.rowHeader} rows={underAssessment} />}
       />
     </>
   );

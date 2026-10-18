@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
 
+import { conflictDetails, type ConflictReason } from "../../../csrm/conflict-reasons";
 import {
   assertAnalystAssessmentScope,
   assertClosedAssessmentQuery,
@@ -13,7 +14,6 @@ import {
 import { AssessmentWorkflowError } from "../../csrm-assessment/services/assessment-workflow";
 import {
   createAssessmentRisk,
-  listAssessmentRiskDocuments,
   listControlDocuments,
   listRiskTypeDocuments,
   RiskWorkflowError,
@@ -21,15 +21,22 @@ import {
   updateRisk,
 } from "../services/risk-workflow";
 import { RiskRegisterQueryError } from "../services/risk-register-query";
+import { CSRM_RISK_OPERATIONS } from "../operations";
+import { isHumanSecurityAnalyst } from "../../../policies/csrm-authorization";
 import { AdministrationValidationError } from "../../csrm-administration/services/administration-query";
 import { AdministrationWorkflowError } from "../../csrm-administration/services/administration-workflow";
 import {
+  assertRiskRegisterScope,
   createStrapiRiskRegisterRepository,
   getRiskRegisterDetail,
   listRiskRegister,
   RiskRegisterError,
 } from "../services/risk-register";
 import { utcToday } from "../../../csrm/insights/utc-date";
+import { riskRegisterExportView } from "../../../csrm/exports/export-views";
+import { runListExport } from "../../../csrm/exports/run-export";
+import { resolveExportActor, sendExportError, sendExportFile } from "../../../csrm/exports/send-export";
+import type { SecurityEventLogger } from "../../../csrm/audit/security-event-log";
 
 const UID = "api::csrm-risk.csrm-risk" as const;
 type RecordValue = Record<string, unknown>;
@@ -38,11 +45,13 @@ function isRecord(value: unknown): value is RecordValue {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string): unknown {
+function safeError(ctx: RecordValue, status: 400 | 403 | 404 | 409, message: string, reason?: ConflictReason): unknown {
   const responder = status === 400 ? ctx.badRequest : status === 403 ? ctx.forbidden : status === 404 ? ctx.notFound : ctx.conflict;
-  if (typeof responder === "function") return responder.call(ctx, message);
+  // D-22: a workflow conflict names its closed reason, as the assessment controller's do (WR-103).
+  const details = conflictDetails(status === 409 ? reason : undefined);
+  if (typeof responder === "function") return details ? responder.call(ctx, message, details) : responder.call(ctx, message);
   ctx.status = status;
-  return { data: null, error: { status, message } };
+  return { data: null, error: { status, message, ...(details ? { details } : {}) } };
 }
 
 function routeId(ctx: RecordValue, name: "assessmentId" | "riskId"): string | null {
@@ -102,7 +111,7 @@ function handleError(ctx: RecordValue, error: unknown): unknown {
   if (error instanceof RiskRegisterQueryError) return safeError(ctx, 400, error.message);
   if (error instanceof RiskRegisterError) return safeError(ctx, error.status, error.message);
   if (error instanceof AssessmentScopeError || error instanceof AssessmentWorkflowError || error instanceof RiskWorkflowError) {
-    return safeError(ctx, error.status, error.message);
+    return safeError(ctx, error.status, error.message, error instanceof AssessmentWorkflowError ? error.reason : undefined);
   }
   throw error;
 }
@@ -123,6 +132,28 @@ export function riskControllerExtension({ strapi }: { strapi: unknown }) {
         return handleError(ctx, error);
       }
     },
+    /*
+     * Phase 19 (D-03 group 1, D-05): the register, whole, as a file. The policy admitted a human Security Analyst holding
+     * the export and the register read; the pipeline runs the register's own scope, parser, repository and projection.
+     */
+    async exportRiskRegister(ctx: RecordValue) {
+      try {
+        assertRiskRegisterScope(ctx.state);
+        const file = await runListExport({
+          view: riskRegisterExportView(createStrapiRiskRegisterRepository(strapi)),
+          query: ctx.query,
+          state: ctx.state,
+          actor: await resolveExportActor(strapi, ctx.state),
+          now: new Date(),
+          log: (strapi as { log: SecurityEventLogger }).log,
+        });
+        sendExportFile(ctx as unknown as Parameters<typeof sendExportFile>[0], file);
+        return undefined;
+      } catch (error) {
+        if (sendExportError(ctx as unknown as Parameters<typeof sendExportError>[0], error)) return undefined;
+        return handleError(ctx, error);
+      }
+    },
     async getRiskRegisterDetail(ctx: RecordValue) {
       try {
         assertClosedAssessmentQuery(ctx.query);
@@ -133,17 +164,6 @@ export function riskControllerExtension({ strapi }: { strapi: unknown }) {
           state: ctx.state,
           riskDocumentId: riskId,
         }) };
-      } catch (error) {
-        return handleError(ctx, error);
-      }
-    },
-    async listAssessmentRisks(ctx: RecordValue) {
-      try {
-        assertAnalystAssessmentScope(ctx.state);
-        assertClosedAssessmentQuery(ctx.query);
-        const assessmentId = routeId(ctx, "assessmentId");
-        if (!assessmentId) return safeError(ctx, 400, "CSRM assessment identifier is invalid.");
-        return { data: (await listAssessmentRiskDocuments(workflowStrapi, assessmentId)).map(projectRiskSummary) };
       } catch (error) {
         return handleError(ctx, error);
       }
@@ -174,10 +194,13 @@ export function riskControllerExtension({ strapi }: { strapi: unknown }) {
         const riskId = routeId(ctx, "riskId");
         const analystId = analystDocumentId(ctx);
         if (!riskId || !analystId) return safeError(ctx, 400, "CSRM Risk mutation data is invalid.");
+        const state = isRecord(ctx.state) ? ctx.state : null;
         const document = await updateRisk({
           strapi: workflowStrapi,
           riskDocumentId: riskId,
           analystDocumentId: analystId,
+          // Verifier W-3: only a human Security Analyst's edit moves an AI field out of proposed.
+          humanAnalyst: await isHumanSecurityAnalyst(strapi as never, state?.idamboxUser, CSRM_RISK_OPERATIONS.update),
           body: mutationBody(ctx),
         });
         return { data: projectRiskSummary(document) };

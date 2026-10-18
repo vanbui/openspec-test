@@ -74,10 +74,13 @@ export async function searchRiskRegisterRelationsAction(input: unknown): Promise
   if (!parsed.success) return { ok: false, formError: 'Enter a valid relation search.' };
   const { kind, search } = parsed.data;
   const result = kind === 'owners' ? await searchRiskRegisterOwners(search)
-    : kind === 'assessments' ? await listRiskRegisterAssessments()
+    : kind === 'assessments' ? await listRiskRegisterAssessments(search)
       : kind === 'systems' ? await searchRiskRegisterSystems(search)
         : await searchRiskRegisterAssets(search);
   if (result.error) return { ok: false, formError: 'Relation search is unavailable. Try again.' };
+  // D-32: the server matched the assessment by number, summary or request title, so its order stands; a label holds
+  // only the number and the title, and filtering on it would drop an assessment the server found by its summary.
+  if (kind === 'assessments') return { ok: true, data: result.data.slice(0, 20) };
   const needle = search.toLocaleLowerCase('en-AU');
   return { ok: true, data: result.data.filter((option) => option.label.toLocaleLowerCase('en-AU').includes(needle)).slice(0, 20) };
 }

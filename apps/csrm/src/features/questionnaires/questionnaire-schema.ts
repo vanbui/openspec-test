@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import { requestSummaryAssignmentSchema, requestSummaryFilesSchema, requestSummaryNotesSchema } from '@/features/requests/request-summary-schema';
+import type { QuestionnaireRequestRelationship } from './questionnaire-domain';
+
 export const questionnaireAnswerTypes = [
   'Text',
   'Long text',
@@ -116,12 +119,23 @@ export const questionnaireAnswerInputSchema = z.object({
 
 export type QuestionnaireAnswerInput = z.infer<typeof questionnaireAnswerInputSchema>;
 
+/* D-22: whether a question is still as generated, edited by an analyst, or added by one (analyst reads only). */
+export const questionAiOriginSchema = z.enum(['generated', 'generated-edited', 'analyst-added', 'proposal-confirmed', 'proposal-edited']);
+export type QuestionAiOrigin = z.infer<typeof questionAiOriginSchema>;
+
+export { aiGenerationFactsSchema, type AiGenerationFacts } from '@/features/ai-assistance/ai-generation-facts-schema';
+
 const questionnaireQuestionTransportSchema = z.object({
   documentId: z.string().trim().min(1).max(255).optional(),
   questionText: z.string().trim().min(1).max(65_535),
+  // D-17: absent only on a definition built in the client; every server read carries it, null when there is none.
+  helpText: z.string().max(2_000).nullable().optional(),
   answerType: questionnaireAnswerTypeSchema,
   options: questionOptionsSchema,
   answer: z.unknown().nullable().optional(),
+  aiOrigin: questionAiOriginSchema.nullable().optional(),
+  // Phase 15 D-30: analyst reads in analyst review or on a submitted questionnaire only.
+  answered: z.boolean().optional(),
 }).strict().superRefine((question, context) => {
   const choices = question.options.choices;
   const isChoiceQuestion = question.answerType === 'Single select' || question.answerType === 'Multi select';
@@ -270,8 +284,11 @@ export const questionnaireDefinitionSchema = z.array(questionnaireQuestionTransp
     return {
       ...(question.documentId ? { documentId: question.documentId } : {}),
       questionText: question.questionText,
+      ...(question.helpText?.trim() ? { helpText: question.helpText } : {}),
       answerType: question.answerType,
       ...question.options,
+      ...(question.aiOrigin ? { aiOrigin: question.aiOrigin } : {}),
+      ...(question.answered !== undefined ? { answered: question.answered } : {}),
       answer: parsedAnswer,
       support: question.answerType === 'File upload'
         ? { status: 'unsupported' as const, reason: 'file-upload-deferred' as const }
@@ -281,3 +298,29 @@ export const questionnaireDefinitionSchema = z.array(questionnaireQuestionTransp
 
 export type QuestionnaireQuestion = z.output<typeof questionnaireDefinitionSchema>[number];
 export type QuestionnaireDefinition = z.output<typeof questionnaireDefinitionSchema>;
+
+/** True only when two types are mutually assignable. */
+type SameType<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+
+/*
+ * The related assessment request's parser (QuestionnaireRequestRelationship in the zod-free domain module):
+ * `available` carries its bounded identity, and `absent` and `unavailable` carry none at all.
+ */
+export const assessmentRequestRelationshipSchema = z.discriminatedUnion('availability', [
+  z.object({
+    availability: z.literal('available'),
+    documentId: z.string().trim().min(1).max(255),
+    requestNumber: z.string().trim().min(1).max(255),
+    title: z.string().trim().min(1).max(255),
+    requestStatus: z.string().trim().min(1).max(255),
+    // Phase 13 D-16, D-25 and Phase 14 D-27: the analyst's read names the assignee, the notes and the files figures; every
+    // other read serves null.
+    assignment: requestSummaryAssignmentSchema.nullable().optional(),
+    notes: requestSummaryNotesSchema.nullable().optional(),
+    files: requestSummaryFilesSchema.nullable().optional(),
+  }).strict(),
+  z.object({ availability: z.literal('absent') }).strict(),
+  z.object({ availability: z.literal('unavailable') }).strict(),
+]);
+const relationshipParserMatchesTheDomainType = true satisfies SameType<z.infer<typeof assessmentRequestRelationshipSchema>, QuestionnaireRequestRelationship>;
+void relationshipParserMatchesTheDomainType;

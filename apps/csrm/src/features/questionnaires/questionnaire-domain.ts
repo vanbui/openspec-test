@@ -1,9 +1,9 @@
-import { z } from 'zod';
 import type {
   QuestionnaireAnswer,
   QuestionnaireDefinition,
   QuestionnaireQuestion,
 } from './questionnaire-schema';
+import type { RequestSummaryAssignment, RequestSummaryFiles, RequestSummaryNotes } from '@/features/requests/request-domain';
 
 export type QuestionnaireAnswers = Readonly<Record<string, QuestionnaireAnswer | null | undefined>>;
 
@@ -165,25 +165,112 @@ export function validateActiveRequiredAnswers(
  * nothing to name, unavailable because the record's existence is itself
  * protected. Only `available` may be named or linked.
  *
- * This lives in the domain module, not the service, because presentation code
- * on client components needs to narrow it and the service is server-only.
+ * The type lives in this zod-free domain module because presentation code on
+ * client components narrows it; its parser lives in questionnaire-schema.ts,
+ * which proves the two equal, so no client module downloads zod (plan 11-09).
  */
-export const assessmentRequestRelationshipSchema = z.discriminatedUnion('availability', [
-  z.object({
-    availability: z.literal('available'),
-    documentId: z.string().trim().min(1).max(255),
-    requestNumber: z.string().trim().min(1).max(255),
-    title: z.string().trim().min(1).max(255),
-    requestStatus: z.string().trim().min(1).max(255),
-  }).strict(),
-  z.object({ availability: z.literal('absent') }).strict(),
-  z.object({ availability: z.literal('unavailable') }).strict(),
-]);
-export type QuestionnaireRequestRelationship = z.infer<typeof assessmentRequestRelationshipSchema>;
+export type QuestionnaireRequestRelationship =
+  | {
+    availability: 'available';
+    documentId: string;
+    requestNumber: string;
+    title: string;
+    requestStatus: string;
+    /** Phase 13 D-16: who holds the request, on the analyst's questionnaire read; null (or absent) on every other. */
+    assignment?: RequestSummaryAssignment | null;
+    /** Phase 13 D-25: the request's notes figures, on the analyst's questionnaire read; null (or absent) on every other. */
+    notes?: RequestSummaryNotes | null;
+    /** Phase 14 D-27: the request's files figures, on the analyst's questionnaire read; null (or absent) on every other. */
+    files?: RequestSummaryFiles | null;
+  }
+  | { availability: 'absent' }
+  | { availability: 'unavailable' };
 
 /** Narrows the relation to the only state that may be named or linked. */
 export function availableAssessmentRequest(
   relationship: QuestionnaireRequestRelationship,
 ): Extract<QuestionnaireRequestRelationship, { availability: 'available' }> | null {
   return relationship.availability === 'available' ? relationship : null;
+}
+
+/*
+ * Phase 15 (15-UI-SPEC §11.2; D-25, D-07, UI-D25, SD-1): the Requestor's unsaved answers, kept for the browser session
+ * when a save is refused because a Security Analyst took the questionnaire back (QUESTIONNAIRE_NOT_ANSWERABLE). The
+ * session draft store keeps strings, so they are kept as JSON and read back defensively; on the next released load only
+ * answers that still fit their question are restored, and the rest are discarded silently.
+ */
+export type KeptAnswerValue = string | boolean | readonly string[] | null;
+
+export type KeptUnsavedAnswer = {
+  readonly questionKey: string;
+  readonly answerType: string;
+  /** The question's choice values when it was answered, so a changed choice list never takes an old answer. */
+  readonly choicesSignature: string;
+  readonly value: KeptAnswerValue;
+};
+
+/** The choice values in order, as JSON; '' for a question without choices. */
+export function choicesSignature(question: Pick<QuestionnaireQuestion, 'choices'>): string {
+  return question.choices ? JSON.stringify(question.choices.map((choice) => choice.value)) : '';
+}
+
+const isKeptValue = (value: unknown): value is KeptAnswerValue => value === null
+  || typeof value === 'string'
+  || typeof value === 'boolean'
+  || (Array.isArray(value) && value.every((item) => typeof item === 'string'));
+
+function isKeptUnsavedAnswer(entry: unknown): entry is KeptUnsavedAnswer {
+  if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return false;
+  const candidate = entry as Record<string, unknown>;
+  return typeof candidate.questionKey === 'string'
+    && typeof candidate.answerType === 'string'
+    && typeof candidate.choicesSignature === 'string'
+    && isKeptValue(candidate.value);
+}
+
+/** The kept answers, or null when there are none or the value does not parse or holds an entry of another shape. */
+export function parseKeptUnsavedAnswers(raw: string | null): readonly KeptUnsavedAnswer[] | null {
+  if (!raw) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  return Array.isArray(parsed) && parsed.every(isKeptUnsavedAnswer) ? parsed : null;
+}
+
+const holdsValue = (value: unknown): boolean => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
+
+/** The answers worth keeping: a supported question's value that has content and differs from the saved answer. */
+export function keptUnsavedAnswersOf(definition: QuestionnaireDefinition, answers: readonly { questionKey: string; value: KeptAnswerValue }[]): KeptUnsavedAnswer[] {
+  const questions = new Map(definition.map((question) => [question.questionKey, question]));
+  return answers.flatMap(({ questionKey, value }) => {
+    const question = questions.get(questionKey);
+    if (!question || question.support.status !== 'supported' || !holdsValue(value)) return [];
+    if (JSON.stringify(question.answer?.value ?? null) === JSON.stringify(value)) return [];
+    return [{ questionKey, answerType: question.answerType, choicesSignature: choicesSignature(question), value }];
+  });
+}
+
+/**
+ * The kept answers that may be restored: the question has the same key, is still active (served to the Requestor and
+ * answerable), has the same answer type and choices, and holds no saved answer.
+ */
+export function restorableUnsavedAnswers(kept: readonly KeptUnsavedAnswer[], questions: QuestionnaireDefinition): KeptUnsavedAnswer[] {
+  const byKey = new Map(questions.map((question) => [question.questionKey, question]));
+  return kept.filter((entry) => {
+    const question = byKey.get(entry.questionKey);
+    return question !== undefined
+      && question.support.status === 'supported'
+      && question.answerType === entry.answerType
+      && choicesSignature(question) === entry.choicesSignature
+      && !holdsValue(question.answer?.value);
+  });
+}
+
+export function unsavedAnswersRestoredCaption(count: number): string {
+  return count === 1
+    ? '1 unsaved answer was restored from earlier in this session. Check it before you carry on.'
+    : `${count.toLocaleString('en-AU')} unsaved answers were restored from earlier in this session. Check them before you carry on.`;
 }

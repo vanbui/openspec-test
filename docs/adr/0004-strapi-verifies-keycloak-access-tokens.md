@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-30
 - **Supersedes:** the production refusal and the empty capability grant in [ADR 0003](0003-production-only-keycloak-oidc-sign-in.md)
-- **Code:** `apps/backend/src/keycloak/`, `apps/backend/src/middlewares/csrm-keycloak-identity.ts`, `apps/backend/src/api/csrm-current-user/`, `apps/csrm/src/lib/auth/`, `apps/csrm/src/lib/capabilities/strapi-capabilities.ts`, `apps/csrm/src/lib/api/transport/`, `apps/csrm/proxy.ts`, `idp/keycloak/import/idambox-realm.json`
+- **Code:** `apps/backend/src/keycloak/`, `apps/backend/src/middlewares/csrm-keycloak-identity.ts`, `apps/backend/src/api/csrm-current-user/`, `apps/csrm/src/lib/auth/`, `apps/csrm/src/lib/capabilities/strapi-capabilities.ts`, `apps/csrm/src/lib/api/transport/`, `apps/csrm/proxy.ts`, `docker/keycloak/import/idambox-realm.json`
 
 ## Context
 
@@ -33,7 +33,7 @@ Planning found that the realm's `idambox-csrm` access token carried no `sub` and
 
 - Signing in as `bob.doe` shows the Security Analyst navigation and pages; `jane.doe` sees the Requestor ones. Strapi, not the web, decides.
 - A deployment that turns on `CSRM_AUTH_OIDC_ENABLED` must also turn on `IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION` in Strapi, apply the realm changes, and have every IdamBox User linked through `externalSubject` (provisioning does this). Otherwise signed-in people see the permission-denied state, which is fail-closed.
-- An existing local Keycloak volume keeps its old realm: `docker compose down -v` in `idp/` re-imports the new one.
+- An existing local Keycloak volume keeps its old realm: `docker compose down -v` in `docker/` re-imports the new one.
 - Keycloak's default access-token lifespan is 5 minutes and the refresh token's 30. The refresh keeps an active session alive; an idle one ends and needs sign-in again.
 - `jose` 6.1.3 is now a direct Strapi dependency (the same exact version the web pins) for JWKS verification.
 

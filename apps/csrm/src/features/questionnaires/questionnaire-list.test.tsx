@@ -18,6 +18,7 @@ const questionnaire: QuestionnaireSummary = {
   questionnaireNumber: 'QUES-DEV-001',
   state: 'draft',
   title: 'Service security questionnaire',
+  aiAssisted: false,
   updatedAt: '2026-08-29T10:00:00.000Z',
 };
 

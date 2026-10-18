@@ -1,6 +1,6 @@
 import type { Core } from "@strapi/strapi";
 import { factories } from "@strapi/strapi";
-import { CSRM_ASSESSMENT_REQUEST_OPERATIONS, listAnalystReviewRequests } from '../operations';
+import { CSRM_ASSESSMENT_REQUEST_OPERATIONS, exportAnalystReviewRequests, listAnalystReviewRequests } from '../operations';
 
 const coreRouter = factories.createCoreRouter('api::csrm-assessment-request.csrm-assessment-request', {
   config: {
@@ -82,6 +82,30 @@ const reviewQueueRoute = {
   },
 };
 
+/*
+ * Phase 19 (D-04, D-13): the review queue's export, beside its list and before every /v1/assessment_requests/:requestId
+ * route, so the export never reaches a request route. The list's policy configuration, plus the queue read it discloses.
+ */
+const reviewQueueExportRoute = {
+  method: "GET",
+  path: "/v1/assessment_requests/export",
+  handler: "api::csrm-assessment-request.csrm-assessment-request.exportReviewRequests",
+  config: {
+    auth: { strategies: ["content-api-token"] },
+    policies: [
+      "global::csrm-app-enabled",
+      {
+        name: "global::csrm-authorization",
+        config: {
+          operation: exportAnalystReviewRequests,
+          requireAnalystRequestCollectionScope: true,
+          underlyingRead: listAnalystReviewRequests,
+        },
+      },
+    ],
+  },
+};
+
 const revertToDraftRoute = {
   method: "POST",
   path: "/v1/assessment_requests/:requestId/revert_to_draft",
@@ -106,6 +130,7 @@ const routes = {
     const coreRoutes = coreRouter.routes;
     return [
       reviewQueueRoute,
+      reviewQueueExportRoute,
       revertToDraftRoute,
       ...(typeof coreRoutes === "function" ? coreRoutes() : coreRoutes),
     ];

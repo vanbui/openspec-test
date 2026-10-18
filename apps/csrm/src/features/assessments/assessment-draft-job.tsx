@@ -1,8 +1,8 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Clock3, LoaderCircle, RotateCcw, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, LoaderCircle, Lock, RotateCcw, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +14,16 @@ import {
   retryAssessmentDraftJobAction,
   startAssessmentDraftAction,
 } from './assessment-actions';
+import { aiJobFailureCopy, type AiPolicyStatus } from '../ai-assistance/ai-assistance-domain';
+import { AiPolicyGate } from '../ai-assistance/ai-policy-gate';
+import { ContextTooLargeFailure } from '../attachments/context-too-large-files';
+import { draftGateLine, type QuestionnaireAiProposalsView } from '../questionnaire-ai/questionnaire-ai-domain';
+import { assessmentDraftJobFailureCopy } from '@/lib/api/refusal-copy';
 import type { AssessmentDraftJob as AssessmentDraftJobRecord, RequestGenerationJobs } from './assessment-schema';
 import { settleGenerationAction } from './generation-failure-copy';
+import { generationRefusalMessage, servedReason } from './generation-refusal';
 
-/** The request's assessment draft job as the jobs read serves it: the job and whether this viewer may retry it. */
+/** The request's assessment draft job as the jobs read serves it: the job and whether this viewer may retry it (the job's own canRetry). */
 export type SeededAssessmentDraftJob = NonNullable<RequestGenerationJobs['assessmentDraft']>;
 
 export interface AssessmentDraftJobTiming {
@@ -52,8 +58,6 @@ const statusCopy = {
 export const draftGenerationPrecondition = 'Draft generation can begin only after the linked questionnaire is submitted.';
 
 /* UI-SPEC §12.1, §12.2 and §12.5; the questionnaire card states the same copy. */
-const startedByAnotherAnalyst = 'Started by another Security Analyst.';
-const retryRestrictedToInitiator = 'Only the Security Analyst who started it can retry it.';
 const automaticChecksStopped = 'Automatic checks stopped after 30 seconds. Generation may still be running.';
 /* True because each registry hands back the request's active job instead of starting a second one (§12.5). */
 const jobsReadFailedNotice = 'We couldn’t check whether a generation is already running. If one is, starting generation shows its progress instead of starting another.';
@@ -62,11 +66,20 @@ function assessmentHref(assessmentId: string): string {
   return `/app/review/assessments/${encodeURIComponent(assessmentId)}`;
 }
 
+/*
+ * UI-SPEC §13 (D-18): a job a colleague started names them, whether it is queued, running or failed; the viewer's
+ * own job, including the attempt their retry started, shows no line. A person who can no longer be read is not named.
+ */
+function startedByLine(job: AssessmentDraftJobRecord): string | null {
+  return job.initiatedByViewer || !job.initiatedBy ? null : `Started by ${job.initiatedBy.displayName}.`;
+}
+
 type PollResult = { ok: true; entry: SeededAssessmentDraftJob | null } | { ok: false; formError: string };
 
 /*
- * D-27: the by-id read and retry stay with the analyst who started the job, so a job this viewer may not
- * retry, or one a start handed back without saying whose it is, is followed through the request's jobs read.
+ * D-18: a job the viewer did not start is followed through the request's jobs read, as the questionnaire card
+ * follows its job (the route is keyed on initiatedByViewer, never on canRetry). The by-id result's canRetry is the
+ * served job's own.
  */
 async function pollJob(requestId: string, jobId: string, byRequest: boolean): Promise<PollResult> {
   if (byRequest) {
@@ -74,19 +87,32 @@ async function pollJob(requestId: string, jobId: string, byRequest: boolean): Pr
     return result.ok ? { ok: true, entry: result.data.assessmentDraft } : { ok: false, formError: result.formError };
   }
   const result = await settleGenerationAction('assessmentDraft', () => getAssessmentDraftJobAction({ jobId }));
-  return result.ok ? { ok: true, entry: { job: result.data, canRetry: true } } : { ok: false, formError: result.formError };
+  return result.ok ? { ok: true, entry: { job: result.data, canRetry: result.data.canRetry } } : { ok: false, formError: result.formError };
 }
 
-function JobState({ canRetry, job }: { canRetry: boolean | null; job: AssessmentDraftJobRecord }) {
+const DRAFT_JOB_GATE = 'The AI is preparing proposals for the questionnaire. Decide them before you generate the draft.';
+
+/* The gate line's text with its link label rendered as the link (the label appears in the sentence, or follows it). */
+function gateText(gate: { text: string; link: { label: string; href: string } | null }): ReactNode {
+  if (!gate.link) return gate.text;
+  const link = <Link className="font-medium text-primary underline-offset-4 hover:underline" href={gate.link.href}>{gate.link.label}</Link>;
+  const at = gate.text.indexOf(gate.link.label);
+  if (at < 0) return <>{gate.text}{' '}{link}</>;
+  return <>{gate.text.slice(0, at)}{link}{gate.text.slice(at + gate.link.label.length)}</>;
+}
+
+function JobState({ job, requestId }: { job: AssessmentDraftJobRecord; requestId: string }) {
+  const startedBy = startedByLine(job);
   if (job.status === 'completed') {
     return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{statusCopy.completed}</p><p className="text-sm text-muted-foreground">The generated draft is advisory and has not been released.</p></div></div>;
   }
   if (job.status === 'failed') {
-    return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription><p>{job.failureMessage}</p>{canRetry === false ? <p>{retryRestrictedToInitiator}</p> : null}</AlertDescription></Alert>;
+    /* 15-UI-SPEC §13 (D-29, D-33): CONTEXT_TOO_LARGE reads by the shared rule; every other code keeps today's order. */
+    return <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>{statusCopy.failed}</AlertTitle><AlertDescription>{job.failureCode === 'CONTEXT_TOO_LARGE' ? <ContextTooLargeFailure failure={job} fallback={aiJobFailureCopy('CONTEXT_TOO_LARGE') ?? job.failureMessage} requestId={requestId} /> : <p>{aiJobFailureCopy(job.failureCode) ?? assessmentDraftJobFailureCopy(job.failureCode) ?? job.failureMessage}</p>}{startedBy ? <p>{startedBy}</p> : null}</AlertDescription></Alert>;
   }
-  const another = canRetry === false ? <p className="text-sm text-muted-foreground">{startedByAnotherAnalyst}</p> : null;
+  const another = startedBy ? <p className="text-sm text-muted-foreground">{startedBy}</p> : null;
   if (job.status === 'running') {
-    return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy.running}</p><p className="text-sm text-muted-foreground">A reviewable draft is being prepared from the questionnaire answers.</p>{another}</div></div>;
+    return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /><div><p className="font-medium">{statusCopy.running}</p><p className="text-sm text-muted-foreground">A reviewable draft is being prepared from the request, its systems and assets, and the questionnaire answers.</p>{another}</div></div>;
   }
   return <div className="grid grid-cols-[auto_1fr] gap-x-3 rounded-lg border border-border p-4"><Clock3 aria-hidden="true" /><div><p className="font-medium">{statusCopy.queued}</p><p className="text-sm text-muted-foreground">Generation is waiting to start. You can leave this page; the status shows here when you come back.</p>{another}</div></div>;
 }
@@ -106,6 +132,9 @@ function JobLifecycle({ job }: { job: AssessmentDraftJobRecord }) {
 }
 
 export function AssessmentDraftJob({
+  aiInputsChanged,
+  aiPolicy,
+  aiProposals = null,
   assessmentExists = false,
   className,
   jobsReadFailed = false,
@@ -121,6 +150,15 @@ export function AssessmentDraftJob({
    * draft (409), so with no job of this session the card offers nothing and renders nothing (W-1).
    */
   assessmentExists?: boolean;
+  /**
+   * Phase 13 D-29 (13-UI-SPEC §10.2): the draft's "AI inputs changed" block, rendered on the server by the hub page and
+   * handed through as a slot, set above the card's action or state line.
+   */
+  aiInputsChanged?: ReactNode;
+  /** The served AI data policy (D-29); absent when the jobs read failed. */
+  aiPolicy?: AiPolicyStatus | null;
+  /** Phase 15 (15-UI-SPEC §8.2; D-08): the questionnaire's AI proposals read; open proposals or a proposal job hold the draft back. */
+  aiProposals?: QuestionnaireAiProposalsView | null;
   className?: string;
   /** The page's jobs read failed, so nothing could be seeded (UI-SPEC §12.5). */
   jobsReadFailed?: boolean;
@@ -129,7 +167,7 @@ export function AssessmentDraftJob({
   questionnaireId: string;
   /** Whether the linked questionnaire is submitted; until it is, generation cannot begin. */
   questionnaireSubmitted: boolean;
-  /** The request the questionnaire belongs to: a job another analyst started is polled through its jobs read (D-27). */
+  /** The request the questionnaire belongs to: a job a colleague started is polled through its jobs read (D-18). */
   requestId: string;
   /**
    * The questionnaire's queued, running or failed draft job from the page's jobs read (D-26). A completed job
@@ -138,9 +176,8 @@ export function AssessmentDraftJob({
   seededJob?: SeededAssessmentDraftJob;
   timing?: AssessmentDraftJobTiming;
 }) {
+  /* D-18: the job carries whether this viewer may retry it and whether they started it, so the card keeps no copy. */
   const [job, setJob] = useState<AssessmentDraftJobRecord | null>(seededJob?.job ?? null);
-  /* `null`: not yet known, as after a start, which may hand back a job another analyst started. */
-  const [canRetry, setCanRetry] = useState<boolean | null>(seededJob ? seededJob.canRetry : null);
   const [announcement, setAnnouncement] = useState(seededJob ? statusCopy[seededJob.job.status] : '');
   /* A status check that failed (`Status unavailable`). */
   const [formError, setFormError] = useState<string | null>(null);
@@ -164,14 +201,13 @@ export function AssessmentDraftJob({
 
   /*
    * `router.refresh()` and revalidation hand the card a new seed object with the same content, so the card
-   * resets only when the seeded job, its status or the viewer's retry right changes. A seed that disappears
+   * resets only when the seeded job, its status, the viewer's retry right or whose it is changes. A seed that disappears
    * (the job completed, so it is no longer seeded) leaves this session's job, and its link, in place.
    */
-  const seededKey = seededJob ? `${seededJob.job.jobId}:${seededJob.job.status}:${seededJob.canRetry}` : null;
+  const seededKey = seededJob ? `${seededJob.job.jobId}:${seededJob.job.status}:${seededJob.job.canRetry}:${seededJob.job.initiatedByViewer}` : null;
   useEffect(() => {
     if (!seededJob) return;
     setJob(seededJob.job);
-    setCanRetry(seededJob.canRetry);
     setTimedOut(false);
     setFormError(null);
     setStartError(null);
@@ -199,7 +235,7 @@ export function AssessmentDraftJob({
     }
 
     const polledJobId = job.jobId;
-    const byRequest = canRetry !== true;
+    const byRequest = job.initiatedByViewer !== true;
     const handle = timing.setTimeout(() => {
       if (!mountedRef.current || requestInFlightRef.current) return;
       if (pollingStartedAtRef.current !== null && timing.now() - pollingStartedAtRef.current >= timing.timeoutMs) {
@@ -221,12 +257,10 @@ export function AssessmentDraftJob({
           /* The server no longer holds a draft job for this questionnaire (D-26: jobs stay in the server process). */
           activeJobIdRef.current = null;
           setJob(null);
-          setCanRetry(null);
           setAnnouncement('');
           return;
         }
         activeJobIdRef.current = entry.job.jobId;
-        setCanRetry(entry.canRetry);
         setJob((current) => {
           if (current?.jobId !== entry.job.jobId || current.status !== entry.job.status) setAnnouncement(statusCopy[entry.job.status]);
           return entry.job;
@@ -238,7 +272,7 @@ export function AssessmentDraftJob({
     }, Math.min(timing.pollIntervalMs, remaining));
 
     return () => timing.clearTimeout(handle);
-  }, [canRetry, job, pollCycle, requestId, timedOut, timing]);
+  }, [job, pollCycle, requestId, timedOut, timing]);
 
   async function start() {
     /* A failed job is terminal, so starting again from it is how another analyst moves on (D-26). */
@@ -248,19 +282,20 @@ export function AssessmentDraftJob({
     setFormError(null);
     setStartError(null);
     const result = await settleGenerationAction('assessmentDraft', () => startAssessmentDraftAction({ questionnaireId }));
+    /* WR-408, IN-303: a refusal by the AI data policy names the classification and the approved limit as they stand. */
+    const refusal = result.ok ? null : await generationRefusalMessage({ requestId, formError: result.formError, reason: servedReason(result), servedPolicy: aiPolicy });
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);
     if (!result.ok) {
-      setStartError(result.formError);
+      setStartError(refusal ?? result.formError);
       setAnnouncement('Draft generation could not be started');
       return;
     }
     activeJobIdRef.current = result.data.jobId;
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
-    /* A start hands back the active job, which another analyst may have started (UI-SPEC §12.5). */
-    setCanRetry(null);
+    /* A start hands back the active job, which a colleague may have started; the job says whose it is (§12.5, §13). */
     setJob(result.data);
     setAnnouncement(statusCopy[result.data.status]);
   }
@@ -272,19 +307,20 @@ export function AssessmentDraftJob({
     setFormError(null);
     setStartError(null);
     const result = await settleGenerationAction('assessmentDraft', () => retryAssessmentDraftJobAction({ jobId: job.jobId }));
+    /* IN-104: Strapi refuses a retry by the AI data policy as it refuses an enqueue, so it reads the same way. */
+    const refusal = result.ok ? null : await generationRefusalMessage({ requestId, formError: result.formError, reason: servedReason(result), servedPolicy: aiPolicy });
     requestInFlightRef.current = false;
     if (!mountedRef.current) return;
     setPending(false);
     if (!result.ok) {
-      setStartError(result.formError);
+      setStartError(refusal ?? result.formError);
       setAnnouncement('Draft generation could not be retried');
       return;
     }
     activeJobIdRef.current = result.data.jobId;
     pollingStartedAtRef.current = timing.now();
     setTimedOut(false);
-    /* Strapi lets only the analyst who started a job retry it, so this viewer started it. */
-    setCanRetry(true);
+    /* D-18, G-3: a retry is the retrying analyst's attempt, so the served job is now the viewer's own. */
     setJob(result.data);
     setAnnouncement(statusCopy[result.data.status]);
   }
@@ -301,9 +337,21 @@ export function AssessmentDraftJob({
    * The card stays mounted while the page re-renders: starting a draft revalidates this page, and the new
    * assessment can exist by then. The session that generated it keeps its job, its state and its link.
    */
-  if (assessmentExists && !job) return null;
+  if (assessmentExists && !job) return aiInputsChanged ? <GenerationSignalCard className={className} title="Assessment draft generation">{aiInputsChanged}</GenerationSignalCard> : null;
 
-  const generate = <Button data-print="hidden" disabled={pending} onClick={() => void start()} type="button"><Sparkles aria-hidden="true" />{pending ? 'Starting draft generation…' : 'Generate assessment draft'}</Button>;
+  const generateButton = <Button data-print="hidden" disabled={pending} onClick={() => void start()} type="button"><Sparkles aria-hidden="true" />{pending ? 'Starting draft generation…' : 'Generate assessment draft'}</Button>;
+  /* 12-UI-SPEC §11.1: the policy gates the action wherever the card offers one. */
+  /*
+   * 15-UI-SPEC §8.2 (D-08): while the questionnaire has open AI proposals, or a proposal job is preparing more, the draft
+   * waits; the line links to the panel. Strapi refuses the draft too (AI_PROPOSALS_OPEN), so this is guidance, not the gate.
+   */
+  const proposalJobActive = aiProposals?.jobs.some((job) => job.status === 'queued' || job.status === 'running') ?? false;
+  const gate = aiProposals
+    ? draftGateLine(aiProposals.openCount, aiProposals.questionnaireId)
+      ?? (proposalJobActive ? { text: DRAFT_JOB_GATE, link: { label: 'Go to AI proposals', href: `/app/review/questionnaires/${encodeURIComponent(aiProposals.questionnaireId)}#ai-proposals` } } : null)
+    : null;
+  const gateLine = gate ? <p className="flex items-start gap-2 text-sm text-foreground-secondary"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{gateText(gate)}</span></p> : null;
+  const generate = gateLine ?? <AiPolicyGate action={generateButton} policy={aiPolicy} />;
 
   return (
     <Card className={className}>
@@ -316,22 +364,41 @@ export function AssessmentDraftJob({
       </CardHeader>
       <CardContent className="space-y-4">
         <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</div>
+        {aiInputsChanged}
         {!job && questionnaireSubmitted && jobsReadFailed ? <p className="text-sm text-foreground-secondary">{jobsReadFailedNotice}</p> : null}
         {job ? <JobLifecycle job={job} />
           : questionnaireSubmitted ? generate
             : <p className="text-sm text-muted-foreground">{draftGenerationPrecondition}</p>}
-        {job && !timedOut ? <JobState canRetry={canRetry} job={job} /> : null}
+        {job && !timedOut ? <JobState job={job} requestId={requestId} /> : null}
         {startError ? <Alert variant="destructive" role="alert"><AlertCircle aria-hidden="true" /><AlertTitle>Draft generation couldn’t start</AlertTitle><AlertDescription>{startError}</AlertDescription></Alert> : null}
         {formError ? <Alert variant="destructive" role="alert"><AlertCircle aria-hidden="true" /><AlertTitle>Status unavailable</AlertTitle><AlertDescription>{formError}</AlertDescription></Alert> : null}
         {timedOut ? <div className="grid gap-3 rounded-lg border border-border p-4"><div className="flex items-center gap-2"><Clock3 aria-hidden="true" /><p className="font-medium">Taking longer than expected</p></div><p className="text-sm text-muted-foreground">{automaticChecksStopped}</p><Button className="w-fit" data-print="hidden" onClick={checkAgain} type="button" variant="outline">Check again</Button></div> : null}
-        {/* D-26: Retry stays with the analyst who started the job; anyone else may generate a new draft. */}
+        {/* D-18 (UI-SPEC §13): every analyst on the request may retry a failed job; one the viewer may not retry offers a new draft. */}
+        {/* WR-308 (D-29): Retry generates too, so the served policy gates it, without the idle state's caption. */}
         {job?.status === 'failed'
-          ? (canRetry === false
-            ? (questionnaireSubmitted ? generate : null)
-            : <Button data-print="hidden" disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying draft generation…' : 'Retry draft generation'}</Button>)
+          ? (job.canRetry
+            ? <AiPolicyGate action={<Button data-print="hidden" disabled={pending} onClick={() => void retry()} type="button" variant="outline"><RotateCcw aria-hidden="true" />{pending ? 'Retrying draft generation…' : 'Retry draft generation'}</Button>} caption={false} policy={aiPolicy} />
+            : (questionnaireSubmitted ? generate : null))
           : null}
         {job?.status === 'completed' ? <Link className={buttonVariants()} data-print="hidden" href={assessmentHref(job.assessmentId)}>Open assessment draft</Link> : null}
       </CardContent>
+    </Card>
+  );
+}
+
+/*
+ * Phase 13 D-29 (13-UI-SPEC §10.2): a generation card that offers nothing, kept for its target's served signal. The draft
+ * card once the request has its assessment (W-1), and the questionnaire card once the Requestor starts answering
+ * (WR-306): while the signal says notes changed the target's AI inputs since it was generated, the card stays to say so,
+ * titled as the card is, with no action of its own.
+ */
+export function GenerationSignalCard({ children, className, title }: { children: ReactNode; className?: string; title: string }) {
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <h2 className="text-heading-sm">{title}</h2>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
     </Card>
   );
 }

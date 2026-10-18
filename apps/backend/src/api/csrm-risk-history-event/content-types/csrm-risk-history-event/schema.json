@@ -1,0 +1,68 @@
+{
+  "kind": "collectionType",
+  "collectionName": "csrm_risk_history_events",
+  "info": {
+    "singularName": "csrm-risk-history-event",
+    "pluralName": "csrm-risk-history-events",
+    "displayName": "CSRM Risk History Event",
+    "description": "One append-only record of a change to a CSRM Risk or one of its control implementations"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "kind": {
+      "type": "string",
+      "required": true,
+      "maxLength": 64
+    },
+    "occurredAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "assessment": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-assessment.csrm-assessment"
+    },
+    "risk": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-risk.csrm-risk"
+    },
+    "sourceKind": {
+      "type": "string",
+      "required": true,
+      "maxLength": 32
+    },
+    "aiRun": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::csrm-ai-run.csrm-ai-run"
+    },
+    "proposalItem": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "batchId": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "reason": {
+      "type": "text"
+    },
+    "undo": {
+      "type": "boolean",
+      "default": false
+    },
+    "changes": {
+      "type": "json"
+    }
+  }
+}

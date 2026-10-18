@@ -4,6 +4,7 @@ import {
   createStrapiClient,
   normalizeTransportError,
   type StrapiClient,
+  type TransportError,
   type TransportResult,
 } from '../../lib/api/transport/server-client';
 import {
@@ -44,6 +45,8 @@ import {
 } from './csv-import-schema';
 import type { AdministrationKind } from './administration-config';
 import type { ContractResponseParser } from '../assessments/assessment-service';
+import { checkExportResponse, EXPORT_FILE_CONTENT_TYPES, listExportParams, type ExportFileCheckError, type ExportResult, type ListExportOptions } from '../exports/export-file-check';
+import { exportFileRule, validateFileResponse, type ExportFileFormat } from '../../lib/files/file-response';
 
 type ClientResponse = { data?: unknown; error?: unknown; response: { status: number } };
 
@@ -100,7 +103,65 @@ export const responseParserModule = {
     { label: 'administration.listInformationAssets', component: 'InformationAssetsAdministrationListResponse', parser: administrationListPayloadSchema('information-assets'), narrowedPaths: listNarrowings('information-assets') },
     { label: 'administration.getInformationAsset', component: 'InformationAssetsAdministrationResponse', parser: administrationDetailPayloadSchema('information-assets'), narrowedPaths: detailNarrowings('information-assets') },
   ] as const satisfies readonly ContractResponseParser[],
+  /*
+   * Phase 19 (19-15, D-31 to D-33): the Administration files, each checked by the shared validator's export rule rather
+   * than a zod parser, and registered here in the task that adds its call (19-PLAN-CHECK recheck C NB1).
+   */
+  fileResponses: [
+    { label: 'administration.downloadRiskTypesImportTemplate', path: '/v1/risk_types/import/template', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadControlsImportTemplate', path: '/v1/controls/import/template', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadInformationSystemsImportTemplate', path: '/v1/information_systems/import/template', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadInformationAssetsImportTemplate', path: '/v1/information_assets/import/template', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadRiskTypesImportErrorReport', path: '/v1/risk_types/import/error_report', method: 'post' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadControlsImportErrorReport', path: '/v1/controls/import/error_report', method: 'post' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadInformationSystemsImportErrorReport', path: '/v1/information_systems/import/error_report', method: 'post' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.downloadInformationAssetsImportErrorReport', path: '/v1/information_assets/import/error_report', method: 'post' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.exportRiskTypes', path: '/v1/risk_types/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.exportControls', path: '/v1/controls/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.exportInformationSystems', path: '/v1/information_systems/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+    { label: 'administration.exportInformationAssets', path: '/v1/information_assets/export', method: 'get' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+  ],
 };
+
+/** A file Strapi built for the import (a template), as the export rule accepted it. */
+export type AdministrationFile = { fileName: string; contentType: string; bytes: Uint8Array };
+
+export type AdministrationFileResult =
+  | { data: AdministrationFile; error: null }
+  | { data: null; error: TransportError | ExportFileCheckError };
+
+/** What the generated client returns for a binary parse. */
+type BinaryResponse = { data?: ArrayBuffer; error?: unknown; response: { status: number; headers: Headers } };
+
+/**
+ * The checked file, or the refusal: a template carries no row count, so it passes the export rule (the format's media
+ * type, the server's safe name, the size bound and the signature) and nothing else (D-31).
+ */
+function checkFileResponse({ data, error, response }: BinaryResponse, format: ExportFileFormat): AdministrationFileResult {
+  if (error !== undefined || data === undefined) return normalizeTransportError(error, response.status);
+  const checked = validateFileResponse({
+    contentType: response.headers.get('content-type'),
+    contentDisposition: response.headers.get('content-disposition'),
+    bytes: new Uint8Array(data),
+  }, exportFileRule(format));
+  if (!checked.ok) return { data: null, error: { kind: 'file-check', failure: checked.failure } };
+  return { data: { fileName: checked.fileName, contentType: checked.contentType, bytes: checked.bytes }, error: null };
+}
+
+/** Strapi's import template for the collection (D-31): the headers, one example row and, in a workbook, its Notes sheet. */
+export async function downloadImportTemplate(kind: AdministrationKind, format: ExportFileFormat): Promise<AdministrationFileResult> {
+  const options = { params: { query: { format } }, parseAs: 'arrayBuffer' as const };
+  try {
+    const client = await createStrapiClient();
+    const served = kind === 'risk-types' ? await client.GET('/v1/risk_types/import/template', options)
+      : kind === 'controls' ? await client.GET('/v1/controls/import/template', options)
+        : kind === 'information-systems' ? await client.GET('/v1/information_systems/import/template', options)
+          : await client.GET('/v1/information_assets/import/template', options);
+    return checkFileResponse(served, format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
+}
 
 async function request<T>(
   invoke: (client: StrapiClient) => Promise<ClientResponse>,
@@ -116,12 +177,14 @@ async function request<T>(
   }
 }
 
-function importForm(file: File, fields?: { previewDigest: string; confirmed: true }): FormData {
+function importForm(file: File, fields?: { previewDigest: string; confirmed: true; decisions?: string }): FormData {
   const form = new FormData();
   form.set('file', file, file.name);
   if (fields) {
     form.set('previewDigest', fields.previewDigest);
     form.set('confirmed', String(fields.confirmed));
+    // D-30: the similar rows' decisions, one JSON string of { "<row number>": "update" | "skip" }.
+    if (fields.decisions !== undefined) form.set('decisions', fields.decisions);
   }
   return form;
 }
@@ -135,13 +198,64 @@ export function previewAdministrationCsv(kind: AdministrationKind, file: File): 
   return request((client) => client.POST('/v1/information_assets/import/preview', { body: body as never, bodySerializer: multipartBodySerializer }), parse);
 }
 
-export function commitAdministrationCsv(kind: AdministrationKind, file: File, previewDigest: string): Promise<TransportResult<CsvImportResultData>> {
-  const body = importForm(file, { previewDigest, confirmed: true });
+export function commitAdministrationCsv(kind: AdministrationKind, file: File, previewDigest: string, decisions?: string): Promise<TransportResult<CsvImportResultData>> {
+  const body = importForm(file, { previewDigest, confirmed: true, ...(decisions === undefined ? {} : { decisions }) });
   const parse = (payload: unknown) => csvImportResultDataSchema.parse((payload as { data?: unknown }).data);
   if (kind === 'risk-types') return request((client) => client.POST('/v1/risk_types/import', { body: body as never, bodySerializer: multipartBodySerializer }), parse);
   if (kind === 'controls') return request((client) => client.POST('/v1/controls/import', { body: body as never, bodySerializer: multipartBodySerializer }), parse);
   if (kind === 'information-systems') return request((client) => client.POST('/v1/information_systems/import', { body: body as never, bodySerializer: multipartBodySerializer }), parse);
   return request((client) => client.POST('/v1/information_assets/import', { body: body as never, bodySerializer: multipartBodySerializer }), parse);
+}
+
+/** The error report's request (D-32): the upload, exactly one of the preview's or the result's token, and the viewer's zone. */
+export type ImportErrorReportInput = { file: File; previewDigest?: string; resultToken?: string; timeZone?: string };
+
+/**
+ * Strapi's error report for the upload (D-32), rebuilt by Strapi from the file and its own preview or result record, in
+ * the upload's format, with the rows to correct in `X-CSRM-Row-Count`; checked by the export rule as an export is.
+ */
+export async function downloadImportErrorReport(kind: AdministrationKind, input: ImportErrorReportInput): Promise<ExportResult> {
+  const body = new FormData();
+  body.set('file', input.file, input.file.name);
+  if (input.previewDigest) body.set('previewDigest', input.previewDigest);
+  if (input.resultToken) body.set('resultToken', input.resultToken);
+  if (input.timeZone) body.set('timeZone', input.timeZone);
+  const format: ExportFileFormat = input.file.name.toLowerCase().endsWith('.xlsx') ? 'xlsx' : 'csv';
+  const options = { body: body as never, bodySerializer: multipartBodySerializer, parseAs: 'arrayBuffer' as const };
+  try {
+    const client = await createStrapiClient();
+    const served = kind === 'risk-types' ? await client.POST('/v1/risk_types/import/error_report', options)
+      : kind === 'controls' ? await client.POST('/v1/controls/import/error_report', options)
+        : kind === 'information-systems' ? await client.POST('/v1/information_systems/import/error_report', options)
+          : await client.POST('/v1/information_assets/import/error_report', options);
+    return checkExportResponse(served, format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
+}
+
+/** A reference list's export query: the admin list's own parsed query without its page and page size (D-13). */
+export type AdministrationExportQuery = Omit<AdministrationQuery, 'page' | 'pageSize'>;
+
+/**
+ * A reference list in its import shape (D-33): the list's search, filters and order, every page, the chosen columns, in
+ * the chosen format; checked by the export rule with its row count. The query is serialised as the list read serialises
+ * it, so the file holds exactly what the filtered list shows; an empty search is left out.
+ */
+export async function exportReferenceList(kind: AdministrationKind, input: ListExportOptions & { query: AdministrationExportQuery }): Promise<ExportResult> {
+  const { page: _page, pageSize: _pageSize, q, ...listQuery } = serializeAdministrationQuery(kind, { ...input.query, page: 1, pageSize: 25 } as AdministrationQuery);
+  const query = { ...(q ? { q } : {}), ...listQuery, ...listExportParams(input) } as never;
+  const options = { params: { query }, parseAs: 'arrayBuffer' as const };
+  try {
+    const client = await createStrapiClient();
+    const served = kind === 'risk-types' ? await client.GET('/v1/risk_types/export', options)
+      : kind === 'controls' ? await client.GET('/v1/controls/export', options)
+        : kind === 'information-systems' ? await client.GET('/v1/information_systems/export', options)
+          : await client.GET('/v1/information_assets/export', options);
+    return checkExportResponse(served, input.format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
 }
 
 export const previewRiskTypesCsv = (file: File) => previewAdministrationCsv('risk-types', file);

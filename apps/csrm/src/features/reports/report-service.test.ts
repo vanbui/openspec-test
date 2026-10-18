@@ -34,10 +34,10 @@ function useMockClient(): void {
 const response = (data: unknown, status = 200) => ({ data, response: { status } });
 
 const definitions = [
-  { key: 'risk-exposure', title: 'Risk exposure', description: 'Open contextual Risks by rating and treatment status, and the Information Systems carrying the most High and Critical residual Risks.' },
-  { key: 'treatment-performance', title: 'Treatment performance', description: 'Risk treatments by due state and treatment status, and the most overdue treatments.' },
+  { key: 'risk-exposure', title: 'Risk exposure', description: 'Released Risks by rating and treatment status, the most exposed Information Systems, and the Risks still under assessment.' },
+  { key: 'treatment-performance', title: 'Treatment performance', description: 'Risk treatments by due state and treatment status, and the most overdue treatments. Includes Risks under assessment.' },
   { key: 'assessment-throughput', title: 'Assessment throughput', description: 'Assessment Requests by lifecycle state, Risk Assessments released each month, and time from submission to release.' },
-  { key: 'control-effectiveness', title: 'Control effectiveness', description: 'Control Implementations on open contextual Risks by implementation status and effectiveness rating.' },
+  { key: 'control-effectiveness', title: 'Control effectiveness', description: 'Mitigation controls on open Risks by implementation status and effectiveness rating. Includes Risks under assessment.' },
 ];
 const controlEffectiveness = {
   key: 'control-effectiveness',
@@ -50,11 +50,13 @@ const riskExposure = {
   today: '2026-09-24',
   byResidualRating: { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 },
   byInherentRating: { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 },
+  acceptedByResidualRating: { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 },
   residualByTreatmentStatus: Object.fromEntries(['Critical', 'High', 'Moderate', 'Low', 'notRated'].map((rating) => [
     rating,
     { notStarted: 0, inProgress: 0, overdue: 0, complete: 0, notProvided: 0, total: 0 },
   ])),
   exposedSystems: { rows: [], total: 0, truncated: false, risksWithoutSystem: 0 },
+  underAssessment: { byResidualRating: { Critical: 0, High: 0, Moderate: 0, Low: 0, notRated: 0, total: 0 } },
 };
 const assessmentThroughput = (period: 6 | 12) => ({
   key: 'assessment-throughput',

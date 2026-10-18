@@ -1,36 +1,40 @@
 import { render, screen } from '@testing-library/react';
 import type { LucideIcon } from 'lucide-react';
 import {
+  ArchiveIcon,
+  ArchiveXIcon,
   CalendarClockIcon,
   CalendarX2Icon,
-  CheckIcon,
   CircleCheckIcon,
   CircleDashedIcon,
   CircleDotIcon,
   CircleGaugeIcon,
   CircleIcon,
-  CircleQuestionMarkIcon,
-  CircleXIcon,
   ClipboardListIcon,
   ClipboardPenLineIcon,
   Clock3Icon,
   ClockAlertIcon,
-  FileCheck2Icon,
   FilePenLineIcon,
   FileWarningIcon,
+  FileXIcon,
   FlagIcon,
   LockKeyholeIcon,
   OctagonAlertIcon,
-  RefreshCwIcon,
   SearchCheckIcon,
   SendIcon,
+  ShieldCheckIcon,
+  ShieldEllipsisIcon,
+  ShieldXIcon,
+  SparklesIcon,
   TriangleAlertIcon,
+  UnlinkIcon,
+  HistoryIcon,
 } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { badgeVariants } from '@/components/ui/badge';
-import { csvRowStates } from '@/features/administration/csv-import-schema';
+import { attachmentStates } from '@/features/attachments/attachments-schema';
 import { assessmentStatuses } from '@/features/assessments/assessment-schema';
 import { requestStatuses, type RequestStatus } from '@/features/requests/request-domain';
 import { riskRegisterTreatmentStatuses } from '@/features/risks/risk-schema';
@@ -47,11 +51,10 @@ import {
 type Row = readonly [value: string, label: string, tone: StatusTone, icon: LucideIcon];
 
 /*
- * UI-SPEC section 3.3, verbatim as amended after the phase code review (WR-03), and the CSV import rows the
- * direction records (section 4, CSV import rows; WR-08): one row per status value, 24 in all. The request
- * draft is work in progress with the Requestor (info) and a submitted request is submitted (success), the
- * tones the direction's vocabulary gives them and the questionnaire family uses. An import row that is or
- * will be written is success, an unchanged row neutral, and a row the Security Analyst must correct warning.
+ * UI-SPEC section 3.3, verbatim as amended after the phase code review (WR-03), and the file states of 14-UI-SPEC
+ * §3.4: one row per status value, 28 in all (the Risk's Withdrawn added by Phase 16). The CSV import rows left this
+ * shared map for the import-only features/administration/import-row-status.tsx (19-13; B4, B5), which tests them. The request draft is work in progress with the Requestor (info) and a submitted request is submitted (success), the
+ * tones the direction's vocabulary gives them and the questionnaire family uses.
  */
 const families = {
   request: [
@@ -81,12 +84,29 @@ const families = {
     ['Overdue', 'Overdue', 'danger', ClockAlertIcon],
     ['Complete', 'Complete', 'success', CircleCheckIcon],
   ],
-  importRow: [
-    ['create', 'Create', 'success', CheckIcon],
-    ['update', 'Update', 'success', RefreshCwIcon],
-    ['unchanged', 'Unchanged', 'neutral', FileCheck2Icon],
-    ['rejected', 'Rejected', 'warning', CircleXIcon],
-    ['ambiguous', 'Ambiguous', 'warning', CircleQuestionMarkIcon],
+  aiReview: [
+    ['proposed', 'AI proposed', 'warning', SparklesIcon],
+    ['uncited', 'No source cited', 'warning', UnlinkIcon],
+    /* 15-UI-SPEC §4.4 (D-20): a proposal whose question or questionnaire has changed since the AI proposed it. */
+    ['stale', 'Changed since proposed', 'warning', HistoryIcon],
+  ],
+  /*
+   * 14-UI-SPEC §3.4 (X-21; UI-D14): a file's state. Every value is neutral, because none is work waiting on a person and
+   * none is overdue; the icon and the words tell them apart. `Available` is in the mapping but never rendered as a badge.
+   */
+  /*
+   * 16-UI-SPEC §6.4 (X-27; S-14, D-46): a Risk a Security Analyst took out of its assessment without deleting it. Neutral,
+   * because it is terminal while it stays withdrawn and waits on nobody; the Archive icon and the word carry it.
+   */
+  risk: [
+    ['withdrawn', 'Withdrawn', 'neutral', ArchiveIcon],
+  ],
+  attachment: [
+    ['available', 'Available', 'neutral', ShieldCheckIcon],
+    ['pending', 'Waiting for malware check', 'neutral', ShieldEllipsisIcon],
+    ['blocked', 'Blocked', 'neutral', ShieldXIcon],
+    ['unavailable', 'File unavailable', 'neutral', FileXIcon],
+    ['removed', 'Removed', 'neutral', ArchiveXIcon],
   ],
 } as const satisfies Record<keyof typeof statusPresentation, readonly Row[]>;
 
@@ -97,7 +117,9 @@ const vocabularies: Record<Family, readonly string[]> = {
   assessment: assessmentStatuses,
   questionnaire: ['analyst-review', 'not-started', 'draft', 'submitted'],
   treatment: riskRegisterTreatmentStatuses,
-  importRow: csvRowStates,
+  aiReview: ['proposed', 'uncited', 'stale'],
+  risk: ['withdrawn'],
+  attachment: attachmentStates,
 };
 
 /* Severity (direction section 3.6) and urgency (section 4 Urgency) shapes: never a status icon. */
@@ -112,12 +134,22 @@ const forbiddenIcons = {
 
 const neutralTint = ['border-border', 'bg-surface-muted', 'text-foreground-secondary'];
 
-function renderFamilyBadge(family: Family, value: string, live = false) {
+/*
+ * IN-506: the file family names its icons, and the attachments feature passes the components; here the test passes the
+ * icons §3.4 names, as the feature does.
+ */
+const attachmentIconNames = { available: 'ShieldCheck', pending: 'ShieldEllipsis', blocked: 'ShieldX', unavailable: 'FileX', removed: 'ArchiveX' } as const;
+const attachmentIcons = { ShieldCheck: ShieldCheckIcon, ShieldEllipsis: ShieldEllipsisIcon, ShieldX: ShieldXIcon, FileX: FileXIcon, ArchiveX: ArchiveXIcon } as const;
+
+function familyBadge(family: Family, value: string, live = false) {
   // The request family keeps its original `status` prop; every other family passes family and value.
-  const element = family === 'request'
-    ? <StatusBadge live={live} status={value as (typeof requestStatuses)[number]} />
-    : <StatusBadge family={family} live={live} value={value as never} />;
-  return render(element);
+  if (family === 'request') return <StatusBadge key={`${family}-${value}`} live={live} status={value as (typeof requestStatuses)[number]} />;
+  if (family === 'attachment') return <StatusBadge family="attachment" icons={attachmentIcons} key={`${family}-${value}`} live={live} value={value as never} />;
+  return <StatusBadge family={family} key={`${family}-${value}`} live={live} value={value as never} />;
+}
+
+function renderFamilyBadge(family: Family, value: string, live = false) {
+  return render(familyBadge(family, value, live));
 }
 
 function iconMarkup(Icon: LucideIcon) {
@@ -129,8 +161,9 @@ const allRows = (Object.keys(families) as Family[]).flatMap((family) =>
 );
 
 describe('statusPresentation', () => {
-  it('owns exactly the 24 status values of the four workflow families and the CSV import rows', () => {
-    expect(allRows).toHaveLength(24);
+  it('owns exactly the 28 status values of the workflow, review, risk and file families, and no import row family', () => {
+    expect(allRows).toHaveLength(28);
+    expect(Object.keys(statusPresentation)).not.toContain('importRow');
     for (const family of Object.keys(families) as Family[]) {
       expect(Object.keys(statusPresentation[family]).sort(), family).toEqual([...vocabularies[family]].sort());
     }
@@ -138,19 +171,33 @@ describe('statusPresentation', () => {
 
   it.each(allRows)('maps %s %s to %s, the %s tone and its icon', (family, value, label, tone, icon) => {
     const presentation = (statusPresentation[family] as Record<string, unknown>)[value];
-    expect(presentation).toEqual({ icon, label, tone });
+    expect(presentation).toEqual(family === 'attachment' ? { iconName: attachmentIconNames[value as keyof typeof attachmentIconNames], label, tone } : { icon, label, tone });
     expect(statusLabel(family, value as never)).toBe(label);
   });
 
+  /*
+   * IN-506 (D-27, R-08-34): the file family holds its icons by name, so StatusBadge's module, which every route with a
+   * badge loads (the assessment editor's included), carries none of the five file icons; the attachments feature resolves
+   * the names.
+   */
+  it('names the file states’ icons rather than holding them, so a route with a badge ships no file icon (IN-506)', () => {
+    for (const value of attachmentStates) {
+      const presentation = statusPresentation.attachment[value] as Record<string, unknown>;
+      expect(presentation, value).not.toHaveProperty('icon');
+      expect(presentation.iconName, value).toBe(attachmentIconNames[value]);
+    }
+  });
+
   it('never gives a status a severity or urgency icon', () => {
-    const icons = allRows.map(([family, value]) => (statusPresentation[family] as Record<string, { icon: LucideIcon }>)[value].icon);
+    const icons = allRows.map(([family, value]) => {
+      const presentation = (statusPresentation[family] as Record<string, { icon?: LucideIcon; iconName?: keyof typeof attachmentIcons }>)[value]!;
+      return presentation.iconName ? attachmentIcons[presentation.iconName] : presentation.icon;
+    });
     for (const [name, forbidden] of Object.entries(forbiddenIcons)) {
       expect(icons, name).not.toContain(forbidden);
     }
     // Overdue is a clock, never the High severity triangle it used to share.
     expect(statusPresentation.treatment.Overdue.icon).toBe(ClockAlertIcon);
-    // An ambiguous import row is a question, never the High severity triangle it used to share (WR-08).
-    expect(statusPresentation.importRow.ambiguous.icon).toBe(CircleQuestionMarkIcon);
   });
 });
 
@@ -274,16 +321,12 @@ describe('StatusBadge', () => {
   it('never renders an untinted outline chip or a severity or urgency icon, in any family', () => {
     const { container } = render(
       <>
-        {allRows.map(([family, value]) =>
-          family === 'request'
-            ? <StatusBadge key={`${family}-${value}`} status={value as (typeof requestStatuses)[number]} />
-            : <StatusBadge family={family} key={`${family}-${value}`} value={value as never} />,
-        )}
+        {allRows.map(([family, value]) => familyBadge(family, value))}
       </>,
     );
 
     const badges = Array.from(container.querySelectorAll<HTMLElement>('[data-slot="badge"]'));
-    expect(badges).toHaveLength(24);
+    expect(badges).toHaveLength(28);
     for (const badge of badges) {
       expect(badge.dataset.tone, badge.textContent ?? '').toMatch(/^(neutral|info|warning|success|danger)$/);
       if (badge.dataset.variant === 'outline') {
@@ -296,5 +339,37 @@ describe('StatusBadge', () => {
     for (const [name, forbidden] of Object.entries(forbiddenIcons)) {
       expect(rendered, name).not.toContain(iconMarkup(forbidden));
     }
+  });
+});
+
+/* 14-UI-SPEC §3.4 (UI-D14): every file state is neutral and named by its icon and words, never by colour. */
+describe('the attachment family (§3.4)', () => {
+  it('gives every file state the neutral tone', () => {
+    for (const value of attachmentStates) expect(statusPresentation.attachment[value].tone, value).toBe('neutral');
+  });
+
+  it('renders Blocked as the neutral badge with its shield, never a danger badge', () => {
+    render(<StatusBadge family="attachment" icons={attachmentIcons} value="blocked" />);
+    const badge = screen.getByText('Blocked', { exact: true });
+    expect(badge).toHaveAttribute('data-tone', 'neutral');
+    expect(badge).toHaveAttribute('data-variant', 'outline');
+    expect(badge.innerHTML).toBe(`${iconMarkup(ShieldXIcon)}Blocked`);
+  });
+});
+
+/*
+ * 16-UI-SPEC §6.4 (X-27; S-14, D-46): the Risk family's one value. A withdrawn Risk is never shown by colour alone and
+ * never styled as a danger: the neutral tint, the Archive icon and the word Withdrawn.
+ */
+describe('the risk family (X-27)', () => {
+  it('renders Withdrawn with the Archive icon and the neutral tone, the other families unchanged', () => {
+    render(<StatusBadge family="risk" value="withdrawn" />);
+    const badge = screen.getByText('Withdrawn', { exact: true });
+    expect(badge).toHaveAttribute('data-tone', 'neutral');
+    expect(badge).toHaveAttribute('data-variant', 'outline');
+    for (const tint of neutralTint) expect(badge.className).toContain(tint);
+    expect(badge.innerHTML).toBe(`${iconMarkup(ArchiveIcon)}Withdrawn`);
+    expect(statusLabel('risk', 'withdrawn')).toBe('Withdrawn');
+    expect(Object.keys(statusPresentation.risk)).toEqual(['withdrawn']);
   });
 });

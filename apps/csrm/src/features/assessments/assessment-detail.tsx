@@ -3,7 +3,7 @@
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { PageHeader } from '@/components/csrm/page-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -17,11 +17,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { analystRequestLifecycle, canRevertRequestToDraft, offersQuestionnaireGeneration, questionnaireGenerationAction, type CsrmAssessmentRequest, type RequestLifecycle } from '@/features/requests/request-domain';
 import { RequestContextDetails } from '@/features/requests/request-context-details';
 import { revertRequestToDraftAction } from '@/features/requests/request-actions';
-import { AssessmentDraftJob, draftGenerationPrecondition } from './assessment-draft-job';
+import { AssessmentDraftJob, draftGenerationPrecondition, GenerationSignalCard } from './assessment-draft-job';
 import { QuestionnaireGenerationJob } from './questionnaire-generation-job';
+import type { QuestionnaireAiProposalsView } from '../questionnaire-ai/questionnaire-ai-domain';
 import type { RequestGenerationJobs } from './assessment-schema';
 import { RequestLifecycleStepper } from '@/features/requests/request-lifecycle-stepper';
 import { RequestHub } from '@/features/requests/request-hub';
+import { AssignmentBlock } from '@/features/request-assignment/assignment-block';
 
 type GenerationJobStatus = 'queued' | 'running' | 'completed' | 'failed';
 
@@ -49,7 +51,7 @@ function SafeDetailState({ refusal = 'record', state }: { refusal?: AnalystRefus
   const empty = state === 'empty';
   const roleRefusal = permission && refusal === 'role';
   const permissionDescription = roleRefusal
-    ? 'Reviewing requests is for Security Analysts. Your own requests are in My Requests.'
+    ? 'Reviewing requests is for Security Analysts. Your own requests are in My requests.'
     : 'You can’t review this request with your current access. Choose another from the assessment requests.';
   return (
     <>
@@ -60,7 +62,7 @@ function SafeDetailState({ refusal = 'record', state }: { refusal?: AnalystRefus
         <AlertDescription>{permission ? permissionDescription : empty ? draftGenerationPrecondition : 'Try again. If the problem continues, contact your administrator.'}</AlertDescription>
       </Alert>
       {roleRefusal
-        ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/requests">Go to My Requests</Link>
+        ? <Link className={buttonVariants({ variant: 'outline' })} href="/app/requests">Go to My requests</Link>
         : <Link className={buttonVariants({ variant: 'outline' })} href="/app/review/requests">Back to assessment requests</Link>}
     </>
   );
@@ -96,7 +98,7 @@ function completedFromProgress(previous: GenerationJobStatus | null | undefined,
 }
 
 /*
- * The served lifecycle as the hub shows it. While the page waits for the request a completed job changed, the
+ * The served lifecycle as the hub and the stepper show it. While the page waits for the request a completed job changed, the
  * served next action names the step the job has just done, so the line names none (walkthrough fix 4's rule:
  * never an action the page does not offer). The refreshed request brings the served next action back.
  */
@@ -110,8 +112,11 @@ function hubLifecycle(lifecycle: RequestLifecycle | undefined, awaitingRefresh: 
  *
  * `analystChangesSinceGeneration` is the served count from the analyst questionnaire summary (D-16), read by
  * the page on the server so this client view receives a number; `null` or absent when no count was served.
+ *
+ * `questionnaireAiInputs` and `draftAiInputs` are the two targets' "AI inputs changed" blocks (Phase 13 D-29, 13-UI-SPEC
+ * §10.2), rendered by the page on the server and handed to the questionnaire and draft cards as slots.
  */
-export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref, generationJobs, jobsReadFailed = false, questionnaireHref, refusal, request, state }: { analystChangesSinceGeneration?: number | null; assessmentHref?: string; generationJobs?: RequestGenerationJobs | null; jobsReadFailed?: boolean; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
+export function AssessmentDetail({ aiProposals = null, analystChangesSinceGeneration, assessmentHref, ownRequest = false, draftAiInputs, draftOwnerKey = null, generationJobs, jobsReadFailed = false, questionnaireAiInputs, questionnaireHref, refusal, request, state }: { aiProposals?: QuestionnaireAiProposalsView | null; ownRequest?: boolean; analystChangesSinceGeneration?: number | null; assessmentHref?: string; draftAiInputs?: ReactNode; draftOwnerKey?: string | null; generationJobs?: RequestGenerationJobs | null; jobsReadFailed?: boolean; questionnaireAiInputs?: ReactNode; questionnaireHref?: string; refusal?: AnalystRefusal; request?: CsrmAssessmentRequest; state: AssessmentDetailState }) {
   const router = useRouter();
   /* `undefined` until the card mounts and reports; `null` once it reports no job. */
   const [questionnaireJobStatus, setQuestionnaireJobStatus] = useState<GenerationJobStatus | null | undefined>(undefined);
@@ -154,7 +159,9 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
    * that generated the draft keeps its card when revalidation re-renders the page.
    */
   const assessmentExists = request.relationships?.assessment.availability === 'available' || request.relationships?.assessment.availability === 'unavailable';
-  const showsQuestionnaireCard = offersQuestionnaireGeneration(request);
+  const offersGeneration = offersQuestionnaireGeneration(request);
+  /* Proposal decisions and hub-started jobs remain available after the Requestor submits. */
+  const showsQuestionnaireCard = offersGeneration || (!ownRequest && aiProposals !== null && questionnaire.availability === 'available');
   const seededQuestionnaireJob = showsQuestionnaireCard ? seedable(generationJobs?.questionnaireGeneration) : undefined;
   const seededDraftJob = questionnaire.availability === 'available' ? seedable(generationJobs?.assessmentDraft) : undefined;
   const shownQuestionnaireJobStatus = questionnaireJobStatus === undefined ? seededQuestionnaireJob?.job.status : questionnaireJobStatus;
@@ -175,14 +182,25 @@ export function AssessmentDetail({ analystChangesSinceGeneration, assessmentHref
     <>
       <PageHeader description={request.requestNumber} status={<StatusBadge status={request.requestStatus} />} title={request.title} />
       <div className="grid gap-6">
-        <RequestLifecycleStepper lifecycle={request.lifecycle} />
+        {/*
+          * D-28: the stepper reads the very lifecycle and override the hub reads, so its compact line (below 768px)
+          * and the hub's line (from 768px) never name an action this page does not offer (walkthrough fix 4, WR-201).
+          */}
+        <RequestLifecycleStepper lifecycle={lifecycle} nextActionOverride={nextActionOverride} />
         <RequestHub governanceDetail hrefs={{ questionnaire: resolvedQuestionnaireHref, assessment: assessmentHref }} lifecycle={lifecycle} nextActionOverride={nextActionOverride} request={request} />
+        {/* 13-UI-SPEC §5.2 (D-16): who holds the request, directly after the hub and before Return to draft. */}
+        <AssignmentBlock assignment={request.assignment} draftOwnerKey={draftOwnerKey} requestId={request.documentId} requestNumber={request.requestNumber} requestStatus={request.requestStatus} />
         {/* Offered only while Strapi's rule allows it: submitted, with no questionnaire and no assessment (D-22). */}
         {offersRevert ? <div><AnalystRequestRevert documentId={request.documentId} /></div> : null}
         <RequestContextDetails request={request} />
         {/* Generate, Replace or neither, from the served questionnaire relation (D-08, D-09, UI-SPEC §3.1). */}
-        {showsQuestionnaireCard ? <QuestionnaireGenerationJob action={questionnaireGenerationAction(questionnaire)} analystChangesSinceGeneration={analystChangesSinceGeneration ?? null} jobsReadFailed={jobsReadFailed} onJobStatusChange={onQuestionnaireJobStatus} questionnaireHref={resolvedQuestionnaireHref} questionnaireNumber={questionnaire.availability === 'available' ? questionnaire.questionnaireNumber : null} requestId={request.documentId} seededJob={seededQuestionnaireJob} /> : null}
-        {questionnaire.availability === 'available' ? <AssessmentDraftJob assessmentExists={assessmentExists} jobsReadFailed={jobsReadFailed} onJobStatusChange={onDraftJobStatus} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} requestId={request.documentId} seededJob={seededDraftJob} /> : null}
+        {/*
+          * 13-UI-SPEC §10.2 (D-29, WR-306): once the Requestor starts answering, the card offers nothing to generate, but the
+          * questionnaire's served signal stays on the hub in a card of its own.
+          */}
+        {!showsQuestionnaireCard && questionnaireAiInputs ? <GenerationSignalCard title="Questionnaire generation">{questionnaireAiInputs}</GenerationSignalCard> : null}
+        {showsQuestionnaireCard ? <QuestionnaireGenerationJob aiInputsChanged={questionnaireAiInputs} aiProposals={ownRequest ? null : aiProposals} ownRequest={ownRequest} ownerKey={draftOwnerKey} aiPolicy={generationJobs?.aiPolicy} action={offersGeneration ? questionnaireGenerationAction(questionnaire) : 'exists'} analystChangesSinceGeneration={analystChangesSinceGeneration ?? null} jobsReadFailed={jobsReadFailed} onJobStatusChange={onQuestionnaireJobStatus} questionnaireHref={resolvedQuestionnaireHref} questionnaireNumber={questionnaire.availability === 'available' ? questionnaire.questionnaireNumber : null} requestId={request.documentId} seededJob={seededQuestionnaireJob} /> : null}
+        {questionnaire.availability === 'available' ? <AssessmentDraftJob aiInputsChanged={draftAiInputs} aiProposals={aiProposals} aiPolicy={generationJobs?.aiPolicy} assessmentExists={assessmentExists} jobsReadFailed={jobsReadFailed} onJobStatusChange={onDraftJobStatus} questionnaireId={questionnaire.documentId} questionnaireSubmitted={questionnaire.state === 'submitted'} requestId={request.documentId} seededJob={seededDraftJob} /> : null}
       </div>
     </>
   );

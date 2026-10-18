@@ -12,6 +12,7 @@ import path from "node:path";
 import {
   CONTROL_DIRECTORY,
   readSeedControlFiles,
+  readSeedFunctionPartition,
 } from "./csrm-seed-control-files.mjs";
 
 const root = await realpath(process.cwd());
@@ -40,6 +41,15 @@ const catalogue = createRequire(import.meta.url)(
     "bootstrap",
     "idambox-csrm-role-function-api-catalogue.json",
   ),
+);
+// The seed's Function partition: the IAM Functions sit under the IAM Application, every other under CSRM.
+const { csrmApplicationSlug, iamApplicationSlug, iamFunctionIds } =
+  readSeedFunctionPartition(root);
+const csrmCatalogueFunctions = catalogue.functions.filter(
+  (entry) => !iamFunctionIds.includes(entry.id),
+);
+const iamCatalogueFunctions = catalogue.functions.filter((entry) =>
+  iamFunctionIds.includes(entry.id),
 );
 // The catalogues the seed loads and its title file, from the seed's own declarations (no second list).
 const { catalogueFiles: controlCatalogueFiles, titleFile: controlTitleFile } =
@@ -285,7 +295,7 @@ const loadAndAssert = async (
   const controlService = strapi.documents("api::csrm-control.csrm-control");
 
   const applications = await applicationService.findMany({
-    filters: { slug: { $eq: "idambox-csrm" } },
+    filters: { slug: { $eq: csrmApplicationSlug } },
     populate: { functions: { populate: { functionApis: true } } },
     limit: 10,
   });
@@ -309,6 +319,21 @@ const loadAndAssert = async (
 
   const functions = await functionService.findMany({
     filters: { application: { documentId: { $eq: application.documentId } } },
+    populate: { functionApis: true },
+    limit: 1000,
+  });
+  const iamApplications = await applicationService.findMany({
+    filters: { slug: { $eq: iamApplicationSlug } },
+    limit: 10,
+  });
+  assert(
+    iamApplications.length === 1,
+    "Expected exactly one IdamBox IAM application",
+  );
+  const iamFunctions = await functionService.findMany({
+    filters: {
+      application: { documentId: { $eq: iamApplications[0].documentId } },
+    },
     populate: { functionApis: true },
     limit: 1000,
   });
@@ -395,8 +420,12 @@ const loadAndAssert = async (
   }
 
   assert(
-    functions.length === catalogue.functions.length,
-    `Expected ${catalogue.functions.length} CSRM Functions, found ${functions.length}`,
+    functions.length === csrmCatalogueFunctions.length,
+    `Expected ${csrmCatalogueFunctions.length} CSRM Functions, found ${functions.length}`,
+  );
+  assert(
+    iamFunctions.length === iamCatalogueFunctions.length,
+    `Expected ${iamCatalogueFunctions.length} IAM Functions, found ${iamFunctions.length}`,
   );
   assert(
     functionApis.length === catalogue.functionApis.length,
@@ -405,17 +434,26 @@ const loadAndAssert = async (
 
   // The seed keys a Function by its name and menu path; an API-only Function stores no menu path.
   const functionKey = ({ menuPath, name }) => `${name}\u0000${menuPath ?? ""}`;
-  const functionByKey = new Map(
-    functions.map((platformFunction) => [
-      functionKey(platformFunction),
-      platformFunction,
-    ]),
-  );
+  const keyByFunctions = (applicationFunctions) =>
+    new Map(
+      applicationFunctions.map((platformFunction) => [
+        functionKey(platformFunction),
+        platformFunction,
+      ]),
+    );
+  const csrmFunctionByKey = keyByFunctions(functions);
+  const iamFunctionByKey = keyByFunctions(iamFunctions);
+  // Each catalogue Function resolves only under the Application the seed partitions it to.
+  const seededFunctionFor = (functionSeed) =>
+    (iamFunctionIds.includes(functionSeed.id)
+      ? iamFunctionByKey
+      : csrmFunctionByKey
+    ).get(functionKey(functionSeed));
   for (const functionSeed of catalogue.functions) {
-    const seededFunction = functionByKey.get(functionKey(functionSeed));
+    const seededFunction = seededFunctionFor(functionSeed);
     assert(
       seededFunction?.name === functionSeed.name,
-      `Function ${functionSeed.id} must be persisted with its canonical name and menu path`,
+      `Function ${functionSeed.id} must be persisted under its partitioned Application with its canonical name and menu path`,
     );
     const expectedFunctionApis = catalogue.functionApis
       .filter((functionApi) => functionApi.functionId === functionSeed.id)
@@ -447,7 +485,7 @@ const loadAndAssert = async (
         const functionSeed = catalogue.functions.find(
           (item) => item.id === functionId,
         );
-        return functionByKey.get(functionKey(functionSeed))?.documentId;
+        return seededFunctionFor(functionSeed)?.documentId;
       })
       .sort();
     const actualFunctionDocumentIds = seededRole.functions
@@ -497,6 +535,7 @@ const loadAndAssert = async (
   const actualCounts = {
     applications: applications.length,
     functions: functions.length,
+    iamFunctions: iamFunctions.length,
     functionApis: functionApis.length,
     roles: seededRoles.length,
     users: [jane, bob].filter(Boolean).length,

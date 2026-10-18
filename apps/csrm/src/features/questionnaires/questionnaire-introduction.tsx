@@ -7,6 +7,10 @@ export interface QuestionnaireIntroductionProps {
   questionCount: number;
   /** Whether any question appears only for certain answers. */
   hasConditionalQuestions: boolean;
+  /** D-23: a Security Analyst used AI to help write the questions. */
+  aiAssisted?: boolean;
+  /** D-16: whether any question offers a `Not sure` choice. */
+  offersNotSure?: boolean;
 }
 
 /*
@@ -14,7 +18,7 @@ export interface QuestionnaireIntroductionProps {
  * how many questions there are, that her answers save, and what to do when she is unsure. It is built only
  * from facts the page already has, and it promises no "Not sure" choice the form does not offer.
  */
-export function QuestionnaireIntroduction({ description, hasConditionalQuestions, questionCount }: QuestionnaireIntroductionProps) {
+export function QuestionnaireIntroduction({ aiAssisted = false, description, hasConditionalQuestions, offersNotSure = false, questionCount }: QuestionnaireIntroductionProps) {
   const headingId = useId();
   const count = `${questionCount} ${questionCount === 1 ? 'question' : 'questions'}`;
   return (
@@ -25,8 +29,11 @@ export function QuestionnaireIntroduction({ description, hasConditionalQuestions
         {`A Security Analyst has sent you ${count} about this request so they can assess its cyber risk.`}
         {hasConditionalQuestions ? ' Depending on your answers, a few more may appear.' : null}
       </p>
+      {aiAssisted ? <p className="text-sm text-foreground">A Security Analyst used AI to help write these questions and reviewed them before sending them to you.</p> : null}
       <p className="text-sm text-foreground">Your answers save automatically, so you can stop and finish later. Answer every question marked (required) before you submit. The Security Analyst sees your answers only after you submit.</p>
-      <p className="text-sm text-foreground">Not sure of an answer? Give your best answer, and where a question asks for text, say what you don’t know. The Security Analyst can send the questionnaire back to you if they need more detail.</p>
+      <p className="text-sm text-foreground">{offersNotSure
+        ? 'Not sure of an answer? Choose “Not sure” where it’s offered. Elsewhere, give your best answer, and where a question asks for text, say what you don’t know. The Security Analyst can send the questionnaire back to you if they need more detail.'
+        : 'Not sure of an answer? Give your best answer, and where a question asks for text, say what you don’t know. The Security Analyst can send the questionnaire back to you if they need more detail.'}</p>
     </section>
   );
 }

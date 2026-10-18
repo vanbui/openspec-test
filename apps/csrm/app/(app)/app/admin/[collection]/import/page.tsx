@@ -1,5 +1,7 @@
 import {
   commitAdministrationCsvAction,
+  downloadImportErrorReportAction,
+  downloadImportTemplateAction,
   previewAdministrationCsvAction,
 } from '@/features/administration/administration-actions';
 import { CsvImportFlow } from '@/features/administration/csv-import-flow';
@@ -17,7 +19,8 @@ type Props = { params: Promise<{ collection: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const collection = (await params).collection;
   if (!administrationKinds.includes(collection as AdministrationKind)) notFound();
-  return { title: `Import ${getAdministrationConfig(collection as AdministrationKind).pluralLabel} CSV | IdamBox CSRM` };
+  // 19-UI-SPEC §5.1: the route title names no format, since a workbook imports too.
+  return { title: `Import ${getAdministrationConfig(collection as AdministrationKind).pluralLabel} | IdamBox CSRM` };
 }
 
 export default async function AdministrationImportPage({ params }: Props) {
@@ -43,5 +46,7 @@ export default async function AdministrationImportPage({ params }: Props) {
       kind={kind}
       previewAction={previewAdministrationCsvAction}
       commitAction={commitAdministrationCsvAction}
+      templateAction={downloadImportTemplateAction}
+      errorReportAction={downloadImportErrorReportAction}
     /></>);
 }

@@ -19,7 +19,9 @@ const unavailableSessionMessage = 'Session authentication is not configured.';
 export type DevelopmentFixtureIdentity =
   | 'jane.doe@idambox.com'
   | 'maya.requestor@idambox.com'
-  | 'bob.doe@idambox.com';
+  | 'bob.doe@idambox.com'
+  /** D-31: the second human Security Analyst, development and E2E only, with no Keycloak fixture subject. */
+  | 'sam.analyst@idambox.com';
 
 export function developmentFixtureIdentityForRole(
   role: DevelopmentRole,
@@ -31,6 +33,8 @@ export function developmentFixtureIdentityForRole(
       return 'maya.requestor@idambox.com';
     case 'Security Analyst':
       return 'bob.doe@idambox.com';
+    case 'Second Security Analyst':
+      return 'sam.analyst@idambox.com';
     default:
       return null;
   }

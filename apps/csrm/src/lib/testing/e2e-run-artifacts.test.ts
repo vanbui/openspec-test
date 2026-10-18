@@ -26,9 +26,10 @@ describe('the disposition of a finished run', () => {
 });
 
 describe("a run's artifact names and paths", () => {
-  it('names the database and both builds by the invocation id', () => {
+  it('names the database, the attachment store and both builds by the invocation id', () => {
     expect(runArtifactNames(invocationId)).toEqual({
       databaseFilename: `.tmp/playwright-e2e-${invocationId}.db`,
+      attachmentDir: `.tmp/playwright-attachments-${invocationId}`,
       nextDistDir: `.tmp/playwright-next-${invocationId}`,
       ordinaryNextDistDir: `.tmp/playwright-ordinary-next-${invocationId}`,
     });
@@ -41,7 +42,11 @@ describe("a run's artifact names and paths", () => {
     },
   );
 
-  it("lists exactly this run's six paths and nothing that another run could own", () => {
+  /*
+   * IN-607: the run's attachment store sits beside its database and follows it, so a failed run keeps the files its kept
+   * database references, and a passing run removes both.
+   */
+  it("lists exactly this run's seven paths, the attachment store beside the database, and nothing that another run could own", () => {
     const paths = runArtifactPaths({ strapiDir, webDir, names: runArtifactNames(invocationId) });
 
     expect(paths).toEqual([
@@ -49,6 +54,7 @@ describe("a run's artifact names and paths", () => {
       `${join(strapiDir, `.tmp/playwright-e2e-${invocationId}.db`)}-journal`,
       `${join(strapiDir, `.tmp/playwright-e2e-${invocationId}.db`)}-wal`,
       `${join(strapiDir, `.tmp/playwright-e2e-${invocationId}.db`)}-shm`,
+      join(strapiDir, `.tmp/playwright-attachments-${invocationId}`),
       join(webDir, `.tmp/playwright-next-${invocationId}`),
       join(webDir, `.tmp/playwright-ordinary-next-${invocationId}`),
     ]);

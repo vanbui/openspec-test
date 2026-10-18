@@ -43,6 +43,25 @@ const TOKEN_EXPIRY_SKEW_MS = 30_000;
 type CachedToken = { value: string; expiresAt: number };
 type RequestOptions = { method?: string; body?: unknown; allowNotFound?: boolean };
 
+export type RevocationOptions = { deadline?: number; signal?: AbortSignal };
+export type KeycloakSyncErrorCode = "KEYCLOAK_TIMEOUT" | "KEYCLOAK_UNAVAILABLE" | "KEYCLOAK_AUTH" | "KEYCLOAK_CONFLICT" | "KEYCLOAK_CONFIG";
+export class KeycloakRevocationError extends Error {
+  constructor(readonly code: KeycloakSyncErrorCode) { super(code); this.name = "KeycloakRevocationError"; }
+}
+
+/** Bound waiting even when another caller owns the shared token request. */
+async function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    void work.catch(() => undefined);
+    throw new KeycloakRevocationError("KEYCLOAK_TIMEOUT");
+  }
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new KeycloakRevocationError("KEYCLOAK_TIMEOUT"));
+    signal.addEventListener("abort", abort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
+}
+
 export class KeycloakAdminClient {
   private cachedToken?: CachedToken;
   private pendingToken?: Promise<string>;
@@ -87,6 +106,64 @@ export class KeycloakAdminClient {
     });
   }
 
+  /** One action-email attempt; acceptance is not proof of mailbox delivery. */
+  async executeActionsEmail(subject: string, actions: readonly ["UPDATE_PASSWORD"], parentSignal: AbortSignal): Promise<void> {
+    if (actions.length !== 1 || actions[0] !== "UPDATE_PASSWORD") throw new KeycloakRevocationError("KEYCLOAK_CONFIG");
+    if (parentSignal.aborted) throw new KeycloakRevocationError("KEYCLOAK_TIMEOUT");
+    const signal = AbortSignal.any([parentSignal, AbortSignal.timeout(Math.min(5000, this.config.requestTimeoutMs))]);
+    try {
+      const token = await abortable(this.getAccessToken(signal), signal);
+      const response = await abortable(fetch(`${this.config.baseUrl}/admin/realms/${encodeURIComponent(this.config.realm)}/users/${encodeURIComponent(subject)}/execute-actions-email`, {
+        method: "PUT", redirect: "error", signal,
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(actions),
+      }), signal);
+      await abortable(discardBody(response), signal);
+      if (!response.ok) throw new KeycloakRevocationError(response.status === 401 || response.status === 403 ? "KEYCLOAK_AUTH" : "KEYCLOAK_UNAVAILABLE");
+    } catch (error) {
+      if (error instanceof KeycloakRevocationError) throw error;
+      throw new KeycloakRevocationError(signal.aborted ? "KEYCLOAK_TIMEOUT" : "KEYCLOAK_UNAVAILABLE");
+    }
+  }
+
+  async disableUser(subject: string | null | undefined, options: RevocationOptions = {}): Promise<void> {
+    if (!subject) return;
+    await this.revoke(subject, false, options);
+  }
+
+  async endUserSessions(subject: string | null | undefined, options: RevocationOptions = {}): Promise<void> {
+    if (!subject) return;
+    await this.revoke(subject, true, options);
+  }
+
+  private async revoke(subject: string, logout: boolean, options: RevocationOptions): Promise<void> {
+    const remaining = (options.deadline ?? Date.now() + 30_000) - Date.now();
+    if (remaining <= 0 || options.signal?.aborted) throw new KeycloakRevocationError("KEYCLOAK_TIMEOUT");
+    const signal = AbortSignal.any([AbortSignal.timeout(Math.min(5000, this.config.requestTimeoutMs, remaining)),
+      ...(options.signal ? [options.signal] : [])]);
+    const url = `${this.config.baseUrl}/admin/realms/${encodeURIComponent(this.config.realm)}/users/${encodeURIComponent(subject)}${logout ? "/logout" : ""}`;
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const token = await abortable(this.getAccessToken(signal), signal);
+        const response = await abortable(fetch(url, { method: logout ? "POST" : "PUT", redirect: "error", signal,
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          ...(logout ? {} : { body: JSON.stringify({ enabled: false }) }) }), signal);
+        // Never read remote error text. Body cleanup remains inside the call budget.
+        await abortable(discardBody(response), signal);
+        if (response.status === 401 && attempt === 0) { this.cachedToken = undefined; continue; }
+        if (response.ok || response.status === 404) return;
+        throw new KeycloakRevocationError(response.status === 401 || response.status === 403 ? "KEYCLOAK_AUTH"
+          : response.status === 409 ? "KEYCLOAK_CONFLICT" : "KEYCLOAK_UNAVAILABLE");
+      }
+    } catch (error) {
+      if (error instanceof KeycloakRevocationError) throw error;
+      if (signal.aborted || (error instanceof Error && /TimeoutError|AbortError/.test(error.name))) {
+        throw new KeycloakRevocationError("KEYCLOAK_TIMEOUT");
+      }
+      throw new KeycloakRevocationError(error instanceof KeycloakProvisioningError && (error.status === 401 || error.status === 403)
+        ? "KEYCLOAK_AUTH" : "KEYCLOAK_UNAVAILABLE");
+    }
+  }
+
   private async adminRequest(operation: string, path: string, options: RequestOptions = {}): Promise<Response> {
     const url = `${this.config.baseUrl}/admin/realms/${encodeURIComponent(this.config.realm)}${path}`;
     let response = await this.send(operation, url, options, await this.getAccessToken());
@@ -123,18 +200,18 @@ export class KeycloakAdminClient {
     });
   }
 
-  private getAccessToken(): Promise<string> {
+  private getAccessToken(signal?: AbortSignal): Promise<string> {
     if (this.cachedToken && this.now() < this.cachedToken.expiresAt) {
       return Promise.resolve(this.cachedToken.value);
     }
     // Concurrent writes share one token request.
-    this.pendingToken ??= this.requestAccessToken().finally(() => {
+    this.pendingToken ??= this.requestAccessToken(signal).finally(() => {
       this.pendingToken = undefined;
     });
     return this.pendingToken;
   }
 
-  private async requestAccessToken(): Promise<string> {
+  private async requestAccessToken(signal?: AbortSignal): Promise<string> {
     const tokenUrl = `${this.config.baseUrl}/realms/${encodeURIComponent(this.config.realm)}/protocol/openid-connect/token`;
     const response = await this.fetchWithTimeout("token request", tokenUrl, {
       method: "POST",
@@ -144,7 +221,7 @@ export class KeycloakAdminClient {
         client_id: this.config.adminClientId,
         client_secret: this.config.adminClientSecret,
       }),
-    });
+    }, signal);
 
     if (!response.ok) {
       throw new KeycloakProvisioningError(
@@ -164,9 +241,11 @@ export class KeycloakAdminClient {
     return payload.access_token;
   }
 
-  private async fetchWithTimeout(operation: string, url: string, init: RequestInit): Promise<Response> {
+  private async fetchWithTimeout(operation: string, url: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
     try {
-      return await fetch(url, { ...init, redirect: "error", signal: AbortSignal.timeout(this.config.requestTimeoutMs) });
+      return await fetch(url, { ...init, redirect: "error", signal: AbortSignal.any([
+        AbortSignal.timeout(this.config.requestTimeoutMs), ...(signal ? [signal] : []),
+      ]) });
     } catch (error) {
       const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
       throw new KeycloakProvisioningError(

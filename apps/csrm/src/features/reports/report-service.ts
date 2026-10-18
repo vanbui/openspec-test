@@ -9,6 +9,8 @@ import {
   type StrapiClient,
   type TransportResult,
 } from '../../lib/api/transport/server-client';
+import type { ExportFileFormat } from '../../lib/files/file-response';
+import { checkExportResponse, EXPORT_FILE_CONTENT_TYPES, type ExportResult } from '../exports/export-file-check';
 import type { ContractResponseParser } from '../assessments/assessment-service';
 import type { ReportKey } from './report-copy';
 import {
@@ -55,6 +57,10 @@ export const responseParserModule = {
     { label: 'reports.getReport.assessmentThroughput', path: REPORT_PATH, method: 'get', branch: 'AssessmentThroughputReport', parser: reportResponseSchemas['assessment-throughput'] },
     { label: 'reports.getReport.controlEffectiveness', path: REPORT_PATH, method: 'get', branch: 'ControlEffectivenessReport', parser: reportResponseSchemas['control-effectiveness'] },
   ] as const satisfies readonly ContractResponseParser[],
+  // Phase 19 D-22: a report's export is a file, checked by the shared validator's export rule instead of a zod parser.
+  fileResponses: [
+    { label: 'reports.exportReport', path: '/v1/reports/{reportKey}/export', method: 'post' as const, contentTypes: EXPORT_FILE_CONTENT_TYPES },
+  ],
 };
 
 /** The parser label of each report, so a contract mismatch names the branch that refused it. */
@@ -106,4 +112,38 @@ export async function getReport<K extends ReportKey>(key: K, options: ReportOpti
     (payload) => parseReportPayload(key, payload),
     reportOperations[key],
   );
+}
+
+/** A report export's body (D-22, UI-D5): no columns; one table for CSV only; the report's own query as strings. */
+export type ReportExportInput = {
+  format: ExportFileFormat;
+  /** One of the report's table keys, CSV only. */
+  table?: string;
+  timeZone?: string;
+  /** The report's own query: only assessment-throughput takes one, its period. */
+  query: Readonly<Record<string, string>>;
+};
+
+/**
+ * Exports one report (D-22): a workbook of its tables, or one table as CSV, through the generated path with a binary
+ * parse. Strapi authorises the export, parses the report's query with the report's own parser and builds the file;
+ * the shared validator checks it before any byte is returned. The table and the viewer's zone are sent only when given.
+ */
+export async function exportReport(reportKey: ReportKey, input: ReportExportInput): Promise<ExportResult> {
+  try {
+    const client = await createStrapiClient();
+    const exported = await client.POST('/v1/reports/{reportKey}/export', {
+      params: { path: { reportKey } },
+      body: {
+        format: input.format,
+        ...(input.table ? { table: input.table } : {}),
+        ...(input.timeZone ? { timeZone: input.timeZone } : {}),
+        query: { ...input.query },
+      },
+      parseAs: 'arrayBuffer',
+    });
+    return checkExportResponse(exported, input.format);
+  } catch (error) {
+    return normalizeTransportError(error);
+  }
 }

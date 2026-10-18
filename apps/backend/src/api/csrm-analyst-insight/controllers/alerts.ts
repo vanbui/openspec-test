@@ -3,6 +3,10 @@ import { createAlertRepository, projectAlertRow, summariseAlertCounts } from "..
 import { AnalystInsightError, assertAnalystInsightScope } from "../services/insight-scope";
 import { ALERT_DUE_SOON_WINDOW_DAYS } from "../../../csrm/insights/insight-constants";
 import { utcToday } from "../../../csrm/insights/utc-date";
+import type { SecurityEventLogger } from "../../../csrm/audit/security-event-log";
+import { alertsExportView } from "../../../csrm/exports/export-views";
+import { runListExport } from "../../../csrm/exports/run-export";
+import { resolveExportActor, sendExportError, sendExportFile } from "../../../csrm/exports/send-export";
 
 /*
  * GET /api/v1/alerts and GET /api/v1/alerts/summary (D-05, D-10, D-12). The
@@ -52,6 +56,30 @@ const alertsController = {
       };
     } catch (error) {
       return handleError(ctx, error);
+    }
+  },
+
+  /*
+   * Phase 19 (D-04, D-07, D-13; G-16): GET /api/v1/alerts/export, the alert list whole, through the list's own parser,
+   * derivation and projection (alertsExportView), as one file and one security event line. The view asserts the
+   * insight scope first.
+   */
+  async exportAlerts(ctx: RecordValue) {
+    const strapi = globalThis.strapi;
+    try {
+      const file = await runListExport({
+        view: alertsExportView(strapi),
+        query: ctx.query,
+        state: ctx.state,
+        actor: await resolveExportActor(strapi, ctx.state),
+        now: new Date(),
+        log: (strapi as unknown as { log: SecurityEventLogger }).log,
+      });
+      sendExportFile(ctx as unknown as Parameters<typeof sendExportFile>[0], file);
+      return undefined;
+    } catch (error) {
+      if (sendExportError(ctx as unknown as Parameters<typeof sendExportError>[0], error)) return undefined;
+      throw error;
     }
   },
 

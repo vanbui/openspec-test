@@ -2,7 +2,7 @@ import { ShieldCheckIcon } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { BrandLockup } from '@/components/shell/wordmark';
+import { BrandLockup } from '@/components/shell/brand-lockup';
 import { buttonVariants } from '@/components/ui/button';
 
 export const metadata: Metadata = { title: 'Page not found | IdamBox CSRM' };

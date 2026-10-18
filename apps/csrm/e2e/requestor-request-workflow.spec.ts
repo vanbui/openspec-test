@@ -2,23 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { strapiHealthUrl } from './harness-urls';
 import { attachCspCollector, expectNoCspViolations } from './helpers/csp';
 import { openFromNavigation, primaryViewport, signInAs } from './helpers/navigation';
-
-/**
- * Scope is chosen by searching now, not by ticking an enumerated list.
- */
-async function chooseRelation(page: Page, label: string): Promise<void> {
-  const group = page.getByRole('group', { name: label });
-  const combobox = group.getByRole('combobox', { name: `Search ${label.toLowerCase()}` });
-  await combobox.fill('e');
-  const selected = group.getByRole('list', { name: `Selected ${label}` });
-  // Enter takes the first match and is a no-op until the debounced search has
-  // returned, so press until a selection lands. This is also the keyboard path
-  // a person without a pointer uses.
-  await expect(async () => {
-    await combobox.press('Enter');
-    await expect(selected.getByRole('listitem')).not.toHaveCount(0, { timeout: 1_000 });
-  }).toPass({ timeout: 30_000 });
-}
+import { chooseRelation } from './helpers/requests';
 
 
 const requestorEmail = 'jane.doe@idambox.com';
@@ -61,7 +45,16 @@ async function expectReturnToDraftConfirmation(
 ): Promise<void> {
   const trigger = actionRegion.getByRole('button', { name: 'Return to draft' });
   await expect(trigger, `REQUEST_${viewport.toUpperCase()}_REVERSAL_TRIGGER`).toHaveCount(1);
-  await expect(actionRegion.getByRole('button').first(), `REQUEST_${viewport.toUpperCase()}_REVERSAL_IS_FIRST_ACTION`).toHaveText('Return to draft');
+  /*
+   * Below 768px the lifecycle stepper's Show all steps disclosure sits above every workflow action (UI-SPEC §6.3).
+   * It changes only what the page shows, so the first workflow action is read among the other buttons. The
+   * Assignment section sits between the hub and Return to draft by design (13-UI-SPEC §5.2, plan 13-09): its
+   * controls change who holds the request, never its lifecycle, so they are not workflow actions either.
+   */
+  const workflowActions = actionRegion.getByRole('button')
+    .and(page.locator(':not(#assignment *)'))
+    .filter({ hasNotText: /^(Show|Hide) all steps$/ });
+  await expect(workflowActions.first(), `REQUEST_${viewport.toUpperCase()}_REVERSAL_IS_FIRST_ACTION`).toHaveText('Return to draft');
   await expect(trigger, `REQUEST_${viewport.toUpperCase()}_REVERSAL_USES_DEFAULT_BUTTON`).toHaveAttribute('data-variant', 'default');
 
   await trigger.click();
@@ -234,6 +227,18 @@ test('Requestor completes an authorised assessment request journey @journey', as
   await expect(page.getByRole('link', { name: 'Edit request' })).toHaveCount(0);
 
   /*
+   * UX08_NEXT_ACTION_NAMES_HOLDER (D-27, UI-SPEC §6.1): the Security Analyst holds a submitted request, so
+   * its Requestor reads what the analyst is doing, as plain text with no link. Scoped to the hub's Request
+   * summary at 1440, where the hub carries the next action (plan 11-09 moves the phone line into the stepper).
+   */
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const nextActionLine = page.getByRole('region', { name: 'Request summary' }).locator('p').filter({ hasText: /^Next action: / });
+  // 13-UI-SPEC §12.1: nobody has picked the request up yet, so the sentence says it is waiting for a Security Analyst.
+  await expect(nextActionLine, 'UX08_NEXT_ACTION_NAMES_HOLDER').toHaveText('Next action: Your request is waiting for a Security Analyst to pick it up. They’ll then send you a questionnaire to answer.');
+  await expect(nextActionLine.getByRole('link'), 'UX08_NEXT_ACTION_NAMES_HOLDER carries no link').toHaveCount(0);
+  await page.setViewportSize(primary);
+
+  /*
    * UAT-037 (D-21): in the same page session, without reloading, a return to draft brings back the draft's
    * actions, because they come from the refreshed request and never from the earlier in-page submit. Focus
    * moves to the first new action (UI-SPEC §9.2). Then submit again so the journey continues from a
@@ -337,7 +342,8 @@ test('Requestor completes an authorised assessment request journey @journey', as
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole('searchbox', { name: 'Search requests' }).fill(uniqueTitle);
-  await page.getByRole('button', { name: 'Search' }).click();
+  // E25: the header's quick-find control is also named Search (UI-SPEC §3), so the list's own button is found in main.
+  await page.getByRole('main').getByRole('button', { name: 'Search' }).click();
   await expect(page).toHaveURL(/q=E2E/);
   await page.getByRole('combobox', { name: 'Filter by status' }).selectOption('submitted');
   await page.getByRole('button', { name: 'Sort by Updated' }).click();
@@ -345,26 +351,30 @@ test('Requestor completes an authorised assessment request journey @journey', as
   await expect(page.getByRole('link', { name: uniqueTitle })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next page' })).toBeVisible();
 
+  /*
+   * E14 (D-19, D-20): the Home splits the Requestor's requests by who holds them, not by stored status. The
+   * resubmitted request is with the Security Analyst at both widths, never under Needs your action, and that
+   * section's View all opens My requests filtered to the same holder.
+   */
   await page.goto('/app');
+  const needsYou = page.getByRole('region', { name: 'Needs your action', exact: true });
+  const withAnalyst = page.getByRole('region', { name: 'With the Security Analyst', exact: true });
   for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
-    const lifecycleCards = page.getByRole('region', { name: 'My Assessment Requests' });
-    await expect(lifecycleCards).toBeVisible();
-    await expect(lifecycleCards.getByRole('list', { name: 'My Assessment Requests by lifecycle state' }).getByRole('listitem')).toHaveCount(7);
+    await expect(needsYou).toBeVisible();
+    await expect(needsYou.getByRole('link', { name: uniqueTitle, exact: true }), `HOME_SUBMITTED_NOT_WAITING_ON_REQUESTOR_${width}`).toHaveCount(0);
+    await expect(withAnalyst.getByRole('link', { name: uniqueTitle, exact: true }), `HOME_RESUBMITTED_WITH_ANALYST_${width}`).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
   await page.setViewportSize(primary);
-  await page.getByRole('region', { name: 'My Assessment Requests' }).getByRole('link', { name: /Submitted/ }).click();
-  await expect(page).toHaveURL(/\/app\/requests\?status=submitted/);
-  await expect(page.getByRole('combobox', { name: 'Filter by status' })).toHaveValue('submitted');
+  await withAnalyst.getByRole('link', { name: /^View all [\d,]+ in My requests$/ }).click();
+  await expect(page).toHaveURL(/\/app\/requests\?holder=analyst/);
+  await expect(page.getByRole('combobox', { name: 'Show', exact: true })).toHaveValue('analyst');
 
   await page.goto('/app');
-  await expect(page.getByRole('heading', { name: 'Draft requests', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Questionnaires in progress' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Recently released assessments' })).toBeVisible();
-  await expect(page.getByRole('link', { name: uniqueTitle })).toHaveCount(0);
-  const releasedAssessments = page.getByRole('region', { name: 'Recently released assessments' });
-  await expect(releasedAssessments.getByRole('list', { name: 'Released assessments by rating' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Released assessments', exact: true })).toBeVisible();
+  const releasedAssessments = page.getByRole('region', { name: 'Released assessments', exact: true });
+  await expect(releasedAssessments.getByRole('list', { name: 'Released assessments by overall rating' })).toBeVisible();
   await expect(releasedAssessments.getByText(uniqueTitle)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 

@@ -16,7 +16,9 @@ vi.mock('next/headers', () => ({
 }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 
-import { getSessionAdapter } from './development-session-adapter';
+import { developmentFixtureIdentityForRole, getSessionAdapter } from './development-session-adapter';
+import { developmentRoles, parseDevelopmentRole } from './session-adapter';
+import { DevelopmentCapabilityAdapter } from '@/lib/capabilities/development-capabilities';
 
 /** Next's redirect never returns; the mock throws the way the real one does. */
 class RedirectSignal extends Error {
@@ -194,5 +196,44 @@ describe('the development session cookie under next dev', () => {
     await getSessionAdapter().setDevelopmentRole('Requestor');
 
     expect(mocks.cookieStore.set).toHaveBeenCalledWith(cookieName, 'Requestor', expect.objectContaining({ secure: false }));
+  });
+});
+
+/*
+ * D-31 (UI-SPEC §17, UI-D26): a second human Security Analyst, Sam Analyst, for development and E2E only. The
+ * development session sends the persona's email as the development identity, so Strapi resolves a human Security
+ * Analyst through the same identity middleware; the persona has no Keycloak fixture subject.
+ */
+describe('the Second Security Analyst development role (D-31)', () => {
+  it('is the fourth development role, after Security Analyst', () => {
+    expect(developmentRoles).toEqual(['Requestor', 'Secondary Requestor', 'Security Analyst', 'Second Security Analyst']);
+    expect(parseDevelopmentRole('Second Security Analyst')).toBe('Second Security Analyst');
+  });
+
+  it('names Sam Analyst as the development identity, and each other role keeps its own', () => {
+    expect(developmentFixtureIdentityForRole('Second Security Analyst')).toBe('sam.analyst@idambox.com');
+    expect(developmentFixtureIdentityForRole('Security Analyst')).toBe('bob.doe@idambox.com');
+    expect(developmentFixtureIdentityForRole('Secondary Requestor')).toBe('maya.requestor@idambox.com');
+    expect(developmentFixtureIdentityForRole('Requestor')).toBe('jane.doe@idambox.com');
+  });
+
+  it('is granted exactly the Security Analyst capabilities', async () => {
+    const second = await new DevelopmentCapabilityAdapter('Second Security Analyst').granted();
+    const first = await new DevelopmentCapabilityAdapter('Security Analyst').granted();
+
+    expect(second).toEqual(first);
+  });
+
+  it('reads and mints the session cookie for the persona under next dev', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    mocks.cookieStore.get.mockReturnValue({ name: cookieName, value: 'Second Security Analyst' });
+
+    await expect(getSessionAdapter().current()).resolves.toEqual({
+      displayName: 'Development user',
+      developmentRole: 'Second Security Analyst',
+    });
+
+    await getSessionAdapter().setDevelopmentRole('Second Security Analyst');
+    expect(mocks.cookieStore.set).toHaveBeenCalledWith(cookieName, 'Second Security Analyst', expect.objectContaining({ httpOnly: true }));
   });
 });

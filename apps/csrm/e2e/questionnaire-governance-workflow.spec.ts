@@ -33,8 +33,12 @@ async function expectAtBothWidths(page: Page, criterion: string, assertion: () =
   }
 }
 
+/*
+ * Opens the request from the actor's list, searched for its title: earlier journeys create requests of their
+ * own, so a seeded one need not be on the list's first page.
+ */
 async function openRequest(page: Page, actor: 'Requestor' | 'Security Analyst', title: string): Promise<string> {
-  await page.goto(actor === 'Requestor' ? '/app/requests' : '/app/review/requests');
+  await page.goto(`${actor === 'Requestor' ? '/app/requests' : '/app/review/requests'}?q=${encodeURIComponent(title)}`);
   const request = page.getByRole('link', { name: title }).first();
   await expect(request, `GOVERNANCE_REQUEST_${actor}_DISCOVERY`).toBeVisible();
   await request.click();
@@ -113,7 +117,12 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   expect(analystRequestUrl, 'CRITERION_1_ANALYST_REQUEST_BACKLINK').toMatch(/^\/app\/review\/requests\/[^/]+$/);
   await page.goto(analystRequestUrl!);
   await expect(page.getByRole('heading', { name: /Current lifecycle state: Questionnaire generated/ }), 'CRITERION_1_GENERATED_STEPPER_STATE').toBeVisible();
-  await expect(page.getByText(/^Next action:/), 'CRITERION_1_NEXT_ACTION_IS_IN_HUB_BENEATH_STEPPER').toBeVisible();
+  /*
+   * E18, UI-D23: both next-action lines are in the DOM, the stepper's compact line below 768px and the hub's from
+   * 768px, and one is displayed at any width. The preceding width sweep leaves this page at 375, so the line is
+   * read as the one displayed.
+   */
+  await expect(page.getByText(/^Next action:/).filter({ visible: true }), 'CRITERION_1_NEXT_ACTION_IS_IN_HUB_BENEATH_STEPPER').toBeVisible();
   await page.goto(analystQuestionnaireHref!);
 
   const governance = page.getByRole('region', { name: 'Questionnaire governance' });
@@ -204,11 +213,12 @@ test('criteria 1-8: an Analyst governs an unreleased questionnaire through relea
   await expect(page.getByText('Questionnaire submitted.')).toBeVisible();
   await page.goto(requestorRequestUrl);
   await expect(page.getByRole('heading', { name: /Current lifecycle state: Questionnaire submitted/ }), 'CRITERION_2_SUBMITTED_STEPPER_STATE').toBeVisible();
-  await expect(page.getByText(/^Next action:/), 'CRITERION_2_NEXT_ACTION_REMAINS_IN_HUB').toBeVisible();
+  await expect(page.getByText(/^Next action:/).filter({ visible: true }), 'CRITERION_2_NEXT_ACTION_REMAINS_IN_HUB').toBeVisible();
 
   await signInAs(page, 'Security Analyst');
   await page.goto(analystQuestionnaireHref!);
-  await page.getByRole('button', { name: 'Return to analyst review' }).click();
+  // Phase 15 (15-UI-SPEC §2.4): the AI proposals panel offers the same dialog beside its guidance; this criterion uses the governance panel's.
+  await page.getByLabel('Questionnaire governance').getByRole('button', { name: 'Return to analyst review' }).click();
   const returnDialog = page.getByRole('alertdialog', { name: 'Return questionnaire to analyst review?' });
   await returnDialog.getByLabel('Reason').fill('   ');
   await expect(returnDialog.getByRole('button', { name: 'Return to analyst review' }), 'CRITERION_4_EMPTY_RETURN_REASON_REFUSED').toBeDisabled();

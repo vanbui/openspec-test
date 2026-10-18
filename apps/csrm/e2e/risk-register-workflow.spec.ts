@@ -6,17 +6,58 @@ import { expectFocusNotObscured, expectFocusVisible } from './helpers/focus';
 import { primaryViewport, signInAs } from './helpers/navigation';
 import { labelToFieldGap } from './helpers/forms';
 import { paintedPixel, rgbOf, sameColour } from './helpers/pixel';
-import { settleElementWidth } from './helpers/settle';
+import { settleElementWidth, settleScrollPosition } from './helpers/settle';
 
 const releasedAssessmentNumber = 'ASM-2026-33SAEN';
 const releasedRiskNumber = 'RSK-RELEASED-33SAEN';
 const mutableRiskNumber = 'RSK-DEV-MUTABLE-001';
+/*
+ * FE3-15: the register search (risk number or statement) that finds the two stable fixtures and, as seeded, no other
+ * Risk: the mutable fixture's number and statement, and the released fixture's statement ("…immutable register…").
+ * Earlier specs keep adding Risks to the shared run database, so proofs that read one page read only these.
+ */
+const fixtureSearch = 'mutable';
 const releasedNoticeHeading = 'Released assessment - read only';
+// The mutable Risk's assessment and its request's title, which the Related assessment picker shows beside it (D-32, X-4).
+const mutableAssessmentNumber = 'ASM-DEV-RISK-001';
+const mutableAssessmentRequestTitle = 'Customer portal penetration test findings';
 // 1280 is where the filter bar becomes one row of four tracks (UI-SPEC section 4.1).
 const viewportWidths = [375, 390, 430, 768, 1024, 1280, 1440] as const;
 const filterLabels = ['Search Risks', 'Treatment status', 'Inherent rating', 'Residual rating'] as const;
 const firstFiveRegisterColumns = ['Risk number', 'Statement', 'Inherent rating', 'Residual rating', 'Treatment status'] as const;
 const mutationActionName = /Edit risk|Save risk|Discard risk changes|Add mitigation control|Edit mitigation control|Save mitigation control|Remove mitigation control|close|more actions/i;
+/*
+ * D-40, D-44: the seeded Phase 7 Risks (seed-analyst-insights.ts). Four sit under the in-review assessment and one,
+ * a Critical Risk in treatment, under the released assessment. Their numbers share a prefix the register's search
+ * matches, so the proofs find them by search rather than by their place on a page other journeys add Risks to.
+ */
+const phase7RiskSearch = 'RSK-E2E-P7';
+const phase7UnderAssessmentRiskNumbers = ['RSK-E2E-P7-OVERDUE-001', 'RSK-E2E-P7-DUESOON-001', 'RSK-E2E-P7-CRITICAL-001', 'RSK-E2E-P7-CLOSED-001'] as const;
+const phase7ReleasedRiskNumber = 'RSK-E2E-P7-RELEASED-001';
+// D-35: the seeded overdue Risk (target 30 days ago) and due-soon Risk (target 7 days ahead), both open and in treatment.
+const phase7OverdueRiskNumber = 'RSK-E2E-P7-OVERDUE-001';
+const phase7DueSoonRiskNumber = 'RSK-E2E-P7-DUESOON-001';
+
+test('UX09_DESKTOP_FILTERS_SCROLL: every More filters control remains reachable on a short desktop', async ({ page }) => {
+  await signInAs(page, 'Security Analyst');
+  for (const height of [900, 600]) {
+    await page.setViewportSize({ width: 1440, height });
+    await page.goto('/app/risks');
+    const { panel } = await openFilterPanel(page, false);
+    const bounds = await panel.boundingBox();
+    expect(bounds, 'desktop filter panel exists').not.toBeNull();
+    expect(bounds!.y, 'filter panel starts inside viewport').toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height, 'filter panel fits viewport').toBeLessThanOrEqual(height);
+    await panel.getByLabel('Target date from', { exact: true }).fill('2026-01-01');
+    const last = panel.getByRole('button', { name: 'Clear target dates', exact: true });
+    await last.focus();
+    const box = await last.boundingBox();
+    expect(box, 'final control has a box').not.toBeNull();
+    expect(box!.y + box!.height, 'final control scrolls into viewport on focus').toBeLessThanOrEqual(height);
+    await last.click();
+    await page.keyboard.press('Escape');
+  }
+});
 
 async function expectNoHorizontalOverflow(page: Page, message: string): Promise<void> {
   const geometry = await page.evaluate(() => ({
@@ -39,10 +80,10 @@ async function expectNoSeriousAxeViolations(page: Page): Promise<void> {
   expect(scan.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
 }
 
-async function selectMatchingOptionAndWait(page: Page, combobox: Locator, label: string, key: string): Promise<void> {
+async function selectMatchingOptionAndWait(page: Page, combobox: Locator, label: string, key: string, optionLabel = label): Promise<void> {
   await combobox.fill(label);
-  const option = page.getByRole('option', { name: label, exact: true });
-  await expect(option, `${label} is returned by the authorised relation search`).toBeVisible();
+  const option = page.getByRole('option', { name: optionLabel, exact: true });
+  await expect(option, `${optionLabel} is returned by the authorised relation search`).toBeVisible();
   await option.click();
   await expect(page).toHaveURL(new RegExp(`[?&]${key}=`));
 }
@@ -141,21 +182,54 @@ async function expectRegionFollowsOverflow(page: Page, tableName: string, messag
  * table border keeps its computed width while the browser draws it on the scrolling grid line, so it
  * slid under the pinned column as soon as the table scrolled. Pixel snapping may put a 1px border in
  * either column beside a fractional edge, so the columns either side of the cell's end are read.
+ *
+ * A pixel speaks for the hairline only where nothing else can be drawn. First the region's and the page's
+ * scroll positions must hold still: ArrowRight scrolls the region smoothly, so the poll that sees it move
+ * returns mid-animation. Then both pinned cells must lie in the window, clear of the sticky application
+ * header. Tab's focus scroll does not stop at the root's scroll padding as scrollIntoView does, so it leaves a
+ * register taller than the window with its header row under that header. In the full suite's mobile pass the
+ * register lists 22 Risks (8 when this file runs alone), and every full run read the header's translucent
+ * background there. Only the page is then scrolled to the region's top; the region keeps the scroll position
+ * under test, and the cell must be what the browser shows at every sampled point before its colour is read.
  */
 async function expectStickyHairlinePainted(page: Page, region: Locator, message: string): Promise<void> {
+  await settleScrollPosition(region);
+  const pinnedCellsOutOfView = await region.evaluate((element) => {
+    const header = element.querySelector('thead tr th:first-child');
+    const body = element.querySelector('tbody tr td:first-child');
+    // A missing cell is reported by the checks below.
+    if (!header || !body) return false;
+    const appHeaderBottom = document.querySelector('.header')?.getBoundingClientRect().bottom ?? 0;
+    return header.getBoundingClientRect().top < appHeaderBottom || body.getBoundingClientRect().bottom > document.documentElement.clientHeight;
+  });
+  if (pinnedCellsOutOfView) {
+    // scrollIntoView moves the region's scroll ancestors, never the region's own scroll position.
+    await region.evaluate((element) => element.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' }));
+    await settleScrollPosition(region);
+    test.info().annotations.push({ type: 'Sticky hairline', description: `${message}: the page was scrolled to the region's top to bring the pinned cells into view below the application header` });
+  }
   for (const [part, selector] of [['header', 'thead tr th:first-child'], ['body', 'tbody tr td:first-child']] as const) {
     const edge = await region.evaluate((element, cellSelector) => {
       const cell = element.querySelector<HTMLElement>(cellSelector);
       if (!cell) return null;
       const rect = cell.getBoundingClientRect();
+      const xs = [...new Set([Math.floor(rect.right) - 1, Math.round(rect.right) - 1, Math.ceil(rect.right) - 1])];
+      const y = Math.round(rect.top + rect.height / 2);
       return {
-        xs: [...new Set([Math.floor(rect.right) - 1, Math.round(rect.right) - 1, Math.ceil(rect.right) - 1])],
-        y: Math.round(rect.top + rect.height / 2),
+        xs,
+        y,
         colour: getComputedStyle(cell).borderRightColor,
         scrollLeft: element.scrollLeft,
+        // What the browser shows at each sampled point: the cell itself, or whatever is drawn over it.
+        shown: xs.map((x) => {
+          const top = document.elementFromPoint(x, y);
+          if (!top) return 'nothing (outside the viewport)';
+          return top === cell || cell.contains(top) ? 'the cell' : `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}`;
+        }),
       };
     }, selector);
     expect(edge, `${message}: the table has a first ${part} cell`).not.toBeNull();
+    expect(edge!.shown, `${message}: the pinned ${part} cell is what the browser shows at its end edge at scrollLeft ${edge!.scrollLeft}`).toEqual(edge!.xs.map(() => 'the cell'));
     const painted = await Promise.all(edge!.xs.map((x) => paintedPixel(page, x, edge!.y)));
     expect(
       painted.some((pixel) => sameColour(pixel, rgbOf(edge!.colour))),
@@ -233,7 +307,7 @@ async function expectFilterBarGeometry(page: Page, width: number): Promise<void>
 
 async function expectRegisterGeometry(page: Page, width: number): Promise<void> {
   await page.setViewportSize({ width, height: 900 });
-  await page.goto('/app/risks');
+  await page.goto('/app/risks?pageSize=50');
   await expect(page.getByRole('heading', { name: 'Risk Register' })).toBeVisible();
   await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveCount(1);
   await expectNoHorizontalOverflow(page, `Risk Register has no horizontal overflow at ${width}px`);
@@ -241,7 +315,8 @@ async function expectRegisterGeometry(page: Page, width: number): Promise<void> 
   if (width < 768) {
     const cards = page.locator('[data-slot="data-table-mobile"]');
     await expect(cards, `Risk cards render at ${width}px`).toBeVisible();
-    await expect(cards.getByRole('article')).toHaveCount(await displayedResultTotal(page));
+    // One card per row of this page (pageSize=50): the shared register can outgrow one page across runs (19-15 gate).
+    await expect(cards.getByRole('article')).toHaveCount(Math.min(await displayedResultTotal(page), 50));
     const filtersTrigger = page.getByRole('button', { name: /Filters \(\d+\)/ });
     await filtersTrigger.click();
     const filtersSheet = page.getByRole('dialog', { name: 'Risk Register filters' });
@@ -371,18 +446,27 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await expect.poll(() => page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
   await signInAs(page, 'Security Analyst');
 
-  await page.goto('/app/risks');
+  await page.goto('/app/risks?pageSize=50');
   await expect(
     page.getByRole('heading', { name: 'Risk Register' }),
     'Expected /app/risks Risk Register heading to be visible',
   ).toBeVisible();
-  await expect(page.getByText('Search and manage contextual Risks across authorised assessments.')).toBeVisible();
-  await expect(page.getByRole('link', { name: mutableRiskNumber }).first(), 'Risk rows finish hydrating before the total/row consistency proof').toBeVisible();
+  // The page header is read in <main>: until React reveals the streamed list, its hidden copy sits outside it (19-15 gate).
+  await expect(page.getByRole('main').getByText('Search and manage Risks from released risk assessments and from those still under assessment.')).toBeVisible();
+  await expect(page.getByText(/^\d+ results?$/), 'the register shows its authoritative total').toBeVisible();
+  // The whole register's total, which the filters below narrow and Clear filters restores.
   const initialTotal = await displayedResultTotal(page);
-  const initialRiskNumbers = await visibleRiskNumbers(page, mobile);
   expect(initialTotal, 'Risk Register contains both stable acceptance fixtures').toBeGreaterThanOrEqual(2);
-  expect(new Set(initialRiskNumbers).size, 'authoritative total matches distinct rendered Risks').toBe(initialTotal);
-  expect(initialRiskNumbers).toEqual(expect.arrayContaining([mutableRiskNumber, releasedRiskNumber]));
+
+  // FE3-15: the total/row proof reads its own fixtures, so it holds however many Risks earlier specs added.
+  await page.goto(`/app/risks?q=${fixtureSearch}&pageSize=50`);
+  await expect(page.getByRole('link', { name: mutableRiskNumber }).first(), 'Risk rows finish hydrating before the total/row consistency proof').toBeVisible();
+  const fixtureTotal = await displayedResultTotal(page);
+  const fixtureRiskNumbers = await visibleRiskNumbers(page, mobile);
+  expect(fixtureTotal, 'the fixture search finds both stable acceptance fixtures').toBeGreaterThanOrEqual(2);
+  expect(fixtureTotal, 'the fixture search fits one 50-row page').toBeLessThanOrEqual(50);
+  expect(new Set(fixtureRiskNumbers).size, 'authoritative total matches distinct rendered Risks').toBe(fixtureTotal);
+  expect(fixtureRiskNumbers).toEqual(expect.arrayContaining([mutableRiskNumber, releasedRiskNumber]));
 
   const initialMutableHref = await page.getByRole('link', { name: mutableRiskNumber }).first().getAttribute('href');
   expect(initialMutableHref).toMatch(/^\/app\/risks\/[^/]+$/);
@@ -392,7 +476,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   expect(currentMutableTargetDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   await page.getByRole('form', { name: 'Edit Risk' }).getByRole('button', { name: 'Discard risk changes' }).click();
 
-  await page.goto(`/app/risks?targetDateFrom=${currentMutableTargetDate}&targetDateTo=${currentMutableTargetDate}&unknown=discard-me&sort=targetDate%3Aasc&pageSize=25`);
+  await page.goto(`/app/risks?targetDateFrom=${currentMutableTargetDate}&targetDateTo=${currentMutableTargetDate}&unknown=discard-me&sort=targetDate%3Aasc&pageSize=50`);
   await expect(page).toHaveURL(new RegExp(`targetDateFrom=${currentMutableTargetDate}`));
   await expect(page).toHaveURL(new RegExp(`targetDateTo=${currentMutableTargetDate}`));
   /*
@@ -427,7 +511,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await page.keyboard.press('Enter');
   await expect(page).not.toHaveURL(/targetDateFrom=|targetDateTo=/);
   await expect(page).toHaveURL(/sort=targetDate%3Aasc/);
-  await expect(page).toHaveURL(/pageSize=25/);
+  await expect(page).toHaveURL(/pageSize=50/);
   expect(await displayedResultTotal(page)).toBe(initialTotal);
   await page.keyboard.press('Escape');
 
@@ -448,7 +532,13 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   const furtherFilters = filterPanel.panel;
   await selectMatchingOptionAndWait(page, furtherFilters.getByRole('combobox', { name: 'Risk owner', exact: true }), 'Bob Doe', 'riskOwner');
   await selectMatchingOptionAndWait(page, furtherFilters.getByRole('combobox', { name: 'Treatment owner', exact: true }), 'Bob Doe', 'treatmentOwner');
-  await selectMatchingOptionAndWait(page, furtherFilters.getByRole('combobox', { name: 'Related assessment', exact: true }), 'ASM-DEV-RISK-001', 'assessment');
+  await selectMatchingOptionAndWait(
+    page,
+    furtherFilters.getByRole('combobox', { name: 'Related assessment', exact: true }),
+    mutableAssessmentNumber,
+    'assessment',
+    `${mutableAssessmentNumber} · ${mutableAssessmentRequestTitle}`,
+  );
   await selectMatchingOptionAndWait(page, furtherFilters.getByRole('combobox', { name: 'Impacted system', exact: true }), 'Customer portal', 'system');
   await selectMatchingOptionAndWait(page, furtherFilters.getByRole('combobox', { name: 'Impacted asset', exact: true }), 'Customer records', 'asset');
   await furtherFilters.getByRole('combobox', { name: 'Mitigation-control status', exact: true }).selectOption('Planned');
@@ -471,7 +561,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await expect(page).toHaveURL(new RegExp(`targetDateFrom=${currentMutableTargetDate}`));
   await expect(page).toHaveURL(new RegExp(`targetDateTo=${currentMutableTargetDate}`));
   await expect(page).toHaveURL(/sort=targetDate%3Aasc/);
-  await expect(page).toHaveURL(/pageSize=25/);
+  await expect(page).toHaveURL(/pageSize=50/);
   await expect(page.getByText('1 result', { exact: true }), 'combined filter total remains authoritative').toBeVisible();
 
   filterPanel = await openFilterPanel(page, mobile);
@@ -498,27 +588,32 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await page.getByRole('button', { name: 'Clear filters' }).first().click();
   await expect(page).not.toHaveURL(/q=|treatmentStatus=|inherentRating=|residualRating=|riskOwner=|treatmentOwner=|assessment=|system=|asset=|mitigationStatus=|targetDateFrom=|targetDateTo=/);
   await expect(page).toHaveURL(/sort=targetDate%3Aasc/);
-  await expect(page).toHaveURL(/pageSize=25/);
+  await expect(page).toHaveURL(/pageSize=50/);
   expect(await displayedResultTotal(page)).toBe(initialTotal);
 
+  // FE3-15: both orders are read within the fixture search, so the two fixtures share one page however large the register.
   if (mobile) {
     // The cards have no sort headers, so both sort orders are requested through the URL they would set.
-    await page.goto('/app/risks?sort=targetDate%3Adesc&pageSize=25');
+    await page.goto(`/app/risks?q=${fixtureSearch}&sort=targetDate%3Adesc&pageSize=50`);
     await expect(registerRecordFor(page, mobile, mutableRiskNumber)).toBeVisible();
   } else {
+    await page.goto(`/app/risks?q=${fixtureSearch}&sort=targetDate%3Aasc&pageSize=50`);
+    await expect(registerRecordFor(page, mobile, mutableRiskNumber)).toBeVisible();
     await page.getByRole('button', { name: 'Sort by Target date' }).click();
   }
   await expect(page).toHaveURL(/sort=targetDate%3Adesc/);
   const descendingRisks = await visibleRiskNumbers(page, mobile);
+  expect(descendingRisks, 'both fixtures share the searched page').toEqual(expect.arrayContaining([mutableRiskNumber, releasedRiskNumber]));
   expect(descendingRisks.indexOf(mutableRiskNumber), 'descending target date keeps the dated fixture before the null fixture').toBeLessThan(descendingRisks.indexOf(releasedRiskNumber));
   if (mobile) {
-    await page.goto('/app/risks?sort=targetDate%3Aasc&pageSize=25');
+    await page.goto(`/app/risks?q=${fixtureSearch}&sort=targetDate%3Aasc&pageSize=50`);
     await expect(registerRecordFor(page, mobile, mutableRiskNumber)).toBeVisible();
   } else {
     await page.getByRole('button', { name: 'Sort by Target date' }).click();
   }
   await expect(page).toHaveURL(/sort=targetDate%3Aasc/);
   const ascendingRisks = await visibleRiskNumbers(page, mobile);
+  expect(ascendingRisks, 'both fixtures share the searched page').toEqual(expect.arrayContaining([mutableRiskNumber, releasedRiskNumber]));
   expect(ascendingRisks.indexOf(mutableRiskNumber), 'ascending target date keeps the dated fixture before the null fixture').toBeLessThan(ascendingRisks.indexOf(releasedRiskNumber));
   if (!mobile) {
     const targetSort = page.getByRole('button', { name: 'Sort by Target date' });
@@ -548,7 +643,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await expect(page.locator(`link[rel="prefetch"][href*="${releasedRiskHref}"]`), 'released Risk has no mutation prefetch').toHaveCount(0);
   await expectNoSeriousAxeViolations(page);
 
-  await page.goto('/app/risks');
+  await page.goto(`/app/risks?q=${fixtureSearch}`);
   const mutableRiskLink = page.getByRole('link', { name: mutableRiskNumber }).first();
   const mutableRiskHref = await mutableRiskLink.getAttribute('href');
   expect(mutableRiskHref).toMatch(/^\/app\/risks\/[^/]+$/);
@@ -589,7 +684,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   await page.reload();
   await expect(page.getByText(persistedEvidence, { exact: true }), 'mitigation evidence persists after authoritative reload').toBeVisible();
 
-  await page.goto('/app/risks?sort=targetDate%3Aasc&pageSize=25');
+  await page.goto(`/app/risks?q=${fixtureSearch}&sort=targetDate%3Aasc&pageSize=50`);
   const mutableRecord = registerRecordFor(page, mobile, mutableRiskNumber);
   const overdue = mutableRecord.getByText('Overdue', { exact: true });
   await expect(overdue, 'past target date has exact Overdue text').toBeVisible();
@@ -618,13 +713,13 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   const pickerSystemName = (index: number) => `Picker proof ${pickerSuffix} ${String(index).padStart(2, '0')}`;
   const pickerCsv = ['name,description', ...Array.from({ length: 26 }, (_, index) => `${pickerSystemName(index + 1)},Record picker proof system`)].join('\r\n');
   await page.goto('/app/admin/information-systems/import');
-  await expect(page.getByRole('heading', { name: 'Import Information Systems from CSV' })).toBeVisible();
-  await page.getByRole('button', { name: 'Choose CSV file' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Import Information Systems', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Choose file' }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: `picker-proof-${pickerSuffix}.csv`, mimeType: 'text/csv', buffer: Buffer.from(pickerCsv) });
   await page.getByRole('button', { name: 'Validate and preview' }).click();
   await expect(page.getByRole('button', { name: 'Create (26)' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue to confirmation' }).click();
-  await page.getByRole('checkbox', { name: 'I have reviewed the create and update rows.' }).click();
+  await page.getByRole('checkbox', { name: 'I have reviewed the rows to create and update.' }).click();
   await page.getByRole('button', { name: 'Confirm import' }).click();
   await expect(page.getByRole('heading', { name: 'Import complete' })).toBeFocused();
   await expect(page.getByText('Created 26', { exact: true })).toBeVisible();
@@ -674,10 +769,14 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   }
   test.info().annotations.push({ type: 'Alerts at 768', description: `data-overflow=${alertsOverflow}` });
 
-  // A table that fits exposes no region and no tab stop (UI-SPEC section 5.5).
+  // A table that fits exposes no region and no tab stop (UI-SPEC section 5.5). My requests gained the Next step column
+  // (11-11, D-34) and may now be wider than 1440px allows, which Phase 11 UI-SPEC §7 permits: its scroller still follows
+  // its measured width. The four-column My released risk assessments, whose request title wraps, is the table that fits.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/app/requests');
-  expect(await expectRegionFollowsOverflow(page, 'My assessment requests', 'My Requests at 1440px'), 'the analyst’s own request list fits at 1440px').toBe(false);
+  await expectRegionFollowsOverflow(page, 'My assessment requests', 'My Requests at 1440px');
+  await page.goto('/app/assessments');
+  expect(await expectRegionFollowsOverflow(page, 'My released risk assessments', 'My risk assessments at 1440px'), 'the analyst’s own released assessment list fits at 1440px').toBe(false);
 
   await page.setViewportSize({ width: 720, height: 450 });
   await page.evaluate(() => {
@@ -705,7 +804,7 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   expect(listDenial).not.toMatch(/\d+ results?|RSK-|ASM-|target date|filters/i);
 
   const arbitraryRiskHref = '/app/risks/not-a-risk-document-id';
-  const detailDenialCopy = 'You don’t have permission to view the Risk Register';
+  const detailDenialCopy = 'You don’t have permission to view the Risk register';
   await page.goto(releasedRiskHref!);
   await expect(page.getByRole('alert').getByText(detailDenialCopy, { exact: true })).toBeVisible();
   await expect(page.getByText(/RSK-|ASM-2026-33SAEN/), 'existing Risk denial contains no identity clue').toHaveCount(0);
@@ -716,4 +815,206 @@ test('Bob filters the Risk Register, maintains mitigation, and Jane learns no Ri
   expect(await page.getByRole('main').innerText()).toBe(existingDenial);
   await expect(page.getByText(/RSK-|ASM-2026-33SAEN/), 'arbitrary Risk denial contains no existence clue').toHaveCount(0);
   await expectNoCspViolations(page, 'the Risk Register journey');
+});
+
+/*
+ * D-40, D-44 and UAT-060: the register says which Risks are released and which are still under assessment, and
+ * filters by both. As the Security Analyst at 1440, the seeded in-review assessment's Risks list under
+ * stage=under-assessment with "Under assessment" under each Related assessment link, the seeded released Critical
+ * Risk lists under stage=released with "Released", and the two stage totals sum to the unfiltered total: nothing
+ * leaves the register. Desktop only: the journey below proves the card markers at 375.
+ */
+test('DASH03_REGISTER_STAGE: the Risk register lists and marks released and under-assessment Risks, and the stages sum to the register', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signInAs(page, 'Security Analyst');
+
+  await page.goto(`/app/risks?stage=under-assessment&q=${phase7RiskSearch}&pageSize=50`);
+  await expect(registerRecordFor(page, false, phase7UnderAssessmentRiskNumbers[0]), 'the filtered register has hydrated').toBeVisible();
+  await expect(page.getByText('Stage: Under assessment', { exact: true }), 'DASH03_STAGE_CHIP').toBeVisible();
+  const underAssessment = await visibleRiskNumbers(page, false);
+  expect(underAssessment, 'DASH03_UNDER_ASSESSMENT_LISTS_THE_IN_REVIEW_RISKS').toEqual(expect.arrayContaining([...phase7UnderAssessmentRiskNumbers]));
+  expect(underAssessment, 'DASH03_UNDER_ASSESSMENT_OMITS_THE_RELEASED_RISK').not.toContain(phase7ReleasedRiskNumber);
+  for (const riskNumber of underAssessment) {
+    const row = registerRecordFor(page, false, riskNumber);
+    await expect(row.getByText('Under assessment', { exact: true }), `DASH03_ROW_MARKER_${riskNumber}`).toBeVisible();
+    await expect(row.getByText('Released', { exact: true }), `DASH03_ROW_ONE_STAGE_${riskNumber}`).toHaveCount(0);
+  }
+
+  await page.goto(`/app/risks?stage=released&q=${phase7RiskSearch}&pageSize=50`);
+  await expect(registerRecordFor(page, false, phase7ReleasedRiskNumber), 'DASH03_RELEASED_LISTS_THE_RELEASED_RISK').toBeVisible();
+  const released = await visibleRiskNumbers(page, false);
+  for (const riskNumber of phase7UnderAssessmentRiskNumbers) expect(released, `DASH03_RELEASED_OMITS_${riskNumber}`).not.toContain(riskNumber);
+  for (const riskNumber of released) {
+    await expect(registerRecordFor(page, false, riskNumber).getByText('Released', { exact: true }), `DASH03_ROW_MARKER_${riskNumber}`).toBeVisible();
+  }
+
+  // The whole register: each Risk in scope is in exactly one stage, so the two totals sum to the unfiltered total.
+  const totalAt = async (path: string) => {
+    await page.goto(path);
+    await expect(page.getByText(/^\d+ results?$/), `${path} shows its total`).toBeVisible();
+    return displayedResultTotal(page);
+  };
+  const registerTotal = await totalAt('/app/risks');
+  const releasedTotal = await totalAt('/app/risks?stage=released');
+  const underAssessmentTotal = await totalAt('/app/risks?stage=under-assessment');
+  expect(releasedTotal, 'DASH03_RELEASED_TOTAL').toBeGreaterThan(0);
+  expect(underAssessmentTotal, 'DASH03_UNDER_ASSESSMENT_TOTAL').toBeGreaterThan(0);
+  expect(releasedTotal + underAssessmentTotal, 'DASH03_STAGES_SUM_TO_THE_REGISTER').toBe(registerTotal);
+});
+
+/*
+ * D-44, UI-SPEC section 9.5 at 375: each card names its Risk's stage after the Related assessment link, and the
+ * Filters sheet holds the Stage control with the active value.
+ */
+test('DASH03_REGISTER_STAGE_CARDS: Risk register cards name each Risk’s stage at 375 @journey', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await signInAs(page, 'Security Analyst');
+
+  await page.goto(`/app/risks?stage=under-assessment&q=${phase7RiskSearch}&pageSize=50`);
+  for (const riskNumber of phase7UnderAssessmentRiskNumbers) {
+    const card = registerRecordFor(page, true, riskNumber);
+    await expect(card.getByText('Under assessment', { exact: true }), `DASH03_CARD_MARKER_${riskNumber}`).toBeVisible();
+  }
+  const { panel } = await openFilterPanel(page, true);
+  await expect(panel.getByRole('combobox', { name: 'Stage', exact: true }), 'DASH03_SHEET_STAGE').toHaveValue('under-assessment');
+  await expect(panel.getByText('Search and filter Risks.', { exact: true }), 'D-54 sheet description').toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.goto(`/app/risks?stage=released&q=${phase7RiskSearch}&pageSize=50`);
+  const releasedCard = registerRecordFor(page, true, phase7ReleasedRiskNumber);
+  await expect(releasedCard.getByText('Released', { exact: true }), 'DASH03_CARD_MARKER_RELEASED').toBeVisible();
+  await expect(releasedCard.getByRole('link', { name: phase7ReleasedRiskNumber }), 'the card opens its Risk').toBeVisible();
+});
+
+/*
+ * D-32 and UAT-048: the Related assessment picker searches on the server by request title. A word that appears
+ * only in the seeded assessment's request title (not in its number or summary) lists it as {number} · {title}.
+ * Desktop only: it reads and changes nothing, and the journey above proves the picker at 375.
+ */
+test('UX09_PICKER_FINDS_BY_REQUEST_TITLE: the Related assessment picker finds an assessment by its request title', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signInAs(page, 'Security Analyst');
+  await page.goto('/app/risks');
+  await expect(page.getByRole('link', { name: mutableRiskNumber }).first(), 'the register has hydrated').toBeVisible();
+
+  const { panel } = await openFilterPanel(page, false);
+  const picker = panel.getByRole('combobox', { name: 'Related assessment', exact: true });
+  await picker.fill('penetration');
+  const option = page.getByRole('option', { name: `${mutableAssessmentNumber} · ${mutableAssessmentRequestTitle}`, exact: true });
+  await expect(option, 'UX09_PICKER_FINDS_BY_REQUEST_TITLE').toBeVisible();
+  await option.click();
+  await expect(page, 'UX09_PICKER_SELECTS_THE_ASSESSMENT').toHaveURL(/[?&]assessment=/);
+  await expect(registerRecordFor(page, false, mutableRiskNumber), 'UX09_PICKER_FILTERS_THE_REGISTER').toBeVisible();
+});
+
+/*
+ * D-02 item 3, D-35, UX-09 criterion 2, UI-SPEC section 9.5: the register lists the Risks behind each figure. As
+ * the Security Analyst at 1440: dueState=overdue lists the seeded overdue Risk and not the due-soon one, with the
+ * chip "Due state: Overdue", and dueState=due-soon the reverse; Any mitigation control and No impacted system, chosen
+ * in More filters, show their chips and a total that Clear filters restores; and the Related assessment chip names
+ * the chosen assessment by its number and request title (D-32). The seeded Risks are found by search, never by
+ * their place on a page other journeys add Risks to. Desktop only: the journey below proves the phone sheet.
+ */
+test('UX09_REGISTER_FIGURE_FILTERS: the Risk register lists the Risks behind each due state, mitigation and system figure', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signInAs(page, 'Security Analyst');
+
+  await page.goto(`/app/risks?dueState=overdue&q=${phase7RiskSearch}&pageSize=50`);
+  await expect(registerRecordFor(page, false, phase7OverdueRiskNumber), 'UX09_DUE_STATE_OVERDUE_LISTS_THE_OVERDUE_RISK').toBeVisible();
+  await expect(page.getByText('Due state: Overdue', { exact: true }), 'UX09_DUE_STATE_CHIP').toBeVisible();
+  expect(await visibleRiskNumbers(page, false), 'UX09_DUE_STATE_OVERDUE_OMITS_THE_DUE_SOON_RISK').not.toContain(phase7DueSoonRiskNumber);
+
+  await page.goto(`/app/risks?dueState=due-soon&q=${phase7RiskSearch}&pageSize=50`);
+  await expect(registerRecordFor(page, false, phase7DueSoonRiskNumber), 'UX09_DUE_STATE_DUE_SOON_LISTS_THE_DUE_SOON_RISK').toBeVisible();
+  await expect(page.getByText('Due state: Due soon', { exact: true }), 'UX09_DUE_SOON_CHIP').toBeVisible();
+  expect(await visibleRiskNumbers(page, false), 'UX09_DUE_STATE_DUE_SOON_OMITS_THE_OVERDUE_RISK').not.toContain(phase7OverdueRiskNumber);
+
+  // Any mitigation control and No impacted system narrow the whole register; Clear filters restores its total.
+  await page.goto('/app/risks');
+  await expect(page.getByText(/^\d+ results?$/), 'the register shows its total').toBeVisible();
+  const registerTotal = await displayedResultTotal(page);
+  let filterPanel = await openFilterPanel(page, false);
+  await filterPanel.panel.getByRole('combobox', { name: 'Mitigation-control status', exact: true }).selectOption({ label: 'Any mitigation control' });
+  await expect(page, 'UX09_ANY_MITIGATION_IN_THE_URL').toHaveURL(/[?&]mitigationStatus=any(?:&|$)/);
+  await filterPanel.panel.getByRole('checkbox', { name: 'No impacted system' }).click();
+  await expect(page, 'UX09_NO_IMPACTED_SYSTEM_IN_THE_URL').toHaveURL(/[?&]impactedSystem=none(?:&|$)/);
+  await page.keyboard.press('Escape');
+  await expect(filterPanel.trigger, 'More filters restores focus to its trigger').toBeFocused();
+  await expect(page.getByText('Mitigation-control status: Any mitigation control', { exact: true }), 'UX09_ANY_MITIGATION_CHIP').toBeVisible();
+  await expect(page.getByText('Impacted system: None', { exact: true }), 'UX09_NO_IMPACTED_SYSTEM_CHIP').toBeVisible();
+  const narrowedTotal = await displayedResultTotal(page);
+  expect(narrowedTotal, 'UX09_FIGURE_FILTERS_ONLY_NARROW: seeded impacted-system Risks are excluded').toBeLessThan(registerTotal);
+  await page.goto(`/app/risks?mitigationStatus=any&impactedSystem=none&q=${encodeURIComponent(phase7OverdueRiskNumber)}`);
+  await expect(registerRecordFor(page, false, phase7OverdueRiskNumber), 'no-system excludes the known impacted-system Risk').toHaveCount(0);
+  await page.goto('/app/risks?mitigationStatus=any&impactedSystem=none');
+  /*
+   * Clear filters is server-rendered, so a click before the register hydrates reaches no handler, and hydration takes
+   * longer the more rows this view lists (the Phase 12 journey plans controls on three Risks with no impacted system).
+   * The click is repeated only while the filters are still in the URL, never once it has landed.
+   */
+  const clearFilters = page.getByRole('button', { name: 'Clear filters' }).first();
+  await expect(async () => {
+    if (/mitigationStatus=|impactedSystem=/.test(page.url())) await clearFilters.click({ timeout: 2_000 });
+    await expect(page).not.toHaveURL(/mitigationStatus=|impactedSystem=/, { timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+  await expect(page.getByText(`${registerTotal} ${registerTotal === 1 ? 'result' : 'results'}`, { exact: true }), 'UX09_CLEAR_FILTERS_RESTORES_THE_TOTAL').toBeVisible();
+
+  // D-32, UI-SPEC section 7.4: the Related assessment chip reads {number} · {request title}.
+  filterPanel = await openFilterPanel(page, false);
+  await filterPanel.panel.getByRole('combobox', { name: 'Related assessment', exact: true }).fill('penetration');
+  await page.getByRole('option', { name: `${mutableAssessmentNumber} · ${mutableAssessmentRequestTitle}`, exact: true }).click();
+  await expect(page).toHaveURL(/[?&]assessment=/);
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByText(`Related assessment: ${mutableAssessmentNumber} · ${mutableAssessmentRequestTitle}`, { exact: true }),
+    'UX09_RELATED_ASSESSMENT_CHIP_NAMES_THE_REQUEST_TITLE',
+  ).toBeVisible();
+  await expect(registerRecordFor(page, false, mutableRiskNumber), 'the assessment filters the register').toBeVisible();
+});
+
+/*
+ * D-35, UI-SPEC section 9.5 at 375: the phone Filters sheet holds Due state, which lists the seeded overdue Risk's
+ * card with its chip; the sheet scrolls to reach it.
+ */
+test('UX09_REGISTER_FIGURE_FILTERS_SHEET: the phone Filters sheet sets Due state at 375 @journey', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await signInAs(page, 'Security Analyst');
+
+  await page.goto(`/app/risks?q=${phase7RiskSearch}&pageSize=50`);
+  await expect(registerRecordFor(page, true, phase7OverdueRiskNumber), 'the searched register has hydrated').toBeVisible();
+  const { panel } = await openFilterPanel(page, true);
+  const dueState = panel.getByRole('combobox', { name: 'Due state', exact: true });
+  await dueState.scrollIntoViewIfNeeded();
+  await expect(dueState, 'UX09_SHEET_DUE_STATE_REACHABLE').toBeInViewport();
+  await dueState.selectOption({ label: 'Overdue' });
+  await expect(page, 'UX09_SHEET_DUE_STATE_IN_THE_URL').toHaveURL(/[?&]dueState=overdue(?:&|$)/);
+  await expect(dueState, 'the sheet keeps the active value').toHaveValue('overdue');
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await expect(registerRecordFor(page, true, phase7OverdueRiskNumber), 'UX09_SHEET_DUE_STATE_LISTS_THE_OVERDUE_CARD').toBeVisible();
+  await expect(registerRecordFor(page, true, phase7DueSoonRiskNumber), 'UX09_SHEET_DUE_STATE_OMITS_THE_DUE_SOON_CARD').toHaveCount(0);
+  await expect(page.getByText('Due state: Overdue', { exact: true }), 'UX09_SHEET_DUE_STATE_CHIP').toBeVisible();
+  await expectNoHorizontalOverflow(page, 'UX09_SHEET_NO_HORIZONTAL_OVERFLOW');
+
+  // UI-SPEC UI Considerations (register filters, long text): the long Related assessment chip wraps inside its box.
+  const sheet = (await openFilterPanel(page, true)).panel;
+  await sheet.getByRole('combobox', { name: 'Related assessment', exact: true }).fill('penetration');
+  await page.getByRole('option', { name: `${mutableAssessmentNumber} · ${mutableAssessmentRequestTitle}`, exact: true }).click();
+  await expect(page).toHaveURL(/[?&]assessment=/);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+  const longChip = page.getByText(`Related assessment: ${mutableAssessmentNumber} · ${mutableAssessmentRequestTitle}`, { exact: true });
+  await expect(longChip, 'UX09_SHEET_LONG_CHIP').toBeVisible();
+  const chipGeometry = await longChip.evaluate((element) => {
+    const chip = element.closest('.rounded-md') ?? element;
+    return { scrollHeight: chip.scrollHeight, clientHeight: chip.clientHeight, right: chip.getBoundingClientRect().right, viewport: window.innerWidth };
+  });
+  expect(chipGeometry.scrollHeight, 'UX09_SHEET_LONG_CHIP_WRAPS_INSIDE_ITS_BOX').toBeLessThanOrEqual(chipGeometry.clientHeight + 1);
+  expect(chipGeometry.right, 'UX09_SHEET_LONG_CHIP_WITHIN_THE_VIEWPORT').toBeLessThanOrEqual(chipGeometry.viewport + 1);
+  await expectNoHorizontalOverflow(page, 'UX09_SHEET_LONG_CHIP_NO_HORIZONTAL_OVERFLOW');
 });

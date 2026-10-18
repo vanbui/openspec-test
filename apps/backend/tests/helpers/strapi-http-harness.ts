@@ -1,13 +1,28 @@
 import assert from "node:assert/strict";
+import type { Core } from "@strapi/strapi";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { CSRM_ASSESSMENT_REQUEST_OPERATIONS } from "../../src/api/csrm-assessment-request/operations";
 import { seedCsrmData } from "../../src/bootstrap/seed-csrm-data";
+import { buildAssessmentContextFor, type AssessmentContextStrapi } from "../../src/csrm/ai/assessment-context-loader";
+import { createRunningAiRun, completeAiRun, failAiRun, appendAiRunDecisions, reconcileInterruptedAiRuns, type CreateRunningAiRunInput, type AiRunDecisionEvent, type AiRunProposal } from "../../src/api/csrm-ai-run/services/ai-run-record";
+import type { AttachmentStorage } from "../../src/csrm/files/storage-port";
 
 type Document = { documentId: string };
 export type AdministrationFixtureKind = "risk-types" | "controls" | "information-systems" | "information-assets";
+
+/** One Administration import upload and its fields (19-13 preview and commit; 19-14 error report). */
+export type MultipartImportInput = {
+  filename: string;
+  bytes: Uint8Array;
+  digest?: string;
+  confirmed?: boolean;
+  decisions?: string;
+  resultToken?: string;
+  timeZone?: string;
+};
 export type AssessmentJobStatus = "queued" | "running" | "completed" | "failed";
 export type AssessmentJobObservation = {
   jobId: string;
@@ -29,8 +44,27 @@ type InjectableAssessmentDraftProvider = {
 type InjectableQuestionnaireGenerationProvider = {
   generate: (...args: unknown[]) => Promise<unknown>;
 };
+/* Phase 15 (15-05): the mounted deterministic proposal and rewrite providers keep `propose` and `rewrite` replaceable. */
+type InjectableQuestionnaireProposalProvider = { propose: (...args: unknown[]) => Promise<unknown> };
+type InjectableQuestionRewriteProvider = { rewrite: (...args: unknown[]) => Promise<unknown> };
+/**
+ * Phase 15 (15-06): a proposal workflow call as the mounted service answered it, shaped as the routes 15-09 adds will
+ * answer: 202 with the job for a start or a retry, 200 with the job for a read, or the workflow's refusal (its status,
+ * closed reason when it has one, and message).
+ */
+export type ProposalFixtureResponse = { status: number; data?: Record<string, unknown>; reason?: string; message?: string };
+/** Phase 15 (15-06): the hold `withHeldQuestionnaireProposalProvider` gives its action. */
+export type HeldQuestionnaireProposalProvider = {
+  /** Settles when a proposal or rewrite call first reaches the hold, after its run exists. */
+  reached: Promise<void>;
+  /** Lets every held call continue; `action` settling does the same. */
+  release: () => void;
+  /** The provider inputs captured so far, in call order, when `capture` was asked for; empty otherwise. */
+  captured: () => ReadonlyArray<Record<string, unknown>>;
+};
 /** The CSRM content types a test may build fixtures of directly. */
 export type CsrmFixtureUid =
+  | "api::csrm-ai-run.csrm-ai-run"
   | "api::csrm-assessment-request.csrm-assessment-request"
   | "api::csrm-questionnaire.csrm-questionnaire"
   | "api::csrm-question.csrm-question"
@@ -38,7 +72,12 @@ export type CsrmFixtureUid =
   | "api::csrm-risk.csrm-risk"
   | "api::csrm-control-implementation.csrm-control-implementation"
   | "api::csrm-control.csrm-control"
-  | "api::csrm-information-system.csrm-information-system";
+  | "api::csrm-information-system.csrm-information-system"
+  | "api::csrm-information-asset.csrm-information-asset"
+  /* Phase 13 (D-26): a note's stored AI-input log, set directly to prove the full and unreadable log refusals. */
+  | "api::csrm-request-note.csrm-request-note"
+  /* Phase 14 (D-10, D-16): an attachment's facts, set directly to prove the window, limit and state rules. */
+  | "api::csrm-request-attachment.csrm-request-attachment";
 export type QuestionnaireLifecycleAnswerState = "none" | "draft" | "submitted";
 /** The analyst questionnaire mutations a test can run inside another mutation's transaction window, as the analyst. */
 export type InterleavedQuestionnaireWorkflows = {
@@ -58,12 +97,35 @@ export type InterleavedIntrusionOutcome =
   | { outcome: "not-reached" };
 /** One FOR UPDATE row lock, numbered by the transaction that took it (in the order each first locked a row). */
 export type RecordedRowLock = { transaction: number; uid: string; documentId: string };
-export type ReviewQueueBucketFixture = "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "released";
+/** Phase 14 WR-301: one call to `withRequestLock` for the watched request, as `withHeldRequestLock` saw it. */
+export type WatchedRequestLockCall = {
+  /** Whether the call has asked the database for its transaction (on SQLite, waited for the one connection). */
+  transactionRequested: boolean;
+  /** The active-file counts the call read inside the lock, in order. */
+  activeCounts: number[];
+};
+/** Phase 14 WR-301: the hold `withHeldRequestLock` gives its action. */
+export type HeldRequestLock = {
+  /** Settles when the first call for the request arrives at the lock's door, where it waits, holding nothing. */
+  atDoor: Promise<void>;
+  /** Lets the call waiting at the door into `withRequestLock`. */
+  admitFirst: () => void;
+  /** Settles with the active count a call read inside the lock, once that call is held just after the read. */
+  countHeld: Promise<number>;
+  /** Lets the held call go on from its count. */
+  releaseCount: () => void;
+  /** Every call for the request so far, in arrival order. */
+  calls: () => readonly WatchedRequestLockCall[];
+};
+export type ReviewQueueBucketFixture = "requires-attention" | "awaiting-requestor" | "generation-in-progress" | "open" | "released" | "all";
+/** Phase 13 (13-12): the assignee and notes filters a shared count applies, for the viewer named by documentId. */
+export type ReviewQueueCountFixtureOptions = { viewerDocumentId: string; assignee?: "me" | "unassigned"; notesUnread?: true };
 type StrapiDocumentService = {
   create: (input: { data: Record<string, unknown> }) => Promise<Document>;
   findMany: (input: Record<string, unknown>) => Promise<Document[]>;
   findOne?: (input: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
   update?: (input: { documentId: string; data: Record<string, unknown> }) => Promise<Document>;
+  delete?: (input: { documentId: string }) => Promise<unknown>;
 };
 /** A route as a router module declares it, after Strapi has registered it. */
 type RegisteredRoute = {
@@ -93,6 +155,8 @@ export type MountedPluginRoute = {
 };
 export type MountedContentApiRoutes = {
   applicationRoutes: MountedApplicationRoute[];
+  rootRoutes: MountedApplicationRoute[];
+  rootKoaLayers: Array<{ path: string; methods: string[] }>;
   pluginRoutes: MountedPluginRoute[];
   /** The content API router's koa layers, in registration order; a route layer names its methods. */
   koaLayers: Array<{ path: string; methods: string[] }>;
@@ -118,6 +182,8 @@ type RunningStrapi = {
     delete: (input: { where: Record<string, unknown> }) => Promise<unknown>;
   };
   server: {
+    routes: (routes: { type?: string; prefix?: string; routes: RegisteredRoute[] }) => unknown;
+    router: { stack: Array<{ path: string; methods: string[] }> };
     api: (name: "content-api" | "admin") => { listRoutes: () => Array<{ path: string; methods: string[] }> };
     app: { middleware: Array<(ctx: { get: (name: string) => string; state: Record<string, unknown> }, next: () => Promise<unknown>) => Promise<unknown>> };
     httpServer: { address: () => { port: number } | string | null };
@@ -145,7 +211,7 @@ function qualifiedHandler(namespace: string, handler: unknown): string {
   return handler.startsWith(namespace) ? handler : `${namespace}.${handler}`;
 }
 
-function listMountedContentApiRoutes(strapi: RunningStrapi): MountedContentApiRoutes {
+function listMountedContentApiRoutes(strapi: RunningStrapi, rootRoutes: MountedApplicationRoute[]): MountedContentApiRoutes {
   const applicationRoutes: MountedApplicationRoute[] = [];
   for (const [apiName, api] of Object.entries(strapi.apis)) {
     for (const [routerName, router] of Object.entries(api.routes)) {
@@ -181,7 +247,8 @@ function listMountedContentApiRoutes(strapi: RunningStrapi): MountedContentApiRo
     }
   }
   const koaLayers = strapi.server.api("content-api").listRoutes().map((layer) => ({ path: layer.path, methods: [...layer.methods] }));
-  return { applicationRoutes, pluginRoutes, koaLayers };
+  return { applicationRoutes, pluginRoutes, koaLayers, rootRoutes: structuredClone(rootRoutes),
+    rootKoaLayers: strapi.server.router.stack.map(layer => ({ path: layer.path, methods: [...layer.methods] })) };
 }
 
 // This helper is emitted to `.tmp/tests-dist/tests/helpers`, so four parents
@@ -263,11 +330,20 @@ function releaseFacts(analystDocumentId: string, at = "2026-08-15T00:00:00.000Z"
 }
 
 export type AuthorizationHttpHarness = {
+  /** Trusted fixture setup against the same persisted backend serving the mounted routes. */
+  withBackendFixture: <T>(action: (backend: Core.Strapi) => Promise<T>) => Promise<T>;
   baseUrl: string;
   identities: { owner: string; otherRequestor: string; analyst: string; secondAnalyst: string; analystAgent: string; serviceAnalystAgent: string; inactiveAnalyst: string };
   developmentEmails: { jane: string; bob: string; inactive: string; unknown: string };
-  users: { owner: string; otherRequestor: string; analyst: string; secondAnalyst: string; serviceAnalystAgent: string };
+  users: { owner: string; otherRequestor: string; analyst: string; secondAnalyst: string; serviceAnalystAgent: string; inactiveAnalyst: string };
   requests: { owner: string; otherRequestor: string };
+  seedUatALikeFixture: () => Promise<{ requestId: string; questionnaireId: string; systemIds: string[]; assetIds: string[]; riskTypeIds: string[]; controlIds: string[] }>;
+  /**
+   * WR-210: another UAT-A-like request and released, answered questionnaire over the same library, its numbers
+   * suffixed by `label`, so a test that needs a known starting state generates a draft of its own.
+   */
+  seedUatALikeRequest: (label: string) => Promise<{ requestId: string; questionnaireId: string }>;
+  buildAssessmentContextFixture: (input: Parameters<typeof buildAssessmentContextFor>[1]) => ReturnType<typeof buildAssessmentContextFor>;
   seedRequestWorkflowFixtures: () => Promise<{
     requests: { editable: string; submitted: string; transition: string; illegalTransition: string };
     relations: { informationSystem: string; informationAsset: string; questionnaire: string; assessment: string };
@@ -321,14 +397,195 @@ export type AuthorizationHttpHarness = {
     informationAssets: { update: string; unchanged: string };
   }>;
   request: (request: HarnessRequest) => Promise<Response>;
+  /**
+   * Sends the requests together (`Promise.all` over `fetch`), with no hook that puts two handlers in one window. On SQLite
+   * the single connection serialises their transactions, so a test built on it proves the serialised outcome, never a
+   * lock (WR-201): use `interleaveInTransactionWindow` or `recordRowLocks` for that.
+   */
   simultaneousRequests: (requests: readonly HarnessRequest[]) => Promise<Response[]>;
   recordJobObservation: (observation: AssessmentJobObservation) => void;
   getJobObservations: (jobId?: string) => readonly AssessmentJobObservation[];
   withProviderFailure: <T>(action: () => Promise<T>) => Promise<T>;
   withProviderFailureCode: <T>(code: string, safeMessage: string, action: () => Promise<T>) => Promise<T>;
+  /**
+   * WR-206: holds the deterministic assessment draft provider until `action` settles, so a draft job waits inside
+   * its provider call, after its run is created, for exactly that long. `action` receives a promise that settles
+   * when a job first reaches the provider. The job is then released; following it is the caller's.
+   */
+  withHeldAssessmentDraftProvider: <T>(action: (reached: Promise<void>) => Promise<T>) => Promise<T>;
+  /**
+   * WR-201: holds every AI generation job (a questionnaire generation or an assessment draft) just before it builds its
+   * context and so before it reads the AI data policy, until `release` is called or `action` settles. `reached` settles
+   * when a job first reaches the hold. Nothing else is held: the enqueue routes evaluate the policy themselves.
+   */
+  withHeldAiContext: <T>(action: (hold: { reached: Promise<void>; release: () => void }) => Promise<T>) => Promise<T>;
+  /**
+   * Phase 14 WR-204: holds the first upload screening that reaches it, just inside screenAttachment, until `release` is
+   * called or `action` settles; every later screening runs at once. `reached` settles when the first is held. The upload
+   * calls screenAttachment through its module object, so the mounted instance takes this hold.
+   */
+  withHeldScreening: <T>(action: (hold: { reached: Promise<void>; release: () => void }) => Promise<T>) => Promise<T>;
+  /**
+   * Phase 14 WR-204: fills the mounted instance's one screening and extraction queue, one held task and every waiting
+   * place, while `action` runs, then releases it and waits for it to drain.
+   */
+  withFullExtractionQueue: <T>(action: () => Promise<T>) => Promise<T>;
+  /**
+   * Phase 14 WR-301: watches and holds the one request lock (`withRequestLock`) for `requestDocumentId` until `action`
+   * settles, so a test can put two writers to one request in a known order and see what the second does while the first
+   * holds the lock. The first call for the request to arrive waits at the lock's door, before it takes anything, until
+   * `admitFirst`. The first active-file count any call reads inside the lock (`scanStatus` in its filter) is read, then
+   * held until `releaseCount`. `calls` reports, per call, whether it has asked the database for its transaction and the
+   * active counts it has read inside the lock. The services call `withRequestLock` through its module object, so the
+   * mounted instance takes this hook; nothing in the application changes, and other requests pass through untouched.
+   * SQLite's one connection would make a second writer wait for the first anyway, so "has not asked the database for its
+   * transaction" is how a test sees the lock's in-process tail hold it.
+   */
+  withHeldRequestLock: <T>(requestDocumentId: string, action: (lock: HeldRequestLock) => Promise<T>) => Promise<T>;
+  /**
+   * WR-201: the mounted instance reads `ceiling` as its AI data classification ceiling (the value of
+   * CSRM_AI_DATA_CLASSIFICATION_CEILING; "" is none) until `action` settles, then the ceiling it booted with again.
+   */
+  withAiDataClassificationCeiling: <T>(ceiling: string, action: () => Promise<T>) => Promise<T>;
+  withQuestionnaireProviderFailureCode: <T>(code: string, safeMessage: string, action: () => Promise<T>) => Promise<T>;
+  /**
+   * WR-02: the mounted questionnaire provider answers every generation with what `generate` returns (for example a
+   * hosted model's wire output through its adapter) until `action` settles, so the workflow persists that proposal.
+   */
+  withQuestionnaireProviderOutput: <T>(generate: () => unknown, action: () => Promise<T>) => Promise<T>;
+  /**
+   * WR-104: the mounted assessment draft provider answers every draft with `transform` applied to its own proposal until
+   * `action` settles (for example a proposal within the parser's bounds but over the run record's).
+   */
+  withAssessmentDraftProviderOutput: <T>(transform: (proposal: Record<string, unknown>) => unknown, action: () => Promise<T>) => Promise<T>;
+  listAiRunsForRequest: (requestId: string) => Promise<Array<Record<string, unknown>>>;
+  runQuestionnaireGenerationJobFixture: (requestId: string, analystId: string) => Promise<{ questionnaireId: string }>;
+  runAssessmentDraftJobFixture: (questionnaireId: string, analystId: string) => Promise<{ assessmentId: string }>;
+  /**
+   * Counts the mounted deterministic providers' calls while `action` runs: questionnaire generation and assessment draft
+   * `generate`, and (Phase 15 H-1) the questionnaire proposal provider's `propose` and the question rewrite provider's
+   * `rewrite`, so a zero-call assertion on a proposal job counts the provider the job would call.
+   */
+  withProviderCallRecorder: <T>(action: (counts: { questionnaire: () => number; assessment: () => number; proposals: () => number; rewrites: () => number }) => Promise<T>) => Promise<T>;
+  /**
+   * Phase 15 (15-06): starts a questionnaire-wide proposal job through the mounted workflow as the human Security Analyst
+   * `analystId` (a documentId), with `body` as the request body (`{ instruction? }`).
+   */
+  startQuestionnaireProposalsFixture: (analystId: string, questionnaireId: string, body?: unknown) => Promise<ProposalFixtureResponse>;
+  /** Phase 15 (15-06): starts a question rewrite job for `questionId` as the human Security Analyst `analystId`. */
+  startQuestionRewriteFixture: (analystId: string, questionnaireId: string, questionId: string, body?: unknown) => Promise<ProposalFixtureResponse>;
+  /** Phase 15 (15-06): reads a proposal job as the human Security Analyst `analystId`. */
+  getProposalJobFixture: (analystId: string, jobId: string) => Promise<ProposalFixtureResponse>;
+  /** Phase 15 (15-06): retries a failed proposal job as the human Security Analyst `analystId`. */
+  retryProposalJobFixture: (analystId: string, jobId: string) => Promise<ProposalFixtureResponse>;
+  /**
+   * Phase 15 (15-06): waits until the proposal job's current attempt has ended and returns the registry's record of it
+   * (status, attempt, runId, failure and the initiating analyst's documentId), read past every access rule. A held job
+   * ends only once its hold is released.
+   */
+  waitForProposalJobFixture: (jobId: string) => Promise<Record<string, unknown>>;
+  /** Phase 15 (15-06): the questionnaire's queued and running proposal jobs, as the registry holds them. */
+  activeProposalJobsFixture: (questionnaireId: string) => Promise<Array<Record<string, unknown>>>;
+  /**
+   * Phase 15 (15-06): holds the mounted deterministic proposal and rewrite providers until `release` is called or
+   * `action` settles, so a job waits inside its provider call, after its run exists. `capture` records each call's input;
+   * `failWith` makes every call fail afterwards as a hosted provider's failure (`QuestionnaireGenerationJobFailure`)
+   * with that code and message.
+   */
+  withHeldQuestionnaireProposalProvider: <T>(action: (hold: HeldQuestionnaireProposalProvider) => Promise<T>, options?: { capture?: boolean; failWith?: { code: string; message: string } }) => Promise<T>;
+  /** Phase 15 (15-06): every AI run on the questionnaire, oldest first, with its initiating analyst populated. */
+  listQuestionnaireRunsFixture: (questionnaireId: string) => Promise<Array<Record<string, unknown>>>;
+  /**
+   * Phase 15 (15-08): runs an acknowledged questionnaire replacement for `requestId` as the analyst, directly on the
+   * mounted job body (`persistGeneratedQuestionnaire`), and reports how it ended: completed, or failed with its code.
+   */
+  replaceQuestionnaireFixture: (requestId: string) => Promise<{ status: "completed" | "failed"; failureCode?: string }>;
+  /** Phase 15 (15-08): records the mounted instance's `strapi.log.warn` messages while `action` runs. */
+  withStrapiWarnings: <T>(action: (warnings: () => readonly string[]) => Promise<T>) => Promise<T>;
+  /**
+   * Phase 15 (15-07): decides AI proposals on the questionnaire through the mounted decision service as the human Security
+   * Analyst `analystId`, with `body` as the request body (`{ decisions }`): 200 with `{ applied, unchanged }`, or the
+   * service's refusal as the route 15-09 adds will answer it.
+   */
+  decideQuestionnaireProposalsFixture: (analystId: string, questionnaireId: string, body: unknown) => Promise<ProposalFixtureResponse>;
+  /**
+   * Phase 15 (15-07): everything a decision may change, for deep-equal checks: every question row (text, help text, type,
+   * options and answer) by documentId, the release fact, the governance log, and every run's decisions by run.
+   */
+  questionnaireSnapshotFixture: (questionnaireId: string) => Promise<Record<string, unknown>>;
+  /**
+   * Phase 15 (15-07): the Requestor's answer save and submit, called on the mounted services directly (past the route's
+   * policy), as `requestorId`: 200 with the service's result, or its refusal (status, closed reason and message).
+   */
+  saveAnswersServiceFixture: (requestorId: string, questionnaireId: string, body: unknown) => Promise<ProposalFixtureResponse>;
+  submitQuestionnaireServiceFixture: (requestorId: string, questionnaireId: string, body?: unknown) => Promise<ProposalFixtureResponse>;
+  listAiRunsForAssessment: (assessmentId: string) => Promise<Array<Record<string, unknown>>>;
   withDocumentWriteFailure: <T>(uid: string, operation: "create" | "update", failAt: number, action: () => Promise<T>) => Promise<T>;
   withQuestionUpdateFailure: <T>(failAt: number, action: () => Promise<T>) => Promise<T>;
   countRequestsForUser: (userDocumentId: string) => Promise<number>;
+  /**
+   * Phase 13 (D-01): a request's four assignment facts as the Document Service holds them, the two relations as
+   * documentIds. The facts are private, so no route returns them; a persistence comparison reads them here.
+   */
+  getRequestAssignment: (documentId: string) => Promise<{
+    assignedAnalyst: string | null;
+    assignedBy: string | null;
+    assignedAt: unknown;
+    assignmentLog: unknown;
+  } | null>;
+  /** The column names SQLite reports for `table` (`PRAGMA table_info`), in declaration order. */
+  listTableColumns: (table: string) => Promise<string[]>;
+  /**
+   * Phase 16 (D-18): a Risk's history rows as the Document Service holds them, oldest first (by id), every relation as
+   * its documentId. No route serves the rows unprojected, so a persistence comparison reads them here.
+   */
+  riskHistoryRowsFixture: (riskDocumentId: string) => Promise<Array<Record<string, unknown>>>;
+  /** Phase 16 (D-05): a Risk's three withdrawal facts as stored, `withdrawnBy` as a documentId; null for no Risk. */
+  riskWithdrawalFactsFixture: (riskDocumentId: string) => Promise<{ withdrawnAt: unknown; withdrawnBy: string | null; withdrawalReason: unknown } | null>;
+  /**
+   * Phase 16 (16-04): writes a Risk's three withdrawal facts straight through the Document Service, so a test holds a
+   * withdrawn Risk before 16-05's withdraw operation exists. `withdrawnBy` is a documentId or null.
+   */
+  setRiskWithdrawalFactsFixture: (riskDocumentId: string, facts: { withdrawnAt: string | null; withdrawnBy: string | null; withdrawalReason: string | null }) => Promise<void>;
+  /**
+   * Phase 16 (D-21): writes one history row straight through the Document Service, past the only writer's checks, so a
+   * test can hold a row the writer would refuse (a malformed `changes`). `actor`, `assessment`, `risk` and `aiRun` are
+   * documentIds. Returns the row's documentId.
+   */
+  writeRawHistoryRowFixture: (row: Record<string, unknown>) => Promise<string>;
+  /**
+   * Phase 13 (D-21): a request's notes as the Document Service holds them, by sequence, each relation as a
+   * documentId. No core route reaches the notes, so a persistence comparison reads them here.
+   */
+  listRequestNotes: (requestDocumentId: string) => Promise<Array<Record<string, unknown>>>;
+  /** Phase 13 (D-24): every read state on a request, by reader then id, the reader as a documentId. */
+  listRequestNoteReadStates: (requestDocumentId: string) => Promise<Array<Record<string, unknown>>>;
+  /**
+   * Phase 13 (D-21, T-13-22): how many note rows in the whole database reference no existing request, counted in SQL
+   * so a note left behind by a deleted request is found even though no request filter can reach it.
+   */
+  countOrphanedRequestNotes: () => Promise<number>;
+  /**
+   * WR-204: how many note and read-state rows the whole database holds, counted in SQL, so a refusal snapshot sees a
+   * write that landed on another request or on none, which no request-scoped read can reach.
+   */
+  countRequestNoteRows: () => Promise<{ notes: number; readStates: number }>;
+  /**
+   * Phase 13 (D-21): writes `count` notes by Jane on the request straight through the Document Service, with sequences
+   * 1 to `count`, so a test can reach the 500-note cap without posting 500 times.
+   */
+  createRequestNoteFixtures: (requestDocumentId: string, count: number) => Promise<void>;
+  /**
+   * Phase 13 (D-27, 13-16): writes the given notes on the request straight through the Document Service, each with its
+   * own part, sequence, posting time, body and AI-input mark; a Requestor note is Jane's, an analyst note Bob's. Returns
+   * the notes' documentIds in the order given.
+   */
+  seedRequestNotes: (requestDocumentId: string, notes: ReadonlyArray<{ part: "requestor" | "security-analyst"; sequence: number; postedAt: string; body: string; changesAiInputs: boolean }>) => Promise<string[]>;
+  /**
+   * Gives a user created in a test an `x-csrm-test-identity` label, so the test can call the mounted API as them
+   * (Phase 13: the participant-shaped caller Phase 17 will add).
+   */
+  registerTestIdentity: (label: string, userDocumentId: string) => void;
   developmentPermissionActions: readonly string[];
   getObservedDevelopmentIdentity: (email: string) => unknown;
   getPublicPermissionActions: () => Promise<string[]>;
@@ -344,12 +601,43 @@ export type AuthorizationHttpHarness = {
   getQuestion: (documentId: string) => Promise<Record<string, unknown> | null>;
   getAssessment: (documentId: string) => Promise<Record<string, unknown> | null>;
   getRisk: (documentId: string) => Promise<Record<string, unknown> | null>;
+  getAiRun: (documentId: string) => Promise<Record<string, unknown> | null>;
+  createAiRunFixture: (data: CreateRunningAiRunInput) => Promise<string>;
+  // Phase 15 D-19 (W-1): either envelope family; the run record checks it against the run's operation.
+  completeAiRunFixture: (runId: string, proposal: AiRunProposal) => Promise<Record<string, unknown>>;
+  failAiRunFixture: (runId: string, code: string, message: string) => Promise<Record<string, unknown>>;
+  appendAiRunDecisionsFixture: (runId: string, events: AiRunDecisionEvent[]) => Promise<void>;
+  /** Writes fields of an AI run straight through the Document Service, as the Content Manager can (WR-103). */
+  updateAiRunFixture: (runId: string, data: Record<string, unknown>) => Promise<void>;
+  /** Deletes an AI run, as an administrator can in the Content Manager (WR-103). */
+  deleteAiRunFixture: (runId: string) => Promise<void>;
+  /** Runs the AI run reconciliation of D-20 against this instance, at `now` when given (WR-01). */
+  reconcileInterruptedAiRunsFixture: (now?: () => Date) => Promise<number>;
   getControlImplementation: (documentId: string) => Promise<Record<string, unknown> | null>;
   countRisksForAssessment: (assessmentDocumentId: string) => Promise<number>;
+  /** WR-210: an assessment's Risks in an explicit order (risk number, as the analyst's page reads them), with their relations. */
+  listRisksForAssessment: (assessmentDocumentId: string) => Promise<Array<Record<string, unknown>>>;
   countControlImplementationsForRisk: (riskDocumentId: string) => Promise<number>;
-  createUserFixture: (data: { email: string; username: string; displayName: string; accountStatus: "active" | "inactive" }) => Promise<string>;
+  /**
+   * Creates an IdamBox User. `roles` names seeded CSRM Roles to hold (none when absent): WR-101 needs a user holding both
+   * the human Security Analyst and the Security Analyst Agent role, a misconfiguration no seeded identity has.
+   */
+  createUserFixture: (data: {
+    email: string;
+    username: string;
+    displayName: string;
+    accountStatus: "active" | "inactive";
+    roles?: ReadonlyArray<"Requestor" | "Security Analyst" | "Security Analyst Agent">;
+  }) => Promise<string>;
+  /**
+   * WR-102: runs `action` while the seeded Role `roleName` holds no Function granting `operation` (a FunctionApi url),
+   * then gives the Role its Functions back, so a test can prove what a later catalogue change to one grant would do.
+   */
+  withRoleOperationWithdrawn: <T>(roleName: "Requestor" | "Security Analyst" | "Security Analyst Agent", operation: string, action: () => Promise<T>) => Promise<T>;
   /** Creates one document of a CSRM content type through the Document Service and returns its documentId. */
   createFixtureDocument: (uid: CsrmFixtureUid, data: Record<string, unknown>) => Promise<string>;
+  /** Writes fields of one CSRM document through the Document Service, for seeding states no route produces. */
+  updateFixtureDocument: (uid: CsrmFixtureUid, documentId: string, data: Record<string, unknown>) => Promise<void>;
   createAssessmentRequestFixture: (data: {
     requestNumber: string;
     title: string;
@@ -357,6 +645,8 @@ export type AuthorizationHttpHarness = {
     requestor: "owner" | "otherRequestor";
     dueDate?: string | null;
     submittedDate?: string | null;
+    assessmentType?: "BAU" | "Project" | "Other";
+    businessCriticality?: "Low" | "Moderate" | "High" | "Critical";
   }) => Promise<string>;
   /**
    * Links a questionnaire to the request, released by the analyst when asked,
@@ -406,7 +696,7 @@ export type AuthorizationHttpHarness = {
   /** CR-101: runs `work` and returns every FOR UPDATE row lock taken meanwhile, in the order taken. */
   recordRowLocks: <T>(work: () => Promise<T>) => Promise<{ result: T; locks: RecordedRowLock[] }>;
   /** Counts a review queue through the running application's own shared bucket counter. */
-  countReviewQueueBucketFixture: (bucket: ReviewQueueBucketFixture, activeIds: readonly string[]) => Promise<number>;
+  countReviewQueueBucketFixture: (bucket: ReviewQueueBucketFixture, activeIds: readonly string[], options?: ReviewQueueCountFixtureOptions) => Promise<number>;
   createAssessmentFixture: (data: {
     assessmentNumber: string;
     assessmentStatus: string;
@@ -422,11 +712,32 @@ export type AuthorizationHttpHarness = {
   setRequestStatusFixture: (requestDocumentId: string, requestStatus: string) => Promise<void>;
   setUserAccountStatusFixture: (userDocumentId: string, accountStatus: "active" | "inactive") => Promise<void>;
   createRiskRegisterFixture: (assessmentDocumentId: string, data: Record<string, unknown>) => Promise<string>;
-  createRiskRegisterMitigationFixture: (riskDocumentId: string, controlDocumentId: string, controlStatus: string) => Promise<string>;
+  createRiskRegisterMitigationFixture: (
+    riskDocumentId: string,
+    controlDocumentId: string,
+    controlStatus: string,
+    data?: Record<string, unknown>,
+  ) => Promise<string>;
+  /**
+   * Writes one stored value straight to its column, past the Document Service's enum validation, so a test can
+   * hold a legacy value off the JDL vocabulary (11-15: the register's "none" filters must list it).
+   */
+  writeStoredValueFixture: (
+    table: "csrm_risks" | "csrm_control_implementations",
+    documentId: string,
+    column: "treatment_status" | "treatment_action" | "effectiveness_rating",
+    value: string | null,
+  ) => Promise<void>;
   getAdministrationRecord: (kind: AdministrationFixtureKind, documentId: string) => Promise<Record<string, unknown> | null>;
   countAdministrationRecords: (kind: AdministrationFixtureKind) => Promise<number>;
   seedRiskTypesDirectly: (count: number, prefix: string) => Promise<{ targetName: string }>;
-  createCsvMultipart: (input: { filename: string; bytes: Uint8Array; digest?: string; confirmed?: boolean }) => FormData;
+  /**
+   * `decisions` (19-13): the commit's JSON object of row number to `update` or `skip`, sent as given. `resultToken` and
+   * `timeZone` (19-14): the error report's Results token and the viewer's zone; `digest` is sent as `previewDigest`.
+   */
+  createCsvMultipart: (input: MultipartImportInput) => FormData;
+  /** The XLSX sibling of createCsvMultipart (19-13): the same fields, with the workbook media type. */
+  createXlsxMultipart: (input: MultipartImportInput) => FormData;
   /**
    * The content API as the running instance mounts it: every application
    * router's routes, every plugin's content-api routes and the koa layers that
@@ -439,10 +750,40 @@ export type AuthorizationHttpHarness = {
   countUsersPermissionsUsers: () => Promise<number>;
   /** Reads every getter at once: the before and after halves of a persistence comparison around a denied mutation. */
   snapshot: (getters: ReadonlyArray<() => Promise<unknown>>) => Promise<unknown[]>;
+  /**
+   * 14-04 (D-06): the running instance's attachment storage port, loaded from the compiled application as Strapi
+   * loads it, so a test stores and reads bytes exactly as the attachment operations will.
+   */
+  attachmentStorage: () => AttachmentStorage;
+  /** D-15: the private storage directory this instance was booted with; removed when the harness closes. */
+  attachmentStorageDirectory: () => string;
+  /** The upload plugin's file record, or null: what the storage port wrote beside the bytes. */
+  findUploadFileRecord: (fileId: number) => Promise<Record<string, unknown> | null>;
+  /** How many upload plugin file records exist; a refused or unmounted upload must leave it unchanged. */
+  countUploadFileRecords: () => Promise<number>;
+  /**
+   * 14-06 (D-01): a request's attachment records as stored, oldest first, with the media relation as `fileId` and
+   * every user and note relation as its documentId, so a test reads the facts no response serves (the digest, the
+   * scan attempts, the event log).
+   */
+  listRequestAttachments: (requestDocumentId: string) => Promise<Array<Record<string, unknown>>>;
+  /** How many attachment rows exist in the whole database; a refused upload must leave it unchanged. */
+  countRequestAttachmentRows: () => Promise<number>;
+  /** The names of the files in this instance's private storage directory, sorted; empty before the first upload. */
+  listAttachmentStorageFiles: () => Promise<string[]>;
+  /**
+   * 14-06 (D-10): `count` clean text attachments on a request, each with real stored bytes and a plugin file record
+   * through the storage port, uploaded by Jane unless another IdamBox User documentId is named. IN-302: each takes the
+   * part the upload would give its uploader (authorPartFor): `requestor` when the uploader raised the request, otherwise
+   * `security-analyst`, so a seed never writes a record the upload path cannot produce.
+   */
+  seedRequestAttachments: (requestDocumentId: string, count: number, uploadedBy?: string) => Promise<string[]>;
   close: () => Promise<void>;
 };
 
 export type AuthorizationHttpHarnessOptions = {
+  /** D-31: pin the data ceiling for this isolated test run. */
+  aiDataClassificationCeiling?: string;
   /** Install the D-38 internal-error middleware, which throws for a request carrying INTERNAL_ERROR_HEADER. */
   internalErrorMiddleware?: boolean;
   /**
@@ -455,6 +796,15 @@ export type AuthorizationHttpHarnessOptions = {
    * JWKS the test serves, and link the seeded people to `keycloakSubjects`. Left out, it is off.
    */
   keycloakTokenVerification?: { issuer: string; clientId: string };
+  /**
+   * D-15: scan with the ClamAV adapter against this host and port (a fake clamd) instead of the development double.
+   */
+  attachmentScanner?: { kind: "clamav"; host: string; port: number; timeoutMs?: number };
+  /**
+   * D-06: store attachments in S3 at this endpoint (a fake object store) instead of the private local directory. The
+   * SDK gets dummy credentials and the instance-metadata lookup is disabled, so no real AWS endpoint is contacted.
+   */
+  attachmentStorage?: { kind: "s3"; endpoint: string; bucket: string; kmsKeyId: string };
 };
 
 /** The Keycloak subjects a token-verification harness links to the seeded IdamBox Users. */
@@ -465,9 +815,35 @@ export const keycloakSubjects = Object.freeze({
   serviceAnalystAgent: "kc-subject-service-agent",
 });
 
+/** IN-301: the dummy access key id an S3 harness boot gives the SDK; a presigned URL's credential starts with it. */
+export const HARNESS_S3_ACCESS_KEY_ID = "csrm-test-access-key";
+
+/** D-15: every attachment setting a harness boot pins or clears, restored when the harness closes. */
+const ATTACHMENT_ENVIRONMENT = [
+  "CSRM_ATTACHMENT_STORAGE",
+  "CSRM_ATTACHMENT_LOCAL_DIR",
+  "CSRM_ATTACHMENT_SCANNER",
+  "CSRM_ATTACHMENT_S3_BUCKET",
+  "CSRM_ATTACHMENT_S3_REGION",
+  "CSRM_ATTACHMENT_S3_KMS_KEY_ID",
+  "CSRM_ATTACHMENT_S3_ENDPOINT",
+  "CSRM_CLAMAV_HOST",
+  "CSRM_CLAMAV_PORT",
+  "CSRM_CLAMAV_TIMEOUT_MS",
+  // The AWS SDK's own settings: pinned for an S3 boot, cleared otherwise, so a developer's profile is never used.
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "AWS_REGION",
+  "AWS_PROFILE",
+  "AWS_ENDPOINT_URL",
+  "AWS_ENDPOINT_URL_S3",
+  "AWS_EC2_METADATA_DISABLED",
+] as const;
+
 export async function startAuthorizationHttpHarness(options: AuthorizationHttpHarnessOptions = {}): Promise<AuthorizationHttpHarness> {
   const originalEnvironment = new Map(
-    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_CORS_ALLOWED_ORIGINS", "IDAMBOX_KEYCLOAK_PROVISIONING", "IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION", "KEYCLOAK_ISSUER", "KEYCLOAK_TOKEN_CLIENT_ID"]
+    ["NODE_ENV", "CSRM_ENVIRONMENT", "CSRM_DEV_IDENTITY", "CSRM_DEV_API_TOKEN", "IDAMBOX_SEED_CORE", "CSRM_AI_PROVIDER", "CSRM_AI_DATA_CLASSIFICATION_CEILING", "CSRM_AI_COMPLETION_TRANSCRIPT_DIAGNOSTICS", "CSRM_AI_REQUEST_TIMEOUT_MS", "CSRM_CORS_ALLOWED_ORIGINS", "IDAMBOX_KEYCLOAK_PROVISIONING", "IDAMBOX_KEYCLOAK_TOKEN_VERIFICATION", "KEYCLOAK_ISSUER", "KEYCLOAK_TOKEN_CLIENT_ID", ...ATTACHMENT_ENVIRONMENT]
       .map((name) => [name, process.env[name]] as const),
   );
   await mkdir(databaseDir, { recursive: true });
@@ -486,9 +862,15 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   process.env.DATABASE_FILENAME = path.relative(appDir, databaseFilename);
   process.env.IDAMBOX_SEED_CSRM = "false";
   process.env.IDAMBOX_SEED_CORE = "false";
-  delete process.env.CSRM_DEV_API_TOKEN;
+  // WR-306: cleared to "", never deleted. Strapi's configuration module runs dotenv when the harness first requires
+  // it, and dotenv fills every unset key from the developer's file but never overrides one that exists, even empty.
+  process.env.CSRM_DEV_API_TOKEN = "";
   process.env.csrmAppIsEnabled = "true";
   process.env.CSRM_AI_PROVIDER = "deterministic";
+  process.env.CSRM_AI_DATA_CLASSIFICATION_CEILING = options.aiDataClassificationCeiling ?? "";
+  process.env.CSRM_AI_COMPLETION_TRANSCRIPT_DIAGNOSTICS = "false";
+  // WR-01: the AI run reconciliation bound derives from it, so a developer's .env never moves the bound under a test.
+  process.env.CSRM_AI_REQUEST_TIMEOUT_MS = "60000";
   process.env.CSRM_CORS_ALLOWED_ORIGINS = options.corsAllowedOrigins ?? "";
   process.env.STRAPI_DISABLE_UPDATE_NOTIFICATION = "true";
   // Tests never reach Keycloak, whatever the developer .env enables.
@@ -498,6 +880,36 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     process.env.KEYCLOAK_ISSUER = options.keycloakTokenVerification.issuer;
     process.env.KEYCLOAK_TOKEN_CLIENT_ID = options.keycloakTokenVerification.clientId;
   }
+  // D-15: attachments boot with this instance's own private directory and the development scanner, under the
+  // development key the double requires, so a developer's .env never changes an outcome. Every attachment variable
+  // is pinned or cleared, and restored on close. WR-306: a cleared variable is set to "", which attachment-config's
+  // setting() and the AWS SDK both read as unset, because dotenv would refill a deleted one (see CSRM_DEV_API_TOKEN).
+  const attachmentStorageDirectory = path.join(databaseDir, `attachments-${process.pid}`);
+  await rm(attachmentStorageDirectory, { recursive: true, force: true });
+  for (const name of ATTACHMENT_ENVIRONMENT) process.env[name] = "";
+  process.env.NODE_ENV = "development";
+  process.env.CSRM_ENVIRONMENT = "development";
+  process.env.CSRM_ATTACHMENT_STORAGE = "local";
+  process.env.CSRM_ATTACHMENT_LOCAL_DIR = attachmentStorageDirectory;
+  process.env.CSRM_ATTACHMENT_SCANNER = "development";
+  if (options.attachmentScanner) {
+    process.env.CSRM_ATTACHMENT_SCANNER = "clamav";
+    process.env.CSRM_CLAMAV_HOST = options.attachmentScanner.host;
+    process.env.CSRM_CLAMAV_PORT = String(options.attachmentScanner.port);
+    if (options.attachmentScanner.timeoutMs !== undefined) process.env.CSRM_CLAMAV_TIMEOUT_MS = String(options.attachmentScanner.timeoutMs);
+  }
+  if (options.attachmentStorage) {
+    process.env.CSRM_ATTACHMENT_STORAGE = "s3";
+    process.env.CSRM_ATTACHMENT_S3_ENDPOINT = options.attachmentStorage.endpoint;
+    process.env.CSRM_ATTACHMENT_S3_BUCKET = options.attachmentStorage.bucket;
+    process.env.CSRM_ATTACHMENT_S3_KMS_KEY_ID = options.attachmentStorage.kmsKeyId;
+    // Dummy credentials, so the SDK never resolves a real one; kept until close, because the SDK resolves them on first
+    // use. IN-301: the fake store checks no signature; a test checks a presigned URL's credential names this key id.
+    process.env.AWS_ACCESS_KEY_ID = HARNESS_S3_ACCESS_KEY_ID;
+    process.env.AWS_SECRET_ACCESS_KEY = "csrm-test-secret-key";
+    process.env.AWS_REGION = "ap-southeast-2";
+    process.env.AWS_EC2_METADATA_DISABLED = "true";
+  }
 
   // The public package exports are intentionally loaded dynamically because its
   // declaration surface re-exports Core but does not declare these runtime helpers.
@@ -506,7 +918,22 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     createStrapi: (options: { appDir: string; distDir: string }) => RunningStrapi & { load: () => Promise<RunningStrapi> };
   };
   const compiled = await strapiPackage.compileStrapi({ appDir });
-  const strapi = await strapiPackage.createStrapi(compiled).load();
+  const instance = strapiPackage.createStrapi(compiled);
+  const rootRoutes: MountedApplicationRoute[] = [];
+  const registerRoutes = instance.server.routes.bind(instance.server);
+  // Observe actual root-manager registration before bootstrap; metadata is never synthesized from the manifest.
+  instance.server.routes = (definition) => {
+    const result = registerRoutes(definition);
+    if (definition.type === undefined && Array.isArray(definition.routes)) {
+      for (const route of definition.routes) {
+        rootRoutes.push({ apiName: "iam-scim", routerName: "root", method: route.method.toUpperCase(),
+          path: `${definition.prefix ?? ""}${route.path}`, handler: qualifiedHandler("iam-scim", route.handler),
+          config: structuredClone(route.config ?? {}) });
+      }
+    }
+    return result;
+  };
+  const strapi = await instance.load();
   const apiTokenService = strapi.service("admin::api-token-content-api") as {
     create: (attributes: { name: string; description: string; type: "full-access"; lifespan: null }) => Promise<{ accessKey: string }>;
   };
@@ -638,6 +1065,10 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   });
   const address = strapi.server.httpServer.address();
   assert.ok(address && typeof address !== "string", "Strapi must listen on a loopback port");
+  // Synchronous SQLite fixture work can block the event loop past Node's 5-second keep-alive
+  // timeout. The next fetch then reuses a pooled socket that the server closes in the same
+  // turn, and a non-idempotent POST surfaces it as ECONNRESET. Outlast any fixture stretch.
+  (strapi.server.httpServer as unknown as { keepAliveTimeout: number }).keepAliveTimeout = 120_000;
 
   let workflowFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedRequestWorkflowFixtures"]>> | null = null;
   let questionnaireFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedQuestionnaireWorkflowFixtures"]>> | null = null;
@@ -645,6 +1076,7 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
   let conditionalQuestionnaireFixture: Awaited<ReturnType<AuthorizationHttpHarness["seedConditionalQuestionnaireFixture"]>> | null = null;
   let concurrentQuestionnaireFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedConcurrentQuestionnaireFixtures"]>> | null = null;
   let assessmentWorkflowFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedAssessmentWorkflowFixtures"]>> | null = null;
+  let uatALikeFixture: Awaited<ReturnType<AuthorizationHttpHarness["seedUatALikeFixture"]>> | null = null;
   let administrationFixtures: Awaited<ReturnType<AuthorizationHttpHarness["seedAdministrationFixtures"]>> | null = null;
   let lifecycleQuestionnaireSequence = 0;
   const jobObservations: AssessmentJobObservation[] = [];
@@ -715,6 +1147,109 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     };
   };
 
+  /*
+   * Phase 15 (15-06): the proposal workflow and providers as the mounted instance loaded them, so a fixture call shares
+   * the instance's job registry and a patched provider is the one its jobs call.
+   */
+  type MountedProposalWorkflow = {
+    startQuestionnaireProposals: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    startQuestionRewrite: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    getQuestionnaireProposalJob: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    retryQuestionnaireProposalJob: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    settledQuestionnaireProposalJob: (strapi: unknown, jobId: string) => Promise<Record<string, unknown> | null>;
+    activeQuestionnaireProposalJobs: (strapi: unknown, questionnaireId: string) => ReadonlyArray<Record<string, unknown>>;
+    QuestionnaireProposalWorkflowError: new (...args: never[]) => Error & { status: number; reason?: string };
+  };
+  const mountedProposalWorkflow = (): MountedProposalWorkflow => require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "questionnaire-proposals-workflow.js")) as MountedProposalWorkflow;
+  const mountedProposalProviders = () => {
+    const providerModule = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "deterministic-questionnaire-proposal-provider.js")) as {
+      deterministicQuestionnaireProposalProvider: InjectableQuestionnaireProposalProvider;
+      deterministicQuestionRewriteProvider: InjectableQuestionRewriteProvider;
+    };
+    return { proposals: providerModule.deterministicQuestionnaireProposalProvider, rewrites: providerModule.deterministicQuestionRewriteProvider };
+  };
+  const proposalFixtureCall = async (success: number, call: (workflow: MountedProposalWorkflow) => Promise<Record<string, unknown>>): Promise<ProposalFixtureResponse> => {
+    const workflow = mountedProposalWorkflow();
+    try {
+      return { status: success, data: await call(workflow) };
+    } catch (error) {
+      if (!(error instanceof workflow.QuestionnaireProposalWorkflowError)) throw error;
+      return { status: error.status, ...(error.reason ? { reason: error.reason } : {}), message: error.message };
+    }
+  };
+
+  /* Phase 15 (15-07): the Requestor's mounted answer services, their refusals returned as the routes answer them. */
+  type MountedQuestionnaireWorkflow = {
+    saveAnswers: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    submitQuestionnaire: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    QuestionnaireWorkflowError: new (...args: never[]) => Error & { status: number; reason?: string };
+  };
+  const questionnaireServiceCall = async (call: (workflow: MountedQuestionnaireWorkflow) => Promise<Record<string, unknown>>): Promise<ProposalFixtureResponse> => {
+    const workflow = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "questionnaire-workflow.js")) as MountedQuestionnaireWorkflow;
+    try {
+      return { status: 200, data: await call(workflow) };
+    } catch (error) {
+      if (!(error instanceof workflow.QuestionnaireWorkflowError)) throw error;
+      return { status: error.status, ...(error.reason ? { reason: error.reason } : {}), message: error.message };
+    }
+  };
+
+  /*
+   * IN-207: the deterministic draft proposes Risks only of the Risk Types with its three exact names, so the UAT-A-like
+   * library gives its types those names (and Payment Integrity), and its controls reach the draft as suggestions. A Risk
+   * Type's name is unique and the assessment workflow fixtures use the same three names, so whichever seeder runs second
+   * adds its applicable controls to the type the first created.
+   */
+  const ensureRiskType = async (name: string, description: string, controlIds: readonly string[]): Promise<string> => {
+    const riskTypes = strapi.documents("api::csrm-risk-type.csrm-risk-type") as unknown as {
+      findMany: (input: Record<string, unknown>) => Promise<Array<Record<string, unknown>>>;
+      update: (input: { documentId: string; data: Record<string, unknown> }) => Promise<Document>;
+    };
+    const [existing] = await riskTypes.findMany({ filters: { name: { $eq: name } }, populate: { applicableControls: true }, limit: 1 });
+    if (!existing) return (await createDocument(strapi, "api::csrm-risk-type.csrm-risk-type", { name, description, applicableControls: [...controlIds] })).documentId;
+    const current = (Array.isArray(existing.applicableControls) ? existing.applicableControls : []).map((control) => String((control as { documentId: unknown }).documentId));
+    await riskTypes.update({ documentId: String(existing.documentId), data: { applicableControls: [...new Set([...current, ...controlIds])] } });
+    return String(existing.documentId);
+  };
+
+  /* The UAT-A-like request: systems, the Restricted asset, the Privacy Act and TFN obligations, a payroll processor. */
+  const createUatALikeRequest = async (suffix: string, library: { systemIds: string[]; assetIds: string[] }) => {
+    const request = await createDocument(strapi, "api::csrm-assessment-request.csrm-assessment-request", { requestNumber: `UATA-SECRET-${suffix}`, title: "Payroll platform change", description: "Unsigned payment files could be altered.", assessmentType: "Project", division: "Corporate", businessUnit: "People and Finance", businessPurpose: "Pay employees", businessCriticality: "High", thirdPartyInvolvement: true, thirdPartyDetails: "External payroll processor", regulatoryRequirements: "Privacy Act 1988 and tax file number obligations", requestStatus: "questionnaire-in-progress", requestor: owner.documentId, informationSystems: library.systemIds, informationAssets: library.assetIds });
+    const questionnaire = await createDocument(strapi, "api::csrm-questionnaire.csrm-questionnaire", { questionnaireNumber: `UATA-QUES-${suffix}`, title: "Payroll controls", assessmentRequest: request.documentId, ...releaseFacts(analyst.documentId) });
+    const yesNo = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }, { value: "not-sure", label: "Not sure" }];
+    for (const [index, item] of [
+      { key: "payment-files", text: "Are payment files signed?", value: "Unsigned payment files", help: "Describe the integrity control." },
+      { key: "duties", text: "Are duties segregated?", value: "Partial segregation of duties", help: "Describe approval roles." },
+      /*
+       * WR-204: the fallback question carries the key the deterministic questionnaire gives its recovery question, so the
+       * deterministic draft cites this answer and lists the claim no source supports as uncited (UAT-042).
+       */
+      { key: "recovery-tested", text: "Has the pay-run fallback been tested?", value: "no", help: "Include test results.", answerType: "Single select", choices: yesNo },
+      { key: "optional", text: "Other recovery notes?", value: null, help: "Optional." },
+    ].entries()) await createDocument(strapi, "api::csrm-question.csrm-question", { questionText: item.text, helpText: item.help, answerType: item.answerType ?? "Long text", options: { schemaVersion: 1, questionKey: item.key, section: { key: "payment", title: "Payment processing", order: 1 }, order: index + 1, required: index < 3, ...(item.choices ? { choices: item.choices } : {}) }, answer: { schemaVersion: 1, value: item.value, state: "submitted", updatedAt: "2026-08-30T00:00:00.000Z", submittedAt: "2026-08-30T00:00:00.000Z" }, questionnaire: questionnaire.documentId });
+    return { requestId: request.documentId, questionnaireId: questionnaire.documentId };
+  };
+  /* The UAT-A-like library and its first request, seeded once per harness. */
+  const seedUatALikeLibrary = async (): Promise<Awaited<ReturnType<AuthorizationHttpHarness["seedUatALikeFixture"]>>> => {
+    if (uatALikeFixture) return uatALikeFixture;
+    const controlNames = ["File integrity verification", "Segregation of duties", "Backup recovery testing", "Privileged access review", "Payroll reconciliation", "Payment approval", "Audit logging", "Change control", "Incident response", "Supplier assurance", "Encryption at rest", "Access recertification"];
+    const controls = [];
+    for (const [index, name] of controlNames.entries()) controls.push(await createDocument(strapi, "api::csrm-control.csrm-control", { controlNumber: `UATA-${String(index + 1).padStart(3, "0")}`, name, description: name, controlType: "Preventive", framework: "Mounted test framework", frameworkVersion: "1" }));
+    const riskTypeIds: string[] = [];
+    for (const [index, name] of ["Internet Exposure", "Personal Information Handling", "Third-Party Dependency", "Payment Integrity"].entries()) riskTypeIds.push(await ensureRiskType(name, `${name} risk`, controls.slice(index, index + 3).map((control) => control.documentId)));
+    const systems = [];
+    for (const data of [
+      { name: "HR and payroll platform", description: "Internet-facing pay processing", environment: "Production", deploymentModel: "SaaS", internetFacing: true },
+      { name: "Finance system", description: "Payment reconciliation", environment: "Production" },
+      { name: "Identity provider", description: "Workforce access", environment: "Production" },
+    ]) systems.push(await createDocument(strapi, "api::csrm-information-system.csrm-information-system", data));
+    const asset = await createDocument(strapi, "api::csrm-information-asset.csrm-information-asset", { name: "Employee payment details", description: "Personal and bank details", type: "Data", dataClassification: "Restricted", containsPersonalData: true, comments: "Private asset comment" });
+    const library = { systemIds: systems.map((system) => system.documentId), assetIds: [asset.documentId] };
+    const { requestId, questionnaireId } = await createUatALikeRequest("001", library);
+    uatALikeFixture = { requestId, questionnaireId, ...library, riskTypeIds, controlIds: controls.map((control) => control.documentId) };
+    return uatALikeFixture;
+  };
+
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
     identities: { owner: "owner", otherRequestor: "other", analyst: "analyst", secondAnalyst: "second-analyst", analystAgent: "agent", serviceAnalystAgent: "service-agent", inactiveAnalyst: "inactive" },
@@ -725,8 +1260,14 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       analyst: analyst.documentId,
       secondAnalyst: secondAnalyst.documentId,
       serviceAnalystAgent: serviceAnalystAgent.documentId,
+      inactiveAnalyst: inactiveAnalyst.documentId,
     },
     requests: { owner: ownerRequest.documentId, otherRequestor: otherRequest.documentId },
+    seedUatALikeFixture: seedUatALikeLibrary,
+    async seedUatALikeRequest(label) {
+      return createUatALikeRequest(label, await seedUatALikeLibrary());
+    },
+    buildAssessmentContextFixture: (input) => buildAssessmentContextFor(strapi as unknown as AssessmentContextStrapi, input),
     async seedRequestWorkflowFixtures() {
       if (workflowFixtures) return workflowFixtures;
 
@@ -1020,12 +1561,9 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
         framework: "Mounted test framework",
         frameworkVersion: "1",
       });
+      // IN-207: the UAT-A-like library may already hold these names; each seeder adds its applicable controls.
       await Promise.all(["Internet Exposure", "Personal Information Handling", "Third-Party Dependency"].map((name) =>
-        createDocument(strapi, "api::csrm-risk-type.csrm-risk-type", {
-          name,
-          description: `Mounted deterministic ${name}`,
-          applicableControls: [control.documentId],
-        })));
+        ensureRiskType(name, `Mounted deterministic ${name}`, [control.documentId])));
 
       const createReleaseFixture = async (
         suffix: string,
@@ -1270,6 +1808,163 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
         provider.generate = originalGenerate;
       }
     },
+    async withHeldAssessmentDraftProvider(action) {
+      const provider = (require(path.join(appDir, "dist", "src", "api", "csrm-assessment", "services", "deterministic-assessment-draft-provider.js")) as {
+        deterministicAssessmentDraftProvider: InjectableAssessmentDraftProvider;
+      }).deterministicAssessmentDraftProvider;
+      const originalGenerate = provider.generate;
+      let releaseGate: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { releaseGate = resolve; });
+      let signalReached: () => void = () => undefined;
+      const reached = new Promise<void>((resolve) => { signalReached = resolve; });
+      provider.generate = async (...args: unknown[]) => {
+        signalReached();
+        await gate;
+        return originalGenerate.apply(provider, args);
+      };
+      try {
+        return await action(reached);
+      } finally {
+        releaseGate();
+        provider.generate = originalGenerate;
+      }
+    },
+    async withHeldAiContext(action) {
+      // Both generation workflows call the loader through its module object, so the mounted instance takes this hold.
+      const loader = require(path.join(appDir, "dist", "src", "csrm", "ai", "assessment-context-loader.js")) as {
+        buildAssessmentContextFor: (...args: unknown[]) => Promise<unknown>;
+      };
+      const originalBuild = loader.buildAssessmentContextFor;
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let signalReached: () => void = () => undefined;
+      const reached = new Promise<void>((resolve) => { signalReached = resolve; });
+      loader.buildAssessmentContextFor = async (...args: unknown[]) => {
+        signalReached();
+        await gate;
+        return originalBuild(...args);
+      };
+      try {
+        return await action({ reached, release });
+      } finally {
+        release();
+        loader.buildAssessmentContextFor = originalBuild;
+      }
+    },
+    async withHeldScreening(action) {
+      const screening = require(path.join(appDir, "dist", "src", "csrm", "files", "screen-attachment.js")) as {
+        screenAttachment: (...args: unknown[]) => Promise<unknown>;
+      };
+      const originalScreen = screening.screenAttachment;
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let signalReached: () => void = () => undefined;
+      const reached = new Promise<void>((resolve) => { signalReached = resolve; });
+      let held = false;
+      screening.screenAttachment = async (...args: unknown[]) => {
+        if (!held) {
+          held = true;
+          signalReached();
+          await gate;
+        }
+        return originalScreen(...args);
+      };
+      try {
+        return await action({ reached, release });
+      } finally {
+        release();
+        screening.screenAttachment = originalScreen;
+      }
+    },
+    async withFullExtractionQueue(action) {
+      const queue = require(path.join(appDir, "dist", "src", "csrm", "files", "extraction.js")) as {
+        runExclusively?: (task: () => Promise<unknown>) => Promise<unknown>;
+        EXTRACTION_QUEUE_MAX_WAITING?: number;
+      };
+      const { runExclusively, EXTRACTION_QUEUE_MAX_WAITING: waitingPlaces } = queue;
+      assert.ok(typeof runExclusively === "function" && typeof waitingPlaces === "number", "THE_EXTRACTION_QUEUE_IS_NOT_BOUNDED");
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const tasks = [runExclusively(() => gate), ...Array.from({ length: waitingPlaces }, () => runExclusively(async () => undefined))];
+      try {
+        return await action();
+      } finally {
+        release();
+        await Promise.allSettled(tasks);
+      }
+    },
+    async withHeldRequestLock(requestDocumentId, action) {
+      const lockModule = require(path.join(appDir, "dist", "src", "api", "csrm-assessment-request", "services", "request-lock.js")) as {
+        withRequestLock: (lockStrapi: unknown, documentId: string, work: (trx: unknown) => Promise<unknown>) => Promise<unknown>;
+      };
+      type Counter = { count: (query: { where?: Record<string, unknown> }) => Promise<number> };
+      const database = strapi.db as unknown as { transaction: (...args: unknown[]) => Promise<unknown>; query: (uid: string) => Counter };
+      const engine = database.query("api::csrm-request-attachment.csrm-request-attachment");
+      const originalLock = lockModule.withRequestLock;
+      const ownTransaction = Object.prototype.hasOwnProperty.call(database, "transaction");
+      const originalTransaction = database.transaction;
+      const originalCount = engine.count;
+      // Each watched call runs inside its own scope, so the database calls it makes from inside the lock are its own.
+      const scope = new AsyncLocalStorage<WatchedRequestLockCall>();
+      const calls: WatchedRequestLockCall[] = [];
+      let admitFirst: () => void = () => undefined;
+      const door = new Promise<void>((resolve) => { admitFirst = resolve; });
+      let signalAtDoor: () => void = () => undefined;
+      const atDoor = new Promise<void>((resolve) => { signalAtDoor = resolve; });
+      let releaseCount: () => void = () => undefined;
+      const countGate = new Promise<void>((resolve) => { releaseCount = resolve; });
+      let signalCountHeld: (count: number) => void = () => undefined;
+      const countHeld = new Promise<number>((resolve) => { signalCountHeld = resolve; });
+      let countHoldTaken = false;
+      lockModule.withRequestLock = async (lockStrapi, documentId, work) => {
+        if (documentId !== requestDocumentId) return originalLock(lockStrapi, documentId, work);
+        const call: WatchedRequestLockCall = { transactionRequested: false, activeCounts: [] };
+        calls.push(call);
+        if (calls.length === 1) {
+          signalAtDoor();
+          await door;
+        }
+        return scope.run(call, () => originalLock(lockStrapi, documentId, work));
+      };
+      database.transaction = function (this: unknown, ...args: unknown[]) {
+        const call = scope.getStore();
+        if (call) call.transactionRequested = true;
+        return originalTransaction.apply(this, args);
+      };
+      engine.count = async (query) => {
+        const value = await originalCount.call(engine, query);
+        const call = scope.getStore();
+        if (call && query?.where !== undefined && "scanStatus" in query.where) {
+          call.activeCounts.push(Number(value));
+          if (!countHoldTaken) {
+            countHoldTaken = true;
+            signalCountHeld(Number(value));
+            await countGate;
+          }
+        }
+        return value;
+      };
+      try {
+        return await action({ atDoor, admitFirst, countHeld, releaseCount, calls: () => calls.map((call) => ({ ...call, activeCounts: [...call.activeCounts] })) });
+      } finally {
+        admitFirst();
+        releaseCount();
+        lockModule.withRequestLock = originalLock;
+        if (ownTransaction) database.transaction = originalTransaction;
+        else delete (database as { transaction?: unknown }).transaction;
+        engine.count = originalCount;
+      }
+    },
+    async withAiDataClassificationCeiling(ceiling, action) {
+      const config = (strapi as unknown as { config: { get: (key: string) => unknown; set: (key: string, value: unknown) => unknown } }).config;
+      const booted = config.get("ai.dataClassificationCeiling");
+      config.set("ai.dataClassificationCeiling", ceiling);
+      try {
+        return await action();
+      } finally {
+        config.set("ai.dataClassificationCeiling", booted);
+      }
+    },
     async withHeldQuestionnaireGeneration(requestDocumentId, action, options = {}) {
       const mountedProviderModule = require(path.join(
         appDir,
@@ -1444,6 +2139,141 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       });
       return documents.length;
     },
+    async getRequestAssignment(documentId) {
+      const request = await (strapi.documents("api::csrm-assessment-request.csrm-assessment-request") as StrapiDocumentService & {
+        findOne: (input: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+      }).findOne({
+        documentId,
+        fields: ["assignedAt", "assignmentLog"],
+        populate: { assignedAnalyst: { fields: ["documentId"] }, assignedBy: { fields: ["documentId"] } },
+      });
+      if (!request) return null;
+      const relationId = (value: unknown): string | null => (typeof value === "object" && value !== null
+        && typeof (value as { documentId?: unknown }).documentId === "string" ? (value as { documentId: string }).documentId : null);
+      return {
+        assignedAnalyst: relationId(request.assignedAnalyst),
+        assignedBy: relationId(request.assignedBy),
+        assignedAt: request.assignedAt ?? null,
+        assignmentLog: request.assignmentLog ?? null,
+      };
+    },
+    async listTableColumns(table) {
+      if (!/^[a-z_]+$/.test(table)) throw new Error(`TABLE_NAME_INVALID_${table}`);
+      const connection = (strapi as unknown as { db: { connection: { raw: (sql: string) => Promise<unknown> } } }).db.connection;
+      const rows = await connection.raw(`PRAGMA table_info(${table})`) as Array<{ name: string }>;
+      return rows.map((row) => row.name);
+    },
+    async riskHistoryRowsFixture(riskDocumentId) {
+      const rows = await strapi.documents("api::csrm-risk-history-event.csrm-risk-history-event").findMany({
+        filters: { risk: { documentId: { $eq: riskDocumentId } } },
+        populate: { actor: { fields: ["documentId"] }, assessment: { fields: ["documentId"] }, risk: { fields: ["documentId"] }, aiRun: { fields: ["documentId"] } },
+        sort: ["id:asc"],
+        limit: 10_000,
+      });
+      const relationId = (value: unknown): string | null => (typeof value === "object" && value !== null
+        && typeof (value as { documentId?: unknown }).documentId === "string" ? (value as { documentId: string }).documentId : null);
+      return rows.map((row) => {
+        const { actor, assessment, risk, aiRun, ...rest } = row as Record<string, unknown>;
+        return { ...rest, actor: relationId(actor), assessment: relationId(assessment), risk: relationId(risk), aiRun: relationId(aiRun) };
+      });
+    },
+    async riskWithdrawalFactsFixture(riskDocumentId) {
+      const risk = await strapi.documents("api::csrm-risk.csrm-risk").findOne?.({
+        documentId: riskDocumentId,
+        populate: { withdrawnBy: { fields: ["documentId"] } },
+      });
+      if (!risk) return null;
+      const withdrawnBy = risk.withdrawnBy;
+      return {
+        withdrawnAt: risk.withdrawnAt ?? null,
+        withdrawnBy: typeof withdrawnBy === "object" && withdrawnBy !== null && typeof (withdrawnBy as { documentId?: unknown }).documentId === "string"
+          ? (withdrawnBy as { documentId: string }).documentId : null,
+        withdrawalReason: risk.withdrawalReason ?? null,
+      };
+    },
+    async setRiskWithdrawalFactsFixture(riskDocumentId, facts) {
+      await strapi.documents("api::csrm-risk.csrm-risk").update?.({ documentId: riskDocumentId, data: { ...facts } });
+    },
+    async writeRawHistoryRowFixture(row) {
+      const created = await createDocument(strapi, "api::csrm-risk-history-event.csrm-risk-history-event", row);
+      return created.documentId;
+    },
+    async listRequestNotes(requestDocumentId) {
+      const notes = await (strapi.documents("api::csrm-request-note.csrm-request-note") as StrapiDocumentService).findMany({
+        filters: { assessmentRequest: { documentId: { $eq: requestDocumentId } } },
+        fields: ["documentId", "sequence", "body", "authorPart", "postedAt", "changesAiInputs", "aiInputLog"],
+        populate: { author: { fields: ["documentId"] } },
+        sort: ["sequence:asc", "id:asc"],
+        limit: 10_000,
+      });
+      return notes.map((note) => {
+        const { author, ...rest } = note as Record<string, unknown>;
+        const authorId = typeof author === "object" && author !== null ? (author as { documentId?: unknown }).documentId ?? null : null;
+        return { ...rest, author: authorId };
+      });
+    },
+    async listRequestNoteReadStates(requestDocumentId) {
+      const states = await (strapi.documents("api::csrm-request-note.csrm-request-note-read-state") as StrapiDocumentService).findMany({
+        filters: { assessmentRequest: { documentId: { $eq: requestDocumentId } } },
+        fields: ["documentId", "lastReadSequence", "lastReadAt"],
+        populate: { reader: { fields: ["documentId"] } },
+        sort: ["id:asc"],
+        limit: 10_000,
+      });
+      return states.map((state) => {
+        const { reader, ...rest } = state as Record<string, unknown>;
+        const readerId = typeof reader === "object" && reader !== null ? (reader as { documentId?: unknown }).documentId ?? null : null;
+        return { ...rest, reader: readerId };
+      });
+    },
+    async countOrphanedRequestNotes() {
+      const connection = (strapi as unknown as { db: { connection: { raw: (sql: string) => Promise<unknown> } } }).db.connection;
+      const rows = await connection.raw(`SELECT COUNT(*) AS orphaned FROM csrm_request_notes n WHERE NOT EXISTS (
+        SELECT 1 FROM csrm_request_notes_assessment_request_lnk l
+        JOIN csrm_assessment_requests r ON r.id = l.csrm_assessment_request_id
+        WHERE l.csrm_request_note_id = n.id
+      )`) as Array<{ orphaned: number | string }>;
+      return Number(rows[0]?.orphaned ?? Number.NaN);
+    },
+    async countRequestNoteRows() {
+      const connection = (strapi as unknown as { db: { connection: { raw: (sql: string) => Promise<unknown> } } }).db.connection;
+      const rows = await connection.raw(`SELECT
+        (SELECT COUNT(*) FROM csrm_request_notes) AS notes,
+        (SELECT COUNT(*) FROM csrm_request_note_read_states) AS read_states`) as Array<{ notes: number | string; read_states: number | string }>;
+      return { notes: Number(rows[0]?.notes ?? Number.NaN), readStates: Number(rows[0]?.read_states ?? Number.NaN) };
+    },
+    async createRequestNoteFixtures(requestDocumentId, count) {
+      for (let index = 1; index <= count; index += 1) {
+        await createDocument(strapi, "api::csrm-request-note.csrm-request-note", {
+          body: `Seeded note ${index}`,
+          authorPart: "requestor",
+          sequence: index,
+          postedAt: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString(),
+          changesAiInputs: false,
+          assessmentRequest: requestDocumentId,
+          author: owner.documentId,
+        });
+      }
+    },
+    async seedRequestNotes(requestDocumentId, notes) {
+      const ids: string[] = [];
+      for (const note of notes) {
+        const created = await createDocument(strapi, "api::csrm-request-note.csrm-request-note", {
+          body: note.body,
+          authorPart: note.part,
+          sequence: note.sequence,
+          postedAt: note.postedAt,
+          changesAiInputs: note.changesAiInputs,
+          assessmentRequest: requestDocumentId,
+          author: note.part === "requestor" ? owner.documentId : analyst.documentId,
+        });
+        ids.push(created.documentId);
+      }
+      return ids;
+    },
+    registerTestIdentity(label, userDocumentId) {
+      testIdentities.set(label, { documentId: userDocumentId });
+    },
     developmentPermissionActions: DEVELOPMENT_PERMISSION_ACTIONS,
     getObservedDevelopmentIdentity(email) {
       return observedDevelopmentIdentities.get(email);
@@ -1545,7 +2375,8 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     async getAssessment(documentId) {
       return (await strapi.documents("api::csrm-assessment.csrm-assessment").findOne?.({
         documentId,
-        populate: { assessmentRequest: { populate: { requestor: true } }, approvedBy: true, generatedBy: true, risks: true },
+        populate: { assessmentRequest: { populate: { requestor: true } }, approvedBy: true, generatedBy: true,
+          risks: { populate: { riskType: true, informationSystemImpacted: true, informationAssetImpacted: true, controlImplementations: true } } },
       })) ?? null;
     },
     async getRisk(documentId) {
@@ -1553,6 +2384,194 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
         documentId,
         populate: { assessment: true, riskType: true, riskOwner: true, controlImplementations: true },
       })) ?? null;
+    },
+    async withQuestionnaireProviderFailureCode(code, safeMessage, action) {
+      const providerModule = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "deterministic-questionnaire-generation-provider.js")) as { deterministicQuestionnaireGenerationProvider: InjectableQuestionnaireGenerationProvider };
+      const registryModule = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "questionnaire-generation-registry.js")) as { QuestionnaireGenerationJobFailure: new (failureCode: string, failureMessage: string) => Error };
+      const provider = providerModule.deterministicQuestionnaireGenerationProvider;
+      const originalGenerate = provider.generate;
+      provider.generate = async () => { throw new registryModule.QuestionnaireGenerationJobFailure(code, safeMessage); };
+      try { return await action(); } finally { provider.generate = originalGenerate; }
+    },
+    async withQuestionnaireProviderOutput(generate, action) {
+      const provider = (require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "deterministic-questionnaire-generation-provider.js")) as { deterministicQuestionnaireGenerationProvider: InjectableQuestionnaireGenerationProvider }).deterministicQuestionnaireGenerationProvider;
+      const originalGenerate = provider.generate;
+      provider.generate = async () => generate();
+      try { return await action(); } finally { provider.generate = originalGenerate; }
+    },
+    async withAssessmentDraftProviderOutput(transform, action) {
+      const provider = (require(path.join(appDir, "dist", "src", "api", "csrm-assessment", "services", "deterministic-assessment-draft-provider.js")) as { deterministicAssessmentDraftProvider: InjectableAssessmentDraftProvider }).deterministicAssessmentDraftProvider;
+      const originalGenerate = provider.generate;
+      provider.generate = async (...args: unknown[]) => transform(await originalGenerate.apply(provider, args) as Record<string, unknown>);
+      try { return await action(); } finally { provider.generate = originalGenerate; }
+    },
+    async listAiRunsForRequest(requestId) {
+      const rows = await strapi.documents("api::csrm-ai-run.csrm-ai-run" as Parameters<typeof strapi.documents>[0]).findMany?.({ filters: { assessmentRequest: { documentId: { $eq: requestId } } }, populate: { initiatedBy: true, questionnaire: true }, sort: "startedAt:asc", limit: 1000 });
+      return (rows ?? []) as Array<Record<string, unknown>>;
+    },
+    async runQuestionnaireGenerationJobFixture(requestId, analystId) {
+      const workflow = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "questionnaire-generation-workflow.js")) as {
+        persistGeneratedQuestionnaire: (strapi: unknown, requestId: string, analystId: string, replace: boolean) => Promise<{ questionnaireId: string }>;
+      };
+      return workflow.persistGeneratedQuestionnaire(strapi, requestId, analystId, false);
+    },
+    async runAssessmentDraftJobFixture(questionnaireId, analystId) {
+      const workflow = require(path.join(appDir, "dist", "src", "api", "csrm-assessment", "services", "assessment-workflow.js")) as {
+        persistAssessmentDraft: (strapi: unknown, job: Record<string, unknown>) => Promise<{ assessmentId: string }>;
+      };
+      return workflow.persistAssessmentDraft(strapi, { jobId: "policy-fixture", questionnaireId, initiatingAnalystDocumentId: analystId, providerName: "deterministic", providerVersion: "1", attempt: 1 });
+    },
+    async withProviderCallRecorder(action) {
+      const questionnaire = (require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "deterministic-questionnaire-generation-provider.js")) as { deterministicQuestionnaireGenerationProvider: InjectableQuestionnaireGenerationProvider }).deterministicQuestionnaireGenerationProvider;
+      const assessment = (require(path.join(appDir, "dist", "src", "api", "csrm-assessment", "services", "deterministic-assessment-draft-provider.js")) as { deterministicAssessmentDraftProvider: InjectableAssessmentDraftProvider }).deterministicAssessmentDraftProvider;
+      const { proposals, rewrites } = mountedProposalProviders();
+      const originalQuestionnaire = questionnaire.generate;
+      const originalAssessment = assessment.generate;
+      const originalPropose = proposals.propose;
+      const originalRewrite = rewrites.rewrite;
+      let questionnaireCalls = 0;
+      let assessmentCalls = 0;
+      let proposalCalls = 0;
+      let rewriteCalls = 0;
+      questionnaire.generate = async (...args) => { questionnaireCalls++; return originalQuestionnaire(...args); };
+      assessment.generate = async (...args) => { assessmentCalls++; return originalAssessment(...args); };
+      // H-1: the proposal providers are counted the same way, each call reaching the provider the job would use.
+      proposals.propose = async (...args) => { proposalCalls++; return originalPropose.apply(proposals, args); };
+      rewrites.rewrite = async (...args) => { rewriteCalls++; return originalRewrite.apply(rewrites, args); };
+      try { return await action({ questionnaire: () => questionnaireCalls, assessment: () => assessmentCalls, proposals: () => proposalCalls, rewrites: () => rewriteCalls }); }
+      finally { questionnaire.generate = originalQuestionnaire; assessment.generate = originalAssessment; proposals.propose = originalPropose; rewrites.rewrite = originalRewrite; }
+    },
+    startQuestionnaireProposalsFixture(analystId, questionnaireId, body) {
+      return proposalFixtureCall(202, (workflow) => workflow.startQuestionnaireProposals({ strapi, questionnaireId, body, analystDocumentId: analystId, humanAnalyst: true }));
+    },
+    startQuestionRewriteFixture(analystId, questionnaireId, questionId, body) {
+      return proposalFixtureCall(202, (workflow) => workflow.startQuestionRewrite({ strapi, questionnaireId, questionId, body, analystDocumentId: analystId, humanAnalyst: true }));
+    },
+    getProposalJobFixture(analystId, jobId) {
+      return proposalFixtureCall(200, (workflow) => workflow.getQuestionnaireProposalJob({ strapi, jobId, analystDocumentId: analystId, humanAnalyst: true }));
+    },
+    retryProposalJobFixture(analystId, jobId) {
+      return proposalFixtureCall(202, (workflow) => workflow.retryQuestionnaireProposalJob({ strapi, jobId, analystDocumentId: analystId, humanAnalyst: true }));
+    },
+    async waitForProposalJobFixture(jobId) {
+      const job = await mountedProposalWorkflow().settledQuestionnaireProposalJob(strapi, jobId);
+      assert.ok(job, "PROPOSAL_JOB_NOT_FOUND");
+      return job;
+    },
+    async activeProposalJobsFixture(questionnaireId) {
+      return [...mountedProposalWorkflow().activeQuestionnaireProposalJobs(strapi, questionnaireId)];
+    },
+    async withHeldQuestionnaireProposalProvider(action, options = {}) {
+      const { proposals, rewrites } = mountedProposalProviders();
+      const failureModule = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "questionnaire-generation-registry.js")) as { QuestionnaireGenerationJobFailure: new (code: string, message: string) => Error };
+      const originalPropose = proposals.propose;
+      const originalRewrite = rewrites.rewrite;
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let signalReached: () => void = () => undefined;
+      const reached = new Promise<void>((resolve) => { signalReached = resolve; });
+      const captured: Array<Record<string, unknown>> = [];
+      const held = <P extends object>(provider: P, original: (...args: unknown[]) => Promise<unknown>) => async (...args: unknown[]) => {
+        if (options.capture) captured.push(args[0] as Record<string, unknown>);
+        signalReached();
+        await gate;
+        if (options.failWith) throw new failureModule.QuestionnaireGenerationJobFailure(options.failWith.code, options.failWith.message);
+        return original.apply(provider, args);
+      };
+      proposals.propose = held(proposals, originalPropose);
+      rewrites.rewrite = held(rewrites, originalRewrite);
+      try {
+        return await action({ reached, release, captured: () => [...captured] });
+      } finally {
+        release();
+        proposals.propose = originalPropose;
+        rewrites.rewrite = originalRewrite;
+      }
+    },
+    async replaceQuestionnaireFixture(requestId) {
+      try {
+        await interleavedQuestionnaireWorkflows().replaceQuestionnaire(requestId);
+        return { status: "completed" as const };
+      } catch (error) {
+        const code = (error as { code?: unknown }).code;
+        if (typeof code === "string") return { status: "failed" as const, failureCode: code };
+        throw error;
+      }
+    },
+    async withStrapiWarnings(action) {
+      const log = (strapi as unknown as { log: { warn: (...args: unknown[]) => unknown } }).log;
+      const original = log.warn;
+      const warnings: string[] = [];
+      log.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); return original.apply(log, args); };
+      try { return await action(() => [...warnings]); } finally { log.warn = original; }
+    },
+    decideQuestionnaireProposalsFixture(analystId, questionnaireId, body) {
+      const decisions = require(path.join(appDir, "dist", "src", "api", "csrm-questionnaire", "services", "questionnaire-proposal-decisions.js")) as {
+        decideQuestionnaireAiProposals: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+      };
+      return proposalFixtureCall(200, () => decisions.decideQuestionnaireAiProposals({ strapi, questionnaireId, body, analystDocumentId: analystId, humanAnalyst: true }));
+    },
+    async questionnaireSnapshotFixture(questionnaireId) {
+      const questionnaire = await strapi.documents("api::csrm-questionnaire.csrm-questionnaire").findOne?.({ documentId: questionnaireId, populate: { questions: true } });
+      assert.ok(questionnaire, "QUESTIONNAIRE_NOT_FOUND");
+      const questions = ((questionnaire.questions ?? []) as Array<Record<string, unknown>>)
+        .map((row) => ({ documentId: row.documentId, questionText: row.questionText, helpText: row.helpText ?? null, answerType: row.answerType, options: row.options, answer: row.answer ?? null }))
+        .sort((left, right) => String(left.documentId).localeCompare(String(right.documentId)));
+      const runs = ((await strapi.documents("api::csrm-ai-run.csrm-ai-run" as Parameters<typeof strapi.documents>[0]).findMany?.({
+        filters: { questionnaire: { documentId: { $eq: questionnaireId } } }, fields: ["documentId", "decisions"], sort: ["id:asc"], limit: 1000,
+      })) ?? []) as Array<Record<string, unknown>>;
+      return {
+        questions,
+        releasedAt: questionnaire.releasedAt ?? null,
+        governanceLog: questionnaire.governanceLog ?? null,
+        runs: runs.map((run) => ({ documentId: run.documentId, decisions: run.decisions ?? null })),
+      };
+    },
+    saveAnswersServiceFixture(requestorId, questionnaireId, body) {
+      return questionnaireServiceCall((workflow) => workflow.saveAnswers({ strapi, questionnaireDocumentId: questionnaireId, actor: "requestor", actorDocumentId: requestorId, body }));
+    },
+    submitQuestionnaireServiceFixture(requestorId, questionnaireId, body) {
+      return questionnaireServiceCall((workflow) => workflow.submitQuestionnaire({ strapi, questionnaireDocumentId: questionnaireId, actor: "requestor", actorDocumentId: requestorId, body }));
+    },
+    async listQuestionnaireRunsFixture(questionnaireId) {
+      const rows = await strapi.documents("api::csrm-ai-run.csrm-ai-run" as Parameters<typeof strapi.documents>[0]).findMany?.({
+        filters: { questionnaire: { documentId: { $eq: questionnaireId } } },
+        populate: { initiatedBy: true, questionnaire: true, assessmentRequest: true }, sort: ["startedAt:asc", "id:asc"], limit: 1000,
+      });
+      return (rows ?? []) as Array<Record<string, unknown>>;
+    },
+    async listAiRunsForAssessment(assessmentId) {
+      const rows = await strapi.documents("api::csrm-ai-run.csrm-ai-run" as Parameters<typeof strapi.documents>[0]).findMany?.({
+        filters: { assessment: { documentId: { $eq: assessmentId } } },
+        populate: { assessment: true, questionnaire: true }, sort: "startedAt:asc", limit: 1000,
+      });
+      return (rows ?? []) as Array<Record<string, unknown>>;
+    },
+    async getAiRun(documentId) {
+      return (await strapi.documents("api::csrm-ai-run.csrm-ai-run" as Parameters<typeof strapi.documents>[0]).findOne?.({
+        documentId, populate: { initiatedBy: true, assessmentRequest: true, questionnaire: true, assessment: true, risk: true },
+      })) ?? null;
+    },
+    async createAiRunFixture(data) {
+      return (await createRunningAiRun(strapi as unknown as Core.Strapi, data)).documentId;
+    },
+    async completeAiRunFixture(runId, proposal) {
+      return completeAiRun(strapi as unknown as Core.Strapi, runId, { proposal });
+    },
+    async failAiRunFixture(runId, code, message) {
+      return failAiRun(strapi as unknown as Core.Strapi, runId, { code, message });
+    },
+    async appendAiRunDecisionsFixture(runId, events) {
+      await appendAiRunDecisions(strapi as unknown as Core.Strapi, runId, events);
+    },
+    async updateAiRunFixture(runId, data) {
+      await strapi.documents("api::csrm-ai-run.csrm-ai-run").update?.({ documentId: runId, data });
+    },
+    async deleteAiRunFixture(runId) {
+      await strapi.documents("api::csrm-ai-run.csrm-ai-run").delete?.({ documentId: runId });
+    },
+    async reconcileInterruptedAiRunsFixture(now) {
+      return reconcileInterruptedAiRuns(strapi as unknown as Core.Strapi, now);
     },
     async getControlImplementation(documentId) {
       return (await strapi.documents("api::csrm-control-implementation.csrm-control-implementation").findOne?.({
@@ -1567,6 +2586,15 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       });
       return rows?.length ?? 0;
     },
+    async listRisksForAssessment(assessmentDocumentId) {
+      const rows = await strapi.documents("api::csrm-risk.csrm-risk").findMany?.({
+        filters: { assessment: { documentId: { $eq: assessmentDocumentId } } },
+        sort: ["riskNumber:asc"],
+        populate: { riskType: true, informationSystemImpacted: true, informationAssetImpacted: true, controlImplementations: true },
+        limit: 1_000,
+      });
+      return (rows ?? []) as Array<Record<string, unknown>>;
+    },
     async countControlImplementationsForRisk(riskDocumentId) {
       const rows = await strapi.documents("api::csrm-control-implementation.csrm-control-implementation").findMany?.({
         filters: { risk: { documentId: { $eq: riskDocumentId } } },
@@ -1574,9 +2602,37 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       });
       return rows?.length ?? 0;
     },
-    async createUserFixture(data) {
-      const user = await createDocument(strapi, "api::idambox-user.idambox-user", data);
+    async withBackendFixture(action) {
+      return action(strapi as unknown as Core.Strapi);
+    },
+    async createUserFixture({ roles: roleNames, ...data }) {
+      const roleIds = (roleNames ?? []).map((name) => {
+        const role = roleByName.get(name);
+        assert.ok(role, `seeded CSRM role ${name} must exist`);
+        return role.documentId;
+      });
+      const user = await createDocument(strapi, "api::idambox-user.idambox-user", { ...data, ...(roleNames ? { roles: roleIds } : {}) });
       return user.documentId;
+    },
+    async withRoleOperationWithdrawn(roleName, operation, action) {
+      const role = roleByName.get(roleName);
+      assert.ok(role, `seeded CSRM role ${roleName} must exist`);
+      const roleDocuments = strapi.documents("api::role.role") as unknown as {
+        findOne: (query: Record<string, unknown>) => Promise<{ functions?: Array<{ documentId: string; functionApis?: Array<{ url?: string }> }> } | null>;
+        update: (query: { documentId: string; data: Record<string, unknown> }) => Promise<unknown>;
+      };
+      const held = (await roleDocuments.findOne({ documentId: role.documentId, populate: { functions: { populate: { functionApis: true } } } }))?.functions ?? [];
+      const kept = held.filter((grant) => !(grant.functionApis ?? []).some((api) => api.url === operation));
+      assert.ok(kept.length < held.length, `seeded CSRM role ${roleName} must hold ${operation}`);
+      await roleDocuments.update({ documentId: role.documentId, data: { functions: kept.map((grant) => grant.documentId) } });
+      try {
+        return await action();
+      } finally {
+        await roleDocuments.update({ documentId: role.documentId, data: { functions: held.map((grant) => grant.documentId) } });
+      }
+    },
+    async updateFixtureDocument(uid, documentId, data) {
+      await strapi.documents(uid).update?.({ documentId, data });
     },
     async createFixtureDocument(uid, data) {
       const document = await createDocument(strapi, uid, data);
@@ -1648,7 +2704,7 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       }
       return { requestNumbers: records.map((record) => record.requestNumber) };
     },
-    async countReviewQueueBucketFixture(bucket, activeIds) {
+    async countReviewQueueBucketFixture(bucket, activeIds, options) {
       // The compiled module the running application loaded, so this is the same
       // counter the analyst dashboard uses.
       const repositoryModule = require(path.join(
@@ -1660,9 +2716,22 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
         "services",
         "review-queue-repository.js",
       )) as {
-        countReviewQueueBucket: (instance: unknown, queue: ReviewQueueBucketFixture, ids: readonly string[]) => Promise<number>;
+        countReviewQueueBucket: (
+          instance: unknown,
+          queue: ReviewQueueBucketFixture,
+          ids: readonly string[],
+          filters?: { assignee?: "me" | "unassigned"; notesUnread?: true; viewer: { id: number; humanAnalyst: boolean } },
+        ) => Promise<number>;
       };
-      return repositoryModule.countReviewQueueBucket(strapi, bucket, activeIds);
+      if (!options) return repositoryModule.countReviewQueueBucket(strapi, bucket, activeIds);
+      // The viewer's numeric id, as the policy resolves it; every analyst fixture is a human Security Analyst.
+      const viewer = await strapi.documents("api::idambox-user.idambox-user").findOne?.({ documentId: options.viewerDocumentId, fields: ["id"] });
+      assert.ok(viewer && typeof viewer.id === "number", "count viewer must exist");
+      return repositoryModule.countReviewQueueBucket(strapi, bucket, activeIds, {
+        ...(options.assignee ? { assignee: options.assignee } : {}),
+        ...(options.notesUnread ? { notesUnread: true as const } : {}),
+        viewer: { id: viewer.id, humanAnalyst: true },
+      });
     },
     async createAssessmentFixture(data) {
       const assessment = await createDocument(strapi, "api::csrm-assessment.csrm-assessment", data);
@@ -1688,13 +2757,21 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       });
       return risk.documentId;
     },
-    async createRiskRegisterMitigationFixture(riskDocumentId, controlDocumentId, controlStatus) {
+    async createRiskRegisterMitigationFixture(riskDocumentId, controlDocumentId, controlStatus, data = {}) {
       const implementation = await createDocument(strapi, "api::csrm-control-implementation.csrm-control-implementation", {
+        ...data,
         risk: riskDocumentId,
         control: controlDocumentId,
         controlStatus,
       });
       return implementation.documentId;
+    },
+    async writeStoredValueFixture(table, documentId, column, value) {
+      const connection = (strapi as unknown as { db: { connection: (name: string) => {
+        where: (filter: Record<string, unknown>) => { update: (values: Record<string, unknown>) => Promise<number> };
+      } } }).db.connection;
+      const updated = await connection(table).where({ document_id: documentId }).update({ [column]: value });
+      if (updated < 1) throw new Error(`STORED_VALUE_FIXTURE_MISSED_${table}_${documentId}`);
     },
     async getAdministrationRecord(kind, documentId) {
       const uid = {
@@ -1729,15 +2806,28 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
       }
       return { targetName: records.at(-1)!.name };
     },
-    createCsvMultipart({ filename, bytes, digest, confirmed }) {
+    createCsvMultipart({ filename, bytes, digest, confirmed, decisions, resultToken, timeZone }) {
       const form = new FormData();
       form.set("file", new File([bytes], filename, { type: "text/csv" }));
       if (digest !== undefined) form.set("previewDigest", digest);
       if (confirmed !== undefined) form.set("confirmed", String(confirmed));
+      if (decisions !== undefined) form.set("decisions", decisions);
+      if (resultToken !== undefined) form.set("resultToken", resultToken);
+      if (timeZone !== undefined) form.set("timeZone", timeZone);
+      return form;
+    },
+    createXlsxMultipart({ filename, bytes, digest, confirmed, decisions, resultToken, timeZone }) {
+      const form = new FormData();
+      form.set("file", new File([bytes], filename, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      if (digest !== undefined) form.set("previewDigest", digest);
+      if (confirmed !== undefined) form.set("confirmed", String(confirmed));
+      if (decisions !== undefined) form.set("decisions", decisions);
+      if (resultToken !== undefined) form.set("resultToken", resultToken);
+      if (timeZone !== undefined) form.set("timeZone", timeZone);
       return form;
     },
     listMountedContentApiRoutes() {
-      return listMountedContentApiRoutes(strapi);
+      return listMountedContentApiRoutes(strapi, rootRoutes);
     },
     async readUsersPermissionsAdvancedSettings() {
       const settings = await strapi.store({ type: "plugin", name: "users-permissions" }).get({ key: "advanced" });
@@ -1749,12 +2839,95 @@ export async function startAuthorizationHttpHarness(options: AuthorizationHttpHa
     async snapshot(getters) {
       return Promise.all(getters.map((getter) => getter()));
     },
+    attachmentStorage() {
+      const port = require(path.join(appDir, "dist", "src", "csrm", "files", "storage-port.js")) as {
+        createAttachmentStorage: (instance: RunningStrapi) => AttachmentStorage;
+      };
+      return port.createAttachmentStorage(strapi);
+    },
+    attachmentStorageDirectory() {
+      return attachmentStorageDirectory;
+    },
+    async findUploadFileRecord(fileId) {
+      return (await strapi.query("plugin::upload.file").findOne({ where: { id: fileId } })) as Record<string, unknown> | null;
+    },
+    async countUploadFileRecords() {
+      return (await strapi.query("plugin::upload.file").findMany({ where: {} })).length;
+    },
+    async listRequestAttachments(requestDocumentId) {
+      const records = await (strapi.documents("api::csrm-request-attachment.csrm-request-attachment") as StrapiDocumentService).findMany({
+        filters: { assessmentRequest: { documentId: { $eq: requestDocumentId } } },
+        populate: {
+          file: { fields: ["id"] },
+          uploadedBy: { fields: ["documentId"] },
+          removedBy: { fields: ["documentId"] },
+          note: { fields: ["documentId"] },
+        },
+        sort: ["id:asc"],
+        limit: 10_000,
+      });
+      const idOf = (value: unknown, key: "id" | "documentId") => (typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] ?? null : null);
+      return records.map((record) => {
+        const { file, uploadedBy, removedBy, note, ...rest } = record as Record<string, unknown>;
+        return { ...rest, fileId: idOf(file, "id"), uploadedBy: idOf(uploadedBy, "documentId"), removedBy: idOf(removedBy, "documentId"), note: idOf(note, "documentId") };
+      });
+    },
+    async countRequestAttachmentRows() {
+      const connection = (strapi as unknown as { db: { connection: { raw: (sql: string) => Promise<unknown> } } }).db.connection;
+      const rows = await connection.raw("SELECT COUNT(*) AS attachments FROM csrm_request_attachments") as Array<{ attachments: number | string }>;
+      return Number(rows[0]?.attachments ?? Number.NaN);
+    },
+    async listAttachmentStorageFiles() {
+      try {
+        return (await readdir(attachmentStorageDirectory)).sort();
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+        throw error;
+      }
+    },
+    async seedRequestAttachments(requestDocumentId, count, uploadedBy = owner.documentId) {
+      assert.ok(Number.isInteger(count) && count >= 0 && count <= 60, "attachment fixture count must be 0 to 60");
+      const port = require(path.join(appDir, "dist", "src", "csrm", "files", "storage-port.js")) as {
+        createAttachmentStorage: (instance: RunningStrapi) => AttachmentStorage;
+      };
+      const storage = port.createAttachmentStorage(strapi);
+      const { createHash } = require("node:crypto") as typeof import("node:crypto");
+      const [request] = await (strapi.documents("api::csrm-assessment-request.csrm-assessment-request") as StrapiDocumentService).findMany({
+        filters: { documentId: { $eq: requestDocumentId } },
+        populate: { requestor: { fields: ["documentId"] } },
+        limit: 1,
+      }) as Array<{ requestor?: { documentId?: unknown } | null }>;
+      assert.ok(request, "attachment fixture request not found");
+      const uploaderPart = request.requestor?.documentId === uploadedBy ? "requestor" : "security-analyst";
+      const ids: string[] = [];
+      for (let index = 1; index <= count; index += 1) {
+        const bytes = Buffer.from(`Seeded attachment ${index} on ${requestDocumentId}.`, "utf8");
+        const stored = await storage.put(bytes, { type: "txt" });
+        const created = await createDocument(strapi, "api::csrm-request-attachment.csrm-request-attachment", {
+          fileName: `seeded-${index}.txt`,
+          fileType: "txt",
+          byteSize: bytes.length,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          uploaderPart,
+          uploadedAt: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString(),
+          scanStatus: "clean",
+          scanAttempts: 0,
+          aiTextIncluded: false,
+          assessmentRequest: requestDocumentId,
+          uploadedBy,
+          file: stored.fileId,
+        });
+        ids.push(created.documentId);
+      }
+      return ids;
+    },
     async close() {
       testIdentities.clear();
       observedDevelopmentIdentities.clear();
       jobObservations.length = 0;
       await strapi.destroy();
       await rm(databaseFilename, { force: true });
+      await rm(attachmentStorageDirectory, { recursive: true, force: true });
       for (const [name, value] of originalEnvironment) {
         if (value === undefined) delete process.env[name];
         else process.env[name] = value;

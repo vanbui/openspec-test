@@ -28,9 +28,13 @@ export function resolveE2eUiState(searchParams: RouteSearchParams): E2eUiState |
     : undefined;
 }
 
-/** A second closed harness selector exercises an independently failed safe dashboard widget. */
-export function resolveE2eDashboardPartial(searchParams: RouteSearchParams): boolean {
-  return isAttestedUiStateHarness() && searchParams.__e2ePartial === 'draft-requests-error';
+/**
+ * The Requestor Home's own closed partial selector (UI-SPEC §5.4, D-23): it fails With the Security Analyst alone
+ * while Needs your action and Released assessments render. The Home resolves it only after its real, owner-scoped
+ * reads succeeded.
+ */
+export function resolveE2eRequestorHomePartial(searchParams: RouteSearchParams): boolean {
+  return isAttestedUiStateHarness() && searchParams.__e2ePartial === 'requestor-home-with-analyst-error';
 }
 
 /**

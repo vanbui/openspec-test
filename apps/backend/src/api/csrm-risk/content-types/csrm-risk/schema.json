@@ -159,6 +159,17 @@
         "Complete"
       ]
     },
+    "withdrawnAt": {
+      "type": "datetime"
+    },
+    "withdrawnBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idambox-user.idambox-user"
+    },
+    "withdrawalReason": {
+      "type": "text"
+    },
     "controlImplementations": {
       "type": "relation",
       "relation": "oneToMany",
@@ -170,6 +181,9 @@
       "relation": "manyToOne",
       "target": "api::csrm-assessment.csrm-assessment",
       "inversedBy": "risks"
+    },
+    "aiProvenance": {
+      "type": "json"
     }
   }
 }

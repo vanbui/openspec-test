@@ -1,0 +1,3 @@
+employeeNumber,givenName,familyName,preferredName,email,username,department,jobTitle,status,startDate,endDate
+940001,Iris,Example,,lifecycle.mover@idambox.test,lifecycle.iris,Lifecycle Operations,Lifecycle Lead,terminated,,
+940002,Maya,Requestor,,maya.requestor@idambox.com,lifecycle.maya,Lifecycle Operations,Lifecycle Analyst,active,,

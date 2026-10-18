@@ -1,0 +1,4286 @@
+[
+  {
+    "sequence": 1,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/11000000-0000-4000-8000-000000000110/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 2,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/11000000-0000-4000-8000-000000000110/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 3,
+    "scenario": "connection",
+    "origin": "connector",
+    "invocation": "POST /resources/11000000-0000-4000-8000-000000000110/test",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 4,
+    "scenario": "initial-import",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000310/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 5,
+    "scenario": "initial-import",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000310/run",
+    "request": {
+      "method": "POST",
+      "path": "/scim/v2/Users",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "active": true,
+        "displayName": "Iris Example",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "department": "Lifecycle Engineering",
+          "employeeNumber": "940001"
+        },
+        "groups": [],
+        "name": {
+          "familyName": "Example",
+          "givenName": "Iris"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:slack:profile:2.0:User"
+        ],
+        "title": "Lifecycle Engineer",
+        "userName": "lifecycle.iris"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Engineer",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Engineering"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 6,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 7,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Engineer",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Engineering"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 8,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 9,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 10,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Engineer",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Engineering"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 11,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 12,
+    "scenario": "live-sync-baseline",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Iris Example",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Example",
+          "givenName": "Iris"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "lifecycle.iris"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Engineer",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Engineering"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 13,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 14,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Engineer",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Engineering"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 15,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 16,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 17,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Engineer",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Engineering"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 18,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 19,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Iris Example",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "department": "Lifecycle Operations"
+        },
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Example",
+          "givenName": "Iris"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:slack:profile:2.0:User"
+        ],
+        "title": "Lifecycle Lead",
+        "userName": "lifecycle.iris"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.joiner@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 20,
+    "scenario": "mover",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "PATCH",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+        ],
+        "Operations": [
+          {
+            "op": "remove",
+            "path": "emails[value eq \"lifecycle.joiner@idambox.test\"]"
+          },
+          {
+            "op": "add",
+            "path": "emails",
+            "value": [
+              {
+                "value": "lifecycle.mover@idambox.test",
+                "primary": "true"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 21,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 22,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 23,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 24,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 25,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": true,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 26,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 27,
+    "scenario": "leaver",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "active": false,
+        "displayName": "Iris Example",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Example",
+          "givenName": "Iris"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "lifecycle.iris"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 28,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 29,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "POST",
+      "path": "/scim/v2/Users",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "active": true,
+        "displayName": "Maya Requestor",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "department": "Lifecycle Operations",
+          "employeeNumber": "940002"
+        },
+        "groups": [],
+        "name": {
+          "familyName": "Requestor",
+          "givenName": "Maya"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:slack:profile:2.0:User"
+        ],
+        "title": "Lifecycle Analyst",
+        "userName": "lifecycle.maya"
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:Error"
+        ],
+        "status": "409",
+        "detail": "The resource conflicts with an existing value.",
+        "scimType": "uniqueness"
+      }
+    }
+  },
+  {
+    "sequence": 30,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 31,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users?filter=userName%20eq%20%22lifecycle.maya%22",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 32,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 33,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "POST",
+      "path": "/scim/v2/Users",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "active": true,
+        "displayName": "Maya Requestor",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "department": "Lifecycle Operations",
+          "employeeNumber": "940002"
+        },
+        "groups": [],
+        "name": {
+          "familyName": "Requestor",
+          "givenName": "Maya"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:slack:profile:2.0:User"
+        ],
+        "title": "Lifecycle Analyst",
+        "userName": "lifecycle.maya"
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:Error"
+        ],
+        "status": "409",
+        "detail": "The resource conflicts with an existing value.",
+        "scimType": "uniqueness"
+      }
+    }
+  },
+  {
+    "sequence": 34,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 35,
+    "scenario": "claim-conflict",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000300/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users?filter=userName%20eq%20%22lifecycle.maya%22",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 36,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 37,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users?count=100&startIndex=1",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 5,
+        "startIndex": 1,
+        "itemsPerPage": 5,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_2}}",
+            "userName": "jane.doe",
+            "emails": [
+              {
+                "value": "jane.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Jane",
+              "familyName": "Doe"
+            },
+            "displayName": "Jane Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_2}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_3}}",
+            "userName": "bob.doe",
+            "emails": [
+              {
+                "value": "bob.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Bob",
+              "familyName": "Doe"
+            },
+            "displayName": "Bob Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_3}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_4}}",
+            "userName": "maya.requestor",
+            "emails": [
+              {
+                "value": "maya.requestor@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Maya",
+              "familyName": "Requestor"
+            },
+            "displayName": "Maya Requestor",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_4}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_5}}",
+            "userName": "sam.analyst",
+            "emails": [
+              {
+                "value": "sam.analyst@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Sam",
+              "familyName": "Analyst"
+            },
+            "displayName": "Sam Analyst",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_5}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User",
+              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            ],
+            "id": "{{USER_ID_1}}",
+            "userName": "lifecycle.iris",
+            "externalId": "940001",
+            "emails": [
+              {
+                "value": "lifecycle.mover@idambox.test",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Iris",
+              "familyName": "Example"
+            },
+            "displayName": "Iris Example",
+            "active": false,
+            "title": "Lifecycle Lead",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+              "employeeNumber": "940001",
+              "department": "Lifecycle Operations"
+            },
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_1}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 38,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 39,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 40,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 41,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 42,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 43,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 44,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 45,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 46,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Iris Example",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Example",
+          "givenName": "Iris"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "lifecycle.iris"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 47,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 48,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 49,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 50,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 51,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "maya.requestor",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 52,
+    "scenario": "claim-case",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 53,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 54,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "maya.requestor",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 55,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 56,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 57,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "maya.requestor",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 58,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 59,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 60,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "maya.requestor",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 61,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 62,
+    "scenario": "claim-confirm",
+    "origin": "connector",
+    "invocation": "POST /rpc/executeScript",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Maya Requestor",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "department": "Lifecycle Operations",
+          "employeeNumber": "940002"
+        },
+        "groups": [],
+        "id": "{{USER_ID_4}}",
+        "name": {
+          "familyName": "Requestor",
+          "givenName": "Maya"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:slack:profile:2.0:User"
+        ],
+        "title": "Lifecycle Analyst",
+        "userName": "lifecycle.maya"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "lifecycle.maya",
+        "externalId": "940002",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "title": "Lifecycle Analyst",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940002",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 63,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 64,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users?count=100&startIndex=1",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 5,
+        "startIndex": 1,
+        "itemsPerPage": 5,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_2}}",
+            "userName": "jane.doe",
+            "emails": [
+              {
+                "value": "jane.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Jane",
+              "familyName": "Doe"
+            },
+            "displayName": "Jane Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_2}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_3}}",
+            "userName": "bob.doe",
+            "emails": [
+              {
+                "value": "bob.doe@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Bob",
+              "familyName": "Doe"
+            },
+            "displayName": "Bob Doe",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_3}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User",
+              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            ],
+            "id": "{{USER_ID_4}}",
+            "userName": "lifecycle.maya",
+            "externalId": "940002",
+            "emails": [
+              {
+                "value": "maya.requestor@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Maya",
+              "familyName": "Requestor"
+            },
+            "displayName": "Maya Requestor",
+            "active": true,
+            "title": "Lifecycle Analyst",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+              "employeeNumber": "940002",
+              "department": "Lifecycle Operations"
+            },
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_4}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+            "id": "{{USER_ID_5}}",
+            "userName": "sam.analyst",
+            "emails": [
+              {
+                "value": "sam.analyst@idambox.com",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Sam",
+              "familyName": "Analyst"
+            },
+            "displayName": "Sam Analyst",
+            "active": true,
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_5}}"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:User",
+              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+            ],
+            "id": "{{USER_ID_1}}",
+            "userName": "lifecycle.iris",
+            "externalId": "940001",
+            "emails": [
+              {
+                "value": "lifecycle.mover@idambox.test",
+                "primary": true
+              }
+            ],
+            "name": {
+              "givenName": "Iris",
+              "familyName": "Example"
+            },
+            "displayName": "Iris Example",
+            "active": false,
+            "title": "Lifecycle Lead",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+              "employeeNumber": "940001",
+              "department": "Lifecycle Operations"
+            },
+            "meta": {
+              "resourceType": "User",
+              "location": "/scim/v2/Users/{{USER_ID_1}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 65,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 66,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 67,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 68,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 69,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 70,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 71,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 72,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 73,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Iris Example",
+        "groups": [],
+        "id": "{{USER_ID_1}}",
+        "name": {
+          "familyName": "Example",
+          "givenName": "Iris"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "lifecycle.iris"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 74,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 75,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_1}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_1}}",
+        "userName": "lifecycle.iris",
+        "externalId": "940001",
+        "emails": [
+          {
+            "value": "lifecycle.mover@idambox.test",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Iris",
+          "familyName": "Example"
+        },
+        "displayName": "Iris Example",
+        "active": false,
+        "title": "Lifecycle Lead",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940001",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_1}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 76,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 77,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 78,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "lifecycle.maya",
+        "externalId": "940002",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "title": "Lifecycle Analyst",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940002",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 79,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  },
+  {
+    "sequence": 80,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "PUT",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": {
+        "displayName": "Maya Requestor",
+        "groups": [],
+        "id": "{{USER_ID_4}}",
+        "name": {
+          "familyName": "Requestor",
+          "givenName": "Maya"
+        },
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": "lifecycle.maya"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "lifecycle.maya",
+        "externalId": "940002",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "title": "Lifecycle Analyst",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940002",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 81,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/ResourceTypes",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 2,
+        "startIndex": 1,
+        "itemsPerPage": 2,
+        "Resources": [
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+            "schemaExtensions": [
+              {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": false
+              }
+            ],
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/User"
+            }
+          },
+          {
+            "schemas": [
+              "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+            ],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "meta": {
+              "resourceType": "ResourceType",
+              "location": "/scim/v2/ResourceTypes/Group"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "sequence": 82,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Users/{{USER_ID_4}}",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:User",
+          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+        ],
+        "id": "{{USER_ID_4}}",
+        "userName": "lifecycle.maya",
+        "externalId": "940002",
+        "emails": [
+          {
+            "value": "maya.requestor@idambox.com",
+            "primary": true
+          }
+        ],
+        "name": {
+          "givenName": "Maya",
+          "familyName": "Requestor"
+        },
+        "displayName": "Maya Requestor",
+        "active": true,
+        "title": "Lifecycle Analyst",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+          "employeeNumber": "940002",
+          "department": "Lifecycle Operations"
+        },
+        "meta": {
+          "resourceType": "User",
+          "location": "/scim/v2/Users/{{USER_ID_4}}"
+        }
+      }
+    }
+  },
+  {
+    "sequence": 83,
+    "scenario": "reconciliation",
+    "origin": "connector",
+    "invocation": "POST /tasks/11000000-0000-4000-8000-000000000320/run",
+    "request": {
+      "method": "GET",
+      "path": "/scim/v2/Groups",
+      "headers": {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      "body": null
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "body": {
+        "schemas": [
+          "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        ],
+        "totalResults": 0,
+        "startIndex": 1,
+        "itemsPerPage": 0,
+        "Resources": []
+      }
+    }
+  }
+]

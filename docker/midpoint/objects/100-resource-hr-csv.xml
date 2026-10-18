@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Reference Identity Source (D3): the HR CSV, read from midPoint's home
+  (var/hr/hr.csv). docker/midpoint/init.sh seeds it once from
+  docker/midpoint/hr/reference.csv; docker/midpoint/hr-publish.sh replaces it.
+
+  Columns (D19): employeeNumber, givenName, familyName, preferredName, email,
+  username, department, jobTitle, status (active | terminated), startDate, endDate.
+
+  - employeeNumber is the Identity's name and correlator (P4-06).
+  - HR owns identity attributes and status (D6): inbound mappings are strong.
+  - Status and dates decide activation (P4-07): enabled only for status=active with
+    valid dates; start is inclusive and end exclusive, both at 00:00 UTC
+    (validFrom/validTo, applied as they pass by 340-task-hr-validity-scan.xml).
+    Anything else (terminated, unknown status, a malformed date, end before start)
+    sets the administrative status to disabled.
+  - A row that leaves the file deactivates its Identity; nothing is deleted (D12).
+-->
+<resource xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3"
+          xmlns:ext="http://idambox.test/midpoint/extension"
+          xmlns:cfg="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-csv/com.evolveum.polygon.connector.csv.CsvConnector"
+          oid="11000000-0000-4000-8000-000000000100">
+    <name>HR (CSV)</name>
+    <description>Reference Identity Source: the HR system's workforce export.</description>
+    <connectorRef type="c:ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>c:connectorType</q:path>
+                <q:value>com.evolveum.polygon.connector.csv.CsvConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+    <connectorConfiguration>
+        <icfc:configurationProperties>
+            <cfg:filePath>/opt/midpoint/var/hr/hr.csv</cfg:filePath>
+            <cfg:encoding>utf-8</cfg:encoding>
+            <cfg:fieldDelimiter>,</cfg:fieldDelimiter>
+            <cfg:quote>"</cfg:quote>
+            <cfg:headerExists>true</cfg:headerExists>
+            <cfg:ignoreSurroundingSpaces>true</cfg:ignoreSurroundingSpaces>
+            <cfg:trim>true</cfg:trim>
+            <cfg:uniqueAttribute>employeeNumber</cfg:uniqueAttribute>
+            <cfg:nameAttribute>employeeNumber</cfg:nameAttribute>
+            <cfg:readOnly>true</cfg:readOnly>
+            <cfg:tmpFolder>/opt/midpoint/var/hr</cfg:tmpFolder>
+            <!-- Live sync compares the file with its last snapshot; keep a few. -->
+            <cfg:preserveOldSyncFiles>10</cfg:preserveOldSyncFiles>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>HR person</displayName>
+            <default>true</default>
+            <delineation>
+                <objectClass>ri:AccountObjectClass</objectClass>
+            </delineation>
+            <focus>
+                <type>c:UserType</type>
+            </focus>
+
+            <attribute>
+                <ref>ri:employeeNumber</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>name</path></target>
+                </inbound>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>personalNumber</path></target>
+                </inbound>
+                <inbound>
+                    <!-- Every HR person holds the HR person archetype
+                         (150-archetype-hr-person.xml), and with it an IdamBox User. -->
+                    <name>hr-person-archetype</name>
+                    <strength>strong</strength>
+                    <expression>
+                        <value>
+                            <targetRef oid="11000000-0000-4000-8000-000000000150" type="c:ArchetypeType"/>
+                        </value>
+                    </expression>
+                    <target><path>assignment</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:givenName</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>givenName</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:familyName</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>familyName</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:preferredName</ref>
+                <inbound>
+                    <!-- The display name's first choice; 140-object-template-hr-person.xml
+                         falls back to given and family name, then username. -->
+                    <strength>strong</strength>
+                    <target><path>nickName</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:email</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>emailAddress</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:username</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>extension/ext:username</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:department</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>extension/ext:department</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:jobTitle</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target><path>title</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:status</ref>
+                <inbound>
+                    <name>hr-activation</name>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                import java.time.LocalDate
+                                import java.time.format.DateTimeFormatter
+                                import java.time.format.ResolverStyle
+
+                                // Disabled unless status=active with dates that parse strictly
+                                // and are in order. An active person gets no explicit status, so
+                                // validFrom/validTo below decide (an explicit administrative
+                                // status would override them).
+                                def ns = 'http://midpoint.evolveum.com/xml/ns/public/resource/instance-3'
+                                def iso = DateTimeFormatter.ofPattern('uuuu-MM-dd').withResolverStyle(ResolverStyle.STRICT)
+                                def parse = { String value ->
+                                    if (value == null || value.trim().isEmpty()) return [ok: true, date: null]
+                                    try { return [ok: true, date: LocalDate.parse(value.trim(), iso)] }
+                                    catch (Exception e) { return [ok: false, date: null] }
+                                }
+                                def start = parse(basic.getAttributeValue(projection, ns, 'startDate'))
+                                def end = parse(basic.getAttributeValue(projection, ns, 'endDate'))
+                                def datesValid = start.ok &amp;&amp; end.ok &amp;&amp;
+                                    !(start.date != null &amp;&amp; end.date != null &amp;&amp; !end.date.isAfter(start.date))
+                                if (input == 'active' &amp;&amp; datesValid) {
+                                    return null
+                                }
+                                return ActivationStatusType.DISABLED
+                            </code>
+                        </script>
+                    </expression>
+                    <target><path>activation/administrativeStatus</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:startDate</ref>
+                <inbound>
+                    <name>hr-valid-from</name>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                import java.time.LocalDate
+                                import java.time.format.DateTimeFormatter
+                                import java.time.format.ResolverStyle
+                                // Inclusive start at 00:00 UTC; a malformed date sets no
+                                // bound here (hr-activation already disables the person).
+                                if (input == null || input.trim().isEmpty()) return null
+                                def iso = DateTimeFormatter.ofPattern('uuuu-MM-dd').withResolverStyle(ResolverStyle.STRICT)
+                                try {
+                                    def day = LocalDate.parse(input.trim(), iso)
+                                    return javax.xml.datatype.DatatypeFactory.newInstance().newXMLGregorianCalendar(day.toString() + 'T00:00:00Z')
+                                } catch (java.time.format.DateTimeParseException e) {
+                                    return null
+                                }
+                            </code>
+                        </script>
+                    </expression>
+                    <target><path>activation/validFrom</path></target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:endDate</ref>
+                <inbound>
+                    <name>hr-valid-to</name>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                import java.time.LocalDate
+                                import java.time.format.DateTimeFormatter
+                                import java.time.format.ResolverStyle
+                                // Exclusive end at 00:00 UTC of endDate.
+                                if (input == null || input.trim().isEmpty()) return null
+                                def iso = DateTimeFormatter.ofPattern('uuuu-MM-dd').withResolverStyle(ResolverStyle.STRICT)
+                                try {
+                                    def day = LocalDate.parse(input.trim(), iso)
+                                    return javax.xml.datatype.DatatypeFactory.newInstance().newXMLGregorianCalendar(day.toString() + 'T00:00:00Z')
+                                } catch (java.time.format.DateTimeParseException e) {
+                                    return null
+                                }
+                            </code>
+                        </script>
+                    </expression>
+                    <target><path>activation/validTo</path></target>
+                </inbound>
+            </attribute>
+
+            <correlation>
+                <correlators>
+                    <items>
+                        <name>employee-number</name>
+                        <item>
+                            <ref>name</ref>
+                        </item>
+                    </items>
+                </correlators>
+            </correlation>
+
+            <synchronization>
+                <reaction>
+                    <name>joiner</name>
+                    <situation>unmatched</situation>
+                    <actions>
+                        <addFocus/>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <name>relink</name>
+                    <situation>unlinked</situation>
+                    <actions>
+                        <link/>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <name>mover</name>
+                    <situation>linked</situation>
+                    <actions>
+                        <synchronize/>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <name>left-the-file</name>
+                    <situation>deleted</situation>
+                    <actions>
+                        <inactivateFocus/>
+                    </actions>
+                </reaction>
+            </synchronization>
+        </objectType>
+    </schemaHandling>
+
+    <capabilities>
+        <configured>
+            <cap:create><cap:enabled>false</cap:enabled></cap:create>
+            <cap:update><cap:enabled>false</cap:enabled></cap:update>
+            <cap:delete><cap:enabled>false</cap:enabled></cap:delete>
+        </configured>
+    </capabilities>
+</resource>

@@ -65,7 +65,7 @@ describe('the sign-in page when the development session is available', () => {
     vi.stubEnv('NODE_ENV', 'development');
   });
 
-  it('offers the three fixture identities exactly as before', async () => {
+  it('offers the four fixture identities, Second Security Analyst after Security Analyst (D-31, UI-D26)', async () => {
     await renderSignIn({ returnTo: '/app/requests' });
 
     expect(screen.getByRole('heading', { level: 1, name: 'Development sign-in' })).toBeInTheDocument();
@@ -73,7 +73,12 @@ describe('the sign-in page when the development session is available', () => {
       'Continue as Requestor',
       'Continue as Secondary Requestor',
       'Continue as Security Analyst',
+      'Continue as Second Security Analyst',
     ]);
+    const second = screen.getByRole('button', { name: 'Continue as Second Security Analyst' });
+    expect(second).toHaveAttribute('name', 'role');
+    expect(second).toHaveAttribute('value', 'Second Security Analyst');
+    expect(second.className).toBe(screen.getByRole('button', { name: 'Continue as Security Analyst' }).className);
     expect(document.querySelector('form.sign-in-actions input[name="returnTo"]')).toHaveValue('/app/requests');
     expect(screen.queryByText(unavailableCopy.heading)).not.toBeInTheDocument();
   });

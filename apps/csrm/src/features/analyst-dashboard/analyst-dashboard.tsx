@@ -10,10 +10,9 @@ import { RecordLink } from '@/components/csrm/record-link';
 import { RiskRatingBadge } from '@/components/csrm/risk-rating-badge';
 import { RetryableErrorState } from '@/components/states/retryable-error-state';
 import { EmptyState, PermissionDeniedState } from '@/components/states/states';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AlertRow, type AlertRowVariant } from '../alerts/alert-row';
+import { homeGridClassName, homeLinkRowClassName, homeRowClassName, HomeSection, HomeSectionFooter, HomeSectionSkeleton } from '../home/home-section';
 import {
   activityRows,
   alertWidgetNote,
@@ -29,11 +28,12 @@ import {
   riskExposureListLabel,
   riskExposureRows,
   riskExposureUnit,
+  underAssessmentRow,
   type ActivityRow,
-  type DashboardLink,
   type DashboardWidgetCopy,
   type DashboardWidgetKey,
   type HighCriticalRiskRow,
+  type UnderAssessmentRow,
 } from './analyst-dashboard-presentation';
 import type { DashboardReviewQueue, DashboardSummary } from './analyst-dashboard-schema';
 import type {
@@ -46,7 +46,7 @@ import type {
 
 /*
  * The analyst dashboard (UI-SPEC §2): the Needs action tiles first, then seven widgets in the
- * widget frame of the Requestor dashboard. The page grids follow the viewport; every widget is a
+ * Home widget frame both Homes share (HomeSection). The page grids follow the viewport; every widget is a
  * container, so its rows follow the widget's own width (UI-D14). Each unit renders its own figures,
  * its cleared state or its compact error, and never another unit's. Every row list states
  * `role="list"`, as the report index does: its markers are removed, and some screen readers then
@@ -59,77 +59,17 @@ import type {
  */
 const kpiStripClassName = 'grid-cols-2 xl:grid-cols-4';
 
-/* Widgets: one column, two from lg (the Requestor dashboard's grid), gaps at the grid gap (§3.9). */
-const widgetGridClassName = 'grid min-w-0 grid-cols-1 gap-gutter-xs sm:gap-gutter-sm lg:grid-cols-2';
+/* Widgets: one column, two from lg (the Home grid both Homes share), gaps at the grid gap (§3.9). */
+const widgetGridClassName = homeGridClassName;
 
 /* A record or alert row in the shipped DashboardItem rhythm: hairlines between rows, none outside. */
-const rowClassName = 'border-t border-border py-4 first:border-t-0 first:pt-0 last:pb-0';
+const rowClassName = homeRowClassName;
 
-/*
- * A link row (UI-SPEC §2.4): the whole row is one link at least the default table row height, with
- * the chevron as its at-rest cue. The hover tint reaches past the text edge, as the bar rows' does.
- */
-const linkRowClassName =
-  '-mx-2 flex min-h-11 items-center gap-3 rounded-md px-2 text-sm text-foreground '
-  + 'transition-colors duration-(--duration-micro) ease-standard hover:bg-surface-hover';
-
-/*
- * A footer text link: ink with its at-rest underline, the button type size, and the touch-target
- * height below md. Written out rather than merged, because a merge drops the type token beside a
- * text colour.
- */
-const footerLinkClassName =
-  'inline-flex min-h-11 items-center text-button text-foreground underline decoration-muted-foreground underline-offset-3 '
-  + 'transition-colors duration-(--duration-micro) ease-standard hover:decoration-foreground md:min-h-6';
+/* A link row (UI-SPEC §2.4), shared with Your own requests. */
+const linkRowClassName = homeLinkRowClassName;
 
 /* A standalone record link meets the touch-target height below md, as the shared alert row's does. */
 const recordLinkClassName = 'inline-flex min-h-11 items-center tabular-nums md:min-h-6';
-
-/** The widget frame: the card, its icon and heading, the one-line predicate, the body and any footer. */
-function DashboardWidget({ children, className, copy, footer }: {
-  children: ReactNode;
-  className?: string;
-  copy: DashboardWidgetCopy;
-  footer?: ReactNode;
-}) {
-  const Icon = copy.icon;
-
-  return (
-    <Card className={cn('min-w-0 gap-0 py-5', className)}>
-      <section aria-labelledby={copy.headingId} className="@container flex min-w-0 flex-1 flex-col px-5" data-slot="dashboard-widget">
-        <div className="flex items-center gap-2">
-          <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-          <h2 className="text-heading-sm text-foreground" id={copy.headingId}>{copy.heading}</h2>
-        </div>
-        <p className="mt-2 text-sm text-foreground-secondary">{copy.description}</p>
-        {/*
-         * The footer follows the rows rather than pinning to the card's bottom edge. Paired
-         * widgets share a row height, so a sparse widget's spare height falls after its footer,
-         * where it reads as room to grow, instead of opening a band between rows and links
-         * (07-UI-REVIEW finding 1).
-         */}
-        <div className="mt-4">{children}</div>
-        {footer}
-      </section>
-    </Card>
-  );
-}
-
-/** The truncation note, then the links that open the widget's own predicate. */
-function WidgetFooter({ links, note }: { links: readonly DashboardLink[]; note: string | null }) {
-  if (!note && links.length === 0) return null;
-
-  return (
-    <div className="mt-4 flex flex-col gap-1 border-t border-border pt-4" data-slot="dashboard-widget-footer">
-      {note ? <p className="text-xs tabular-nums text-foreground-secondary">{note}</p> : null}
-      {links.length > 0 ? (
-        <div className="flex flex-wrap gap-x-4">
-          {links.map((link) => <Link className={footerLinkClassName} href={link.href} key={link.href}>{link.label}</Link>)}
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 /** A failed unit: its compact error and "Try again", with no count and no record link (UI-SPEC §6.2). */
 function WidgetError({ noun }: { noun: string }) {
@@ -200,8 +140,27 @@ function ReviewQueueBody({ queue }: { queue: DashboardReviewQueue }) {
   );
 }
 
-function RiskExposureBody({ counts }: { counts: DashboardSummary['riskExposure'] }) {
-  const bars = riskExposureRows(counts).map((row) => ({
+/*
+ * The open Risks under assessment, apart from the released rows (UI-SPEC §9.2): after a hairline, a link row
+ * in the Review queue's pattern, then its caption, so the two stages are never read as one total.
+ */
+function UnderAssessmentLinkRow({ row }: { row: UnderAssessmentRow }) {
+  return (
+    <div className="mt-3 border-t border-border pt-3" data-slot="analyst-dashboard-under-assessment">
+      <Link aria-label={row.accessibleName} className={linkRowClassName} href={row.href}>
+        <span className="min-w-0 flex-1 break-words">{row.label}</span>
+        {/* A word break the flex row does not draw: the link's text reads as its name begins (SC 2.5.3). */}
+        {' '}
+        <span className="shrink-0 font-medium tabular-nums">{row.countText}</span>
+        <ChevronRightIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
+      <p className="text-xs text-foreground-secondary">{row.caption}</p>
+    </div>
+  );
+}
+
+function RiskExposureChart({ exposure }: { exposure: DashboardSummary['riskExposure'] }) {
+  const bars = riskExposureRows(exposure).map((row) => ({
     key: row.key,
     // The badge keeps the rating's icon and word beside its colour; Not rated is plain text. The row's
     // link names the rating, so the badge inside it does not name itself (SC 2.5.3).
@@ -210,9 +169,20 @@ function RiskExposureBody({ counts }: { counts: DashboardSummary['riskExposure']
     value: row.value,
     tone: row.tone,
     href: row.href,
+    secondary: row.accepted,
   }));
 
   return <BarChart ariaLabel={riskExposureListLabel} data={bars} presentation="labelled-values" unit={riskExposureUnit} />;
+}
+
+/** Released rows, or the cleared released state, then the under-assessment row beneath either (UI-SPEC §9.2). */
+function RiskExposureBody({ copy, exposure }: { copy: DashboardWidgetCopy; exposure: DashboardSummary['riskExposure'] }) {
+  return (
+    <div className="flex flex-col">
+      {exposure.released.total === 0 ? <WidgetCleared copy={copy} /> : <RiskExposureChart exposure={exposure} />}
+      <UnderAssessmentLinkRow row={underAssessmentRow(exposure)} />
+    </div>
+  );
 }
 
 function TargetDateLine({ row }: { row: HighCriticalRiskRow }) {
@@ -308,7 +278,7 @@ function widgetView<T>(
 ): WidgetView {
   if (unit.status === 'unavailable') return { body: <WidgetError noun={copy.errorNoun} /> };
   if (view.isEmpty?.(unit.data)) return { body: <WidgetCleared copy={copy} /> };
-  return { body: view.body(unit.data), footer: <WidgetFooter links={copy.links} note={view.note?.(unit.data) ?? null} /> };
+  return { body: view.body(unit.data), footer: <HomeSectionFooter links={copy.links} note={view.note?.(unit.data) ?? null} /> };
 }
 
 function widgetViews(units: AnalystDashboardUnits, copy: Record<DashboardWidgetKey, DashboardWidgetCopy>): Record<DashboardWidgetKey, WidgetView> {
@@ -321,9 +291,9 @@ function widgetViews(units: AnalystDashboardUnits, copy: Record<DashboardWidgetK
   return {
     // Zero rows are data: the Review queue has no empty state.
     reviewQueue: widgetView(units.reviewQueue, copy.reviewQueue, { body: (queue) => <ReviewQueueBody queue={queue} /> }),
+    // The cleared released state keeps the under-assessment row, so the body draws its own empty state.
     riskExposure: widgetView(units.riskExposure, copy.riskExposure, {
-      isEmpty: (counts) => counts.total === 0,
-      body: (counts) => <RiskExposureBody counts={counts} />,
+      body: (exposure) => <RiskExposureBody copy={copy.riskExposure} exposure={exposure} />,
     }),
     highCritical: widgetView(units.highCritical, copy.highCritical, {
       isEmpty: (list) => list.total === 0,
@@ -345,11 +315,15 @@ function widgetViews(units: AnalystDashboardUnits, copy: Record<DashboardWidgetK
 /** Recent activity reads best at full width, so it spans both columns from lg. */
 const widgetSpans: Partial<Record<DashboardWidgetKey, string>> = { recentActivity: 'lg:col-span-2' };
 
+/** Your own requests sits beneath Recent activity, in the left column from lg and full width below (UI-D21). */
+export const ownRequestsPlacement = 'lg:col-start-1';
+
 /**
  * The analyst Home's review summary for a composed state. The page error shows only when the summary
- * itself failed; a refused read shows the permission state; otherwise every unit renders on its own.
+ * itself failed; a refused read shows the permission state; otherwise every unit renders on its own, and
+ * `ownRequests` (the Home's Your own requests panel, D-18 item 7) ends the widget grid.
  */
-export function AnalystDashboard({ state }: { state: AnalystDashboardState }) {
+export function AnalystDashboard({ ownRequests, state }: { ownRequests?: ReactNode; state: AnalystDashboardState }) {
   if (state.kind === 'permission-denied') return <PermissionDeniedState action={analystHomePermissionAction} area={analystDashboardCopy.area} />;
   if (state.kind === 'error') return <RetryableErrorState noun={analystDashboardCopy.area} />;
 
@@ -362,39 +336,17 @@ export function AnalystDashboard({ state }: { state: AnalystDashboardState }) {
       <NeedsActionStrip dueSoonWindowDays={dueSoonWindowDays} unit={units.kpi} />
       <div className={widgetGridClassName} data-slot="analyst-dashboard-widgets">
         {dashboardWidgetOrder.map((key) => (
-          <DashboardWidget className={widgetSpans[key]} copy={copy[key]} footer={views[key].footer} key={key}>
+          <HomeSection className={widgetSpans[key]} copy={copy[key]} footer={views[key].footer} key={key}>
             {views[key].body}
-          </DashboardWidget>
+          </HomeSection>
         ))}
+        {ownRequests}
       </div>
     </div>
   );
 }
 
-/** A loading widget in the same card: the icon and title, the description, then three rows. */
-function WidgetSkeleton({ className }: { className?: string }) {
-  return (
-    <Card className={cn('min-w-0 gap-0 py-5', className)} data-slot="dashboard-widget-skeleton">
-      <div className="px-5">
-        <div className="flex h-6 items-center gap-2">
-          <Skeleton className="size-4" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-        <Skeleton className="mt-2 h-5 w-full max-w-sm" />
-        <div className="mt-4">
-          {Array.from({ length: 3 }, (_, index) => (
-            <div className={rowClassName} key={index}>
-              <Skeleton className="h-5 w-2/5" />
-              <Skeleton className="mt-2 h-4 w-4/5" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/** The loading dashboard in its final layout: four tile skeletons, then the seven widget skeletons. */
+/** The loading dashboard in its final layout: four tile skeletons, then the eight widget skeletons, Your own requests last. */
 export function AnalystDashboardSkeleton() {
   return (
     <div aria-label={analystDashboardCopy.loadingLabel} aria-live="polite" className="space-y-8" role="status">
@@ -403,7 +355,8 @@ export function AnalystDashboardSkeleton() {
         {Array.from({ length: 4 }, (_, index) => <KpiTileSkeleton key={index} />)}
       </KpiTileStrip>
       <div className={widgetGridClassName}>
-        {dashboardWidgetOrder.map((key) => <WidgetSkeleton className={widgetSpans[key]} key={key} />)}
+        {dashboardWidgetOrder.map((key) => <HomeSectionSkeleton className={widgetSpans[key]} key={key} />)}
+        <HomeSectionSkeleton className={ownRequestsPlacement} withFooter />
       </div>
     </div>
   );

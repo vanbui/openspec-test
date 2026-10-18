@@ -213,7 +213,8 @@ test("catalogue provides exactly one API-only grant for every served operation",
   const core = catalogue.functions.find((entry) => entry.id === "function.risk_assessment_requests.core_api");
   assert.ok(core);
   assert.equal("menuPath" in core, false);
-  assert.deepEqual([...core.roleIds].sort(), ["role.requestor", "role.security_analyst", "role.security_analyst_agent"]);
+  // Phase 12 D-33 (R-08-42): the service agent holds neither request grant.
+  assert.deepEqual([...core.roleIds].sort(), ["role.requestor", "role.security_analyst"]);
   assert.deepEqual(core.functionApiIds, [
     "function.risk_assessment_requests.core_api.api.01",
     "function.risk_assessment_requests.core_api.api.02",
@@ -224,7 +225,7 @@ test("catalogue provides exactly one API-only grant for every served operation",
   const deleteFunction = catalogue.functions.find((entry) => entry.id === deleteFunctionId);
   assert.ok(deleteFunction);
   assert.equal("menuPath" in deleteFunction, false);
-  assert.deepEqual([...deleteFunction.roleIds].sort(), ["role.security_analyst", "role.security_analyst_agent"]);
+  assert.deepEqual([...deleteFunction.roleIds].sort(), ["role.security_analyst"]);
   assert.deepEqual(deleteFunction.functionApiIds, ["function.risk_assessment_requests.delete_api.api.01"]);
 
   const requestor = catalogue.roles.find((entry) => entry.id === "role.requestor");
@@ -233,10 +234,10 @@ test("catalogue provides exactly one API-only grant for every served operation",
   assert.ok(requestor && analyst && analystAgent);
   assert.equal(requestor.functionIds.includes(coreFunctionId), true);
   assert.equal(requestor.functionIds.includes(deleteFunctionId), false);
-  for (const role of [analyst, analystAgent]) {
-    assert.equal(role.functionIds.includes(coreFunctionId), true);
-    assert.equal(role.functionIds.includes(deleteFunctionId), true);
-  }
+  assert.equal(analyst.functionIds.includes(coreFunctionId), true);
+  assert.equal(analyst.functionIds.includes(deleteFunctionId), true);
+  assert.equal(analystAgent.functionIds.includes(coreFunctionId), false);
+  assert.equal(analystAgent.functionIds.includes(deleteFunctionId), false);
   // REQ-06: the owning Requestor and a human Security Analyst may return a
   // submitted request to draft; the service analyst agent must not.
   assert.equal(requestor.functionIds.includes(revertFunctionId), true);
@@ -257,10 +258,16 @@ test("catalogue provides exactly one API-only grant for every served operation",
   assert.ok(catalogue.functionApis.some((entry) => entry.id === "function.risk_assessment_requests.request_details.api.02"));
 });
 
-test("ADMIN-01 ADMIN-02 ADMIN-03 ADMIN-04 catalogue grants exactly 24 no-delete human-analyst Administration operations", () => {
+/*
+ * Phase 06's 24 Administration operations, plus Phase 19's 12 (19-14; D-31 to D-33): each collection's import template,
+ * error report and reference-list export, in the same Functions and human-analyst-only.
+ */
+const ADMINISTRATION_OPERATION_COUNT = 24 + 12;
+
+test("ADMIN-01 ADMIN-02 ADMIN-03 ADMIN-04 catalogue grants exactly 36 no-delete human-analyst Administration operations", () => {
   const operations = Object.values(CSRM_ADMINISTRATION_OPERATIONS).sort();
-  assert.equal(operations.length, 24, "PHASE6_OPERATION_INVENTORY_MISSING");
-  assert.equal(new Set(operations).size, 24, "DUPLICATE_ADMINISTRATION_OPERATION");
+  assert.equal(operations.length, ADMINISTRATION_OPERATION_COUNT, "PHASE6_OPERATION_INVENTORY_MISSING");
+  assert.equal(new Set(operations).size, ADMINISTRATION_OPERATION_COUNT, "DUPLICATE_ADMINISTRATION_OPERATION");
   assert.equal(operations.some((operation) => operation.startsWith("DELETE:")), false, "T-06-08_DELETE_OPERATION_EXPOSED");
 
   for (const operation of operations) {
@@ -312,8 +319,8 @@ test("Administration route inventory is token-only, exact-grant, human-only, and
     assert.notEqual(route.method, "DELETE");
   }
 
-  assert.equal(mountedOperations.length, 24);
-  assert.equal(new Set(mountedOperations).size, 24);
+  assert.equal(mountedOperations.length, ADMINISTRATION_OPERATION_COUNT);
+  assert.equal(new Set(mountedOperations).size, ADMINISTRATION_OPERATION_COUNT);
   for (const path of ["/v1/risk_types", "/v1/controls"]) {
     assert.equal(routes.filter((route) => route.method === "GET" && route.path === path).length, 1);
     assert.equal(administrationRouteList.some((route: RouteConfig) => route.method === "GET" && route.path === path), false);
@@ -493,7 +500,8 @@ test("mounted request writes admit every granted actor, the service agent includ
     "REQUEST_OWNER_NOT_DERIVED_OTHER_REQUESTOR",
   );
 
-  // The analyst and the service agent create through the explicit analyst grant.
+  // The analyst creates through the explicit analyst grant; the service agent, whose request grants Phase 12
+  // withdrew (D-33, R-08-42), through the Requestor birthright every identity holds.
   for (const [actor, identity] of [
     ["ANALYST", harness.identities.analyst],
     ["SERVICE_AGENT", harness.identities.serviceAnalystAgent],
@@ -506,20 +514,20 @@ test("mounted request writes admit every granted actor, the service agent includ
     assert.equal((await harness.getRequest(createdId))?.title, `Write proof ${actor}`, `REQUEST_CREATE_NOT_PERSISTED_${actor}`);
   }
 
-  // The service agent holds the exact update and delete grants, on a request it does not own.
+  // Phase 12 D-33 (R-08-42): the service agent no longer holds the update or delete grant, so a request it does
+  // not own is refused and left exactly as it was.
   const target = await harness.createAssessmentRequestFixture({
     requestNumber: "AUTH-SERVICE-AGENT-WRITE-001",
     title: "Service agent write target",
     requestStatus: "draft",
     requestor: "owner",
   });
+  const before = await harness.getRequest(target);
   const updated = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.serviceAnalystAgent, json("PUT", { data: { title: "Service agent updated" } }));
-  assert.equal(updated.status, 200, "SERVICE_AGENT_UPDATE_REFUSED");
-  assert.equal((await harness.getRequest(target))?.title, "Service agent updated");
-
+  assert.equal(updated.status, 403, "SERVICE_AGENT_UPDATE_NOT_REFUSED");
   const removed = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.serviceAnalystAgent, { method: "DELETE" });
-  assert.equal(removed.status, 204, "SERVICE_AGENT_DELETE_REFUSED");
-  assert.equal(await harness.getRequest(target), null);
+  assert.equal(removed.status, 403, "SERVICE_AGENT_DELETE_NOT_REFUSED");
+  assert.deepEqual(await harness.getRequest(target), before, "SERVICE_AGENT_REFUSAL_WROTE");
 });
 
 /*
@@ -626,11 +634,10 @@ test("T-08-A1 an analyst's or the service agent's own new request appears in the
   }
 });
 
-test("T-08-A2 mounted update keeps a request's owner when an analyst or the service agent names another Requestor", async () => {
+test("T-08-A2 mounted update keeps a request's owner when an analyst names another Requestor", async () => {
   const harness = await harnessPromise;
   for (const [actor, identity, suffix] of [
     ["ANALYST", harness.identities.analyst, "AN"],
-    ["SERVICE_AGENT", harness.identities.serviceAnalystAgent, "AG"],
   ] as const) {
     // The owner's released work: an approved request, its released questionnaire and its released assessment.
     const requestId = await harness.createAssessmentRequestFixture({
@@ -685,14 +692,13 @@ test("T-08-A2 mounted update keeps a request's owner when an analyst or the serv
  * contract does not allow is refused (400) with nothing written, and submission is a transition
  * from draft only, dated by the server.
  */
-test("T-08-A2 mounted update ignores server-owned facts and honours only the published submission intent from an analyst or the service agent", async () => {
+test("T-08-A2 mounted update ignores server-owned facts and honours only the published submission intent from an analyst", async () => {
   const harness = await harnessPromise;
   const forgedQuestionnaire = await harness.createFixtureDocument("api::csrm-questionnaire.csrm-questionnaire", { title: "T-08-A2 forged questionnaire" });
   const forgedAssessment = await harness.createFixtureDocument("api::csrm-assessment.csrm-assessment", { assessmentNumber: "T08A2-FORGED-ASSESSMENT", assessmentStatus: "draft" });
 
   for (const [actor, identity, suffix] of [
     ["ANALYST", harness.identities.analyst, "AN"],
-    ["SERVICE_AGENT", harness.identities.serviceAnalystAgent, "AG"],
   ] as const) {
     const requestNumber = `T08A2-DRAFT-${suffix}`;
     const target = await harness.createAssessmentRequestFixture({ requestNumber, title: `T-08-A2 draft ${actor}`, requestStatus: "draft", requestor: "owner" });
@@ -751,4 +757,32 @@ test("T-08-A2 mounted update ignores server-owned facts and honours only the pub
     assert.equal(repeated.status, 400, `T08A2_REPEATED_SUBMIT_ADMITTED_${actor}`);
     assert.deepEqual(await harness.getRequest(ownId), before, `T08A2_REPEATED_SUBMIT_WROTE_${actor}`);
   }
+});
+
+/*
+ * Phase 13 D-20 (O-5): the analyst branch of the request update may amend another person's draft, but only the
+ * request's own requestor submits it, so an analyst never attests a request they did not raise. The refusal is a 403
+ * with the closed reason NOT_REQUEST_REQUESTOR and nothing written. T-08-A2's cases above stay as they are: another
+ * status on another person's draft is still 400, and an analyst still submits their own draft.
+ */
+test("D-20 an analyst submitting a draft they did not raise is refused with NOT_REQUEST_REQUESTOR, while amending it and the requestor's own submission stay allowed", async () => {
+  const harness = await harnessPromise;
+  const target = await harness.createAssessmentRequestFixture({ requestNumber: "D20-DRAFT", title: "D-20 draft", requestStatus: "draft", requestor: "owner" });
+  for (const body of [{ requestStatus: "submitted" }, { title: "Submitted by Bob", requestStatus: "submitted" }]) {
+    const before = await harness.getRequest(target);
+    const refused = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.analyst, jsonBody("PUT", body));
+    assert.equal(refused.status, 403, `D20_SUBMISSION_STATUS_${JSON.stringify(body)}`);
+    assert.deepEqual(((await refused.json()) as { error?: { details?: unknown } }).error?.details, { reason: "NOT_REQUEST_REQUESTOR" }, "D20_SUBMISSION_REASON");
+    assert.deepEqual(await harness.getRequest(target), before, `D20_SUBMISSION_WROTE_${JSON.stringify(body)}`);
+  }
+
+  const amended = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.analyst, jsonBody("PUT", { title: "D-20 amended by Bob" }));
+  assert.equal(amended.status, 200, "D20_AMENDMENT_STATUS");
+  assert.equal((await harness.getRequest(target))?.title, "D-20 amended by Bob", "D20_AMENDMENT_NOT_WRITTEN");
+  const kept = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.analyst, jsonBody("PUT", { requestStatus: "draft" }));
+  assert.equal(kept.status, 200, "D20_DRAFT_INTENT_STATUS");
+
+  const submitted = await request(`/api/csrm-assessment-requests/${target}`, harness.identities.owner, jsonBody("PUT", { requestStatus: "submitted" }));
+  assert.equal(submitted.status, 200, "D20_REQUESTOR_SUBMISSION_STATUS");
+  assert.equal((await harness.getRequest(target))?.requestStatus, "submitted", "D20_REQUESTOR_SUBMISSION_NOT_APPLIED");
 });

@@ -10,7 +10,7 @@ export const listStateTargets = [
   'src/features/assessments/released-assessment.tsx',
   'src/features/risks/risk-register.tsx',
   'src/features/administration/administration-workspace.tsx',
-  'src/features/dashboard/requestor-dashboard.tsx',
+  'src/features/home/requestor-home.tsx',
 ];
 
 const sharedStateImport = /import\s*\{[^}]*\b(?:EmptyState|ErrorState|LoadingState|PermissionDeniedState)\b[^}]*}\s*from\s*['"][^'"]*components\/states\/states['"]/s;

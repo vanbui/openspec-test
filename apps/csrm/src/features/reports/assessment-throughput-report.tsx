@@ -42,7 +42,7 @@ export function AssessmentThroughputReportView({ report }: { report: AssessmentT
             caption={copy.releasedPerMonth.caption}
             columns={copy.releasedPerMonth.columns}
             rowHeader={copy.releasedPerMonth.rowHeader}
-            rows={releasedMonthRows(report.released.months)}
+            rows={releasedMonthRows(report.released.months, report.today)}
           />
         )}
       />
