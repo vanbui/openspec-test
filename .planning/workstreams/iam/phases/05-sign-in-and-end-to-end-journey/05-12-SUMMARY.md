@@ -1,14 +1,24 @@
 ---
 phase: 05-sign-in-and-end-to-end-journey
 plan: "12"
-status: blocked
-updated: 2026-10-18
-requirements-completed: []
+status: complete
+updated: 2026-10-19
+requirements-completed: [SIGN-01, SIGN-02]
 ---
 
 # 05-12 summary: complete responsive journey and final evidence
 
-**Outcome: every live stage passes; acceptance blocked by B1.** Record: [05-LIVE-EVIDENCE.md](05-LIVE-EVIDENCE.md).
+**Outcome (2026-10-19): passed.** The official run `iam-journey-35607205-…` at `72aeb261` passed all 30 stages, including the unfiltered regressions, and published a verified bundle with four screenshots. Record: [05-LIVE-EVIDENCE.md](05-LIVE-EVIDENCE.md).
+
+## 2026-10-19 closure
+
+- B1 closed: csrm's modules are on `main`, `main` is merged here, and the unfiltered backend suite passes 2576/2576.
+- `1f47da95`: the evidence stage gets its own 7200 s regression budget. It had 180 s, which the unfiltered suite (about 45–51 min) could never meet.
+- Local only: removed the stale git-ignored `apps/csrm/.next/dev`, which broke `pnpm --dir apps/csrm typecheck` after the csrm route moves.
+- `72aeb261`: the evidence verifier accepts IN-03's PATCH receipts (P3-35). A diagnostic live run verified the real bundle before the official run.
+- `journey.mjs --verify-evidence` accepts the published bundle; journey tests 231/231; `--check` passes.
+
+## 2026-10-18 record (superseded)
 
 - Task 1 (fresh-stack two-width gate): the official `--run` (run `iam-journey-3a51c9e6-…`, HEAD `e5964724`) passed all 29 live stages through the committed runtime: setup, both full lifecycles at 1440 and 375, and IN-03 with native recovery (519 s). The `evidence` stage then failed. Its unfiltered backend regression stops at the six inherited B1 compilation diagnostics, so the runner published no bundle, as designed.
 - Task 2 (publication, cleanup, provenance): cleanup was verified (no owned containers, volumes, network, run directory or lock remained). No `journey.json`, screenshots or `evidence/journey/manifest.json` exist, so `--verify-evidence` has nothing to accept. `05-VALIDATION.md` was not changed, because no acceptance result exists.

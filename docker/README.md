@@ -26,7 +26,7 @@ Run the commands in this README from this `docker/` directory: Compose reads `do
    midpoint/new-env.sh
    ```
 
-   Or copy `.env.example` to `.env` and fill in the values yourself. midPoint's default password policy allows at most 14 characters for `MIDPOINT_ADMIN_PASSWORD`. `midpoint/tests/new-env.test.sh` checks the generator, including a CRLF copy of the example.
+   Or copy `.env.example` to `.env` and fill in the values yourself. midPoint's default password policy allows at most 14 characters for `MIDPOINT_ADMIN_PASSWORD` and requires uppercase, lowercase and numeric characters. Do not use the `change-me` placeholder: midPoint rejects it during initialization, leaving the administrator account uncreated even though the server reports healthy. `midpoint/tests/new-env.test.sh` checks the generator, including a CRLF copy of the example.
 
 2. Start the stack. The first start builds the midPoint image, which clones and compiles the SCIM2 connector, so it needs network access to GitHub and the Maven repositories:
 

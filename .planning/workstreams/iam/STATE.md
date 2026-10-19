@@ -2,45 +2,38 @@
 gsd_state_version: "1.0"
 milestone: v1.0
 milestone_name: Identity Provisioning
-current_phase: 5
-current_phase_name: Sign-in and end-to-end journey
-status: executing
-stopped_at: 05-11 passed live; 05-12 official run passed all 29 live stages, evidence stage blocked by B1 (unfiltered backend suite cannot compile)
-last_updated: "2026-10-18"
-last_activity: 2026-10-18
-state_head: e5964724
+status: Awaiting next milestone
+stopped_at: v1.0 milestone completed (override_closeout); audit tech_debt 24/24, see milestones/v1.0-MILESTONE-AUDIT.md
+closeout_type: override_closeout
+last_updated: "2026-10-19T10:29:46.950Z"
+last_activity: 2026-10-19
+last_activity_desc: Milestone v1.0 completed and archived
+state_head: d28ebfaf02b5efe4a040a786d0c53f411c114597
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 80
-  completed_plans: 79
-  percent: 80
-last_activity_desc: 05-11 Keycloak contract live pass (43ba478c); 05-12 live stages all pass at e5964724 after 15 runner/spec fixes; journey bundle unpublished because B1 blocks the unfiltered backend suite
+  completed_plans: 80
+  percent: 100
+current_phase: 5
+current_phase_name: Sign-in and end-to-end journey
 ---
 
 # Project State
 
 ## Project Reference
 
-See: `.planning/workstreams/iam/PROJECT.md` (updated 2026-10-13)
+See: `.planning/workstreams/iam/PROJECT.md` (updated 2026-10-19)
 
 **Core value:** A leaver in the customer's Identity Source loses access to every IdamBox product on the next sync, without anyone remembering to do it, and no external system can grant IdamBox roles.
-**Current focus:** Phase 5 acceptance, waiting only on B1 (csrm modules on main) and one official journey rerun that publishes evidence
+**Current focus:** Planning next milestone (v1.0 Identity Provisioning shipped 2026-10-19)
 
 ## Current Position
 
-Phase: 5 (Sign-in and end-to-end journey) — IN PROGRESS (blocked by B1)
-Update 2026-10-18: 05-11 complete (A1–A4 live, `05-KEYCLOAK-CONTRACT.md`). 05-12: the official fresh-stack `--run` at `e5964724` passed all 29 live stages (both widths and IN-03); the `evidence` stage failed on B1, so no bundle was published (`05-LIVE-EVIDENCE.md`, `05-12-SUMMARY.md`). Plans 11/12 complete; SIGN-01/SIGN-02 pending.
-Plan: 8/12 executed (05-01 to 05-07, 05-09). Remaining: 05-08 (wave 5), 05-10 (wave 6), and the live checkpoints 05-11 and 05-12 (waves 7–8).
-Status: Wave 3 committed (`b47112fe` operator resend command, `6ec90635` journey lifecycle adapters and capability-only bootstrap). Wave 4 committed (`56d643ba` private password-setup and sign-in browser journey; `dadf5599` Keycloak contract probe and IN-03 conflict runner seams, **partial**: concrete source, mailbox, browser and native retry bindings still open, see 05-09-SUMMARY.md). Orchestrator fix in `56d643ba`: the default CSRM Playwright configuration ignores `iam-journey.spec.ts`, which only the journey configuration and its disposable runner drive (244 default tests listed, journey spec excluded; journey configuration still lists its 1440 and 375 tests).
-Orchestrator re-verification at `6ec90635`: backend source and test compilation with only the two inherited csrm files excluded, then the remaining backend suite: 2070 passed, 0 failed. At `dadf5599`: journey adapter tests 143/143; `journey.mjs --check` passes; CSRM typecheck passes and CSRM unit tests 5412/5412 (the two `listen EPERM` failures seen inside the restricted executor do not reproduce outside it). No live operation in this session; no live acceptance is claimed.
-Wave 4 completion (2026-10-17): the stashed in-flight 05-09 work was restored, completed by the delegated executor, reviewed and committed as `65e15658`. Both documented gaps are closed offline: `--probe-keycloak` and the `in03-conflict` stage (also `--in03-conflict`) now build concrete default bindings. Review points checked: the foreign Requestor fixture is created through `identity-service.createFromSource`, its restricted record through the request domain service, refusals are server 403s, listener IdamBoxUser reads stay read-only `findMany`, and SCIM observation counts only requests carrying the private source bearer. Orchestrator re-run: journey adapter tests 172/172, `journey.mjs --check` passes. No apps/backend change. The old stash entry is fully superseded by `65e15658` and can be dropped. Early 05-08 seams (access driver, listener access actions) are committed but the default browser advertises only password setup and sign-in; 05-08 remains open.
-
-Prior phase: Phase 4 remains complete; its historical results and amendments are preserved in `phases/04-midpoint-configuration/`. Historical diagnostic exclusions do not satisfy Phase 5's unfiltered backend gate.
-
-Last activity: 2026-10-17. Wave 2 delivered the transaction/eligibility acceptance matrix, SMTP-only local realm seed and ordered journey/evidence protocol. Plan summaries 05-02, 05-04 and 05-05 record actual checks, corrections and remaining acceptance. Live adapters remain owned by later plans and fail closed while unavailable. Keycloak endpoint assumptions A1–A4 still require contract proof.
-
-Progress: [████████░░] 80% (4 of 5 phases complete; Phase 5 wave 2 implemented)
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-19 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -120,7 +113,7 @@ The brief's decisions D1–D26 (`.planning/workstreams/iam/IDENTITY-PROVISIONING
 - [Phase 3, 2026-10-16]: Orchestrator live probe through midPoint and the real connector (`phases/03-strapi-scim-2-0-service/03-LIVE-PROBE.md`) found five contract gaps and fixed them (P3-33 to P3-35, commits `344bc8c9`, `b17bbaac`, `ad78a21d`, `2c164ba1`). Live: connection test passes; create 201, mover PUT+PATCH 200, leaver 200, DELETE 204 then 404. Plans 03-10 onward must build on these decisions, not on the original P3-13 clearing rule.
 - [Phase 3, resolved by 03-11]: Replaced the stale unmounted-SCIM assertion and regenerated the runtime inventory. Ordinary inventory 13/13, contract 27/27 and focused SCIM regressions 71/71 pass. Full backend gate remains with the orchestrator.
 
-- [Backend gate, OPEN 2026-10-15, still open 2026-10-18]: the only blocker left for Phase 5 acceptance; the modules exist on `origin/csrm` only, not on `main`. csrm 16-02 committed red-phase unit tests `risk-curation-rules.unit.test.ts` and `risk-history-changes.unit.test.ts` before their modules, so unfiltered `pnpm --dir apps/backend test` stops at compilation on every branch (WINDOWS.md entry 11, owner csrm). Phase 4 must re-evaluate the unfiltered baseline; the historical two-file diagnostic exclusions do not authorize a passing full-suite claim.
+- [Backend gate, RESOLVED 2026-10-19]: csrm's modules reached `main` (PR #9), `main` was merged here (PR #10), and the unfiltered backend suite passes 2576/2576. Original note: the modules exist on `origin/csrm` only, not on `main`. csrm 16-02 committed red-phase unit tests `risk-curation-rules.unit.test.ts` and `risk-history-changes.unit.test.ts` before their modules, so unfiltered `pnpm --dir apps/backend test` stops at compilation on every branch (WINDOWS.md entry 11, owner csrm). Phase 4 must re-evaluate the unfiltered baseline; the historical two-file diagnostic exclusions do not authorize a passing full-suite claim.
 
 - [Phase 1, resolved]: Connector compatibility proven for discovery (GO). Community-support risk stays open; fallbacks are listed, unselected, in ADR 0006.
 - [Phase 2 gate, CLOSED 2026-10-14]: `docs/contract-gaps/iam-identity-model-and-leaver-sync.md` approved by the operator, including private sourceIdentityKey, outbox lease/fencing fields, seeded idambox-iam Application and service birthright exclusion. The first execution task reconciles exact approved schemas; schema drift requires renewed approval.
@@ -137,7 +130,6 @@ The brief's decisions D1–D26 (`.planning/workstreams/iam/IDENTITY-PROVISIONING
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 1 | remove the example-data-models folder | 2026-10-15 | 8d71f63a | [261015-h3b](./quick/261015-h3b-remove-the-example-data-models-folder/) |
 
 ## Deferred Items
 
@@ -145,9 +137,21 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
-| *(none)* | | | | |
+| verification_override | Phase 1: verification lacks file fingerprint (stale); 1 consolidated summary for 5 plans | acknowledged | 2026-10-19 | v1.0 |
+| verification_override | Phase 4: verification lacks frontmatter (missing); 1 consolidated summary for 32 plans | acknowledged | 2026-10-19 | v1.0 |
 
 ## Session Continuity
+
+### 2026-10-19 session (milestone audit)
+
+Landed: `v1.0-MILESTONE-AUDIT.md` (status gaps_found). The audit re-ran the journey unit tests (231/231), `journey.mjs --check`, and every evidence verifier (journey, contract, SCIM capture, lifecycle, refusal); all pass. It did not re-run live gates or the full backend suite. The `idp` stack stayed disposed, and no backend, schema, contract or default changed.
+Resume with: `/gsd-verify-work 2 --ws iam`.
+
+### 2026-10-19 session (Phase 5 acceptance)
+
+Landed: B1 is closed (the unfiltered backend suite passes 2576/2576 in about 51 min). `1f47da95` gives the journey's evidence stage its own 7200 s budget: 180 s could never cover the unfiltered regressions. `72aeb261` makes the evidence verifier accept IN-03's PATCH receipts (P3-35). The fixtures had the same wrong PUT, so only a live publication could expose it. Locally, the stale git-ignored `apps/csrm/.next/dev` was removed because it broke CSRM `typecheck` after the csrm route moves (handoff recorded in 05-VERIFICATION.md). Official run `iam-journey-35607205-…` passed. The verification is in `05-VERIFICATION.md`.
+Environment: the `idp` stack is disposed (no containers, volumes or networks). Developer `docker/.env` and `apps/backend/.env` were not touched. No delegated executor runs were needed in this session.
+Resume with: `/gsd-audit-milestone --ws iam`.
 
 ### 2026-10-18 session (live checkpoints)
 
@@ -163,6 +167,7 @@ Landed (all reviewed and re-verified outside the restricted executor):
 - `6c39366e` Orchestrator gap closure (quick task `20261018-journey-default-bindings`): no plan owned the default Mailpit/remote observers or evidence assembly, so the default `--run` could never pass. Defaults now exist; the evidence stage cleans up, then runs the unfiltered regressions and compares frozen-contract hashes before publishing. Journey tests 218/218.
 - `6b88f91b` B2 fix: `iam-journey-bootstrap.integration.test.ts` counted Strapi's own update check (`registry.npmjs.org/@strapi%2Fcore`, cached per user, so date-dependent) as journey transport. Strapi 5.51 ignores `STRAPI_DISABLE_UPDATE_NOTIFICATION`. The call is still refused but not counted.
 - `b3415d21` 05-10: operating contract (`05-OPERATIONS.md`) and offline gate (`05-OFFLINE-GATE.md`).
+
 Orchestrator re-run at `6b88f91b`: backend diagnostic suite (only the two B1 csrm files excluded) **2070/2070**; CSRM unit 5412/5412; CSRM typecheck passes. B1 (WINDOWS.md entry 11, owner csrm) still blocks the unfiltered backend gate; the default branch still lacks the csrm modules.
 
 Stopped at 05-11 Task 1: the session's permission policy refused `docker compose --project-name idp ... down -v --remove-orphans`, which the runner requires (its preflight refuses existing idp containers/volumes). Not worked around. The leftover `apps/backend` `pnpm develop` from 2026-10-16 was stopped to free port 1337; the idp stack (Keycloak, midPoint, midpoint_data, Mailpit, ClamAV) is still running with its old volumes.
@@ -171,7 +176,6 @@ Plan for 05-11 (decided, not yet executed): no developer secret is needed. After
 Known consequence: the full `--run` evidence stage runs the unfiltered backend suite, so 05-12 cannot publish passing evidence until B1 closes (csrm merges its modules into the default branch, then the default branch is merged here).
 
 Codex usage at stop: 5-hour window about 30%, weekly about 5%.
-
 
 Last session: 2026-10-17 (wave 4 completed, reviewed and committed as `65e15658`).
 Stopped at: the delegated executor's weekly usage window at 98% (5-hour window 17%), past the 95% stop line; it resets 2026-10-22 21:31 AEDT. The orchestration side was under its limit. No new delegated run was started after 05-09.
@@ -182,3 +186,7 @@ Orchestrator note: the session secret guard refuses direct reads of `docker/.env
 Runtime at stop: no live stack operation. Offline backend tests used real SQLite and mounted in-process requests with injected remote transports. Journey observations were synthetic validator fixtures; no live evidence was retained.
 Phase 5 execution records: `phases/05-sign-in-and-end-to-end-journey/05-02-SUMMARY.md`, `05-04-SUMMARY.md` and `05-05-SUMMARY.md` record exact results and deviations. No schema/default/contract change or dependency was introduced; the local realm change adds only SMTP configuration.
 The inherited unfiltered backend compilation blocker remains open (WINDOWS.md entry 11). Focused checks do not satisfy that gate. Phase verification/completion and SIGN-01/SIGN-02 closure remain pending.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone --ws iam

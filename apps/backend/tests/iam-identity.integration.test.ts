@@ -152,6 +152,37 @@ test("development reseed preserves a claimed fixture's HR values, roles, subject
   assert.deepEqual(await strapi.documents(USER).findOne({ documentId: jane.documentId, populate: { roles: true, identitySource: true } }), beforeSeed);
 });
 
+test("admin saves accept empty identity source relation changes without relaxing ownership", async () => {
+  const human = await manual("admin-relation-noop");
+  const noChanges = { connect: [], disconnect: [] };
+  // Content Manager accepts relation deltas beyond the generated singular-relation type.
+  const save = (documentId: string, data: Record<string, unknown>) => strapi.documents(USER).update({ documentId, data });
+  await save(human.documentId, {
+    accountStatus: "inactive", identitySource: noChanges,
+  });
+  const inactive = await strapi.documents(USER).findOne({ documentId: human.documentId, populate: { identitySource: true } });
+  assert.equal(inactive?.accountStatus, "inactive");
+  assert.equal(inactive?.identitySource, null);
+
+  const owned = value(await service.createFromSource(first, dto("admin-owned-noop")));
+  await save(owned.documentId, {
+    identitySource: noChanges, roles: [roleId],
+  });
+  const stored = await strapi.documents(USER).findOne({ documentId: owned.documentId, populate: { identitySource: true, roles: true } });
+  assert.equal(stored?.identitySource?.documentId, first.sourceDocumentId);
+  assert.deepEqual(stored?.roles?.map((role) => role.documentId), [roleId]);
+  for (const identitySource of [
+    { connect: [second.sourceDocumentId], disconnect: [] },
+    { connect: [], disconnect: [first.sourceDocumentId] },
+    { connect: [], disconnect: [], unexpected: true },
+  ]) {
+    await assert.rejects(save(owned.documentId, { identitySource }), /IAM_IDENTITY_FORBIDDEN/);
+  }
+  await assert.rejects(save(owned.documentId, {
+    identitySource: noChanges, accountStatus: "inactive",
+  }), /IAM_IDENTITY_FORBIDDEN/);
+});
+
 test("explicit PUT claims once, replay preserves roles and full replacement clears only optional HR fields", async () => {
   const human = await manual("claim");
   await strapi.documents(USER).update({ documentId: human.documentId, data: { employeeNumber: "old", department: "old", jobTitle: "old" } });

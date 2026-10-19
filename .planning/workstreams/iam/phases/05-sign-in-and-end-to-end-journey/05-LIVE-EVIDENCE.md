@@ -1,17 +1,47 @@
 ---
 phase: 05-sign-in-and-end-to-end-journey
 plan: "12"
-status: blocked
-observed: 2026-10-18
-run: iam-journey-3a51c9e6-c0eb-474b-9dfd-59beb2a3a959
-head: e5964724
+status: passed
+observed: 2026-10-19
+run: iam-journey-35607205-a771-477b-a22b-3f83895cc83a
+head: 72aeb261
 ---
 
 # Phase 5 live journey evidence
 
-**NOT PASSING: acceptance blocked by B1.** In the official fresh-stack run, every live stage passed through the committed `journey.mjs --run` runtime. That covers setup, the complete joiner → password → Requestor sign-in → access → mover → leaver → immediate refusal → remote completion lifecycle at 1440×900 and 375×812, and the IN-03 conflict with native recovery. The final `evidence` stage then failed exactly as designed. After disposing the stack it runs the **unfiltered** `pnpm --dir apps/backend test`, which still stops at compilation on the six inherited csrm diagnostics (B1, WINDOWS.md entry 11). The runner therefore published **no** journey bundle and no screenshots. No passing evidence exists, and none is claimed here.
+**PASSED.** The official fresh-stack run at `72aeb261` passed all 30 stages through the committed `journey.mjs --run` runtime. The final `evidence` stage passed too: it disposed the owned stack, then ran the unfiltered regressions. The runner published the bundle, and `journey.mjs --verify-evidence` accepted it:
 
-## Official run (2026-10-18, HEAD `e5964724`)
+- [`evidence/iam-journey-35607205-a771-477b-a22b-3f83895cc83a/journey.json`](evidence/iam-journey-35607205-a771-477b-a22b-3f83895cc83a/journey.json)
+- screenshots `csrm-1440-requestor.png`, `csrm-1440-refusal.png` (1440×900), `csrm-375-requestor.png` and `csrm-375-refusal.png` (375×812) in the same directory's `screenshots/`
+
+The orchestrator reviewed the bundle and the screenshots. The bundle holds no token, password, mail body or action link. The Requestor screenshots show only the My work navigation on the sourced person's own request. The refusal screenshots show the CSRM "You don't have access to this area" page after the leaver sync.
+
+## Official run (2026-10-19, HEAD `72aeb261`)
+
+Launched like the earlier runs: a private owner-only run directory under `apps/backend/.tmp`, freshly generated compose and backend credentials, and the committed realm-seed client fixtures. No developer `docker/.env` or database was used. Preflight found no `idp` containers, volumes, networks or listeners.
+
+| Stage group | Outcome | Start (s) | Duration (s) |
+| --- | --- | --- | --- |
+| setup (`preflight` → `connection`, 8 stages) | passed | 0.0 | 142.3 |
+| 1440×900 lifecycle (10 stages) | passed | 142.3 | 44.6 |
+| 375×812 lifecycle (10 stages) | passed | 186.9 | 23.3 |
+| `in03-conflict` | passed | 210.2 | 524.5 |
+| `evidence` (cleanup, then unfiltered regressions) | passed | 734.7 | 2743.2 |
+
+The live stages ended at 734.7 s against the 3600 s overall budget. The evidence stage took 2743 s against its own 7200 s budget. Bundle facts: six on-demand lifecycle tasks (joiner POST 201; mover and leaver PUT 200), the IN-03 conflict PATCH 503 `retry-later` and the native-retry-scanner recovery PATCH 200. Each width's same-session API refusal (403 for list, detail and write) came before access-token expiry and before remote logout. IN-03 retry was scheduled 300 s after the failed run and recovered through the scanner. Regressions inside the run: `pnpm --dir apps/backend test` unfiltered, `pnpm --dir apps/csrm typecheck`, `pnpm --dir apps/csrm test`, the journey tests and `journey.mjs --check`, plus the frozen-contract hash comparison.
+
+Cleanup afterwards: no `idp` container, volume or network, no run directory, no lock.
+
+### What it took to publish (2026-10-19)
+
+B1 closed when csrm's modules reached `main` (PR #9) and `main` was merged here (PR #10). The unfiltered backend suite then passed standalone: 2576/2576, exit 0, 51 min. Three more defects stood between the passing live stages and a published bundle. Each was found by running for real:
+
+1. **Evidence budget** (`1f47da95`). The evidence stage had the ordinary 180 s budget, capped by the 3600 s overall budget. The unfiltered backend suite alone needs about 45–51 minutes, so publication could never succeed. The 05-12 run hid this because it failed at compilation. The evidence stage now has its own 7200 s budget outside the overall budget, which still bounds every live stage. The runner and the verifier share one `stageBudget` rule.
+2. **Stale CSRM dev types** (local state, no commit). The first post-fix run (`1f47da95`) failed in the evidence stage after 44 min. Reproducing the regression sequence with the runner's minimal environment showed backend 2576/2576 and CSRM unit 248 files passing, but `pnpm --dir apps/csrm typecheck` failing. A git-ignored `apps/csrm/.next/dev/types/validator.ts`, left by a 6 October dev server, still referenced routes the csrm merge removed. `tsconfig.json` includes `.next/dev/types`, and `next typegen` does not rewrite that directory. Removing the ignored `.next/dev` fixed it. Handoff for csrm: stale dev output can break `typecheck` after route moves.
+3. **IN-03 receipt method** (`72aeb261`). The next run (`iam-journey-eb72649d-…`) passed all 30 stages, regressions included, and then refused its own bundle. The verifier required PUT for every non-joiner task, but the connector sends IN-03's email change as PATCH (P3-35, `eaa437f6`). The synthetic fixtures and the default-publication test used the same wrong PUT. A diagnostic live run with stubbed regressions and a private copy of the bundle verified the real bundle and its four screenshots before the official run.
+
+## Earlier official run (2026-10-18, HEAD `e5964724`, not passing)
+
 
 Launched with a private owner-only run directory under `apps/backend/.tmp`, freshly generated compose and backend credentials, and the committed realm-seed client fixtures. No developer `docker/.env` or database was used. Preflight found no `idp` containers, volumes, networks, listeners or compilers.
 
@@ -64,7 +94,7 @@ Regression facts at `e5964724`:
 
 No backend source, schema, grant, catalogue, OpenAPI or committed default changed in this session, so the 2070/2070 backend diagnostic result at `6b88f91b`, which excludes only the two B1 files, still describes the backend code.
 
-## What closes acceptance
+## What closed acceptance (historical plan, done 2026-10-19)
 
 1. The csrm workstream lands `src/csrm/risk-curation-rules.ts` and `src/csrm/risk-history-changes.ts` on `main`, and `main` is merged into this branch.
 2. Rerun the official journey on a fresh private run directory (no flags, no exclusions). On success it publishes `evidence/<run>/journey.json` and the four screenshots, which `journey.mjs --verify-evidence` must accept.

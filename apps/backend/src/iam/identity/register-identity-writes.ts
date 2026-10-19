@@ -75,6 +75,14 @@ async function dedicatedRoles(strapi: Core.Strapi) {
 
 async function guardUser(strapi: Core.Strapi, action: string, target: string | undefined, data: Record<string, unknown>,
   user: IdentityUser | null) {
+  // Content Manager sends both empty delta arrays for an untouched relation.
+  // Omit that no-op so existing source ownership is preserved by every check below.
+  const sourceRelation = data.identitySource;
+  if (action === "update" && typeof sourceRelation === "object" && sourceRelation !== null && !Array.isArray(sourceRelation)) {
+    const delta = sourceRelation as Record<string, unknown>;
+    if (Object.keys(delta).length === 2 && Array.isArray(delta.connect) && delta.connect.length === 0
+      && Array.isArray(delta.disconnect) && delta.disconnect.length === 0) delete data.identitySource;
+  }
   const initial = action === "create" && isInitialSourceServiceCreate(strapi, data);
   const grant = isSourceRegistrationGrant(strapi, target, data);
   if ("roles" in data) {

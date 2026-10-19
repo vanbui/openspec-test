@@ -135,7 +135,7 @@ function fixture() {
         triggeredAt: at(index === 7 ? 583000 : STAGES.indexOf(stage.startsWith('in03-') ? 'in03-conflict' : `csv-${stage}`) * 10000 + 1000),
         finishedAt: at(index === 7 ? 584000 : STAGES.indexOf(stage.startsWith('in03-') ? 'in03-conflict' : `csv-${stage}`) * 10000 + 2000),
         result: stage === 'in03-conflict' ? 'retry-later' : 'success', nativeAuditId: `audit-${index}`, scimCorrelationId: `scim-${index}`,
-        scimMethod: stage.startsWith('joiner-') ? 'POST' : 'PUT',
+        scimMethod: stage.startsWith('joiner-') ? 'POST' : stage.startsWith('in03-') ? 'PATCH' : 'PUT',
         scimStatus: stage === 'in03-conflict' ? 503 : stage.startsWith('joiner-') ? 201 : 200,
         nativePaging: true, cadenceSeconds: 300 })),
     people: [1440, 375].map((width, index) => ({ width, height: index === 0 ? 900 : 812, sourceKey: `95000${index}`,
@@ -203,6 +203,37 @@ test('per-width budget prevents expansion beyond ten minutes', async () => {
     { now: () => now, setTimeout, clearTimeout }), error => error.code === 'JOURNEY_TIMEOUT' && error.stage === 'csv-mover-1440');
 });
 
+test('evidence stage has its own regression budget outside the live overall budget', async () => {
+  let now = 0; const budgets = new Map();
+  const clock = { now: () => now, setTimeout: (_, ms) => { budgets.set(now, ms); return 0; }, clearTimeout: () => {} };
+  const rows = await executeJourney({ stage: async stage => { now += stage === 'evidence' ? BUDGETS.overall + 1 : 1000; },
+    cleanup: async () => {} }, clock);
+  assert.equal(rows.at(-1).stage, 'evidence');
+  assert.equal(budgets.get(rows.at(-1).startedMs), BUDGETS.evidence);
+  now = 0;
+  await assert.rejects(executeJourney({ stage: async stage => { now += stage === 'evidence' ? BUDGETS.evidence + 1 : 1000; },
+    cleanup: async () => {} }, clock), error => error.code === 'JOURNEY_TIMEOUT' && error.stage === 'evidence');
+});
+
+// Moves IN-03 with its task and retry instants, so only the overall budget can reject the result.
+function moveConflict(value, startedMs) {
+  const conflict = value.stages.at(-2); const delta = startedMs - conflict.startedMs;
+  const shift = instant => new Date(Date.parse(instant) + delta).toISOString();
+  conflict.startedMs = startedMs; value.stages.at(-1).startedMs = startedMs + conflict.durationMs;
+  for (const task of value.tasks.filter(row => row.stage.startsWith('in03-'))) {
+    task.triggeredAt = shift(task.triggeredAt); task.finishedAt = shift(task.finishedAt);
+  }
+  value.conflict.retryScheduledAt = shift(value.conflict.retryScheduledAt);
+  value.conflict.retryTriggeredAt = shift(value.conflict.retryTriggeredAt);
+}
+
+test('evidence accepts full regressions running past the live overall budget', () => {
+  const value = fixture(); value.stages.at(-1).durationMs = BUDGETS.overall;
+  assert.equal(verifyJourneyEvidence(value), true);
+  moveConflict(value, BUDGETS.overall - value.stages.at(-2).durationMs);
+  assert.equal(verifyJourneyEvidence(value), true);
+});
+
 test('check and list ignore private inputs and publish no evidence', async () => {
   assert.equal(await main(['--check'], { IAM_JOURNEY_DISPOSABLE: 'false', DATABASE_FILENAME: '/foreign/database' }), true);
   assert.deepEqual(await main(['--list'], {}), STAGES);
@@ -234,8 +265,11 @@ const mutations = {
   'stale SCIM correlation': value => { value.tasks[1].scimCorrelationId = value.tasks[0].scimCorrelationId; },
   'task outside owning stage': value => { value.tasks[0].finishedAt = '2026-10-17T00:50:00.000Z'; },
   'hot-loop conflict retry': value => { value.conflict.retryTriggeredAt = value.tasks[6].finishedAt; },
-  'POST conflict instead of mover PUT': value => { value.tasks[6].scimMethod = 'POST'; },
-  'POST recovery instead of mover PUT': value => { value.tasks[7].scimMethod = 'POST'; value.tasks[7].scimStatus = 201; },
+  'POST conflict instead of connector PATCH': value => { value.tasks[6].scimMethod = 'POST'; },
+  'POST recovery instead of connector PATCH': value => { value.tasks[7].scimMethod = 'POST'; value.tasks[7].scimStatus = 201; },
+  'PUT conflict instead of connector PATCH': value => { value.tasks[6].scimMethod = 'PUT'; },
+  'PUT recovery instead of connector PATCH': value => { value.tasks[7].scimMethod = 'PUT'; },
+  'PATCH mover instead of lifecycle PUT': value => { value.tasks[1].scimMethod = 'PATCH'; },
   'refusal before its stage': value => { value.people[0].refusal.observedAt = value.date; },
   'refusal after its stage': value => { value.people[0].refusal.observedAt = '2026-10-17T00:04:59.000Z'; },
   'raw token': value => { value.token = 'private'; },
@@ -247,6 +281,8 @@ const mutations = {
   'failed outcome': value => { value.stages[0].outcome = 'failed'; },
   'overlapping stages': value => { value.stages[1].startedMs = 0; },
   'over-budget stage': value => { value.stages[0].durationMs = BUDGETS.setup + 1; },
+  'over-budget evidence regressions': value => { value.stages.at(-1).durationMs = BUDGETS.evidence + 1; },
+  'live stages past the overall budget': value => moveConflict(value, BUDGETS.overall - value.stages.at(-2).durationMs + 1),
   'unsafe screenshot path': value => { value.people[0].screenshots[0] = '../../secret.png'; },
   'password screenshot': value => { value.people[0].screenshots[0] = 'screenshots/keycloak-password.png'; },
   'missing full regressions': value => { value.regressions.backendUnfiltered = false; },
@@ -998,7 +1034,7 @@ for (const scenario of ['complete', 'failed-regression', 'failed-cleanup']) test
         const tasks = [0, 1].map(index => ({ task: { oid: index ? '00000000-0000-4000-8000-000000000007' : taskOid('300'),
           startedAt: new Date(started + (index ? 301000 : 0)).toISOString(), finishedAt: new Date(started + (index ? 301100 : 100)).toISOString(),
           result: index ? 'success' : 'retry-later' }, nativeAuditId: `conflict-audit-${index}`, scimCorrelationId: `conflict-scim-${index}`,
-          method: 'PUT', status: index ? 200 : 503 }));
+          method: 'PATCH', status: index ? 200 : 503 }));
         onObservations(...tasks); time += 302000;
         return { ...fixture().conflict, retryScheduledAt: new Date(started + 300000).toISOString(), retryTriggeredAt: tasks[1].task.startedAt };
       },

@@ -1,0 +1,432 @@
+{
+  "format": 1,
+  "runId": "iam-journey-35607205-a771-477b-a22b-3f83895cc83a",
+  "date": "2026-10-19T01:24:51.444Z",
+  "provenance": "live-journey",
+  "reset": {
+    "idpVolumesRemoved": true,
+    "freshDatabase": true,
+    "exclusiveListeners": true,
+    "exclusiveCompiler": true,
+    "schedulesSuspended": true
+  },
+  "versions": {
+    "midpoint": "4.8.14",
+    "connector": "1.2.9",
+    "sourceCommit": "05c404bbecf9c28938e2183411c7b04b4f8f4226",
+    "keycloak": "26.6.1"
+  },
+  "stages": [
+    {
+      "stage": "preflight",
+      "outcome": "passed",
+      "startedMs": 0,
+      "durationMs": 485
+    },
+    {
+      "stage": "reset",
+      "outcome": "passed",
+      "startedMs": 486,
+      "durationMs": 1742
+    },
+    {
+      "stage": "readiness",
+      "outcome": "passed",
+      "startedMs": 2228,
+      "durationMs": 27431
+    },
+    {
+      "stage": "source-registration",
+      "outcome": "passed",
+      "startedMs": 29659,
+      "durationMs": 20078
+    },
+    {
+      "stage": "source-token",
+      "outcome": "passed",
+      "startedMs": 49738,
+      "durationMs": 24147
+    },
+    {
+      "stage": "render",
+      "outcome": "passed",
+      "startedMs": 73885,
+      "durationMs": 17790
+    },
+    {
+      "stage": "reload",
+      "outcome": "passed",
+      "startedMs": 91675,
+      "durationMs": 47206
+    },
+    {
+      "stage": "connection",
+      "outcome": "passed",
+      "startedMs": 138881,
+      "durationMs": 3437
+    },
+    {
+      "stage": "csv-joiner-1440",
+      "outcome": "passed",
+      "startedMs": 142318,
+      "durationMs": 4539
+    },
+    {
+      "stage": "linkage-1440",
+      "outcome": "passed",
+      "startedMs": 146857,
+      "durationMs": 0
+    },
+    {
+      "stage": "mail-1440",
+      "outcome": "passed",
+      "startedMs": 146858,
+      "durationMs": 10
+    },
+    {
+      "stage": "password-setup-1440",
+      "outcome": "passed",
+      "startedMs": 146868,
+      "durationMs": 12414
+    },
+    {
+      "stage": "requestor-sign-in-1440",
+      "outcome": "passed",
+      "startedMs": 159283,
+      "durationMs": 5489
+    },
+    {
+      "stage": "requestor-access-1440",
+      "outcome": "passed",
+      "startedMs": 164772,
+      "durationMs": 7175
+    },
+    {
+      "stage": "csv-mover-1440",
+      "outcome": "passed",
+      "startedMs": 171947,
+      "durationMs": 4480
+    },
+    {
+      "stage": "csv-leaver-1440",
+      "outcome": "passed",
+      "startedMs": 176427,
+      "durationMs": 2459
+    },
+    {
+      "stage": "immediate-refusal-1440",
+      "outcome": "passed",
+      "startedMs": 178886,
+      "durationMs": 1487
+    },
+    {
+      "stage": "remote-completion-1440",
+      "outcome": "passed",
+      "startedMs": 180373,
+      "durationMs": 6542
+    },
+    {
+      "stage": "csv-joiner-375",
+      "outcome": "passed",
+      "startedMs": 186916,
+      "durationMs": 3069
+    },
+    {
+      "stage": "linkage-375",
+      "outcome": "passed",
+      "startedMs": 189985,
+      "durationMs": 0
+    },
+    {
+      "stage": "mail-375",
+      "outcome": "passed",
+      "startedMs": 189985,
+      "durationMs": 8
+    },
+    {
+      "stage": "password-setup-375",
+      "outcome": "passed",
+      "startedMs": 189993,
+      "durationMs": 738
+    },
+    {
+      "stage": "requestor-sign-in-375",
+      "outcome": "passed",
+      "startedMs": 190731,
+      "durationMs": 1459
+    },
+    {
+      "stage": "requestor-access-375",
+      "outcome": "passed",
+      "startedMs": 192190,
+      "durationMs": 3705
+    },
+    {
+      "stage": "csv-mover-375",
+      "outcome": "passed",
+      "startedMs": 195895,
+      "durationMs": 3664
+    },
+    {
+      "stage": "csv-leaver-375",
+      "outcome": "passed",
+      "startedMs": 199559,
+      "durationMs": 2454
+    },
+    {
+      "stage": "immediate-refusal-375",
+      "outcome": "passed",
+      "startedMs": 202013,
+      "durationMs": 1646
+    },
+    {
+      "stage": "remote-completion-375",
+      "outcome": "passed",
+      "startedMs": 203660,
+      "durationMs": 6507
+    },
+    {
+      "stage": "in03-conflict",
+      "outcome": "passed",
+      "startedMs": 210167,
+      "durationMs": 524503
+    },
+    {
+      "stage": "evidence",
+      "outcome": "passed",
+      "startedMs": 734671,
+      "durationMs": 2743180
+    }
+  ],
+  "tasks": [
+    {
+      "stage": "joiner-1440",
+      "taskOid": "11000000-0000-4000-8000-000000000310",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:27:14.057Z",
+      "finishedAt": "2026-10-19T01:27:17.314Z",
+      "result": "success",
+      "nativeAuditId": "289",
+      "scimCorrelationId": "8549b382-bb04-4075-8f5d-2b25003c277d",
+      "scimMethod": "POST",
+      "scimStatus": 201,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "mover-1440",
+      "taskOid": "11000000-0000-4000-8000-000000000300",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:27:43.718Z",
+      "finishedAt": "2026-10-19T01:27:45.537Z",
+      "result": "success",
+      "nativeAuditId": "298",
+      "scimCorrelationId": "dd437caa-726f-49d6-ae5b-1218255efa2d",
+      "scimMethod": "PUT",
+      "scimStatus": 200,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "leaver-1440",
+      "taskOid": "11000000-0000-4000-8000-000000000300",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:27:48.214Z",
+      "finishedAt": "2026-10-19T01:27:49.280Z",
+      "result": "success",
+      "nativeAuditId": "307",
+      "scimCorrelationId": "49f4ab72-e372-4649-a932-9fa6b1087e79",
+      "scimMethod": "PUT",
+      "scimStatus": 200,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "joiner-375",
+      "taskOid": "11000000-0000-4000-8000-000000000310",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:27:58.697Z",
+      "finishedAt": "2026-10-19T01:28:00.364Z",
+      "result": "success",
+      "nativeAuditId": "321",
+      "scimCorrelationId": "b039272e-996e-4cfa-8355-c9d659de1bb4",
+      "scimMethod": "POST",
+      "scimStatus": 201,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "mover-375",
+      "taskOid": "11000000-0000-4000-8000-000000000300",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:28:07.663Z",
+      "finishedAt": "2026-10-19T01:28:08.724Z",
+      "result": "success",
+      "nativeAuditId": "330",
+      "scimCorrelationId": "e188148f-a503-4b4e-ac51-47d29bc7966b",
+      "scimMethod": "PUT",
+      "scimStatus": 200,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "leaver-375",
+      "taskOid": "11000000-0000-4000-8000-000000000300",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:28:11.413Z",
+      "finishedAt": "2026-10-19T01:28:12.383Z",
+      "result": "success",
+      "nativeAuditId": "339",
+      "scimCorrelationId": "e336c527-b495-427d-a98a-52f568b0b24e",
+      "scimMethod": "PUT",
+      "scimStatus": 200,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "in03-conflict",
+      "taskOid": "11000000-0000-4000-8000-000000000300",
+      "invocation": "on-demand",
+      "triggeredAt": "2026-10-19T01:28:25.988Z",
+      "finishedAt": "2026-10-19T01:28:26.888Z",
+      "result": "retry-later",
+      "nativeAuditId": "364",
+      "scimCorrelationId": "6dd8fb16-918a-484f-a9c1-b1f469f73d09",
+      "scimMethod": "PATCH",
+      "scimStatus": 503,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    },
+    {
+      "stage": "in03-recovery",
+      "taskOid": "00000000-0000-0000-0000-000000000007",
+      "invocation": "native-retry-scanner",
+      "triggeredAt": "2026-10-19T01:37:00.557Z",
+      "finishedAt": "2026-10-19T01:37:01.053Z",
+      "result": "success",
+      "nativeAuditId": "369",
+      "scimCorrelationId": "06b8da28-3c84-47d6-abd8-d281f815fa01",
+      "scimMethod": "PATCH",
+      "scimStatus": 200,
+      "nativePaging": true,
+      "cadenceSeconds": 300
+    }
+  ],
+  "people": [
+    {
+      "width": 1440,
+      "height": 900,
+      "sourceKey": "927071376770",
+      "identityOid": "3f7d7320-d3a7-4d2c-b790-efe37720d0b0",
+      "documentId": "immyuuupvoncak88mrw5vw2e",
+      "remoteSubject": "0a122069-f62a-4b3b-9fea-d7a2daf96d57",
+      "assertions": {
+        "freshMatchedMail": true,
+        "actualPasswordLink": true,
+        "freshOidcSignIn": true,
+        "requestorOnly": true,
+        "restrictedRoutesRefused": true,
+        "foreignRecordRefused": true,
+        "moverLinkageUnchanged": true,
+        "moverAttributesMirrored": true,
+        "moverNoInvitation": true,
+        "sameBrowserSession": true,
+        "terminatedPut": true,
+        "localInactive": true,
+        "remoteDisabled": true,
+        "remoteSessionsEnded": true,
+        "freshSignInRefused": true,
+        "keyboard": true,
+        "visibleFocus": true,
+        "readableErrors": true,
+        "noHorizontalOverflow": true
+      },
+      "refusal": {
+        "observedAt": "2026-10-19T01:27:51.816Z",
+        "accessTokenExpiresAt": "2026-10-19T01:32:33.000Z",
+        "accessStatus": 403,
+        "detailStatus": 403,
+        "writeStatus": 403,
+        "browserListRefused": true,
+        "browserDetailRefused": true,
+        "beforeRemoteLogout": true
+      },
+      "screenshots": [
+        "screenshots/csrm-1440-requestor.png",
+        "screenshots/csrm-1440-refusal.png"
+      ]
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "sourceKey": "927071376771",
+      "identityOid": "a5151da1-6004-46cd-a431-9393ca2b8247",
+      "documentId": "nj11nmp9acqpjbmoad1g1zv3",
+      "remoteSubject": "32ea8bff-6e56-4d9b-809f-e42dee984ba7",
+      "assertions": {
+        "freshMatchedMail": true,
+        "actualPasswordLink": true,
+        "freshOidcSignIn": true,
+        "requestorOnly": true,
+        "restrictedRoutesRefused": true,
+        "foreignRecordRefused": true,
+        "moverLinkageUnchanged": true,
+        "moverAttributesMirrored": true,
+        "moverNoInvitation": true,
+        "sameBrowserSession": true,
+        "terminatedPut": true,
+        "localInactive": true,
+        "remoteDisabled": true,
+        "remoteSessionsEnded": true,
+        "freshSignInRefused": true,
+        "keyboard": true,
+        "visibleFocus": true,
+        "readableErrors": true,
+        "noHorizontalOverflow": true
+      },
+      "refusal": {
+        "observedAt": "2026-10-19T01:28:15.103Z",
+        "accessTokenExpiresAt": "2026-10-19T01:33:03.000Z",
+        "accessStatus": 403,
+        "detailStatus": 403,
+        "writeStatus": 403,
+        "browserListRefused": true,
+        "browserDetailRefused": true,
+        "beforeRemoteLogout": true
+      },
+      "screenshots": [
+        "screenshots/csrm-375-requestor.png",
+        "screenshots/csrm-375-refusal.png"
+      ]
+    }
+  ],
+  "conflict": {
+    "scenario": "IN-03",
+    "status": 503,
+    "retryAfterSeconds": 30,
+    "initialRetrySeconds": 300,
+    "subsequentRetrySeconds": 900,
+    "nativeRetryObserved": true,
+    "retryScheduledAt": "2026-10-19T01:33:26.775Z",
+    "retryTriggeredAt": "2026-10-19T01:37:00.557Z",
+    "correctionApplied": true,
+    "recovered": true,
+    "rollback": true,
+    "ownershipUnchanged": true,
+    "noInvitation": true
+  },
+  "cleanup": {
+    "processesStopped": true,
+    "listenersClosed": true,
+    "privateFilesRemoved": true,
+    "schedulesRestored": true
+  },
+  "regressions": {
+    "backendUnfiltered": true,
+    "csrm": true,
+    "contracts": true,
+    "catalogues": true,
+    "schemas": true,
+    "defaults": true
+  }
+}

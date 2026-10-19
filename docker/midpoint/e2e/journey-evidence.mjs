@@ -2,7 +2,7 @@
 import { lstat, realpath, readFile, mkdir, writeFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { ROOT, STAGES, BUDGETS } from './journey.mjs';
+import { ROOT, STAGES, BUDGETS, stageBudget } from './journey.mjs';
 import { PIN } from './scim-evidence.mjs';
 
 export const EVIDENCE_ROOT = path.join(ROOT, '.planning/workstreams/iam/phases/05-sign-in-and-end-to-end-journey/evidence');
@@ -34,16 +34,14 @@ export function verifyJourneyEvidence(bundle) {
     keys(row, ['stage', 'outcome', 'startedMs', 'durationMs']);
     if (row.stage !== STAGES[index] || row.outcome !== 'passed' || !number(row.startedMs) || !number(row.durationMs)
       || row.startedMs < previousEnd) fail();
-    const budget = row.stage === 'in03-conflict' ? BUDGETS.conflict : row.stage.startsWith('mail-') ? BUDGETS.mail
-      : ['preflight', 'reset', 'readiness'].includes(row.stage) ? BUDGETS.setup : BUDGETS.ordinary;
-    if (row.durationMs > budget) fail();
+    if (row.durationMs > stageBudget(row.stage)) fail();
     previousEnd = row.startedMs + row.durationMs;
+    if (row.stage !== 'evidence' && previousEnd > BUDGETS.overall) fail();
     if (index < 8 && previousEnd > BUDGETS.setup) fail();
     const width = row.stage.match(/-(1440|375)$/)?.[1];
     if (row.stage.startsWith('csv-joiner-')) widthStarts.set(width, row.startedMs);
     if (width && previousEnd - widthStarts.get(width) > BUDGETS.viewport) fail();
   }
-  if (previousEnd > BUDGETS.overall) fail();
   trueFields(bundle.cleanup, ['processesStopped', 'listenersClosed', 'privateFilesRemoved', 'schedulesRestored']);
   trueFields(bundle.regressions, ['backendUnfiltered', 'csrm', 'contracts', 'catalogues', 'schemas', 'defaults']);
   const expectedTasks = [...[1440, 375].flatMap(width => ['joiner', 'mover', 'leaver'].map(kind => `${kind}-${width}`)), 'in03-conflict', 'in03-recovery'];
@@ -61,7 +59,8 @@ export function verifyJourneyEvidence(bundle) {
       || !id(task.nativeAuditId) || auditIds.has(task.nativeAuditId) || !id(task.scimCorrelationId) || scimIds.has(task.scimCorrelationId)
       || !sourceStage || Date.parse(task.triggeredAt) < Date.parse(bundle.date) + sourceStage.startedMs
       || Date.parse(task.finishedAt) > Date.parse(bundle.date) + sourceStage.startedMs + sourceStage.durationMs
-      || task.scimMethod !== (task.stage.startsWith('joiner-') ? 'POST' : 'PUT')
+      // The pinned connector sends IN-03's email change as PATCH (P3-35); lifecycle updates are full PUTs.
+      || task.scimMethod !== (task.stage.startsWith('joiner-') ? 'POST' : task.stage.startsWith('in03-') ? 'PATCH' : 'PUT')
       || task.scimStatus !== (task.stage === 'in03-conflict' ? 503 : task.scimMethod === 'POST' ? 201 : 200)
       || task.nativePaging !== true || task.cadenceSeconds !== 300
       || task.result !== (task.stage === 'in03-conflict' ? 'retry-later' : 'success')) fail();

@@ -1,17 +1,17 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.0 \u2014 Identity Provisioning",
+  "milestone": "v1.0 — Identity Provisioning",
   "phases": [
     {
       "number": "1",
       "name": "midPoint platform and connector spike",
-      "status": "complete"
+      "status": "pending"
     },
     {
       "number": "2",
       "name": "Identity model and leaver-safe Keycloak sync",
-      "status": "complete"
+      "status": "pending"
     },
     {
       "number": "3",
@@ -26,13 +26,13 @@
     {
       "number": "5",
       "name": "Sign-in and end-to-end journey",
-      "status": "planned"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd-execute-phase 5 --ws iam",
-    "label": "Execute Phase 5",
-    "reason": "Twelve plans checked in eight waves; execution and orchestrator live checkpoints pending; planning stopped as requested"
+    "command": "/gsd:progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-10-17"
+  "updated_at": "2026-10-19T10:29:46.978Z"
 }

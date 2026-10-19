@@ -4,6 +4,7 @@ workstream: iam
 status: complete
 completed: 2026-10-13
 requirements: [PLAT-01, PLAT-02, PLAT-03]
+requirements-completed: [PLAT-01, PLAT-02, PLAT-03]
 go_no_go: go
 commits: [aa2bb310, 5e1e23db, 67fe2599]
 ---

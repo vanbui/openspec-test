@@ -1,7 +1,8 @@
 ---
 phase: "05"
 slug: sign-in-and-end-to-end-journey
-status: draft
+status: validated
+validated: "2026-10-19"
 nyquist_compliant: false
 wave_0_complete: false
 created: "2026-10-17"
@@ -9,7 +10,9 @@ created: "2026-10-17"
 
 # Phase 5 — Validation Strategy
 
-Planning contract only. No implementation or runtime result is claimed. Task identifiers/waves below are reconciled with the twelve plans; runtime validation remains pending.
+**Result (2026-10-19): validated.** Every behaviour below was exercised. The offline rows are covered by the unfiltered backend suite (2576/2576), the journey tests (231/231) and the CSRM checks. The live rows are covered by the official run `iam-journey-35607205-…` at `72aeb261`, whose bundle `journey.mjs --verify-evidence` accepts (05-VERIFICATION.md, 05-LIVE-EVIDENCE.md). The status cells below are the original planning contract.
+
+Original planning note: planning contract only; no implementation or runtime result is claimed. Task identifiers/waves below are reconciled with the twelve plans; runtime validation remains pending.
 
 ## Infrastructure and sampling
 

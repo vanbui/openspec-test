@@ -1,15 +1,16 @@
 ---
 phase: "02"
 slug: identity-model-and-leaver-safe-keycloak-sync
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-14"
+validated: "2026-10-19"
 ---
 
 # Phase 2 — Validation Strategy
 
-Planning defines the checks; runtime results remain pending execution. The operator approved the exact contract-gap record on 2026-10-14. No additional human approval checkpoint is required.
+Planning defined the checks; execution evidence is in `02-GATE-EVIDENCE.md` and was audited on 2026-10-19 (see Validation Audit below). The operator approved the exact contract-gap record on 2026-10-14. No additional human approval checkpoint is required.
 
 ## Test Infrastructure
 
@@ -67,13 +68,13 @@ Extend the existing fake Keycloak server with controlled disable/logout outcomes
 
 The recorded backend baseline in .planning/WINDOWS.md is 1581 pass, 1 fail, 1 skipped, with a known context-size attachment ECONNRESET failure. Record actual final counts and distinguish baseline from regressions. Repeating a baseline failure is not a green full-suite pass.
 
-- [ ] Every task has behavioral verification and an observable failure direction.
-- [ ] Every helper exists before invocation.
-- [ ] Fresh and reused schema constraints are verified.
-- [ ] All ownership and write-discipline scenarios pass.
-- [ ] Outage and two-process PostgreSQL evidence pass.
-- [ ] Full backend suite passes; CSRM endpoints and grants retain compatibility.
-- [ ] Runtime evidence justifies setting compliance fields; planning leaves them false.
+- [x] Every task has behavioral verification and an observable failure direction.
+- [x] Every helper exists before invocation.
+- [x] Fresh and reused schema constraints are verified.
+- [x] All ownership and write-discipline scenarios pass.
+- [x] Outage and two-process PostgreSQL evidence pass.
+- [x] Full backend suite passes; CSRM endpoints and grants retain compatibility.
+- [x] Runtime evidence justifies setting compliance fields; planning leaves them false.
 
 ## Multi-Source Coverage Audit
 
@@ -171,3 +172,18 @@ Planning performed no schema change, dependency installation, live outage, migra
 
 Independent final planning review passed with zero findings after one revision; see 02-PLAN-CHECK.md. All 13 plans, 21 tasks and 45 commands retain five-requirement and 30-decision coverage. This draft validation contract becomes validated only after its execution evidence is audited.
 
+## Validation Audit 2026-10-19
+
+Every row in the Final Task Verification Matrix is COVERED: the owned test file or gate helper exists under `apps/backend`, and it passed in the recorded execution evidence.
+
+- Unit and integration tests (all 19 test files in the matrix) ran in the full backend suite on 2026-10-15: 1803 tests, 1802 pass, 0 fail, 1 platform skip unrelated to IAM (`02-GATE-EVIDENCE.md` §1). The operator re-ran `pnpm --dir apps/backend test` green during UAT on 2026-10-19 (`02-UAT.md` test 8).
+- 02-11-02: two-process PostgreSQL gate exited 0 on fresh and reused schemas (§4), and passed again during UAT (test 6).
+- 02-12-01/02: the write guard passed over 250 files and caught a deliberate `updateMany` probe (§5), confirmed again in UAT (test 7).
+- 02-13-02: live Keycloak outage and recovery gate exited 0 with every stage passing (§3), confirmed again in UAT (test 5).
+- 02-02-01: `pg` is pinned at `8.23.1` in `apps/backend/package.json`.
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |

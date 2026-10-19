@@ -10,16 +10,16 @@ The IAM workstream gives the BProton / IdamBox product suite its identity lifecy
 
 A leaver in the customer's Identity Source loses access to every IdamBox product on the next sync, without anyone remembering to do it, and no external system can grant IdamBox roles.
 
-## Current Milestone: v1.0 Identity Provisioning
+## Current State
 
-**Goal:** midPoint provisions IdamBox Users from the customer's Identity Source through a Strapi SCIM 2.0 interface, so joiners, movers and leavers reach Keycloak and every IdamBox product without manual user administration.
+**Shipped v1.0 Identity Provisioning on 2026-10-19** (`milestones/v1.0-ROADMAP.md`, audit 24/24). midPoint 4.8.14 LTS reads the reference HR CSV and provisions IdamBox Users through Strapi's SCIM 2.0 `/Users` with a per-source bearer token. Joiners get the birthright Requestor role and a Keycloak set-password email, movers keep their IdamBox Roles, and leavers are deactivated, never deleted. A leaver is refused on their next request, and Keycloak disable and logout follow through an outbox once Keycloak is reachable.
 
-**Target features:**
-- midPoint 4.8.14 LTS with its PostgreSQL repository, the community SCIM2 connector and Mailpit in the `docker/` `idp` compose project.
-- The identity model (`IdentitySource`, source fields on `IdamBoxUser`) and leaver-safe Keycloak sync through an outbox.
-- A Strapi SCIM 2.0 `/Users` service with per-source bearer-token service identities, proven by the connector's recorded request sequence.
-- midPoint configuration as code: HR CSV resource, IdamBox SCIM resource, correlation with confirmation, disable instead of delete, sync tasks.
-- Set-password email for sourced users and a scripted joiner → mover → leaver journey.
+## Next Milestone Goals
+
+Not yet defined. Run `/gsd-new-milestone --ws iam`. Candidates from v1.0 handoffs:
+- csrm handoffs: source badges, read-only HR fields, inactive-owner reassignment, provisioning change-log screens (owned by the `csrm` workstream).
+- Operations: rate-limit sizing for large sources, task reload that keeps run state, a production HR source resource in midPoint beyond the reference CSV.
+- Hygiene: Nyquist validation for phases 1, 3, 4 and 5; move the Phase 1 spike resource out of the default object set.
 
 **Brief (decisions D1–D26):** `.planning/workstreams/iam/IDENTITY-PROVISIONING-BRIEF.md`
 
@@ -27,14 +27,15 @@ A leaver in the customer's Identity Source loses access to every IdamBox product
 
 ### Validated
 
-- ✓ midPoint runs beside Keycloak in the `idp` compose project with the SCIM2 connector loaded — Phase 1 (connector GO, ADR 0006).
+- ✓ midPoint runs beside Keycloak in the `idp` compose project with the SCIM2 connector loaded — v1.0 (Phase 1, connector GO, ADR 0006).
+- ✓ Strapi accepts provisioning only through SCIM 2.0, from an Identity Source's own service identity, for the users that source owns — v1.0 (Phases 2–3).
+- ✓ A leaver's deactivation commits in Strapi even when Keycloak is unavailable, and the person is refused immediately — v1.0 (Phases 2–3, Phase 5 journey).
+- ✓ midPoint applies joiners, movers and leavers from the reference HR CSV on a 5-minute cycle with nightly reconciliation — v1.0 (Phase 4; measured 4 min 58 s, nightly runs triggered on demand).
+- ✓ Sourced users set their own password through Keycloak; provisioning never sets one — v1.0 (Phase 5).
 
 ### Active
 
-- [ ] Strapi accepts provisioning only through SCIM 2.0, from an Identity Source's own service identity, for the users that source owns.
-- [ ] A leaver's deactivation commits in Strapi even when Keycloak is unavailable, and the person is refused immediately.
-- [ ] midPoint applies joiners, movers and leavers from the reference HR CSV on a 5-minute cycle with nightly reconciliation.
-- [ ] Sourced users set their own password through Keycloak; provisioning never sets one.
+- (none until the next milestone is defined)
 
 ### Out of Scope
 
@@ -47,6 +48,8 @@ A leaver in the customer's Identity Source loses access to every IdamBox product
 
 ## Context
 
+- v1.0 shipped: `apps/backend/src/iam/` (identity, scim, keycloak-sync, password-setup), `docker/midpoint/` (objects 100–340, render/reload scripts, e2e capture, refusal and journey tooling), ADRs 0005 and 0006. The unfiltered backend suite was 2577/2577 at the close.
+- Known debt (v1.0 audit): Nyquist validation incomplete for phases 1, 3, 4 and 5; SECURITY report body text lags the closed registers; MySQL is unverified for source/user locks.
 - Strapi (`apps/backend`) already provisions Keycloak inside the `IdamBoxUser` write (ADR 0002) and maps the Keycloak `sub` to one active `IdamBoxUser.externalSubject` per request (ADR 0004).
 - `docker/docker-compose.yaml` (project `idp`) runs Keycloak 26.6.1 and ClamAV.
 - Earlier research: `docs/iam-early-research/` (SCIM standards and hubs, engine selection, a starting midPoint compose). The 2026-10-03 "Strapi is the hub" brief there is superseded by this workstream's brief.
@@ -64,10 +67,12 @@ A leaver in the customer's Identity Source loses access to every IdamBox product
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| midPoint is the identity engine; SCIM 2.0 is Strapi's only inbound provisioning contract | One lifecycle authority; Strapi stays independent of the engine | — Pending |
-| Strapi keeps provisioning Keycloak; deactivation commits through an outbox | One Keycloak writer; leaver safety during outages | — Pending |
+| midPoint is the identity engine; SCIM 2.0 is Strapi's only inbound provisioning contract | One lifecycle authority; Strapi stays independent of the engine | ✓ Good — 21 SCIM operations served; genuine connector capture replays in CI (v1.0) |
+| Strapi keeps provisioning Keycloak; deactivation commits through an outbox | One Keycloak writer; leaver safety during outages | ✓ Good — live outage/recovery and two-process PostgreSQL gates passed (v1.0) |
 | midPoint 4.8.14 LTS with the community SCIM2 connector | Longest support, Apache-2.0 available; only usable SCIM 2.0 target connector | ✓ Good — loads and passes discovery on 4.8.14 (Phase 1, ADR 0006) |
-| HR owns identity attributes and status; IdamBox owns roles | No two writers on a field; no external role grants | — Pending |
+| Connector-side paging, durable retry-later triggers and native correlation cases (Phase 4 amendments A4, A5, A8) | The connector reports 503 generically and sends no paging by default | ⚠️ Revisit — works (139-user run, automatic recovery) but retry has no increasing backoff and request volume nears the 600/min source limit at ~150–200 users/min |
+| Partial-PUT merge semantics (P3-34, superseding P3-13) | The pinned connector omits emails, Enterprise data and externalId on update | ✓ Good — prevents wiping source keys; discovery wording still to align |
+| HR owns identity attributes and status; IdamBox owns roles | No two writers on a field; no external role grants | ✓ Good — mover kept Security Analyst; owned fields refused on SCIM and admin paths (v1.0) |
 
 ## Evolution
 
@@ -87,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-14 after Phase 1 (midPoint platform and connector spike)*
+*Last updated: 2026-10-19 after v1.0 milestone*

@@ -4,14 +4,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+// `overall` bounds the live stages; `evidence` runs the unfiltered regressions after the stack is disposed.
 export const BUDGETS = Object.freeze({ setup: 300000, ordinary: 180000, mail: 120000,
-  viewport: 600000, conflict: 1500000, overall: 3600000, cleanup: 60000 });
+  viewport: 600000, conflict: 1500000, overall: 3600000, evidence: 7200000, cleanup: 60000 });
 const lifecycle = ['csv-joiner', 'linkage', 'mail', 'password-setup', 'requestor-sign-in',
   'requestor-access', 'csv-mover', 'csv-leaver', 'immediate-refusal', 'remote-completion'];
 export const STAGES = Object.freeze(['preflight', 'reset', 'readiness', 'source-registration',
   'source-token', 'render', 'reload', 'connection',
   ...[1440, 375].flatMap(width => lifecycle.map(stage => `${stage}-${width}`)),
   'in03-conflict', 'evidence']);
+export const stageBudget = stage => stage === 'in03-conflict' ? BUDGETS.conflict : stage === 'evidence' ? BUDGETS.evidence
+  : stage.startsWith('mail-') ? BUDGETS.mail : ['preflight', 'reset', 'readiness'].includes(stage) ? BUDGETS.setup : BUDGETS.ordinary;
 const systemClock = { now: Date.now, setTimeout, clearTimeout };
 const failure = (code, stage) => Object.assign(new Error(code), { code, ...(stage ? { stage } : {}) });
 
@@ -39,9 +42,7 @@ export async function executeJourney(runtime, clock = systemClock) {
     const start = clock.now();
     const width = stage.match(/-(1440|375)$/)?.[1];
     if (stage.startsWith('csv-joiner-')) widthStart = start;
-    let budget = stage === 'in03-conflict' ? BUDGETS.conflict : stage.startsWith('mail-') ? BUDGETS.mail
-      : ['preflight', 'reset', 'readiness'].includes(stage) ? BUDGETS.setup : BUDGETS.ordinary;
-    budget = Math.min(budget, BUDGETS.overall - (start - started),
+    const budget = Math.min(stageBudget(stage), stage === 'evidence' ? Infinity : BUDGETS.overall - (start - started),
       STAGES.indexOf(stage) < 8 ? BUDGETS.setup - (start - started) : Infinity,
       width ? BUDGETS.viewport - (start - widthStart) : Infinity);
     emit({ stage, outcome: 'started', startedMs: start - started });
